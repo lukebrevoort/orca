@@ -142,7 +142,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
               icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
               key={destinationForSpace(space)} label={space.label} onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
-            {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={`Manage ${group.toLowerCase()}`} onClick={() => { setMobileMenuOpen(false); (group === "Spaces" ? onManageSpaces : onManageTools)?.(); }} />}
+            {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={`Manage ${group.toLowerCase()}`} onClick={() => (group === "Spaces" ? onManageSpaces : onManageTools)?.()} />}
           </div>)}
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>

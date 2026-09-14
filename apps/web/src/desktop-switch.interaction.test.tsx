@@ -192,8 +192,8 @@ describe("AppSidebar mobile navigation", () => {
     manage.focus();
     await click(manage);
     expect(manageCalls).toBe(1);
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
-    await click(more);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).not.toBeNull();
+    expect((browserWindow.document.activeElement as unknown as HTMLButtonElement) === manage).toBe(true);
     await click(browserWindow.document.querySelector(".desktop-mobile-menu-backdrop") as unknown as HTMLButtonElement);
     await flush();
     expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
