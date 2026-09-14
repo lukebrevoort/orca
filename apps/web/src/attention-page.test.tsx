@@ -275,7 +275,7 @@ async function select(label: string, value: string) {
   await settle();
 }
 async function expectEmptySenderRules(accountId: string) {
-  await editableSelect("Default destination for everyone else");
+  await editableSelect("Default space for everyone else");
   expect((await editableSelect("Attention account")).value).toBe(accountId);
   // Both accounts know Maya from mail; hidden Add-sender suggestions may include
   // her, but another account's explicit rules must never appear in this list.
@@ -287,7 +287,7 @@ async function expectEmptySenderRules(accountId: string) {
 
 test("page saves actual sender routing, refreshes consumers, Undo restores prior explicit state, accounts isolated", async () => {
   await render();
-  await select("Destination for maya@example.com", quietId);
+  await select("Space for maya@example.com", quietId);
   expect((await state()).senders[0]?.destinationId).toBe(quietId);
   expect((await state("b")).senders).toHaveLength(0);
   expect(puts[0]?.body).toMatchObject({
@@ -360,11 +360,11 @@ test("unknown committed response reloads canonical state without retry; failed r
     if (path.startsWith("/v1/destinations/routing") && fault)
       return Response.json({}, { status: 403 });
   };
-  await select("Destination for maya@example.com", quietId);
+  await select("Space for maya@example.com", quietId);
   expect(puts).toHaveLength(1);
   expect((await state()).senders[0]?.destinationId).toBe(quietId);
   const control = document.querySelector<HTMLSelectElement>(
-    '[aria-label="Destination for maya@example.com"]',
+    '[aria-label="Space for maya@example.com"]',
   )!;
   expect(control.value).toBe(fallbackId);
   expect(control.disabled).toBe(true);
@@ -414,7 +414,7 @@ test("account-list failure remains visible after a successful routing reload; of
   });
   expect(
     document.querySelector<HTMLSelectElement>(
-      '[aria-label="Destination for maya@example.com"]',
+      '[aria-label="Space for maya@example.com"]',
     )!.disabled,
   ).toBe(true);
   expect(button("All senders").disabled).toBe(false);
@@ -424,10 +424,10 @@ test("write-only permission failure remains locked when GET succeeds until expli
   await render();
   intercept = async (_path, init) =>
     init?.method === "PUT" ? Response.json({}, { status: 403 }) : undefined;
-  await select("Destination for maya@example.com", quietId);
+  await select("Space for maya@example.com", quietId);
   expect(
     document.querySelector<HTMLSelectElement>(
-      '[aria-label="Destination for maya@example.com"]',
+      '[aria-label="Space for maya@example.com"]',
     )!.disabled,
   ).toBe(true);
   expect(document.body.textContent).toContain("Read-only");
@@ -435,7 +435,7 @@ test("write-only permission failure remains locked when GET succeeds until expli
   await click("Reload choices");
   expect(
     document.querySelector<HTMLSelectElement>(
-      '[aria-label="Destination for maya@example.com"]',
+      '[aria-label="Space for maya@example.com"]',
     )!.disabled,
   ).toBe(false);
 });
@@ -481,12 +481,12 @@ test("failed recovery read is not silently retried after an unknown save", async
       return Response.json({}, { status: 503 });
     }
   };
-  await select("Destination for maya@example.com", quietId);
+  await select("Space for maya@example.com", quietId);
   await settle();
   expect(reads).toBe(1);
   expect(
     document.querySelector<HTMLSelectElement>(
-      '[aria-label="Destination for maya@example.com"]',
+      '[aria-label="Space for maya@example.com"]',
     )!.disabled,
   ).toBe(true);
 });
@@ -499,12 +499,12 @@ test("filtered sender disappearance and Undo return focus to a useful heading", 
       .click(),
   );
   const control = document.querySelector<HTMLSelectElement>(
-    '[aria-label="Destination for maya@example.com"]',
+    '[aria-label="Space for maya@example.com"]',
   )!;
   control.focus();
-  await select("Destination for maya@example.com", quietId);
-  for (let attempt = 0; attempt < 50 && document.querySelector('[aria-label="Destination for maya@example.com"]'); attempt++) await settle();
-  expect(document.querySelector('[aria-label="Destination for maya@example.com"]')).toBeNull();
+  await select("Space for maya@example.com", quietId);
+  for (let attempt = 0; attempt < 50 && document.querySelector('[aria-label="Space for maya@example.com"]'); attempt++) await settle();
+  expect(document.querySelector('[aria-label="Space for maya@example.com"]')).toBeNull();
   expect(document.activeElement?.id).toBe("sender-heading");
   await click("Undo");
   for (let attempt = 0; attempt < 50 && document.activeElement?.id !== "sender-heading"; attempt++) await settle();
@@ -519,7 +519,7 @@ function deferred() {
 for (const outcome of ["conflict", "success"] as const) {
   test(`old Undo ${outcome} completion preserves a later save receipt`, async () => {
     await render();
-    await select("Destination for maya@example.com", quietId);
+    await select("Space for maya@example.com", quietId);
     const gate = deferred();
     let held = false;
     if (outcome === "success") onRefresh = async () => {
@@ -533,7 +533,7 @@ for (const outcome of ["conflict", "success"] as const) {
     };
     await click("Undo");
     expect(held).toBe(true);
-    await select("Default destination for everyone else", quietId);
+    await select("Default space for everyone else", quietId);
     expect(document.querySelector(".routing-feedback")?.textContent).toContain("Everyone else · Quiet.");
     await act(async () => gate.release());
     await settle();
@@ -546,9 +546,9 @@ for (const outcome of ["conflict", "success"] as const) {
 for (const outcome of ["committed", "rejected", "moved-focus"] as const) {
   test(`filtered sender attempted edit reconciles focus after ${outcome} ambiguous response`, async () => {
     await render();
-    await select("Destination for maya@example.com", quietId);
+    await select("Space for maya@example.com", quietId);
     await act(async () => document.querySelectorAll<HTMLButtonElement>(".simple-attention-choices button")[1]!.click());
-    const control = document.querySelector<HTMLSelectElement>('[aria-label="Destination for maya@example.com"]')!;
+    const control = document.querySelector<HTMLSelectElement>('[aria-label="Space for maya@example.com"]')!;
     control.focus();
     const gate = deferred();
     intercept = async (path, init) => {
@@ -557,7 +557,7 @@ for (const outcome of ["committed", "rejected", "moved-focus"] as const) {
       await gate.promise;
       return Response.json({}, { status: 503 });
     };
-    await select("Destination for maya@example.com", fallbackId);
+    await select("Space for maya@example.com", fallbackId);
     const search = document.querySelector<HTMLInputElement>('[aria-label="Search senders"]')!;
     if (outcome === "moved-focus") search.focus();
     await act(async () => gate.release());
@@ -633,7 +633,7 @@ for (const mailbox of ["Inbox", "Signals"]) {
     await click("Load more messages");
     expect(held).toBe(true);
     await nav("Attention");
-    await select("Destination for maya@example.com", quietId);
+    await select("Space for maya@example.com", quietId);
     expect(delayedRoutingRead).toBe(true);
     await nav(mailbox);
     await act(async () => gate.release());
@@ -667,7 +667,7 @@ test("App ignores a pre-save background snapshot after Quiet save, retaining row
   await renderMailbox();
   expect(held).toBe(true);
   await nav("Attention");
-  await select("Destination for maya@example.com", quietId);
+  await select("Space for maya@example.com", quietId);
   await nav("Inbox");
   expect([...document.querySelectorAll(".message-row")].some(row => row.textContent?.includes("Mail a"))).toBe(false);
   const counts = () => [...document.querySelectorAll(".desktop-sidebar-item")].filter(b => b.textContent?.startsWith("Inbox") || b.textContent?.startsWith("Quiet")).map(b => b.textContent);
@@ -713,7 +713,7 @@ test("App accepts final provider status after routing invalidates its completed 
   expect(syncs).toBe(1);
   expect(document.querySelector(".sync-status-chip")?.textContent).toBe("Syncing Gmail…");
   await nav("Attention");
-  await select("Destination for maya@example.com", quietId);
+  await select("Space for maya@example.com", quietId);
   await nav("Inbox");
   const rows = () => [...document.querySelectorAll(".message-row")].map(row => row.textContent);
   const counts = () => [...document.querySelectorAll(".desktop-sidebar-item")].filter(b => b.textContent?.startsWith("Inbox") || b.textContent?.startsWith("Quiet")).map(b => b.textContent);
@@ -886,10 +886,10 @@ async function inputValue(input: HTMLInputElement, value: string) {
 test("create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement rejects references safely", async () => {
   intercept = async path => syncNoop(path);
   await renderMailbox();
-  await click("New / manage");
+  await click("Manage spaces");
   await inputValue(document.querySelector<HTMLInputElement>('.destination-manager input')!, "Clients");
-  expect(button("Create destination").disabled, document.querySelector(".destination-manager")?.outerHTML).toBe(false);
-  await click("Create destination");
+  expect(button("Create space").disabled, document.querySelector(".destination-manager")?.outerHTML).toBe(false);
+  await click("Create space");
   const catalog = await (await request("/v1/destinations")).json();
   const clients = catalog.destinations.find((item: {name: string}) => item.name === "Clients");
   expect(clients, document.querySelector(".destination-manager")?.outerHTML).toBeDefined();
@@ -899,7 +899,7 @@ test("create from sidebar opens durable destination; sender routing covers futur
   expect(document.querySelector(".content-pane")?.textContent).not.toContain("Keep useful mail together");
   expect(document.querySelector(".content-pane")?.textContent).not.toContain("When synced mail arrives");
   await nav("Attention");
-  await select("Destination for maya@example.com", clients.id);
+  await select("Space for maya@example.com", clients.id);
   await nav("Clients");
   expect(document.querySelector(".content-pane")?.textContent).toContain("Mail a");
   expect(document.querySelector(".content-pane")?.textContent).not.toContain("Mail b");
@@ -911,7 +911,7 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await act(async () => window.dispatchEvent(new Event("focus")));
   for (let i = 0; i < 50 && !document.querySelector(".content-pane")?.textContent?.includes("Future client mail"); i++) await settle();
   expect(document.querySelector(".content-pane")?.textContent).toContain("Future client mail");
-  await click("New / manage");
+  await click("Manage spaces");
   const details = [...document.querySelectorAll(".destination-manager details")].find(item => item.querySelector("summary")?.textContent === "Clients")!;
   await inputValue(details.querySelector<HTMLInputElement>("input")!, "Partners");
   await act(async () => details.querySelector<HTMLButtonElement>("button")!.click());
@@ -1042,7 +1042,7 @@ test("custom destination cannot save its search as a fallback Inbox filter", asy
   await renderMailbox();
   const trigger = document.querySelector<HTMLButtonElement>(".pinned-person-add")!;
   expect(trigger.disabled).toBe(true);
-  expect(document.body.textContent).toContain("Filters cannot be saved for this destination yet");
+  expect(document.body.textContent).toContain("Filters cannot be saved for this space yet");
   await act(async () => {
     trigger.click();
     trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));

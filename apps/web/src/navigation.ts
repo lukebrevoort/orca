@@ -198,7 +198,7 @@ export function createSidebarNavigationProjection({ account, active, attention =
     inboxCount: destinations.find(item => item.isFallback && !item.retiredAt)?.counts.total ?? inboxCount,
     fallbackDestination: destinations.find(item => item.isFallback && !item.retiredAt),
     online,
-    spaces: [...destinations.filter(item => !item.retiredAt && !item.isFallback).sort((a,b) => a.position-b.position).map(item => ({ id: item.id, label: item.name, description: "mail destination", kind: "destination" as const, count: item.counts.total })), ...projectWorkflowSpaces({ collections, views, counts, hidden, labels, order })],
+    spaces: [...destinations.filter(item => !item.retiredAt && !item.isFallback).sort((a,b) => a.position-b.position).map(item => ({ id: item.id, label: item.name, description: "mail space", kind: "destination" as const, count: item.counts.total })), ...projectWorkflowSpaces({ collections, views, counts, hidden, labels, order })],
   };
 }
 

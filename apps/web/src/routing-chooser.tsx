@@ -137,8 +137,8 @@ export function RoutingChooser({
               }
             }}
           >
-            <h2 id={`routing-title-${message.id}`}>Where this mail belongs</h2>
-            <p>Choose a destination for this mail.</p>
+            <h2 id={`routing-title-${message.id}`}>Move to space</h2>
+            <p>Choose a space for this mail.</p>
             <label>
               Apply to
               <select
@@ -171,7 +171,7 @@ export function RoutingChooser({
                   : `Chosen for this ${scope}`}
               </p>
             )}
-            <div className="routing-destinations" aria-label="Destination">
+            <div className="routing-destinations" aria-label="Space">
               {catalog.active.map(({id: value}) => (
                 <button
                   type="button"

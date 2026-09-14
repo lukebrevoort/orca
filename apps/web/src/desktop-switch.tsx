@@ -96,7 +96,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <p className="desktop-sidebar-label">Mail</p>
       <SidebarItem active={inboxActive} count={inboxCount} icon={<NavIcon name="inbox" />} label={inboxLabel} onClick={() => onNavigate("inbox")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
-      <div className="desktop-sidebar-section-head"><span>Destinations</span><button onClick={onManageSpaces} type="button">New / manage</button></div>
+      <div className="desktop-sidebar-section-head"><span>Spaces</span><button onClick={onManageSpaces} type="button">Manage spaces</button></div>
       {visibleSpaces.map((space, index) => <Fragment key={destinationForSpace(space)}>{space.kind !== "destination" && (index === 0 || visibleSpaces[index - 1]?.kind === "destination") && <p className="desktop-sidebar-label">Tools</p>}<SidebarItem
         active={active === destinationForSpace(space)}
         count={space.count}
@@ -127,8 +127,8 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         returnFocusRef={mobileMenuTriggerRef}
         surfaceProps={{ id: "desktop-mobile-navigation-dialog" }}
       >
-        <header><div><span>Orca workspace</span><h2>All destinations</h2></div><button aria-label="Close navigation menu" className="desktop-mobile-menu-close" onClick={() => setMobileMenuOpen(false)} type="button">×</button></header>
-        <div aria-label="All Orca destinations" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
+        <header><div><span>Orca workspace</span><h2>All spaces</h2></div><button aria-label="Close navigation menu" className="desktop-mobile-menu-close" onClick={() => setMobileMenuOpen(false)} type="button">×</button></header>
+        <div aria-label="All Orca spaces" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
           <div aria-label="Mail" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
             <MobileMenuItem active={inboxActive} count={inboxCount} icon={<NavIcon name="inbox" />} label={inboxLabel} onClick={() => navigateFromMobileMenu("inbox")} />
@@ -136,7 +136,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
             <MobileMenuItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => navigateFromMobileMenu("all")} />
           </div>
           <div aria-label="My spaces" role="group">
-            <p aria-hidden="true" className="desktop-mobile-menu-label">Destinations & tools</p>
+            <p aria-hidden="true" className="desktop-mobile-menu-label">Spaces & tools</p>
             {visibleSpaces.map((space) => <MobileMenuItem
               active={active === destinationForSpace(space)}
               count={space.count}
@@ -145,7 +145,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
               label={space.label}
               onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
-            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="New / manage destinations" onClick={onManageSpaces} />
+            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="Manage spaces" onClick={onManageSpaces} />
             {onManageTools && <MobileMenuItem icon={<span aria-hidden="true">±</span>} label="Manage tools" onClick={onManageTools} />}
           </div>
           <div aria-label="Workspace" role="group">
@@ -163,7 +163,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         aria-controls="desktop-mobile-navigation-dialog"
         aria-expanded={mobileMenuOpen}
         aria-haspopup="dialog"
-        aria-label={`Open all destinations${activeSpace ? `. Current destination: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current destination: ${active === "all" ? "All Mail" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
+        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
         className="desktop-mobile-nav-item desktop-mobile-more"
         data-has-current={mobileMenuOwnsCurrentDestination || undefined}
         onClick={() => setMobileMenuOpen((current) => !current)}

@@ -27,7 +27,7 @@ export async function refreshDestinations() {
   }
 }
 export function destinationLabel(id: string | null | undefined) {
-  return snapshot.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable destination" : "No destination");
+  return snapshot.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable space" : "No space");
 }
 // Explicitly synthetic destinations for the existing /dev preview only.
 const previewCatalog = destinationListSchema.parse({ revision: 1, fallbackDestinationId: "inbox", legacyDestinationIds: { normal: "inbox", focus: "focus", notify: "signals", quiet: "quiet" }, destinations: ["Inbox", "Focus", "Signals", "Quiet"].map((name, position) => ({ id: name.toLowerCase(), name, isFallback: position === 0, position, retiredAt: null, revision: 1, notificationPreference: "quiet", delivery: "proposal_only", counts: { total: 0, unread: 0 } })) });
@@ -36,7 +36,7 @@ export function useDestinations(preview = false) {
   const state = preview ? { data: previewCatalog, loading: false, error: "" } : liveState;
   const online = useOnlineStatus();
   useEffect(() => { if (!preview && !snapshot.loading) void refreshDestinations().catch(() => {}); }, [preview]);
-  return { ...state, label: (id: string | null | undefined) => state.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable destination" : "No destination"), active: state.data?.destinations.filter(item => !item.retiredAt).sort((a,b) => a.position-b.position) ?? [], locked: preview || !online || state.loading || !state.data || Boolean(state.error), refresh: refreshDestinations };
+  return { ...state, label: (id: string | null | undefined) => state.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable space" : "No space"), active: state.data?.destinations.filter(item => !item.retiredAt).sort((a,b) => a.position-b.position) ?? [], locked: preview || !online || state.loading || !state.data || Boolean(state.error), refresh: refreshDestinations };
 }
 
 export function DestinationManager({ onClose, onCreated, preview = false }: { onClose: () => void; onCreated: (id: string) => void; preview?: boolean }) {
@@ -57,17 +57,17 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
     } catch (cause) { setError(`${String(cause)} Reload and review before trying again.`); await refreshDestinations().catch(() => {}); }
     finally { lock.current = false; setBusy(false); }
   }
-  return <TopLayer ariaLabelledBy="destination-manager-title" className="simple-attention-dialog destination-manager" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close destination manager" initialFocusSelector="input" dismissible={!busy} ariaBusy={busy} onClose={onClose}>
-    <h2 id="destination-manager-title">Your mail destinations</h2>
+  return <TopLayer ariaLabelledBy="destination-manager-title" className="simple-attention-dialog destination-manager" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close space manager" initialFocusSelector="input" dismissible={!busy} ariaBusy={busy} onClose={onClose}>
+    <h2 id="destination-manager-title">Your spaces</h2>
     <p>Names are shared across your accounts. Routing choices stay with each account.</p>
-    {preview && <p role="status">Synthetic preview. Connect an account to create or change durable destinations.</p>}
+    {preview && <p role="status">Synthetic preview. Connect an account to create or change spaces.</p>}
     <form onSubmit={event => { event.preventDefault(); void mutate("/v1/destinations", "POST", { name: name.trim() }, true); }}>
-      <label>New destination<input autoFocus required maxLength={120} value={name} onInput={event => setName(event.currentTarget.value)} /></label>
-      <button disabled={busy || catalog.locked || !name.trim()}>Create destination</button>
+      <label>New space<input autoFocus required maxLength={120} value={name} onInput={event => setName(event.currentTarget.value)} /></label>
+      <button disabled={busy || catalog.locked || !name.trim()}>Create space</button>
     </form>
     {catalog.active.map(item => <DestinationEditor key={item.id} item={item} fallbackId={catalog.data?.fallbackDestinationId ?? ""} disabled={busy || catalog.locked} mutate={mutate} />)}
-    {(error || catalog.error) && <p role="alert">{error || catalog.error} <button disabled={busy} onClick={() => void catalog.refresh().catch(() => {})}>Reload destinations</button></p>}
-    <p>Move its conversations and update sender choices first. Removing a destination never deletes mail. Notification delivery is not available.</p>
+    {(error || catalog.error) && <p role="alert">{error || catalog.error} <button disabled={busy} onClick={() => void catalog.refresh().catch(() => {})}>Reload spaces</button></p>}
+    <p>Move its conversations and update sender choices first. Removing a space never deletes mail. Notification delivery is not available.</p>
     <footer><button disabled={busy} onClick={onClose}>Done</button></footer>
   </TopLayer>;
 }
@@ -77,7 +77,7 @@ function DestinationEditor({ item, fallbackId, disabled, mutate }: { item: MailD
   return <details><summary>{item.name}{item.isFallback ? " · Default" : ""}</summary>
     <label>Name<input value={name} maxLength={120} disabled={disabled} onInput={event => setName(event.currentTarget.value)} /></label>
     <button disabled={disabled || !name.trim() || name.trim() === item.name} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}`, "PATCH", { name: name.trim() })}>Rename</button>
-    {item.isFallback ? <p>Your default destination cannot be removed.</p> : <p>Move conversations and update sender choices before removing this destination.</p>}
-    <button aria-label={`Remove ${item.name}`} disabled={disabled || item.isFallback || !fallbackId} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}/retire`, "POST", { reassignToDestinationId: fallbackId })}>Remove destination</button>
+    {item.isFallback ? <p>Your default space cannot be removed.</p> : <p>Move conversations and update sender choices before removing this space.</p>}
+    <button aria-label={`Remove ${item.name}`} disabled={disabled || item.isFallback || !fallbackId} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}/retire`, "POST", { reassignToDestinationId: fallbackId })}>Remove space</button>
   </details>;
 }

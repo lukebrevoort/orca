@@ -1226,7 +1226,7 @@ describe("App top-layer contract", () => {
   test("suspends Compose and search shortcuts behind destination management and Pin Builder", async () => {
     await renderApp();
     const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "New / manage") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage spaces") as unknown as HTMLButtonElement;
     manage.focus();
     await act(async () => manage.click());
     const manageDialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="destination-manager-title"]') as unknown as HTMLElement;

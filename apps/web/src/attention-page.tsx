@@ -193,7 +193,7 @@ export function AttentionPage({
         <p>
           Choose where each sender’s mail belongs.
           <br />
-          Your destinations, ready when you are.
+          Your spaces, ready when you are.
         </p>
       </header>
       <div className="simple-attention-account">
@@ -213,7 +213,7 @@ export function AttentionPage({
             ))}
           </select>
         </label>
-        <button onClick={() => setManaging(true)}>New / manage destinations</button>
+        <button onClick={() => setManaging(true)}>Manage spaces</button>
         <button onClick={onAdvanced}>Advanced organization ↗</button>
       </div>
       {accountsError && (
@@ -237,7 +237,7 @@ export function AttentionPage({
         </p>
       )}
       {managing && <DestinationManager preview={demoMode} onClose={() => setManaging(false)} onCreated={() => {}} />}
-      {catalog.error && <p role="alert">{catalog.error} <button onClick={() => void catalog.refresh().catch(() => {})}>Reload destinations</button></p>}
+      {catalog.error && <p role="alert">{catalog.error} <button onClick={() => void catalog.refresh().catch(() => {})}>Reload spaces</button></p>}
       <RoutingErrors routing={routing} />
       <div
         className="simple-attention-choices"
@@ -305,7 +305,7 @@ export function AttentionPage({
               {names[sender.value] && <small>{sender.value}</small>}
             </div>
             <select
-              aria-label={`Destination for ${sender.value}`}
+              aria-label={`Space for ${sender.value}`}
               disabled={locked || !sender.editable}
               value={sender.destinationId}
               onChange={(e) =>
@@ -316,7 +316,7 @@ export function AttentionPage({
               }
             >
               {catalog.active.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-              {!catalog.active.some(item => item.id === sender.destinationId) && <option value={sender.destinationId}>Unavailable destination</option>}
+              {!catalog.active.some(item => item.id === sender.destinationId) && <option value={sender.destinationId}>Unavailable space</option>}
             </select>
             <button
               disabled={locked || !sender.editable}
@@ -353,7 +353,7 @@ export function AttentionPage({
           <p>For mail without a sender, domain, or conversation choice.</p>
         </div>
         <select
-          aria-label="Default destination for everyone else"
+          aria-label="Default space for everyone else"
           value={routing.state?.defaultDestinationId ?? "inherit"}
           disabled={locked}
           onChange={(e) =>
@@ -429,7 +429,7 @@ export function AttentionPage({
               );
               return;
             }
-            if (!choice) { setAddError("Choose a destination."); return; }
+            if (!choice) { setAddError("Choose a space."); return; }
             if (await routing.save(choice, result.data)) {
               closeAdd();
               setAddress("");
@@ -482,12 +482,12 @@ export function AttentionPage({
             </p>
           )}
           <label>
-            Destination
+            Space
             <select
               value={choice}
               onChange={(e) => setChoice(e.target.value)}
             >
-              <option value="">Choose destination</option>
+              <option value="">Choose space</option>
               {catalog.active.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </label>
