@@ -454,3 +454,5 @@
 .space-color-picker button:focus-visible { outline: 2px solid var(--orca-ink); outline-offset: 2px; }
 .space-color-picker button:disabled { opacity: .55; cursor: not-allowed; }
 .space-color-check { width: 1em; }
+
+.space-edit-hint { display: inline-block; margin-left: 12px; color: var(--orca-muted); font-size: 12px; }

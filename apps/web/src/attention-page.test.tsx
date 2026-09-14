@@ -915,7 +915,7 @@ test("create from sidebar opens durable destination; sender routing covers futur
   for (let i = 0; i < 50 && !document.querySelector(".content-pane")?.textContent?.includes("Future client mail"); i++) await settle();
   expect(document.querySelector(".content-pane")?.textContent).toContain("Future client mail");
   await click("Manage spaces");
-  const details = [...document.querySelectorAll(".destination-manager details")].find(item => item.querySelector("summary")?.textContent === "Clients")!;
+  const details = [...document.querySelectorAll(".destination-manager details")].find(item => item.querySelector("summary")?.textContent?.startsWith("Clients"))!;
   await inputValue(details.querySelector<HTMLInputElement>("input")!, "Partners");
   await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "Rose")!.click());
   expect(details.querySelector<HTMLInputElement>("input")!.value).toBe("Partners");

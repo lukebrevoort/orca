@@ -78,7 +78,7 @@ function DestinationEditor({ item, fallbackId, disabled, mutate }: { item: MailD
   const [color, setColor] = useState(item.color);
   useEffect(() => setName(item.name), [item.name]);
   useEffect(() => setColor(item.color), [item.color]);
-  return <details><summary><span aria-hidden="true" className="desktop-space-mark" style={{ background: item.color }} />{item.name}{item.isFallback ? " · Default" : ""}</summary>
+  return <details><summary><span aria-hidden="true" className="desktop-space-mark" style={{ background: item.color }} />{item.name}{item.isFallback ? " · Default" : ""}<small className="space-edit-hint">Edit name &amp; color</small></summary>
     <label>Name<input value={name} maxLength={120} disabled={disabled} onInput={event => setName(event.currentTarget.value)} /></label>
     <SpaceColorPicker color={color} onChange={setColor} disabled={disabled} />
     <button disabled={disabled || !name.trim() || (name.trim() === item.name && color === item.color)} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}`, "PATCH", { name: name.trim(), color })}>Save changes</button>
