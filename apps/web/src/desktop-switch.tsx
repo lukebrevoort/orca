@@ -1,5 +1,5 @@
 import { DestinationManager, useDestinations } from "./mail-destinations";
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { GlobalMailSearch, openMailSearch } from "./global-search";
@@ -96,15 +96,14 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <p className="desktop-sidebar-label">Mail</p>
       <SidebarItem active={inboxActive} count={inboxCount} icon={<NavIcon name="inbox" />} label={inboxLabel} onClick={() => onNavigate("inbox")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
-      <div className="desktop-sidebar-section-head"><span>Destinations & tools</span><button onClick={onManageSpaces} type="button">New / manage</button></div>
-      {visibleSpaces.map((space) => <SidebarItem
+      <div className="desktop-sidebar-section-head"><span>Destinations</span><button onClick={onManageSpaces} type="button">New / manage</button></div>
+      {visibleSpaces.map((space, index) => <Fragment key={destinationForSpace(space)}>{space.kind !== "destination" && (index === 0 || visibleSpaces[index - 1]?.kind === "destination") && <p className="desktop-sidebar-label">Tools</p>}<SidebarItem
         active={active === destinationForSpace(space)}
         count={space.count}
         icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
-        key={space.id}
         label={space.label}
         onClick={() => onNavigate(destinationForSpace(space))}
-      />)}
+      /></Fragment>)}
       {onManageTools && <button className="desktop-space-tools" onClick={onManageTools} type="button">Manage tools</button>}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
@@ -142,7 +141,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
               active={active === destinationForSpace(space)}
               count={space.count}
               icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
-              key={space.id}
+              key={destinationForSpace(space)}
               label={space.label}
               onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
