@@ -1223,13 +1223,13 @@ describe("App top-layer contract", () => {
     expect(isSameNode(browserWindow.document.activeElement, permission)).toBe(true);
   });
 
-  test("suspends Compose and search shortcuts behind Manage spaces and Pin Builder", async () => {
+  test("suspends Compose and search shortcuts behind destination management and Pin Builder", async () => {
     await renderApp();
     const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage tools") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "New / manage") as unknown as HTMLButtonElement;
     manage.focus();
     await act(async () => manage.click());
-    const manageDialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
+    const manageDialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="destination-manager-title"]') as unknown as HTMLElement;
     expect(manageDialog).not.toBeNull();
     const manageFocus = browserWindow.document.activeElement as unknown as HTMLElement;
     await act(async () => {
@@ -1696,15 +1696,15 @@ describe("Desktop evidence and navigation", () => {
     const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
-    const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Orca launch"))!;
+    const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Life admin"))!;
     const hide = [...signalsRow.querySelectorAll("button")].find((button) => button.textContent === "Hide") as unknown as HTMLButtonElement;
     await act(async () => { hide.click(); });
-    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Orca launch"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Life admin"))).toBe(false);
 
     await act(async () => { root!.unmount(); });
     root = null;
     await renderApp();
-    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Orca launch"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Life admin"))).toBe(false);
   });
 
   test("persists one absolute order when a drag crosses multiple rows", async () => {
@@ -2518,8 +2518,14 @@ describe("Inbox reader viewport restoration", () => {
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
       if (url.pathname === "/v1/inbox") {
-        inboxReadCount += 1;
-        if (inboxReadCount === 2) return delayedInbox;
+        if (!url.searchParams.has("destinationId")) {
+          inboxReadCount += 1;
+          if (inboxReadCount === 2) return delayedInbox;
+        }
+        if (activeSnapshotChanged) {
+          const canonical = await (await baseFetch(input, init)).json();
+          return jsonResponse({ ...canonical, messages: refreshedMessages });
+        }
       }
       if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
         threadReadCount += 1;

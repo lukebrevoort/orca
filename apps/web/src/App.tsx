@@ -1275,6 +1275,7 @@ export function InboxApp({
   const [destinationRetry, setDestinationRetry] = useState(0);
   const destinationRequest = useRef(0);
   const destinationPageKey = useRef("");
+  const destinationQueryKey = useRef("");
   const [allMailCursor, setAllMailCursor] = useState<string | null>(null);
   const [classificationLoading, setClassificationLoading] = useState(false);
   const [classificationError, setClassificationError] = useState<string | null>(null);
@@ -1794,8 +1795,12 @@ export function InboxApp({
     const controller = new AbortController();
     const epoch = mailboxSnapshotEpochRef.current;
     setIsLoadingMoreMessages(false);
-    setDestinationPage(null);
-    destinationPageKey.current = "";
+    const queryKey = `${requestedDestinationId ?? ""}:${classificationView}`;
+    if (destinationQueryKey.current !== queryKey || !selectedDestination || selectedDestination.retiredAt) {
+      setDestinationPage(null);
+      destinationPageKey.current = "";
+    }
+    destinationQueryKey.current = queryKey;
     setDestinationError(null);
     if (!requestedDestinationId || !selectedDestination || selectedDestination.retiredAt || demoMode) { setDestinationLoading(false); return; }
     setDestinationLoading(true);
@@ -3117,7 +3122,7 @@ export function InboxApp({
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Destinations could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry destinations</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading destination…" : "This destination is unavailable."}</p>}
-            {selectedDestination?.retiredAt && <p role="status">This destination has been retired. <button onClick={() => navigateDesktop("inbox")}>Open default destination</button></p>}
+            {selectedDestination?.retiredAt && <p role="status">This destination has been removed. <button onClick={() => navigateDesktop("inbox")}>Open default destination</button></p>}
             {requestedDestinationId && destinationLoading && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry destination</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading destinations…" : "This legacy destination is unavailable. Choose a destination from the sidebar."}</p>}

@@ -914,16 +914,14 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
   expect((await state()).senders[0]?.destinationId).toBe(clients.id);
-  const replacement = details.querySelector<HTMLSelectElement>("select")!;
-  await act(async () => { replacement.value = fallbackId; replacement.dispatchEvent(new Event("change", { bubbles: true })); });
-  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Retire Partners")!.click());
+  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.getAttribute("aria-label") === "Remove Partners")!.click());
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
   expect(document.querySelector(".destination-manager [role=alert]")).not.toBeNull();
   const latest = await state();
   await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: latest.revision, target: { scope: "sender", address: "maya@example.com" }, destinationId: null }) });
   await act(async () => refreshDestinations());
-  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Retire Partners")!.click());
+  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.getAttribute("aria-label") === "Remove Partners")!.click());
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Partners");
   const retired = await (await request("/v1/destinations")).json();
@@ -954,4 +952,35 @@ test("destination URL survives reader open, close and history while canonical pa
   await settle();
   expect(new URL(window.location.href).searchParams.get("thread")).toBeTruthy();
   expect(document.querySelector(".reader-back")?.textContent).toContain("Quiet");
+}, 20000);
+
+test("same-destination refresh retains an open chooser and explicit unsaved choice", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox();
+  await act(async () => document.querySelector<HTMLButtonElement>(".sender-attention-trigger")!.click());
+  await settle();
+  await click("Quiet");
+  const chooser = document.querySelector(".routing-chooser");
+  expect(chooser).not.toBeNull();
+  const pageGate = deferred();
+  let requested = false;
+  intercept = async path => {
+    if (path.includes("destinationId=") && !path.includes("cursor=")) {
+      requested = true;
+      await pageGate.promise;
+    }
+    return syncNoop(path);
+  };
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  const deadline = Date.now() + 2000;
+  while (!requested && Date.now() < deadline) await settle();
+  expect(requested).toBe(true);
+  expect(document.querySelector(".routing-chooser")).toBe(chooser);
+  expect(button("Quiet").getAttribute("aria-pressed")).toBe("true");
+  await act(async () => pageGate.release());
+  await settle();
+  expect(document.querySelector(".routing-chooser")).toBe(chooser);
+  expect(button("Quiet").getAttribute("aria-pressed")).toBe("true");
+  await click("Save choice");
+  expect(puts.at(-1)?.body.destinationId).toBe(quietId);
 }, 20000);
