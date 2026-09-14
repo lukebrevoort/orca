@@ -1125,6 +1125,45 @@ test("App bulk move dedupes selected messages across accounts, refreshes counts/
   expect((await state("b", "&threadId=thread-b")).selection.explicitDestinationId).toBeNull();
 });
 
+test("App pending batch preserves attempted scope when refreshed rows prune every selected target", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  const responseGate = deferred();
+  let committed = false;
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT") {
+      const result = await request(path, init);
+      committed = true;
+      await responseGate.promise;
+      return result;
+    }
+    return syncNoop(path);
+  };
+  try {
+    await act(async () => button("Move conversations").click()); await settle();
+    expect(committed).toBe(true);
+    // A provider refresh sees the committed move before the response reaches the chooser.
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    for (let i = 0; i < 50 && document.querySelectorAll(".message-row").length; i++) await settle();
+    expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+    const dialog = document.querySelector(".bulk-space-dialog")!;
+    expect(dialog.textContent).toContain("2 selected conversations across 2 accounts");
+    expect(dialog.textContent).not.toContain("No selected conversations remain");
+    expect(dialog.getAttribute("aria-busy")).toBe("true");
+    expect(button("Moving…").disabled).toBe(true);
+    expect(button("Cancel").disabled).toBe(true);
+    expect(puts.filter(p => p.path.endsWith("/routing/batch"))).toHaveLength(1);
+  } finally {
+    await act(async () => responseGate.release()); await settle(); await settle();
+  }
+  expect(document.querySelector(".bulk-space-dialog")).toBeNull();
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("2 conversations moved to Quiet.");
+  await click("Undo");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(2);
+  expect((await state("a", "&threadId=thread-a")).selection.explicitDestinationId).toBeNull();
+  expect((await state("b", "&threadId=thread-b")).selection.explicitDestinationId).toBeNull();
+});
+
 for (const failure of ["rejected", "unconfirmed"] as const) test(`App bulk ${failure} preserves choices and requires explicit recovery without fabricated Undo`, async () => {
   intercept = async path => syncNoop(path);
   await renderMailbox(); await openBulkMove();

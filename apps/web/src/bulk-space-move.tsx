@@ -19,6 +19,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingTargets, setPendingTargets] = useState<DestinationConversation[] | null>(null);
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
   const lock = useRef(false);
@@ -28,13 +29,17 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { setOpen(false); setChoice(""); setError(""); setRecovery(false); }, [queryOwner]);
   const overLimit = targets.length > destinationBatchLimit;
+  // Refreshed rows may disappear before the batch response arrives. Keep the
+  // attempted scope visible until that request settles; live selection still owns retries.
+  const presentedTargets = pendingTargets ?? targets;
+  const presentedAccounts = new Set(presentedTargets.map(target => target.accountId)).size;
   const blocked = disabled || busy || updates.recovering || catalog.locked || recovery || updates.recoveryRequired || !targets.length || overLimit;
   async function move() {
     if (blocked || lock.current || !catalog.data || !catalog.active.some(space => space.id === choice)) return;
     const attempted = targets.map(target => ({ ...target }));
     const owner = queryOwner;
     const receiptOwner = updates.begin();
-    lock.current = true; setBusy(true); onBusy(true); setError("");
+    lock.current = true; setPendingTargets(attempted); setBusy(true); onBusy(true); setError("");
     try {
       const result = destinationBatchResultSchema.parse(await attentionRequest("/v1/destinations/routing/batch", {
         method: "PUT", headers: { "content-type": "application/json" },
@@ -55,7 +60,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
       await updates.changed(undefined, receiptOwner);
     } finally {
       lock.current = false;
-      if (mounted.current) { setBusy(false); onBusy(false); }
+      if (mounted.current) { setPendingTargets(null); setBusy(false); onBusy(false); }
     }
   }
   async function reload() {
@@ -73,14 +78,14 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
     </div>
     {open && <TopLayer ariaLabelledBy="bulk-space-title" className="simple-attention-dialog bulk-space-dialog" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close Move to space" initialFocusSelector=".routing-destinations button" dismissible={!busy} ariaBusy={busy} onClose={() => setOpen(false)}>
       <h2 id="bulk-space-title">Move to space</h2>
-      <p>{targets.length} selected {targets.length === 1 ? "conversation" : "conversations"} across {new Set(targets.map(target => target.accountId)).size} {new Set(targets.map(target => target.accountId)).size === 1 ? "account" : "accounts"}. Only these conversations move; sender choices stay as they are.</p>
+      <p>{presentedTargets.length} selected {presentedTargets.length === 1 ? "conversation" : "conversations"} across {presentedAccounts} {presentedAccounts === 1 ? "account" : "accounts"}. Only these conversations move; sender choices stay as they are.</p>
       <div className="routing-destinations" aria-label="Space">{catalog.active.map(space => <button type="button" key={space.id} aria-pressed={choice === space.id} disabled={busy || catalog.locked} onClick={() => setChoice(space.id)}><span aria-hidden="true" className="desktop-space-mark" style={{ background: space.color }} />{space.name}</button>)}</div>
       {catalog.loading && <p role="status">Loading spaces…</p>}
       {busy && <p role="status">Updating selected conversations…</p>}
       {(error || catalog.error) && <p role="alert">{error || catalog.error}</p>}
       {updates.recoveryRequired && !error && <p role="alert">A previous move needs recovery. Reload current mail before moving conversations.</p>}
       {(recovery || updates.recoveryRequired || catalog.error) && <button type="button" disabled={busy || updates.recovering} onClick={() => void reload()}>Reload spaces and mail</button>}
-      {!targets.length && <p role="status">No selected conversations remain in this view. Close and select visible messages.</p>}
+      {!busy && !targets.length && <p role="status">No selected conversations remain in this view. Close and select visible messages.</p>}
       <footer><button type="button" disabled={busy} onClick={() => setOpen(false)}>Cancel</button><button type="button" disabled={blocked || !catalog.active.some(space => space.id === choice)} onClick={() => void move()}>{busy ? "Moving…" : "Move conversations"}</button></footer>
     </TopLayer>}
   </>;

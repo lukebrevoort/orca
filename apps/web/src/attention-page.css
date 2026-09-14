@@ -456,3 +456,15 @@
 .space-color-check { width: 1em; }
 
 .space-edit-hint { display: inline-block; margin-left: 12px; color: var(--orca-muted); font-size: 12px; }
+
+@media (max-width: 520px) {
+  .simple-attention-dialog.destination-manager {
+    box-sizing: border-box;
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    min-width: 0;
+    padding: 20px;
+  }
+  .destination-manager :is(form, details, label, footer) { min-width: 0; max-width: 100%; }
+  .destination-manager :is(p, summary) { overflow-wrap: anywhere; }
+}
