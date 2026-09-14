@@ -9,7 +9,6 @@ import {
 import {
   attentionRequest,
   RoutingErrors,
-  routingLabel,
   useAttentionRouting,
 } from "./attention-routing";
 import "./attention-page.css";
@@ -22,6 +21,7 @@ export function AttentionPage({
   onAdvanced: () => void;
 }) {
   const catalog = useDestinations(demoMode);
+  const routingLabel = catalog.label;
   const [managing, setManaging] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [accountId, setAccountId] = useState("");

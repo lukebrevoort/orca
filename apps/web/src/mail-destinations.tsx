@@ -36,7 +36,7 @@ export function useDestinations(preview = false) {
   const state = preview ? { data: previewCatalog, loading: false, error: "" } : liveState;
   const online = useOnlineStatus();
   useEffect(() => { if (!preview && !snapshot.loading) void refreshDestinations().catch(() => {}); }, [preview]);
-  return { ...state, active: state.data?.destinations.filter(item => !item.retiredAt).sort((a,b) => a.position-b.position) ?? [], locked: preview || !online || state.loading || !state.data || Boolean(state.error), refresh: refreshDestinations };
+  return { ...state, label: (id: string | null | undefined) => state.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable destination" : "No destination"), active: state.data?.destinations.filter(item => !item.retiredAt).sort((a,b) => a.position-b.position) ?? [], locked: preview || !online || state.loading || !state.data || Boolean(state.error), refresh: refreshDestinations };
 }
 
 export function DestinationManager({ onClose, onCreated, preview = false }: { onClose: () => void; onCreated: (id: string) => void; preview?: boolean }) {
@@ -51,7 +51,7 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
     try {
       const result = destinationMutationResultSchema.parse(await request(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ expectedRevision: catalog.data.revision, ...change }) }));
       ++generation;
-      publish({ data: result.state, loading: false, error: "" });
+      publish({ data: snapshot.data && snapshot.data.revision > result.state.revision ? snapshot.data : result.state, loading: false, error: "" });
       window.dispatchEvent(new Event(destinationChangeEvent));
       if (created) { onCreated(result.destinationId); onClose(); }
     } catch (cause) { setError(`${String(cause)} Reload and review before trying again.`); await refreshDestinations().catch(() => {}); }

@@ -1,4 +1,4 @@
-import { DestinationManager, destinationLabel, refreshDestinations, useDestinations } from "./mail-destinations";
+import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
 import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
 import { AttentionPage } from "./attention-page";
@@ -1783,7 +1783,7 @@ export function InboxApp({
     ])));
   }, [messages, status]);
 
-  const destinationSurface = Boolean(activeDestinationId) || (!activeCollectionId && !activeSavedViewId && ["inbox", "quiet", "focus", "signals", "hidden"].includes(activeMailbox));
+  const destinationSurface = !organizationStudioOpen && (Boolean(activeDestinationId) || (!activeCollectionId && !activeSavedViewId && ["inbox", "quiet", "focus", "signals", "hidden"].includes(activeMailbox)));
   const legacyBehavior = activeMailbox === "inbox" ? "normal" : activeMailbox === "signals" ? "notify" : activeMailbox === "quiet" || activeMailbox === "focus" || activeMailbox === "hidden" ? activeMailbox : null;
   const requestedDestinationId = activeDestinationId ?? (destinationSurface && legacyBehavior ? catalog.data?.legacyDestinationIds[legacyBehavior] ?? null : null);
   const selectedDestination = catalog.data?.destinations.find(item => item.id === requestedDestinationId);
@@ -1886,7 +1886,7 @@ export function InboxApp({
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
-    : requestedDestinationId ? destinationLabel(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+    : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;
@@ -2108,14 +2108,14 @@ export function InboxApp({
     })) ?? null,
     [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
-  const activeMailboxLabel = requestedDestinationId ? destinationLabel(requestedDestinationId) : activeMailboxItem.label;
+  const activeMailboxLabel = requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
       ?? allMailMessages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
       ?? activePin?.label
       ?? personFilter
     : null;
-  const inboxTitle = personFilterName ?? activeCollection?.name ?? (requestedDestinationId ? destinationLabel(requestedDestinationId) : activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? (requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? classificationViewLabel(classificationView)).toLowerCase()}`
     : activeCollection
@@ -3007,6 +3007,7 @@ export function InboxApp({
     }
     setActiveSavedViewId(null);
     if (destination.startsWith("destination:")) {
+      setClassificationView("all");
       setActiveMailbox(demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox"); setActiveCollectionId(null); setSelectedThreadId(null); setSelectedThreadAccountId(null); setPersonFilter(null); setInboxFilter("all");
       return;
     }
@@ -3109,7 +3110,7 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={requestedDestinationId && !organizationStudioOpen ? destinationLabel(requestedDestinationId) : organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} onAdvanced={() => navigateDesktop("organization")} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Attention</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
