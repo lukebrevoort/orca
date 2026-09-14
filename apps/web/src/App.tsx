@@ -2268,7 +2268,10 @@ export function InboxApp({
 
     if (message.unread) {
       if (!demoMode) {
-        fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read?accountId=${encodeURIComponent(message.accountId)}`, { method: "PATCH", credentials: "include" }).catch(() => {});
+        void fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read?accountId=${encodeURIComponent(message.accountId)}`, { method: "PATCH", credentials: "include" }).finally(() => {
+          setDestinationRetry(value => value + 1);
+          void refreshDestinations().catch(() => {});
+        }).catch(() => {});
       } else {
         writeDemoReadState(message.threadId);
       }
@@ -2278,6 +2281,7 @@ export function InboxApp({
       setAllMailMessages((prev) =>
         prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
+      setDestinationPage(current => current ? { ...current, messages: current.messages.map(m => m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m) } : current);
     }
   }
 
@@ -3127,6 +3131,7 @@ export function InboxApp({
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry destination</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading destinations…" : "This legacy destination is unavailable. Choose a destination from the sidebar."}</p>}
             {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+              key={requestedDestinationId ? `destination:${requestedDestinationId}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
               agentEventActionErrors={agentEventActionErrors}
@@ -4696,7 +4701,9 @@ function InboxView({
     setViewAuthoringEntry(null);
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
-  }, [classificationView, personFilter, viewMode]);
+    setBulkRetry(null);
+    setBulkPendingBehavior(null);
+  }, [classificationView, inboxFilter, personFilter, searchQuery, viewMode]);
 
   useEffect(() => {
     if (!guidanceSelectionRequest || handledGuidanceSelection.current === guidanceSelectionRequest) return;
@@ -4776,7 +4783,12 @@ function InboxView({
     setBulkRetry(null);
   }
 
+  const bulkQuery = `${classificationView}:${inboxFilter}:${personFilter ?? ""}:${searchQuery}:${viewMode}`;
+  const bulkQueryRef = useRef({ key: bulkQuery, generation: 0 });
+  if (bulkQueryRef.current.key !== bulkQuery) bulkQueryRef.current = { key: bulkQuery, generation: bulkQueryRef.current.generation + 1 };
+
   async function applyBulkAttention(behavior: AttentionBehavior, onlyTargets?: readonly BulkAttentionTarget[]) {
+    const queryGeneration = bulkQueryRef.current.generation;
     const attemptedTargets = [...new Map((onlyTargets ?? [...selectedTargets.values()]).map((target) => [senderAttentionTargetKey(target), target])).values()];
     if (!attemptedTargets.length || bulkAttentionStatus === "saving") return;
     const count = attemptedTargets.length;
@@ -4786,6 +4798,7 @@ function InboxView({
     setBulkRetry(null);
     try {
       const result = await onBulkAttentionChange(attemptedTargets, behavior);
+      if (bulkQueryRef.current.generation !== queryGeneration) return;
       const succeeded = result.outcomes.filter((outcome) => outcome.status === "succeeded");
       const failed = result.outcomes.filter((outcome) => outcome.status === "failed");
       const succeededTargets = new Set(succeeded.map((outcome) => senderAttentionTargetKey(outcome.target)));
@@ -4808,11 +4821,12 @@ function InboxView({
         setBulkAttentionMessage(`${saved}${failed.length} ${failed.length === 1 ? "sender" : "senders"} could not be updated.${retry}`);
       }
     } catch (error) {
+      if (bulkQueryRef.current.generation !== queryGeneration) return;
       setBulkAttentionStatus("error");
       setBulkRetry({ behavior, targets: attemptedTargets });
       setBulkAttentionMessage(`Could not update ${count} ${count === 1 ? "sender" : "senders"}. ${count === 1 ? "The sender is" : "The senders are"} ready to retry. ${getErrorMessage(error)}`);
     } finally {
-      setBulkPendingBehavior(null);
+      if (bulkQueryRef.current.generation === queryGeneration) setBulkPendingBehavior(null);
     }
   }
 

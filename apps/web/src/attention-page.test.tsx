@@ -988,3 +988,46 @@ test("same-destination refresh retains an open chooser and explicit unsaved choi
   await click("Save choice");
   expect(puts.at(-1)?.body.destinationId).toBe(quietId);
 }, 20000);
+
+for (const destination of ["Inbox", "Quiet"]) {
+  test(`opening unread mail updates the ${destination} page and canonical catalog count`, async () => {
+    if (destination === "Quiet") {
+      const current = await state();
+      await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "conversation", threadId: "thread-a" }, destinationId: quietId }) });
+    }
+    intercept = async path => syncNoop(path);
+    await renderMailbox();
+    if (destination === "Quiet") await nav("Quiet");
+    const row = [...document.querySelectorAll<HTMLButtonElement>(".message-row")].find(item => item.textContent?.includes("Mail a"))!;
+    expect(row.classList.contains("message-row-unread")).toBe(true);
+    await act(async () => row.click());
+    await settle();
+    await act(async () => document.querySelector<HTMLButtonElement>(".reader-back")!.click());
+    await settle();
+    const updated = [...document.querySelectorAll<HTMLButtonElement>(".message-row")].find(item => item.textContent?.includes("Mail a"))!;
+    expect(updated.classList.contains("message-row-unread")).toBe(false);
+    const catalog = await (await request("/v1/destinations")).json();
+    const id = destination === "Quiet" ? quietId : catalog.fallbackDestinationId;
+    expect(catalog.destinations.find((item: {id: string}) => item.id === id).counts.unread).toBe(destination === "Quiet" ? 0 : 1);
+    expect(document.querySelector(".desktop-sidebar")?.textContent).toContain(`${destination}${destination === "Quiet" ? 1 : 2}`);
+  });
+}
+
+test("destination switches clear hidden selections and actionable sender targets", async () => {
+  const current = await state();
+  await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "conversation", threadId: "thread-a" }, destinationId: quietId }) });
+  intercept = async path => syncNoop(path);
+  await renderMailbox();
+  await click("Select");
+  await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
+  expect(button("Use these senders").disabled).toBe(false);
+  await nav("Quiet");
+  expect(document.querySelector(".bulk-selection-toolbar")).toBeNull();
+  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
+  await click("Select");
+  await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
+  expect(button("Use these senders").disabled).toBe(false);
+  await nav("Inbox");
+  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
+  expect(puts).toHaveLength(0);
+});
