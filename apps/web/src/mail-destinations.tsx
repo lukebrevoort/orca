@@ -39,41 +39,63 @@ export function useDestinations(preview = false) {
   return { ...state, label: (id: string | null | undefined) => state.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable space" : "No space"), active: state.data?.destinations.filter(item => !item.retiredAt).sort((a,b) => a.position-b.position) ?? [], locked: preview || !online || state.loading || !state.data || Boolean(state.error), refresh: refreshDestinations };
 }
 
-export function DestinationManager({ onClose, onCreated, preview = false }: { onClose: () => void; onCreated: (id: string) => void; preview?: boolean }) {
+export function DestinationManager({ onClose, onCreated, onRemoved, preview = false }: { onClose: () => void; onCreated: (id: string) => void; onRemoved?: (id: string, fallbackId: string) => void; preview?: boolean }) {
   const catalog = useDestinations(preview);
   const [name, setName] = useState("");
   const [color, setColor] = useState(defaultSpaceColor);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lock = useRef(false);
-  async function mutate(path: string, method: string, change: object, created = false) {
+  const newSpaceInput = useRef<HTMLInputElement>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removalError, setRemovalError] = useState<{ id: string; message: string } | null>(null);
+  const [notice, setNotice] = useState("");
+  function finishRemoval(id: string, state: ReturnType<typeof destinationListSchema.parse>) {
+    const fallback = state.destinations.find(item => item.id === state.fallbackDestinationId)!;
+    setRemovalError(null);
+    setNotice(`Space removed. Its mail and sender/account choices moved to ${fallback.name}. No mail was deleted.`);
+    onRemoved?.(id, fallback.id);
+    window.requestAnimationFrame(() => newSpaceInput.current?.focus());
+  }
+  async function mutate(path: string, method: string, change: object, created = false, removedId?: string) {
     if (catalog.locked || lock.current || !catalog.data) return;
-    lock.current = true; setBusy(true); setError("");
+    lock.current = true; setBusy(true); setError(""); setNotice(""); setRemovalError(null); setRemovingId(removedId ?? null);
     try {
       const result = destinationMutationResultSchema.parse(await request(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ expectedRevision: catalog.data.revision, ...change }) }));
       ++generation;
       publish({ data: snapshot.data && snapshot.data.revision > result.state.revision ? snapshot.data : result.state, loading: false, error: "" });
       window.dispatchEvent(new Event(destinationChangeEvent));
       if (created) { onCreated(result.destinationId); onClose(); }
-    } catch (cause) { setError(`${String(cause)} Reload and review before trying again.`); await refreshDestinations().catch(() => {}); }
-    finally { lock.current = false; setBusy(false); }
+      if (removedId) finishRemoval(removedId, result.state);
+
+    } catch (cause) {
+      const message = `${cause instanceof Error ? cause.message : String(cause)} Reload and review before trying again.`;
+      if (removedId) setRemovalError({ id: removedId, message }); else setError(message);
+      await refreshDestinations().catch(() => {});
+      if (removedId && !snapshot.error && snapshot.data?.destinations.find(item => item.id === removedId)?.retiredAt) {
+        window.dispatchEvent(new Event(destinationChangeEvent));
+        finishRemoval(removedId, snapshot.data);
+      }
+    }
+    finally { lock.current = false; setBusy(false); setRemovingId(null); }
   }
   return <TopLayer ariaLabelledBy="destination-manager-title" className="simple-attention-dialog destination-manager" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close space manager" initialFocusSelector="input" dismissible={!busy} ariaBusy={busy} onClose={onClose}>
     <h2 id="destination-manager-title">Your spaces</h2>
     <p>Spaces hold mail. Tools help you work with it. Space names and colors are shared across your accounts.</p>
     {preview && <p role="status">Synthetic preview. Connect an account to create or change spaces.</p>}
     <form onSubmit={event => { event.preventDefault(); void mutate("/v1/destinations", "POST", { name: name.trim(), color }, true); }}>
-      <label>New space<input autoFocus required maxLength={120} value={name} onInput={event => setName(event.currentTarget.value)} /></label>
+      <label>New space<input ref={newSpaceInput} autoFocus required maxLength={120} value={name} onInput={event => setName(event.currentTarget.value)} /></label>
       <SpaceColorPicker color={color} onChange={setColor} disabled={busy || catalog.locked} />
       <button disabled={busy || catalog.locked || !name.trim()}>Create space</button>
     </form>
-    {catalog.active.map(item => <DestinationEditor key={item.id} item={item} fallbackId={catalog.data?.fallbackDestinationId ?? ""} disabled={busy || catalog.locked} mutate={mutate} />)}
+    {catalog.active.map(item => <DestinationEditor key={item.id} item={item} fallbackId={catalog.data?.fallbackDestinationId ?? ""} fallbackName={catalog.label(catalog.data?.fallbackDestinationId)} removing={removingId === item.id} error={removalError?.id === item.id ? removalError.message : ""} disabled={busy || catalog.locked} mutate={mutate} />)}
     {(error || catalog.error) && <p role="alert">{error || catalog.error} <button disabled={busy} onClick={() => void catalog.refresh().catch(() => {})}>Reload spaces</button></p>}
-    <p>Move its conversations and update sender choices first. Removing a space never deletes mail. Notification delivery is not available.</p>
+    {notice && <p role="status">{notice}</p>}
+    <p>Removing a space never deletes mail. Protected conversations and active advanced rules may need review in Organization. Notification delivery is not available.</p>
     <footer><button disabled={busy} onClick={onClose}>Done</button></footer>
   </TopLayer>;
 }
-function DestinationEditor({ item, fallbackId, disabled, mutate }: { item: MailDestination; fallbackId: string; disabled: boolean; mutate: (path: string, method: string, change: object) => Promise<void> }) {
+function DestinationEditor({ item, fallbackId, fallbackName, removing, error, disabled, mutate }: { item: MailDestination; fallbackId: string; fallbackName: string; removing: boolean; error: string; disabled: boolean; mutate: (path: string, method: string, change: object, created?: boolean, removedId?: string) => Promise<void> }) {
   const [name, setName] = useState(item.name);
   const [color, setColor] = useState(item.color);
   useEffect(() => setName(item.name), [item.name]);
@@ -82,8 +104,9 @@ function DestinationEditor({ item, fallbackId, disabled, mutate }: { item: MailD
     <label>Name<input value={name} maxLength={120} disabled={disabled} onInput={event => setName(event.currentTarget.value)} /></label>
     <SpaceColorPicker color={color} onChange={setColor} disabled={disabled} />
     <button disabled={disabled || !name.trim() || (name.trim() === item.name && color === item.color)} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}`, "PATCH", { name: name.trim(), color })}>Save changes</button>
-    {item.isFallback ? <p>Your default space cannot be removed.</p> : <p>Move conversations and update sender choices before removing this space.</p>}
-    <button aria-label={`Remove ${item.name}`} disabled={disabled || item.isFallback || !fallbackId} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}/retire`, "POST", { reassignToDestinationId: fallbackId })}>Remove space</button>
+    {item.isFallback ? <p>Your default space cannot be removed.</p> : <p>Removing {item.name} moves its mail and sender/account choices to {fallbackName}. No mail is deleted.</p>}
+    <button aria-label={`Remove ${item.name}`} disabled={disabled || item.isFallback || !fallbackId} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}/retire`, "POST", { reassignToDestinationId: fallbackId }, false, item.id)}>{removing ? `Moving mail to ${fallbackName}…` : "Remove space"}</button>
+    {error && <p role="alert">{error}</p>}
   </details>;
 }
 

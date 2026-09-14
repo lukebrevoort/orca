@@ -123,14 +123,9 @@ export function createDestinations(db: Db, workspaceId: string) {
                 active(v.reassignToDestinationId);
                 if (id === v.reassignToDestinationId || id === config().fallbackLaneId)
                     throw new DestinationError(409, "The fallback destination cannot be retired.");
-                if (db.all(sql `select 1 from organization_destination_legacy where workspace_id=${workspaceId} and destination_id=${id}`)[0])
-                    throw new DestinationError(409, "Legacy choices reference this destination. Keep it available until those choices are migrated.");
-                if (db.all(sql `select 1 from organization_effective_destinations where workspace_id=${workspaceId} and destination_id=${id} limit 1`)[0] || db.all(sql `select 1 from organization_destination_bindings where workspace_id=${workspaceId} and destination_id=${id} limit 1`)[0])
-                    throw new DestinationError(409, "Move conversations and update sender/account choices before retiring this destination.");
-                // Existing engine also rejects stored lower placement references, including protected placements.
-                if (db.all(sql `select 1 from organization_rule_revisions where workspace_id=${workspaceId} and compiled_json like ${'%' + id + '%'} limit 1`)[0])
-                    throw new DestinationError(409, "Advanced rules reference this destination. Update them in Organization first.");
-                apply(v.expectedRevision, [{ kind: "update_lane", laneId: id, retired: true, expectedRevision: l.revision }]);
+                if (v.reassignToDestinationId !== config().fallbackLaneId)
+                    throw new DestinationError(409, "Removing a space redirects to the current Inbox fallback.");
+                apply(v.expectedRevision, [{ kind: "retire_lane_to_fallback", laneId: id, fallbackLaneId: v.reassignToDestinationId, expectedRevision: l.revision }]);
                 return { state: list(), destinationId: id };
             });
         },

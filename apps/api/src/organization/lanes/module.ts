@@ -109,6 +109,33 @@ export function applyLaneActions(
   const touchedThreads = new Set<string>();
 
   for (const action of actions) {
+    if (action.kind === "retire_lane_to_fallback") {
+      const lane = configuration.lanes.find(item => item.id === action.laneId && !item.retiredAt);
+      if (!lane || lane.revision !== action.expectedRevision) throw new OrganizationLaneValidationError("Space revision is stale.");
+      if (lane.id === configuration.fallbackLaneId || action.fallbackLaneId !== configuration.fallbackLaneId) {
+        throw new OrganizationLaneValidationError("Space removal must redirect to the current Inbox fallback; Inbox cannot be removed.");
+      }
+      for (const placement of placements.values()) {
+        if (placement.primaryLaneId !== lane.id && placement.manualOverride?.laneId !== lane.id) continue;
+        if (!authorized.has(placement.accountId)) throw new OrganizationLaneValidationError("Account is outside the authorized scope");
+        if (placement.safetyLock.locked) throw new OrganizationSafetyLockError("This space has protected conversation references. Review their safety locks in Organization. Nothing was moved or removed.");
+        if (placement.manualOverride?.laneId === lane.id) placement.manualOverride = { ...placement.manualOverride, laneId: action.fallbackLaneId, actor: input.actor, reason: "Space removed; redirected to Inbox", updatedAt: input.now };
+        if (placement.primaryLaneId === lane.id) {
+          const fallback = fallbackPlacement({ ...placement, fallbackLaneId: action.fallbackLaneId });
+          placement.primaryLaneId = fallback.primaryLaneId;
+          placement.evidence = fallback.evidence;
+        }
+        placement.revision = (placement.revision ?? 0) + 1;
+      }
+      for (const binding of destinationBindings) if (binding.destinationId === lane.id) {
+        if (!authorized.has(binding.accountId)) throw new OrganizationLaneValidationError("Account is outside the authorized scope");
+        binding.destinationId = action.fallbackLaneId;
+        binding.revision++;
+      }
+      lane.retiredAt = input.now;
+      lane.revision++;
+      continue;
+    }
     if (action.kind === "set_destination_binding") {
       if (!authorized.has(action.accountId)) throw new OrganizationLaneValidationError("Account is outside the authorized scope");
       if ((action.scope === "account" && action.value !== "") || (action.scope === "sender" && (!action.value.includes("@") || action.value !== action.value.trim().toLowerCase()))

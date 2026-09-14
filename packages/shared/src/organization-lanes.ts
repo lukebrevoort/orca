@@ -189,6 +189,7 @@ export const organizationLaneActionSchema = z.discriminatedUnion("kind", [
     scope: z.enum(["account", "sender", "conversation"]), value: z.string().max(320),
     destinationId: identifierSchema.nullable(), expectedRevision: revisionSchema.nullable(),
   }).strict(),
+  z.object({ kind: z.literal("retire_lane_to_fallback"), laneId: identifierSchema, fallbackLaneId: identifierSchema, expectedRevision: revisionSchema }).strict(),
   defineLanePolicyActionSchema,
   updateLanePolicyActionSchema,
   defineLaneActionSchema,
@@ -204,7 +205,11 @@ export const organizationLaneApplySchema = z.object({
   idempotencyKey: nonEmptyStringSchema.max(200),
   expectedWorkspaceRevision: revisionSchema,
   actions: z.array(organizationLaneActionSchema).min(1).max(100),
-}).strict();
+}).strict().superRefine((command, context) => {
+  if (command.actions.some(action => action.kind === "retire_lane_to_fallback") && command.actions.length !== 1) {
+    context.addIssue({ code: "custom", message: "Space removal must be the sole action in its Change Set" });
+  }
+});
 export type OrganizationLaneApply = z.infer<typeof organizationLaneApplySchema>;
 
 export const organizationLaneApplyResponseSchema = z.object({
