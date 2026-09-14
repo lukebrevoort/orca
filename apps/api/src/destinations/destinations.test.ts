@@ -127,17 +127,47 @@ test("legacy conversation beats new sender; reset reveals inheritance; guarded U
     expect(s.read("a").senders).toEqual([]);
     f.sqlite.close();
 });
-test("ownership, retired targets and safe retirement reject references without deleting mail", async () => {
+test("ownership, retired targets and retirement preserve mail", async () => {
     const f = await setup(), s = service(f), clients = add(f), spare = add(f, "Spare");
     expect(() => s.read("private")).toThrow("not found");
     expect(() => s.read("a", { scope: "conversation", threadId: "m5" })).toThrow("not found");
     const foreign = createDestinations(f.db, "other").create({ expectedRevision: createDestinations(f.db, "other").list().revision, name: "Private" }).state.destinations.find(d => d.name === "Private")!;
     expect(() => route(f, sender, foreign.id)).toThrow("not found");
     route(f, sender, clients.id);
-    expect(() => s.retire(clients.id, { expectedRevision: s.list().revision, reassignToDestinationId: spare.id })).toThrow("Move conversations");
-    s.retire(spare.id, { expectedRevision: s.list().revision, reassignToDestinationId: clients.id });
+    expect(() => s.retire(clients.id, { expectedRevision: s.list().revision, reassignToDestinationId: spare.id })).toThrow("current Inbox fallback");
+    s.retire(spare.id, { expectedRevision: s.list().revision, reassignToDestinationId: s.list().fallbackDestinationId });
     expect(() => route(f, sender, spare.id)).toThrow("not found");
     expect(f.sqlite.query("select count(*) n from emails").get()).toEqual({ n: 5 });
+    f.sqlite.close();
+});
+test("occupied Space removal redirects mail and choices to the renamed fallback in one revision", async () => {
+    const f = await setup(), s = service(f), clients = add(f), keep = add(f, "Keep");
+    const fallback = s.list().fallbackDestinationId;
+    s.update(fallback, { expectedRevision: s.list().revision, name: "Home" });
+    route(f, sender, clients.id);
+    route(f, account, clients.id, "b");
+    route(f, conversation, clients.id);
+    route(f, { scope: "conversation", threadId: "m2" }, keep.id);
+    for (let i = 10; i < 135; i++) f.message(`m${i}`);
+    for (let start = 10; start < 135; start += 50) s.batch({ expectedRevision: s.list().revision,
+        changes: Array.from({ length: Math.min(50, 135 - start) }, (_, offset) => ({ accountId: "a", threadId: `m${start + offset}`, destinationId: clients.id })) });
+    const before = s.list().revision;
+    const mail = f.sqlite.query("select * from emails order by id").all();
+    const conversations = f.sqlite.query("select * from threads order by account_id,id").all();
+    const result = s.retire(clients.id, { expectedRevision: before, reassignToDestinationId: fallback });
+    expect(result.state.revision).toBe(before + 1);
+    expect(result.state.destinations.find(d => d.id === clients.id)?.retiredAt).not.toBeNull();
+    expect(result.state.destinations.find(d => d.id === fallback)?.name).toBe("Home");
+    expect(s.read("a", conversation).selection.explicitDestinationId).toBe(fallback);
+    expect(s.read("a", sender).selection.explicitDestinationId).toBe(fallback);
+    expect(s.read("b").defaultDestinationId).toBe(fallback);
+    expect(s.read("a", { scope: "conversation", threadId: "m2" }).selection.effective.destinationId).toBe(keep.id);
+    expect(f.sqlite.query("select * from emails order by id").all()).toEqual(mail);
+    expect(f.sqlite.query("select * from threads order by account_id,id").all()).toEqual(conversations);
+    expect(f.db.all(sql`select count(*) n from organization_change_actions a join organization_change_sets c on c.workspace_id=a.workspace_id and c.id=a.change_id where c.workspace_id='owner' and c.workspace_revision_after=${before + 1} and a.resource_family='thread'`)).toEqual([{ n: 126 }]);
+    expect(f.db.all(sql`select * from organization_effective_destinations where workspace_id='owner' and destination_id=${clients.id}`)).toEqual([]);
+    f.message("m200");
+    expect(s.read("a", { scope: "conversation", threadId: "m200" }).selection.effective.destinationId).toBe(fallback);
     f.sqlite.close();
 });
 test("explicit sender beats advanced placement; safety lock freezes actual effective destination", async () => {
@@ -438,5 +468,88 @@ test("batch accepts the exact 50-conversation authority bound and applies a sing
     expect(result.targets).toHaveLength(50);
     expect(result.state.destinations.find(d => d.id === clients.id)?.counts.total).toBe(50);
     expect(s.batch(result.undo).state.destinations.find(d => d.id === clients.id)?.counts.total).toBe(0);
+    f.sqlite.close();
+});
+
+
+test("retirement redirects legacy choices across accounts and future legacy writes cannot resurrect the Space", async () => {
+    const f = await setup(), s = service(f);
+    await f.save(sender, "quiet");
+    await f.save(account, "quiet", "b");
+    await f.save(conversation, "quiet");
+    const quiet = s.list().legacyDestinationIds.quiet!;
+    const fallback = s.list().fallbackDestinationId;
+    const before = s.list().revision;
+    s.retire(quiet, { expectedRevision: before, reassignToDestinationId: fallback });
+    expect(s.list().revision).toBe(before + 1);
+    expect(s.list().legacyDestinationIds.quiet).toBe(fallback);
+    expect(s.read("a", conversation).selection.effective.destinationId).toBe(fallback);
+    expect(s.read("b").defaultDestinationId).toBe(fallback);
+    await f.save(sender, "quiet");
+    await f.save({ scope: "conversation", threadId: "m3" }, "quiet");
+    f.message("m300");
+    expect(s.read("a", { scope: "conversation", threadId: "m300" }).selection.effective.destinationId).toBe(fallback);
+    expect(s.list().destinations.find(d => d.id === quiet)?.retiredAt).not.toBeNull();
+    expect(f.sqlite.query("select count(*) n from organization_change_actions where action_kind='redirect_legacy_destination'").get()).toEqual({ n: 1 });
+    f.sqlite.close();
+});
+
+test("retirement rejects stale, foreign, narrow and protected requests without partial writes; commit failures roll back audit", async () => {
+    const f = await setup(), s = service(f), clients = add(f);
+    route(f, sender, clients.id);
+    route(f, account, clients.id, "b");
+    const repo = createSqliteOrganizationRepository(f.db), org = createOrganization(repo);
+    const scope = { actor: { type: "human" as const, id: "owner" }, workspaceId: "owner", accountIds: ["a", "b"] };
+    const command = { id: "remove", idempotencyKey: "remove", expectedWorkspaceRevision: s.list().revision,
+        actions: [{ kind: "retire_lane_to_fallback", laneId: clients.id, fallbackLaneId: s.list().fallbackDestinationId, expectedRevision: clients.revision }] };
+    const before = s.list();
+    const audit = f.sqlite.query("select * from organization_change_sets").all();
+    expect(() => org.apply({ scope: { ...scope, accountIds: ["a"] }, command })).toThrow("all connected accounts");
+    expect(() => org.apply({ scope: { ...scope, accountIds: ["a", "private"] }, command })).toThrow();
+    expect(() => org.apply({ scope, command: { ...command, expectedWorkspaceRevision: before.revision - 1 } })).toThrow();
+    expect(() => org.apply({ scope, command: { ...command, actions: [{ ...command.actions[0], expectedRevision: 99 }] } })).toThrow();
+    expect(() => org.apply({ scope, command: { ...command, actions: [{ ...command.actions[0], fallbackLaneId: clients.id }] } })).toThrow("Inbox");
+    expect(() => org.apply({ scope, command: { ...command, actions: [{ kind: "update_lane", laneId: clients.id, retired: true, expectedRevision: clients.revision }] } })).toThrow("referenced");
+    f.sqlite.run("CREATE TEMP TRIGGER fail_retirement BEFORE UPDATE ON organization_destination_bindings BEGIN SELECT RAISE(ABORT, 'injected retirement failure'); END");
+    expect(() => org.apply({ scope, command })).toThrow("injected retirement failure");
+    f.sqlite.run("DROP TRIGGER fail_retirement");
+    expect(s.list()).toEqual(before);
+    expect(f.sqlite.query("select * from organization_change_sets").all()).toEqual(audit);
+    const p = repo.lanes!.getSnapshot("owner", ["a"]).placements.find(p => p.threadId === "m1")!;
+    org.apply({ scope, command: { id: "lock-remove", idempotencyKey: "lock-remove", expectedWorkspaceRevision: s.list().revision, actions: [{ kind: "set_thread_safety_lock", accountId: "a", threadId: "m1", locked: true, reason: "Protected", expectedThreadRevision: p.revision }] } });
+    const locked = s.list();
+    const response = await f.request(`/v1/destinations/${clients.id}/retire`, "POST", { expectedRevision: locked.revision, reassignToDestinationId: locked.fallbackDestinationId });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.message).toContain("safety locks");
+    expect(s.list()).toEqual(locked);
+    expect(s.read("b").defaultDestinationId).toBe(clients.id);
+    f.sqlite.close();
+});
+
+test("active rules block atomically; historic rules stay immutable; hidden candidates and unrelated future routes survive", async () => {
+    const f = await setup(), s = service(f), clients = add(f), keep = add(f, "Keep");
+    route(f, account, keep.id);
+    route(f, { scope: "conversation", threadId: "m2" }, keep.id);
+    f.db.run(sql`update organization_thread_lane_states set primary_lane_id=${clients.id},placement_source='lane_policy' where workspace_id='owner' and account_id='a' and thread_id in ('m1','m2')`);
+    f.sqlite.run("insert into organization_rules(workspace_id,id,name,latest_revision,active_revision_id,position) values('owner','r','Advanced rule',1,'r1',0)");
+    f.db.run(sql`insert into organization_rule_revisions(workspace_id,id,rule_id,revision,workspace_schema_revision,language_version,source,source_digest,compiled_json,required_capabilities,risk,actor_id,actor_type) values('owner','r1','r',1,1,1,'historic',${'sha256:' + 'a'.repeat(64)},${JSON.stringify({ actions: [{ kind: "place_lane", laneId: clients.id }] })},'[]','low','owner','human')`);
+    const history = f.sqlite.query("select * from organization_rule_revisions").all();
+    const before = s.list();
+    expect(() => s.retire(clients.id, { expectedRevision: before.revision, reassignToDestinationId: before.fallbackDestinationId })).toThrow("active advanced rule");
+    expect(s.list()).toEqual(before);
+    f.sqlite.run("update organization_rules set active_revision_id=null where workspace_id='owner' and id='r'");
+    const repo = createSqliteOrganizationRepository(f.db), org = createOrganization(repo);
+    const input = { scope: { actor: { type: "human" as const, id: "owner" }, workspaceId: "owner", accountIds: ["a", "b"] }, command: { id: "retire-history", idempotencyKey: "retire-history", expectedWorkspaceRevision: s.list().revision, actions: [{ kind: "retire_lane_to_fallback", laneId: clients.id, fallbackLaneId: before.fallbackDestinationId, expectedRevision: clients.revision }] } };
+    const result = org.apply(input);
+    expect(org.apply(input)).toEqual(result);
+    expect(s.read("a", conversation).selection.effective.destinationId).toBe(before.fallbackDestinationId);
+    expect(s.read("a", { scope: "conversation", threadId: "m2" }).selection.effective.destinationId).toBe(keep.id);
+    expect(s.read("a").defaultDestinationId).toBe(keep.id);
+    route(f, { scope: "conversation", threadId: "m2" }, null);
+    expect(s.read("a", { scope: "conversation", threadId: "m2" }).selection.effective.destinationId).toBe(keep.id);
+    f.message("m400", "a", "future@new.example");
+    expect(s.read("a", { scope: "conversation", threadId: "m400" }).selection.effective.destinationId).toBe(keep.id);
+    expect(f.sqlite.query("select * from organization_rule_revisions").all()).toEqual(history);
+    expect(f.db.all(sql`select * from organization_thread_lane_states where workspace_id='owner' and primary_lane_id=${clients.id}`)).toEqual([]);
     f.sqlite.close();
 });
