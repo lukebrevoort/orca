@@ -22,7 +22,7 @@ const source = `orca 1
 rule "Launch mail"
 event message.received
 when subject contains "launch"
-action route lane "Everything else"
+action route lane "Inbox"
 because "Launch mail stays visible"`;
 
 function reviewerTabHeavySource(): string {
@@ -195,7 +195,7 @@ describe("Rule Revision REST adapter", () => {
 
     const invalid = await app.request("/v1/organization/rules/compile", {
       method: "POST", headers: ownerHeaders,
-      body: JSON.stringify({ idempotencyKey: "route-rule-invalid-1", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: source.replace('"Everything else"', '"Missing"') }),
+      body: JSON.stringify({ idempotencyKey: "route-rule-invalid-1", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: source.replace('"Inbox"', '"Missing"') }),
     });
     assert.equal(invalid.status, 422);
     const invalidBody = await invalid.json();
