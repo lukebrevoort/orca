@@ -282,7 +282,7 @@ async function expectEmptySenderRules(accountId: string) {
   const senderList = document.querySelector('[aria-labelledby="sender-heading"]');
   expect(senderList).not.toBeNull();
   expect(senderList!.querySelectorAll(".simple-attention-row")).toHaveLength(0);
-  expect(senderList!.querySelector(".simple-attention-empty")?.textContent).toContain("No sender choices yet.");
+  expect(senderList!.querySelector(".simple-attention-empty")?.textContent).toContain("Add a sender to choose where their mail goes.");
 }
 
 test("page saves actual sender routing, refreshes consumers, Undo restores prior explicit state, accounts isolated", async () => {
