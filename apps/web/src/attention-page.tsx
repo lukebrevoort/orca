@@ -1,3 +1,4 @@
+import { DestinationManager, useDestinations } from "./mail-destinations";
 import { useEffect, useRef, useState } from "react";
 import {
   attentionRoutingTargetSchema,
@@ -20,16 +21,18 @@ export function AttentionPage({
   demoMode?: boolean;
   onAdvanced: () => void;
 }) {
+  const catalog = useDestinations();
+  const [managing, setManaging] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [accountId, setAccountId] = useState("");
   const [accountsLoading, setAccountsLoading] = useState(true);
   const [accountsError, setAccountsError] = useState("");
   const [retryAccounts, setRetryAccounts] = useState(0);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "normal" | "quiet">("all");
+  const [filter, setFilter] = useState<string>("all");
   const [adding, setAdding] = useState(false);
   const [address, setAddress] = useState("");
-  const [choice, setChoice] = useState<"normal" | "quiet">("normal");
+  const [choice, setChoice] = useState<string>("");
   const [addError, setAddError] = useState("");
   const [candidates, setCandidates] = useState<
     Array<{ address: string; name: string | null }>
@@ -153,25 +156,25 @@ export function AttentionPage({
     requestAnimationFrame(() => addButton.current?.focus());
   }
   const locked =
-    routing.locked || accountsLoading || Boolean(accountsError) || demoMode;
+    routing.locked || catalog.locked || accountsLoading || Boolean(accountsError) || demoMode;
   const senders =
     routing.state?.senders.filter((s) => s.scope === "address") ?? [];
   const domains =
     routing.state?.senders.filter((s) => s.scope === "domain") ?? [];
   const visible = senders.filter(
     (s) =>
-      (filter === "all" || s.behavior === filter) &&
+      (filter === "all" || s.destinationId === filter) &&
       `${names[s.value] ?? ""} ${s.value}`
         .toLowerCase()
         .includes(query.trim().toLowerCase()),
   );
   async function changeSender(
     value: string,
-    behavior: "normal" | "quiet" | null,
+    destinationId: string | null,
   ) {
     const row = document.activeElement?.closest(".simple-attention-row");
     pendingSenderFocus.current = row ? { accountId, row, initialState: routing.state } : null;
-    await routing.save(behavior, { scope: "sender", address: value });
+    await routing.save(destinationId, { scope: "sender", address: value });
   }
 
   return (
@@ -188,9 +191,9 @@ export function AttentionPage({
           Room for what matters.
         </h1>
         <p>
-          Choose whose mail belongs in your Inbox.
+          Choose where each sender’s mail belongs.
           <br />
-          Quiet mail stays here, ready when you are.
+          Your destinations, ready when you are.
         </p>
       </header>
       <div className="simple-attention-account">
@@ -210,6 +213,7 @@ export function AttentionPage({
             ))}
           </select>
         </label>
+        <button onClick={() => setManaging(true)}>New / manage destinations</button>
         <button onClick={onAdvanced}>Advanced organization ↗</button>
       </div>
       {accountsError && (
@@ -232,28 +236,28 @@ export function AttentionPage({
           This preview is read-only. Connect an account to save routing choices.
         </p>
       )}
+      {managing && <DestinationManager onClose={() => setManaging(false)} onCreated={() => {}} />}
+      {catalog.error && <p role="alert">{catalog.error} <button onClick={() => void catalog.refresh().catch(() => {})}>Reload destinations</button></p>}
       <RoutingErrors routing={routing} />
       <div
         className="simple-attention-choices"
         aria-label="Filter sender choices"
       >
-        {(["normal", "quiet"] as const).map((value) => (
+        {catalog.active.map(({id: value}) => (
           <button
             key={value}
             aria-pressed={filter === value}
             onClick={() => setFilter(filter === value ? "all" : value)}
           >
-            <span aria-hidden="true">{value === "normal" ? "⌑" : "☾"}</span>
+            <span aria-hidden="true">{"⌑"}</span>
             <small>
               {routing.state
-                ? `${senders.filter((s) => s.behavior === value).length} ${senders.filter((s) => s.behavior === value).length === 1 ? "sender" : "senders"}`
+                ? `${senders.filter((s) => s.destinationId === value).length} ${senders.filter((s) => s.destinationId === value).length === 1 ? "sender" : "senders"}`
                 : "Not loaded"}
             </small>
             <strong>{routingLabel(value)}</strong>
             <p>
-              {value === "normal"
-                ? "Mail you want to see as it arrives."
-                : "A quieter place to read on your own time."}
+              Read this mail in {routingLabel(value)}.
             </p>
           </button>
         ))}
@@ -268,6 +272,7 @@ export function AttentionPage({
             disabled={locked}
             onClick={() => {
               setAddError("");
+              setChoice("");
               setAdding(true);
             }}
           >
@@ -291,7 +296,7 @@ export function AttentionPage({
         </div>
         {routing.loading && <p role="status">Loading choices…</p>}
         {visible.map((sender) => (
-          <div className="simple-attention-row" key={sender.id}>
+          <div className="simple-attention-row" key={sender.value}>
             <span aria-hidden="true" className="simple-attention-avatar">
               {(names[sender.value] ?? sender.value).slice(0, 1).toUpperCase()}
             </span>
@@ -301,25 +306,20 @@ export function AttentionPage({
             </div>
             <select
               aria-label={`Destination for ${sender.value}`}
-              disabled={locked}
-              value={sender.behavior}
+              disabled={locked || !sender.editable}
+              value={sender.destinationId}
               onChange={(e) =>
                 void changeSender(
                   sender.value,
-                  e.target.value as "normal" | "quiet",
+                  e.target.value,
                 )
               }
             >
-              <option value="normal">Inbox</option>
-              <option value="quiet">Quiet</option>
-              {!["normal", "quiet"].includes(sender.behavior) && (
-                <option value={sender.behavior}>
-                  {routingLabel(sender.behavior)}
-                </option>
-              )}
+              {catalog.active.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+              {!catalog.active.some(item => item.id === sender.destinationId) && <option value={sender.destinationId}>Unavailable destination</option>}
             </select>
             <button
-              disabled={locked}
+              disabled={locked || !sender.editable}
               aria-label={`Reset ${sender.value} to inherited choice`}
               onClick={() => void changeSender(sender.value, null)}
             >
@@ -354,27 +354,26 @@ export function AttentionPage({
         </div>
         <select
           aria-label="Default destination for everyone else"
-          value={routing.state?.defaultBehavior ?? "inherit"}
+          value={routing.state?.defaultDestinationId ?? "inherit"}
           disabled={locked}
           onChange={(e) =>
             void routing.save(
               e.target.value === "inherit"
                 ? null
-                : (e.target.value as "normal" | "quiet"),
+                : (e.target.value),
             )
           }
         >
-          <option value="inherit">Orca default · Inbox</option>
-          <option value="normal">Inbox</option>
-          <option value="quiet">Quiet</option>
+          <option value="inherit">Workspace default · {routingLabel(catalog.data?.fallbackDestinationId)}</option>
+          {catalog.active.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
       </section>
       {domains.length > 0 && (
         <details className="attention-domain-rules">
           <summary>{domains.length} domain rules · Advanced</summary>
           {domains.map((rule) => (
-            <p key={rule.id}>
-              {rule.value} · {routingLabel(rule.behavior)}
+            <p key={rule.value}>
+              {rule.value} · {routingLabel(rule.destinationId)}
             </p>
           ))}
           <button onClick={onAdvanced}>Manage advanced organization</button>
@@ -430,6 +429,7 @@ export function AttentionPage({
               );
               return;
             }
+            if (!choice) { setAddError("Choose a destination."); return; }
             if (await routing.save(choice, result.data)) {
               closeAdd();
               setAddress("");
@@ -485,10 +485,10 @@ export function AttentionPage({
             Destination
             <select
               value={choice}
-              onChange={(e) => setChoice(e.target.value as "normal" | "quiet")}
+              onChange={(e) => setChoice(e.target.value)}
             >
-              <option value="normal">Inbox</option>
-              <option value="quiet">Quiet</option>
+              <option value="">Choose destination</option>
+              {catalog.active.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </label>
           {addError && <p role="alert">{addError}</p>}
@@ -497,7 +497,7 @@ export function AttentionPage({
             <button type="button" onClick={closeAdd}>
               Cancel
             </button>
-            <button disabled={locked} type="submit">
+            <button disabled={locked || !choice} type="submit">
               {routing.saving ? "Saving…" : "Add sender"}
             </button>
           </footer>

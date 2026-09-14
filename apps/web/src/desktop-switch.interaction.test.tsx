@@ -161,7 +161,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Attention", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "New / manage destinations", "Attention", "Settings", "Account · Maya Chen"]);
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
     expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
 
@@ -186,7 +186,7 @@ describe("AppSidebar mobile navigation", () => {
     }
 
     await click(more);
-    const manage = findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "Manage spaces")!;
+    const manage = findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "New / manage destinations")!;
     manage.focus();
     await click(manage);
     expect(manageCalls).toBe(1);

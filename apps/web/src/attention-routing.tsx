@@ -1,3 +1,4 @@
+import { destinationLabel, refreshDestinations } from "./mail-destinations";
 import {
   createContext,
   useContext,
@@ -7,11 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import {
-  attentionRoutingResultSchema,
-  attentionRoutingStateSchema,
-  type AttentionBehavior,
-  type AttentionRoutingChange,
-  type AttentionRoutingState,
+  destinationRoutingResultSchema,
+  destinationRoutingStateSchema,
+  type DestinationRoutingChange,
+  type DestinationRoutingState,
   type AttentionRoutingTarget,
 } from "@orca/shared";
 import { useOnlineStatus } from "./navigation";
@@ -42,21 +42,14 @@ export function routingUrl(
   if (target.scope === "sender")
     params.set("address", target.address.trim().toLowerCase());
   if (target.scope === "conversation") params.set("threadId", target.threadId);
-  return `/v1/attention/routing?${params}`;
+  return `/v1/destinations/routing?${params}`;
 }
-export const routingLabel = (behavior: AttentionBehavior) =>
-  ({
-    normal: "Inbox",
-    quiet: "Quiet",
-    notify: "Signals (advanced)",
-    focus: "Focus (advanced)",
-    hidden: "Hidden (advanced)",
-  })[behavior];
-export const inheritanceLabel = (state: AttentionRoutingState) =>
-  `${routingLabel(state.selection.inherited.behavior)} · ${state.selection.inherited.source === "fallback" ? "Orca default" : `${state.selection.inherited.source} choice`}`;
+export const routingLabel = destinationLabel;
+export const inheritanceLabel = (state: DestinationRoutingState) =>
+  `${routingLabel(state.selection.inherited.destinationId)} · ${state.selection.inherited.source} choice`;
 type Receipt = {
   accountId: string;
-  undo: AttentionRoutingChange;
+  undo: DestinationRoutingChange;
   text: string;
 };
 const RoutingContext = createContext({
@@ -88,7 +81,7 @@ export function AttentionRoutingProvider({
     setNotice(next?.text ?? "");
     setVersion((v) => v + 1);
     try {
-      await onRefresh();
+      await Promise.all([onRefresh(), refreshDestinations()]);
       if (generation === receiptGeneration.current) setError("");
     } catch {
       if (generation === receiptGeneration.current) setError("Mail could not reload. Last loaded mail may be out of date.");
@@ -100,7 +93,7 @@ export function AttentionRoutingProvider({
     setBusy(true);
     const generation = receiptGeneration.current;
     try {
-      const result = attentionRoutingResultSchema.parse(
+      const result = destinationRoutingResultSchema.parse(
         await attentionRequest(routingUrl(receipt.accountId), {
           method: "PUT",
           headers: { "content-type": "application/json" },
@@ -110,7 +103,7 @@ export function AttentionRoutingProvider({
       if (result.state.accountId !== receipt.accountId)
         throw new Error("Account mismatch");
       if (generation !== receiptGeneration.current) {
-        await onRefresh();
+        await Promise.all([onRefresh(), refreshDestinations()]);
         return;
       }
       const completionGeneration = receiptGeneration.current + 1;
@@ -132,7 +125,7 @@ export function AttentionRoutingProvider({
       );
       setVersion((v) => v + 1);
       try {
-        await onRefresh();
+        await Promise.all([onRefresh(), refreshDestinations()]);
       } catch {
         if (failureGeneration === receiptGeneration.current) setError("Mail could not reload. Retry mail reload.");
       }
@@ -198,7 +191,7 @@ export function useAttentionRouting(
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const online = useOnlineStatus();
-  const [state, setState] = useState<AttentionRoutingState | null>(null);
+  const [state, setState] = useState<DestinationRoutingState | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -229,7 +222,7 @@ export function useAttentionRouting(
         .then((raw) => {
           if (current !== generation.current || controller.signal.aborted)
             return;
-          const next = attentionRoutingStateSchema.parse(raw);
+          const next = destinationRoutingStateSchema.parse(raw);
           if (
             next.accountId !== accountId ||
             routingUrl(accountId, next.selection.target) !== key
@@ -259,6 +252,7 @@ export function useAttentionRouting(
     };
   }, [key, enabled, reload, context.version]);
   const locked =
+    !enabled ||
     !online ||
     !state ||
     stateKey.current !== key ||
@@ -266,21 +260,21 @@ export function useAttentionRouting(
     readOnly ||
     loading ||
     saving;
-  async function save(behavior: AttentionBehavior | null, saveTarget = target) {
+  async function save(destinationId: string | null, saveTarget = target) {
     if (locked || lock.current || !state) return false;
     lock.current = true;
     setSaving(true);
     setSaveError("");
     const savedKey = key;
     try {
-      const result = attentionRoutingResultSchema.parse(
+      const result = destinationRoutingResultSchema.parse(
         await attentionRequest(routingUrl(accountId), {
           method: "PUT",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             expectedRevision: state.revision,
             target: saveTarget,
-            behavior,
+            destinationId,
           }),
         }),
       );
@@ -296,7 +290,7 @@ export function useAttentionRouting(
       await context.changed({
         accountId,
         undo: result.undo,
-        text: `${saveTarget.scope === "account" ? "Everyone else" : saveTarget.scope === "sender" ? `Mail from ${saveTarget.address}` : "This conversation"} · ${behavior === null ? "Inherited choice restored" : routingLabel(behavior)}.`,
+        text: `${saveTarget.scope === "account" ? "Everyone else" : saveTarget.scope === "sender" ? `Mail from ${saveTarget.address}` : "This conversation"} · ${destinationId === null ? "Inherited choice restored" : routingLabel(destinationId)}.`,
       });
       if (!context.provided) setReload((v) => v + 1);
       return true;

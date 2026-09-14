@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
-import type { Collection, OrganizationView } from "@orca/shared";
+import type { Collection, OrganizationView, MailDestination } from "@orca/shared";
 
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "attention" | "organization" | "settings" | `space:${string}` | `view:${string}`;
+export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "attention" | "organization" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -10,7 +10,7 @@ export type WorkflowSpace = {
   count?: number;
   color?: string;
   custom?: boolean;
-  kind?: "built_in" | "collection" | "view";
+  kind?: "built_in" | "collection" | "view" | "destination";
   hidden?: boolean;
 };
 
@@ -35,13 +35,14 @@ export type SidebarNavigationProjection = {
   active: DesktopDestination;
   draftCount?: number;
   inboxCount?: number;
+  fallbackDestination?: MailDestination;
   online: boolean;
   spaces: WorkflowSpace[];
 };
 
 type BuiltInSpaceId = "focus" | "signals" | "quiet" | "later";
 
-const builtInSpaceIds: BuiltInSpaceId[] = ["focus", "signals", "quiet", "later"];
+const builtInSpaceIds: BuiltInSpaceId[] = ["later"];
 const rootDestinations = new Set<DesktopDestination>(["inbox", "drafts", "focus", "signals", "quiet", "later", "all", "attention", "organization"]);
 
 const builtInSpaces: Record<BuiltInSpaceId, Omit<WorkflowSpace, "count" | "hidden">> = {
@@ -81,6 +82,7 @@ export function parseDesktopDestination(value: string | null | undefined): Deskt
   if (!value) return null;
   if (rootDestinations.has(value as DesktopDestination)) return value as DesktopDestination;
   if (value === "settings") return "settings";
+  if (value.startsWith("destination:") && value.slice(12).trim()) return value as `destination:${string}`;
   if (value.startsWith("space:") && value.slice("space:".length).trim()) return value as `space:${string}`;
   if (value.startsWith("view:") && value.slice("view:".length).trim()) return value as `view:${string}`;
   return null;
@@ -108,6 +110,7 @@ export function desktopDestinationUrl(currentHref: string, destination: Exclude<
 }
 
 export function destinationForSpace(space: Pick<WorkflowSpace, "custom" | "id" | "kind">): DesktopDestination {
+  if (space.kind === "destination") return `destination:${space.id}`;
   if (space.kind === "view") return `view:${space.id}`;
   return space.custom ? `space:${space.id}` : parseDesktopDestination(space.id) ?? "inbox";
 }
@@ -166,11 +169,12 @@ export function deriveSidebarHealth({ attention = false, known = true, online, s
   return known ? "synced" : "unknown";
 }
 
-export function createSidebarNavigationProjection({ account, active, attention = false, collections, views = [], counts, draftCount, hidden, inboxCount, known = true, labels, online, order, syncing = false }: {
+export function createSidebarNavigationProjection({ account, active, attention = false, collections, destinations = [], views = [], counts, draftCount, hidden, inboxCount, known = true, labels, online, order, syncing = false }: {
   account: Omit<SidebarAccount, "health">;
   active: DesktopDestination;
   attention?: boolean;
   collections: readonly Collection[];
+  destinations?: readonly MailDestination[];
   views?: readonly OrganizationView[];
   counts?: Partial<Record<BuiltInSpaceId, number>>;
   draftCount?: number;
@@ -191,9 +195,10 @@ export function createSidebarNavigationProjection({ account, active, attention =
     },
     active,
     draftCount,
-    inboxCount,
+    inboxCount: destinations.find(item => item.isFallback && !item.retiredAt)?.counts.total ?? inboxCount,
+    fallbackDestination: destinations.find(item => item.isFallback && !item.retiredAt),
     online,
-    spaces: projectWorkflowSpaces({ collections, views, counts, hidden, labels, order }),
+    spaces: [...destinations.filter(item => !item.retiredAt && !item.isFallback).sort((a,b) => a.position-b.position).map(item => ({ id: item.id, label: item.name, description: "mail destination", kind: "destination" as const, count: item.counts.total })), ...projectWorkflowSpaces({ collections, views, counts, hidden, labels, order })],
   };
 }
 

@@ -1,3 +1,4 @@
+import { DestinationManager, destinationLabel, refreshDestinations, useDestinations } from "./mail-destinations";
 import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
 import { AttentionPage } from "./attention-page";
@@ -1263,11 +1264,17 @@ export function InboxApp({
   const [classificationView, setClassificationView] = useState<ClassificationView>("all");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
-  const [quietPage, setQuietPage] = useState<InboxClassificationResponse | null>(null);
-  const [quietRetry, setQuietRetry] = useState(0);
-  const [quietLoading, setQuietLoading] = useState(false);
-  const [quietError, setQuietError] = useState<string | null>(null);
-  const quietRequest = useRef(0);
+  const catalog = useDestinations();
+  const [activeDestinationId, setActiveDestinationId] = useState<string | null>(() => {
+    const route = desktopDestinationFromLocation(window.location);
+    return route.startsWith("destination:") ? route.slice(12) : null;
+  });
+  const [destinationPage, setDestinationPage] = useState<InboxClassificationResponse | null>(null);
+  const [destinationLoading, setDestinationLoading] = useState(false);
+  const [destinationError, setDestinationError] = useState<string | null>(null);
+  const [destinationRetry, setDestinationRetry] = useState(0);
+  const destinationRequest = useRef(0);
+  const destinationPageKey = useRef("");
   const [allMailCursor, setAllMailCursor] = useState<string | null>(null);
   const [classificationLoading, setClassificationLoading] = useState(false);
   const [classificationError, setClassificationError] = useState<string | null>(null);
@@ -1775,39 +1782,46 @@ export function InboxApp({
     ])));
   }, [messages, status]);
 
+  const destinationSurface = Boolean(activeDestinationId) || (!activeCollectionId && !activeSavedViewId && ["inbox", "quiet", "focus", "signals", "hidden"].includes(activeMailbox));
+  const legacyBehavior = activeMailbox === "inbox" ? "normal" : activeMailbox === "signals" ? "notify" : activeMailbox === "quiet" || activeMailbox === "focus" || activeMailbox === "hidden" ? activeMailbox : null;
+  const requestedDestinationId = activeDestinationId ?? (destinationSurface && legacyBehavior ? catalog.data?.legacyDestinationIds[legacyBehavior] ?? null : null);
+  const selectedDestination = catalog.data?.destinations.find(item => item.id === requestedDestinationId);
+  const destinationKeyRef = useRef(requestedDestinationId);
+  destinationKeyRef.current = requestedDestinationId;
   useEffect(() => {
-    if (demoMode || activeMailbox !== "quiet") return;
+    const owner = ++destinationRequest.current;
     const controller = new AbortController();
-    const generation = ++quietRequest.current;
     const epoch = mailboxSnapshotEpochRef.current;
-    // A completed provider refresh replaces the whole Quiet snapshot and cursor.
-    // Pending pages belong to the preceding snapshot and no longer own busy state.
     setIsLoadingMoreMessages(false);
-    setQuietLoading(true);
-    void fetchJson("/v1/inbox?view=quiet&classification=all&limit=100", inboxClassificationResponseSchema, controller.signal).then(page => {
-      if (controller.signal.aborted || generation !== quietRequest.current || epoch !== mailboxSnapshotEpochRef.current) return;
-      setQuietPage(page); setRoutingCounts(page.counts.attention); setQuietError(null);
+    setDestinationPage(null);
+    destinationPageKey.current = "";
+    setDestinationError(null);
+    if (!requestedDestinationId || !selectedDestination || selectedDestination.retiredAt || demoMode) { setDestinationLoading(false); return; }
+    setDestinationLoading(true);
+    void fetchJson(`/v1/inbox?view=all&classification=all&limit=100&destinationId=${encodeURIComponent(requestedDestinationId)}`, inboxClassificationResponseSchema, controller.signal).then(page => {
+      if (controller.signal.aborted || owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current) return;
+      destinationPageKey.current = requestedDestinationId;
+      setDestinationPage(page);
       setAllMailMessages(current => mergeMessages(current, page.messages));
-    }).catch(error => { if (!controller.signal.aborted && generation === quietRequest.current) setQuietError(`Quiet mail could not reload. ${getErrorMessage(error)}`); })
-      .finally(() => { if (!controller.signal.aborted && generation === quietRequest.current) setQuietLoading(false); });
-    return () => controller.abort();
-  }, [activeMailbox, demoMode, mailboxRefreshGeneration, quietRetry]);
+    }).catch(error => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); })
+      .finally(() => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationLoading(false); });
+    return () => { controller.abort(); ++destinationRequest.current; };
+  }, [requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision]);
+  useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
-  const isClassificationMailbox = activeMailbox === "inbox" || activeMailbox === "all";
+  const isClassificationMailbox = !requestedDestinationId && (activeMailbox === "inbox" || activeMailbox === "all");
   const mailboxMessages = useMemo(
     () => {
       const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
-      return activeCollection
+      return destinationSurface && !demoMode ? (destinationPageKey.current === requestedDestinationId ? destinationPage?.messages ?? [] : []) : activeCollection
         ? allMailMessages.filter((message) => activeCollection.threadIds.includes(message.threadId))
         : isClassificationMailbox
           ? getMessagesForMailbox(messages, activeMailbox, attentionByAddress)
-          : activeMailbox === "quiet" && !demoMode
-            ? quietPage?.messages ?? []
           : activeMailbox === "later"
             ? allMailMessages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
             : getMessagesForMailbox(allMailMessages, activeMailbox, attentionByAddress);
     },
-    [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, isClassificationMailbox, messages, quietPage, reminders],
+    [destinationSurface, requestedDestinationId, destinationPage, activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, isClassificationMailbox, messages, reminders],
   );
 
   const visibleMessages = useMemo(() => {
@@ -1833,6 +1847,8 @@ export function InboxApp({
 
   const activeDesktopDestination: DesktopDestination = organizationStudioOpen
     ? organizationStudioOpen
+    : requestedDestinationId
+      ? `destination:${requestedDestinationId}`
     : activeSavedViewId
       ? `view:${activeSavedViewId}`
     : activeCollectionId
@@ -1849,6 +1865,7 @@ export function InboxApp({
     active: activeDesktopDestination,
     attention: status === "error" || Boolean(syncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error")),
     collections,
+    destinations: catalog.active,
     views: savedViews,
     counts: {
       focus: routingCounts?.focus ?? getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
@@ -1864,16 +1881,16 @@ export function InboxApp({
     online,
     order: spaceOrder,
     syncing: status === "syncing" || isGmailRefreshing,
-  }), [routingCounts, account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
+  }), [catalog.data, routingCounts, account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
-    : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+    : requestedDestinationId ? destinationLabel(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;
     const customSpaceRequested = activeDesktopDestination.startsWith("space:");
-    const builtInSpaceRequested = ["focus", "signals", "quiet", "later"].includes(activeDesktopDestination);
+    const builtInSpaceRequested = ["later"].includes(activeDesktopDestination);
     const selectedSpace = workflowSpaces.find((space) => destinationForSpace(space) === activeDesktopDestination);
     if ((!customSpaceRequested && !builtInSpaceRequested) || (selectedSpace && !selectedSpace.hidden)) return;
     if (customSpaceRequested && (collectionsLoad.accountId !== account?.id || collectionsLoad.status !== "ready")) return;
@@ -2069,7 +2086,7 @@ export function InboxApp({
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
-  const activeMailboxCursor = !activeCollectionId && activeMailbox === "quiet" && !demoMode ? quietPage?.nextCursor ?? null : activeCollectionId || !isClassificationMailbox ? allMailCursor : classificationCursor;
+  const activeMailboxCursor = destinationSurface ? destinationPage?.nextCursor ?? null : activeCollectionId || !isClassificationMailbox ? allMailCursor : classificationCursor;
   const composeContacts = useMemo(() => collectComposeContacts(allMailMessages, account?.email ?? ""), [account?.email, allMailMessages]);
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? null;
   const pinnedPeople = useMemo(
@@ -2090,14 +2107,14 @@ export function InboxApp({
     })) ?? null,
     [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
-  const activeMailboxLabel = activeMailboxItem.label;
+  const activeMailboxLabel = requestedDestinationId ? destinationLabel(requestedDestinationId) : activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
       ?? allMailMessages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
       ?? activePin?.label
       ?? personFilter
     : null;
-  const inboxTitle = personFilterName ?? activeCollection?.name ?? (activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? (requestedDestinationId ? destinationLabel(requestedDestinationId) : activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? classificationViewLabel(classificationView)).toLowerCase()}`
     : activeCollection
@@ -2127,6 +2144,7 @@ export function InboxApp({
       return;
     }
     setManageSpacesOpen(false);
+    setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     setStreamQuery(location.query);
     setOrganizationStudioOpen(destination === "organization" || destination === "attention" ? destination : false);
     setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
@@ -2134,7 +2152,7 @@ export function InboxApp({
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
       setActiveCollectionId(null);
-      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination as Mailbox);
+      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") || destination.startsWith("view:") ? "inbox" : destination as Mailbox);
     }
 
     const history = surfaceHistoryRef.current;
@@ -2488,6 +2506,7 @@ export function InboxApp({
 
   function selectMailbox(mailbox: Mailbox, focusDestination = false) {
     runUiTransition("content", () => {
+      setActiveDestinationId(null);
       setActiveMailbox(mailbox);
       if (mailbox === "inbox") setClassificationView("all");
       if (mailbox === "all") setClassificationView("all");
@@ -2523,17 +2542,19 @@ export function InboxApp({
   }
 
   async function loadMoreMessages() {
-    if (!demoMode && activeMailbox === "quiet" && !activeCollectionId) {
-      if (!quietPage?.nextCursor || isLoadingMoreMessages || quietLoading) return;
-      const generation = ++quietRequest.current;
+    if (requestedDestinationId && !demoMode) {
+      if (!destinationPage?.nextCursor || destinationPageKey.current !== requestedDestinationId || isLoadingMoreMessages || destinationLoading) return;
+      const owner = ++destinationRequest.current;
+      const epoch = mailboxSnapshotEpochRef.current;
+      const key = requestedDestinationId;
       setIsLoadingMoreMessages(true);
       try {
-        const page = await fetchJson(`/v1/inbox?view=quiet&classification=all&limit=100&cursor=${encodeURIComponent(quietPage.nextCursor)}`, inboxClassificationResponseSchema);
-        if (generation !== quietRequest.current) return;
-        setQuietPage(current => ({ ...page, messages: mergeMessages(current?.messages ?? [], page.messages) }));
-        setAllMailMessages(current => mergeMessages(current, page.messages)); setQuietError(null);
-      } catch (error) { if (generation === quietRequest.current) setQuietError(`Quiet mail could not load more. ${getErrorMessage(error)}`); }
-      finally { if (generation === quietRequest.current) setIsLoadingMoreMessages(false); }
+        const page = await fetchJson(`/v1/inbox?view=all&classification=all&limit=100&destinationId=${encodeURIComponent(key)}&cursor=${encodeURIComponent(destinationPage.nextCursor)}`, inboxClassificationResponseSchema);
+        if (owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current || key !== destinationKeyRef.current) return;
+        setDestinationPage(current => ({ ...page, messages: mergeMessages(current?.messages ?? [], page.messages) }));
+        setAllMailMessages(current => mergeMessages(current, page.messages));
+      } catch (error) { if (owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); }
+      finally { if (owner === destinationRequest.current) setIsLoadingMoreMessages(false); }
       return;
     }
     const useClassificationSource = isClassificationMailbox && !activeCollectionId;
@@ -2898,19 +2919,18 @@ export function InboxApp({
   async function reloadRoutingMail() {
     if (demoMode) return;
     mailboxSnapshotEpochRef.current += 1;
+    destinationRequest.current += 1;
+    setDestinationRetry(value => value + 1);
     setIsLoadingMoreMessages(false);
     const generation = ++classificationRequestRef.current;
     classificationPageRequestRef.current += 1;
     allMailPageRequestRef.current += 1;
     setClassificationCursor(null); setAllMailCursor(null);
     const view = classificationViewRef.current;
-    const quietGeneration = ++quietRequest.current;
     const all = await fetchJson("/v1/inbox?view=all&classification=all&limit=100", inboxClassificationResponseSchema);
-    const quiet = await fetchJson("/v1/inbox?view=quiet&classification=all&limit=100", inboxClassificationResponseSchema);
     const inbox = view === "all" ? all : await fetchJson(`/v1/inbox?classification=${view}&limit=100`, inboxClassificationResponseSchema);
     if (generation !== classificationRequestRef.current || view !== classificationViewRef.current) return;
     setAttentionByAddress({});
-    if (quietGeneration === quietRequest.current) { setQuietPage(quiet); setQuietLoading(false); setQuietError(null); }
     setAllMailMessages(all.messages); setAllMailCursor(all.nextCursor);
     setMessages(inbox.messages); setClassificationCursor(inbox.nextCursor);
     setClassificationCounts(toClassificationCounts(inbox.counts.classification));
@@ -2959,6 +2979,7 @@ export function InboxApp({
       window.location.assign("/settings");
       return;
     }
+    setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     surfaceHistoryRef.current?.navigate(destination);
     if (destination === "organization" || destination === "attention") {
       runUiTransition("content", () => {
@@ -2980,6 +3001,10 @@ export function InboxApp({
       return;
     }
     setActiveSavedViewId(null);
+    if (destination.startsWith("destination:")) {
+      setActiveMailbox("inbox"); setActiveCollectionId(null); setSelectedThreadId(null); setSelectedThreadAccountId(null); setPersonFilter(null); setInboxFilter("all");
+      return;
+    }
     if (destination.startsWith("space:")) {
       selectCollection(destination.slice("space:".length));
       return;
@@ -3078,13 +3103,17 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={requestedDestinationId && !organizationStudioOpen ? destinationLabel(requestedDestinationId) : organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} onAdvanced={() => navigateDesktop("organization")} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Attention</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
-            {activeMailbox === "quiet" && quietLoading && <p role="status">Loading Quiet mail…</p>}
-            {activeMailbox === "quiet" && quietError && <p role="alert">{quietError} <button className="attention-back" onClick={() => setQuietRetry(value => value + 1)}>Retry Quiet mail</button></p>}
+            {catalog.error && <p role="alert">Destinations could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry destinations</button></p>}
+            {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading destination…" : "This destination is unavailable."}</p>}
+            {selectedDestination?.retiredAt && <p role="status">This destination has been retired. <button onClick={() => navigateDesktop("inbox")}>Open default destination</button></p>}
+            {requestedDestinationId && destinationLoading && <p role="status">Loading mail…</p>}
+            {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry destination</button></p>}
+            {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading destinations…" : "This legacy destination is unavailable. Choose a destination from the sidebar."}</p>}
             {activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
               demoMode={demoMode}
@@ -3101,7 +3130,7 @@ export function InboxApp({
               inboxTitle={inboxTitle}
               originLabel={activeCollection?.name ?? activeMailboxLabel}
               classificationView={classificationView}
-              classificationError={activeMailbox === "quiet" ? null : classificationError}
+              classificationError={requestedDestinationId || activeMailbox === "quiet" ? null : classificationError}
               classificationActionError={classificationActionError}
               classificationActionMessage={classificationActionMessage}
               hasMoreMessages={Boolean(activeMailboxCursor)}
@@ -3147,7 +3176,7 @@ export function InboxApp({
               onSearchChange={changeStreamQuery}
               searchQuery={streamQuery}
               reminders={reminders}
-              showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
+              showInboxFilters={!requestedDestinationId && !activeCollectionId && activeMailbox === "inbox" && !personFilter}
               viewMode={activeCollection ? "collection" : activeMailbox}
             />}
           </div>
@@ -3176,17 +3205,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageSpacesOpen ? <ManageSpacesDialog
-        busy={spaceOperationStatus === "saving"}
-        error={spaceOperationError ?? organizationError}
-        onClose={() => setManageSpacesOpen(false)}
-        onCreate={createWorkflowSpace}
-        onHide={hideWorkflowSpace}
-        onReorder={reorderWorkflowSpaces}
-        onRename={renameWorkflowSpace}
-        onRestore={restoreWorkflowSpace}
-        spaces={workflowSpaces.filter((space) => space.kind !== "view")}
-      /> : null}
+      {manageSpacesOpen ? <DestinationManager onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -4975,11 +4994,11 @@ function InboxView({
               <button disabled={!selectedRows.size || selectedAccountCount !== 1 || bulkAttentionStatus === "saving"} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
               {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
             </div>
-            <div aria-label="Move selected senders" role="group">
+            <details><summary>Advanced legacy attention preferences</summary><div aria-label="Legacy sender preferences" role="group">
               <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
               <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
               <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
-            </div>
+            </div></details>
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
@@ -6311,8 +6330,9 @@ export function getStreamMessages(messages: InboxMessage[], viewMode: "collectio
   const normalizedQuery = query.trim().toLowerCase();
   const seen = new Set<string>();
   return messages.filter((message) => {
-    if (seen.has(message.threadId)) return false;
-    seen.add(message.threadId);
+    const key = `${message.accountId}:${message.threadId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     if (!normalizedQuery) return true;
     return [message.from.name, message.from.email, message.subject, message.snippet]
       .filter((value): value is string => Boolean(value))

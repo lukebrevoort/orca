@@ -1,6 +1,7 @@
+import { useDestinations } from "./mail-destinations";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { AttentionBehavior, AttentionRoutingTarget } from "@orca/shared";
+import type { AttentionRoutingTarget } from "@orca/shared";
 import {
   RoutingErrors,
   routingLabel,
@@ -22,9 +23,10 @@ export function RoutingChooser({
   message: Target;
   reader?: boolean;
 }) {
+  const catalog = useDestinations();
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<"conversation" | "sender">("conversation");
-  const [userChoice, setChoice] = useState<{ key: string; value: "normal" | "quiet" } | null>(null);
+  const [userChoice, setChoice] = useState<{ key: string; value: string } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const address = message.from.email.trim().toLowerCase();
@@ -40,17 +42,17 @@ export function RoutingChooser({
   // Only a click is an explicit choice. A loaded default must follow the fresh
   // read for this opening/target, rather than becoming sticky cached intent.
   const currentBehavior = routing.reliable
-    ? routing.state?.selection.effective.behavior
+    ? routing.state?.selection.effective.destinationId
     : undefined;
   const choiceKey = routingUrl(message.accountId, target);
   const choice = userChoice?.key === choiceKey ? userChoice.value :
-    (currentBehavior === "normal" || currentBehavior === "quiet" ? currentBehavior : "");
+    (currentBehavior ?? "");
   function close() {
     dialog.current?.close();
     setOpen(false);
     requestAnimationFrame(() => trigger.current?.focus());
   }
-  async function save(value: AttentionBehavior | null) {
+  async function save(value: string | null) {
     const row = trigger.current?.closest(".message-row-wrap");
     const rows = Array.from(document.querySelectorAll(".message-row-wrap"));
     const index = row ? rows.indexOf(row) : -1;
@@ -136,7 +138,7 @@ export function RoutingChooser({
             }}
           >
             <h2 id={`routing-title-${message.id}`}>Where this mail belongs</h2>
-            <p>Keep it in your Inbox, or read it later in Quiet.</p>
+            <p>Choose a destination for this mail.</p>
             <label>
               Apply to
               <select
@@ -163,18 +165,18 @@ export function RoutingChooser({
             {routing.state && (
               <p className="routing-current">
                 Currently{" "}
-                {routingLabel(routing.state.selection.effective.behavior)} ·{" "}
-                {routing.state.selection.explicitBehavior === null
-                  ? `Uses your ${routing.state.selection.effective.source === "sender" ? "sender choice" : routing.state.selection.effective.source === "domain" ? "domain choice" : "default"}`
+                {routingLabel(routing.state.selection.effective.destinationId)} ·{" "}
+                {routing.state.selection.explicitDestinationId === null
+                  ? `Uses your ${routing.state.selection.effective.source === "sender" ? "sender choice" : routing.state.selection.effective.source === "advanced" ? "domain choice" : "default"}`
                   : `Chosen for this ${scope}`}
               </p>
             )}
             <div className="routing-destinations" aria-label="Destination">
-              {(["normal", "quiet"] as const).map((value) => (
+              {catalog.active.map(({id: value}) => (
                 <button
                   type="button"
                   key={value}
-                  disabled={routing.locked}
+                  disabled={(routing.locked || catalog.locked)}
                   aria-pressed={choice === value}
                   onClick={() => setChoice({ key: choiceKey, value })}
                 >
@@ -182,6 +184,8 @@ export function RoutingChooser({
                 </button>
               ))}
             </div>
+            {routing.state?.selection.effective.locked && <p role="status">{routing.state.selection.effective.reason}</p>}
+            {catalog.error && <p role="alert">{catalog.error}</p>}
             <RoutingErrors routing={routing} />
             <p>
               <a href="/?destination=attention">
@@ -195,20 +199,20 @@ export function RoutingChooser({
               <button
                 type="button"
                 disabled={
-                  routing.locked ||
-                  routing.state?.selection.explicitBehavior === null
+                  (routing.locked || catalog.locked) ||
+                  routing.state?.selection.explicitDestinationId === null
                 }
                 onClick={() => void save(null)}
               >
                 {routing.state?.selection.inherited.source === "sender"
                   ? "Use sender choice"
-                  : routing.state?.selection.inherited.source === "domain"
+                  : routing.state?.selection.inherited.source === "advanced"
                     ? "Use inherited choice"
                     : "Use default"}
               </button>
               <button
                 type="button"
-                disabled={routing.locked || !choice}
+                disabled={(routing.locked || catalog.locked) || !choice}
                 onClick={() => choice && void save(choice)}
               >
                 {routing.saving ? "Saving…" : "Save choice"}

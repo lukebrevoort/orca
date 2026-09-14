@@ -18,6 +18,9 @@ const collections: Collection[] = [
 
 describe("shared desktop navigation contract", () => {
   test("parses one destination grammar and serializes stable production and preview URLs", () => {
+    expect(parseDesktopDestination("destination:client-id")).toBe("destination:client-id");
+    expect(parseDesktopDestination("destination:")).toBeNull();
+    expect(desktopDestinationHref("destination:client-id")).toBe("/?destination=destination%3Aclient-id");
     expect(parseDesktopDestination("space:space-one")).toBe("space:space-one");
     expect(parseDesktopDestination("view:view-one")).toBe("view:view-one");
     expect(parseDesktopDestination("space:")).toBeNull();
@@ -52,9 +55,6 @@ describe("shared desktop navigation contract", () => {
     expect(projection.draftCount).toBe(5);
     expect(projection.spaces.map((space) => [space.id, space.label, space.count, space.hidden])).toEqual([
       ["space-one", "Launch room", 2, false],
-      ["quiet", "Quiet", 2, false],
-      ["focus", "Deep focus", 4, false],
-      ["signals", "Signals", 3, true],
       ["later", "Later", 1, false],
       ["space-two", "Second", 1, true],
     ]);
@@ -85,4 +85,12 @@ describe("shared desktop navigation contract", () => {
     expect(projectedViews.map((space) => space.hidden)).toEqual([false, false, false]);
     expect(projectedViews.map((space) => `view:${space.id}`)).toContain(projection.active);
   });
+});
+
+test("catalog names and identity outrank stale local categories in every sidebar", () => {
+  const item = { id: "fallback-id", name: "My correspondence", isFallback: true, retiredAt: null, revision: 1, position: 0, notificationPreference: "quiet" as const, delivery: "proposal_only" as const, counts: { total: 204, unread: 3 } };
+  const projection = createSidebarNavigationProjection({ account: { displayName: "Owner", email: "owner@example.com", accountCount: 2 }, active: "destination:clients", collections: [], online: true, labels: { focus: "Old focus" }, destinations: [item, { ...item, id: "clients", name: "Clients", isFallback: false, position: 2 }, { ...item, id: "retired", isFallback: false, retiredAt: "2026-09-13" }] });
+  expect(projection.fallbackDestination?.name).toBe("My correspondence");
+  expect(projection.inboxCount).toBe(204);
+  expect(projection.spaces.map(space => space.label)).toEqual(["Clients", "Later"]);
 });

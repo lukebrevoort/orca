@@ -1,3 +1,4 @@
+import { DestinationManager, useDestinations } from "./mail-destinations";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
@@ -57,7 +58,9 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
   onManageSpaces: () => void;
   onNavigate: (destination: DesktopDestination) => void;
 }) {
-  const { account, active, draftCount, inboxCount, spaces } = projection;
+  const { account, active, draftCount, inboxCount, spaces, fallbackDestination } = projection;
+  const inboxActive = active === "inbox" || active === `destination:${fallbackDestination?.id}`;
+  const inboxLabel = fallbackDestination?.name ?? "Inbox";
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -89,10 +92,10 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
         <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
       </button>
-      <p className="desktop-sidebar-label">Anchors</p>
-      <SidebarItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => onNavigate("inbox")} />
+      <p className="desktop-sidebar-label">Mail</p>
+      <SidebarItem active={inboxActive} count={inboxCount} icon={<NavIcon name="inbox" />} label={inboxLabel} onClick={() => onNavigate("inbox")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
-      <div className="desktop-sidebar-section-head"><span>My spaces</span><button onClick={onManageSpaces} type="button">Manage</button></div>
+      <div className="desktop-sidebar-section-head"><span>Destinations & tools</span><button onClick={onManageSpaces} type="button">New / manage</button></div>
       {visibleSpaces.map((space) => <SidebarItem
         active={active === destinationForSpace(space)}
         count={space.count}
@@ -127,12 +130,12 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         <div aria-label="All Orca destinations" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
           <div aria-label="Mail" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
-            <MobileMenuItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => navigateFromMobileMenu("inbox")} />
+            <MobileMenuItem active={inboxActive} count={inboxCount} icon={<NavIcon name="inbox" />} label={inboxLabel} onClick={() => navigateFromMobileMenu("inbox")} />
             <MobileMenuItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => navigateFromMobileMenu("drafts")} />
             <MobileMenuItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => navigateFromMobileMenu("all")} />
           </div>
           <div aria-label="My spaces" role="group">
-            <p aria-hidden="true" className="desktop-mobile-menu-label">My spaces</p>
+            <p aria-hidden="true" className="desktop-mobile-menu-label">Destinations & tools</p>
             {visibleSpaces.map((space) => <MobileMenuItem
               active={active === destinationForSpace(space)}
               count={space.count}
@@ -141,7 +144,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
               label={space.label}
               onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
-            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="Manage spaces" onClick={onManageSpaces} />
+            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="New / manage destinations" onClick={onManageSpaces} />
           </div>
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
@@ -152,7 +155,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         </div>
       </TopLayer> : null}
       <button aria-keyshortcuts="c" className="desktop-mobile-nav-item desktop-mobile-compose" onClick={onCompose} type="button"><NavIcon name="compose"/><span>Compose</span></button>
-      <button aria-current={active === "inbox" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("inbox")} type="button"><NavIcon name="inbox"/><span>Inbox</span></button>
+      <button aria-current={inboxActive ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("inbox")} type="button"><NavIcon name="inbox"/><span>{inboxLabel}</span></button>
       <button aria-current={active === "drafts" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("drafts")} type="button"><NavIcon name="drafts"/><span>Drafts</span></button>
       <button
         aria-controls="desktop-mobile-navigation-dialog"
@@ -227,6 +230,8 @@ const emptySettingsNavigationSource: SettingsNavigationSource = {
 
 export function DesktopSettingsFrame({ children, navigationPreview, theme, title, onThemeChange }: { children: ReactNode; navigationPreview?: SettingsNavigationPreview; theme: "light" | "dark"; title: string; onThemeChange: () => void }) {
   const online = useOnlineStatus();
+  const catalog = useDestinations();
+  const [manageDestinations, setManageDestinations] = useState(false);
   const [source, setSource] = useState<SettingsNavigationSource>(() => navigationPreview
     ? navigationPreview
     : emptySettingsNavigationSource);
@@ -315,6 +320,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     active: "settings",
     attention: source.attention,
     collections: source.collections,
+    destinations: catalog.active,
     views: source.views,
     counts: source.counts,
     draftCount: source.draftCount,
@@ -331,9 +337,10 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     window.location.assign(desktopDestinationHref(destination, window.location.pathname));
   };
   return <div className="desktop-shell desktop-settings-frame">
+    {manageDestinations && <DestinationManager onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />
     <AppSidebar
       onCompose={() => window.location.assign("/?compose=1")}
-      onManageSpaces={() => window.location.assign("/settings/attention-views")}
+      onManageSpaces={() => setManageDestinations(true)}
       onNavigate={navigate}
       projection={projection}
       theme={theme}

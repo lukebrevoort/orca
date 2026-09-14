@@ -22,9 +22,9 @@ describe("BRE-311 Organization Lane UI", () => {
 
   test("renders readable Thread Manual Override and evidence triggers", () => {
     const html = renderToStaticMarkup(<ThreadLaneControls accountId="account_a" demoMode threadId="thread_a" />);
-    expect(html).toContain("Everything else");
+    expect(html).toContain("Advanced safety");
     expect(html).toContain("Why is this here?");
-    expect(html).toContain("Lane");
+    expect(html).not.toContain("Choose this Thread’s Lane");
   });
 
   test("uses the theme-safe surface, border, and ink treatment for selected and pressed controls", () => {

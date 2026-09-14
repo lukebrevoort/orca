@@ -1,3 +1,4 @@
+import { refreshDestinations } from "./mail-destinations";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -21,7 +22,7 @@ import { TopLayerProvider } from "./top-layer";
 import { AttentionPage } from "./attention-page";
 import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
-import { attentionRoutingStateSchema } from "@orca/shared";
+import { destinationRoutingStateSchema } from "@orca/shared";
 const globals = [
   "window",
   "document",
@@ -61,6 +62,7 @@ let intercept:
   | undefined;
 let puts: Array<{ path: string; body: any }>;
 let refreshes: number;
+let quietId: string, fallbackId: string;
 let onRefresh: (() => Promise<void>) | undefined;
 beforeEach(async () => {
   process.env.SESSION_SECRET = "attention-web-integration-test-session-secret";
@@ -165,6 +167,11 @@ beforeEach(async () => {
       puts.push({ path, body: JSON.parse(String(init.body)) });
     return (await intercept?.(path, init)) ?? (await request(path, init));
   }) as typeof fetch;
+  const catalog = await (await request("/v1/destinations")).json();
+  fallbackId = catalog.fallbackDestinationId;
+  const created = await (await request("/v1/destinations", { method: "POST", body: JSON.stringify({ expectedRevision: catalog.revision, name: "Quiet" }) })).json();
+  quietId = created.destinationId;
+  await refreshDestinations();
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -189,11 +196,11 @@ function request(path: string, init?: RequestInit) {
   });
 }
 async function state(account = "a", query = "") {
-  let result!: ReturnType<typeof attentionRoutingStateSchema.parse>;
+  let result!: ReturnType<typeof destinationRoutingStateSchema.parse>;
   await act(async () => {
-    result = attentionRoutingStateSchema.parse(
+    result = destinationRoutingStateSchema.parse(
       await (
-        await request(`/v1/attention/routing?accountId=${account}${query}`)
+        await request(`/v1/destinations/routing?accountId=${account}${query}`)
       ).json(),
     );
   });
@@ -280,16 +287,16 @@ async function expectEmptySenderRules(accountId: string) {
 
 test("page saves actual sender routing, refreshes consumers, Undo restores prior explicit state, accounts isolated", async () => {
   await render();
-  await select("Destination for maya@example.com", "quiet");
-  expect((await state()).senders[0]?.behavior).toBe("quiet");
+  await select("Destination for maya@example.com", quietId);
+  expect((await state()).senders[0]?.destinationId).toBe(quietId);
   expect((await state("b")).senders).toHaveLength(0);
   expect(puts[0]?.body).toMatchObject({
     target: { scope: "sender", address: "maya@example.com" },
-    expectedRevision: 1,
+    expectedRevision: expect.any(Number),
   });
   expect(refreshes).toBe(1);
   await click("Undo");
-  expect((await state()).senders[0]?.behavior).toBe("normal");
+  expect((await state()).senders[0]?.destinationId).toBe(fallbackId);
   await select("Attention account", "b");
   await expectEmptySenderRules("b");
   expect(document.body.textContent).not.toContain(
@@ -307,9 +314,9 @@ test("shared chooser defaults to actual conversation, sender action is explicit,
     threadId: "thread-a",
   });
   expect(
-    (await state("a", "&threadId=thread-a")).selection.explicitBehavior,
-  ).toBe("quiet");
-  expect((await state()).senders[0]?.behavior).toBe("normal");
+    (await state("a", "&threadId=thread-a")).selection.explicitDestinationId,
+  ).toBe(quietId);
+  expect((await state()).senders[0]?.destinationId).toBe(fallbackId);
   await click("Tune");
   await act(async () => {
     const control = document.querySelector<HTMLSelectElement>("dialog select")!;
@@ -319,25 +326,25 @@ test("shared chooser defaults to actual conversation, sender action is explicit,
   await settle();
   await click("Quiet");
   await click("Save choice");
-  expect((await state()).senders[0]?.behavior).toBe("quiet");
+  expect((await state()).senders[0]?.destinationId).toBe(quietId);
   await click("Tune");
   await click("Use sender choice");
   expect((await state("a", "&threadId=thread-a")).selection).toMatchObject({
-    explicitBehavior: null,
-    effective: { behavior: "quiet", source: "sender" },
+    explicitDestinationId: null,
+    effective: { destinationId: quietId, source: "sender" },
   });
   const current = await state();
-  await request("/v1/attention/routing?accountId=a", {
+  await request("/v1/destinations/routing?accountId=a", {
     method: "PUT",
     body: JSON.stringify({
       expectedRevision: current.revision,
       target: { scope: "account" },
-      behavior: "quiet",
+      destinationId: quietId,
     }),
   });
   await click("Undo");
   expect(
-    (await state("a", "&threadId=thread-a")).selection.explicitBehavior,
+    (await state("a", "&threadId=thread-a")).selection.explicitDestinationId,
   ).toBe(null);
   expect(document.body.textContent).toContain("Undo could not be confirmed");
 });
@@ -350,30 +357,30 @@ test("unknown committed response reloads canonical state without retry; failed r
       await request(path, init);
       return Response.json({}, { status: 503 });
     }
-    if (path.startsWith("/v1/attention/routing") && fault)
+    if (path.startsWith("/v1/destinations/routing") && fault)
       return Response.json({}, { status: 403 });
   };
-  await select("Destination for maya@example.com", "quiet");
+  await select("Destination for maya@example.com", quietId);
   expect(puts).toHaveLength(1);
-  expect((await state()).senders[0]?.behavior).toBe("quiet");
+  expect((await state()).senders[0]?.destinationId).toBe(quietId);
   const control = document.querySelector<HTMLSelectElement>(
     '[aria-label="Destination for maya@example.com"]',
   )!;
-  expect(control.value).toBe("normal");
+  expect(control.value).toBe(fallbackId);
   expect(control.disabled).toBe(true);
   expect(document.body.textContent).toContain("Save could not be confirmed");
   expect(document.body.textContent).toContain("Read-only");
   fault = false;
   await click("Reload choices");
   expect(control.disabled).toBe(false);
-  expect(control.value).toBe("quiet");
+  expect(control.value).toBe(quietId);
   expect(puts).toHaveLength(1);
 });
 
 test("late account response cannot replace current account and discovery never creates sender rules", async () => {
   let release: (() => void) | undefined;
   intercept = async (path) => {
-    if (path === "/v1/attention/routing?accountId=a") {
+    if (path === "/v1/destinations/routing?accountId=a") {
       await new Promise<void>((resolve) => {
         release = resolve;
       });
@@ -417,7 +424,7 @@ test("write-only permission failure remains locked when GET succeeds until expli
   await render();
   intercept = async (_path, init) =>
     init?.method === "PUT" ? Response.json({}, { status: 403 }) : undefined;
-  await select("Destination for maya@example.com", "quiet");
+  await select("Destination for maya@example.com", quietId);
   expect(
     document.querySelector<HTMLSelectElement>(
       '[aria-label="Destination for maya@example.com"]',
@@ -469,12 +476,12 @@ test("failed recovery read is not silently retried after an unknown save", async
   let reads = 0;
   intercept = async (path, init) => {
     if (init?.method === "PUT") return Response.json({}, { status: 503 });
-    if (path.startsWith("/v1/attention/routing")) {
+    if (path.startsWith("/v1/destinations/routing")) {
       reads++;
       return Response.json({}, { status: 503 });
     }
   };
-  await select("Destination for maya@example.com", "quiet");
+  await select("Destination for maya@example.com", quietId);
   await settle();
   expect(reads).toBe(1);
   expect(
@@ -495,7 +502,7 @@ test("filtered sender disappearance and Undo return focus to a useful heading", 
     '[aria-label="Destination for maya@example.com"]',
   )!;
   control.focus();
-  await select("Destination for maya@example.com", "quiet");
+  await select("Destination for maya@example.com", quietId);
   for (let attempt = 0; attempt < 50 && document.querySelector('[aria-label="Destination for maya@example.com"]'); attempt++) await settle();
   expect(document.querySelector('[aria-label="Destination for maya@example.com"]')).toBeNull();
   expect(document.activeElement?.id).toBe("sender-heading");
@@ -512,7 +519,7 @@ function deferred() {
 for (const outcome of ["conflict", "success"] as const) {
   test(`old Undo ${outcome} completion preserves a later save receipt`, async () => {
     await render();
-    await select("Destination for maya@example.com", "quiet");
+    await select("Destination for maya@example.com", quietId);
     const gate = deferred();
     let held = false;
     if (outcome === "success") onRefresh = async () => {
@@ -526,20 +533,20 @@ for (const outcome of ["conflict", "success"] as const) {
     };
     await click("Undo");
     expect(held).toBe(true);
-    await select("Default destination for everyone else", "quiet");
+    await select("Default destination for everyone else", quietId);
     expect(document.querySelector(".routing-feedback")?.textContent).toContain("Everyone else · Quiet.");
     await act(async () => gate.release());
     await settle();
     expect(document.querySelector(".routing-feedback")?.textContent).toContain("Everyone else · Quiet.");
     expect(button("Undo").disabled).toBe(false);
     await click("Undo");
-    expect((await state()).defaultBehavior).toBeNull();
+    expect((await state()).defaultDestinationId).toBeNull();
   });
 }
 for (const outcome of ["committed", "rejected", "moved-focus"] as const) {
   test(`filtered sender attempted edit reconciles focus after ${outcome} ambiguous response`, async () => {
     await render();
-    await select("Destination for maya@example.com", "quiet");
+    await select("Destination for maya@example.com", quietId);
     await act(async () => document.querySelectorAll<HTMLButtonElement>(".simple-attention-choices button")[1]!.click());
     const control = document.querySelector<HTMLSelectElement>('[aria-label="Destination for maya@example.com"]')!;
     control.focus();
@@ -550,7 +557,7 @@ for (const outcome of ["committed", "rejected", "moved-focus"] as const) {
       await gate.promise;
       return Response.json({}, { status: 503 });
     };
-    await select("Destination for maya@example.com", "normal");
+    await select("Destination for maya@example.com", fallbackId);
     const search = document.querySelector<HTMLInputElement>('[aria-label="Search senders"]')!;
     if (outcome === "moved-focus") search.focus();
     await act(async () => gate.release());
@@ -607,7 +614,7 @@ for (const mailbox of ["Inbox", "Signals"]) {
     const cursors: string[] = [];
     intercept = async (path) => {
       // Exercise readiness beyond settle() without releasing the stale page.
-      if (path.startsWith("/v1/attention/routing?") && !delayedRoutingRead) {
+      if (path.startsWith("/v1/destinations/routing?") && !delayedRoutingRead) {
         delayedRoutingRead = true;
         await new Promise((resolve) => setTimeout(resolve, 80));
       }
@@ -622,7 +629,7 @@ for (const mailbox of ["Inbox", "Signals"]) {
     await click("Load more messages");
     expect(held).toBe(true);
     await nav("Attention");
-    await select("Destination for maya@example.com", "quiet");
+    await select("Destination for maya@example.com", quietId);
     expect(delayedRoutingRead).toBe(true);
     await nav(mailbox);
     await act(async () => gate.release());
@@ -656,7 +663,7 @@ test("App ignores a pre-save background snapshot after Quiet save, retaining row
   await renderMailbox();
   expect(held).toBe(true);
   await nav("Attention");
-  await select("Destination for maya@example.com", "quiet");
+  await select("Destination for maya@example.com", quietId);
   await nav("Inbox");
   expect([...document.querySelectorAll(".message-row")].some(row => row.textContent?.includes("Mail a"))).toBe(false);
   const counts = () => [...document.querySelectorAll(".desktop-sidebar-item")].filter(b => b.textContent?.startsWith("Inbox") || b.textContent?.startsWith("Quiet")).map(b => b.textContent);
@@ -702,7 +709,7 @@ test("App accepts final provider status after routing invalidates its completed 
   expect(syncs).toBe(1);
   expect(document.querySelector(".sync-status-chip")?.textContent).toBe("Syncing Gmail…");
   await nav("Attention");
-  await select("Destination for maya@example.com", "quiet");
+  await select("Destination for maya@example.com", quietId);
   await nav("Inbox");
   const rows = () => [...document.querySelectorAll(".message-row")].map(row => row.textContent);
   const counts = () => [...document.querySelectorAll(".desktop-sidebar-item")].filter(b => b.textContent?.startsWith("Inbox") || b.textContent?.startsWith("Quiet")).map(b => b.textContent);
@@ -748,7 +755,7 @@ test("delayed successful old Undo response cannot replace a newer receipt", asyn
   await act(async () => gate.release()); await settle();
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("This conversation · Quiet.");
   await click("Undo");
-  expect((await state("b", "&threadId=thread-b")).selection.explicitBehavior).toBeNull();
+  expect((await state("b", "&threadId=thread-b")).selection.explicitDestinationId).toBeNull();
 });
 
 
@@ -758,14 +765,14 @@ test("cancelled chooser reopening reads external routing before selecting or sav
   expect(button("Inbox").getAttribute("aria-pressed")).toBe("true");
   await click("Cancel");
   const current = await state();
-  await request("/v1/attention/routing?accountId=a", {
+  await request("/v1/destinations/routing?accountId=a", {
     method: "PUT",
-    body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "conversation", threadId: "thread-a" }, behavior: "quiet" }),
+    body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "conversation", threadId: "thread-a" }, destinationId: quietId }),
   });
   const gate = deferred();
   let held = false;
   intercept = async (path) => {
-    if (path.includes("/v1/attention/routing?")) { held = true; await gate.promise; }
+    if (path.includes("/v1/destinations/routing?")) { held = true; await gate.promise; }
     return undefined;
   };
   await click("Tune");
@@ -778,17 +785,17 @@ test("cancelled chooser reopening reads external routing before selecting or sav
   expect(button("Inbox").getAttribute("aria-pressed")).toBe("false");
   await click("Save choice");
   expect(puts).toHaveLength(1);
-  expect(puts[0]?.body.behavior).toBe("quiet");
-  expect((await state("a", "&threadId=thread-a")).selection.explicitBehavior).toBe("quiet");
+  expect(puts[0]?.body.destinationId).toBe(quietId);
+  expect((await state("a", "&threadId=thread-a")).selection.explicitDestinationId).toBe(quietId);
 });
 
 for (const entry of ["focus", "interval", "manual"] as const) {
   test(`App ${entry} provider completion refreshes Quiet rows, count and cursor and rejects old pagination`, async () => {
     seedPages();
     const current = await state();
-    await request("/v1/attention/routing?accountId=a", {
+    await request("/v1/destinations/routing?accountId=a", {
       method: "PUT",
-      body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "account" }, behavior: "quiet" }),
+      body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "account" }, destinationId: quietId }),
     });
     let interval: (() => void) | undefined;
     const originalInterval = browser.setInterval.bind(browser);
@@ -804,7 +811,7 @@ for (const entry of ["focus", "interval", "manual"] as const) {
     let syncs = 0;
     const cursors: string[] = [];
     intercept = async (path) => {
-      if (path.includes("view=quiet") && path.includes("cursor=")) {
+      if (path.includes(`destinationId=${encodeURIComponent(quietId)}`) && path.includes("cursor=")) {
         cursors.push(new URL(path, "http://localhost").searchParams.get("cursor")!);
         if (cursors.length === 1) { const old = await request(path); await stalePage.promise; return old; }
         if (cursors.length === 2) await freshPage.promise;
@@ -862,3 +869,69 @@ for (const entry of ["focus", "interval", "manual"] as const) {
     expect(document.querySelector(".content-pane")?.textContent).toContain("Incoming Quiet mail");
   }, 20000);
 }
+
+async function inputValue(input: HTMLInputElement, value: string) {
+  await act(async () => {
+    const previous = input.value;
+    input.value = value;
+    (input as unknown as { _valueTracker?: { setValue: (value: string) => void } })._valueTracker?.setValue(previous);
+    input.dispatchEvent(new browser.InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }) as unknown as Event);
+  });
+}
+
+test("create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement reassigns safely", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox();
+  await click("New / manage");
+  await inputValue(document.querySelector<HTMLInputElement>('dialog input')!, "Clients");
+  await click("Create destination");
+  const catalog = await (await request("/v1/destinations")).json();
+  const clients = catalog.destinations.find((item: {name: string}) => item.name === "Clients");
+  expect(clients).toBeDefined();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
+  await nav("Attention");
+  await select("Destination for maya@example.com", clients.id);
+  await nav("Clients");
+  expect(document.querySelector(".content-pane")?.textContent).toContain("Mail a");
+  expect(document.querySelector(".content-pane")?.textContent).not.toContain("Mail b");
+  const client = createDatabaseClient(join(directory, "test.sqlite"));
+  try {
+    client.db.insert(threads).values({ id: "future", accountId: "a", providerThreadId: "future", messageCount: 1 }).run();
+    client.db.insert(emails).values({ id: "future", accountId: "a", threadId: "future", providerMessageId: "future", fromAddress: "maya@example.com", subject: "Future client mail", receivedAt: new Date(), bodyText: "Next project" }).run();
+  } finally { client.sqlite.close(); }
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  for (let i = 0; i < 50 && !document.querySelector(".content-pane")?.textContent?.includes("Future client mail"); i++) await settle();
+  expect(document.querySelector(".content-pane")?.textContent).toContain("Future client mail");
+  await click("New / manage");
+  const details = [...document.querySelectorAll("dialog details")].find(item => item.querySelector("summary")?.textContent === "Clients")!;
+  await inputValue(details.querySelector<HTMLInputElement>("input")!, "Partners");
+  await act(async () => details.querySelector<HTMLButtonElement>("button")!.click());
+  await settle();
+  expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
+  expect((await state()).senders[0]?.destinationId).toBe(clients.id);
+  const replacement = details.querySelector<HTMLSelectElement>("select")!;
+  await act(async () => { replacement.value = fallbackId; replacement.dispatchEvent(new Event("change", { bubbles: true })); });
+  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Retire Partners")!.click());
+  await settle();
+  expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Partners");
+  const retired = await (await request("/v1/destinations")).json();
+  expect(retired.destinations.find((item: {id: string}) => item.id === clients.id).retiredAt).not.toBeNull();
+  const page = await (await request(`/v1/inbox?view=all&classification=all&destinationId=${fallbackId}`)).json();
+  expect(page.messages.some((item: {subject: string}) => item.subject === "Future client mail")).toBe(true);
+}, 20000);
+
+test("destination URL survives reader open, close and history while canonical pages exceed first hundred", async () => {
+  seedPages();
+  const current = await state();
+  await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "account" }, destinationId: quietId }) });
+  window.history.replaceState(null, "", `/?destination=${encodeURIComponent(`destination:${quietId}`)}`);
+  intercept = async path => syncNoop(path);
+  await renderMailbox();
+  await click("Load more messages");
+  expect(document.querySelector(".content-pane")?.textContent).toContain("Older mail 104");
+  await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
+  await settle();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${quietId}`);
+  expect(new URL(window.location.href).searchParams.get("accountId")).toBe("a");
+  expect(new URL(window.location.href).searchParams.get("thread")).toBeTruthy();
+}, 20000);
