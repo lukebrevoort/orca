@@ -1,5 +1,5 @@
 // Isolated browser verification harness. Run with Bun; ATTENTION_REPO points to the built worktree.
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -51,7 +51,7 @@ client.db.insert(schema.emails).values(samples.map(([accountId,id,fromAddress,fr
 }))).run();
 client.db.insert(schema.labels).values(['sample-work','sample-personal','sample-foreign'].map(accountId=>({id:`inbox-${accountId}`,accountId,providerLabelId:'INBOX',name:'INBOX',type:'system'}))).run();
 client.db.insert(schema.emailLabels).values(samples.map(([accountId,id])=>({id:`label-${id}`,emailId:`message-${id}`,labelId:`inbox-${accountId}`}))).run();
-client.db.insert(schema.senderAttentionRules).values([
+if (process.env.ATTENTION_PREVIEW_LEGACY_CHOICES === '1') client.db.insert(schema.senderAttentionRules).values([
  {id:'rule-bulletin',accountId:'sample-work',scope:'address',value:'hello@weekly.example',behavior:'quiet',source:'user_choice'},
  {id:'rule-receipt',accountId:'sample-personal',scope:'address',value:'receipts@shop.example',behavior:'quiet',source:'user_choice'},
  {id:'rule-deploy',accountId:'sample-work',scope:'address',value:'notifications@github.example',behavior:'focus',source:'user_choice'},
@@ -67,7 +67,7 @@ const server = Bun.serve({idleTimeout:30,hostname:'127.0.0.1',port:Number(proces
  const url = new URL(request.url);
  if (url.pathname === '/__preview/fault' && request.method === 'POST') {
    const raw = await request.json() as Partial<PreviewFault>;
-   if (!(raw.path?.startsWith('/v1/attention/') || (raw.path === '/v1/inbox' && raw.method === 'GET')) || !['GET','PUT'].includes(raw.method ?? '')) return Response.json({error:'Only Attention fixture requests can be faulted.'},{status:400});
+   if (!((raw.path?.startsWith('/v1/attention/') || raw.path?.startsWith('/v1/destinations')) || (raw.path === '/v1/inbox' && raw.method === 'GET')) || !['GET','PUT','POST','PATCH'].includes(raw.method ?? '')) return Response.json({error:'Only Attention fixture requests can be faulted.'},{status:400});
    nextFault = { method:raw.method!, path:raw.path, status:raw.status === 401 ? 401 : raw.status === 403 ? 403 : 503, afterCommit:raw.afterCommit === true, delayMs:Math.min(15000,Math.max(0,Number(raw.delayMs)||0)), passthrough:raw.passthrough === true, queryIncludes:typeof raw.queryIncludes === 'string' ? raw.queryIncludes : '' };
    return Response.json({queued:true});
  }
@@ -80,7 +80,7 @@ const server = Bun.serve({idleTimeout:30,hostname:'127.0.0.1',port:Number(proces
    return Response.json({accounts:status.accounts.map(account=>({...account,state:'idle',error:null}))});
  }
  if (url.pathname.startsWith('/v1/')) {
-   if (!['GET','HEAD'].includes(request.method) && !/^\/v1\/(attention|threads|messages|preferences)(\/|$)/.test(url.pathname)) return Response.json({error:{message:'This isolated preview only supports mail organization changes.'}},{status:403});
+   if (!['GET','HEAD'].includes(request.method) && !/^\/v1\/(attention|destinations|threads|messages|preferences)(\/|$)/.test(url.pathname)) return Response.json({error:{message:'This isolated preview only supports mail organization changes.'}},{status:403});
    const headers = new Headers(request.headers); headers.set('cookie',`orca_session=${session.token}`);
    const fault = nextFault?.method === request.method && nextFault.path === url.pathname && url.search.includes(nextFault.queryIncludes) ? nextFault : null;
    if (fault) {
@@ -118,3 +118,10 @@ const server = Bun.serve({idleTimeout:30,hostname:'127.0.0.1',port:Number(proces
  return new Response(html,{headers:{'content-type':'text/html'}});
 }});
 console.log(JSON.stringify({url:server.url.href,databasePath,kind:'isolated synthetic mailbox'}));
+
+// Keep the disposable mailbox for the preview lifetime, then remove it on shutdown.
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
+ server.stop(true);
+ rmSync(directory, {recursive:true, force:true});
+ process.exit(0);
+});
