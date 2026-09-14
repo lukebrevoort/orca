@@ -80,7 +80,9 @@ describe("first-slice API smoke test", () => {
       assert.equal(inboxResponse.status, 200);
       const inbox = await inboxResponse.json();
       assert.deepEqual(inbox.accounts.map((account: { email: string }) => account.email), ["luke@example.com"]);
-      assert.deepEqual(inbox.messages, [{
+      assert.equal(inbox.messages.length, 1);
+      const { destination, ...legacyMessage } = inbox.messages[0];
+      assert.deepEqual([legacyMessage], [{
         id: "email_smoke", accountId: "acct_smoke", provider: "gmail", providerMessageId: "message-smoke", threadId: "thread_smoke",
         from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Smoke coverage", snippet: "A seeded inbox message",
         receivedAt: syncedAt.toISOString(), unread: true, labels: ["Inbox"], attentionBehavior: "normal", humanSignal: null,
@@ -89,6 +91,16 @@ describe("first-slice API smoke test", () => {
           effective: { classification: "unclassified", score: null, reasonCodes: ["insufficient_evidence"], classifierVersion: null, source: "automatic_heuristic", userOverride: null },
         },
       }]);
+      const destinationsResponse = await api.request("/v1/destinations", { headers });
+      assert.equal(destinationsResponse.status, 200);
+      const destinations = await destinationsResponse.json();
+      assert.equal(typeof destinations.fallbackDestinationId, "string");
+      assert.ok(destinations.fallbackDestinationId.length > 0);
+      assert.equal(destination.destinationId, destinations.fallbackDestinationId);
+      assert.equal(destination.source, "fallback");
+      assert.equal(destination.locked, false);
+      assert.equal(typeof destination.reason, "string");
+      assert.ok(destination.reason.length > 0);
       assert.deepEqual(inbox.counts, { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 });
     } finally {
       sqlite.close();

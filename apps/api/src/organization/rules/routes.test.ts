@@ -26,7 +26,9 @@ action route lane "Inbox"
 because "Launch mail stays visible"`;
 
 function reviewerTabHeavySource(): string {
-  let result = source;
+  // Replace the ten bytes removed by the fresh fallback name with rationale
+  // text, preserving both the source and escaped JSON byte budgets.
+  let result = source.replace("Launch mail stays visible", "Launch mail stays visible in Inbox!");
   while (Buffer.byteLength(result) < 62_159) {
     const remaining = 62_159 - Buffer.byteLength(result);
     if (remaining === 1) {
