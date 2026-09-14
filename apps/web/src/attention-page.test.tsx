@@ -894,6 +894,10 @@ test("create from sidebar opens durable destination; sender routing covers futur
   const clients = catalog.destinations.find((item: {name: string}) => item.name === "Clients");
   expect(clients, document.querySelector(".destination-manager")?.outerHTML).toBeDefined();
   expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
+  expect(document.querySelector(".content-pane")?.textContent).toContain("No mail in Clients yet");
+  expect(document.querySelector(".content-pane")?.textContent).toContain("choose Clients for a sender in Attention");
+  expect(document.querySelector(".content-pane")?.textContent).not.toContain("Keep useful mail together");
+  expect(document.querySelector(".content-pane")?.textContent).not.toContain("When synced mail arrives");
   await nav("Attention");
   await select("Destination for maya@example.com", clients.id);
   await nav("Clients");

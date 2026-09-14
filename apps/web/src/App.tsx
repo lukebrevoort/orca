@@ -3140,6 +3140,7 @@ export function InboxApp({
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
+              destinationName={destinationSurface ? selectedDestination?.name ?? null : null}
               originLabel={activeCollection?.name ?? activeMailboxLabel}
               classificationView={classificationView}
               classificationError={requestedDestinationId || activeMailbox === "quiet" ? null : classificationError}
@@ -4457,6 +4458,7 @@ export function MessageSubject({ subject, unread }: { subject: string; unread: b
 }
 
 function InboxView({
+  destinationName,
   account,
   demoMode,
   agentEventActionErrors,
@@ -4536,6 +4538,7 @@ function InboxView({
   inboxEyebrow: string;
   inboxFilter: InboxFilter;
   inboxTitle: string;
+  destinationName: string | null;
   originLabel: string;
   classificationView: ClassificationView;
   classificationError: string | null;
@@ -4837,7 +4840,7 @@ function InboxView({
           : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} in ${inboxTitle}.`;
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
-      {viewMode === "inbox" && status === "ready" && !classificationError && inboxFilter === "all" && classificationView === "all" && !isCollectionView && activePin?.kind !== "filter" && !searchQuery && !personFilter && !selectionMode ? <FirstViewInvitation/> : null}
+      {!destinationName && (viewMode === "inbox" || viewMode === "all") && status === "ready" && !classificationError && inboxFilter === "all" && classificationView === "all" && !isCollectionView && activePin?.kind !== "filter" && !searchQuery && !personFilter && !selectionMode ? <FirstViewInvitation/> : null}
       <header className="pane-header">
         <div>
           <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>
@@ -5065,10 +5068,10 @@ function InboxView({
                 ? `No threads in your inbox include ${personFilter} yet.`
                 : isCollectionView
                   ? "Use Add to collection on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
-                  : "When synced mail arrives, your inbox list will appear here."
+                  : destinationName ? `Move a conversation here or choose ${destinationName} for a sender in Attention.` : "When synced mail arrives, your inbox list will appear here."
             }
-            eyebrow={searchQuery.trim() || personFilter ? "No matches" : isCollectionView ? "Collection empty" : "Inbox empty"}
-            title={searchQuery.trim() ? "Nothing found" : personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : "No messages yet"}
+            eyebrow={searchQuery.trim() || personFilter ? "No matches" : isCollectionView ? "Collection empty" : destinationName ? "Destination empty" : "Inbox empty"}
+            title={searchQuery.trim() ? "Nothing found" : personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : destinationName ? `No mail in ${destinationName} yet` : "No messages yet"}
           />
         ) : null}
 

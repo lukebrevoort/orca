@@ -332,7 +332,7 @@ export function AttentionPage({
             <p>
               {senders.length
                 ? "No senders match these filters."
-                : "No sender choices yet. Everyone follows the default below unless an advanced rule or conversation choice applies."}
+                : "Add a sender to choose where their mail goes."}
             </p>
             {(query || filter !== "all") && (
               <button
