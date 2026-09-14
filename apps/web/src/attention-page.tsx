@@ -21,7 +21,7 @@ export function AttentionPage({
   demoMode?: boolean;
   onAdvanced: () => void;
 }) {
-  const catalog = useDestinations();
+  const catalog = useDestinations(demoMode);
   const [managing, setManaging] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [accountId, setAccountId] = useState("");
@@ -236,7 +236,7 @@ export function AttentionPage({
           This preview is read-only. Connect an account to save routing choices.
         </p>
       )}
-      {managing && <DestinationManager onClose={() => setManaging(false)} onCreated={() => {}} />}
+      {managing && <DestinationManager preview={demoMode} onClose={() => setManaging(false)} onCreated={() => {}} />}
       {catalog.error && <p role="alert">{catalog.error} <button onClick={() => void catalog.refresh().catch(() => {})}>Reload destinations</button></p>}
       <RoutingErrors routing={routing} />
       <div

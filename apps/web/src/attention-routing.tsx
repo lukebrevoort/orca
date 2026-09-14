@@ -1,4 +1,4 @@
-import { destinationLabel, refreshDestinations } from "./mail-destinations";
+import { destinationChangeEvent, destinationLabel, refreshDestinations } from "./mail-destinations";
 import {
   createContext,
   useContext,
@@ -87,6 +87,11 @@ export function AttentionRoutingProvider({
       if (generation === receiptGeneration.current) setError("Mail could not reload. Last loaded mail may be out of date.");
     }
   }
+  useEffect(() => {
+    const refresh = () => { void changed(); };
+    window.addEventListener(destinationChangeEvent, refresh);
+    return () => window.removeEventListener(destinationChangeEvent, refresh);
+  }, [onRefresh]);
   async function undo() {
     if (!receipt || lock.current || !online) return;
     lock.current = true;

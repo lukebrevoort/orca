@@ -50,12 +50,13 @@ function MobileMenuItem({ active = false, count, icon, label, onClick }: { activ
   </button>;
 }
 
-export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onNavigate }: {
+export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onManageTools, onNavigate }: {
   projection: SidebarNavigationProjection;
   theme: "light" | "dark";
   composeButtonRef?: RefObject<HTMLButtonElement | null>;
   onCompose: () => void;
   onManageSpaces: () => void;
+  onManageTools?: () => void;
   onNavigate: (destination: DesktopDestination) => void;
 }) {
   const { account, active, draftCount, inboxCount, spaces, fallbackDestination } = projection;
@@ -104,6 +105,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         label={space.label}
         onClick={() => onNavigate(destinationForSpace(space))}
       />)}
+      {onManageTools && <button className="desktop-space-tools" onClick={onManageTools} type="button">Manage tools</button>}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
       <SidebarItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => onNavigate("attention")} />
@@ -145,6 +147,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
               onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="New / manage destinations" onClick={onManageSpaces} />
+            {onManageTools && <MobileMenuItem icon={<span aria-hidden="true">±</span>} label="Manage tools" onClick={onManageTools} />}
           </div>
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
@@ -230,7 +233,7 @@ const emptySettingsNavigationSource: SettingsNavigationSource = {
 
 export function DesktopSettingsFrame({ children, navigationPreview, theme, title, onThemeChange }: { children: ReactNode; navigationPreview?: SettingsNavigationPreview; theme: "light" | "dark"; title: string; onThemeChange: () => void }) {
   const online = useOnlineStatus();
-  const catalog = useDestinations();
+  const catalog = useDestinations(Boolean(navigationPreview?.complete));
   const [manageDestinations, setManageDestinations] = useState(false);
   const [source, setSource] = useState<SettingsNavigationSource>(() => navigationPreview
     ? navigationPreview
@@ -337,10 +340,11 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     window.location.assign(desktopDestinationHref(destination, window.location.pathname));
   };
   return <div className="desktop-shell desktop-settings-frame">
-    {manageDestinations && <DestinationManager onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />
+    {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
       onCompose={() => window.location.assign("/?compose=1")}
       onManageSpaces={() => setManageDestinations(true)}
+      onManageTools={() => window.location.assign(desktopDestinationHref("organization", window.location.pathname))}
       onNavigate={navigate}
       projection={projection}
       theme={theme}

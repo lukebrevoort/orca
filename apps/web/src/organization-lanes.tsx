@@ -1,3 +1,4 @@
+import { destinationChangeEvent } from "./mail-destinations";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   organizationFallbackPlacementFixture,
@@ -177,6 +178,14 @@ function ThreadLaneControlsContent({ accountId, threadId, demoMode = false }: { 
   const canCorrect = demoMode || authority.state.canMutate && authority.allows.correct;
 
   useEffect(() => {
+    if (demoMode) return;
+    const refresh = () => authority.retry();
+    window.addEventListener("orca:routing-changed", refresh);
+    window.addEventListener(destinationChangeEvent, refresh);
+    return () => { window.removeEventListener("orca:routing-changed", refresh); window.removeEventListener(destinationChangeEvent, refresh); };
+  }, [demoMode, authority.retry]);
+
+  useEffect(() => {
     if (demoMode) { setPlacement(demoPlacement(accountId, threadId)); return; }
     if (!authority.snapshot) return;
     const controller = new AbortController();
@@ -203,6 +212,7 @@ function ThreadLaneControlsContent({ accountId, threadId, demoMode = false }: { 
         const parsed = organizationLaneApplyResponseSchema.parse(body); setConfiguration(parsed.laneConfiguration); setPlacement(parsed.placements[0] ?? placement);
       }
       setState("ready");
+      if (!demoMode) window.dispatchEvent(new Event(destinationChangeEvent));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Nothing changed"); setState("error"); }
   }
 
@@ -235,6 +245,7 @@ function ThreadLaneControlsContent({ accountId, threadId, demoMode = false }: { 
         setCorrectionEvidence(`${result.eventKind} · Trace ${result.trace.id} · winner ${laneWinner?.candidateId ?? "no projected change"}`);
       }
       setState("ready");
+      if (!demoMode) window.dispatchEvent(new Event(destinationChangeEvent));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Correction was not recorded"); setState("error"); }
   }
 

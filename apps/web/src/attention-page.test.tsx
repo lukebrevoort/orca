@@ -245,7 +245,7 @@ function button(text: string) {
       ? b.classList.contains("sender-attention-trigger")
       : b.textContent === text,
   );
-  expect(found).toBeDefined();
+  expect(found, `Missing button ${text}. Page: ${document.body.textContent}`).toBeDefined();
   return found!;
 }
 async function click(text: string) {
@@ -580,6 +580,10 @@ async function renderMailbox() {
   await settle(); await settle();
 }
 async function nav(label: string) {
+  if (label === "Signals") {
+    const catalog = await (await request("/v1/destinations")).json();
+    label = catalog.destinations.find((item: {id: string}) => item.id === catalog.legacyDestinationIds.notify)?.name ?? label;
+  }
   const target = (label === "Signals" ? document.querySelector(".desktop-space-signals")?.closest("button") : null) ?? document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
     ?? [...document.querySelectorAll<HTMLButtonElement>(".desktop-sidebar button")].find(b => b.textContent?.includes(label));
   expect(target).toBeDefined();
@@ -879,15 +883,16 @@ async function inputValue(input: HTMLInputElement, value: string) {
   });
 }
 
-test("create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement reassigns safely", async () => {
+test("create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement rejects references safely", async () => {
   intercept = async path => syncNoop(path);
   await renderMailbox();
   await click("New / manage");
-  await inputValue(document.querySelector<HTMLInputElement>('dialog input')!, "Clients");
+  await inputValue(document.querySelector<HTMLInputElement>('.destination-manager input')!, "Clients");
+  expect(button("Create destination").disabled, document.querySelector(".destination-manager")?.outerHTML).toBe(false);
   await click("Create destination");
   const catalog = await (await request("/v1/destinations")).json();
   const clients = catalog.destinations.find((item: {name: string}) => item.name === "Clients");
-  expect(clients).toBeDefined();
+  expect(clients, document.querySelector(".destination-manager")?.outerHTML).toBeDefined();
   expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
   await nav("Attention");
   await select("Destination for maya@example.com", clients.id);
@@ -903,7 +908,7 @@ test("create from sidebar opens durable destination; sender routing covers futur
   for (let i = 0; i < 50 && !document.querySelector(".content-pane")?.textContent?.includes("Future client mail"); i++) await settle();
   expect(document.querySelector(".content-pane")?.textContent).toContain("Future client mail");
   await click("New / manage");
-  const details = [...document.querySelectorAll("dialog details")].find(item => item.querySelector("summary")?.textContent === "Clients")!;
+  const details = [...document.querySelectorAll(".destination-manager details")].find(item => item.querySelector("summary")?.textContent === "Clients")!;
   await inputValue(details.querySelector<HTMLInputElement>("input")!, "Partners");
   await act(async () => details.querySelector<HTMLButtonElement>("button")!.click());
   await settle();
@@ -914,7 +919,7 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Retire Partners")!.click());
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
-  expect(document.querySelector("dialog [role=alert]")).not.toBeNull();
+  expect(document.querySelector(".destination-manager [role=alert]")).not.toBeNull();
   const latest = await state();
   await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: latest.revision, target: { scope: "sender", address: "maya@example.com" }, destinationId: null }) });
   await act(async () => refreshDestinations());
@@ -941,4 +946,12 @@ test("destination URL survives reader open, close and history while canonical pa
   expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${quietId}`);
   expect(new URL(window.location.href).searchParams.get("accountId")).toBe("a");
   expect(new URL(window.location.href).searchParams.get("thread")).toBeTruthy();
+  await act(async () => document.querySelector<HTMLButtonElement>(".reader-back")!.click());
+  await settle();
+  expect(new URL(window.location.href).searchParams.get("thread")).toBeNull();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${quietId}`);
+  await act(async () => window.history.forward());
+  await settle();
+  expect(new URL(window.location.href).searchParams.get("thread")).toBeTruthy();
+  expect(document.querySelector(".reader-back")?.textContent).toContain("Quiet");
 }, 20000);

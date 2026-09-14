@@ -440,3 +440,9 @@
     max-width: 100%;
   }
 }
+
+.destination-manager { position: relative; z-index: 1; align-self: center; margin: auto; }
+.destination-manager details { border-top: 1px solid var(--orca-border); margin-top: 20px; padding-top: 16px; }
+.destination-manager summary { cursor: pointer; color: var(--orca-ink); }
+.desktop-space-tools { margin: 8px 12px; padding: 8px; background: var(--orca-surface); color: var(--orca-muted); border: 1px solid var(--orca-border); border-radius: 8px; }
+.desktop-space-tools:hover, .desktop-space-tools:focus-visible { color: var(--orca-ink); background: var(--orca-surface-hover); }

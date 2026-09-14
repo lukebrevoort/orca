@@ -1264,9 +1264,9 @@ export function InboxApp({
   const [classificationView, setClassificationView] = useState<ClassificationView>("all");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
-  const catalog = useDestinations();
+  const catalog = useDestinations(demoMode);
   const [activeDestinationId, setActiveDestinationId] = useState<string | null>(() => {
-    const route = desktopDestinationFromLocation(window.location);
+    const route = typeof window === "undefined" ? "inbox" : desktopDestinationFromLocation(window.location);
     return route.startsWith("destination:") ? route.slice(12) : null;
   });
   const [destinationPage, setDestinationPage] = useState<InboxClassificationResponse | null>(null);
@@ -1341,11 +1341,12 @@ export function InboxApp({
   }, []);
   const bre358PartialServedRef = useRef(false);
   const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
+  const [manageToolsOpen, setManageToolsOpen] = useState(false);
   const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
   const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
   const [spacePreferencesReady, setSpacePreferencesReady] = useState(false);
   const [hiddenSpaceIds, setHiddenSpaceIds] = useState<string[]>([]);
-  const [spaceOrder, setSpaceOrder] = useState<string[]>(["focus", "signals", "quiet", "later"]);
+  const [spaceOrder, setSpaceOrder] = useState<string[]>(["later"]);
   const [spaceLabels, setSpaceLabels] = useState<Record<string, string>>({});
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -1475,7 +1476,7 @@ export function InboxApp({
   useEffect(() => {
     setSpaceOrder((current) => {
       const collectionIds = collections.map((collection) => collection.id);
-      const next = current.filter((id) => ["focus", "signals", "quiet", "later"].includes(id) || collectionIds.includes(id));
+      const next = current.filter((id) => ["later"].includes(id) || collectionIds.includes(id));
       for (const id of collectionIds) if (!next.includes(id)) next.push(id);
       return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next;
     });
@@ -1798,7 +1799,7 @@ export function InboxApp({
     setDestinationError(null);
     if (!requestedDestinationId || !selectedDestination || selectedDestination.retiredAt || demoMode) { setDestinationLoading(false); return; }
     setDestinationLoading(true);
-    void fetchJson(`/v1/inbox?view=all&classification=all&limit=100&destinationId=${encodeURIComponent(requestedDestinationId)}`, inboxClassificationResponseSchema, controller.signal).then(page => {
+    void fetchJson(`/v1/inbox?view=all&classification=${classificationView}&limit=100&destinationId=${encodeURIComponent(requestedDestinationId)}`, inboxClassificationResponseSchema, controller.signal).then(page => {
       if (controller.signal.aborted || owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current) return;
       destinationPageKey.current = requestedDestinationId;
       setDestinationPage(page);
@@ -1806,10 +1807,10 @@ export function InboxApp({
     }).catch(error => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationLoading(false); });
     return () => { controller.abort(); ++destinationRequest.current; };
-  }, [requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision]);
+  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision]);
   useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
-  const isClassificationMailbox = !requestedDestinationId && (activeMailbox === "inbox" || activeMailbox === "all");
+  const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "all");
   const mailboxMessages = useMemo(
     () => {
       const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
@@ -2144,6 +2145,7 @@ export function InboxApp({
       return;
     }
     setManageSpacesOpen(false);
+    setManageToolsOpen(false);
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     setStreamQuery(location.query);
     setOrganizationStudioOpen(destination === "organization" || destination === "attention" ? destination : false);
@@ -2152,7 +2154,7 @@ export function InboxApp({
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
       setActiveCollectionId(null);
-      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") || destination.startsWith("view:") ? "inbox" : destination as Mailbox);
+      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
     }
 
     const history = surfaceHistoryRef.current;
@@ -2549,7 +2551,7 @@ export function InboxApp({
       const key = requestedDestinationId;
       setIsLoadingMoreMessages(true);
       try {
-        const page = await fetchJson(`/v1/inbox?view=all&classification=all&limit=100&destinationId=${encodeURIComponent(key)}&cursor=${encodeURIComponent(destinationPage.nextCursor)}`, inboxClassificationResponseSchema);
+        const page = await fetchJson(`/v1/inbox?view=all&classification=${classificationView}&limit=100&destinationId=${encodeURIComponent(key)}&cursor=${encodeURIComponent(destinationPage.nextCursor)}`, inboxClassificationResponseSchema);
         if (owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current || key !== destinationKeyRef.current) return;
         setDestinationPage(current => ({ ...page, messages: mergeMessages(current?.messages ?? [], page.messages) }));
         setAllMailMessages(current => mergeMessages(current, page.messages));
@@ -2668,6 +2670,7 @@ export function InboxApp({
   function selectCollection(id: string) {
     runUiTransition("content", () => {
       setActiveCollectionId(id);
+      setActiveDestinationId(null);
       setActiveMailbox("inbox");
       setPersonFilter(null);
       setSelectedThreadId(null);
@@ -2853,6 +2856,7 @@ export function InboxApp({
       surfaceHistoryRef.current?.navigate(filter.mailbox);
       surfaceHistoryRef.current?.replaceQuery(filter.query);
       runUiTransition("content", () => {
+        setActiveDestinationId(null);
         setActiveMailbox(filter.mailbox);
         if (filter.mailbox === "inbox" || filter.mailbox === "all") {
           setClassificationView(pinFilterClassificationView(filter) ?? "human");
@@ -2975,6 +2979,7 @@ export function InboxApp({
 
   function navigateDesktop(destination: DesktopDestination) {
     setManageSpacesOpen(false);
+    setManageToolsOpen(false);
     if (destination === "settings") {
       window.location.assign("/settings");
       return;
@@ -3002,7 +3007,7 @@ export function InboxApp({
     }
     setActiveSavedViewId(null);
     if (destination.startsWith("destination:")) {
-      setActiveMailbox("inbox"); setActiveCollectionId(null); setSelectedThreadId(null); setSelectedThreadAccountId(null); setPersonFilter(null); setInboxFilter("all");
+      setActiveMailbox(demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox"); setActiveCollectionId(null); setSelectedThreadId(null); setSelectedThreadAccountId(null); setPersonFilter(null); setInboxFilter("all");
       return;
     }
     if (destination.startsWith("space:")) {
@@ -3093,6 +3098,7 @@ export function InboxApp({
           composeButtonRef={composeTriggerRef}
           onCompose={() => openCompose()}
           onManageSpaces={() => setManageSpacesOpen(true)}
+          onManageTools={() => setManageToolsOpen(true)}
           onNavigate={navigateDesktop}
           projection={sidebarProjection}
           theme={theme}
@@ -3176,8 +3182,8 @@ export function InboxApp({
               onSearchChange={changeStreamQuery}
               searchQuery={streamQuery}
               reminders={reminders}
-              showInboxFilters={!requestedDestinationId && !activeCollectionId && activeMailbox === "inbox" && !personFilter}
-              viewMode={activeCollection ? "collection" : activeMailbox}
+              showInboxFilters={(demoMode || !requestedDestinationId) && !activeCollectionId && activeMailbox === "inbox" && !personFilter}
+              viewMode={activeCollection ? "collection" : requestedDestinationId && requestedDestinationId === catalog.data?.legacyDestinationIds.notify ? "signals" : activeMailbox}
             />}
           </div>
           <div style={{ display: selectedThreadId ? undefined : "none" }}>
@@ -3205,7 +3211,8 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageSpacesOpen ? <DestinationManager onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
+      {manageToolsOpen ? <ManageSpacesDialog busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => setManageToolsOpen(false)} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} spaces={workflowSpaces.filter(space => space.kind !== "view" && space.kind !== "destination")} /> : null}
+      {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
