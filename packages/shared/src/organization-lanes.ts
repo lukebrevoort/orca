@@ -176,6 +176,10 @@ const setThreadSafetyLockActionSchema = z.object({
 }).strict();
 
 export const organizationLaneActionSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("set_destination_binding"), accountId: identifierSchema,
+    scope: z.enum(["account", "sender", "conversation"]), value: z.string().max(320),
+    destinationId: identifierSchema.nullable(), expectedRevision: revisionSchema.nullable(),
+  }).strict(),
   defineLanePolicyActionSchema,
   updateLanePolicyActionSchema,
   defineLaneActionSchema,

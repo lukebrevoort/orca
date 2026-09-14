@@ -1,3 +1,4 @@
+import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
 
 const nonEmptyStringSchema = z.string().min(1);
@@ -583,6 +584,7 @@ export const inboxQuerySchema = z
     sender: z.string().trim().min(1).max(320).optional(),
     accountId: nonEmptyStringSchema.optional(),
     collectionId: nonEmptyStringSchema.optional(),
+    destinationId: nonEmptyStringSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();

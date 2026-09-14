@@ -583,3 +583,4 @@ export * from "./organization-view-search.ts";
 
 export * from "./attention-preferences.ts";
 export * from "./attention-routing.ts";
+export * from "./mail-destinations.ts";
