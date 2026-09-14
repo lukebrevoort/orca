@@ -1,3 +1,4 @@
+import { destinationChangeEvent } from "./mail-destinations";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   organizationFallbackPlacementFixture,
@@ -39,10 +40,11 @@ function applyDemoActions(configuration: OrganizationLaneConfiguration, actions:
         revision: 1,
       } satisfies LanePolicy);
     }
-    if (action.kind === "define_lane") next.lanes.push({ id: action.id, name: action.name, position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
+    if (action.kind === "define_lane") next.lanes.push({ id: action.id, name: action.name, color: action.color ?? "#70867d", position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
     if (action.kind === "update_lane") {
       const lane = next.lanes.find((item) => item.id === action.laneId); if (!lane) continue;
       if (action.name !== undefined) lane.name = action.name;
+      if (action.color !== undefined) lane.color = action.color;
       if (action.position !== undefined) lane.position = action.position;
       if (action.retired !== undefined) lane.retiredAt = action.retired ? new Date().toISOString() : null;
       lane.revision += 1;
@@ -177,6 +179,14 @@ function ThreadLaneControlsContent({ accountId, threadId, demoMode = false }: { 
   const canCorrect = demoMode || authority.state.canMutate && authority.allows.correct;
 
   useEffect(() => {
+    if (demoMode) return;
+    const refresh = () => authority.retry();
+    window.addEventListener("orca:routing-changed", refresh);
+    window.addEventListener(destinationChangeEvent, refresh);
+    return () => { window.removeEventListener("orca:routing-changed", refresh); window.removeEventListener(destinationChangeEvent, refresh); };
+  }, [demoMode, authority.retry]);
+
+  useEffect(() => {
     if (demoMode) { setPlacement(demoPlacement(accountId, threadId)); return; }
     if (!authority.snapshot) return;
     const controller = new AbortController();
@@ -203,6 +213,7 @@ function ThreadLaneControlsContent({ accountId, threadId, demoMode = false }: { 
         const parsed = organizationLaneApplyResponseSchema.parse(body); setConfiguration(parsed.laneConfiguration); setPlacement(parsed.placements[0] ?? placement);
       }
       setState("ready");
+      if (!demoMode) window.dispatchEvent(new Event(destinationChangeEvent));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Nothing changed"); setState("error"); }
   }
 
@@ -235,18 +246,18 @@ function ThreadLaneControlsContent({ accountId, threadId, demoMode = false }: { 
         setCorrectionEvidence(`${result.eventKind} · Trace ${result.trace.id} · winner ${laneWinner?.candidateId ?? "no projected change"}`);
       }
       setState("ready");
+      if (!demoMode) window.dispatchEvent(new Event(destinationChangeEvent));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Correction was not recorded"); setState("error"); }
   }
 
   return <div className="thread-lane-controls">
-    <button aria-expanded={drawer === "controls"} className="thread-lane-trigger" disabled={!placement && authority.state.kind === "loading"} onClick={() => setDrawer("controls")} type="button"><span>Lane</span><strong>{lane?.name ?? (authority.state.kind === "loading" ? "Loading…" : authority.state.title)}</strong></button>
+    <button aria-expanded={drawer === "controls"} className="thread-lane-trigger" disabled={!placement && authority.state.kind === "loading"} onClick={() => setDrawer("controls")} type="button"><span>Advanced safety</span>{!placement && <strong>{authority.state.title}</strong>}</button>
     <button aria-expanded={drawer === "evidence"} className="thread-lane-why" disabled={!placement} onClick={() => setDrawer("evidence")} type="button">Why is this here?</button>
-    {drawer ? <DesktopDrawer ariaLabel={drawer === "controls" ? "Thread Lane controls" : "Thread placement evidence"} backdropClassName="thread-lane-backdrop" className="thread-lane-drawer" layerClassName="thread-lane-layer" onClose={() => setDrawer(null)}><header><div><span>{drawer === "controls" ? "Manual organization" : "Placement evidence"}</span><h2>{drawer === "controls" ? "Choose this Thread’s Lane" : "Why is this here?"}</h2></div><button aria-label="Close" onClick={() => setDrawer(null)} type="button">×</button></header>
+    {drawer ? <DesktopDrawer ariaLabel={drawer === "controls" ? "Thread Lane controls" : "Thread placement evidence"} backdropClassName="thread-lane-backdrop" className="thread-lane-drawer" layerClassName="thread-lane-layer" onClose={() => setDrawer(null)}><header><div><span>{drawer === "controls" ? "Manual organization" : "Placement evidence"}</span><h2>{drawer === "controls" ? "Safety & correction" : "Why is this here?"}</h2></div><button aria-label="Close" onClick={() => setDrawer(null)} type="button">×</button></header>
       <OrganizationRecoveryBanner />
       {error ? <p className="thread-lane-error" role="alert">{error}</p> : null}
       {drawer === "controls" && configuration && placement ? <>
-        <div className="thread-lane-options" role="group" aria-label="Manual Override Lane">{configuration.lanes.filter((item) => !item.retiredAt).map((item) => <button aria-pressed={placement.primaryLaneId === item.id} disabled={!canApply || state === "saving" || placement.safetyLock.locked} key={item.id} onClick={() => void apply({ kind: "set_thread_manual_override", accountId, threadId, laneId: item.id, reason: `Human selected ${item.name} from the Thread reader.`, expectedThreadRevision: placement.revision })} type="button"><span>{item.name}</span><small>{item.id === configuration.fallbackLaneId ? "Workspace Fallback" : "Manual Override"}</small></button>)}</div>
-        <button className="thread-clear-override" disabled={!canApply || state === "saving" || placement.safetyLock.locked || !placement.manualOverride} onClick={() => void apply({ kind: "set_thread_manual_override", accountId, threadId, laneId: null, reason: "Human cleared the Manual Override from the Thread reader.", expectedThreadRevision: placement.revision })} type="button">Clear Manual Override</button>
+        <p>Use the mail destination chooser to change where this conversation belongs.</p>
         <section className="thread-safety-lock"><div><span>Safety Lock</span><strong>{placement.safetyLock.locked ? "Locked by you" : "Changes allowed"}</strong><p>Prevents Orca rules and Manual Overrides from changing this Thread’s Lane until you unlock it.</p></div><button aria-pressed={placement.safetyLock.locked} disabled={!canApply || state === "saving"} onClick={() => void apply({ kind: "set_thread_safety_lock", accountId, threadId, locked: !placement.safetyLock.locked, reason: placement.safetyLock.locked ? "Human unlocked the Thread after review." : "Human protected this Thread placement from organizational changes.", expectedThreadRevision: placement.revision })} type="button">{placement.safetyLock.locked ? "Unlock" : "Lock placement"}</button></section>
         <section className="thread-correction"><div><span>Production correction</span><strong>Record user.corrected</strong><p>Re-evaluates through the same Rule, precedence, Safety Lock, projection, Trace, and audit path. It never sends or deletes provider mail.</p></div><button disabled={!canCorrect || state === "saving"} onClick={() => void correct()} type="button">{state === "saving" ? "Recording…" : "Record correction"}</button>{correctionEvidence ? <p role="status">{correctionEvidence}</p> : null}</section>
       </> : placement ? <div className="thread-evidence-grid"><section><span>Winning source</span><h3>{placement.evidence.winningSource.replaceAll("_", " ")}</h3><p>Source identity · {placement.evidence.sourceId}</p></section><section><span>Precedence level</span><h3>{placement.evidence.precedenceLevel.replaceAll("_", " ")}</h3><p>Safety Lock → Manual Override → Rule → Lane Policy → Workspace Fallback.</p></section><section><span>Actor</span><h3>{placement.evidence.actor.type} · {placement.evidence.actor.id}</h3><p>The accountable identity behind the winning decision.</p></section><section><span>Reason</span><h3>{placement.evidence.reason}</h3><p>Primary Lane · {lane?.name ?? placement.primaryLaneId}</p></section>{placement.safetyLock.locked ? <section className="thread-evidence-lock"><span>Safety Lock active</span><h3>{placement.safetyLock.reason}</h3><p>{placement.safetyLock.actor?.type} · {placement.safetyLock.actor?.id}</p></section> : null}</div> : null}

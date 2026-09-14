@@ -11,6 +11,7 @@ import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { emails, oauthAccounts, threads, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
+import { createMailboxReader, MailboxCursorError } from "../../mailbox/read.ts";
 import { createOrganizationViews, digestOrganizationViewDefinition } from "./module.ts";
 import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, type OrganizationViewPageKey } from "./sqlite-repository.ts";
 import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
@@ -207,6 +208,42 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
   assert.equal(response.status, 201, text);
   return JSON.parse(text) as OrganizationView;
 }
+
+test("commits a View once while invalidating owned mailbox cursors through revision triggers", async () => {
+  const { app, headers, path } = await setup();
+  const client = createDatabaseClient(path);
+  try {
+    const reader = createMailboxReader(client.sqlite);
+    const authorization = { userId: "owner", accountIds: ["account_a", "account_b"] };
+    const query = { view: "all" as const, classification: "all" as const, limit: 1 };
+    const first = reader.read({ authorization, query }).response;
+    assert.ok(first.nextCursor);
+    const revisions = () => client.sqlite.query("SELECT account_id,revision FROM mailbox_revisions ORDER BY account_id").all() as Array<{account_id:string;revision:number}>;
+    const before = revisions();
+    const workspaceBefore = (client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as {revision:number}).revision;
+    await createView(app, headers, { name: "Cursor invalidation", color: "#0b9b84", position: 0, definition: { revision: 1, thread: { subjectContains: "A /" } } });
+    const workspaceAfter = (client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as {revision:number}).revision;
+    assert.equal(workspaceAfter, workspaceBefore + 1);
+    assert.deepEqual(revisions(), before.map(row => ({ ...row, revision: row.revision + (row.account_id === "account_foreign" ? 0 : 1) })));
+    assert.throws(() => reader.read({ authorization, query: { ...query, cursor: first.nextCursor! } }), MailboxCursorError);
+    const fresh = reader.read({ authorization, query }).response;
+    assert.notEqual(fresh.freshness.revision, first.freshness.revision);
+    assert.deepEqual(fresh.messages.map(message => message.id), first.messages.map(message => message.id));
+    const committedRevisions = revisions();
+    const committedChanges = client.sqlite.query("SELECT id FROM organization_change_sets WHERE workspace_id='owner' ORDER BY id").all();
+    const stale = await app.request("/v1/organization/views", {
+      method: "POST", headers,
+      body: JSON.stringify({ idempotencyKey: "stale-mailbox-cursor-view", expectedWorkspaceRevision: workspaceBefore,
+        name: "Stale View", color: "#0b9b84", position: 1, definition: { revision: 1 } }),
+    });
+    assert.equal(stale.status, 409);
+    assert.equal((await stale.json()).error.code, "revision_conflict");
+    assert.deepEqual(revisions(), committedRevisions);
+    assert.deepEqual(client.sqlite.query("SELECT id FROM organization_change_sets WHERE workspace_id='owner' ORDER BY id").all(), committedChanges);
+    assert.equal((client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision, workspaceAfter);
+    assert.equal((client.sqlite.query("SELECT count(*) count FROM organization_views WHERE workspace_id='owner'").get() as { count: number }).count, 1);
+  } finally { client.sqlite.close(); }
+});
 
 describe("BRE-313 independent View lifecycle verification", () => {
   test("prepares exact selected-message From addresses only after validating every reference", { timeout: 30_000 }, async () => {

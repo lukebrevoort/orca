@@ -77,7 +77,7 @@ afterEach(() => {
   while (directories.length) rmSync(directories.pop()!, { recursive: true, force: true });
 });
 
-const source = (lane = "Everything else", name = "Launch mail") => `orca 1
+const source = (lane = "Inbox", name = "Launch mail") => `orca 1
 rule "${name}"
 event message.received
 when subject contains "launch"
@@ -104,7 +104,7 @@ describe("Rule Revision service", () => {
       assert.deepEqual(service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request }), first);
       assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE idempotency_key=?").get(request.idempotencyKey) as { count: number }).count, 1);
       assert.throws(() => createRuleRevisionService(repository).compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request }), RuleAuthorityError);
-      assert.throws(() => service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request: { ...request, source: source("Everything else", "Conflict") } }), (error: unknown) => error instanceof Error && (error as { code?: string }).code === "duplicate_idempotency_key");
+      assert.throws(() => service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request: { ...request, source: source("Inbox", "Conflict") } }), (error: unknown) => error instanceof Error && (error as { code?: string }).code === "duplicate_idempotency_key");
       const denials: Array<[string, () => void]> = [
         ["revoked", () => { live = { snapshot: structuredClone(baseline), revokedAt: "2026-08-26T00:00:00.000Z" }; }],
         ["downgraded", () => { const snapshot = structuredClone(baseline); snapshot.operations = ["query"]; live = { snapshot, revokedAt: null }; }],
@@ -280,7 +280,7 @@ describe("Rule Revision service", () => {
         idempotencyKey: "constant-work-edit",
         expectedRuleRevision: 300,
         workspaceSchemaRevision: 2,
-        source: source("Everything else", "Constant work edit"),
+        source: source("Inbox", "Constant work edit"),
       } });
       assert.equal(edited.ok, true);
       if (edited.ok) assert.equal(edited.revision.revision, 301);
@@ -324,7 +324,7 @@ describe("Rule Revision service", () => {
       changeActions: (sqlite.query("SELECT COUNT(*) count FROM organization_change_actions").get() as { count: number }).count,
       workspaceRevision: (sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'owner'").get() as { revision: number }).revision,
     });
-    const changedSource = source("Everything else", "Substituted source");
+    const changedSource = source("Inbox", "Substituted source");
     const cases: Array<[string, (input: RuleAppendInput) => RuleAppendInput]> = [
       ["request-rule-id", (input) => { input.request.ruleId = "substituted-rule"; return input; }],
       ["request-idempotency", (input) => { input.request.idempotencyKey = "substituted-key"; return input; }],
@@ -383,7 +383,7 @@ predicate launch = subject contains "launch"
 predicate unread = thread.unread equals true
 when launch
 when unread
-action route lane "Everything else"
+action route lane "Inbox"
 action notify digest
 because "Ordered predicates and actions stay bound"`;
     const before = persistenceState();
@@ -455,7 +455,7 @@ because "Ordered predicates and actions stay bound"`;
         idempotencyKey: "transaction-rollback-rule-1",
         expectedRuleRevision: null,
         workspaceSchemaRevision: 2,
-        source: source("Everything else", "Rollback probe"),
+        source: source("Inbox", "Rollback probe"),
       });
       const writesBeforeRollback = countWrites();
       let enteredTransactionClosure = false;
@@ -502,7 +502,7 @@ because "Ordered predicates and actions stay bound"`;
 
       assert.throws(() => service.compile({
         actor: { id: "owner", type: "human" }, workspaceId: "owner",
-        request: { ...request, source: source("Everything else", "Conflicting replay") },
+        request: { ...request, source: source("Inbox", "Conflicting replay") },
       }), (error: unknown) => (error as { code?: string }).code === "duplicate_idempotency_key");
       assert.throws(() => service.compile({
         actor: { id: "owner", type: "human" }, workspaceId: "owner",
@@ -526,7 +526,7 @@ because "Ordered predicates and actions stay bound"`;
 
       const edited = service.compile({
         actor: { id: "owner", type: "human" }, workspaceId: "owner",
-        request: { ruleId: created.rule.id, idempotencyKey: "edit-rule-1", expectedRuleRevision: 1, workspaceSchemaRevision: 2, source: source("Everything else", "Launch alerts") },
+        request: { ruleId: created.rule.id, idempotencyKey: "edit-rule-1", expectedRuleRevision: 1, workspaceSchemaRevision: 2, source: source("Inbox", "Launch alerts") },
       });
       assert.equal(edited.ok, true);
       if (!edited.ok) return;
@@ -580,7 +580,7 @@ because "Ordered predicates and actions stay bound"`;
       try {
         for (let index = 0; index < 3; index += 1) {
           const created = service.compile({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
-            ruleId: `race-rule-${index}`, idempotencyKey: `race-create-${index}`, expectedRuleRevision: null, workspaceSchemaRevision: index + 1, source: source("Everything else", `Race ${index}`),
+            ruleId: `race-rule-${index}`, idempotencyKey: `race-create-${index}`, expectedRuleRevision: null, workspaceSchemaRevision: index + 1, source: source("Inbox", `Race ${index}`),
           } });
           assert.equal(created.ok, true);
         }
@@ -599,7 +599,7 @@ because "Ordered predicates and actions stay bound"`;
       for (let index = 0; index < 101; index += 1) {
         const created = service.compile({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
           ruleId: `growth-order-${String(index).padStart(3, "0")}`, idempotencyKey: `growth-order-create-${index}`, expectedRuleRevision: null,
-          workspaceSchemaRevision: index + 1, source: source("Everything else", `Growth ${index}`),
+          workspaceSchemaRevision: index + 1, source: source("Inbox", `Growth ${index}`),
         } });
         assert.equal(created.ok, true);
       }

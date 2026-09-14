@@ -281,6 +281,41 @@
       "when": 1788825600000,
       "tag": "0039_classifier_lookup_index",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1789257600000,
+      "tag": "0040_attention_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1789344000000,
+      "tag": "0041_attention_routing",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1789430400000,
+      "tag": "0042_custom_destinations",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1789516800000,
+      "tag": "0043_destination_latest_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1789603200000,
+      "tag": "0044_destination_colors",
+      "breakpoints": true
     }
   ]
 }

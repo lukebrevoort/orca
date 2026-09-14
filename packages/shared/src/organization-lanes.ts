@@ -1,3 +1,5 @@
+import { defaultSpaceColor, spaceColorSchema } from "./space-color.ts";
+import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
 
 import { organizationActorSchema } from "./organization-contract.ts";
@@ -32,6 +34,7 @@ export type LanePolicy = z.infer<typeof lanePolicySchema>;
 export const laneSchema = z.object({
   id: identifierSchema,
   name: nonEmptyStringSchema.max(120),
+  color: spaceColorSchema.default(defaultSpaceColor),
   position: positionSchema,
   defaultPolicyId: identifierSchema,
   retiredAt: retiredAtSchema,
@@ -61,6 +64,7 @@ export const organizationLaneConfigurationSchema = z.object({
 export type OrganizationLaneConfiguration = z.infer<typeof organizationLaneConfigurationSchema>;
 
 export const lanePlacementSourceSchema = z.enum([
+  "destination_choice",
   "safety_lock",
   "manual_override",
   "rule_revision",
@@ -68,6 +72,8 @@ export const lanePlacementSourceSchema = z.enum([
   "workspace_fallback",
 ]);
 export const lanePrecedenceLevelSchema = z.enum([
+  "2_user_destination",
+  "5_inherited_destination",
   "1_safety_lock",
   "2_manual_override",
   "3_rule_revision",
@@ -92,6 +98,7 @@ const placementDecisionSchema = z.object({
 }).strict();
 
 export const threadLanePlacementSchema = z.object({
+  destination: destinationResolutionSchema.optional(),
   accountId: identifierSchema,
   threadId: identifierSchema,
   primaryLaneId: identifierSchema,
@@ -134,6 +141,7 @@ const defineLaneActionSchema = z.object({
   kind: z.literal("define_lane"),
   id: identifierSchema,
   name: nonEmptyStringSchema.max(120),
+  color: spaceColorSchema.optional(),
   position: positionSchema,
   defaultPolicyId: identifierSchema,
 }).strict();
@@ -142,12 +150,13 @@ const updateLaneActionSchema = z.object({
   kind: z.literal("update_lane"),
   laneId: identifierSchema,
   name: nonEmptyStringSchema.max(120).optional(),
+  color: spaceColorSchema.optional(),
   position: positionSchema.optional(),
   defaultPolicyId: identifierSchema.optional(),
   retired: z.boolean().optional(),
   expectedRevision: revisionSchema,
 }).strict().superRefine((action, context) => {
-  if (action.name === undefined && action.position === undefined && action.defaultPolicyId === undefined && action.retired === undefined) {
+  if (action.color === undefined && action.name === undefined && action.position === undefined && action.defaultPolicyId === undefined && action.retired === undefined) {
     context.addIssue({ code: "custom", message: "A Lane update must rename, reorder, change Policy, or change retirement" });
   }
 });
@@ -176,6 +185,10 @@ const setThreadSafetyLockActionSchema = z.object({
 }).strict();
 
 export const organizationLaneActionSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("set_destination_binding"), accountId: identifierSchema,
+    scope: z.enum(["account", "sender", "conversation"]), value: z.string().max(320),
+    destinationId: identifierSchema.nullable(), expectedRevision: revisionSchema.nullable(),
+  }).strict(),
   defineLanePolicyActionSchema,
   updateLanePolicyActionSchema,
   defineLaneActionSchema,

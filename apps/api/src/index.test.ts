@@ -831,7 +831,19 @@ describe("Orca API", () => {
       assert.equal(body.messages[1].bodyText, null);
       assert.deepEqual(body.messages[0].attachments, [{ id: "attachment_1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }]);
       assert.deepEqual(body.thread.participants, [{ name: "Maya", email: "maya@example.com" }, { name: "Luke", email: "luke@example.com" }]);
-      assert.deepEqual(body.thread.attention, { hasUnread: true, hasStarred: true, hasDraft: false, humanSignal: 7 });
+      const { destination, ...legacyAttention } = body.thread.attention;
+      assert.deepEqual(legacyAttention, { hasUnread: true, hasStarred: true, hasDraft: false, humanSignal: 7, attentionBehavior: "normal" });
+      const destinationsResponse = await testApp.request("/v1/destinations", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(destinationsResponse.status, 200);
+      const destinations = await destinationsResponse.json();
+      assert.equal(typeof destinations.fallbackDestinationId, "string");
+      assert.ok(destinations.fallbackDestinationId.length > 0);
+      assert.equal(destination.destinationId, destinations.fallbackDestinationId);
+      assert.equal(destination.source, "fallback");
+      assert.equal(destination.locked, false);
+      assert.equal(typeof destination.reason, "string");
+      assert.ok(destination.reason.length > 0);
+      for (const message of body.messages) assert.deepEqual(message.destination, destination);
 
       const secondOwnedAccount = await testApp.request("/v1/threads/thread_2?accountId=acct_2", { headers: { cookie: `orca_session=${session.token}` } });
       assert.equal(secondOwnedAccount.status, 200);

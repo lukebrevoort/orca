@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
+import { DestinationManager, useDestinations } from "./mail-destinations";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { GlobalMailSearch, openMailSearch } from "./global-search";
@@ -49,15 +50,19 @@ function MobileMenuItem({ active = false, count, icon, label, onClick }: { activ
   </button>;
 }
 
-export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onNavigate }: {
+export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onManageTools, onNavigate }: {
   projection: SidebarNavigationProjection;
   theme: "light" | "dark";
   composeButtonRef?: RefObject<HTMLButtonElement | null>;
   onCompose: () => void;
   onManageSpaces: () => void;
+  onManageTools?: () => void;
   onNavigate: (destination: DesktopDestination) => void;
 }) {
-  const { account, active, draftCount, inboxCount, spaces } = projection;
+  const { account, active, draftCount, inboxCount, spaces, fallbackDestination } = projection;
+  const inboxActive = active === "inbox" || active === `destination:${fallbackDestination?.id}`;
+  const inboxLabel = fallbackDestination?.name ?? "Inbox";
+  const inboxIcon = fallbackDestination ? <span aria-hidden="true" className="desktop-space-mark" style={{ background: fallbackDestination.color }} /> : <NavIcon name="inbox" />;
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -89,21 +94,20 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
         <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
       </button>
-      <p className="desktop-sidebar-label">Anchors</p>
-      <SidebarItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => onNavigate("inbox")} />
+      <p className="desktop-sidebar-label">Mail</p>
+      <SidebarItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => onNavigate("inbox")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
-      <div className="desktop-sidebar-section-head"><span>My spaces</span><button onClick={onManageSpaces} type="button">Manage</button></div>
-      {visibleSpaces.map((space) => <SidebarItem
-        active={active === destinationForSpace(space)}
-        count={space.count}
-        icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
-        key={space.id}
-        label={space.label}
-        onClick={() => onNavigate(destinationForSpace(space))}
-      />)}
+      {(["Spaces", "Tools"] as const).map(group => <Fragment key={group}>
+        <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">Manage {group.toLowerCase()}</button>}</div>
+        {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <SidebarItem
+          key={destinationForSpace(space)} active={active === destinationForSpace(space)} count={space.count}
+          icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
+          label={space.label} onClick={() => onNavigate(destinationForSpace(space))}
+        />)}
+      </Fragment>)}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
-      <SidebarItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("organization")} />
+      <SidebarItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => onNavigate("attention")} />
       <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
       <div className="desktop-sidebar-spacer"/>
       <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
@@ -123,42 +127,39 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         returnFocusRef={mobileMenuTriggerRef}
         surfaceProps={{ id: "desktop-mobile-navigation-dialog" }}
       >
-        <header><div><span>Orca workspace</span><h2>All destinations</h2></div><button aria-label="Close navigation menu" className="desktop-mobile-menu-close" onClick={() => setMobileMenuOpen(false)} type="button">×</button></header>
-        <div aria-label="All Orca destinations" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
+        <header><div><span>Orca workspace</span><h2>All spaces</h2></div><button aria-label="Close navigation menu" className="desktop-mobile-menu-close" onClick={() => setMobileMenuOpen(false)} type="button">×</button></header>
+        <div aria-label="All Orca spaces" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
           <div aria-label="Mail" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
-            <MobileMenuItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => navigateFromMobileMenu("inbox")} />
+            <MobileMenuItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => navigateFromMobileMenu("inbox")} />
             <MobileMenuItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => navigateFromMobileMenu("drafts")} />
             <MobileMenuItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => navigateFromMobileMenu("all")} />
           </div>
-          <div aria-label="My spaces" role="group">
-            <p aria-hidden="true" className="desktop-mobile-menu-label">My spaces</p>
-            {visibleSpaces.map((space) => <MobileMenuItem
-              active={active === destinationForSpace(space)}
-              count={space.count}
+          {(["Spaces", "Tools"] as const).map(group => <div aria-label={group} role="group" key={group}>
+            <p aria-hidden="true" className="desktop-mobile-menu-label">{group}</p>
+            {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <MobileMenuItem
+              active={active === destinationForSpace(space)} count={space.count}
               icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
-              key={space.id}
-              label={space.label}
-              onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
+              key={destinationForSpace(space)} label={space.label} onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
-            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="Manage spaces" onClick={onManageSpaces} />
-          </div>
+            {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={`Manage ${group.toLowerCase()}`} onClick={() => (group === "Spaces" ? onManageSpaces : onManageTools)?.()} />}
+          </div>)}
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
-            <MobileMenuItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => navigateFromMobileMenu("organization")} />
+            <MobileMenuItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => navigateFromMobileMenu("attention")} />
             <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
           </div>
         </div>
       </TopLayer> : null}
       <button aria-keyshortcuts="c" className="desktop-mobile-nav-item desktop-mobile-compose" onClick={onCompose} type="button"><NavIcon name="compose"/><span>Compose</span></button>
-      <button aria-current={active === "inbox" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("inbox")} type="button"><NavIcon name="inbox"/><span>Inbox</span></button>
+      <button aria-current={inboxActive ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("inbox")} type="button">{inboxIcon}<span>{inboxLabel}</span></button>
       <button aria-current={active === "drafts" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("drafts")} type="button"><NavIcon name="drafts"/><span>Drafts</span></button>
       <button
         aria-controls="desktop-mobile-navigation-dialog"
         aria-expanded={mobileMenuOpen}
         aria-haspopup="dialog"
-        aria-label={`Open all destinations${activeSpace ? `. Current destination: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current destination: ${active === "all" ? "All Mail" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
+        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
         className="desktop-mobile-nav-item desktop-mobile-more"
         data-has-current={mobileMenuOwnsCurrentDestination || undefined}
         onClick={() => setMobileMenuOpen((current) => !current)}
@@ -227,6 +228,8 @@ const emptySettingsNavigationSource: SettingsNavigationSource = {
 
 export function DesktopSettingsFrame({ children, navigationPreview, theme, title, onThemeChange }: { children: ReactNode; navigationPreview?: SettingsNavigationPreview; theme: "light" | "dark"; title: string; onThemeChange: () => void }) {
   const online = useOnlineStatus();
+  const catalog = useDestinations(Boolean(navigationPreview?.complete));
+  const [manageDestinations, setManageDestinations] = useState(false);
   const [source, setSource] = useState<SettingsNavigationSource>(() => navigationPreview
     ? navigationPreview
     : emptySettingsNavigationSource);
@@ -315,6 +318,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     active: "settings",
     attention: source.attention,
     collections: source.collections,
+    destinations: catalog.active,
     views: source.views,
     counts: source.counts,
     draftCount: source.draftCount,
@@ -331,9 +335,11 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     window.location.assign(desktopDestinationHref(destination, window.location.pathname));
   };
   return <div className="desktop-shell desktop-settings-frame">
+    {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
       onCompose={() => window.location.assign("/?compose=1")}
-      onManageSpaces={() => window.location.assign("/settings/attention-views")}
+      onManageSpaces={() => setManageDestinations(true)}
+      onManageTools={() => window.location.assign(desktopDestinationHref("organization", window.location.pathname))}
       onNavigate={navigate}
       projection={projection}
       theme={theme}
@@ -383,8 +389,8 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
   }
   const visible = spaces.filter((space) => !space.hidden);
   const hidden = spaces.filter((space) => space.hidden);
-  return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Manage spaces" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
-    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Manage spaces</h2><p>Names and supported positions sync with your account. Cross-type ordering and hidden visibility are saved on this device; hiding never changes a rule.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
+  return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Manage tools" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
+    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Manage tools</h2><p>Spaces hold mail. Tools help you work with it. Names and supported positions sync with your account. Cross-type ordering and hidden visibility are saved on this device; hiding never changes a rule.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
     {error ? <p className="desktop-space-operation-error" role="alert">{error}</p> : null}
     <div className="desktop-space-list">{visible.map((space, index) => <article draggable={!busy} onDragStart={() => setDraggedId(space.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => void dropOn(event, space)} key={space.id}>
       <span aria-hidden="true" className="desktop-drag-handle">⠿</span><span className="desktop-space-mark" style={space.color ? { background: space.color } : undefined}/><div><strong>{space.label}</strong><small>{space.description}</small></div>

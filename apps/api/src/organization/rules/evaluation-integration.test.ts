@@ -917,10 +917,10 @@ because "These remain proposals until an authoritative apply exists"` },
       const second = service.compile({ actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", request: {
         ruleId: "rule-everything-else", idempotencyKey: "bre-315-order-second", expectedRuleRevision: null, workspaceSchemaRevision: 2,
         source: `orca 1
-rule "Everything else wins"
+rule "Inbox wins"
 event message.received
 when subject contains "failed"
-action route lane "Everything else"
+action route lane "Inbox"
 because "The explicit first Rule wins the Lane tie"`,
       } });
       assert.equal(second.ok, true);

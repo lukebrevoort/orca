@@ -427,6 +427,7 @@ export const organizationLanes = sqliteTable(
     workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     id: text("id").notNull(),
     name: text("name").notNull(),
+    color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
     defaultPolicyId: text("default_policy_id").notNull(),
     retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
@@ -481,6 +482,7 @@ export const organizationThreadLaneStates = sqliteTable(
     manualOverrideActorType: text("manual_override_actor_type"),
     manualOverrideReason: text("manual_override_reason"),
     manualOverrideAt: integer("manual_override_at", { mode: "timestamp_ms" }),
+    safetyLockLaneId: text("safety_lock_lane_id"),
     safetyLocked: integer("safety_locked", { mode: "boolean" }).notNull().default(false),
     safetyLockActorId: text("safety_lock_actor_id"),
     safetyLockActorType: text("safety_lock_actor_type"),
@@ -916,6 +918,13 @@ export const emails = sqliteTable(
     accountThreadIdUniqueIdx: uniqueIndex("emails_account_thread_id_unique_idx").on(
       table.accountId,
       table.threadId,
+      table.id,
+    ),
+    threadLatestDestinationIdx: index("emails_thread_latest_destination_idx").on(
+      table.accountId,
+      table.threadId,
+      sql`${table.receivedAt} DESC`,
+      sql`${table.createdAt} DESC`,
       table.id,
     ),
     threadIdx: index("emails_thread_idx").on(table.threadId),
@@ -1616,3 +1625,41 @@ export const mcpRefreshTokens = sqliteTable(
     revokedAtIdx: index("mcp_refresh_tokens_revoked_at_idx").on(table.revokedAt),
   }),
 );
+
+// Notification intent only; independent of inbox placement and provider delivery.
+export const accountAttentionPreferences = sqliteTable("account_attention_preferences", {
+  accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  defaultChoice: text("default_choice", { enum: ["notify", "quiet"] }).notNull(),
+  sendersJson: text("senders_json").notNull(),
+});
+
+/** Actual local mail routing. Notification intent is stored separately. */
+export const accountAttentionRouting = sqliteTable("account_attention_routing", {
+  accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  defaultBehavior: text("default_behavior"),
+  revision: integer("revision").notNull().default(0),
+});
+export const threadAttentionOverrides = sqliteTable("thread_attention_overrides", {
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+  behavior: text("behavior").notNull(),
+}, table => [primaryKey({ columns: [table.accountId, table.threadId] })]);
+
+/** Explicit destination choices. A null target records reset/inheritance over legacy choices. */
+export const organizationDestinationBindings = sqliteTable("organization_destination_bindings", {
+  workspaceId: text("workspace_id").notNull(), accountId: text("account_id").notNull(),
+  scope: text("scope").notNull(), value: text("value").notNull(), destinationId: text("destination_id"),
+  revision: integer("revision").notNull().default(1),
+}, t => ({
+  pk: primaryKey({ columns: [t.workspaceId, t.accountId, t.scope, t.value] }),
+  accountFk: foreignKey({ columns:[t.workspaceId,t.accountId],foreignColumns:[oauthAccounts.userId,oauthAccounts.id] }).onDelete("cascade"),
+  destinationFk: foreignKey({ columns:[t.workspaceId,t.destinationId],foreignColumns:[organizationLanes.workspaceId,organizationLanes.id] }),
+  revisionCheck: check("destination_binding_revision",sql`${t.revision}>0`),
+  scopeCheck: check("destination_binding_scope",sql`${t.scope} in ('account','sender','conversation')`),
+  valueCheck: check("destination_binding_value",sql`${t.scope} != 'account' or ${t.value} = ''`),
+  conversationCheck: check("destination_binding_conversation",sql`${t.scope} != 'conversation' or ${t.destinationId} is null`),
+}));
+export const organizationDestinationLegacy = sqliteTable("organization_destination_legacy", {
+  workspaceId:text("workspace_id").notNull(),behavior:text("behavior").notNull(),destinationId:text("destination_id").notNull(),
+},t=>({pk:primaryKey({columns:[t.workspaceId,t.behavior]}),destinationFk:foreignKey({columns:[t.workspaceId,t.destinationId],foreignColumns:[organizationLanes.workspaceId,organizationLanes.id]})}));

@@ -205,7 +205,7 @@ function mapReadError(error: unknown) {
     return errorResult("idempotency_conflict", message);
   }
   if (code === "revision_conflict" || code === "compensation_conflict" || code?.startsWith("SQLITE_BUSY")
-    || error instanceof Error && error.name === "OrganizationRevisionConflictError") {
+    || error instanceof Error && ["OrganizationRevisionConflictError", "OrganizationContextsConflictError"].includes(error.name)) {
     return errorResult("revision_conflict", message);
   }
   if (code === "approval_required" || code === "approval_binding_conflict") {

@@ -39,7 +39,7 @@ import {
   type OrganizationContextSnapshot,
   type OrganizationContextsRepository,
 } from "./contexts/module.ts";
-import { digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
+import { destinationBindingResource, digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
 import { isAgentOrganizationActor, requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
 
 export type OrganizationAttentionRule = {
@@ -57,6 +57,7 @@ export type OrganizationThreadRecord = {
   readState: "read" | "unread";
   messages: WorkspaceThreadMessage[];
   attentionRules: OrganizationAttentionRule[];
+  attentionBehavior?: AttentionBehavior;
   facetValues?: WorkspaceThread["organization"]["facetValues"];
   workflowState?: WorkspaceThread["organization"]["workflowState"];
   organizationRevision?: number | null;
@@ -286,7 +287,10 @@ function bindLaneCommand(command: ReturnType<typeof organizationLaneApplySchema.
     let resourceId: string;
     let mutation: "create" | "update";
     let kind: OrganizationCommand["intents"][number]["kind"];
-    if (action.kind === "define_lane_policy") {
+    if (action.kind === "set_destination_binding") {
+      resourceId = destinationBindingResource(action.accountId, action.scope, action.value); mutation = action.expectedRevision === null ? "create" : "update"; kind = "mutate_lane";
+      if (action.expectedRevision !== null) expectedResources[resourceId] = action.expectedRevision;
+    } else if (action.kind === "define_lane_policy") {
       resourceId = lanePolicyResourceId(action.id); mutation = "create"; kind = "mutate_lane";
     } else if (action.kind === "update_lane_policy") {
       resourceId = lanePolicyResourceId(action.policyId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = action.expectedRevision;
@@ -313,7 +317,7 @@ function unconfiguredLaneSnapshot(workspaceRevision: number, accountIds: readonl
       workspaceRevision,
       fallbackLaneId: laneId,
       policies: [{ id: policyId, visibility: "standard", interruption: "badge", review: "daily", retention: { mode: "keep", days: null }, providerDeletion: false, revision: 1 }],
-      lanes: [{ id: laneId, name: "Everything else", position: 0, defaultPolicyId: policyId, retiredAt: null, revision: 1 }],
+      lanes: [{ id: laneId, name: "Everything else", color: "#70867d", position: 0, defaultPolicyId: policyId, retiredAt: null, revision: 1 }],
     },
     placements: threads.filter((thread) => accountIds.includes(thread.accountId)).map((thread) => fallbackPlacement({ accountId: thread.accountId, threadId: thread.id, fallbackLaneId: laneId })),
   };
@@ -522,7 +526,7 @@ export function createOrganization(repository: OrganizationRepository, dependenc
               : value === filter.value);
           })) return [];
           const latest = record.messages[0];
-          const attentionBehavior = resolveAttention(latest?.from.email ?? "", record.attentionRules);
+          const attentionBehavior = record.attentionBehavior ?? resolveAttention(latest?.from.email ?? "", record.attentionRules);
           if (!matchesAttention(attentionBehavior, query.attention)) return [];
           const humanClassification = latest?.humanClassification ?? null;
           if (!matchesClassification(humanClassification, query.classification)) return [];

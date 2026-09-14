@@ -421,19 +421,12 @@ describe("App", () => {
     expect(isDevPreviewPath("/", false, true)).toBe(true);
   });
 
-  test("applies sender attention to historical and newly synced messages", () => {
-    const historical = demoMessages.filter((message) => message.from.email === "maya@example.com");
-    const future = { ...historical[0], id: "future", providerMessageId: "future" };
-    const all = [...demoMessages, future];
-
-    expect(applySenderAttention(all, { "maya@example.com": "hidden" }).some((message) => message.from.email === "maya@example.com")).toBe(false);
-    const quiet = applySenderAttention(all, { "maya@example.com": "quiet" });
-    expect(quiet.filter((message) => message.from.email === "maya@example.com").map((message) => message.receivedAt))
-      .toEqual([...historical, future].map((message) => message.receivedAt).sort().reverse());
-    const priority = applySenderAttention(all, { "maya@example.com": "focus" });
-    const lastMaya = priority.map((message) => message.from.email).lastIndexOf("maya@example.com");
-    const firstNormal = priority.findIndex((message) => message.attentionBehavior === "normal");
-    expect(lastMaya).toBeLessThan(firstNormal);
+  test("canonical routing cannot be masked by address-only or account-sender cache entries", () => {
+    const message = { ...demoMessages[0]!, accountId: "real-account", attentionBehavior: "normal" as const };
+    const cache = { [message.from.email]: "hidden" as const, [`real-account:${message.from.email}`]: "quiet" as const };
+    expect(applySenderAttention([message], cache)).toEqual([message]);
+    expect(getMessagesForMailbox([message], "inbox", cache)).toEqual([message]);
+    expect(getMessagesForMailbox([message], "quiet", cache)).toEqual([]);
   });
 
   test("orders and groups thread messages chronologically", () => {

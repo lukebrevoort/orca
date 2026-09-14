@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Attention routing · Backend contract</title><style>body{font:16px/1.6 system-ui,sans-serif;margin:40px auto;max-width:960px;padding:0 24px;color:#192c2c;background:#f8faf8}h1,h2{line-height:1.2}h2{margin-top:36px}code,pre{font:14px/1.5 ui-monospace,monospace;background:#e9efec;border-radius:6px}code{padding:2px 5px}pre{padding:16px;overflow:auto}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #c8d5ce}small{color:#51645c}.flow{padding:18px;background:#dfebe4;border-radius:12px}</style>
+<h1>Attention routing: backend foundation</h1><p>Actual local Inbox/Quiet routing is separate from notification intent. New callers share one account-scoped, revision-guarded API. No provider archive/delete operation is performed.</p>
+<div class="flow"><strong>Effective precedence</strong><br>Conversation override → exact sender rule → domain rule → explicit account default → Inbox (<code>normal</code>)</div>
+<h2>Read &amp; manage</h2><pre>GET /v1/attention/routing?accountId=A
+GET /v1/attention/routing?accountId=A&amp;address=maya%40example.com
+GET /v1/attention/routing?accountId=A&amp;threadId=T</pre>
+<p>Response is <code>AttentionRoutingState</code>. <code>senders</code> includes all existing account rules, both address and domain, preserving legacy behavior and metadata. It is the complete configured-rule list, not the known-sender directory. Conversation selection derives inheritance from the latest stored message (received time, created time, then ID). Read with either an address or thread ID; thread ID takes precedence if both are provided.</p>
+<pre>{
+  "accountId": "A", "revision": 7, "defaultBehavior": null,
+  "senders": [],
+  "selection": {
+    "target": {"scope": "conversation", "threadId": "T"},
+    "explicitBehavior": "quiet",
+    "effective": {"behavior": "quiet", "destination": "quiet", "source": "conversation", "rule": null},
+    "inherited": {"behavior": "normal", "destination": "inbox", "source": "fallback", "rule": null}
+  }
+}</pre>
+<table><tr><th>Field</th><th>Meaning</th></tr><tr><td>defaultBehavior</td><td><code>null</code> means no explicit default, retaining Inbox. This is independent of notification default quiet.</td></tr><tr><td>explicitBehavior</td><td>Exact setting at the selected scope; null means inherit.</td></tr><tr><td>effective / inherited</td><td>Current result / result after clearing this scope. Source is conversation, sender, domain, account, or fallback.</td></tr><tr><td>destination</td><td>inbox for normal; quiet for quiet; null for notify, focus, hidden. Show the actual advanced behavior, never label these as Inbox/Quiet.</td></tr><tr><td>rule</td><td>Full matched sender/domain rule when one supplies the resolution.</td></tr></table>
+<h2>Save, reset, Undo</h2><pre>PUT /v1/attention/routing?accountId=A
+{
+  "expectedRevision": 7,
+  "target": {"scope": "conversation", "threadId": "T"},
+  "behavior": "quiet"
+}</pre>
+<p>Targets: <code>{scope:"account"}</code>, <code>{scope:"sender",address:"maya@example.com"}</code>, <code>{scope:"conversation",threadId:"T"}</code>. Send <code>normal</code> for Inbox, <code>quiet</code> for Quiet, or <code>null</code> to reset only the selected scope. Sender targets also accept existing advanced values so an inverse can restore an advanced exact sender choice.</p>
+<pre>{
+  "state": {"accountId": "A", "revision": 8, "...": "canonical state"},
+  "undo": {
+    "expectedRevision": 8,
+    "target": {"scope": "conversation", "threadId": "T"},
+    "behavior": null
+  }
+}</pre>
+<p>Send the returned <code>undo</code> object using <strong>PUT to the same account URL</strong>. It restores the prior explicit behavior, or removes the newly created setting. Any later account routing change makes old Undo fail with HTTP 409. Do not automatically fetch a new revision and replay stale intent. Refresh canonical state and let the user choose again. Same-state saves with the current revision are no-ops; an old revision after a real write remains a conflict, even if desired behavior now matches. This avoids stale retries overwriting newer intent without adding history infrastructure.</p>
+<p>Errors: 401 unauthenticated, 400 invalid payload, 404 unknown/foreign account or conversation, 409 stale revision. New frontend callers should exclusively use this interface for destination changes, key local state by account and sender/thread, then refresh affected mailbox/reader data. Never treat a local optimistic cache as persisted truth.</p>
+<h2>Known-sender lookup</h2><pre>GET /v1/attention/senders?accountId=A&amp;query=maya
+{
+  "accountId": "A",
+  "candidates": [{"address":"maya@example.com","name":"Maya"}],
+  "truncated": false
+}</pre><p>Searches stored email senders and contacts by name/address; normalized address deduplication, deterministic address order, maximum 30 candidates. If truncated, ask the user to narrow the search. Candidates do not create rules. Search uses a bounded response, not a mailbox download; its database scan remains proportional to stored account mail/contacts.</p>
+<h2>Compatibility &amp; boundaries</h2><ul><li>Legacy CRUD and resolve endpoints now accept optional <code>accountId</code>. Omission retains first-Gmail-account behavior. Batch remains account-targeted. Existing payloads are preserved.</li><li>Legacy unconditional writes intentionally retain legacy semantics. Database triggers advance the account routing revision after every sender rule insert/update/delete, so those writes invalidate in-flight new guarded saves. Legacy writes themselves are not protected against stale clients.</li><li>Mailbox filtering, counts and keyset pagination resolve routing in SQL before LIMIT. New defaults/overrides and resets invalidate mailbox cursors.</li><li>Reader returns optional additive <code>thread.attention.attentionBehavior</code> and per-message <code>attentionBehavior</code>. Thread aggregate uses latest sender; without a conversation override individual messages can retain different sender-derived behaviors.</li><li>Organization queries receive the same effective behavior. Lane placements, lane policies, safety/authority, classification, and provider labels are unchanged. Inbox/Quiet choices are attention behaviors, not Organization lane placements.</li><li><code>/v1/attention/preferences</code> still reports <code>delivery: proposal_only</code>. There is no alert delivery service.</li></ul>
+<h2>Implementation &amp; verification</h2><p>Migration <code>0041_attention_routing.sql</code> adds account default/revision and account/thread override tables. Exact sender settings reuse <code>sender_attention_rules</code>. All new writes are synchronous immediate SQLite transactions. Shared contracts live in <code>packages/shared/src/attention-routing.ts</code>; service/routes in <code>apps/api/src/attention/</code>.</p>
+<p>Focused tests cover reopen-to-reader routing, future mail, sender/thread/domain/default precedence, ownership, cross-account choices, stale create/update, legacy revision invalidation, reset/Undo conflicts, SQL counts/filter/pagination/cursor invalidation, known-sender bounds/search, and existing mailbox/Organization behavior. Backend wave contains no UI work or browser evidence.</p>
+<h2>Commands run (serial)</h2><pre>bun install --frozen-lockfile
+bun test apps/api/src/attention/routing.test.ts apps/api/src/attention/preferences.test.ts apps/api/src/attention/batch.test.ts
+# 13 passed at the initial checkpoint
+bun test apps/api/src/attention/routing.test.ts apps/api/src/mailbox/read.test.ts apps/api/src/organization/sqlite-repository.test.ts apps/api/src/organization/module.test.ts
+# 24 passed at the mailbox/Organization checkpoint
+bun test packages/shared/src/attention-routing.test.ts packages/shared/src/attention-preferences.test.ts packages/shared/src/schemas.test.ts apps/api/src/attention/routing.test.ts
+# 26 passed at the final routing/shared checkpoint
+bun run --cwd apps/api typecheck
+bun run --cwd packages/shared typecheck
+git diff --check</pre><p>Counts overlap because routing tests were extended between checkpoints. Full monorepo suites, browser checks, and provider integration were outside this bounded backend wave.</p>
+</html>

@@ -361,6 +361,11 @@ function apiError(status: number, code: string, message: string) {
   return jsonResponse({ error: { code, message } }, status);
 }
 
+function destinationCatalogFixture(messages: InboxMessage[]) {
+  const mapping = { normal: "inbox", focus: "focus", notify: "signals", quiet: "quiet", hidden: "hidden" };
+  return { revision: 1, fallbackDestinationId: "inbox", legacyDestinationIds: mapping, destinations: ["Inbox", "Focus", "Signals", "Quiet", "Hidden"].map((name, position) => ({ id: name.toLowerCase(), name, position, isFallback: position === 0, retiredAt: null, revision: 1, notificationPreference: "quiet", delivery: "proposal_only", counts: { total: messages.filter(message => mapping[message.attentionBehavior] === name.toLowerCase()).length, unread: 0 } })) };
+}
+
 function createProductionInboxFetch(
   collectionsResponse: Promise<Response>,
   onCollectionsRequest?: () => void,
@@ -419,10 +424,15 @@ function createProductionInboxFetch(
 
   return (async (input: string | URL | Request) => {
     const url = new URL(String(input), browserWindow.location.href);
+    if (url.pathname === "/v1/destinations") return jsonResponse(destinationCatalogFixture(messages));
     if (url.pathname === "/v1/me") return jsonResponse(accountFixture);
     if (url.pathname === "/v1/sync/status") return jsonResponse(syncStatus);
     if (url.pathname === "/v1/sync/gmail") return jsonResponse({});
-    if (url.pathname === "/v1/inbox") return jsonResponse(inbox);
+    if (url.pathname === "/v1/inbox") {
+      const destinationId = url.searchParams.get("destinationId");
+      const mapping = destinationCatalogFixture(messages).legacyDestinationIds;
+      return jsonResponse({ ...inbox, messages: destinationId ? messages.filter(message => mapping[message.attentionBehavior] === destinationId) : messages });
+    }
     const requestedThread = url.pathname.match(/^\/v1\/threads\/([^/]+)$/)?.[1];
     if (requestedThread) {
       const message = messages.find((candidate) => candidate.threadId === decodeURIComponent(requestedThread));
@@ -1213,13 +1223,13 @@ describe("App top-layer contract", () => {
     expect(isSameNode(browserWindow.document.activeElement, permission)).toBe(true);
   });
 
-  test("suspends Compose and search shortcuts behind Manage spaces and Pin Builder", async () => {
+  test("suspends Compose and search shortcuts behind destination management and Pin Builder", async () => {
     await renderApp();
     const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage spaces") as unknown as HTMLButtonElement;
     manage.focus();
     await act(async () => manage.click());
-    const manageDialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
+    const manageDialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="destination-manager-title"]') as unknown as HTMLElement;
     expect(manageDialog).not.toBeNull();
     const manageFocus = browserWindow.document.activeElement as unknown as HTMLElement;
     await act(async () => {
@@ -1429,7 +1439,7 @@ describe("Desktop evidence and navigation", () => {
     expect(browserWindow.document.activeElement?.getAttribute("data-focus-origin")).toBe("reader-evidence");
   });
 
-  test("applies a Manual Override and Safety Lock from the current Thread experience", async () => {
+  test("preserves advanced Safety Lock without duplicate placement controls from the current Thread experience", async () => {
     await renderApp();
     await openMessage("Mom");
     const trigger = browserWindow.document.querySelector("button.thread-lane-trigger") as unknown as HTMLButtonElement;
@@ -1437,10 +1447,8 @@ describe("Desktop evidence and navigation", () => {
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]') as unknown as HTMLElement;
     expect(dialog).not.toBeNull();
     expect(dialog.closest("#orca-top-layer-root")?.parentElement?.tagName).toBe("BODY");
-    const focus = [...dialog.querySelectorAll(".thread-lane-options button")].find((button) => button.textContent?.includes("Focus")) as unknown as HTMLButtonElement;
-    await act(async () => { focus.click(); });
-    expect(trigger.textContent).toContain("Focus");
-    expect(focus.getAttribute("aria-pressed")).toBe("true");
+    expect(dialog.querySelectorAll(".thread-lane-options button")).toHaveLength(0);
+    expect(dialog.textContent).toContain("Use the mail destination chooser");
     const lock = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Lock placement") as unknown as HTMLButtonElement;
     await act(async () => { lock.click(); });
     expect(dialog.textContent).toContain("Locked by you");
@@ -1450,8 +1458,7 @@ describe("Desktop evidence and navigation", () => {
     const why = browserWindow.document.querySelector("button.thread-lane-why") as unknown as HTMLButtonElement;
     await act(async () => { why.click(); });
     const evidence = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]');
-    expect(evidence?.textContent).toContain("manual override");
-    expect(evidence?.textContent).toContain("2 manual override");
+    expect(evidence?.textContent).toContain("workspace fallback");
     expect(evidence?.textContent).toContain("demo-human");
     expect(evidence?.textContent).toContain("Safety Lock active");
   });
@@ -1492,7 +1499,7 @@ describe("Desktop evidence and navigation", () => {
     const focus = navButtons.find((button) => button.textContent?.includes("Focus"))!;
     const custom = navButtons.find((button) => button.textContent?.includes("Orca launch"))!;
     await act(async () => { focus.click(); });
-    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("focus");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("destination:focus");
     await act(async () => { custom.click(); });
     expect(new URL(browserWindow.location.href).searchParams.get("destination")).toStartWith("space:");
     await act(async () => {
@@ -1686,27 +1693,27 @@ describe("Desktop evidence and navigation", () => {
 
   test("persists hidden workspace visibility across a reload", async () => {
     await renderApp();
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
-    const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Signals"))!;
+    const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Life admin"))!;
     const hide = [...signalsRow.querySelectorAll("button")].find((button) => button.textContent === "Hide") as unknown as HTMLButtonElement;
     await act(async () => { hide.click(); });
-    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Life admin"))).toBe(false);
 
     await act(async () => { root!.unmount(); });
     root = null;
     await renderApp();
-    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Life admin"))).toBe(false);
   });
 
   test("persists one absolute order when a drag crosses multiple rows", async () => {
     await renderApp();
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]')!;
     const rows = [...dialog.querySelectorAll(".desktop-space-list article")];
-    const focus = rows.find((row) => row.textContent?.includes("Focus"))!;
+    const focus = rows.find((row) => row.textContent?.includes("Life"))!;
     const later = rows.find((row) => row.textContent?.includes("Later"))!;
     await act(async () => {
       focus.dispatchEvent(new browserWindow.DragEvent("dragstart", { bubbles: true, cancelable: true }));
@@ -1717,7 +1724,7 @@ describe("Desktop evidence and navigation", () => {
       await Promise.resolve();
     });
     const labels = [...dialog.querySelectorAll(".desktop-space-list article > div > strong")].map((label) => label.textContent);
-    expect(labels.slice(0, 4)).toEqual(["Signals", "Quiet", "Later", "Focus"]);
+    expect(labels).toEqual(["Life admin", "Later", "Orca launch"]);
   });
 
   test("keeps Inbox and Settings on the same customized sidebar projection in both themes", async () => {
@@ -1736,7 +1743,7 @@ describe("Desktop evidence and navigation", () => {
       await waitFor(0);
       const inboxRows = sidebarRows();
       expect(inboxRows.some((label) => label?.includes("Launch watch"))).toBe(true);
-      expect(inboxRows.some((label) => label?.includes("Signals"))).toBe(false);
+      expect(inboxRows.some((label) => label?.includes("Signals"))).toBe(true);
 
       await act(async () => root!.unmount());
       root = null;
@@ -1783,7 +1790,7 @@ describe("Desktop evidence and navigation", () => {
 
   test("keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback", async () => {
     await renderApp();
-    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
     await act(async () => manageButton().click());
     const createTrigger = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "+ Create a workflow space") as unknown as HTMLButtonElement;
     await act(async () => createTrigger.click());
@@ -2169,19 +2176,22 @@ describe("Pin navigation and bulk sender actions", () => {
     expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
   });
 
-  test("keeps selection across search and includes hidden selections in the sender count", async () => {
+  test("changing search clears selection before selecting newly visible conversations", async () => {
     await renderApp();
     const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
     await act(async () => { selectMode.click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
 
-    const search = browserWindow.document.querySelector('input[aria-label="Search the stream"]') as unknown as HTMLInputElement;
-    await enterInput(search, "Jordan");
+    await act(async () => {
+      browserWindow.history.pushState(null, "", "?destination=inbox&q=Jordan");
+      browserWindow.dispatchEvent(new browserWindow.Event("popstate"));
+    });
 
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
     expect(buttonByName("Select Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("false");
     await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
   });
 
   test("reconciles mixed failure, keeps only the failed sender selected, and retries it", async () => {
@@ -2205,7 +2215,7 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { quiet.click(); await Promise.resolve(); });
 
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toContain("1 sender moved to Quiet. 1 sender could not be updated. 1 sender is ready to retry.");
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
     expect(buttonByName("Deselect Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("true");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
 
@@ -2299,12 +2309,13 @@ describe("Pin navigation and bulk sender actions", () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
+      if (url === "/v1/destinations") return jsonResponse(destinationCatalogFixture([gmailMessage, outlookMessage]));
       if (url === "/v1/me") return jsonResponse(gmailAccount);
       if (url === "/v1/sync/status") return jsonResponse({ accounts: [] });
-      if (url.includes("/v1/inbox?view=all&classification=all&limit=100&cursor=")) {
+      if (url.startsWith("/v1/inbox?") && url.includes("cursor=")) {
         return jsonResponse({ accounts: [gmailAccount, outlookAccount], messages: [refreshedGmailMessage, outlookMessage], counts, nextCursor: null });
       }
-      if (url === "/v1/inbox?view=all&classification=all&limit=100") {
+      if (url.startsWith("/v1/inbox?view=all&classification=all&limit=100")) {
         return jsonResponse({ accounts: [gmailAccount, outlookAccount], messages: [gmailMessage], counts, nextCursor: "page-two" });
       }
       if (url === "/v1/sync/gmail" && init?.method === "POST") return apiError(503, "temporarily_unavailable", "Skip background refresh in this test");
@@ -2335,11 +2346,11 @@ describe("Pin navigation and bulk sender actions", () => {
         buttonByName("Select Shared Outlook: Outlook copy").click();
       });
 
-      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 conversations selected");
       const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
       await act(async () => { quiet.click(); await Promise.resolve(); });
 
-      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
       expect(buttonByName("Deselect Shared Outlook: Outlook copy").getAttribute("aria-pressed")).toBe("true");
       const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
       await act(async () => { retry.click(); await Promise.resolve(); });
@@ -2510,8 +2521,14 @@ describe("Inbox reader viewport restoration", () => {
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
       if (url.pathname === "/v1/inbox") {
-        inboxReadCount += 1;
-        if (inboxReadCount === 2) return delayedInbox;
+        if (!url.searchParams.has("destinationId")) {
+          inboxReadCount += 1;
+          if (inboxReadCount === 2) return delayedInbox;
+        }
+        if (activeSnapshotChanged) {
+          const canonical = await (await baseFetch(input, init)).json();
+          return jsonResponse({ ...canonical, messages: refreshedMessages });
+        }
       }
       if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
         threadReadCount += 1;
@@ -3439,7 +3456,7 @@ describe("BRE-386 guidance navigation", () => {
   const originalFetch = globalThis.fetch;
   beforeEach(() => installDom());
   afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } globalThis.fetch = originalFetch; restoreDom(); });
-  test("normal Inbox invitation disappears for attention and classification filter pins", async () => {
+  test("All Mail invitation disappears for attention and classification filter pins", async () => {
     const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
     const pins = ["attention", "classification"].map((kind, position) => ({ id: kind, accountId: accountFixture.id, kind: "filter", targetId: JSON.stringify({ mailbox: "inbox", attention: kind === "attention" ? "focus" : "all", classification: kind === "classification" ? "human" : "all", person: null, query: "" }), label: kind, icon: "search", color: "#70867d", position, createdAt: "2026-09-06T12:00:00.000Z", updatedAt: "2026-09-06T12:00:00.000Z" }));
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -3449,6 +3466,7 @@ describe("BRE-386 guidance navigation", () => {
       if (url.pathname === "/v1/pins") return jsonResponse(pins);
       return base(input, init);
     }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
     await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
     expect(browserWindow.document.querySelector(".first-view-starts")).not.toBeNull();
@@ -3458,7 +3476,7 @@ describe("BRE-386 guidance navigation", () => {
       expect(browserWindow.document.querySelector(".first-view-starts")).toBeNull();
     }
   });
-  test.each(["organization", "inbox"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
+  test.each(["organization", "all"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
     const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture.map(message => ({ ...message, attentionBehavior: "quiet" })) });
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);

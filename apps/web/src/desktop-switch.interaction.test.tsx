@@ -153,7 +153,7 @@ describe("AppSidebar mobile navigation", () => {
     more.focus();
     await click(more);
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Navigation menu"]') as unknown as HTMLElement;
-    const menu = dialog.querySelector('[role="menu"][aria-label="All Orca destinations"]') as unknown as HTMLElement;
+    const menu = dialog.querySelector('[role="menu"][aria-label="All Orca spaces"]') as unknown as HTMLElement;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(dialog.closest("#orca-top-layer-root")).not.toBeNull();
     expect(container.inert).toBe(true);
@@ -161,7 +161,9 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Organization", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Attention", "Settings", "Account · Maya Chen"]);
+    expect(menu.querySelector('[role="group"][aria-label="Spaces"]')).not.toBeNull();
+    expect(menu.querySelector('[role="group"][aria-label="Tools"]')?.textContent).toContain("Later");
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
     expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
 
@@ -174,7 +176,7 @@ describe("AppSidebar mobile navigation", () => {
 
     const expected = new Map<string, DesktopDestination>([
       ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
-      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organization", "organization"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Attention", "attention"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
     ]);
     for (const [label, destination] of expected) {
       await click(more);

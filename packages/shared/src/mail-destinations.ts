@@ -1,0 +1,36 @@
+import { defaultSpaceColor, spaceColorSchema } from "./space-color.ts";
+import { z } from "zod";
+import { attentionRoutingTargetSchema, attentionRoutingQuerySchema } from "./attention-routing.ts";
+const id = z.string().trim().min(1).max(256);
+const revision = z.number().int().positive();
+import { destinationResolutionSchema } from "./destination-resolution.ts";
+export { destinationResolutionSchema } from "./destination-resolution.ts";
+export const mailDestinationSchema = z.object({ id, isFallback: z.boolean(), name: z.string(), color: spaceColorSchema.default(defaultSpaceColor), position: z.number().int(), retiredAt: z.string().nullable(), revision, notificationPreference: z.enum(["notify", "badge", "quiet"]), delivery: z.literal("proposal_only"), counts: z.object({ total: z.number().int().nonnegative(), unread: z.number().int().nonnegative() }) }).strict();
+export const destinationListSchema = z.object({ revision, fallbackDestinationId: id, legacyDestinationIds: z.object({ normal: id, quiet: id.optional(), focus: id.optional(), notify: id.optional(), hidden: id.optional() }).strict(), destinations: z.array(mailDestinationSchema) }).strict();
+export const destinationCreateSchema = z.object({ expectedRevision: revision, name: z.string().trim().min(1).max(120), color: spaceColorSchema.optional() }).strict();
+export const destinationUpdateSchema = z.object({ expectedRevision: revision, name: z.string().trim().min(1).max(120).optional(), color: spaceColorSchema.optional(), position: z.number().int().nonnegative().optional(), notificationPreference: z.enum(["notify", "badge", "quiet"]).optional() }).strict().refine(v => v.color !== undefined || v.name !== undefined || v.position !== undefined || v.notificationPreference !== undefined, "Choose a change");
+export const destinationRetireSchema = z.object({ expectedRevision: revision, reassignToDestinationId: id }).strict();
+export const destinationRoutingQuerySchema = attentionRoutingQuerySchema;
+export const destinationRoutingChangeSchema = z.object({ expectedRevision: revision, target: attentionRoutingTargetSchema, destinationId: id.nullable() }).strict();
+export const destinationRoutingStateSchema = z.object({ accountId: id, revision, defaultDestinationId: id.nullable(), senders: z.array(z.object({ scope: z.enum(["address", "domain"]), value: z.string(), destinationId: id, source: z.enum(["user_choice", "legacy"]), editable: z.boolean() }).strict()), selection: z.object({ target: attentionRoutingTargetSchema, explicitDestinationId: id.nullable(), effective: destinationResolutionSchema, inherited: destinationResolutionSchema }).strict() }).strict();
+export const destinationRoutingResultSchema = z.object({ state: destinationRoutingStateSchema, undo: destinationRoutingChangeSchema }).strict();
+export type MailDestination = z.infer<typeof mailDestinationSchema>;
+export type DestinationRoutingState = z.infer<typeof destinationRoutingStateSchema>;
+export type DestinationRoutingChange = z.infer<typeof destinationRoutingChangeSchema>;
+export type DestinationResolution = z.infer<typeof destinationResolutionSchema>;
+export const destinationMutationResultSchema = z.object({ state: destinationListSchema, destinationId: id }).strict();
+
+// Each conversation uses two existing Organization actions (100-action limit).
+export const destinationBatchLimit = 50;
+export const destinationConversationSchema = z.object({ accountId: id, threadId: id }).strict();
+export const destinationBatchChangeSchema = z.object({
+  expectedRevision: revision,
+  changes: z.array(destinationConversationSchema.extend({ destinationId: id.nullable() }).strict()).min(1).max(destinationBatchLimit),
+}).strict();
+export const destinationBatchResultSchema = z.object({
+  state: destinationListSchema,
+  targets: z.array(destinationConversationSchema).min(1).max(destinationBatchLimit),
+  undo: destinationBatchChangeSchema,
+}).strict();
+export type DestinationBatchChange = z.infer<typeof destinationBatchChangeSchema>;
+export type DestinationConversation = z.infer<typeof destinationConversationSchema>;

@@ -1,3 +1,4 @@
+import { readThreadDestination } from "../../destinations/resolution.ts";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -14,6 +15,7 @@ import {
 
 import type { createDatabaseClient } from "../../db/client.ts";
 import {
+  organizationDestinationBindings,
   oauthAccounts,
   organizationChangeActions,
   organizationChangeSets,
@@ -27,6 +29,8 @@ import {
 import { canonicalOrganizationJson, digestOrganizationCommand } from "../authority.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "../module.ts";
 import {
+  OrganizationLaneValidationError,
+  destinationBindingResource,
   applyLaneActions,
   digestLaneActions,
   fallbackPlacement,
@@ -88,7 +92,7 @@ function loadSnapshot(
     }));
   const lanes = executor.select().from(organizationLanes)
     .where(eq(organizationLanes.workspaceId, workspaceId)).orderBy(asc(organizationLanes.position), asc(organizationLanes.id)).all()
-    .map((lane) => ({ id: lane.id, name: lane.name, position: lane.position, defaultPolicyId: lane.defaultPolicyId, retiredAt: lane.retiredAt?.toISOString() ?? null, revision: lane.revision }));
+    .map((lane) => ({ id: lane.id, name: lane.name, color: lane.color, position: lane.position, defaultPolicyId: lane.defaultPolicyId, retiredAt: lane.retiredAt?.toISOString() ?? null, revision: lane.revision }));
   const rows = accountIds.length === 0 ? [] : executor.select().from(organizationThreadLaneStates)
     .where(and(eq(organizationThreadLaneStates.workspaceId, workspaceId), inArray(organizationThreadLaneStates.accountId, [...accountIds]))).all();
   const placements = rows.map((row): ThreadLanePlacement => {
@@ -113,7 +117,7 @@ function loadSnapshot(
     } satisfies PlacementEvidence;
     const lowerCandidate = { primaryLaneId: row.primaryLaneId, evidence: storedEvidence } satisfies LowerPlacementCandidate;
     lowerCandidatesByThread?.set(placementKey(row.accountId, row.threadId), lowerCandidate);
-    const effectiveLaneId = manualOverride?.laneId ?? lowerCandidate.primaryLaneId;
+    const effectiveLaneId = (row.safetyLocked ? row.safetyLockLaneId : null) ?? manualOverride?.laneId ?? lowerCandidate.primaryLaneId;
     const effectiveEvidence: PlacementEvidence = manualOverride ? {
       winningSource: "manual_override",
       sourceId: manualOverride.laneId,
@@ -143,6 +147,7 @@ function loadSnapshot(
     });
   });
   return {
+    destinationBindings: accountIds.length ? executor.select().from(organizationDestinationBindings).where(and(eq(organizationDestinationBindings.workspaceId, workspaceId), inArray(organizationDestinationBindings.accountId, [...accountIds]))).all() : [],
     configuration: organizationLaneConfigurationSchema.parse({ workspaceRevision: state?.revision ?? 1, fallbackLaneId: settings.fallbackLaneId, lanes, policies }),
     placements,
   };
@@ -150,6 +155,7 @@ function loadSnapshot(
 
 function resourceRevisions(snapshot: OrganizationLaneSnapshot, workspaceId: string): Record<string, number> {
   return Object.fromEntries([
+    ...(snapshot.destinationBindings ?? []).map(b => [destinationBindingResource(b.accountId, b.scope, b.value), b.revision] as const),
     ...snapshot.configuration.lanes.map((lane) => [laneResourceId(lane.id), lane.revision] as const),
     ...snapshot.configuration.policies.map((policy) => [policyResourceId(policy.id), policy.revision] as const),
     [fallbackResourceId(workspaceId), 1] as const,
@@ -157,9 +163,33 @@ function resourceRevisions(snapshot: OrganizationLaneSnapshot, workspaceId: stri
   ]);
 }
 
+function resolvePlacements(executor: Database, workspaceId: string, placements: ThreadLanePlacement[]): ThreadLanePlacement[] {
+  return placements.map((placement) => {
+    const destination = readThreadDestination(executor, workspaceId, placement.accountId, placement.threadId);
+    if (!destination) return placement;
+    const inheritedChoice = ["sender", "conversation", "account", "legacy"].includes(destination.source) && !placement.manualOverride;
+    return {
+      ...placement,
+      primaryLaneId: destination.destinationId,
+      destination,
+      ...(inheritedChoice ? { evidence: {
+        winningSource: "destination_choice" as const,
+        sourceId: destination.destinationId,
+        precedenceLevel: ["sender", "conversation"].includes(destination.source) ? "2_user_destination" as const : "5_inherited_destination" as const,
+        actor: { id: "system:destination-resolver", type: "system" as const },
+        reason: destination.reason,
+      } } : {}),
+    };
+  });
+}
+
 export function createSqliteOrganizationLanesRepository(db: Database): OrganizationLanesRepository {
   return {
-    getSnapshot(workspaceId, accountIds) { return loadSnapshot(db, workspaceId, accountIds); },
+    getSnapshot(workspaceId, accountIds) {
+      const snapshot=loadSnapshot(db,workspaceId,accountIds);
+      snapshot.placements = resolvePlacements(db, workspaceId, snapshot.placements);
+      return snapshot;
+    },
     getAuthorityState(workspaceId) {
       const accountIds = db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, workspaceId)).all().map((row) => row.id);
       const snapshot = loadSnapshot(db, workspaceId, accountIds);
@@ -230,9 +260,28 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         const existingThreads = new Set(executor.select({ accountId: threads.accountId, threadId: threads.id }).from(threads)
           .where(inArray(threads.accountId, [...input.executionContext.accountIds])).all().map((row) => `${row.accountId}\0${row.threadId}`));
         const now = new Date().toISOString();
-        const applied = applyLaneActions(current, parsed.actions, { actor: input.executionContext.actor, authorizedAccountIds: input.executionContext.accountIds, existingThreads, now });
+        const actionSnapshot = structuredClone(current);
+        // Capture only the effective input; preserve the stored candidate and audit before state.
+        for (const action of parsed.actions) if (action.kind === "set_thread_safety_lock" && action.locked) {
+          const p=actionSnapshot.placements.find(p=>p.accountId===action.accountId&&p.threadId===action.threadId);
+          const effective=readThreadDestination(executor,workspaceId,action.accountId,action.threadId);
+          if(p && effective && !p.manualOverride && !p.safetyLock.locked) {
+            p.primaryLaneId=effective.destinationId;
+          }
+        }
+        // Workspace configuration can affect accounts outside the caller's selected mailbox.
+        // Retirement must inspect all references, not only the scoped placement snapshot.
+        for (const action of parsed.actions) if (action.kind === "update_lane" && action.retired === true) {
+          const referenced=executor.all(sql`select 1 from organization_destination_bindings where workspace_id=${workspaceId} and destination_id=${action.laneId}
+            union all select 1 from organization_destination_legacy where workspace_id=${workspaceId} and destination_id=${action.laneId}
+            union all select 1 from organization_thread_lane_states where workspace_id=${workspaceId} and (primary_lane_id=${action.laneId} or manual_override_lane_id=${action.laneId} or safety_lock_lane_id=${action.laneId})
+            union all select 1 from organization_rule_revisions r where r.workspace_id=${workspaceId} and exists(select 1 from json_tree(r.compiled_json) where atom=${action.laneId}) limit 1`);
+          if(referenced.length) throw new OrganizationLaneValidationError("Destination is still referenced. Update its choices or advanced Organization configuration before retiring it.");
+        }
+        const applied = applyLaneActions(actionSnapshot, parsed.actions, { actor: input.executionContext.actor, authorizedAccountIds: input.executionContext.accountIds, existingThreads, now });
         const currentPlacements = new Map(current.placements.map((placement) => [placementKey(placement.accountId, placement.threadId), placement]));
         const next = {
+          destinationBindings: applied.destinationBindings,
           configuration: applied.configuration,
           placements: applied.placements.map((placement) => {
             const threadKey = placementKey(placement.accountId, placement.threadId);
@@ -259,8 +308,6 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             return placementWithLowerCandidate(placement, lower);
           }),
         };
-        const response = organizationLaneApplyResponseSchema.parse({ changeSetId: input.boundCommand.id, workspaceId, workspaceRevision: next.configuration.workspaceRevision, appliedActions: parsed.actions.length, laneConfiguration: next.configuration, placements: next.placements.filter((placement) => parsed.actions.some((action) => "threadId" in action && action.accountId === placement.accountId && action.threadId === placement.threadId)) });
-
         transaction.insert(organizationChangeSets).values({
           workspaceId,
           id: input.boundCommand.id,
@@ -269,7 +316,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           authorityTrace: JSON.stringify(input.authorityTrace),
           resourceFamily: "lane",
           operation: "apply",
-          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() }, response }),
+          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() } }),
           workspaceRevisionBefore: current.configuration.workspaceRevision,
           workspaceRevisionAfter: next.configuration.workspaceRevision,
           createdAt: new Date(now),
@@ -283,8 +330,10 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           return !sameValue(currentPlacements.get(key), placement)
             || !sameValue(currentLowerCandidatesByThread.get(key), lowerCandidatesByThread.get(key));
         });
+        const changedBindings = (next.destinationBindings ?? []).filter(b => !sameValue(current.destinationBindings?.find(old => old.accountId === b.accountId && old.scope === b.scope && old.value === b.value), b));
         const fallbackChanged = current.configuration.fallbackLaneId !== next.configuration.fallbackLaneId;
         const auditRows: Array<{ actionKind: string; resourceFamily: string; resourceId: string; before: unknown; after: unknown }> = [
+          ...changedBindings.map(b => ({ actionKind: "set_destination_binding", resourceFamily: "lane", resourceId: destinationBindingResource(b.accountId,b.scope,b.value), before: current.destinationBindings?.find(old => old.accountId === b.accountId && old.scope === b.scope && old.value === b.value) ?? null, after: b })),
           ...changedPolicies.map((policy) => ({ actionKind: currentPolicies.has(policy.id) ? "update_lane_policy" : "define_lane_policy", resourceFamily: "lane_policy", resourceId: policy.id, before: currentPolicies.get(policy.id) ?? null, after: policy })),
           ...changedLanes.map((lane) => ({ actionKind: currentLanes.has(lane.id) ? "update_lane" : "define_lane", resourceFamily: "lane", resourceId: lane.id, before: currentLanes.get(lane.id) ?? null, after: lane })),
           ...(fallbackChanged ? [{ actionKind: "set_fallback_lane", resourceFamily: "lane", resourceId: workspaceId, before: { fallbackLaneId: current.configuration.fallbackLaneId }, after: { fallbackLaneId: next.configuration.fallbackLaneId } }] : []),
@@ -320,7 +369,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           .where(and(eq(organizationLanes.workspaceId, workspaceId), inArray(organizationLanes.id, movedExistingLaneIds))).run();
         for (const lane of changedLanes) {
           const values = {
-            workspaceId, id: lane.id, name: lane.name, position: lane.position, defaultPolicyId: lane.defaultPolicyId,
+            workspaceId, id: lane.id, name: lane.name, color: lane.color, position: lane.position, defaultPolicyId: lane.defaultPolicyId,
             retiredAt: lane.retiredAt ? new Date(lane.retiredAt) : null, revision: lane.revision, updatedAt: new Date(now),
           };
           if (!currentLanes.has(lane.id)) transaction.insert(organizationLanes).values(values).run();
@@ -338,6 +387,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             reason: lower.evidence.reason, manualOverrideLaneId: placement.manualOverride?.laneId ?? null,
             manualOverrideActorId: placement.manualOverride?.actor.id ?? null, manualOverrideActorType: placement.manualOverride?.actor.type ?? null,
             manualOverrideReason: placement.manualOverride?.reason ?? null, manualOverrideAt: placement.manualOverride ? new Date(placement.manualOverride.updatedAt) : null,
+            safetyLockLaneId: placement.safetyLock.locked ? placement.primaryLaneId : null,
             safetyLocked: placement.safetyLock.locked, safetyLockActorId: placement.safetyLock.actor?.id ?? null, safetyLockActorType: placement.safetyLock.actor?.type ?? null,
             safetyLockReason: placement.safetyLock.reason, safetyLockUpdatedAt: placement.safetyLock.updatedAt ? new Date(placement.safetyLock.updatedAt) : null,
             revision: placement.revision ?? 1, updatedAt: new Date(now),
@@ -349,9 +399,14 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             eq(organizationThreadLaneStates.threadId, placement.threadId),
           )).run();
         }
+        for (const binding of changedBindings) transaction.insert(organizationDestinationBindings).values({ ...binding, workspaceId }).onConflictDoUpdate({ target: [organizationDestinationBindings.workspaceId,organizationDestinationBindings.accountId,organizationDestinationBindings.scope,organizationDestinationBindings.value], set: { destinationId: binding.destinationId, revision: binding.revision } }).run();
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.configuration.workspaceRevision, updatedAt: new Date(now) })
           .where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.configuration.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.configuration.workspaceRevision, current.configuration.workspaceRevision + 1);
+        const response = organizationLaneApplyResponseSchema.parse({ changeSetId: input.boundCommand.id, workspaceId, workspaceRevision: next.configuration.workspaceRevision, appliedActions: parsed.actions.length, laneConfiguration: next.configuration, placements: resolvePlacements(executor, workspaceId, next.placements).filter((placement) => parsed.actions.some((action) => "threadId" in action && action.accountId === placement.accountId && action.threadId === placement.threadId)) });
+        transaction.update(organizationChangeSets).set({
+          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() }, response }),
+        }).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.boundCommand.id))).run();
         return response;
       });
     },

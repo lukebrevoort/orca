@@ -22,11 +22,13 @@ const source = `orca 1
 rule "Launch mail"
 event message.received
 when subject contains "launch"
-action route lane "Everything else"
+action route lane "Inbox"
 because "Launch mail stays visible"`;
 
 function reviewerTabHeavySource(): string {
-  let result = source;
+  // Replace the ten bytes removed by the fresh fallback name with rationale
+  // text, preserving both the source and escaped JSON byte budgets.
+  let result = source.replace("Launch mail stays visible", "Launch mail stays visible in Inbox!");
   while (Buffer.byteLength(result) < 62_159) {
     const remaining = 62_159 - Buffer.byteLength(result);
     if (remaining === 1) {
@@ -195,7 +197,7 @@ describe("Rule Revision REST adapter", () => {
 
     const invalid = await app.request("/v1/organization/rules/compile", {
       method: "POST", headers: ownerHeaders,
-      body: JSON.stringify({ idempotencyKey: "route-rule-invalid-1", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: source.replace('"Everything else"', '"Missing"') }),
+      body: JSON.stringify({ idempotencyKey: "route-rule-invalid-1", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: source.replace('"Inbox"', '"Missing"') }),
     });
     assert.equal(invalid.status, 422);
     const invalidBody = await invalid.json();

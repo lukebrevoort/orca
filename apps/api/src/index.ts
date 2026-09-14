@@ -1,3 +1,5 @@
+import { registerDestinationRoutes } from "./destinations/routes.ts";
+import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
@@ -140,6 +142,9 @@ import {
 import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
+import { registerAttentionRoutingRoutes } from "./attention/routing-routes.ts";
+import { loadAttentionRouting } from "./attention/routing.ts";
+import { registerAttentionPreferencesRoutes } from "./attention/preferences-routes.ts";
 import { registerOrganizationContextRoutes } from "./organization/contexts/routes.ts";
 import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { registerOrganizationRuleRoutes } from "./organization/rules/routes.ts";
@@ -267,6 +272,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
   registerOrganizationContextRoutes(app, { dbFactory });
+  registerAttentionPreferencesRoutes(app, { dbFactory });
+  registerAttentionRoutingRoutes(app, { dbFactory });
+  registerDestinationRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 
@@ -1227,7 +1235,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/attention/rules", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const account = c.req.query("accountId")
+          ? getConnectedAccountById(db, c.get("auth").userId, c.req.query("accountId")!)
+          : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       return c.json(listSenderRules(db, account.id).map(toSenderRule));
     } finally {
@@ -1289,7 +1299,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+        const account = c.req.query("accountId")
+          ? getConnectedAccountById(db, c.get("auth").userId, c.req.query("accountId")!)
+          : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const input = normalizeRuleInput(c.req.valid("json"));
         const id = `sender-rule:${crypto.randomUUID()}`;
@@ -1310,7 +1322,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+        const account = c.req.query("accountId")
+          ? getConnectedAccountById(db, c.get("auth").userId, c.req.query("accountId")!)
+          : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const existing = getSenderRule(db, account.id, c.req.param("id"));
         if (!existing) return c.json({ error: { code: "not_found", message: "Sender rule was not found" } }, 404);
@@ -1329,7 +1343,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/attention/rules/:id", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const account = c.req.query("accountId")
+          ? getConnectedAccountById(db, c.get("auth").userId, c.req.query("accountId")!)
+          : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const existing = getSenderRule(db, account.id, c.req.param("id"));
       if (!existing) return c.json({ error: { code: "not_found", message: "Sender rule was not found" } }, 404);
@@ -1347,7 +1363,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+        const account = c.req.query("accountId")
+          ? getConnectedAccountById(db, c.get("auth").userId, c.req.query("accountId")!)
+          : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const address = c.req.valid("query").address.toLowerCase();
         return jsonWithSchema(c, resolvedSenderAttentionSchema, resolveSenderAttention(db, account.id, address));
@@ -2225,7 +2243,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId, destinationId } = c.req.valid("query");
       const useClassificationResponse = classification !== undefined;
       const { sqlite } = dbFactory();
       try {
@@ -2235,7 +2253,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             observe: options.mailboxReadObserver,
           }).read({
             authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
-            query: { cursor, limit, view, classification, query, sender, collectionId },
+            query: { cursor, limit, view, classification, query, sender, collectionId, destinationId },
           });
           c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
           c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
@@ -2991,23 +3009,15 @@ function listSenderRules(db: Database, accountId: string) {
 }
 
 function resolveSenderAttention(db: Database, accountId: string, address: string): ResolvedSenderAttention {
-  const domain = address.split("@")[1]!;
-  const rule = db.select().from(senderAttentionRules).where(and(
-    eq(senderAttentionRules.accountId, accountId),
-    eq(senderAttentionRules.scope, "address"),
-    eq(senderAttentionRules.value, address),
-  )).get() ?? db.select().from(senderAttentionRules).where(and(
-    eq(senderAttentionRules.accountId, accountId),
-    eq(senderAttentionRules.scope, "domain"),
-    eq(senderAttentionRules.value, domain),
-  )).get();
-  return resolvedSenderAttentionSchema.parse({
-    behavior: rule?.behavior ?? "normal",
-    rule: rule ? toSenderRule(rule) : null,
-  });
+  const effective = loadAttentionRouting(db, accountId).resolve(address);
+  return resolvedSenderAttentionSchema.parse({ behavior: effective.behavior, rule: effective.rule });
 }
 
-function readThreadDetail(
+function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string): ThreadDetail {
+  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId), { behavior: "deferred" });
+}
+
+function readThreadDetailSnapshot(
   db: Database,
   account: ConnectedAccount,
   serializedAccount: MailAccount,
@@ -3018,7 +3028,7 @@ function readThreadDetail(
   if (!thread) throw new McpReadError("not_found", "Thread not found");
 
   const messageRows = db.select({
-    id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
+    id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName, createdAt: emails.createdAt,
     toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
     subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
     internetMessageId: emails.internetMessageId, references: emails.references,
@@ -3050,6 +3060,8 @@ function readThreadDetail(
     attachmentsByMessage.set(attachment.emailId, attachments);
   }
   const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
+  const routing = loadAttentionRouting(db, account.id);
+  const destination = readThreadDestination(db, db.select({userId:oauthAccounts.userId}).from(oauthAccounts).where(eq(oauthAccounts.id,account.id)).get()!.userId, account.id, thread.id) ?? undefined;
   const messages = messageRows.map((message) => {
     const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
     const humanClassification = resolveHumanClassification(message, resolveClassification);
@@ -3063,9 +3075,15 @@ function readThreadDetail(
       humanSignal: humanClassification.effective.score,
       humanClassification,
       attachments: attachmentsByMessage.get(message.id) ?? [],
+      attentionBehavior: routing.resolve(message.fromAddress ?? "", thread.id).behavior,
+      destination,
     };
   });
   const sourceMessages = messageRows;
+  const latestMessage = [...messageRows].sort((a, b) =>
+    (a.receivedAt === null ? (b.receivedAt === null ? 0 : 1) : b.receivedAt === null ? -1 : b.receivedAt.getTime() - a.receivedAt.getTime())
+    || b.createdAt.getTime() - a.createdAt.getTime()
+    || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
   return threadDetailSchema.parse({
     account: serializedAccount,
     thread: {
@@ -3075,6 +3093,8 @@ function readThreadDetail(
       participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
       readState: thread.isRead ? "read" : "unread",
       attention: {
+        attentionBehavior: routing.resolve(latestMessage?.fromAddress ?? "", thread.id).behavior,
+        destination,
         hasUnread: messages.some((message) => message.unread), hasStarred: sourceMessages.some((message) => message.isStarred),
         hasDraft: sourceMessages.some((message) => message.isDraft),
         humanSignal: maxHumanSignal(sourceMessages.map((message) => message.humanSignal)),

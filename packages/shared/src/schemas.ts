@@ -1,3 +1,4 @@
+import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
 
 const nonEmptyStringSchema = z.string().min(1);
@@ -292,6 +293,7 @@ export const inboxMessageSchema = z
     unread: z.boolean(),
     labels: labelListSchema,
     attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]),
+    destination: destinationResolutionSchema.optional(),
     humanSignal: humanSignalScoreSchema,
     humanClassification: humanClassificationResultSchema.nullable().default(null),
   })
@@ -489,6 +491,8 @@ export const threadReadStateSchema = z.enum(["read", "unread"]);
 export type ThreadReadState = z.infer<typeof threadReadStateSchema>;
 
 export const threadAttentionSchema = z.object({
+  attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
+  destination: destinationResolutionSchema.optional(),
   hasUnread: z.boolean(),
   hasStarred: z.boolean(),
   hasDraft: z.boolean(),
@@ -504,6 +508,8 @@ export const threadDetailMessageSchema = normalizedMessageSchema
     humanSignal: humanSignalScoreSchema,
     humanClassification: humanClassificationResultSchema.nullable().default(null),
     attachments: z.array(mailAttachmentSchema),
+    attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
+  destination: destinationResolutionSchema.optional(),
   })
   .strict();
 export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;
@@ -581,6 +587,7 @@ export const inboxQuerySchema = z
     sender: z.string().trim().min(1).max(320).optional(),
     accountId: nonEmptyStringSchema.optional(),
     collectionId: nonEmptyStringSchema.optional(),
+    destinationId: nonEmptyStringSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -636,6 +643,7 @@ export const updateSenderAttentionRuleSchema = senderAttentionRuleInputSchema.pa
 export type UpdateSenderAttentionRule = z.infer<typeof updateSenderAttentionRuleSchema>;
 
 export const resolveSenderAttentionSchema = z.object({
+  accountId: z.string().min(1).max(256).optional(),
   address: z.string().trim().email().max(320),
 }).strict();
 export type ResolveSenderAttention = z.infer<typeof resolveSenderAttentionSchema>;
