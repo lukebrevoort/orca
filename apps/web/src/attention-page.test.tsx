@@ -1056,3 +1056,23 @@ test("custom destination cannot save its search as a fallback Inbox filter", asy
   await act(async () => supported.click());
   expect(document.querySelector(".pin-builder")).not.toBeNull();
 });
+
+test("rejected mark-read restores canonical destination unread state without changing another account", async () => {
+  const readGate = deferred();
+  let readRequested = false;
+  intercept = async path => {
+    if (path.includes("/read?accountId=a")) { readRequested = true; await readGate.promise; return Response.json({ error: { message: "Read unavailable" } }, { status: 503 }); }
+    return syncNoop(path);
+  };
+  await renderMailbox();
+  const findRow = (subject: string) => [...document.querySelectorAll<HTMLButtonElement>(".message-row")].find(item => item.textContent?.includes(subject))!;
+  await act(async () => findRow("Mail a").click());
+  await settle();
+  expect(readRequested).toBe(true);
+  expect(findRow("Mail a").classList.contains("message-row-unread")).toBe(false);
+  expect(findRow("Mail b").classList.contains("message-row-unread")).toBe(true);
+  await act(async () => readGate.release());
+  for (let i = 0; i < 30 && !findRow("Mail a")?.classList.contains("message-row-unread"); i++) await settle();
+  expect(findRow("Mail a").classList.contains("message-row-unread")).toBe(true);
+  expect(findRow("Mail b").classList.contains("message-row-unread")).toBe(true);
+});
