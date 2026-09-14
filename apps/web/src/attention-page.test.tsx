@@ -1031,3 +1031,28 @@ test("destination switches clear hidden selections and actionable sender targets
   expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
   expect(puts).toHaveLength(0);
 });
+
+test("custom destination cannot save its search as a fallback Inbox filter", async () => {
+  window.history.replaceState(null, "", `/?destination=${encodeURIComponent(`destination:${quietId}`)}&q=no-such-mail`);
+  let filterWrites = 0;
+  intercept = async (path, init) => {
+    if (path === "/v1/pins" && init?.method === "POST") filterWrites++;
+    return syncNoop(path);
+  };
+  await renderMailbox();
+  const trigger = document.querySelector<HTMLButtonElement>(".pinned-person-add")!;
+  expect(trigger.disabled).toBe(true);
+  expect(document.body.textContent).toContain("Filters cannot be saved for this destination yet");
+  await act(async () => {
+    trigger.click();
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  });
+  expect(document.querySelector(".pin-builder")).toBeNull();
+  expect([...document.querySelectorAll("button")].some(item => item.textContent?.includes("Save this search"))).toBe(false);
+  expect(filterWrites).toBe(0);
+  await nav("All Mail");
+  const supported = document.querySelector<HTMLButtonElement>(".pinned-person-add")!;
+  expect(supported.disabled).toBe(false);
+  await act(async () => supported.click());
+  expect(document.querySelector(".pin-builder")).not.toBeNull();
+});

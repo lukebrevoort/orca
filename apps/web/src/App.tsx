@@ -3146,6 +3146,7 @@ export function InboxApp({
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
               destinationName={destinationSurface ? selectedDestination?.name ?? null : null}
+              destinationFilterUnsupported={destinationSurface && Boolean(selectedDestination && !selectedDestination.isFallback)}
               originLabel={activeCollection?.name ?? activeMailboxLabel}
               classificationView={classificationView}
               classificationError={requestedDestinationId || activeMailbox === "quiet" ? null : classificationError}
@@ -4463,6 +4464,7 @@ export function MessageSubject({ subject, unread }: { subject: string; unread: b
 }
 
 function InboxView({
+  destinationFilterUnsupported,
   destinationName,
   account,
   demoMode,
@@ -4544,6 +4546,7 @@ function InboxView({
   inboxFilter: InboxFilter;
   inboxTitle: string;
   destinationName: string | null;
+  destinationFilterUnsupported: boolean;
   originLabel: string;
   classificationView: ClassificationView;
   classificationError: string | null;
@@ -4645,7 +4648,7 @@ function InboxView({
     }
     return [...candidates.values()].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
   }, [allMessages]);
-  const canPinCurrentView = !isCollectionView && viewMode !== "later";
+  const canPinCurrentView = !destinationFilterUnsupported && !isCollectionView && viewMode !== "later";
   function attentionTargetsForRows(rows: Map<string, InboxMessage>) {
     return new Map([...rows.values()].map((message) => {
       const target = senderAttentionTargetForMessage(message);
@@ -4721,6 +4724,7 @@ function InboxView({
   }, [selectionMode, status, displayMessages.length]);
 
   function openPinBuilder() {
+    if (destinationFilterUnsupported) return;
     setPinFilterMailbox(canPinCurrentView ? viewMode as PinMailbox : "inbox");
     setPinFilterClassification(classificationView === "all" ? "human" : classificationView);
     setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all");
@@ -4738,6 +4742,7 @@ function InboxView({
 
   function savePinFilter(event: React.FormEvent) {
     event.preventDefault();
+    if (destinationFilterUnsupported) return;
     if (!pinPreview.count && !pinZeroMatchConfirmed) {
       setPinZeroMatchConfirmed(true);
       return;
@@ -4918,13 +4923,16 @@ function InboxView({
             aria-expanded={pinMenuOpen}
             aria-haspopup="dialog"
             className="pinned-person-add"
+            disabled={destinationFilterUnsupported}
+            aria-describedby={destinationFilterUnsupported ? "destination-filter-unavailable" : undefined}
             onClick={() => pinMenuOpen ? closePinBuilder() : openPinBuilder()}
             ref={pinMenuTriggerRef}
             type="button"
           >
             <span className="pinned-avatar">＋</span><small>Pin</small>
           </button>
-          {pinMenuOpen ? (
+          {destinationFilterUnsupported && <p id="destination-filter-unavailable">Filters cannot be saved for this destination yet. Open All Mail to save a filter, or use advanced Views.</p>}
+          {pinMenuOpen && !destinationFilterUnsupported ? (
             <TopLayer ariaLabelledBy="pin-builder-title" as="section" backdropAriaLabel="Close pin builder" backdropClassName="pin-builder-backdrop" className="pin-builder" initialFocusRef={pinBuilderInputRef} layerClassName="pin-builder-layer" onClose={closePinBuilder} surfaceProps={{ id: "pin-builder" }}>
                 <header className="pin-builder-heading">
                   <div><p>Keep a filter</p><h2 id="pin-builder-title">Pin anything you can find.</h2><span>Build a slice of mail, preview it, and keep it one click away.</span></div>
@@ -5074,7 +5082,7 @@ function InboxView({
 
         {status === "ready" && displayMessages.length === 0 ? (
           <InboxStatusState
-            action={searchQuery.trim() ? <button className="empty-state-action" onClick={() => { setPinFilterQuery(searchQuery.trim()); setPinMenuOpen(true); window.requestAnimationFrame(() => pinBuilderInputRef.current?.focus()); }} type="button">Save this search <span aria-hidden="true">+</span></button> : undefined}
+            action={searchQuery.trim() && !destinationFilterUnsupported ? <button className="empty-state-action" onClick={() => { setPinFilterQuery(searchQuery.trim()); setPinMenuOpen(true); window.requestAnimationFrame(() => pinBuilderInputRef.current?.focus()); }} type="button">Save this search <span aria-hidden="true">+</span></button> : undefined}
             description={
               searchQuery.trim()
                 ? `No messages match “${searchQuery.trim()}”. Try a person, subject, or phrase.`

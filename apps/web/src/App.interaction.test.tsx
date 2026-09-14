@@ -3453,7 +3453,7 @@ describe("BRE-386 guidance navigation", () => {
   const originalFetch = globalThis.fetch;
   beforeEach(() => installDom());
   afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } globalThis.fetch = originalFetch; restoreDom(); });
-  test("normal Inbox invitation disappears for attention and classification filter pins", async () => {
+  test("All Mail invitation disappears for attention and classification filter pins", async () => {
     const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
     const pins = ["attention", "classification"].map((kind, position) => ({ id: kind, accountId: accountFixture.id, kind: "filter", targetId: JSON.stringify({ mailbox: "inbox", attention: kind === "attention" ? "focus" : "all", classification: kind === "classification" ? "human" : "all", person: null, query: "" }), label: kind, icon: "search", color: "#70867d", position, createdAt: "2026-09-06T12:00:00.000Z", updatedAt: "2026-09-06T12:00:00.000Z" }));
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -3463,6 +3463,7 @@ describe("BRE-386 guidance navigation", () => {
       if (url.pathname === "/v1/pins") return jsonResponse(pins);
       return base(input, init);
     }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
     await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
     expect(browserWindow.document.querySelector(".first-view-starts")).not.toBeNull();
@@ -3472,7 +3473,7 @@ describe("BRE-386 guidance navigation", () => {
       expect(browserWindow.document.querySelector(".first-view-starts")).toBeNull();
     }
   });
-  test.each(["organization", "inbox"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
+  test.each(["organization", "all"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
     const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture.map(message => ({ ...message, attentionBehavior: "quiet" })) });
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
