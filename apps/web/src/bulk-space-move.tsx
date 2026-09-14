@@ -28,7 +28,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { setOpen(false); setChoice(""); setError(""); setRecovery(false); }, [queryOwner]);
   const overLimit = targets.length > destinationBatchLimit;
-  const blocked = disabled || busy || catalog.locked || recovery || !targets.length || overLimit;
+  const blocked = disabled || busy || catalog.locked || recovery || updates.recoveryRequired || !targets.length || overLimit;
   async function move() {
     if (blocked || lock.current || !catalog.data || !catalog.active.some(space => space.id === choice)) return;
     const attempted = targets.map(target => ({ ...target }));
@@ -45,6 +45,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
       if (mounted.current && currentOwner.current === owner) { onMoved(attempted, owner); setOpen(false); }
       await updates.changed({ batch: true, undo: result.undo, text: `${attempted.length} ${attempted.length === 1 ? "conversation" : "conversations"} moved to ${catalog.label(choice)}.` }, receiptOwner);
     } catch (cause) {
+      updates.requireRecovery(receiptOwner);
       if (mounted.current && currentOwner.current === owner) {
         const rejected = cause instanceof RoutingRequestError && [400, 401, 403, 404, 409].includes(cause.status);
         setError(rejected ? `${cause.message} No conversations were moved. Reload spaces and review your selection.` : "Move could not be confirmed. Reload current mail and review before making another move. No automatic retry or Undo is available.");
@@ -60,7 +61,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
   async function reload() {
     if (lock.current) return;
     lock.current = true; setBusy(true); onBusy(true);
-    try { await catalog.refresh(); if (!await updates.changed()) throw new Error("Mail reload failed"); if (mounted.current) { setRecovery(false); setError("Current mail reloaded. Review the selected conversations and space before moving again."); } }
+    try { if (!await updates.recover()) throw new Error("Mail reload failed"); if (mounted.current) { setRecovery(false); setError("Current mail reloaded. Review the selected conversations and space before moving again."); } }
     catch { if (mounted.current) setError("Spaces could not reload. Your choice is preserved; try reloading again."); }
     finally { lock.current = false; if (mounted.current) { setBusy(false); onBusy(false); } }
   }
@@ -77,7 +78,8 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
       {catalog.loading && <p role="status">Loading spaces…</p>}
       {busy && <p role="status">Updating selected conversations…</p>}
       {(error || catalog.error) && <p role="alert">{error || catalog.error}</p>}
-      {(recovery || catalog.error) && <button type="button" disabled={busy} onClick={() => void reload()}>Reload spaces and mail</button>}
+      {updates.recoveryRequired && !error && <p role="alert">A previous move needs recovery. Reload current mail before moving conversations.</p>}
+      {(recovery || updates.recoveryRequired || catalog.error) && <button type="button" disabled={busy} onClick={() => void reload()}>Reload spaces and mail</button>}
       {!targets.length && <p role="status">No selected conversations remain in this view. Close and select visible messages.</p>}
       <footer><button type="button" disabled={busy} onClick={() => setOpen(false)}>Cancel</button><button type="button" disabled={blocked || !catalog.active.some(space => space.id === choice)} onClick={() => void move()}>{busy ? "Moving…" : "Move conversations"}</button></footer>
     </TopLayer>}

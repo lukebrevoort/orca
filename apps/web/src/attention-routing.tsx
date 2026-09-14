@@ -54,6 +54,9 @@ type ReceiptOwner = { generation: number; key: string };
 const RoutingContext = createContext({
   provided: false,
   version: 0,
+  recoveryRequired: false,
+  requireRecovery: (_owner: ReceiptOwner) => {},
+  recover: async () => false,
   begin: (): ReceiptOwner => ({ generation: 0, key: "" }),
   changed: async (_receipt?: Receipt, _owner?: ReceiptOwner) => true,
   clear: () => {},
@@ -74,12 +77,13 @@ export function AttentionRoutingProvider({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
   const lock = useRef(false);
   const receiptGeneration = useRef(0);
   const online = useOnlineStatus();
   const currentOwner = useRef(ownerKey);
   if (currentOwner.current !== ownerKey) { currentOwner.current = ownerKey; receiptGeneration.current++; }
-  useEffect(() => { setReceipt(undefined); setNotice(""); setError(""); }, [ownerKey]);
+  useEffect(() => { setReceipt(undefined); setNotice(""); setError(""); setRecoveryRequired(false); }, [ownerKey]);
   useEffect(() => () => { receiptGeneration.current++; currentOwner.current = "unmounted"; }, []);
   function begin() {
     const generation = ++receiptGeneration.current;
@@ -109,6 +113,18 @@ export function AttentionRoutingProvider({
     window.addEventListener(destinationChangeEvent, refresh);
     return () => window.removeEventListener(destinationChangeEvent, refresh);
   }, [onRefresh]);
+  async function recover() {
+    const key = currentOwner.current, generation = receiptGeneration.current;
+    try {
+      await Promise.all([onRefresh(), refreshDestinations()]);
+      if (key !== currentOwner.current || generation !== receiptGeneration.current) return false;
+      setRecoveryRequired(false); setError("");
+      return true;
+    } catch {
+      if (key === currentOwner.current && generation === receiptGeneration.current) setError("Mail could not reload. Retry mail reload.");
+      return false;
+    }
+  }
   async function undo() {
     if (!receipt || lock.current || !online) return;
     lock.current = true;
@@ -159,6 +175,11 @@ export function AttentionRoutingProvider({
         version,
         changed,
         begin,
+        recoveryRequired,
+        requireRecovery: (owner) => {
+          if (owner.key === currentOwner.current && owner.generation === receiptGeneration.current) setRecoveryRequired(true);
+        },
+        recover,
         clear: () => {
           receiptGeneration.current += 1;
           setReceipt(undefined);
@@ -178,7 +199,7 @@ export function AttentionRoutingProvider({
           {error && (
             <span role="alert">
               {error}{" "}
-              <button onClick={() => void changed(receipt)}>
+              <button onClick={() => void recover()}>
                 Retry mail reload
               </button>
             </span>

@@ -20,7 +20,7 @@ import { createApp } from "../../api/src/index";
 import { InboxApp, defaultReaderPreferences } from "./App";
 import { TopLayerProvider } from "./top-layer";
 import { AttentionPage } from "./attention-page";
-import { AttentionRoutingProvider } from "./attention-routing";
+import { AttentionRoutingProvider, useRoutingUpdates } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
 import { destinationRoutingStateSchema } from "@orca/shared";
 const globals = [
@@ -1180,4 +1180,106 @@ test("App late batch completion does not clear another view's selection or overw
   expect(document.querySelector(".routing-feedback")?.textContent).not.toContain("2 conversations moved");
   await click("Undo");
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("Last routing change undone");
+});
+
+test("App committed-but-unconfirmed batch reloads canonical mail, prunes stale selection and never offers fabricated Undo", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT") { await request(path, init); throw new Error("Response lost after commit"); }
+    return syncNoop(path);
+  };
+  await click("Move conversations");
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("Move could not be confirmed");
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("No selected conversations remain");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+  expect(button("Move conversations").disabled).toBe(true);
+  expect([...document.querySelectorAll("button")].some(b => b.textContent === "Undo")).toBe(false);
+  intercept = async path => syncNoop(path);
+  await click("Reload spaces and mail");
+  expect(button("Move conversations").disabled).toBe(true);
+  expect(puts).toHaveLength(1);
+  await click("Cancel"); await nav("Quiet");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(2);
+});
+
+
+test("batch receipt cannot cross an account/session owner replacement, including late success", async () => {
+  let updates!: ReturnType<typeof useRoutingUpdates>;
+  function Capture() { updates = useRoutingUpdates(); return <p>Workspace</p>; }
+  async function renderOwner(owner: string) { await act(async () => root.render(<AttentionRoutingProvider ownerKey={owner} onRefresh={async () => {}}><Capture /></AttentionRoutingProvider>)); }
+  await renderOwner("account-a");
+  const prior = updates;
+  let old!: ReturnType<typeof updates.begin>;
+  await act(async () => { old = updates.begin(); });
+  const receipt = { batch: true as const, text: "Private receipt", undo: { expectedRevision: 1, changes: [{ accountId: "a", threadId: "thread-a", destinationId: null }] } };
+  await renderOwner("account-b");
+  await act(async () => { await prior.changed(receipt, old); });
+  expect(document.querySelector(".routing-feedback")).toBeNull();
+  await act(async () => { await updates.changed(receipt, updates.begin()); });
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("Private receipt");
+  await renderOwner("account-c");
+  expect(document.querySelector(".routing-feedback")).toBeNull();
+});
+
+test("App query replacement releases old bulk refresh busy state without unlocking a newer pending move", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox();
+  // All Mail keeps moved conversations visible while destination changes settle.
+  await nav("All Mail"); await openBulkMove();
+  const oldRefresh = deferred(), newWrite = deferred();
+  let committed = false, heldRead = false, heldWrite = false;
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT") {
+      if (committed) { heldWrite = true; await newWrite.promise; return request(path, init); }
+      const result = await request(path, init); committed = true; return result;
+    }
+    if (committed && !heldRead && path.startsWith("/v1/inbox?")) { heldRead = true; const result = await request(path, init); await oldRefresh.promise; return result; }
+    return syncNoop(path);
+  };
+  await act(async () => button("Move conversations").click()); await settle();
+  expect(heldRead).toBe(true);
+  expect(document.querySelector(".bulk-space-dialog")).toBeNull();
+  await act(async () => {
+    window.history.pushState(null, "", "/?destination=all&q=Mail");
+    window.dispatchEvent(new Event("popstate"));
+  }); await settle();
+  expect(button("Select").disabled).toBe(false);
+  await click("Select"); await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
+  await click("Move to space");
+  await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".bulk-space-dialog .routing-destinations button")].find(b => b.textContent === "Inbox")!.click());
+  await act(async () => button("Move conversations").click()); await settle();
+  expect(heldWrite).toBe(true);
+  await act(async () => oldRefresh.release()); await settle();
+  expect(button("Moving…").disabled).toBe(true);
+  expect(document.querySelector('.bulk-action-bar')?.getAttribute("aria-busy")).toBe("true");
+  expect(document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
+  await act(async () => newWrite.release()); await settle(); await settle();
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox");
+});
+
+test("App uncertain batch recovery survives Cancel and selection teardown until explicit mail reload succeeds", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  let committed = false;
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT") { await request(path, init); committed = true; throw new Error("Response lost"); }
+    if (committed && path.startsWith("/v1/inbox?")) return Response.json({ error: { message: "Mail unavailable" } }, { status: 503 });
+    return syncNoop(path);
+  };
+  await click("Move conversations");
+  await click("Cancel"); await click("Done selecting");
+  await openBulkMove();
+  expect(button("Move conversations").disabled).toBe(true);
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("A previous move needs recovery");
+  await click("Reload spaces and mail");
+  expect(button("Move conversations").disabled).toBe(true);
+  expect(puts).toHaveLength(1);
+  intercept = async path => syncNoop(path);
+  await click("Reload spaces and mail");
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).not.toContain("A previous move needs recovery");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+  expect(puts).toHaveLength(1);
+  await click("Cancel"); await nav("Quiet"); await openBulkMove();
+  expect(button("Move conversations").disabled).toBe(false);
 });

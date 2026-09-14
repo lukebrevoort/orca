@@ -2176,19 +2176,22 @@ describe("Pin navigation and bulk sender actions", () => {
     expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
   });
 
-  test("keeps selection across search and includes hidden selections in the sender count", async () => {
+  test("changing search clears selection before selecting newly visible conversations", async () => {
     await renderApp();
     const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
     await act(async () => { selectMode.click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
 
-    const search = browserWindow.document.querySelector('input[aria-label="Search the stream"]') as unknown as HTMLInputElement;
-    await enterInput(search, "Jordan");
+    await act(async () => {
+      browserWindow.history.pushState(null, "", "?destination=inbox&q=Jordan");
+      browserWindow.dispatchEvent(new browserWindow.Event("popstate"));
+    });
 
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
     expect(buttonByName("Select Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("false");
     await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
   });
 
   test("reconciles mixed failure, keeps only the failed sender selected, and retries it", async () => {
@@ -2212,7 +2215,7 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { quiet.click(); await Promise.resolve(); });
 
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toContain("1 sender moved to Quiet. 1 sender could not be updated. 1 sender is ready to retry.");
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
     expect(buttonByName("Deselect Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("true");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
 
@@ -2343,11 +2346,11 @@ describe("Pin navigation and bulk sender actions", () => {
         buttonByName("Select Shared Outlook: Outlook copy").click();
       });
 
-      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 conversations selected");
       const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
       await act(async () => { quiet.click(); await Promise.resolve(); });
 
-      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
       expect(buttonByName("Deselect Shared Outlook: Outlook copy").getAttribute("aria-pressed")).toBe("true");
       const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
       await act(async () => { retry.click(); await Promise.resolve(); });

@@ -4656,13 +4656,7 @@ function InboxView({
     setSelectedRows(current => {
       if ([...current.keys()].every(key => visibleRowKeys.has(key))) return current;
       const next = new Map([...current].filter(([key]) => visibleRowKeys.has(key)));
-      const targets = attentionTargetsForRows(next);
-      setSelectedTargets(targets);
-      setBulkRetry(retry => {
-        if (!retry) return null;
-        const remaining = retry.targets.filter(target => targets.has(senderAttentionTargetKey(target)));
-        return remaining.length ? { ...retry, targets: remaining } : null;
-      });
+      setSelectedTargets(attentionTargetsForRows(next));
       return next;
     });
   }, [visibleRowKeys]);
@@ -4717,6 +4711,7 @@ function InboxView({
 
   useEffect(() => {
     setSelectionMode(false);
+    setBulkSpaceBusy(false);
     setSelectedRows(new Map());
     setSelectedTargets(new Map());
     setViewAuthoringEntry(null);
