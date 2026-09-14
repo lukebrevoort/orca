@@ -919,6 +919,13 @@ export const emails = sqliteTable(
       table.threadId,
       table.id,
     ),
+    threadLatestDestinationIdx: index("emails_thread_latest_destination_idx").on(
+      table.accountId,
+      table.threadId,
+      sql`${table.receivedAt} DESC`,
+      sql`${table.createdAt} DESC`,
+      table.id,
+    ),
     threadIdx: index("emails_thread_idx").on(table.threadId),
   }),
 );

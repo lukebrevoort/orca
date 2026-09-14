@@ -489,8 +489,10 @@ function authorizedMutation<T>(sqlite: Database, input: {
       const afterOrder = { orderDigest: digestOrganizationViewOrder(afterOrderIds), revision: revisionBefore + 1, viewCount: afterOrderIds.length };
       insertAction.run(input.workspaceId, input.authorization.command.id, directChangedIds.length, "view_order_update", "view", orderResourceId, JSON.stringify(beforeOrder), JSON.stringify(afterOrder));
     }
-    const advanced = sqlite.query("UPDATE organization_workspace_states SET revision=revision+1,updated_at=? WHERE workspace_id=? AND revision=?").run(input.now.getTime(), input.workspaceId, revisionBefore);
-    if (advanced.changes !== 1) throw new OrganizationViewConflictError("The Workspace changed before this View command could commit");
+    // Bun's run().changes includes mailbox revision trigger writes; RETURNING
+    // identifies only the Workspace row matched by this optimistic guard.
+    const advanced = sqlite.query<{ revision: number }, [number, string, number]>("UPDATE organization_workspace_states SET revision=revision+1,updated_at=? WHERE workspace_id=? AND revision=? RETURNING revision").all(input.now.getTime(), input.workspaceId, revisionBefore);
+    if (advanced.length !== 1 || advanced[0]!.revision !== revisionBefore + 1) throw new OrganizationViewConflictError("The Workspace changed before this View command could commit");
     return response;
   })();
 }
