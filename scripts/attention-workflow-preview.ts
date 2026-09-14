@@ -1,7 +1,7 @@
 // Isolated browser verification harness. Run with Bun; ATTENTION_REPO points to the built worktree.
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 const repo = process.env.ATTENTION_REPO;
 if (!repo) throw new Error('Set ATTENTION_REPO to the isolated implementation worktree.');
@@ -12,10 +12,13 @@ const schema = await import(join(repo, 'apps/api/src/db/schema.ts'));
 const { migrate } = await import(join(repo, 'node_modules/drizzle-orm/bun-sqlite/migrator.js'));
 const { createSession } = await import(join(repo, 'apps/api/src/auth/session-store.ts'));
 const { createApp } = await import(join(repo, 'apps/api/src/index.ts'));
-const directory = mkdtempSync(join(tmpdir(), 'orca-attention-browser-'));
-const databasePath = join(directory, 'sample.sqlite');
+const preservedDatabase = process.env.ATTENTION_PREVIEW_DATABASE;
+if (preservedDatabase && !existsSync(preservedDatabase)) throw new Error('The preserved preview database must already exist.');
+const directory = preservedDatabase ? dirname(preservedDatabase) : mkdtempSync(join(tmpdir(), 'orca-attention-browser-'));
+const databasePath = preservedDatabase ?? join(directory, 'sample.sqlite');
 const client = createDatabaseClient(databasePath);
 migrate(client.db, { migrationsFolder: join(repo, 'apps/api/drizzle') });
+if (!preservedDatabase) {
 client.db.insert(schema.users).values([
   {id:'sample-owner',email:'luke@example.com',displayName:'Luke',onboardingCompletedAt:new Date()},
   {id:'sample-foreign',email:'private@example.com',displayName:'Private account',onboardingCompletedAt:new Date()},
@@ -56,6 +59,7 @@ if (process.env.ATTENTION_PREVIEW_LEGACY_CHOICES === '1') client.db.insert(schem
  {id:'rule-receipt',accountId:'sample-personal',scope:'address',value:'receipts@shop.example',behavior:'quiet',source:'user_choice'},
  {id:'rule-deploy',accountId:'sample-work',scope:'address',value:'notifications@github.example',behavior:'focus',source:'user_choice'},
 ]).run();
+}
 const session = await createSession(client.db,'sample-owner');
 client.sqlite.close();
 const app = createApp({dbFactory:()=>createDatabaseClient(databasePath)});
@@ -122,6 +126,6 @@ console.log(JSON.stringify({url:server.url.href,databasePath,kind:'isolated synt
 // Keep the disposable mailbox for the preview lifetime, then remove it on shutdown.
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
  server.stop(true);
- rmSync(directory, {recursive:true, force:true});
+ if (!preservedDatabase) rmSync(directory, {recursive:true, force:true});
  process.exit(0);
 });
