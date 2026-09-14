@@ -15,9 +15,12 @@ import {
 } from "@orca/shared";
 import type { OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 
+export type DestinationBinding = { workspaceId: string; accountId: string; scope: string; value: string; destinationId: string | null; revision: number };
+export function destinationBindingResource(accountId: string, scope: string, value: string) { return `destination:${JSON.stringify([accountId, scope, value])}`; }
 export type OrganizationLaneSnapshot = {
   configuration: OrganizationLaneConfiguration;
   placements: ThreadLanePlacement[];
+  destinationBindings?: DestinationBinding[];
 };
 
 export class OrganizationLaneValidationError extends Error {
@@ -100,11 +103,23 @@ export function applyLaneActions(
   input: { actor: OrganizationActor; authorizedAccountIds: readonly string[]; existingThreads: ReadonlySet<string>; now: string },
 ): OrganizationLaneSnapshot {
   const configuration = structuredClone(snapshot.configuration);
+  const destinationBindings = structuredClone(snapshot.destinationBindings ?? []);
   const placements = new Map(snapshot.placements.map((placement) => [key(placement.accountId, placement.threadId), structuredClone(placement)]));
   const authorized = new Set(input.authorizedAccountIds);
   const touchedThreads = new Set<string>();
 
   for (const action of actions) {
+    if (action.kind === "set_destination_binding") {
+      if (!authorized.has(action.accountId)) throw new OrganizationLaneValidationError("Account is outside the authorized scope");
+      if ((action.scope === "account" && action.value !== "") || (action.scope === "sender" && (!action.value.includes("@") || action.value !== action.value.trim().toLowerCase()))
+        || (action.scope === "conversation" && (action.destinationId !== null || !input.existingThreads.has(key(action.accountId, action.value))))) throw new OrganizationLaneValidationError("Invalid destination scope");
+      if (action.destinationId !== null && !configuration.lanes.some(l => l.id === action.destinationId && !l.retiredAt)) throw new OrganizationLaneValidationError("Choose an active destination");
+      const old = destinationBindings.find(b => b.accountId === action.accountId && b.scope === action.scope && b.value === action.value);
+      if ((old?.revision ?? null) !== action.expectedRevision) throw new OrganizationLaneValidationError("Destination choice is stale");
+      if (old) { old.destinationId = action.destinationId; old.revision++; }
+      else destinationBindings.push({ workspaceId: "", accountId: action.accountId, scope: action.scope, value: action.value, destinationId: action.destinationId, revision: 1 });
+      continue;
+    }
     if (action.kind === "define_lane_policy") {
       if (configuration.policies.some((policy) => policy.id === action.id)) throw new OrganizationLaneValidationError(`Lane Policy ${action.id} already exists`);
       configuration.policies.push({ id: action.id, visibility: action.visibility, interruption: action.interruption, review: action.review, retention: action.retention, providerDeletion: false, revision: 1 });
@@ -125,6 +140,7 @@ export function applyLaneActions(
     if (action.kind === "define_lane") {
       if (configuration.lanes.some((lane) => lane.id === action.id)) throw new OrganizationLaneValidationError(`Lane ${action.id} already exists`);
       if (!configuration.policies.some((policy) => policy.id === action.defaultPolicyId)) throw new OrganizationLaneValidationError(`Lane Policy ${action.defaultPolicyId} does not exist`);
+      if (configuration.lanes.some(l => !l.retiredAt && l.name.trim().toLowerCase() === action.name?.trim().toLowerCase())) throw new OrganizationLaneValidationError("A destination with this name already exists");
       configuration.lanes.push({ id: action.id, name: action.name, position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
       continue;
     }
@@ -137,6 +153,8 @@ export function applyLaneActions(
         throw new OrganizationLaneValidationError("A Lane with routed Threads cannot be retired until those Threads are moved");
       }
       if (action.defaultPolicyId !== undefined && !configuration.policies.some((policy) => policy.id === action.defaultPolicyId)) throw new OrganizationLaneValidationError(`Lane Policy ${action.defaultPolicyId} does not exist`);
+      if (action.name !== undefined && configuration.lanes.some(l => l.id !== lane.id && !l.retiredAt && l.name.trim().toLowerCase() === action.name?.trim().toLowerCase())) throw new OrganizationLaneValidationError("A destination with this name already exists");
+      if (action.retired === true && destinationBindings.some(b => b.destinationId === lane.id)) throw new OrganizationLaneValidationError("Reassign destination choices before retiring this destination");
       if (action.name !== undefined) lane.name = action.name;
       if (action.position !== undefined) lane.position = action.position;
       if (action.defaultPolicyId !== undefined) lane.defaultPolicyId = action.defaultPolicyId;
@@ -190,6 +208,7 @@ export function applyLaneActions(
   }
   configuration.lanes.sort((left, right) => left.position - right.position || left.id.localeCompare(right.id));
   return {
+    destinationBindings,
     configuration: organizationLaneConfigurationSchema.parse(configuration),
     placements: [...placements.values()].map(placementWithEvidence),
   };

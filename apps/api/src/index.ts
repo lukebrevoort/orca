@@ -1,3 +1,5 @@
+import { registerDestinationRoutes } from "./destinations/routes.ts";
+import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
@@ -272,6 +274,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerOrganizationContextRoutes(app, { dbFactory });
   registerAttentionPreferencesRoutes(app, { dbFactory });
   registerAttentionRoutingRoutes(app, { dbFactory });
+  registerDestinationRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 
@@ -2240,7 +2243,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId, destinationId } = c.req.valid("query");
       const useClassificationResponse = classification !== undefined;
       const { sqlite } = dbFactory();
       try {
@@ -2250,7 +2253,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             observe: options.mailboxReadObserver,
           }).read({
             authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
-            query: { cursor, limit, view, classification, query, sender, collectionId },
+            query: { cursor, limit, view, classification, query, sender, collectionId, destinationId },
           });
           c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
           c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
@@ -3058,6 +3061,7 @@ function readThreadDetailSnapshot(
   }
   const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
   const routing = loadAttentionRouting(db, account.id);
+  const destination = readThreadDestination(db, db.select({userId:oauthAccounts.userId}).from(oauthAccounts).where(eq(oauthAccounts.id,account.id)).get()!.userId, account.id, thread.id) ?? undefined;
   const messages = messageRows.map((message) => {
     const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
     const humanClassification = resolveHumanClassification(message, resolveClassification);
@@ -3072,6 +3076,7 @@ function readThreadDetailSnapshot(
       humanClassification,
       attachments: attachmentsByMessage.get(message.id) ?? [],
       attentionBehavior: routing.resolve(message.fromAddress ?? "", thread.id).behavior,
+      destination,
     };
   });
   const sourceMessages = messageRows;
@@ -3089,6 +3094,7 @@ function readThreadDetailSnapshot(
       readState: thread.isRead ? "read" : "unread",
       attention: {
         attentionBehavior: routing.resolve(latestMessage?.fromAddress ?? "", thread.id).behavior,
+        destination,
         hasUnread: messages.some((message) => message.unread), hasStarred: sourceMessages.some((message) => message.isStarred),
         hasDraft: sourceMessages.some((message) => message.isDraft),
         humanSignal: maxHumanSignal(sourceMessages.map((message) => message.humanSignal)),

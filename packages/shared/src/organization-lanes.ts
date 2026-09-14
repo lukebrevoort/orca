@@ -1,3 +1,4 @@
+import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
 
 import { organizationActorSchema } from "./organization-contract.ts";
@@ -61,6 +62,7 @@ export const organizationLaneConfigurationSchema = z.object({
 export type OrganizationLaneConfiguration = z.infer<typeof organizationLaneConfigurationSchema>;
 
 export const lanePlacementSourceSchema = z.enum([
+  "destination_choice",
   "safety_lock",
   "manual_override",
   "rule_revision",
@@ -68,6 +70,8 @@ export const lanePlacementSourceSchema = z.enum([
   "workspace_fallback",
 ]);
 export const lanePrecedenceLevelSchema = z.enum([
+  "2_user_destination",
+  "5_inherited_destination",
   "1_safety_lock",
   "2_manual_override",
   "3_rule_revision",
@@ -92,6 +96,7 @@ const placementDecisionSchema = z.object({
 }).strict();
 
 export const threadLanePlacementSchema = z.object({
+  destination: destinationResolutionSchema.optional(),
   accountId: identifierSchema,
   threadId: identifierSchema,
   primaryLaneId: identifierSchema,

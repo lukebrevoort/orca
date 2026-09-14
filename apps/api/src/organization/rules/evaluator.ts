@@ -275,6 +275,9 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       reason: placement.manualOverride.reason, authorized: true,
     });
   }
+  if (!placement.manualOverride && placement.destination && ["sender","conversation"].includes(placement.destination.source)) {
+    addCandidate({ candidateId:"user-destination:lane",action:{kind:"route_lane",laneId:placement.destination.destinationId},slot:"lane",precedence:"manual_override",ruleOrder:0,actionOrder:0,actor:placement.evidence.actor,reason:"Explicit user destination choice",authorized:true });
+  }
   if (placement.evidence.winningSource === "lane_policy") {
     addCandidate({
       candidateId: "lane-policy:lane", action: { kind: "route_lane", laneId: placement.primaryLaneId }, slot: "lane",
@@ -283,7 +286,7 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
     });
   }
   addCandidate({
-    candidateId: "workspace-fallback:lane", action: { kind: "route_lane", laneId: input.workspaceSchema.fallbackLaneId }, slot: "lane",
+    candidateId: "workspace-fallback:lane", action: { kind: "route_lane", laneId: placement.destination && ["account","legacy"].includes(placement.destination.source) ? placement.destination.destinationId : input.workspaceSchema.fallbackLaneId }, slot: "lane",
     precedence: "workspace_fallback", ruleOrder: 0, actionOrder: 0,
     actor: { id: "system:workspace-fallback", type: "system" },
     reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.", authorized: true,

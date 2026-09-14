@@ -1,0 +1,258 @@
+import { afterEach, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import type { AttentionRoutingChange, AttentionRoutingState, AttentionRoutingTarget } from "@orca/shared";
+import { createDatabaseClient } from "../db/client.ts";
+import { emails, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { createApp } from "../index.ts";
+import { createSession } from "../auth/session-store.ts";
+import { createAttentionRouting } from "../attention/routing.ts";
+import { createMailboxReader } from "../mailbox/read.ts";
+import { createOrganization } from "../organization/module.ts";
+import { createSqliteOrganizationRepository } from "../organization/sqlite-repository.ts";
+import { createDestinations } from "./service.ts";
+import { readThreadDestination } from "./resolution.ts";
+import { sql } from "drizzle-orm";
+const folders: string[] = [];
+const original = { SESSION_SECRET: process.env.SESSION_SECRET, TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY };
+afterEach(() => {
+    for (const folder of folders.splice(0))
+        rmSync(folder, { recursive: true, force: true });
+    for (const [key, value] of Object.entries(original)) {
+        if (value === undefined)
+            delete process.env[key];
+        else
+            process.env[key] = value;
+    }
+});
+async function setup() {
+    process.env.SESSION_SECRET = "attention-routing-test-session-secret-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 17).toString("base64");
+    const directory = mkdtempSync(join(tmpdir(), "orca-routing-"));
+    folders.push(directory);
+    const path = join(directory, "test.sqlite");
+    const client = createDatabaseClient(path);
+    migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+    client.db.insert(users).values([{ id: "owner", email: "owner@example.com" }, { id: "other", email: "other@example.com" }]).run();
+    client.db.insert(oauthAccounts).values(["a", "b", "private"].map(id => ({ id, userId: id === "private" ? "other" : "owner", provider: "gmail" as const, providerId: id, providerEmail: `${id}@example.com` }))).run();
+    function message(id: string, accountId = "a", address = "maya@example.com", threadId = id) {
+        client.db.insert(threads).values({ id: threadId, accountId, providerThreadId: threadId, messageCount: 1 }).onConflictDoNothing().run();
+        client.db.insert(emails).values({ id, accountId, threadId, providerMessageId: id, fromAddress: address, fromName: "Maya", receivedAt: new Date(1000 + Number(id.replace(/\D/g, "")) * 1000), bodyText: "hello" }).run();
+    }
+    message("m1");
+    message("m2");
+    message("m3", "a", "unruled@elsewhere.com");
+    message("m4", "b");
+    message("m5", "private");
+    const session = await createSession(client.db, "owner");
+    const app = createApp({ dbFactory: () => createDatabaseClient(path) });
+    const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+    const request = (url: string, method = "GET", body?: unknown) => app.request(url, { headers, method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const state = async (accountId = "a", query = "") => {
+        const response = await request(`/v1/attention/routing?accountId=${accountId}${query}`);
+        expect(response.status).toBe(200);
+        return await response.json() as AttentionRoutingState;
+    };
+    const save = async (target: AttentionRoutingTarget, behavior: AttentionRoutingChange["behavior"], accountId = "a", revision?: number) => {
+        const response = await request(`/v1/attention/routing?accountId=${accountId}`, "PUT", { target, behavior, expectedRevision: revision ?? (await state(accountId)).revision });
+        expect(response.status).toBe(200);
+        return await response.json() as {
+            state: AttentionRoutingState;
+            undo: AttentionRoutingChange;
+        };
+    };
+    return { ...client, path, app, request, state, save, message };
+}
+const sender = { scope: "sender", address: "maya@example.com" } as const;
+const conversation = { scope: "conversation", threadId: "m1" } as const;
+const account = { scope: "account" } as const;
+function service(f: Awaited<ReturnType<typeof setup>>) { return createDestinations(f.db, "owner"); }
+function add(f: Awaited<ReturnType<typeof setup>>, name = "Clients") { const s = service(f); return s.create({ expectedRevision: s.list().revision, name }).state.destinations.find(d => d.name === name)!; }
+function route(f: Awaited<ReturnType<typeof setup>>, target: AttentionRoutingTarget, destinationId: string | null, accountId = "a") { const s = service(f); return s.save(accountId, { expectedRevision: s.list().revision, target, destinationId }); }
+test("fresh catalog is Inbox only; GET is read-only; stable names, collision validation, ordering and notification intent", async () => {
+    const f = await setup(), s = service(f), initial = s.list();
+    expect(initial.destinations.map(d => d.name)).toEqual(["Inbox"]);
+    const changes = f.sqlite.query("select total_changes() n").get();
+    s.list();
+    s.read("a");
+    expect(f.sqlite.query("select total_changes() n").get()).toEqual(changes);
+    const clients = add(f);
+    expect(() => add(f, " clients ")).toThrow("already exists");
+    const updated = s.update(clients.id, { expectedRevision: s.list().revision, name: "Customers", position: 0, notificationPreference: "notify" });
+    expect(updated.state.destinations[0]).toMatchObject({ id: clients.id, name: "Customers", delivery: "proposal_only", notificationPreference: "notify" });
+    expect(s.list().fallbackDestinationId).toBe(initial.fallbackDestinationId);
+    expect((await f.request("/v1/destinations")).status).toBe(200);
+    f.sqlite.close();
+});
+test("sender destination applies to current/future mail, SQL pages/counts, reader and Organization across accounts", async () => {
+    const f = await setup(), s = service(f), clients = add(f);
+    route(f, sender, clients.id);
+    f.message("m6");
+    const reader = createMailboxReader(f.sqlite), q = { destinationId: clients.id, limit: 1 };
+    const page = reader.read({ authorization: { userId: "owner", accountIds: ["a"] }, query: q }).response;
+    expect(page.messages.map(m => m.id)).toEqual(["m6"]);
+    expect(page.counts.attention.all).toBe(3);
+    const next = reader.read({ authorization: { userId: "owner", accountIds: ["a"] }, query: { ...q, cursor: page.nextCursor! } }).response;
+    expect(next.messages.map(m => m.id)).toEqual(["m2"]);
+    expect(s.list().destinations.find(d => d.id === clients.id)?.counts).toEqual({ total: 3, unread: 3 });
+    expect(s.read("b", sender).selection.effective.destinationId).not.toBe(clients.id);
+    const detail = await f.request("/v1/threads/m1?accountId=a");
+    expect(detail.status).toBe(200);
+    expect(await detail.json()).toMatchObject({ thread: { attention: { destination: { destinationId: clients.id } } }, messages: [{ destination: { destinationId: clients.id } }] });
+    const o = createOrganization(createSqliteOrganizationRepository(f.db)).query({ scope: { actor: { type: "human", id: "owner" }, workspaceId: "owner", accountIds: ["a"] }, query: { accountIds: ["a"], laneIds: [clients.id], limit: 20 } });
+    expect(o.threads.length).toBe(3);
+    expect(o.threads.every(t => t.organization.lanePlacement.primaryLaneId === clients.id)).toBe(true);
+    route(f, sender, null);
+    expect(() => reader.read({ authorization: { userId: "owner", accountIds: ["a"] }, query: { ...q, cursor: page.nextCursor! } })).toThrow("cursor");
+    f.sqlite.close();
+});
+test("legacy conversation beats new sender; reset reveals inheritance; guarded Undo and legacy writes invalidate", async () => {
+    const f = await setup(), s = service(f), clients = add(f);
+    await f.save(conversation, "quiet");
+    const quiet = s.read("a", conversation).selection.effective.destinationId;
+    route(f, sender, clients.id);
+    expect(s.read("a", conversation).selection.effective.destinationId).toBe(quiet);
+    const reset = route(f, conversation, null);
+    expect(reset.state.selection.effective.destinationId).toBe(clients.id);
+    s.save("a", reset.undo);
+    expect(s.read("a", conversation).selection.effective.destinationId).toBe(quiet);
+    const undo = route(f, conversation, clients.id).undo;
+    await f.save(account, "quiet");
+    expect(() => s.save("a", undo)).toThrow("changed");
+    expect(s.read("a").senders).toContainEqual({ scope: "address", value: "maya@example.com", destinationId: clients.id, source: "user_choice", editable: true });
+    route(f, sender, null);
+    expect(s.read("a").senders).toEqual([]);
+    f.sqlite.close();
+});
+test("ownership, retired targets and safe retirement reject references without deleting mail", async () => {
+    const f = await setup(), s = service(f), clients = add(f), spare = add(f, "Spare");
+    expect(() => s.read("private")).toThrow("not found");
+    expect(() => s.read("a", { scope: "conversation", threadId: "m5" })).toThrow("not found");
+    const foreign = createDestinations(f.db, "other").create({ expectedRevision: createDestinations(f.db, "other").list().revision, name: "Private" }).state.destinations.find(d => d.name === "Private")!;
+    expect(() => route(f, sender, foreign.id)).toThrow("not found");
+    route(f, sender, clients.id);
+    expect(() => s.retire(clients.id, { expectedRevision: s.list().revision, reassignToDestinationId: spare.id })).toThrow("Move conversations");
+    s.retire(spare.id, { expectedRevision: s.list().revision, reassignToDestinationId: clients.id });
+    expect(() => route(f, sender, spare.id)).toThrow("not found");
+    expect(f.sqlite.query("select count(*) n from emails").get()).toEqual({ n: 5 });
+    f.sqlite.close();
+});
+test("explicit sender beats advanced placement; safety lock freezes actual effective destination", async () => {
+    const f = await setup(), s = service(f), clients = add(f), advanced = add(f, "Advanced");
+    f.db.run(sql `update organization_thread_lane_states set primary_lane_id=${advanced.id},placement_source='lane_policy' where account_id='a' and thread_id='m1'`);
+    route(f, sender, clients.id);
+    expect(readThreadDestination(f.db, "owner", "a", "m1")?.destinationId).toBe(clients.id);
+    const repo = createSqliteOrganizationRepository(f.db), org = createOrganization(repo), p = repo.lanes!.getSnapshot("owner", ["a"]).placements.find(p => p.threadId === "m1")!;
+    org.apply({ scope: { actor: { type: "human", id: "owner" }, workspaceId: "owner", accountIds: ["a", "b"] }, command: { id: "lock", idempotencyKey: "lock", expectedWorkspaceRevision: s.list().revision, actions: [{ kind: "set_thread_safety_lock", accountId: "a", threadId: "m1", locked: true, reason: "Protect", expectedThreadRevision: p.revision }] } });
+    route(f, sender, advanced.id);
+    expect(readThreadDestination(f.db, "owner", "a", "m1")).toMatchObject({ destinationId: clients.id, locked: true });
+    expect(() => route(f, conversation, advanced.id)).toThrow("protected");
+    f.sqlite.close();
+});
+test("destination filtering paginates beyond 100 and rejects changed filters or stale concurrent writes", async () => {
+    const f = await setup(), s = service(f), clients = add(f);
+    route(f, sender, clients.id);
+    f.db.transaction(() => { for (let i = 10; i < 135; i++)
+        f.message(`m${i}`); });
+    const reader = createMailboxReader(f.sqlite), query = { destinationId: clients.id, limit: 100 };
+    const first = reader.read({ authorization: { userId: "owner" }, query }).response;
+    const second = reader.read({ authorization: { userId: "owner" }, query: { ...query, cursor: first.nextCursor! } }).response;
+    expect(first.messages.length).toBe(100);
+    expect(second.messages.length).toBe(27);
+    expect(second.nextCursor).toBeNull();
+    expect(first.counts.attention.all).toBe(127);
+    expect(new Set([...first.messages, ...second.messages].map(m => m.id)).size).toBe(127);
+    expect(() => reader.read({ authorization: { userId: "owner" }, query: { ...query, destinationId: s.list().fallbackDestinationId, cursor: first.nextCursor! } })).toThrow("cursor");
+    const other = createDatabaseClient(f.path), otherService = createDestinations(other.db, "owner"), old = s.list().revision;
+    s.update(clients.id, { expectedRevision: old, name: "Customers" });
+    expect(() => otherService.create({ expectedRevision: old, name: "Concurrent" })).toThrow("changed");
+    expect(() => reader.read({ authorization: { userId: "owner" }, query: { ...query, cursor: first.nextCursor! } })).toThrow("cursor");
+    expect(otherService.read("a", sender).selection.effective.destinationId).toBe(clients.id);
+    other.sqlite.close();
+    f.sqlite.close();
+});
+test("SQL resolution and inherited selection agree through account, sender, conversation and legacy transitions", async () => {
+    const f = await setup(), s = service(f), clients = add(f);
+    const matches = () => expect(readThreadDestination(f.db, "owner", "a", "m1")).toMatchObject(s.read("a", conversation).selection.effective);
+    matches();
+    route(f, account, clients.id);
+    matches();
+    await f.save(sender, "hidden");
+    matches();
+    route(f, sender, s.list().fallbackDestinationId);
+    matches();
+    route(f, conversation, clients.id);
+    matches();
+    route(f, conversation, null);
+    matches();
+    route(f, sender, null);
+    matches();
+    route(f, account, null);
+    matches();
+    const q = s.list().legacyDestinationIds.hidden!;
+    const hidden = createMailboxReader(f.sqlite).read({ authorization: { userId: "owner" }, query: { destinationId: q, limit: 100 } }).response;
+    expect(hidden.messages).toHaveLength(0); // Explicit sender reset suppresses old hidden placement, without deleting mail.
+    expect(f.sqlite.query("select count(*) n from emails").get()).toEqual({ n: 5 });
+    f.sqlite.close();
+});
+test("populated pre-0042 upgrade preserves custom fallback identity and legacy conversation choices", () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-destination-upgrade-"));
+    folders.push(directory);
+    const oldFolder = join(directory, "migrations");
+    mkdirSync(join(oldFolder, "meta"), { recursive: true });
+    const source = resolve(import.meta.dir, "../../drizzle");
+    const journal = JSON.parse(readFileSync(join(source, "meta/_journal.json"), "utf8"));
+    journal.entries = journal.entries.filter((e: {
+        idx: number;
+    }) => e.idx < 42);
+    writeFileSync(join(oldFolder, "meta/_journal.json"), JSON.stringify(journal));
+    for (const e of journal.entries)
+        copyFileSync(join(source, e.tag + ".sql"), join(oldFolder, e.tag + ".sql"));
+    const f = createDatabaseClient(join(directory, "upgrade.sqlite"));
+    migrate(f.db, { migrationsFolder: oldFolder });
+    f.db.insert(users).values({ id: "owner", email: "owner@example.com" }).run();
+    f.db.insert(oauthAccounts).values({ id: "a", userId: "owner", provider: "gmail", providerId: "a", providerEmail: "a@example.com" }).run();
+    f.db.insert(threads).values({ id: "t", accountId: "a", providerThreadId: "t" }).run();
+    f.db.insert(emails).values({ id: "m", accountId: "a", threadId: "t", providerMessageId: "m", fromAddress: "maya@example.com" }).run();
+    const fallback = f.sqlite.query("select fallback_lane_id id from organization_workspace_lane_settings where workspace_id='owner'").get() as {
+        id: string;
+    };
+    f.sqlite.query("update organization_lanes set name='Personal desk' where workspace_id='owner' and id=?").run(fallback.id);
+    createAttentionRouting(f.db, "owner").save("a", { expectedRevision: 0, target: { scope: "conversation", threadId: "t" }, behavior: "quiet" });
+    migrate(f.db, { migrationsFolder: source });
+    const s = createDestinations(f.db, "owner"), catalog = s.list();
+    expect(catalog.fallbackDestinationId).toBe(fallback.id);
+    expect(catalog.destinations.find(d => d.isFallback)?.name).toBe("Personal desk");
+    expect(catalog.legacyDestinationIds.quiet).toBeDefined();
+    expect(catalog.legacyDestinationIds.hidden).toBeUndefined();
+    expect(s.read("a", { scope: "conversation", threadId: "t" }).selection).toMatchObject({ explicitDestinationId: catalog.legacyDestinationIds.quiet, effective: { destinationId: catalog.legacyDestinationIds.quiet, source: "conversation" } });
+    expect(f.sqlite.query("select behavior from thread_attention_overrides").get()).toEqual({ behavior: "quiet" });
+    expect(f.sqlite.query("pragma foreign_key_check").all()).toEqual([]);
+    f.sqlite.close();
+});
+test("HTTP destination mutations return affected stable ID and enforce validation/authentication", async () => {
+    const f = await setup();
+    const initial = await (await f.request("/v1/destinations")).json();
+    const create = await f.request("/v1/destinations", "POST", { expectedRevision: initial.revision, name: "HTTP Clients" });
+    expect(create.status).toBe(200);
+    const result = await create.json();
+    expect(result.state.destinations.some((d: {
+        id: string;
+    }) => d.id === result.destinationId)).toBe(true);
+    const put = await f.request("/v1/destinations/routing?accountId=a", "PUT", { expectedRevision: result.state.revision, target: sender, destinationId: result.destinationId });
+    expect(put.status).toBe(200);
+    const inbox = await f.request(`/v1/inbox?destinationId=${result.destinationId}&limit=1`);
+    expect(inbox.status).toBe(200);
+    expect(await inbox.json()).toMatchObject({ messages: [{ destination: { destinationId: result.destinationId } }], counts: { all: 2 } });
+    expect((await f.request("/v1/destinations", "POST", { name: "Missing revision" })).status).toBe(400);
+    expect((await f.app.request("/v1/destinations")).status).toBe(401);
+    expect((await f.request("/v1/destinations/routing?accountId=private")).status).toBe(404);
+    const customQuiet = add(f, "Quiet");
+    await f.save(account, "quiet");
+    const catalog = service(f).list();
+    expect(catalog.legacyDestinationIds.quiet).not.toBe(customQuiet.id);
+    expect(new Set(catalog.destinations.map(d => d.name.trim().toLowerCase())).size).toBe(catalog.destinations.length);
+    f.sqlite.close();
+});

@@ -1636,3 +1636,21 @@ export const threadAttentionOverrides = sqliteTable("thread_attention_overrides"
   threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
   behavior: text("behavior").notNull(),
 }, table => [primaryKey({ columns: [table.accountId, table.threadId] })]);
+
+/** Explicit destination choices. A null target records reset/inheritance over legacy choices. */
+export const organizationDestinationBindings = sqliteTable("organization_destination_bindings", {
+  workspaceId: text("workspace_id").notNull(), accountId: text("account_id").notNull(),
+  scope: text("scope").notNull(), value: text("value").notNull(), destinationId: text("destination_id"),
+  revision: integer("revision").notNull().default(1),
+}, t => ({
+  pk: primaryKey({ columns: [t.workspaceId, t.accountId, t.scope, t.value] }),
+  accountFk: foreignKey({ columns:[t.workspaceId,t.accountId],foreignColumns:[oauthAccounts.userId,oauthAccounts.id] }).onDelete("cascade"),
+  destinationFk: foreignKey({ columns:[t.workspaceId,t.destinationId],foreignColumns:[organizationLanes.workspaceId,organizationLanes.id] }),
+  revisionCheck: check("destination_binding_revision",sql`${t.revision}>0`),
+  scopeCheck: check("destination_binding_scope",sql`${t.scope} in ('account','sender','conversation')`),
+  valueCheck: check("destination_binding_value",sql`${t.scope} != 'account' or ${t.value} = ''`),
+  conversationCheck: check("destination_binding_conversation",sql`${t.scope} != 'conversation' or ${t.destinationId} is null`),
+}));
+export const organizationDestinationLegacy = sqliteTable("organization_destination_legacy", {
+  workspaceId:text("workspace_id").notNull(),behavior:text("behavior").notNull(),destinationId:text("destination_id").notNull(),
+},t=>({pk:primaryKey({columns:[t.workspaceId,t.behavior]}),destinationFk:foreignKey({columns:[t.workspaceId,t.destinationId],foreignColumns:[organizationLanes.workspaceId,organizationLanes.id]})}));
