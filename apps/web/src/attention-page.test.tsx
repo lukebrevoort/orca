@@ -1399,3 +1399,50 @@ test("Space removal recovers a lost success response from the refreshed catalog 
   expect(document.querySelector(".destination-manager [role=status]")?.textContent).toContain("No mail was deleted");
   expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Quiet");
 });
+
+
+test("Space removal reconciles a lost response after failed automatic refresh and successful manual reload", async () => {
+  intercept = async path => syncNoop(path);
+  window.history.replaceState(null, "", `/?destination=${encodeURIComponent(`destination:${quietId}`)}`);
+  await renderMailbox(); await click("Manage spaces");
+  let committed = false, failedRefresh = false;
+  intercept = async (path, init) => {
+    if (path.endsWith("/retire") && init?.method === "POST") {
+      const result = await request(path, init); expect(result.status).toBe(200); committed = true;
+      return Response.json({ error: { message: "Response lost" } }, { status: 503 });
+    }
+    if (committed && !failedRefresh && path === "/v1/destinations") {
+      failedRefresh = true;
+      return Response.json({ error: { message: "Catalog unavailable" } }, { status: 503 });
+    }
+    return syncNoop(path);
+  };
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Remove Quiet"]')!.click());
+  await settle(); await settle();
+  expect(failedRefresh).toBe(true);
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${quietId}`);
+  await click("Reload spaces"); await settle();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${fallbackId}`);
+  expect(document.querySelector(".destination-manager [role=alert]")).toBeNull();
+  expect(document.querySelector(".destination-manager [role=status]")?.textContent).toContain("No mail was deleted");
+  expect(document.activeElement).toBe(document.querySelector('.destination-manager input'));
+});
+
+test("obsolete Space removal completion preserves newer history navigation after manager unmount", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await nav("Drafts"); await nav("Quiet"); await click("Manage spaces");
+  const gate = deferred();
+  intercept = async (path, init) => {
+    if (path.endsWith("/retire") && init?.method === "POST") await gate.promise;
+    return syncNoop(path);
+  };
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Remove Quiet"]')!.click());
+  await act(async () => { window.history.back(); }); await settle();
+  expect(document.querySelector(".destination-manager")).toBeNull();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe("drafts");
+  await act(async () => gate.release()); await settle(); await settle();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe("drafts");
+  expect(document.querySelector(".destination-manager")).toBeNull();
+  const catalog = await (await request("/v1/destinations")).json();
+  expect(catalog.destinations.find((item: {id: string}) => item.id === quietId).retiredAt).not.toBeNull();
+});

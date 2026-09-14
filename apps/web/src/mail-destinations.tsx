@@ -50,34 +50,66 @@ export function DestinationManager({ onClose, onCreated, onRemoved, preview = fa
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removalError, setRemovalError] = useState<{ id: string; message: string } | null>(null);
   const [notice, setNotice] = useState("");
-  function finishRemoval(id: string, state: ReturnType<typeof destinationListSchema.parse>) {
-    const fallback = state.destinations.find(item => item.id === state.fallbackDestinationId)!;
+  const mounted = useRef(true);
+  const operation = useRef(0);
+  const callbacks = useRef({ onCreated, onRemoved, onClose });
+  callbacks.current = { onCreated, onRemoved, onClose };
+  type PendingRemoval = { id: string; fallbackId: string; revision: number; operation: number; focusOwner: Element | null };
+  const pendingRemoval = useRef<PendingRemoval | null>(null);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; operation.current++; pendingRemoval.current = null; };
+  }, []);
+  function finishRemoval(pending: PendingRemoval, state: ReturnType<typeof destinationListSchema.parse>, notify = true) {
+    if (!mounted.current || pendingRemoval.current !== pending || operation.current !== pending.operation) return;
+    const fallback = state.destinations.find(item => item.id === pending.fallbackId && !item.retiredAt);
+    if (!fallback || state.fallbackDestinationId !== pending.fallbackId || state.revision <= pending.revision
+      || !state.destinations.find(item => item.id === pending.id)?.retiredAt) return;
+    pendingRemoval.current = null;
+    const focused = document.activeElement;
+    const ownsFocus = focused === pending.focusOwner || focused === document.body || focused?.matches("[data-space-reload]");
     setRemovalError(null);
     setNotice(`Space removed. Its mail and sender/account choices moved to ${fallback.name}. No mail was deleted.`);
-    onRemoved?.(id, fallback.id);
-    window.requestAnimationFrame(() => newSpaceInput.current?.focus());
+    callbacks.current.onRemoved?.(pending.id, fallback.id);
+    if (notify) window.dispatchEvent(new Event(destinationChangeEvent));
+    if (ownsFocus) window.requestAnimationFrame(() => {
+      if (mounted.current && operation.current === pending.operation
+        && (document.activeElement === focused || document.activeElement === document.body)) newSpaceInput.current?.focus();
+    });
   }
+  // Retain this manager's pending removal across failed reads, then reconcile only a
+  // successful, newer canonical catalog with the exact target and fallback identity.
+  useEffect(() => {
+    const pending = pendingRemoval.current;
+    if (!pending || busy || catalog.loading || catalog.error || !catalog.data) return;
+    if (catalog.data.destinations.find(item => item.id === pending.id)?.retiredAt) finishRemoval(pending, catalog.data);
+    else if (catalog.data.revision >= pending.revision) pendingRemoval.current = null;
+  }, [busy, catalog.data, catalog.error, catalog.loading]);
   async function mutate(path: string, method: string, change: object, created = false, removedId?: string) {
     if (catalog.locked || lock.current || !catalog.data) return;
+    const owner = ++operation.current;
+    const current = () => mounted.current && operation.current === owner;
+    const pending = removedId ? { id: removedId, fallbackId: catalog.data.fallbackDestinationId, revision: catalog.data.revision, operation: owner, focusOwner: document.activeElement } : null;
+    pendingRemoval.current = pending;
     lock.current = true; setBusy(true); setError(""); setNotice(""); setRemovalError(null); setRemovingId(removedId ?? null);
     try {
       const result = destinationMutationResultSchema.parse(await request(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ expectedRevision: catalog.data.revision, ...change }) }));
       ++generation;
       publish({ data: snapshot.data && snapshot.data.revision > result.state.revision ? snapshot.data : result.state, loading: false, error: "" });
       window.dispatchEvent(new Event(destinationChangeEvent));
-      if (created) { onCreated(result.destinationId); onClose(); }
-      if (removedId) finishRemoval(removedId, result.state);
-
+      if (!current()) return;
+      if (created) { callbacks.current.onCreated(result.destinationId); callbacks.current.onClose(); }
+      if (pending) finishRemoval(pending, result.state, false);
     } catch (cause) {
-      const message = `${cause instanceof Error ? cause.message : String(cause)} Reload and review before trying again.`;
-      if (removedId) setRemovalError({ id: removedId, message }); else setError(message);
-      await refreshDestinations().catch(() => {});
-      if (removedId && !snapshot.error && snapshot.data?.destinations.find(item => item.id === removedId)?.retiredAt) {
-        window.dispatchEvent(new Event(destinationChangeEvent));
-        finishRemoval(removedId, snapshot.data);
+      if (current()) {
+        const message = `${cause instanceof Error ? cause.message : String(cause)} Reload and review before trying again.`;
+        if (removedId) setRemovalError({ id: removedId, message }); else setError(message);
       }
+      await refreshDestinations().catch(() => {});
     }
-    finally { lock.current = false; setBusy(false); setRemovingId(null); }
+    finally {
+      if (current()) { lock.current = false; setBusy(false); setRemovingId(null); }
+    }
   }
   return <TopLayer ariaLabelledBy="destination-manager-title" className="simple-attention-dialog destination-manager" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close space manager" initialFocusSelector="input" dismissible={!busy} ariaBusy={busy} onClose={onClose}>
     <h2 id="destination-manager-title">Your spaces</h2>
@@ -89,7 +121,7 @@ export function DestinationManager({ onClose, onCreated, onRemoved, preview = fa
       <button disabled={busy || catalog.locked || !name.trim()}>Create space</button>
     </form>
     {catalog.active.map(item => <DestinationEditor key={item.id} item={item} fallbackId={catalog.data?.fallbackDestinationId ?? ""} fallbackName={catalog.label(catalog.data?.fallbackDestinationId)} removing={removingId === item.id} error={removalError?.id === item.id ? removalError.message : ""} disabled={busy || catalog.locked} mutate={mutate} />)}
-    {(error || catalog.error) && <p role="alert">{error || catalog.error} <button disabled={busy} onClick={() => void catalog.refresh().catch(() => {})}>Reload spaces</button></p>}
+    {(error || catalog.error) && <p role="alert">{error || catalog.error} <button data-space-reload disabled={busy} onClick={() => void catalog.refresh().catch(() => {})}>Reload spaces</button></p>}
     {notice && <p role="status">{notice}</p>}
     <p>Removing a space never deletes mail. Protected conversations and active advanced rules may need review in Organization. Notification delivery is not available.</p>
     <footer><button disabled={busy} onClick={onClose}>Done</button></footer>
