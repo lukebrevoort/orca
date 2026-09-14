@@ -887,15 +887,16 @@ describe("Orca scoped MCP server", () => {
         .filter((message: { id: string }) => message.id.startsWith("bre320-"))
         .map((message: { threadId: string }) => message.threadId)), new Set(bre320ProductionFailureFixture.historicalThreads.map((item) => item.id)));
 
+      const nextLanePosition = Math.max(-1, ...described.laneConfiguration.lanes.map((lane: { position: number }) => lane.position)) + 1;
       const laneArguments = {
           ...scope,
           expectedWorkspaceRevision: initialWorkspaceRevision,
           targetKind: "lanes",
           target: { kind: "lanes", request: { id: "mcp-lanes-r1", idempotencyKey: "mcp-lanes-r1", expectedWorkspaceRevision: initialWorkspaceRevision, actions: [
             { kind: "define_lane_policy", id: "policy-focus", visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
-            { kind: "define_lane", id: "lane-focus", name: "Focus", position: 1, defaultPolicyId: "policy-focus" },
+            { kind: "define_lane", id: "lane-focus", name: "Focus", position: nextLanePosition, defaultPolicyId: "policy-focus" },
             { kind: "define_lane_policy", id: bre320ProductionFailureFixture.lanePolicy.id, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
-            { kind: "define_lane", id: bre320ProductionFailureFixture.lanes.production.id, name: bre320ProductionFailureFixture.lanes.production.name, position: 2, defaultPolicyId: bre320ProductionFailureFixture.lanePolicy.id },
+            { kind: "define_lane", id: bre320ProductionFailureFixture.lanes.production.id, name: bre320ProductionFailureFixture.lanes.production.name, position: nextLanePosition + 1, defaultPolicyId: bre320ProductionFailureFixture.lanePolicy.id },
           ] } },
         };
       const lanes = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: laneArguments });
@@ -1329,11 +1330,13 @@ describe("Orca scoped MCP server", () => {
       });
       try {
         const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
+        const nextLanePosition = Math.max(-1, ...db.select().from(organizationLanes)
+          .where(eq(organizationLanes.workspaceId, "user_a")).all().map(lane => lane.position)) + 1;
         const request = {
           workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: initialWorkspaceRevision, targetKind: "lanes",
           target: { kind: "lanes", request: { id: idempotencyKey, idempotencyKey, expectedWorkspaceRevision: initialWorkspaceRevision, actions: [
             { kind: "define_lane_policy", id: policyId, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
-            { kind: "define_lane", id: laneId, name: "Must roll back", position: 1, defaultPolicyId: policyId },
+            { kind: "define_lane", id: laneId, name: "Must roll back", position: nextLanePosition, defaultPolicyId: policyId },
           ] } },
         };
         for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -1348,6 +1351,7 @@ describe("Orca scoped MCP server", () => {
         assert.equal(attempts[0]!.workspaceId, "user_a");
         assert.equal(attempts[0]!.connectionId, "connection_a");
         assert.equal(attempts[0]!.operation, "apply");
+        assert.match(attempts[0]!.reasonCode, /^SQLITE_/, "the injected database failure must be reached");
         assert.match(attempts[0]!.commandDigest, /^sha256:[0-9a-f]{64}$/);
         assert.match(attempts[0]!.accountIdsDigest, /^sha256:[0-9a-f]{64}$/);
         assert.doesNotMatch(JSON.stringify(attempts), /Bearer|provider-access|provider-refresh|Must roll back|g2 injected failure/);
