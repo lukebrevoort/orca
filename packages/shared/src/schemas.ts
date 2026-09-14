@@ -293,6 +293,7 @@ export const inboxMessageSchema = z
     unread: z.boolean(),
     labels: labelListSchema,
     attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]),
+    destination: destinationResolutionSchema.optional(),
     humanSignal: humanSignalScoreSchema,
     humanClassification: humanClassificationResultSchema.nullable().default(null),
   })
@@ -491,6 +492,7 @@ export type ThreadReadState = z.infer<typeof threadReadStateSchema>;
 
 export const threadAttentionSchema = z.object({
   attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
+  destination: destinationResolutionSchema.optional(),
   hasUnread: z.boolean(),
   hasStarred: z.boolean(),
   hasDraft: z.boolean(),
@@ -507,6 +509,7 @@ export const threadDetailMessageSchema = normalizedMessageSchema
     humanClassification: humanClassificationResultSchema.nullable().default(null),
     attachments: z.array(mailAttachmentSchema),
     attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
+  destination: destinationResolutionSchema.optional(),
   })
   .strict();
 export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;

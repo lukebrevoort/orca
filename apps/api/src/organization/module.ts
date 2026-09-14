@@ -39,7 +39,7 @@ import {
   type OrganizationContextSnapshot,
   type OrganizationContextsRepository,
 } from "./contexts/module.ts";
-import { digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
+import { destinationBindingResource, digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
 import { isAgentOrganizationActor, requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
 
 export type OrganizationAttentionRule = {
@@ -287,7 +287,10 @@ function bindLaneCommand(command: ReturnType<typeof organizationLaneApplySchema.
     let resourceId: string;
     let mutation: "create" | "update";
     let kind: OrganizationCommand["intents"][number]["kind"];
-    if (action.kind === "define_lane_policy") {
+    if (action.kind === "set_destination_binding") {
+      resourceId = destinationBindingResource(action.accountId, action.scope, action.value); mutation = action.expectedRevision === null ? "create" : "update"; kind = "mutate_lane";
+      if (action.expectedRevision !== null) expectedResources[resourceId] = action.expectedRevision;
+    } else if (action.kind === "define_lane_policy") {
       resourceId = lanePolicyResourceId(action.id); mutation = "create"; kind = "mutate_lane";
     } else if (action.kind === "update_lane_policy") {
       resourceId = lanePolicyResourceId(action.policyId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = action.expectedRevision;

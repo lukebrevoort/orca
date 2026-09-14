@@ -5,6 +5,7 @@ import {
   humanClassificationAssessmentSchema,
   humanClassificationOverrideSchema,
   humanClassificationSchema,
+  type DestinationResolution,
   type AttentionBehavior,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
@@ -40,6 +41,7 @@ export type MailboxReadQuery = {
   query?: string;
   sender?: string;
   collectionId?: string;
+  destinationId?: string;
   receivedAfter?: string;
   receivedBefore?: string;
 };
@@ -126,6 +128,7 @@ type RawMailboxMessage = {
   human_classification_reasons: string | null;
   human_classifier_version: string | null;
   attention_behavior: string;
+  destination_id: string; destination_source: DestinationResolution["source"]; destination_locked: number;
   override_id: string | null;
   override_account_id: string | null;
   override_target_type: string | null;
@@ -176,6 +179,7 @@ const reasonCodes = new Set<HumanClassificationReasonCode>([
 const normalizedAddressSql = "lower(trim(coalesce(e.from_address, '')))";
 const normalizedDomainSql = `case when instr(${normalizedAddressSql}, '@') > 0 then substr(${normalizedAddressSql}, instr(${normalizedAddressSql}, '@') + 1) else '' end`;
 const resolvedJoinsSql = `
+  join organization_effective_destinations destination on destination.account_id=e.account_id and destination.thread_id=e.thread_id
   left join thread_attention_overrides attention_thread
     on attention_thread.account_id = e.account_id and attention_thread.thread_id = e.thread_id
   left join account_attention_routing attention_account
@@ -237,6 +241,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         throw new MailboxScopeError("Collection not found");
       }
 
+      if (input.query.destinationId && !queryAll(sqlite, `select id from organization_lanes where workspace_id=? and id=?`, [input.authorization.userId,input.query.destinationId]).length) throw new MailboxScopeError("Destination not found");
       const classification = input.query.classification ?? "all";
       const view = input.query.view ?? "default";
       const scope = cursorScope(input.query);
@@ -271,7 +276,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const pageRows: RawMailboxMessage[] = [];
       let pageRowsProjected = 0;
       let accountPageQueries = 0;
-      for (const behavior of behaviorsForView(input.query.view)) {
+      for (const behavior of behaviorsForView(input.query.destinationId ? "all" : input.query.view)) {
         if (pageRows.length >= requestedRows) break;
         const rank = attentionRank[behavior];
         if (cursor && rank < cursor.attentionRank) continue;
@@ -288,6 +293,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
               e.is_read, e.human_signal, e.human_classification,
               e.human_classification_reasons, e.human_classifier_version,
               ${attentionSql} as attention_behavior,
+              destination.destination_id,destination.source destination_source,destination.locked destination_locked,
               ${effectiveOverrideSql.id} as override_id,
               ${effectiveOverrideSql.accountId} as override_account_id,
               ${effectiveOverrideSql.targetType} as override_target_type,
@@ -347,6 +353,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
           unread: row.is_read !== 1,
           labels: labels.byMessage.get(row.id) ?? [],
           attentionBehavior: row.attention_behavior as AttentionBehavior,
+          destination: { destinationId:row.destination_id,source:row.destination_source,locked:Boolean(row.destination_locked),reason:`Placement from ${row.destination_source}` },
           humanSignal: humanClassification.effective.score,
           humanClassification,
         };
@@ -522,6 +529,7 @@ function addMailboxFilters(
   params: Array<string | number | null>,
   query: MailboxReadQuery,
 ) {
+  if (query.destinationId) { clauses.push("destination.destination_id = ?"); params.push(query.destinationId); }
   if (query.collectionId) {
     clauses.push(`exists (
       select 1
@@ -587,11 +595,12 @@ function mailboxFreshAt(accounts: RawMailboxAccount[]) {
 }
 
 function cursorScope(query: MailboxReadQuery) {
-  return query.query || query.sender || query.collectionId || query.receivedAfter || query.receivedBefore
+  return query.destinationId || query.query || query.sender || query.collectionId || query.receivedAfter || query.receivedBefore
     ? JSON.stringify({
         query: query.query?.trim() ?? null,
         sender: query.sender?.trim().toLocaleLowerCase() ?? null,
         collectionId: query.collectionId ?? null,
+        destinationId: query.destinationId ?? null,
         receivedAfter: query.receivedAfter ?? null,
         receivedBefore: query.receivedBefore ?? null,
       })
