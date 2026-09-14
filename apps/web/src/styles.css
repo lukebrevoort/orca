@@ -5738,3 +5738,4 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .bulk-space-dialog .routing-destinations button { display: flex; align-items: center; gap: 8px; }
 .bulk-action-bar > details { grid-column: 1 / -1; color: var(--orca-muted); font-size: 11px; }
 .bulk-action-bar > details p { margin: 8px 0; }
+.bulk-space-dialog { position: relative; z-index: 1; align-self: center; margin: auto; }
