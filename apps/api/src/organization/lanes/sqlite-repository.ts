@@ -117,7 +117,7 @@ function loadSnapshot(
     } satisfies PlacementEvidence;
     const lowerCandidate = { primaryLaneId: row.primaryLaneId, evidence: storedEvidence } satisfies LowerPlacementCandidate;
     lowerCandidatesByThread?.set(placementKey(row.accountId, row.threadId), lowerCandidate);
-    const effectiveLaneId = manualOverride?.laneId ?? lowerCandidate.primaryLaneId;
+    const effectiveLaneId = (row.safetyLocked ? row.safetyLockLaneId : null) ?? manualOverride?.laneId ?? lowerCandidate.primaryLaneId;
     const effectiveEvidence: PlacementEvidence = manualOverride ? {
       winningSource: "manual_override",
       sourceId: manualOverride.laneId,
@@ -163,12 +163,31 @@ function resourceRevisions(snapshot: OrganizationLaneSnapshot, workspaceId: stri
   ]);
 }
 
+function resolvePlacements(executor: Database, workspaceId: string, placements: ThreadLanePlacement[]): ThreadLanePlacement[] {
+  return placements.map((placement) => {
+    const destination = readThreadDestination(executor, workspaceId, placement.accountId, placement.threadId);
+    if (!destination) return placement;
+    const inheritedChoice = ["sender", "conversation", "account", "legacy"].includes(destination.source) && !placement.manualOverride;
+    return {
+      ...placement,
+      primaryLaneId: destination.destinationId,
+      destination,
+      ...(inheritedChoice ? { evidence: {
+        winningSource: "destination_choice" as const,
+        sourceId: destination.destinationId,
+        precedenceLevel: ["sender", "conversation"].includes(destination.source) ? "2_user_destination" as const : "5_inherited_destination" as const,
+        actor: { id: "system:destination-resolver", type: "system" as const },
+        reason: destination.reason,
+      } } : {}),
+    };
+  });
+}
+
 export function createSqliteOrganizationLanesRepository(db: Database): OrganizationLanesRepository {
   return {
     getSnapshot(workspaceId, accountIds) {
       const snapshot=loadSnapshot(db,workspaceId,accountIds);
-      snapshot.placements=snapshot.placements.map(p=>{const destination=readThreadDestination(db,workspaceId,p.accountId,p.threadId);return destination?{...p,primaryLaneId:destination.destinationId,destination,
-        ...(["sender","conversation","account","legacy"].includes(destination.source)&&!p.manualOverride?{evidence:{winningSource:"destination_choice" as const,sourceId:destination.destinationId,precedenceLevel:["sender","conversation"].includes(destination.source)?"2_user_destination" as const:"5_inherited_destination" as const,actor:{id:"system:destination-resolver",type:"system" as const},reason:destination.reason}}:{})}:p;});
+      snapshot.placements = resolvePlacements(db, workspaceId, snapshot.placements);
       return snapshot;
     },
     getAuthorityState(workspaceId) {
@@ -241,13 +260,13 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         const existingThreads = new Set(executor.select({ accountId: threads.accountId, threadId: threads.id }).from(threads)
           .where(inArray(threads.accountId, [...input.executionContext.accountIds])).all().map((row) => `${row.accountId}\0${row.threadId}`));
         const now = new Date().toISOString();
-        // Lock the placement the user actually sees, including inherited sender choices.
+        const actionSnapshot = structuredClone(current);
+        // Capture only the effective input; preserve the stored candidate and audit before state.
         for (const action of parsed.actions) if (action.kind === "set_thread_safety_lock" && action.locked) {
-          const p=current.placements.find(p=>p.accountId===action.accountId&&p.threadId===action.threadId);
+          const p=actionSnapshot.placements.find(p=>p.accountId===action.accountId&&p.threadId===action.threadId);
           const effective=readThreadDestination(executor,workspaceId,action.accountId,action.threadId);
           if(p && effective && !p.manualOverride && !p.safetyLock.locked) {
             p.primaryLaneId=effective.destinationId;
-            lowerCandidatesByThread.set(placementKey(p.accountId,p.threadId),lowerCandidateFromPlacement(p));
           }
         }
         // Workspace configuration can affect accounts outside the caller's selected mailbox.
@@ -255,11 +274,11 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         for (const action of parsed.actions) if (action.kind === "update_lane" && action.retired === true) {
           const referenced=executor.all(sql`select 1 from organization_destination_bindings where workspace_id=${workspaceId} and destination_id=${action.laneId}
             union all select 1 from organization_destination_legacy where workspace_id=${workspaceId} and destination_id=${action.laneId}
-            union all select 1 from organization_thread_lane_states where workspace_id=${workspaceId} and (primary_lane_id=${action.laneId} or manual_override_lane_id=${action.laneId})
+            union all select 1 from organization_thread_lane_states where workspace_id=${workspaceId} and (primary_lane_id=${action.laneId} or manual_override_lane_id=${action.laneId} or safety_lock_lane_id=${action.laneId})
             union all select 1 from organization_rule_revisions r where r.workspace_id=${workspaceId} and exists(select 1 from json_tree(r.compiled_json) where atom=${action.laneId}) limit 1`);
           if(referenced.length) throw new OrganizationLaneValidationError("Destination is still referenced. Update its choices or advanced Organization configuration before retiring it.");
         }
-        const applied = applyLaneActions(current, parsed.actions, { actor: input.executionContext.actor, authorizedAccountIds: input.executionContext.accountIds, existingThreads, now });
+        const applied = applyLaneActions(actionSnapshot, parsed.actions, { actor: input.executionContext.actor, authorizedAccountIds: input.executionContext.accountIds, existingThreads, now });
         const currentPlacements = new Map(current.placements.map((placement) => [placementKey(placement.accountId, placement.threadId), placement]));
         const next = {
           destinationBindings: applied.destinationBindings,
@@ -289,8 +308,6 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             return placementWithLowerCandidate(placement, lower);
           }),
         };
-        const response = organizationLaneApplyResponseSchema.parse({ changeSetId: input.boundCommand.id, workspaceId, workspaceRevision: next.configuration.workspaceRevision, appliedActions: parsed.actions.length, laneConfiguration: next.configuration, placements: next.placements.filter((placement) => parsed.actions.some((action) => "threadId" in action && action.accountId === placement.accountId && action.threadId === placement.threadId)) });
-
         transaction.insert(organizationChangeSets).values({
           workspaceId,
           id: input.boundCommand.id,
@@ -299,7 +316,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           authorityTrace: JSON.stringify(input.authorityTrace),
           resourceFamily: "lane",
           operation: "apply",
-          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() }, response }),
+          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() } }),
           workspaceRevisionBefore: current.configuration.workspaceRevision,
           workspaceRevisionAfter: next.configuration.workspaceRevision,
           createdAt: new Date(now),
@@ -370,6 +387,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             reason: lower.evidence.reason, manualOverrideLaneId: placement.manualOverride?.laneId ?? null,
             manualOverrideActorId: placement.manualOverride?.actor.id ?? null, manualOverrideActorType: placement.manualOverride?.actor.type ?? null,
             manualOverrideReason: placement.manualOverride?.reason ?? null, manualOverrideAt: placement.manualOverride ? new Date(placement.manualOverride.updatedAt) : null,
+            safetyLockLaneId: placement.safetyLock.locked ? placement.primaryLaneId : null,
             safetyLocked: placement.safetyLock.locked, safetyLockActorId: placement.safetyLock.actor?.id ?? null, safetyLockActorType: placement.safetyLock.actor?.type ?? null,
             safetyLockReason: placement.safetyLock.reason, safetyLockUpdatedAt: placement.safetyLock.updatedAt ? new Date(placement.safetyLock.updatedAt) : null,
             revision: placement.revision ?? 1, updatedAt: new Date(now),
@@ -385,6 +403,10 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.configuration.workspaceRevision, updatedAt: new Date(now) })
           .where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.configuration.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.configuration.workspaceRevision, current.configuration.workspaceRevision + 1);
+        const response = organizationLaneApplyResponseSchema.parse({ changeSetId: input.boundCommand.id, workspaceId, workspaceRevision: next.configuration.workspaceRevision, appliedActions: parsed.actions.length, laneConfiguration: next.configuration, placements: resolvePlacements(executor, workspaceId, next.placements).filter((placement) => parsed.actions.some((action) => "threadId" in action && action.accountId === placement.accountId && action.threadId === placement.threadId)) });
+        transaction.update(organizationChangeSets).set({
+          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() }, response }),
+        }).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.boundCommand.id))).run();
         return response;
       });
     },

@@ -481,6 +481,7 @@ export const organizationThreadLaneStates = sqliteTable(
     manualOverrideActorType: text("manual_override_actor_type"),
     manualOverrideReason: text("manual_override_reason"),
     manualOverrideAt: integer("manual_override_at", { mode: "timestamp_ms" }),
+    safetyLockLaneId: text("safety_lock_lane_id"),
     safetyLocked: integer("safety_locked", { mode: "boolean" }).notNull().default(false),
     safetyLockActorId: text("safety_lock_actor_id"),
     safetyLockActorType: text("safety_lock_actor_type"),

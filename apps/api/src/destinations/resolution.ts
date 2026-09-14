@@ -29,10 +29,11 @@ export function resolveDestination(db: Db, workspaceId: string, accountId: strin
         primary_lane_id: string;
         manual_override_lane_id: string | null;
         safety_locked: number;
+        safety_lock_lane_id: string | null;
         placement_source: string;
     }>(sql `select * from organization_thread_lane_states where workspace_id=${workspaceId} and account_id=${accountId} and thread_id=${threadId}`)[0] : undefined;
     if (placement?.safety_locked)
-        return result(placement.manual_override_lane_id ?? placement.primary_lane_id, "safety_lock", true);
+        return result(placement.safety_lock_lane_id ?? placement.manual_override_lane_id ?? placement.primary_lane_id, "safety_lock", true);
     if (skip !== "conversation" && placement?.manual_override_lane_id)
         return result(placement.manual_override_lane_id, "conversation");
     if (skip !== "conversation" && threadId && !binding("conversation", threadId)) {
