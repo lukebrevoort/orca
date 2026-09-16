@@ -658,7 +658,7 @@ function mapGmailPushError(error: unknown): GmailPushError {
     return new GmailPushError(error.message, error.code);
   }
   if (error instanceof GmailApiError) {
-    if (error.status === 401 || error.status === 403) {
+    if (error.requiresReconnect) {
       return new GmailPushError("Gmail credentials need to be refreshed", "provider_auth_error");
     }
     return new GmailPushError("Gmail provider request failed", "provider_error");
