@@ -577,7 +577,7 @@ describe("OrganizationStudio integration", () => {
 
 test("Customize tools reorders, hides and restores saved view shortcuts without mutation requests or rename", async () => {
   const requests: string[] = [];
-  globalThis.fetch = (async (input: unknown) => { requests.push(String(input)); throw new Error("No remote writes expected"); }) as typeof fetch;
+  globalThis.fetch = (async (input: unknown) => { requests.push(String(input)); throw new Error("No remote writes expected"); }) as unknown as typeof fetch;
   const opened: string[] = [];
   const renamed: string[] = [];
   function Harness() {
