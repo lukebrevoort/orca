@@ -1,3 +1,4 @@
+import { inboxVisibilityPredicate } from "../organization/views/inbox-policy.ts";
 import { sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { destinationBatchChangeSchema, destinationCreateSchema, destinationUpdateSchema, destinationRetireSchema, destinationRoutingChangeSchema, destinationListSchema, destinationRoutingStateSchema, attentionRoutingTargetSchema, type AttentionRoutingTarget, type OrganizationLaneAction } from "@orca/shared";
@@ -26,11 +27,12 @@ export function createDestinations(db: Db, workspaceId: string) {
     function apply(expected: number, actions: OrganizationLaneAction[]) { check(expected); const id = randomUUID(); return organization.apply({ scope: scope(), command: { id, idempotencyKey: id, expectedWorkspaceRevision: expected, actions } }); }
     function list() {
         const c = config();
-        const counts = db.all<{
+        const inboxPolicy = inboxVisibilityPredicate(db.$client, workspaceId, "d");
+        const counts = db.$client.query<{
             id: string;
             total: number;
             unread: number;
-        }>(sql `select d.destination_id id,count(*) total,sum(case when e.is_read=0 then 1 else 0 end) unread from emails e join organization_effective_destinations d on d.account_id=e.account_id and d.thread_id=e.thread_id where d.workspace_id=${workspaceId} group by d.destination_id`);
+        }, Array<string | number>>(`select d.destination_id id,count(*) total,sum(case when e.is_read=0 then 1 else 0 end) unread from emails e join organization_effective_destinations d on d.account_id=e.account_id and d.thread_id=e.thread_id where d.workspace_id=? AND ${inboxPolicy.sql} group by d.destination_id`).all(workspaceId, ...inboxPolicy.params);
         return destinationListSchema.parse({ revision: revision(), fallbackDestinationId: c.fallbackLaneId, legacyDestinationIds: { normal: c.fallbackLaneId, ...Object.fromEntries(db.all<{
                     behavior: string;
                     id: string;
