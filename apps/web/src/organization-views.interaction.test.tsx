@@ -1586,7 +1586,9 @@ test("BRE-385 saved editing keeps only the latest refinement undo and guards dir
   expect(container.textContent).toContain("Discard changes to this draft?");
   await click(button(container, "Keep editing"));
   await flush();
-  expect(browserWindow.document.activeElement as unknown as Element).toBe(container.querySelector(".view-composer h3"));
+  const composerHeading = container.querySelector(".view-composer h3");
+  if (!composerHeading) throw new Error("Expected the view composer heading after keeping edits");
+  expect(browserWindow.document.activeElement as unknown as Element).toBe(composerHeading);
   await click(button(container, "Undo draft change"));
   expect(input(container, "Subject contains").value).toBe("production failure");
   expect(input(container, "View name").value).toBe("Renamed only in draft");
