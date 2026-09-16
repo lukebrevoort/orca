@@ -98,7 +98,8 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <SidebarItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => onNavigate("inbox")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
       {(["Spaces", "Tools"] as const).map(group => <Fragment key={group}>
-        <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">Manage {group.toLowerCase()}</button>}</div>
+        <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">{group === "Tools" ? "Customize tools" : "Manage spaces"}</button>}</div>
+        {group === "Tools" ? <SidebarItem active={active === "attention"} icon={<NavIcon name="organization" />} label="Senders" onClick={() => onNavigate("attention")} /> : null}
         {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <SidebarItem
           key={destinationForSpace(space)} active={active === destinationForSpace(space)} count={space.count}
           icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
@@ -107,7 +108,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       </Fragment>)}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
-      <SidebarItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => onNavigate("attention")} />
+      <SidebarItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Advanced organization" onClick={() => onNavigate("organization")} />
       <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
       <div className="desktop-sidebar-spacer"/>
       <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
@@ -137,16 +138,17 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
           </div>
           {(["Spaces", "Tools"] as const).map(group => <div aria-label={group} role="group" key={group}>
             <p aria-hidden="true" className="desktop-mobile-menu-label">{group}</p>
+            {group === "Tools" ? <MobileMenuItem active={active === "attention"} icon={<NavIcon name="organization" />} label="Senders" onClick={() => navigateFromMobileMenu("attention")} /> : null}
             {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <MobileMenuItem
               active={active === destinationForSpace(space)} count={space.count}
               icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
               key={destinationForSpace(space)} label={space.label} onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
-            {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={`Manage ${group.toLowerCase()}`} onClick={() => (group === "Spaces" ? onManageSpaces : onManageTools)?.()} />}
+            {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={group === "Tools" ? "Customize tools" : "Manage spaces"} onClick={() => { setMobileMenuOpen(false); (group === "Spaces" ? onManageSpaces : onManageTools)?.(); }} />}
           </div>)}
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
-            <MobileMenuItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => navigateFromMobileMenu("attention")} />
+            <MobileMenuItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Advanced organization" onClick={() => navigateFromMobileMenu("organization")} />
             <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
           </div>
@@ -159,7 +161,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         aria-controls="desktop-mobile-navigation-dialog"
         aria-expanded={mobileMenuOpen}
         aria-haspopup="dialog"
-        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
+        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : active === "attention" ? "Senders" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
         className="desktop-mobile-nav-item desktop-mobile-more"
         data-has-current={mobileMenuOwnsCurrentDestination || undefined}
         onClick={() => setMobileMenuOpen((current) => !current)}
@@ -339,7 +341,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     <AppSidebar
       onCompose={() => window.location.assign("/?compose=1")}
       onManageSpaces={() => setManageDestinations(true)}
-      onManageTools={() => window.location.assign(desktopDestinationHref("organization", window.location.pathname))}
+      onManageTools={() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`)}
       onNavigate={navigate}
       projection={projection}
       theme={theme}
@@ -389,15 +391,15 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
   }
   const visible = spaces.filter((space) => !space.hidden);
   const hidden = spaces.filter((space) => space.hidden);
-  return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Manage tools" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
-    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Manage tools</h2><p>Spaces hold mail. Tools help you work with it. Names and supported positions sync with your account. Cross-type ordering and hidden visibility are saved on this device; hiding never changes a rule.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
+  return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Customize tools" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
+    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Customize tools</h2><p>Rename, reorder, or hide Later and your collections. Names and supported positions sync with your account; visibility and cross-type order stay on this device. Senders is always available. Edit saved views from the view itself.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
     {error ? <p className="desktop-space-operation-error" role="alert">{error}</p> : null}
     <div className="desktop-space-list">{visible.map((space, index) => <article draggable={!busy} onDragStart={() => setDraggedId(space.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => void dropOn(event, space)} key={space.id}>
       <span aria-hidden="true" className="desktop-drag-handle">⠿</span><span className="desktop-space-mark" style={space.color ? { background: space.color } : undefined}/><div><strong>{space.label}</strong><small>{space.description}</small></div>
-      <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button><button disabled={busy} onClick={() => { const name = window.prompt("Rename workflow space", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button><button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
+      <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button><button disabled={busy} onClick={() => { const name = window.prompt("Rename tool", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button><button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
     </article>)}</div>
     {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <button disabled={busy} key={space.id} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>Rules intact</small><strong>Restore</strong></button>)}</section> : null}
-    <footer>{creating ? <div className="desktop-create-space"><input aria-label="Workflow space name" autoFocus disabled={busy} maxLength={60} onInput={(event) => setNewName(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a workflow space"}</button>}</footer>
+    <footer>{creating ? <div className="desktop-create-space"><input aria-label="Collection name" autoFocus disabled={busy} maxLength={60} onInput={(event) => setNewName(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a collection"}</button>}</footer>
   </TopLayer>;
 }
 

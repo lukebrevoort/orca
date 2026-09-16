@@ -117,12 +117,14 @@ describe("AppSidebar mobile navigation", () => {
     const destinations: DesktopDestination[] = [];
     let composeCalls = 0;
     let manageCalls = 0;
+    let customizeCalls = 0;
     const container = browserWindow.document.createElement("div");
     browserWindow.document.body.append(container);
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<TopLayerProvider><AppSidebar
       onCompose={() => { composeCalls += 1; }}
       onManageSpaces={() => { manageCalls += 1; }}
+      onManageTools={() => { customizeCalls += 1; }}
       onNavigate={(destination) => { destinations.push(destination); }}
       projection={{
         account: { displayName: "Maya Chen", email: "maya@example.com", accountCount: 2, health: "synced" },
@@ -161,7 +163,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Attention", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Manage spaces", "Senders", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Customize tools", "Advanced organization", "Settings", "Account · Maya Chen"]);
     expect(menu.querySelector('[role="group"][aria-label="Spaces"]')).not.toBeNull();
     expect(menu.querySelector('[role="group"][aria-label="Tools"]')?.textContent).toContain("Later");
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
@@ -176,7 +178,7 @@ describe("AppSidebar mobile navigation", () => {
 
     const expected = new Map<string, DesktopDestination>([
       ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
-      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Attention", "attention"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Senders", "attention"], ["Advanced organization", "organization"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
     ]);
     for (const [label, destination] of expected) {
       await click(more);
@@ -192,9 +194,11 @@ describe("AppSidebar mobile navigation", () => {
     manage.focus();
     await click(manage);
     expect(manageCalls).toBe(1);
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).not.toBeNull();
-    expect((browserWindow.document.activeElement as unknown as HTMLButtonElement) === manage).toBe(true);
-    await click(browserWindow.document.querySelector(".desktop-mobile-menu-backdrop") as unknown as HTMLButtonElement);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    await click(more);
+    await click(findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "Customize tools")!);
+    expect(customizeCalls).toBe(1);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
     await flush();
     expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
     expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");

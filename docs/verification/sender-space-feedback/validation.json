@@ -1,0 +1,37 @@
+{
+  "tickets": [
+    "BRE-406",
+    "BRE-408",
+    "BRE-409",
+    "BRE-410",
+    "BRE-411"
+  ],
+  "validation": {
+    "navigation": {
+      "pass": 14,
+      "fail": 0
+    },
+    "views": {
+      "pass": 44,
+      "fail": 0
+    },
+    "attention_routing_and_bulk_moves": {
+      "pass": 43,
+      "fail": 0
+    },
+    "changed_flows_final_focused": {
+      "pass": 6,
+      "fail": 0
+    },
+    "keep_editing_focus": {
+      "pass": 1,
+      "fail": 0
+    }
+  },
+  "notes": [
+    "The broad App interaction run passed 91 tests and failed one newly added fixture-address assertion. The assertion was corrected to the existing fixture sender; all three final App sender/customization focused tests pass. Full integrated CI is owned by the parent agent.",
+    "No local production build or completed local typecheck claimed; parent runs integrated checks.",
+    "Headless unique agent-browser session orca-senders-9dc5 and disposable server were closed.",
+    "Hover/focus/selected/disabled controls inspected in light and dark during browser flows; screenshots cover key states."
+  ]
+}

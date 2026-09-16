@@ -102,7 +102,7 @@ async function choose(field: HTMLSelectElement, value: string) {
 }
 
 function button(container: HTMLElement, label: string) {
-  const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+  const found = [...container.querySelectorAll("button")].find((candidate) => (candidate.getAttribute("aria-label") ?? candidate.textContent?.trim()) === label);
   expect(found, `button ${label}`).toBeDefined();
   return found as unknown as HTMLButtonElement;
 }
@@ -855,6 +855,18 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await act(async () => root!.render(<SavedOrganizationViewWorkspace onManage={() => {}} onOpenThread={(value) => { opened.push(value); }} previewMode viewId={selected.id}/>));
     await flush(); await flush(); await flush();
     expect(container.textContent).toContain("Reload-safe result");
+    expect(container.querySelectorAll("h2, h3")).toHaveLength(1);
+    expect(container.querySelector(".view-thread-sender")?.textContent).toBe("Maya");
+    expect(container.querySelector(".view-thread-row small")?.textContent).toBe("work@example.com");
+    const actions = container.querySelector(".view-thread-actions") as unknown as HTMLDetailsElement;
+    const summary = actions.querySelector("summary")!;
+    expect(actions.open).toBe(false);
+    expect(summary.getAttribute("aria-label")).toBe("Actions for Reload-safe result");
+    await click(summary);
+    expect(actions.open).toBe(true);
+    await act(async () => actions.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }) as unknown as KeyboardEvent));
+    expect(actions.open).toBe(false);
+    expect(browserWindow.document.activeElement as unknown as Element).toBe(summary);
     await click(container.querySelector(".view-thread-open") as unknown as HTMLButtonElement);
     expect(opened[0]).toEqual({ accountId: "account_gmail", threadId: "thread_reloaded" });
   });
@@ -1573,6 +1585,8 @@ test("BRE-385 saved editing keeps only the latest refinement undo and guards dir
   await click(button(container, "Cancel"));
   expect(container.textContent).toContain("Discard changes to this draft?");
   await click(button(container, "Keep editing"));
+  await flush();
+  expect(browserWindow.document.activeElement as unknown as Element).toBe(container.querySelector(".view-composer h3"));
   await click(button(container, "Undo draft change"));
   expect(input(container, "Subject contains").value).toBe("production failure");
   expect(input(container, "View name").value).toBe("Renamed only in draft");
@@ -1600,7 +1614,12 @@ test("BRE-385 correction uses complete census, blocks empty sets, replaces domai
   }) as typeof fetch;
   const container = await renderWorkspace(false); await flush(); await flush();
   await click(button(container, "Edit definition")); await flush(); await flush();
+  const actions = container.querySelector<HTMLDetailsElement>(".view-thread-actions")!;
+  expect(actions.open).toBe(false);
+  await click(actions.querySelector("summary")!);
+  expect(actions.open).toBe(true);
   await click(button(container, "Correct senders for Review meeting")); await flush();
+  expect(actions.open).toBe(false);
   const panel = container.querySelector(".view-sender-correction") as HTMLElement;
   expect(panel.textContent).toContain("review-thread");
   expect(panel.textContent).toContain("Omitted and new senders");

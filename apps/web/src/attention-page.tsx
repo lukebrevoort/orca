@@ -184,17 +184,8 @@ export function AttentionPage({
       aria-busy={routing.loading || routing.saving || accountsLoading}
     >
       <header className="simple-attention-intro">
-        <span>Your attention, your choice</span>
-        <h1 id="simple-attention-title">
-          A little less noise.
-          <br />
-          Room for what matters.
-        </h1>
-        <p>
-          Choose where each sender’s mail belongs.
-          <br />
-          Your spaces, ready when you are.
-        </p>
+        <h1 id="simple-attention-title">Senders</h1>
+        <p>Choose where each sender’s mail belongs.</p>
       </header>
       <div className="simple-attention-account">
         <label>

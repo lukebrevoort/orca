@@ -1691,9 +1691,28 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
+  test("Settings opens the same Customize tools workflow as the main sidebar", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/settings");
+    await renderSettingsHome("light", true);
+    const customize = [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Customize tools") as unknown as HTMLButtonElement;
+    await act(async () => customize.click());
+    expect(browserWindow.location.pathname).toBe("/dev/inbox");
+    expect(new URL(browserWindow.location.href).searchParams.get("customize")).toBe("tools");
+    await act(async () => root!.unmount()); root = null;
+    await renderApp();
+    expect(browserWindow.document.querySelector("#manage-spaces-title")?.textContent).toBe("Customize tools");
+    expect(browserWindow.document.querySelector(".desktop-spaces-dialog")?.textContent).toContain("Create a collection");
+    await act(async () => (browserWindow.document.querySelector('.desktop-spaces-dialog button[aria-label="Close"]') as unknown as HTMLButtonElement).click());
+    expect(new URL(browserWindow.location.href).searchParams.has("customize")).toBe(false);
+    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Senders") as unknown as HTMLButtonElement;
+    await act(async () => senders.click());
+    expect(senders.getAttribute("aria-current")).toBe("page");
+    expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Senders");
+  });
+
   test("persists hidden workspace visibility across a reload", async () => {
     await renderApp();
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "customize tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
     const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Life admin"))!;
@@ -1709,7 +1728,7 @@ describe("Desktop evidence and navigation", () => {
 
   test("persists one absolute order when a drag crosses multiple rows", async () => {
     await renderApp();
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "customize tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]')!;
     const rows = [...dialog.querySelectorAll(".desktop-space-list article")];
@@ -1790,12 +1809,12 @@ describe("Desktop evidence and navigation", () => {
 
   test("keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback", async () => {
     await renderApp();
-    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
+    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "customize tools") as unknown as HTMLButtonElement;
     await act(async () => manageButton().click());
-    const createTrigger = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "+ Create a workflow space") as unknown as HTMLButtonElement;
+    const createTrigger = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "+ Create a collection") as unknown as HTMLButtonElement;
     await act(async () => createTrigger.click());
     const createForm = browserWindow.document.querySelector(".desktop-create-space") as unknown as HTMLElement;
-    const nameInput = createForm.querySelector('input[aria-label="Workflow space name"]') as unknown as HTMLInputElement;
+    const nameInput = createForm.querySelector('input[aria-label="Collection name"]') as unknown as HTMLInputElement;
     await enterInput(nameInput, "Launch review");
     const createButton = [...createForm.querySelectorAll("button")].find((button) => button.textContent === "Create") as unknown as HTMLButtonElement;
     expect(createButton.disabled).toBe(false);
@@ -2143,6 +2162,10 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(authoringSurface.style.zIndex).toBe("151");
     const authoringHeading = authoringSurface.querySelector("#views-title") as unknown as HTMLElement;
     expect(authoringHeading.tabIndex).toBe(-1);
+    expect(authoringHeading.textContent).toBe("Save a sender view");
+    expect(authoringSurface.querySelector(".view-composer h3")).toBeNull();
+    expect(authoringSurface.querySelector("#search-view-tune")?.hasAttribute("hidden")).toBe(true);
+    expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("deploy@status.example.com");
     expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);
     setScroll({ x: 0, y: 0 });
     const cancel = [...browserWindow.document.querySelectorAll(".selected-view-authoring button")].find((candidate) => candidate.textContent === "Cancel") as unknown as HTMLButtonElement;
@@ -2150,6 +2173,31 @@ describe("Pin navigation and bulk sender actions", () => {
     flushAnimationFrames();
     expect(scrollPosition).toEqual({ x: 12, y: 380 });
     expect(focusCalls.at(-1)).toEqual({ preventScroll: true });
+    expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
+  });
+
+  test("sender authoring tucks extra fields into Tune and guards dirty Escape before returning selection", async () => {
+    await renderApp();
+    const byText = (text: string) => [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === text) as unknown as HTMLButtonElement;
+    await act(async () => byText("Select").click());
+    await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
+    await act(async () => { byText("Use these senders").click(); await Promise.resolve(); });
+    const tunePanel = browserWindow.document.querySelector("#search-view-tune")!;
+    expect(tunePanel.hasAttribute("hidden")).toBe(true);
+    expect(tunePanel.querySelector('input[aria-label="View color"]')).not.toBeNull();
+    await act(async () => byText("Tune").click());
+    expect(tunePanel.hasAttribute("hidden")).toBe(false);
+    const name = browserWindow.document.querySelector(".view-identity input") as unknown as HTMLInputElement;
+    await enterInput(name, "Friends");
+    const workspace = browserWindow.document.querySelector(".views-workspace-sender-authoring")!;
+    await act(async () => workspace.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(tunePanel.hasAttribute("hidden")).toBe(true);
+    expect(workspace.textContent).not.toContain("Discard changes to this draft?");
+    await act(async () => workspace.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(workspace.textContent).toContain("Discard changes to this draft?");
+    await act(async () => byText("Discard draft").click());
+    flushAnimationFrames();
+    expect(browserWindow.document.querySelector(".selected-view-authoring")).toBeNull();
     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
   });
 
