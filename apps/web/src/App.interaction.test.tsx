@@ -1449,8 +1449,9 @@ describe("Desktop evidence and navigation", () => {
       expect(rows()).toContain(freshMessage.subject);
       expect(rows()).not.toContain(oldMessage.subject);
       expect(browserWindow.document.querySelectorAll("button.message-row").length).toBe(2);
-      const inboxButton = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(item => item.querySelector("span")?.textContent === "Inbox");
-      expect(inboxButton?.querySelector("small")?.textContent).toBe("2");
+      const inboxButton = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(item => item.querySelector(":scope > span:last-of-type")?.textContent === "Inbox");
+      expect(inboxButton).toBeDefined();
+      expect(inboxButton!.querySelector(":scope > small")?.textContent).toBe("2");
     } finally { releaseOldSnapshot?.(); globalThis.fetch = originalFetch; }
   });
 
