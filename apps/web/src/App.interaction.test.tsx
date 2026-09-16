@@ -1704,10 +1704,13 @@ describe("Desktop evidence and navigation", () => {
     expect(browserWindow.document.querySelector(".desktop-spaces-dialog")?.textContent).toContain("Create a collection");
     await act(async () => (browserWindow.document.querySelector('.desktop-spaces-dialog button[aria-label="Close"]') as unknown as HTMLButtonElement).click());
     expect(new URL(browserWindow.location.href).searchParams.has("customize")).toBe(false);
-    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Senders") as unknown as HTMLButtonElement;
+    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Organization") as unknown as HTMLButtonElement;
     await act(async () => senders.click());
     expect(senders.getAttribute("aria-current")).toBe("page");
-    expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Senders");
+    expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Organization");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("attention");
+    expect([...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization")).toHaveLength(1);
+    expect(browserWindow.document.querySelector(".simple-attention")?.textContent).not.toContain("Advanced organization");
   });
 
   test("persists hidden workspace visibility across a reload", async () => {

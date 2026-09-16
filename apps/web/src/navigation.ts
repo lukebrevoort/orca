@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { Collection, OrganizationView, MailDestination } from "@orca/shared";
 
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
+export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "organization-studio" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -80,6 +80,9 @@ export function writeSpacePreferences(accountId: string, preferences: StoredSpac
 
 export function parseDesktopDestination(value: string | null | undefined): DesktopDestination | null {
   if (!value) return null;
+  // Old Organization bookmarks now open sender management; authoring has its own route.
+  if (value === "organization") return "attention";
+  if (value === "organization-studio") return "organization-studio";
   if (rootDestinations.has(value as DesktopDestination)) return value as DesktopDestination;
   if (value === "settings") return "settings";
   if (value.startsWith("destination:") && value.slice(12).trim()) return value as `destination:${string}`;

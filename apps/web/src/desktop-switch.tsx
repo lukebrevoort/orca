@@ -99,7 +99,6 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
       {(["Spaces", "Tools"] as const).map(group => <Fragment key={group}>
         <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">{group === "Tools" ? "Customize tools" : "Manage spaces"}</button>}</div>
-        {group === "Tools" ? <SidebarItem active={active === "attention"} icon={<NavIcon name="organization" />} label="Senders" onClick={() => onNavigate("attention")} /> : null}
         {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <SidebarItem
           key={destinationForSpace(space)} active={active === destinationForSpace(space)} count={space.count}
           icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
@@ -108,7 +107,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       </Fragment>)}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
-      <SidebarItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Advanced organization" onClick={() => onNavigate("organization")} />
+      <SidebarItem active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("attention")} />
       <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
       <div className="desktop-sidebar-spacer"/>
       <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
@@ -138,7 +137,6 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
           </div>
           {(["Spaces", "Tools"] as const).map(group => <div aria-label={group} role="group" key={group}>
             <p aria-hidden="true" className="desktop-mobile-menu-label">{group}</p>
-            {group === "Tools" ? <MobileMenuItem active={active === "attention"} icon={<NavIcon name="organization" />} label="Senders" onClick={() => navigateFromMobileMenu("attention")} /> : null}
             {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <MobileMenuItem
               active={active === destinationForSpace(space)} count={space.count}
               icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
@@ -148,7 +146,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
           </div>)}
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
-            <MobileMenuItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Advanced organization" onClick={() => navigateFromMobileMenu("organization")} />
+            <MobileMenuItem active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => navigateFromMobileMenu("attention")} />
             <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
           </div>
@@ -161,7 +159,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         aria-controls="desktop-mobile-navigation-dialog"
         aria-expanded={mobileMenuOpen}
         aria-haspopup="dialog"
-        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : active === "attention" ? "Senders" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
+        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : (active === "attention" || active === "organization-studio") ? "Organization" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
         className="desktop-mobile-nav-item desktop-mobile-more"
         data-has-current={mobileMenuOwnsCurrentDestination || undefined}
         onClick={() => setMobileMenuOpen((current) => !current)}
@@ -392,7 +390,7 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
   const visible = spaces.filter((space) => !space.hidden);
   const hidden = spaces.filter((space) => space.hidden);
   return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Customize tools" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
-    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Customize tools</h2><p>Rename, reorder, or hide Later and your collections. Names and supported positions sync with your account; visibility and cross-type order stay on this device. Senders is always available. Edit saved views from the view itself.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
+    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Customize tools</h2><p>Rename, reorder, or hide Later and your collections. Names and supported positions sync with your account; visibility and cross-type order stay on this device. Organization is always available in Workspace. Edit saved views from the view itself.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
     {error ? <p className="desktop-space-operation-error" role="alert">{error}</p> : null}
     <div className="desktop-space-list">{visible.map((space, index) => <article draggable={!busy} onDragStart={() => setDraggedId(space.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => void dropOn(event, space)} key={space.id}>
       <span aria-hidden="true" className="desktop-drag-handle">⠿</span><span className="desktop-space-mark" style={space.color ? { background: space.color } : undefined}/><div><strong>{space.label}</strong><small>{space.description}</small></div>

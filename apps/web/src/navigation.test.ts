@@ -17,6 +17,13 @@ const collections: Collection[] = [
 ];
 
 describe("shared desktop navigation contract", () => {
+  test("legacy Organization links open sender management while saved-view authoring stays reachable", () => {
+    expect(parseDesktopDestination("organization")).toBe("attention");
+    expect(desktopDestinationFromLocation({ pathname: "/", search: "?destination=organization" })).toBe("attention");
+    expect(desktopDestinationFromLocation({ pathname: "/", search: "?destination=attention" })).toBe("attention");
+    expect(desktopDestinationFromLocation({ pathname: "/", search: "?destination=organization-studio" })).toBe("organization-studio");
+    expect(desktopDestinationHref("attention", "/settings")).toBe("/?destination=attention");
+  });
   test("parses one destination grammar and serializes stable production and preview URLs", () => {
     expect(parseDesktopDestination("destination:client-id")).toBe("destination:client-id");
     expect(parseDesktopDestination("destination:")).toBeNull();

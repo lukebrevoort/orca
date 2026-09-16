@@ -15,10 +15,8 @@ import "./attention-page.css";
 
 export function AttentionPage({
   demoMode = false,
-  onAdvanced,
 }: {
   demoMode?: boolean;
-  onAdvanced: () => void;
 }) {
   const catalog = useDestinations(demoMode);
   const routingLabel = catalog.label;
@@ -184,7 +182,7 @@ export function AttentionPage({
       aria-busy={routing.loading || routing.saving || accountsLoading}
     >
       <header className="simple-attention-intro">
-        <h1 id="simple-attention-title">Senders</h1>
+        <h1 id="simple-attention-title">Organization</h1>
         <p>Choose where each sender’s mail belongs.</p>
       </header>
       <div className="simple-attention-account">
@@ -205,7 +203,6 @@ export function AttentionPage({
           </select>
         </label>
         <button onClick={() => setManaging(true)}>Manage spaces</button>
-        <button onClick={onAdvanced}>Advanced organization ↗</button>
       </div>
       {accountsError && (
         <p role="alert">
@@ -361,13 +358,12 @@ export function AttentionPage({
       </section>
       {domains.length > 0 && (
         <details className="attention-domain-rules">
-          <summary>{domains.length} domain rules · Advanced</summary>
+          <summary>{domains.length} domain rules</summary>
           {domains.map((rule) => (
             <p key={rule.value}>
               {rule.value} · {routingLabel(rule.destinationId)}
             </p>
           ))}
-          <button onClick={onAdvanced}>Manage advanced organization</button>
         </details>
       )}
       <p className="simple-attention-footnote">
