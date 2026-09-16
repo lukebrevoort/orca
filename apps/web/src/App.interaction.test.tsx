@@ -3621,7 +3621,7 @@ describe("BRE-386 guidance navigation", () => {
       expect(browserWindow.document.querySelector(".first-view-starts")).toBeNull();
     }
   });
-  test.each(["organization", "all"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
+  test.each(["organization-studio", "all"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
     const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture.map(message => ({ ...message, attentionBehavior: "quiet" })) });
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
@@ -3641,7 +3641,7 @@ describe("BRE-386 guidance navigation", () => {
     expect(browserWindow.location.search).toContain("destination=all");
     expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("true");
     expect(browserWindow.document.activeElement?.classList.contains("selection-mode-toggle")).toBe(true);
-    for (const destination of ["organization", "all"]) {
+    for (const destination of ["organization-studio", "all"]) {
       await act(async () => { browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`); browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate")); });
       await waitFor(0);
     }
