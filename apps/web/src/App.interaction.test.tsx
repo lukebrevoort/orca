@@ -1853,7 +1853,7 @@ describe("Desktop evidence and navigation", () => {
       await Promise.resolve();
     });
     const labels = [...dialog.querySelectorAll(".desktop-space-list article > div > strong")].map((label) => label.textContent);
-    expect(labels).toEqual(["Life admin", "Later", "Orca launch"]);
+    expect(labels).toEqual(["Life admin", "Later", "Orca launch", "Weekly production review", "Urgent humans", "Orca launch context"]);
   });
 
   test("keeps Inbox and Settings on the same customized sidebar projection in both themes", async () => {
