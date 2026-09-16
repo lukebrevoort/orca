@@ -3099,6 +3099,17 @@ export function InboxApp({
     }
   }
 
+  function deletedSavedView(id: string) {
+    // Invalidate in-flight list reads before removing the confirmed deleted view.
+    savedViewsRequest.current += 1;
+    setSavedViews(current => current.filter(view => view.id !== id));
+    setHiddenSpaceIds(current => current.filter(item => item !== id));
+    setSpaceOrder(current => current.filter(item => item !== id));
+    setSpaceLabels(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== id)));
+    if (activeSavedViewId === id) navigateDesktop("inbox");
+    window.dispatchEvent(new Event("orca:views-changed"));
+  }
+
   function restoreWorkflowSpace(space: WorkflowSpace) {
     setSpaceOperationError(null);
     setHiddenSpaceIds((current) => current.filter((id) => id !== space.id));
@@ -3228,7 +3239,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageToolsOpen ? <ManageSpacesDialog busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
+      {manageToolsOpen ? <ManageSpacesDialog demoMode={demoMode} savedViews={savedViews} onDeleted={deletedSavedView} busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
       {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
 
       {organizerMessage ? (

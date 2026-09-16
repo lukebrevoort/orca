@@ -606,3 +606,38 @@ test("Customize tools reorders, hides and restores saved view shortcuts without 
   expect(renamed).toEqual([]);
   expect(requests).toEqual([]);
 });
+
+test("hidden saved-view Delete restores focus on Cancel/Escape and deletes only its row after confirmation", async () => {
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (init?.method === "DELETE") return new Response(null, { status: 204 });
+    return String(input).endsWith("describe") ? Response.json(describeResponse(7)) : Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: organizationViewsFixture });
+  }) as unknown as typeof fetch;
+  const deleted: string[] = [];
+  function Harness() {
+    const [views, setViews] = useState(organizationViewsFixture.slice(0, 2));
+    return <TopLayerProvider><ManageSpacesDialog savedViews={views} spaces={projectWorkflowSpaces({ collections: [], views, hidden: [organizationViewsFixture[0]!.id, "later"] })} onClose={() => {}} onCreate={() => {}} onRename={() => {}} onHide={() => {}} onRestore={() => {}} onReorder={() => {}} onDeleted={id => { deleted.push(id); setViews(current => current.filter(view => view.id !== id)); }}/></TopLayerProvider>;
+  }
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<Harness/>));
+  const body = browserWindow.document.body as unknown as HTMLElement;
+  expect(body.querySelectorAll(".desktop-hidden-delete")).toHaveLength(1);
+  const label = `Delete ${organizationViewsFixture[0]!.name}`;
+  await click(body.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement);
+  expect(deleted).toEqual([]);
+  expect(body.textContent).toContain("No email is deleted");
+  await click(button(body, "Cancel"));
+  expect(body.querySelectorAll(".desktop-hidden-restore")).toHaveLength(2);
+  expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe(label);
+  await click(body.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement);
+  await act(async () => { browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+  expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe(label);
+  await click(body.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement);
+  await flush(); await flush();
+  await click(button(body, "Delete view"));
+  expect(deleted).toEqual([organizationViewsFixture[0]!.id]);
+  expect(body.querySelectorAll(".desktop-hidden-restore")).toHaveLength(1);
+  expect(body.querySelectorAll(".desktop-hidden-delete")).toHaveLength(0);
+  expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Close");
+  expect(body.querySelector(".desktop-space-list")?.textContent).toContain(organizationViewsFixture[1]!.name);
+});
