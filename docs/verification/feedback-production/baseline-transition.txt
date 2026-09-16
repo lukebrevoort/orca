@@ -1,0 +1,16 @@
+runUiTransition is byte-identical to origin/main 01cc004bfaf28d8ee1ae8d07073ab3f89814eb04
+function runUiTransition(name: OrcaTransition, update: () => void) {
+  const transitionDocument = document as Document & {
+    startViewTransition?: (callback: () => void) => { finished: Promise<void> };
+  };
+  if (!transitionDocument.startViewTransition || shouldReduceMotion()) {
+    update();
+    return;
+  }
+  document.documentElement.dataset.orcaTransition = name;
+  const transition = transitionDocument.startViewTransition(update);
+  void transition.finished.finally(() => {
+    delete document.documentElement.dataset.orcaTransition;
+  });
+}
+
