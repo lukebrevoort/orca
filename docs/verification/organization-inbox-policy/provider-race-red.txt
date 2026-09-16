@@ -1,0 +1,23 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/App.interaction.test.tsx:
+1444 |       const rows = () => [...browserWindow.document.querySelectorAll("button.message-row")].map(row => row.textContent).join(" ");
+1445 |       expect(rows()).toContain(freshMessage.subject);
+1446 |       await act(async () => { releaseOldSnapshot!(); });
+1447 |       await waitFor(20);
+1448 |       // The pre-save provider response cannot restore stale rows or counts.
+1449 |       expect(rows()).toContain(freshMessage.subject);
+                            ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Current mailbox after saving view"
+Received: "MCMaya ChennormalJun 28First Orca previewA quiet shell for human messages is ready for real inbox data."
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-e8bea37a7f42-agent-7a7f42/apps/web/src/App.interaction.test.tsx:1449:22)
+(fail) Desktop evidence and navigation > view mutation supersedes a delayed provider Inbox snapshot [4307.90ms]
+
+ 0 pass
+ 99 filtered out
+ 1 fail
+ 4 expect() calls
+Ran 1 test across 1 file. [7.60s]

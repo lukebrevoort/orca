@@ -1,0 +1,10 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/App.interaction.test.tsx:
+(pass) Desktop evidence and navigation > view mutation supersedes a delayed provider Inbox snapshot [1929.39ms]
+
+ 1 pass
+ 99 filtered out
+ 0 fail
+ 8 expect() calls
+Ran 1 test across 1 file. [4.35s]
