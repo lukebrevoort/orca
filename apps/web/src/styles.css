@@ -3481,7 +3481,8 @@ textarea {
 .reader-body-html pre { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 8px; font-size: .75em; line-height: 1.6; overflow-x: auto; padding: 1em; white-space: pre; }
 .reader-body-html pre code { background: transparent; padding: 0; }
 .reader-body-html hr { border: 0; border-top: 1px solid var(--orca-border); margin: 2em 0; }
-.reader-body-html table { border-collapse: collapse; font-size: .88em; margin: 1.25em 0; max-width: 100%; overflow-x: auto; }
+/* Email layout tables nest deeply; relative reductions compound into tiny copy. */
+.reader-body-html table { border-collapse: collapse; font-size: inherit; margin: 1.25em 0; max-width: 100%; overflow-x: auto; }
 .reader-body-html td,
 .reader-body-html th { padding: .5em .75em; vertical-align: top; }
 .reader-body-html th { background: var(--orca-surface-hover); font-weight: 700; }
