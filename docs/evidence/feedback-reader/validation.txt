@@ -1,0 +1,72 @@
+1440 light standard {
+  base: 18,
+  copy: [ 18, 18 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1440 light large {
+  base: 20,
+  copy: [ 20, 20 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1440 dark standard {
+  base: 18,
+  copy: [ 18, 18 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1440 dark large {
+  base: 20,
+  copy: [ 20, 20 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1024 light standard {
+  base: 18,
+  copy: [ 18, 18 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1024 light large {
+  base: 20,
+  copy: [ 20, 20 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1024 dark standard {
+  base: 18,
+  copy: [ 18, 18 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
+1024 dark large {
+  base: 20,
+  copy: [ 20, 20 ],
+  authored: 16,
+  imageWidth: 600,
+  imageHeight: 200,
+  overflow: false,
+  tables: 6,
+}
