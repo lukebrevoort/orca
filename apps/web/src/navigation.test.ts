@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { organizationViewsFixture, type Collection } from "@orca/shared";
 import {
+  reconcileWorkflowSpaceOrder,
+  mergeWorkflowSpaceOrder,
+  projectWorkflowSpaces,
   createSidebarNavigationProjection,
   desktopDestinationFromLocation,
   desktopDestinationHref,
@@ -102,4 +105,35 @@ test("catalog names and identity outrank stale local categories in every sidebar
   expect(projection.fallbackDestination?.color).toBe("#648ac4");
   expect(projection.spaces[0]?.color).toBe("#648ac4");
   expect(projection.spaces.map(space => space.label)).toEqual(["Clients", "Later"]);
+});
+
+test("saved sender views share mixed tool ordering and hide preferences", () => {
+  const view = organizationViewsFixture[0]!;
+  const order = [view.id, "space-one", "later", "space-two"];
+  const projected = createSidebarNavigationProjection({ account: { displayName: "Owner", email: "owner@example.com", accountCount: 1 }, active: `view:${view.id}`, collections, views: [view], online: true, order, hidden: [view.id] });
+  expect(projected.spaces.map(item => item.id)).toEqual(order);
+  expect(projected.spaces[0]?.hidden).toBe(true);
+});
+
+
+test("hydration, failed lists, new and absent views preserve device preferences across reload", () => {
+  const [first, second] = organizationViewsFixture;
+  const values = new Map<string, string>();
+  const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+  const original = [first!.id, "space-one", "later", second!.id, "space-two"];
+  let order = reconcileWorkflowSpaceOrder(original, ["later"]);
+  expect(order).toEqual(original);
+  order = mergeWorkflowSpaceOrder(order, ["later", "space-one", "space-two"], ["space-two", "later", "space-one"])!;
+  expect(order).toEqual([first!.id, "space-two", "later", second!.id, "space-one"]);
+  order = reconcileWorkflowSpaceOrder(order, ["later", ...collections.map(item => item.id), ...organizationViewsFixture.map(item => item.id)]);
+  writeSpacePreferences("account", { revision: 1, order, hidden: [first!.id], labels: {} }, storage);
+  const stored = readSpacePreferences("account", storage)!;
+  const hidden = projectWorkflowSpaces({ collections, views: organizationViewsFixture, ...stored });
+  expect(hidden.map(item => item.id)).toEqual(order);
+  expect(hidden.find(item => item.id === first!.id)?.hidden).toBe(true);
+  const restored = projectWorkflowSpaces({ collections, views: organizationViewsFixture, ...stored, hidden: [] });
+  expect(restored.map(item => item.id)).toEqual(order);
+  expect(restored.every(item => !item.hidden)).toBe(true);
+  expect(projectWorkflowSpaces({ collections, views: [second!], ...stored }).some(item => item.id === first!.id)).toBe(false);
+  expect(mergeWorkflowSpaceOrder(order, ["later", first!.id], ["later", "later"])).toBeNull();
 });

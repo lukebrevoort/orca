@@ -38,7 +38,7 @@ import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
-import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
+import { reconcileWorkflowSpaceOrder, mergeWorkflowSpaceOrder, createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
@@ -1478,12 +1478,10 @@ export function InboxApp({
 
   useEffect(() => {
     setSpaceOrder((current) => {
-      const collectionIds = collections.map((collection) => collection.id);
-      const next = current.filter((id) => ["later"].includes(id) || collectionIds.includes(id));
-      for (const id of collectionIds) if (!next.includes(id)) next.push(id);
+      const next = reconcileWorkflowSpaceOrder(current, ["later", ...collections.slice().sort((a, b) => a.position - b.position).map(item => item.id), ...savedViews.slice().sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)).map(item => item.id)]);
       return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next;
     });
-  }, [collections]);
+  }, [collections, savedViews]);
 
   useEffect(() => {
     return () => {
@@ -3050,22 +3048,18 @@ export function InboxApp({
   }
 
   async function reorderWorkflowSpaces(nextOrder: string[]) {
-    if (nextOrder.length !== spaceOrder.length || nextOrder.some((id) => !spaceOrder.includes(id))) return;
+    const mergedOrder = mergeWorkflowSpaceOrder(spaceOrder, workflowSpaces.filter(space => space.kind !== "destination").map(space => space.id), nextOrder);
+    if (!mergedOrder) return;
     const previousOrder = spaceOrder;
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
-    setSpaceOrder(nextOrder);
+    setSpaceOrder(mergedOrder);
     try {
-      if (!demoMode) {
-        const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+      const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+      const previousCustomIds = collections.slice().sort((a, b) => a.position - b.position).map(item => item.id);
+      if (!demoMode && customIds.some((id, index) => id !== previousCustomIds[index])) {
         await Promise.all(customIds.map((id, position) => {
-          const collection = collections.find((item) => item.id === id)!;
           return fetchJson(`/v1/collections/${encodeURIComponent(id)}`, collectionSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
-        }));
-        const builtIns = nextOrder.filter((id) => ["focus", "signals", "quiet"].includes(id));
-        await Promise.all(builtIns.map((id, position) => {
-          const behavior = id === "signals" ? "notify" : id;
-          return fetchJson(`/v1/attention/view-settings/${behavior}`, attentionViewSettingSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
         }));
         setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
       }
@@ -3078,6 +3072,7 @@ export function InboxApp({
   }
 
   async function renameWorkflowSpace(space: WorkflowSpace, name: string) {
+    if (space.kind === "view") return;
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
     const collection = collections.find((item) => item.id === space.id);
@@ -3233,7 +3228,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageToolsOpen ? <ManageSpacesDialog busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} spaces={workflowSpaces.filter(space => space.kind !== "view" && space.kind !== "destination")} /> : null}
+      {manageToolsOpen ? <ManageSpacesDialog busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
       {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
 
       {organizerMessage ? (

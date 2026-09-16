@@ -356,13 +356,14 @@ export function ConnectivityNotice({ online, onOpenDrafts }: { online: boolean; 
   </div>;
 }
 
-export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose, onCreate, onHide, onReorder, onRename, onRestore }: {
+export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose, onCreate, onHide, onOpen, onReorder, onRename, onRestore }: {
   busy?: boolean;
   error?: string | null;
   spaces: WorkflowSpace[];
   onClose: () => void;
   onCreate: (name: string) => Promise<void> | void;
   onHide: (space: WorkflowSpace) => Promise<void> | void;
+  onOpen?: (space: WorkflowSpace) => void;
   onReorder: (order: string[]) => Promise<void> | void;
   onRename: (space: WorkflowSpace, name: string) => Promise<void> | void;
   onRestore: (space: WorkflowSpace) => Promise<void> | void;
@@ -390,13 +391,13 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
   const visible = spaces.filter((space) => !space.hidden);
   const hidden = spaces.filter((space) => space.hidden);
   return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Customize tools" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
-    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Customize tools</h2><p>Rename, reorder, or hide Later and your collections. Names and supported positions sync with your account; visibility and cross-type order stay on this device. Organization is always available in Workspace. Edit saved views from the view itself.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
+    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Customize tools</h2><p>Reorder or hide Later, collections, and saved views on this device. Hiding a shortcut keeps its saved view and Inbox policy intact. Rename Later and collections here; open a saved view to edit it.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
     {error ? <p className="desktop-space-operation-error" role="alert">{error}</p> : null}
     <div className="desktop-space-list">{visible.map((space, index) => <article draggable={!busy} onDragStart={() => setDraggedId(space.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => void dropOn(event, space)} key={space.id}>
       <span aria-hidden="true" className="desktop-drag-handle">⠿</span><span className="desktop-space-mark" style={space.color ? { background: space.color } : undefined}/><div><strong>{space.label}</strong><small>{space.description}</small></div>
-      <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button><button disabled={busy} onClick={() => { const name = window.prompt("Rename tool", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button><button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
+      <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button>{space.kind === "view" ? (onOpen ? <button disabled={busy} onClick={() => onOpen(space)} type="button">Open view</button> : null) : <button disabled={busy} onClick={() => { const name = window.prompt("Rename tool", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button>}<button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
     </article>)}</div>
-    {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <button disabled={busy} key={space.id} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>Rules intact</small><strong>Restore</strong></button>)}</section> : null}
+    {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <button disabled={busy} key={space.id} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>{space.kind === "view" ? "View and Inbox policy intact" : "Rules intact"}</small><strong>Restore</strong></button>)}</section> : null}
     <footer>{creating ? <div className="desktop-create-space"><input aria-label="Collection name" autoFocus disabled={busy} maxLength={60} onInput={(event) => setNewName(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a collection"}</button>}</footer>
   </TopLayer>;
 }

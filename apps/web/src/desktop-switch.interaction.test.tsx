@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture } from "@orca/shared";
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
-import { AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { ManageSpacesDialog, AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { projectWorkflowSpaces, type WorkflowSpace } from "./navigation";
 import { acceptedOrcaV1Example } from "./tide-table";
 import { TopLayerProvider } from "./top-layer";
 
@@ -571,4 +572,37 @@ describe("OrganizationStudio integration", () => {
     expect(views.textContent).toContain("Canonical after compile");
     expect(views.textContent).not.toContain("Weekly production review");
   });
+});
+
+
+test("Customize tools reorders, hides and restores saved view shortcuts without mutation requests or rename", async () => {
+  const requests: string[] = [];
+  globalThis.fetch = (async (input: unknown) => { requests.push(String(input)); throw new Error("No remote writes expected"); }) as typeof fetch;
+  const opened: string[] = [];
+  const renamed: string[] = [];
+  function Harness() {
+    const [spaces, setSpaces] = useState(projectWorkflowSpaces({ collections: [], views: organizationViewsFixture.slice(0, 2) }));
+    const setHidden = (space: WorkflowSpace, hidden: boolean) => setSpaces(current => current.map(item => item.id === space.id ? { ...item, hidden } : item));
+    return <TopLayerProvider><ManageSpacesDialog spaces={spaces} onClose={() => {}} onCreate={() => {}} onOpen={space => opened.push(space.id)} onRename={space => { renamed.push(space.id); }} onHide={space => setHidden(space, true)} onRestore={space => setHidden(space, false)} onReorder={order => setSpaces(current => order.map(id => current.find(item => item.id === id)!))}/></TopLayerProvider>;
+  }
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<Harness/>));
+  const body = browserWindow.document.body as unknown as HTMLElement;
+  const rows = () => [...body.querySelectorAll(".desktop-space-list article")];
+  const view = organizationViewsFixture[0]!;
+  expect(rows()[1]?.textContent).toContain(view.name);
+  expect(rows()[1]?.textContent).not.toContain("Rename");
+  await click(body.querySelector(`[aria-label="Move ${view.name} up"]`) as HTMLButtonElement);
+  expect(rows()[0]?.textContent).toContain(view.name);
+  await click(button(rows()[0], "Open view"));
+  expect(opened).toEqual([view.id]);
+  await click(button(rows()[0], "Hide"));
+  expect(rows().some(row => row.textContent?.includes(view.name))).toBe(false);
+  expect(body.querySelector(".desktop-hidden-spaces")?.textContent).toContain("View and Inbox policy intact");
+  await click(body.querySelector(".desktop-hidden-spaces button") as HTMLButtonElement);
+  expect(rows()[0]?.textContent).toContain(view.name);
+  expect(renamed).toEqual([]);
+  expect(requests).toEqual([]);
 });
