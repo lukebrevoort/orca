@@ -1,3 +1,4 @@
+import { inboxDestinationId, inboxVisibilityPredicate } from "../organization/views/inbox-policy.ts";
 import { createHash } from "node:crypto";
 
 import type { Database } from "bun:sqlite";
@@ -249,7 +250,12 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const cursor = decodeCursor(input.query.cursor);
       validateCursor(cursor, { accountIds, classification, revision, scope, view });
 
-      const base = buildBaseWhere(accountIds, input.query);
+      const applyInboxPolicy = input.query.destinationId
+        ? input.query.destinationId === inboxDestinationId(sqlite, input.authorization.userId)
+        : input.query.view === "normal" || input.query.view === undefined;
+      const inboxPolicy = applyInboxPolicy ? inboxVisibilityPredicate(sqlite, input.authorization.userId) : { sql: "1", params: [] };
+      const withInboxPolicy = (base: { sql: string; params: Array<string | number | null> }) => ({ sql: `${base.sql} AND ${inboxPolicy.sql}`, params: [...base.params, ...inboxPolicy.params] });
+      const base = withInboxPolicy(buildBaseWhere(accountIds, input.query));
       const countStartedAt = clock();
       const countRows = queryAll<RawCountRow>(sqlite, `
         select
@@ -284,7 +290,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         const classificationPredicate = classificationWhere(classification);
         const accountRowsForBehavior: RawMailboxMessage[][] = [];
         for (const accountId of accountIds) {
-          const accountBase = buildAccountBaseWhere(accountId, input.query);
+          const accountBase = withInboxPolicy(buildAccountBaseWhere(accountId, input.query));
           const keyset = pageKeyset(cursor, rank, accountId);
           const pageSql = `
             select

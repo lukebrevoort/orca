@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture } from "@orca/shared";
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
-import { AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { ManageSpacesDialog, AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { projectWorkflowSpaces, type WorkflowSpace } from "./navigation";
 import { acceptedOrcaV1Example } from "./tide-table";
 import { TopLayerProvider } from "./top-layer";
 
@@ -117,12 +118,14 @@ describe("AppSidebar mobile navigation", () => {
     const destinations: DesktopDestination[] = [];
     let composeCalls = 0;
     let manageCalls = 0;
+    let customizeCalls = 0;
     const container = browserWindow.document.createElement("div");
     browserWindow.document.body.append(container);
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<TopLayerProvider><AppSidebar
       onCompose={() => { composeCalls += 1; }}
       onManageSpaces={() => { manageCalls += 1; }}
+      onManageTools={() => { customizeCalls += 1; }}
       onNavigate={(destination) => { destinations.push(destination); }}
       projection={{
         account: { displayName: "Maya Chen", email: "maya@example.com", accountCount: 2, health: "synced" },
@@ -161,7 +164,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Attention", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Customize tools", "Organization", "Settings", "Account · Maya Chen"]);
     expect(menu.querySelector('[role="group"][aria-label="Spaces"]')).not.toBeNull();
     expect(menu.querySelector('[role="group"][aria-label="Tools"]')?.textContent).toContain("Later");
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
@@ -176,7 +179,7 @@ describe("AppSidebar mobile navigation", () => {
 
     const expected = new Map<string, DesktopDestination>([
       ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
-      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Attention", "attention"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organization", "attention"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
     ]);
     for (const [label, destination] of expected) {
       await click(more);
@@ -192,9 +195,11 @@ describe("AppSidebar mobile navigation", () => {
     manage.focus();
     await click(manage);
     expect(manageCalls).toBe(1);
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).not.toBeNull();
-    expect((browserWindow.document.activeElement as unknown as HTMLButtonElement) === manage).toBe(true);
-    await click(browserWindow.document.querySelector(".desktop-mobile-menu-backdrop") as unknown as HTMLButtonElement);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    await click(more);
+    await click(findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "Customize tools")!);
+    expect(customizeCalls).toBe(1);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
     await flush();
     expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
     expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
@@ -567,4 +572,72 @@ describe("OrganizationStudio integration", () => {
     expect(views.textContent).toContain("Canonical after compile");
     expect(views.textContent).not.toContain("Weekly production review");
   });
+});
+
+
+test("Customize tools reorders, hides and restores saved view shortcuts without mutation requests or rename", async () => {
+  const requests: string[] = [];
+  globalThis.fetch = (async (input: unknown) => { requests.push(String(input)); throw new Error("No remote writes expected"); }) as unknown as typeof fetch;
+  const opened: string[] = [];
+  const renamed: string[] = [];
+  function Harness() {
+    const [spaces, setSpaces] = useState(projectWorkflowSpaces({ collections: [], views: organizationViewsFixture.slice(0, 2) }));
+    const setHidden = (space: WorkflowSpace, hidden: boolean) => setSpaces(current => current.map(item => item.id === space.id ? { ...item, hidden } : item));
+    return <TopLayerProvider><ManageSpacesDialog spaces={spaces} onClose={() => {}} onCreate={() => {}} onOpen={space => opened.push(space.id)} onRename={space => { renamed.push(space.id); }} onHide={space => setHidden(space, true)} onRestore={space => setHidden(space, false)} onReorder={order => setSpaces(current => order.map(id => current.find(item => item.id === id)!))}/></TopLayerProvider>;
+  }
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<Harness/>));
+  const body = browserWindow.document.body as unknown as HTMLElement;
+  const rows = () => [...body.querySelectorAll(".desktop-space-list article")];
+  const view = organizationViewsFixture[0]!;
+  expect(rows()[1]?.textContent).toContain(view.name);
+  expect(rows()[1]?.textContent).not.toContain("Rename");
+  await click(body.querySelector(`[aria-label="Move ${view.name} up"]`) as HTMLButtonElement);
+  expect(rows()[0]?.textContent).toContain(view.name);
+  await click(button(rows()[0], "Open view"));
+  expect(opened).toEqual([view.id]);
+  await click(button(rows()[0], "Hide"));
+  expect(rows().some(row => row.textContent?.includes(view.name))).toBe(false);
+  expect(body.querySelector(".desktop-hidden-spaces")?.textContent).toContain("View and Inbox policy intact");
+  await click(body.querySelector(".desktop-hidden-spaces button") as HTMLButtonElement);
+  expect(rows()[0]?.textContent).toContain(view.name);
+  expect(renamed).toEqual([]);
+  expect(requests).toEqual([]);
+});
+
+test("hidden saved-view Delete restores focus on Cancel/Escape and deletes only its row after confirmation", async () => {
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (init?.method === "DELETE") return new Response(null, { status: 204 });
+    return String(input).endsWith("describe") ? Response.json(describeResponse(7)) : Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: organizationViewsFixture });
+  }) as unknown as typeof fetch;
+  const deleted: string[] = [];
+  function Harness() {
+    const [views, setViews] = useState(organizationViewsFixture.slice(0, 2));
+    return <TopLayerProvider><ManageSpacesDialog savedViews={views} spaces={projectWorkflowSpaces({ collections: [], views, hidden: [organizationViewsFixture[0]!.id, "later"] })} onClose={() => {}} onCreate={() => {}} onRename={() => {}} onHide={() => {}} onRestore={() => {}} onReorder={() => {}} onDeleted={id => { deleted.push(id); setViews(current => current.filter(view => view.id !== id)); }}/></TopLayerProvider>;
+  }
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<Harness/>));
+  const body = browserWindow.document.body as unknown as HTMLElement;
+  expect(body.querySelectorAll(".desktop-hidden-delete")).toHaveLength(1);
+  const label = `Delete ${organizationViewsFixture[0]!.name}`;
+  await click(body.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement);
+  expect(deleted).toEqual([]);
+  expect(body.textContent).toContain("No email is deleted");
+  await click(button(body, "Cancel"));
+  expect(body.querySelectorAll(".desktop-hidden-restore")).toHaveLength(2);
+  expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe(label);
+  await click(body.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement);
+  await act(async () => { browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+  expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe(label);
+  await click(body.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement);
+  await flush(); await flush();
+  await click(button(body, "Delete view"));
+  expect(deleted).toEqual([organizationViewsFixture[0]!.id]);
+  expect(body.querySelectorAll(".desktop-hidden-restore")).toHaveLength(1);
+  expect(body.querySelectorAll(".desktop-hidden-delete")).toHaveLength(0);
+  expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Close");
+  expect(body.querySelector(".desktop-space-list")?.textContent).toContain(organizationViewsFixture[1]!.name);
 });

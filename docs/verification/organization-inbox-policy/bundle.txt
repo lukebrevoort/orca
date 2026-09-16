@@ -1,0 +1,38 @@
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 172 modules transformed.
+rendering chunks...
+assets/react-vendor-CQc3Zyh3.js: 192.36 kB, gzip 60.97 kB
+  552.88 kB rendered: ../../node_modules/react-dom/cjs/react-dom-client.production.js
+  18.32 kB rendered: ../../node_modules/react/cjs/react.production.js
+  11.13 kB rendered: ../../node_modules/scheduler/cjs/scheduler.production.js
+  7.22 kB rendered: ../../node_modules/react-dom/cjs/react-dom.production.js
+  1.29 kB rendered: ../../node_modules/react/cjs/react-jsx-runtime.production.js
+assets/mail-contracts-yAC7OFbp.js: 205.16 kB, gzip 50.91 kB
+  62.59 kB rendered: ../../node_modules/zod/v4/core/schemas.js
+  32.00 kB rendered: ../../node_modules/zod/v4/classic/schemas.js
+  25.24 kB rendered: ../../packages/shared/src/schemas.ts
+  20.92 kB rendered: ../../packages/shared/src/fixtures.ts
+  19.62 kB rendered: ../../packages/shared/src/orca-language.ts
+assets/organization-views-B0eQzmhn.js: 91.25 kB, gzip 26.04 kB
+  126.75 kB rendered: src/organization-views.tsx
+  14.21 kB rendered: src/organization-authority.tsx
+  11.87 kB rendered: src/first-view-guidance.tsx
+  11.61 kB rendered: src/top-layer.tsx
+  6.07 kB rendered: src/organization-view-draft.ts
+assets/index-B94LpG1G.js: 441.83 kB, gzip 125.67 kB
+  388.33 kB rendered: src/App.tsx
+  117.76 kB rendered: src/desktop-switch.tsx
+  76.38 kB rendered: src/compose-workspace.tsx
+  34.89 kB rendered: src/global-search.tsx
+  30.96 kB rendered: src/organization-lanes.tsx
+Bundle checks passed: every JS chunk below 500 kB, no static chunk cycles, no development feedback.
+computing gzip size...
+dist/index.html                                1.78 kB │ gzip:   0.76 kB
+dist/assets/organization-views-B0ys5fOD.css    2.95 kB │ gzip:   0.88 kB
+dist/assets/index-VCQ4Ynp-.css               369.87 kB │ gzip:  55.45 kB
+dist/assets/organization-views-B0eQzmhn.js    91.25 kB │ gzip:  26.04 kB
+dist/assets/react-vendor-CQc3Zyh3.js         192.36 kB │ gzip:  60.97 kB
+dist/assets/mail-contracts-yAC7OFbp.js       205.16 kB │ gzip:  50.91 kB
+dist/assets/index-B94LpG1G.js                441.83 kB │ gzip: 125.67 kB
+✓ built in 23.40s

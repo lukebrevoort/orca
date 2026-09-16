@@ -433,12 +433,6 @@
   min-height: calc(100vh - var(--desktop-header-height));
 }
 @media (min-width: 761px) {
-  /* Both sticky surfaces use the workspace scrollport. Reserve the header's
-     space so selection actions stay visible without intercepting Search/theme. */
-  .desktop-workspace .bulk-action-bar {
-    top: calc(var(--desktop-header-height) + 12px);
-    z-index: 15;
-  }
   .desktop-workspace > .content-pane {
     width: 100%;
     max-width: 880px;
@@ -1062,3 +1056,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .desktop-shell .inbox-view-later .later-row-actions span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .desktop-shell .inbox-view-later .later-row-actions button { min-height: 44px; flex: 0 0 auto; }
 }
+
+.desktop-hidden-space-row { display: flex; align-items: stretch; gap: 8px; }
+.desktop-hidden-space-row .desktop-hidden-restore { flex: 1; min-width: 0; grid-template-columns: 1fr auto; }
+.desktop-hidden-restore span { overflow-wrap: anywhere; }
+.desktop-hidden-space-row .desktop-hidden-restore small { grid-column: 1; grid-row: 2; }
+.desktop-hidden-space-row .desktop-hidden-restore strong { grid-column: 2; grid-row: 1 / 3; }
+.desktop-hidden-space-row .desktop-hidden-delete { width: auto; display: block; color: var(--desktop-danger); }
+.desktop-view-delete { padding: 24px 0; }
+.desktop-view-delete h3 { margin: 0 0 14px; font: 500 23px/1.3 var(--desktop-serif); overflow-wrap: anywhere; }
+.desktop-view-delete p { font-size: 13px; line-height: 1.6; }
+.desktop-view-delete-policy { color: var(--desktop-muted); }
+.desktop-view-delete-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.desktop-view-delete-actions button { min-height: 38px; padding: 8px 14px; border: 1px solid var(--desktop-border); border-radius: 8px; background: var(--desktop-surface); color: var(--desktop-ink); font: 600 12px var(--desktop-sans); }
+.desktop-view-delete-actions .desktop-view-delete-confirm { color: var(--desktop-danger); border-color: var(--desktop-danger); }
+.desktop-view-delete-actions button:hover,.desktop-hidden-spaces button:hover { background: var(--desktop-surface-hover); }
+.desktop-view-delete-actions button:disabled,.desktop-hidden-spaces button:disabled { color: var(--desktop-control-disabled-ink); background: var(--desktop-control-disabled-background); border-color: var(--desktop-control-disabled-border); cursor: not-allowed; }
+.desktop-demo-delete-note { color: var(--desktop-muted); font-size: 11px; line-height: 1.5; }

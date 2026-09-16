@@ -38,7 +38,7 @@ import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
-import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
+import { reconcileWorkflowSpaceOrder, mergeWorkflowSpaceOrder, createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
@@ -130,7 +130,7 @@ function readerOriginLabelForDestination(destination: DesktopDestination, spaces
   if (space) return space.label;
   if (destination === "all") return "All Mail";
   if (destination === "drafts") return "Drafts";
-  if (destination === "organization") return "Organization";
+  if (destination === "organization-studio" || destination === "attention" || destination === "organization") return "Organization";
   if (destination === "settings") return "Settings";
   if (destination.startsWith("space:")) return "Workflow space";
   return destination.charAt(0).toUpperCase() + destination.slice(1);
@@ -1292,9 +1292,10 @@ export function InboxApp({
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
   const savedViewsRequest = useRef(0);
+  const [viewMutationRefreshKey, setViewMutationRefreshKey] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    const refresh = () => { const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
+    const refresh = () => { mailboxSnapshotEpochRef.current += 1; setViewMutationRefreshKey((key) => key + 1); if (!demoMode) void refreshDestinations().catch(() => {}); const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
     window.addEventListener("orca:views-changed", refresh);
     return () => { controller.abort(); window.removeEventListener("orca:views-changed", refresh); };
   }, [demoMode]);
@@ -1322,9 +1323,9 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
-  const [organizationStudioOpen, setOrganizationStudioOpen] = useState<false | "organization" | "attention">(() => {
+  const [organizationStudioOpen, setOrganizationStudioOpen] = useState<false | "organization-studio" | "attention">(() => {
     const destination = typeof window !== "undefined" ? desktopDestinationFromLocation(window.location) : "inbox";
-    return destination === "organization" || destination === "attention" ? destination : false;
+    return destination === "organization-studio" || destination === "attention" ? destination : false;
   });
   const bre320EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
@@ -1343,7 +1344,7 @@ export function InboxApp({
   }, []);
   const bre358PartialServedRef = useRef(false);
   const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
-  const [manageToolsOpen, setManageToolsOpen] = useState(false);
+  const [manageToolsOpen, setManageToolsOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "tools");
   const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
   const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
   const [spacePreferencesReady, setSpacePreferencesReady] = useState(false);
@@ -1477,12 +1478,10 @@ export function InboxApp({
 
   useEffect(() => {
     setSpaceOrder((current) => {
-      const collectionIds = collections.map((collection) => collection.id);
-      const next = current.filter((id) => ["later"].includes(id) || collectionIds.includes(id));
-      for (const id of collectionIds) if (!next.includes(id)) next.push(id);
+      const next = reconcileWorkflowSpaceOrder(current, ["later", ...collections.slice().sort((a, b) => a.position - b.position).map(item => item.id), ...savedViews.slice().sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)).map(item => item.id)]);
       return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next;
     });
-  }, [collections]);
+  }, [collections, savedViews]);
 
   useEffect(() => {
     return () => {
@@ -1664,7 +1663,7 @@ export function InboxApp({
       abortController.abort();
       if (gmailBackgroundRefreshRef.current === refreshGmailInBackground) gmailBackgroundRefreshRef.current = null;
     };
-  }, [classificationView, demoMode, refreshKey]);
+  }, [classificationView, demoMode, refreshKey, viewMutationRefreshKey]);
 
   useEffect(() => {
     if (demoMode || status !== "ready") return;
@@ -1819,7 +1818,7 @@ export function InboxApp({
     }).catch(error => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationLoading(false); });
     return () => { controller.abort(); ++destinationRequest.current; };
-  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision]);
+  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision, viewMutationRefreshKey]);
   useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
   const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "all");
@@ -2160,13 +2159,13 @@ export function InboxApp({
     setManageToolsOpen(false);
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     setStreamQuery(location.query);
-    setOrganizationStudioOpen(destination === "organization" || destination === "attention" ? destination : false);
+    setOrganizationStudioOpen(destination === "organization-studio" || destination === "attention" ? destination : false);
     setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
     if (destination.startsWith("space:")) {
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
       setActiveCollectionId(null);
-      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
+      if (destination !== "organization-studio" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
     }
 
     const history = surfaceHistoryRef.current;
@@ -3003,9 +3002,9 @@ export function InboxApp({
     }
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     surfaceHistoryRef.current?.navigate(destination);
-    if (destination === "organization" || destination === "attention") {
+    if (destination === "organization-studio" || destination === "attention") {
       runUiTransition("content", () => {
-        setOrganizationStudioOpen(destination as "organization" | "attention");
+        setOrganizationStudioOpen(destination as "organization-studio" | "attention");
         setSelectedThreadId(null);
         setSelectedThreadAccountId(null);
         setActiveCollectionId(null);
@@ -3049,22 +3048,18 @@ export function InboxApp({
   }
 
   async function reorderWorkflowSpaces(nextOrder: string[]) {
-    if (nextOrder.length !== spaceOrder.length || nextOrder.some((id) => !spaceOrder.includes(id))) return;
+    const mergedOrder = mergeWorkflowSpaceOrder(spaceOrder, workflowSpaces.filter(space => space.kind !== "destination").map(space => space.id), nextOrder);
+    if (!mergedOrder) return;
     const previousOrder = spaceOrder;
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
-    setSpaceOrder(nextOrder);
+    setSpaceOrder(mergedOrder);
     try {
-      if (!demoMode) {
-        const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+      const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+      const previousCustomIds = collections.slice().sort((a, b) => a.position - b.position).map(item => item.id);
+      if (!demoMode && customIds.some((id, index) => id !== previousCustomIds[index])) {
         await Promise.all(customIds.map((id, position) => {
-          const collection = collections.find((item) => item.id === id)!;
           return fetchJson(`/v1/collections/${encodeURIComponent(id)}`, collectionSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
-        }));
-        const builtIns = nextOrder.filter((id) => ["focus", "signals", "quiet"].includes(id));
-        await Promise.all(builtIns.map((id, position) => {
-          const behavior = id === "signals" ? "notify" : id;
-          return fetchJson(`/v1/attention/view-settings/${behavior}`, attentionViewSettingSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
         }));
         setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
       }
@@ -3077,6 +3072,7 @@ export function InboxApp({
   }
 
   async function renameWorkflowSpace(space: WorkflowSpace, name: string) {
+    if (space.kind === "view") return;
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
     const collection = collections.find((item) => item.id === space.id);
@@ -3103,6 +3099,17 @@ export function InboxApp({
     }
   }
 
+  function deletedSavedView(id: string) {
+    // Invalidate in-flight list reads before removing the confirmed deleted view.
+    savedViewsRequest.current += 1;
+    setSavedViews(current => current.filter(view => view.id !== id));
+    setHiddenSpaceIds(current => current.filter(item => item !== id));
+    setSpaceOrder(current => current.filter(item => item !== id));
+    setSpaceLabels(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== id)));
+    if (activeSavedViewId === id) navigateDesktop("inbox");
+    window.dispatchEvent(new Event("orca:views-changed"));
+  }
+
   function restoreWorkflowSpace(space: WorkflowSpace) {
     setSpaceOperationError(null);
     setHiddenSpaceIds((current) => current.filter((id) => id !== space.id));
@@ -3127,10 +3134,10 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} onAdvanced={() => navigateDesktop("organization")} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Attention</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}
@@ -3138,7 +3145,7 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization-studio")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${requestedDestinationId}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
@@ -3232,7 +3239,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageToolsOpen ? <ManageSpacesDialog busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => setManageToolsOpen(false)} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} spaces={workflowSpaces.filter(space => space.kind !== "view" && space.kind !== "destination")} /> : null}
+      {manageToolsOpen ? <ManageSpacesDialog demoMode={demoMode} savedViews={savedViews} onDeleted={deletedSavedView} busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
       {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
 
       {organizerMessage ? (
@@ -4858,7 +4865,7 @@ function InboxView({
   function openSelectedSenderAuthoring() {
     if (!selectedRows.size || selectedAccountCount !== 1) return;
     const preparation = selectedSenderPreparation([...selectedRows.values()], `${window.location.pathname}${window.location.search}${window.location.hash}`);
-    setViewAuthoringEntry({ preparation, returnContext: { scrollX: window.scrollX, scrollY: window.scrollY, focus: "use-selected-senders" } });
+    setViewAuthoringEntry({ preparation, accountLabels: account ? { [account.id]: account.email } : {}, returnContext: { scrollX: window.scrollX, scrollY: window.scrollY, focus: "use-selected-senders" } });
   }
 
   function restoreFromViewAuthoring(context: InboxViewAuthoringReturnContext) {
@@ -5062,7 +5069,7 @@ function InboxView({
               <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
               {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
             </div>
-            <details><summary>Advanced legacy attention preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
+            <details><summary>Sender preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
               <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
               <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
               <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
@@ -5070,7 +5077,7 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
-        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
@@ -5120,7 +5127,7 @@ function InboxView({
                 ? `No threads in your inbox include ${personFilter} yet.`
                 : isCollectionView
                   ? "Use Add to collection on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
-                  : destinationName ? `Move a conversation here or choose ${destinationName} for a sender in Attention.` : "When synced mail arrives, your inbox list will appear here."
+                  : destinationName ? `Move a conversation here or choose ${destinationName} for a sender in Organization.` : "When synced mail arrives, your inbox list will appear here."
             }
             eyebrow={searchQuery.trim() || personFilter ? "No matches" : isCollectionView ? "Collection empty" : destinationName ? "Space empty" : "Inbox empty"}
             title={searchQuery.trim() ? "Nothing found" : personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : destinationName ? `No mail in ${destinationName} yet` : "No messages yet"}
@@ -6308,7 +6315,7 @@ export function senderAttentionTargetKey(target: BulkAttentionTarget) {
 
 export function selectedSenderPreparation(messages: readonly Pick<InboxMessage, "id" | "accountId" | "threadId">[], returnTarget: string): OrganizationViewPreparationInput {
   return {
-    kind: "selected_senders",
+    kind: "selected_senders", skipInbox: false,
     source: { kind: "sender_selection", label: "Selected message senders", returnTarget },
     identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
     references: messages.map((message) => ({ accountId: message.accountId, threadId: message.threadId, messageId: message.id })),
