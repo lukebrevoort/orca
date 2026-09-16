@@ -2419,6 +2419,44 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector(".reader-kicker")?.textContent).toStartWith(`${label} ·`);
   }
 
+  test("keeps cached space geometry during revalidation and clears a recovered sync failure", async () => {
+    const originalFetch = globalThis.fetch;
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    let syncCalls = 0;
+    let holdDestination = false;
+    let destinationHeld = false;
+    let resolveDestination!: (response: Response) => void;
+    const delayedDestination = new Promise<Response>(resolve => { resolveDestination = resolve; });
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=destination%3Ainbox");
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/sync/gmail" && ++syncCalls === 1) return apiError(401, "provider_auth_error", "Reconnect required");
+      if (url.pathname === "/v1/inbox" && url.searchParams.has("destinationId") && holdDestination) { destinationHeld = true; return delayedDestination; }
+      return baseFetch(input, init);
+    }) as typeof fetch;
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 30 && !browserWindow.document.querySelector(".inbox-sync-alert"); i++) await waitFor(0);
+      expect(browserWindow.document.querySelector(".inbox-sync-alert")?.textContent).toContain("Reconnect required");
+      const header = browserWindow.document.querySelector(".pane-header");
+      const rows = browserWindow.document.querySelector(".message-list");
+      expect(header).not.toBeNull();
+      expect(rows).not.toBeNull();
+      holdDestination = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("focus")); });
+      for (let i = 0; i < 30 && !destinationHeld; i++) await waitFor(0);
+      expect(destinationHeld).toBe(true);
+      expect(browserWindow.document.querySelector(".inbox-sync-alert")).toBeNull();
+      expect(browserWindow.document.body.textContent).not.toContain("Loading mail…");
+      expect(isSameNode(browserWindow.document.querySelector(".pane-header"), header)).toBe(true);
+      expect(isSameNode(browserWindow.document.querySelector(".message-list"), rows)).toBe(true);
+    } finally {
+      resolveDestination(await baseFetch("/v1/inbox?destinationId=inbox"));
+      await waitFor(0);
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = inboxFixture[0]!;

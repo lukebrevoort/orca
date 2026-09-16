@@ -92,9 +92,16 @@ export class GmailApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly reasons: readonly string[] = [],
   ) {
     super(message);
     this.name = "GmailApiError";
+  }
+
+  get requiresReconnect(): boolean {
+    return this.status === 401 || (this.status === 403 && this.reasons.some(
+      reason => reason === "authError" || reason === "insufficientPermissions" || reason === "ACCESS_TOKEN_SCOPE_INSUFFICIENT",
+    ));
   }
 }
 
@@ -262,7 +269,7 @@ async function gmailRequest<T>(
   });
 
   if (!response.ok) {
-    throw new GmailApiError("Gmail API request failed", response.status);
+    throw await gmailResponseError(response);
   }
 
   if (response.status === 204) return undefined as T;
@@ -300,4 +307,12 @@ function buildInboxQuery(since: Date) {
 
   const unixSeconds = Math.floor(querySince / 1000);
   return `after:${unixSeconds}`;
+}
+
+async function gmailResponseError(response: Response): Promise<GmailApiError> {
+  // Keep only machine-readable reasons; provider messages may contain account data.
+  const body = await response.json().catch(() => null) as { error?: { errors?: Array<{ reason?: unknown }>; details?: Array<{ reason?: unknown }> } } | null;
+  const reasons = [...(Array.isArray(body?.error?.errors) ? body.error.errors : []), ...(Array.isArray(body?.error?.details) ? body.error.details : [])]
+    .flatMap(item => item && typeof item.reason === "string" ? [item.reason] : []);
+  return new GmailApiError("Gmail API request failed", response.status, reasons);
 }

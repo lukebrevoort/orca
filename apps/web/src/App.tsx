@@ -1531,12 +1531,15 @@ export function InboxApp({
 
     async function loadInbox() {
       if (isInitialLoad) setStatus("loading");
-      else if (shouldRefreshGmail) setStatus("syncing");
+      // Background refresh preserves the ready surface, including empty states.
       setClassificationCursor(null);
       setClassificationLoading(true);
-      setErrorMessage(null);
-      setErrorStatus(null);
-      setClassificationError(null);
+      // Keep an actionable failure visible until a successful refresh resolves it.
+      if (isInitialLoad) {
+        setErrorMessage(null);
+        setErrorStatus(null);
+        setClassificationError(null);
+      }
 
       try {
         const [currentAccount, nextSyncStatus] = await Promise.all([
@@ -1617,6 +1620,9 @@ export function InboxApp({
           if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
           // Routing can supersede the mailbox snapshot without superseding provider status.
           setSyncStatus(nextStatus);
+          setErrorMessage(null);
+          setErrorStatus(null);
+          setClassificationError(null);
           if (classificationViewRef.current !== refreshedView || refreshed.inbox.epoch !== mailboxSnapshotEpochRef.current) return;
           classificationPageRequestRef.current += 1;
           allMailPageRequestRef.current += 1;
@@ -3129,7 +3135,7 @@ export function InboxApp({
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}
             {selectedDestination?.retiredAt && <p role="status">This space has been removed. <button onClick={() => navigateDesktop("inbox")}>Open default space</button></p>}
-            {requestedDestinationId && destinationLoading && <p role="status">Loading mail…</p>}
+            {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
             {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
@@ -4922,7 +4928,7 @@ function InboxView({
         </div>
       </header>
 
-      {errorMessage && status === "ready" ? <InboxSyncAlert errorMessage={errorMessage} errorStatus={errorStatus} /> : null}
+      {errorMessage && status === "ready" ? <InboxSyncAlert errorMessage={errorMessage} errorStatus={errorStatus} onRetry={onRetry} /> : null}
 
       <div className="classification-panel">
         {classificationActionMessage ? <p className="classification-action-message" role="status">{classificationActionMessage}</p> : null}
@@ -5218,13 +5224,13 @@ function InboxView({
   );
 }
 
-export function InboxSyncAlert({ errorMessage, errorStatus }: { errorMessage: string; errorStatus: number | null }) {
+export function InboxSyncAlert({ errorMessage, errorStatus, onRetry }: { errorMessage: string; errorStatus: number | null; onRetry?: () => void }) {
   return (
     <div className="inbox-sync-alert" role="alert">
       <span>{errorMessage}</span>
-      <a className="inbox-reconnect-link inbox-sync-alert-action" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>
+      {errorStatus === 401 || errorStatus === 403 || errorStatus === 404 ? <a className="inbox-reconnect-link inbox-sync-alert-action" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>
         Reconnect Gmail <span aria-hidden="true">→</span>
-      </a>
+      </a> : <button className="inbox-sync-alert-action" onClick={onRetry} type="button">Try again <span aria-hidden="true">↻</span></button>}
     </div>
   );
 }
