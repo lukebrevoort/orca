@@ -1723,6 +1723,30 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
+  test.each(["organization", "attention"])("%s links reopen Organization sender management", async (destination) => {
+    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`);
+    await renderApp();
+    expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Organization");
+    expect(browserWindow.document.querySelector(".organization-studio")).toBeNull();
+  });
+
+  test("the internal authoring link reopens the Organization studio", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=organization-studio");
+    await renderApp();
+    expect(browserWindow.document.querySelector(".organization-studio")).not.toBeNull();
+    expect(browserWindow.document.querySelector("#simple-attention-title")).toBeNull();
+  });
+
+  test("Settings Organization navigation opens the sender workspace", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/settings");
+    await renderSettingsHome("light", true);
+    const entries = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization");
+    expect(entries).toHaveLength(1);
+    await act(async () => (entries[0] as unknown as HTMLButtonElement).click());
+    expect(browserWindow.location.pathname).toBe("/dev/inbox");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("attention");
+  });
+
   test("Settings opens the same Customize tools workflow as the main sidebar", async () => {
     browserWindow.history.replaceState({}, "", "/dev/settings");
     await renderSettingsHome("light", true);
