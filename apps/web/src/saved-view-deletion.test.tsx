@@ -191,3 +191,13 @@ test("canonical absence after lost response reconciles without a second delete",
   expect(deleted).toEqual([view.id]);
   expect(requests.filter(item => item.startsWith("DELETE "))).toHaveLength(1);
 });
+
+
+test("partial view lists cannot authorize deletion or remove a shortcut", async () => {
+  const deleted: string[] = [];
+  fakeFetch(url => url.endsWith("describe") ? Response.json(describeResponse(7)) : Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: [] }, { status: 206 }));
+  const container = await renderDeletion({ onDeleted: id => deleted.push(id) });
+  expect(deleted).toEqual([]);
+  expect(button(container, "Delete view").disabled).toBe(true);
+  expect(container.textContent).toContain("complete view list is unavailable");
+});

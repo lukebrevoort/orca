@@ -33,7 +33,9 @@ function DeletionConfirmation({ viewId, label, demoView, demoMode = false, onCan
     if (demoMode || authority.state.kind !== "ready") return;
     const controller = new AbortController();
     setLoading(true); setSnapshot(null);
-    void authority.request("/v1/organization/views", { signal: controller.signal }, { operation: "read", capability: "query" }).then(value => {
+    void authority.response("/v1/organization/views", { signal: controller.signal }, { operation: "read", capability: "query" }).then(async response => {
+      if (response.status !== 200) throw new Error("The complete view list is unavailable. Refresh before deleting.");
+      const value: unknown = await response.json();
       if (controller.signal.aborted) return;
       const listed = organizationViewListResponseSchema.parse(value);
       const view = listed.items.find(item => item.id === viewId);
@@ -44,7 +46,7 @@ function DeletionConfirmation({ viewId, label, demoView, demoMode = false, onCan
     }).catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Could not load this view."); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [demoMode, viewId, authority.state.kind, authority.refreshToken, authority.request]);
+  }, [demoMode, viewId, authority.state.kind, authority.refreshToken, authority.response]);
 
   const canDelete = !demoMode && Boolean(snapshot) && !loading && !saving && !conflict && authority.state.canMutate && authority.allows.apply;
   async function remove() {
