@@ -1295,7 +1295,7 @@ export function InboxApp({
   const [viewMutationRefreshKey, setViewMutationRefreshKey] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    const refresh = () => { setViewMutationRefreshKey((key) => key + 1); if (!demoMode) void refreshDestinations().catch(() => {}); const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
+    const refresh = () => { mailboxSnapshotEpochRef.current += 1; setViewMutationRefreshKey((key) => key + 1); if (!demoMode) void refreshDestinations().catch(() => {}); const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
     window.addEventListener("orca:views-changed", refresh);
     return () => { controller.abort(); window.removeEventListener("orca:views-changed", refresh); };
   }, [demoMode]);

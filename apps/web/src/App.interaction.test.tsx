@@ -1404,6 +1404,51 @@ describe("Desktop evidence and navigation", () => {
     restoreDom();
   });
 
+  test("view mutation supersedes a delayed provider Inbox snapshot", async () => {
+    const originalFetch = globalThis.fetch;
+    const oldMessage = inboxFixture[0]!;
+    const freshMessage = { ...oldMessage, id: "message_after_policy", threadId: "thread_after_policy", subject: "Current mailbox after saving view" };
+    const before = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [oldMessage] });
+    const after = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [freshMessage, { ...freshMessage, id: "message_after_policy_2", threadId: "thread_after_policy_2" }] });
+    let changed = false;
+    let snapshotReads = 0;
+    let releaseOldSnapshot: (() => void) | undefined;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox" && !url.searchParams.has("destinationId")) {
+        snapshotReads++;
+        // The first read paints stored mail. The second follows provider sync,
+        // and represents a database snapshot taken before the view was saved.
+        if (snapshotReads === 2) {
+          const oldSnapshot = await before(input, init);
+          return new Promise<Response>(resolve => { releaseOldSnapshot = () => resolve(oldSnapshot); });
+        }
+      }
+      return (changed ? after : before)(input, init);
+    }) as typeof fetch;
+    try {
+      browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await waitFor(20);
+      expect(releaseOldSnapshot).toBeDefined();
+      changed = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("orca:views-changed")); });
+      await waitFor(20);
+      const rows = () => [...browserWindow.document.querySelectorAll("button.message-row")].map(row => row.textContent).join(" ");
+      expect(rows()).toContain(freshMessage.subject);
+      const readsAfterMutation = snapshotReads;
+      await act(async () => { releaseOldSnapshot!(); });
+      await waitFor(20);
+      // An obsolete provider snapshot must be reread at the current epoch.
+      expect(snapshotReads).toBeGreaterThan(readsAfterMutation);
+      expect(rows()).toContain(freshMessage.subject);
+      expect(rows()).not.toContain(oldMessage.subject);
+      expect(browserWindow.document.querySelectorAll("button.message-row").length).toBe(2);
+      const inboxButton = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(item => item.querySelector("span")?.textContent === "Inbox");
+      expect(inboxButton?.querySelector("small")?.textContent).toBe("2");
+    } finally { releaseOldSnapshot?.(); globalThis.fetch = originalFetch; }
+  });
+
   test("view mutation refreshes Inbox messages and destination counts without provider sync", async () => {
     const originalFetch = globalThis.fetch;
     let changed = false;
