@@ -47,9 +47,9 @@ async function renderWorkspace(demoMode = true, previewMode = true) {
       if (path === "/v1/organization/views/prepare") {
         const preparation = JSON.parse(String(init?.body)) as OrganizationViewPreparationInput;
         const saved = preparation.kind === "saved_view" ? listedViews.find((view) => view.id === preparation.viewId)! : null;
-        const typed: OrganizationViewPreparationInput = saved ? { kind: "typed_definition", source: { kind: "manual", label: "Saved View" }, identity: { name: saved.name, description: saved.description, color: saved.color, position: saved.position }, definition: saved.definition, unsupportedClauses: [] } : preparation;
+        const typed: OrganizationViewPreparationInput = saved ? { kind: "typed_definition", skipInbox: false, source: { kind: "manual", label: "Saved View" }, identity: { name: saved.name, description: saved.description, color: saved.color, position: saved.position }, definition: saved.definition, unsupportedClauses: [] } : preparation;
         const prepared = preparedCreateDraft(typed, typed.kind === "typed_definition" ? typed.definition : { revision: 1 });
-        return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: saved ? { ...prepared, mode: "update", viewId: saved.id, viewRevision: saved.revision } : prepared });
+        return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: saved ? { ...prepared, mode: "update", viewId: saved.id, viewRevision: saved.revision, skipInbox: saved.skipInbox ?? false } : prepared });
       }
       const response = await boundaryFetch(request, init);
       if (path === "/v1/organization/views" && (!init?.method || init.method === "GET")) listedViews = (await response.clone().json() as { items: OrganizationView[] }).items;
@@ -72,7 +72,7 @@ async function renderExternalAuthoring(onCancel: (context: { anchor: string }) =
     demoMode
     entry={{
       preparation: {
-        kind: "typed_definition",
+        kind: "typed_definition", skipInbox: false,
         source: { kind: "search", label: "Search results", returnTarget: "/dev/inbox?q=moonbase" },
         identity: { name: "Moonbase", description: "", color: "#70867d", position: 2 },
         definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["maya@example.com", "ari@example.com"] } },
@@ -162,7 +162,7 @@ test("an explicit source replacement preserves the account and Undo restores the
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
   await act(async () => root!.render(<OrganizationViewAuthoringWorkspace demoMode entry={{ preparation: {
-    kind: "typed_definition", source: { kind: "search", label: "Search mail" },
+    kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Search mail" },
     identity: { name: "Apartment", description: "", color: "#70867d", position: 0 },
     definition: { revision: 1, accountIds: ["account_gmail"] },
     unsupportedClauses: [{ id: "search.query", label: "General text", reason: "apartment searches sender and snippet too" }],
@@ -245,7 +245,7 @@ const liveAuthorityDescription = {
 };
 
 test("unmounted authoring suppresses a late successful commit callback without undoing the server write", async () => {
-  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", source: { kind: "search", label: "Search", returnTarget: "/?searchQuery=alpha" }, identity: { name: "Alpha", description: "", color: "#0b9b84", position: 0 }, definition: { revision: 1, accountIds: ["account_gmail"] }, unsupportedClauses: [] };
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Search", returnTarget: "/?searchQuery=alpha" }, identity: { name: "Alpha", description: "", color: "#0b9b84", position: 0 }, definition: { revision: 1, accountIds: ["account_gmail"] }, unsupportedClauses: [] };
   let complete!: () => void;
   let committedOnServer = false;
   const callbacks: unknown[] = [];
@@ -276,7 +276,7 @@ test("unmounted authoring suppresses a late successful commit callback without u
 function preparedCreateDraft(input: OrganizationViewPreparationInput, definition: OrganizationViewDefinition, options: { unsupportedClauses?: OrganizationViewReviewedDraft["unsupportedClauses"]; preparationNotices?: OrganizationViewReviewedDraft["preparationNotices"] } = {}): OrganizationViewReviewedDraft {
   if (input.kind === "saved_view") throw new Error("Expected create preparation");
   return {
-    mode: "create", viewId: null, viewRevision: null, source: input.source, identity: input.identity, definition,
+    mode: "create", viewId: null, viewRevision: null, source: input.source, identity: input.identity, definition, skipInbox: input.skipInbox ?? false,
     unsupportedClauses: options.unsupportedClauses ?? [], preparationNotices: options.preparationNotices ?? [],
     definitionDigest: testDigest(definition), definitionKind: "filtered", effectiveAccountIds: definition.accountIds ?? ["account_gmail"],
     summary: { text: "Prepared definition", clauses: ["Prepared filters"] },
@@ -288,7 +288,7 @@ function preparedCreateDraft(input: OrganizationViewPreparationInput, definition
 
 test("shows the authoritative consequence when self messages were omitted from selected senders", async () => {
   const preparation: OrganizationViewPreparationInput = {
-    kind: "selected_senders",
+    kind: "selected_senders", skipInbox: false,
     source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/?destination=inbox" },
     identity: { name: "Selected senders", description: "", color: "#0b9b84", position: 0 },
     references: [
@@ -339,7 +339,7 @@ test("create-mode external authoring preserves every prepared predicate through 
   };
   const unsupported = [{ id: "attachment-pdf", label: "Has PDF", reason: "Attachment predicates are not available yet." }];
   const preparation: OrganizationViewPreparationInput = {
-    kind: "typed_definition", source: { kind: "search", label: "Advanced Search", returnTarget: "/dev/inbox?q=launch" },
+    kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Advanced Search", returnTarget: "/dev/inbox?q=launch" },
     identity: { name: "Launch evidence", description: "Prepared from Search", color: "#70867d", position: 3 },
     definition, unsupportedClauses: unsupported,
   };
@@ -397,7 +397,7 @@ test("non-sender external preparation preserves its typed constraints through re
     thread: { ids: ["thread_alpha", "thread_beta"], readState: "unread" },
   };
   const preparation: OrganizationViewPreparationInput = {
-    kind: "typed_definition", source: { kind: "search", label: "Non-sender Search", returnTarget: "/dev/inbox?q=unread" },
+    kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Non-sender Search", returnTarget: "/dev/inbox?q=unread" },
     identity: { name: "Unread evidence", description: "", color: "#70867d", position: 0 }, definition, unsupportedClauses: [],
   };
   const prepared = preparedCreateDraft(preparation, definition);
@@ -436,7 +436,7 @@ test("non-sender external preparation preserves its typed constraints through re
 
 test("external Search recovery retains edits and the exact commit retry after authority reconnect", async () => {
   const definition: OrganizationViewDefinition = { revision: 1, accountIds: ["account_gmail"], thread: { subjectContains: "apartment" } };
-  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", source: { kind: "search", label: "Search" }, identity: { name: "Original", description: "", color: "#70867d", position: 0 }, definition, unsupportedClauses: [] };
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Search" }, identity: { name: "Original", description: "", color: "#70867d", position: 0 }, definition, unsupportedClauses: [] };
   let prepareCalls = 0; const commits: Array<Record<string, unknown>> = [];
   globalThis.fetch = (async (request, init) => {
     const path = String(request);
@@ -471,7 +471,7 @@ test("external saved-view authoring carries prepared View identity and revision 
   const preparation: OrganizationViewPreparationInput = { kind: "saved_view", viewId: view.id };
   const prepared: OrganizationViewReviewedDraft = {
     mode: "update", viewId: view.id, viewRevision: view.revision, source: { kind: "saved_view", label: view.name },
-    identity: { name: view.name, description: view.description, color: view.color, position: view.position }, definition: view.definition,
+    identity: { name: view.name, description: view.description, color: view.color, position: view.position }, definition: view.definition, skipInbox: view.skipInbox ?? false,
     unsupportedClauses: [], preparationNotices: [], definitionDigest: testDigest(view.definition), definitionKind: "filtered", effectiveAccountIds: ["account_gmail"],
     summary: { text: "Unread mail", clauses: ["Unread"] }, saveEligibility: { allowed: true, code: null, detail: "Ready to save." },
   };
@@ -500,7 +500,7 @@ test("external saved-view authoring carries prepared View identity and revision 
   root = createRoot(container as unknown as Element);
   await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { viewId: view.id } }} onCancel={() => {}} onCommitted={() => {}}/>));
   await flush(); await flush(); await flush();
-  expect(previewIdentities.at(-1)).toEqual({ mode: "update", viewId: view.id, viewRevision: 7, source: prepared.source, identity: prepared.identity, definition: view.definition, unsupportedClauses: [] });
+  expect(previewIdentities.at(-1)).toEqual({ mode: "update", viewId: view.id, viewRevision: 7, source: prepared.source, identity: prepared.identity, definition: view.definition, skipInbox: false, unsupportedClauses: [] });
   await click(button(container as unknown as HTMLElement, "Save changes"));
   await flush(); await flush();
   expect(commits).toHaveLength(1);
@@ -512,7 +512,7 @@ test("external saved-view authoring carries prepared View identity and revision 
 test("a stale first preparation cannot replace a newer external authoring entry", async () => {
   const entry = (label: string, address: string): { preparation: OrganizationViewPreparationInput; returnContext: { anchor: string } } => ({
     preparation: {
-      kind: "typed_definition", source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
+      kind: "typed_definition", skipInbox: false, source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
       identity: { name: label, description: "", color: "#70867d", position: 0 },
       definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: [address] } }, unsupportedClauses: [],
     },
@@ -558,7 +558,7 @@ test("a stale first preparation cannot replace a newer external authoring entry"
 test("a ready external draft cannot survive a replacement entry while its preparation is pending or failing", async () => {
   const entry = (label: string, address: string): { preparation: OrganizationViewPreparationInput; returnContext: { anchor: string } } => ({
     preparation: {
-      kind: "typed_definition", source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
+      kind: "typed_definition", skipInbox: false, source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
       identity: { name: label, description: "", color: "#70867d", position: 0 },
       definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: [address] } }, unsupportedClauses: [],
     },
@@ -618,7 +618,7 @@ test("a ready external draft cannot survive a replacement entry while its prepar
 test("a stale commit response cannot use a replacement entry context or keep its saving state", async () => {
   const entry = (label: string, address: string): { preparation: OrganizationViewPreparationInput; returnContext: { anchor: string } } => ({
     preparation: {
-      kind: "typed_definition", source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
+      kind: "typed_definition", skipInbox: false, source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
       identity: { name: label, description: "", color: "#70867d", position: 0 },
       definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: [address] } }, unsupportedClauses: [],
     },
@@ -684,7 +684,7 @@ test("a stale commit response cannot use a replacement entry context or keep its
 
 test("an in-flight commit keeps its initiating context when an equal preparation gets a new return context", async () => {
   const preparation: OrganizationViewPreparationInput = {
-    kind: "typed_definition", source: { kind: "search", label: "Stable search", returnTarget: "/dev/inbox?q=stable" },
+    kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Stable search", returnTarget: "/dev/inbox?q=stable" },
     identity: { name: "Stable search", description: "", color: "#70867d", position: 0 },
     definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["maya@example.com"] } }, unsupportedClauses: [],
   };
@@ -720,7 +720,7 @@ test("an in-flight commit keeps its initiating context when an equal preparation
 
 test("Cmd+Enter and duplicate form submissions share one in-flight external commit", async () => {
   const preparation: OrganizationViewPreparationInput = {
-    kind: "typed_definition", source: { kind: "search", label: "Ari search", returnTarget: "/dev/inbox?q=ari" },
+    kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Ari search", returnTarget: "/dev/inbox?q=ari" },
     identity: { name: "Ari search", description: "", color: "#70867d", position: 0 },
     definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["ari@example.com"] } }, unsupportedClauses: [],
   };
@@ -784,10 +784,10 @@ function previewResponse(init?: RequestInit, options: { state?: "matches" | "zer
 }
 
 function committedResponse(init?: RequestInit, viewId = "view_committed") {
-  const request = JSON.parse(String(init?.body)) as { draft: { identity: OrganizationView["definition"] & { name: string; description: string; color: string; position: number }; definition: OrganizationView["definition"] } };
+  const request = JSON.parse(String(init?.body)) as { draft: { identity: OrganizationView["definition"] & { name: string; description: string; color: string; position: number }; definition: OrganizationView["definition"]; skipInbox: boolean } };
   return Response.json({
     workspaceId: "workspace_demo", workspaceRevision: 5,
-    view: { id: viewId, workspaceId: "workspace_demo", ...request.draft.identity, definition: request.draft.definition, revision: 1, createdAt: "2026-09-06T18:00:00.000Z", updatedAt: "2026-09-06T18:00:00.000Z" },
+    view: { id: viewId, workspaceId: "workspace_demo", ...request.draft.identity, definition: request.draft.definition, skipInbox: request.draft.skipInbox, revision: 1, createdAt: "2026-09-06T18:00:00.000Z", updatedAt: "2026-09-06T18:00:00.000Z" },
     navigation: { destination: `view:${viewId}`, href: `/?destination=view%3A${viewId}` },
   });
 }
@@ -1398,6 +1398,8 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
   });
 
   test("reloads canonical positions and shifted revisions after an authorized removal", async () => {
+    let mutations = 0;
+    window.addEventListener("orca:views-changed", () => mutations++);
     let listReads = 0;
     let reorderRequest: { expectedWorkspaceRevision: number; items: Array<{ id: string; expectedRevision: number }> } | null = null;
     const canonicalRemaining = [
@@ -1429,6 +1431,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click(button(container, "Confirm remove"));
     await flush(); await flush();
     expect(listReads).toBe(2);
+    expect(mutations).toBe(1);
     expect(orderedNames(container)).toEqual(["Urgent humans", "Orca launch context"]);
     await click(container.querySelector('[aria-label="Move Urgent humans down"]') as unknown as HTMLButtonElement);
     await flush();
@@ -1637,3 +1640,64 @@ test("BRE-385 correction uses complete census, blocks empty sets, replaces domai
   await click(button(container, "Undo draft change")); await flush();
   expect(previews.at(-1)?.definition).toEqual(selected.definition);
 }, 30000);
+
+describe("Inbox visibility metadata", () => {
+  for (const mode of ["create", "edit"] as const) {
+    test(`${mode} previews and commits only the chosen Inbox flag without widening the definition`, async () => {
+      const definition: OrganizationViewDefinition = { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["notifications@github.com"] }, thread: { subjectContains: "Orca" } };
+      const preparation: OrganizationViewPreparationInput = { kind: "selected_senders", skipInbox: false, source: { kind: "sender_selection", label: "GitHub" }, identity: { name: "GitHub", description: "", color: "#70867d", position: 0 }, references: [{ accountId: "account_gmail", threadId: "thread_github", messageId: "message_github" }] };
+      const prepared = { ...preparedCreateDraft(preparation, definition), mode: mode === "edit" ? "update" : "create", viewId: mode === "edit" ? "view_github" : null, viewRevision: mode === "edit" ? 1 : null, skipInbox: mode === "edit" };
+      let committed: OrganizationViewDraftInput | undefined;
+      let returned: OrganizationView | undefined;
+      let mutations = 0;
+      let callbacks = 0;
+      window.addEventListener("orca:views-changed", () => mutations++);
+      globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+        const path = String(request);
+        if (path === "/v1/accounts") return Response.json({ items: [] });
+        if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+        if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+        if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: prepared });
+        if (path === "/v1/organization/views/preview") return previewResponse(init);
+        if (path === "/v1/organization/views/commit") { committed = JSON.parse(String(init?.body)).draft; return committedResponse(init, "view_github"); }
+        throw new Error(`Unexpected request ${path}`);
+      }) as typeof fetch;
+      const container = browserWindow.document.createElement("div") as unknown as HTMLElement;
+      document.body.append(container); root = createRoot(container);
+      await act(async () => root!.render(<OrganizationAuthorityProvider><OrganizationViewsWorkspace compact authoringEntry={{ preparation, returnContext: null }} onCommitted={(result) => { returned = result.view; }} onWorkspaceMutation={() => callbacks++}/></OrganizationAuthorityProvider>));
+      await flush(); await flush(); await flush();
+      const checkbox = input(container, "Keep matching mail out of Inbox");
+      expect(checkbox.checked).toBe(mode === "edit");
+      expect(checkbox.closest("[hidden]")).toBeNull();
+      expect(button(container, "Tune").getAttribute("aria-expanded")).toBe("false");
+      await click(checkbox);
+      await flush(); await flush();
+      await click(button(container, mode === "edit" ? "Save changes" : "Save"));
+      await flush();
+      expect(committed?.skipInbox).toBe(mode === "create");
+      expect(committed?.definition).toEqual(definition);
+      expect(returned?.skipInbox).toBe(mode === "create");
+      expect(mutations).toBe(1);
+      expect(callbacks).toBe(1);
+    });
+  }
+
+  test("an Inbox-only edit prompts before discard and restores the saved setting", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "Edit definition"));
+    expect(input(container, "Keep matching mail out of Inbox").checked).toBe(false);
+    await click(input(container, "Keep matching mail out of Inbox"));
+    await click(button(container, "Cancel"));
+    expect(container.textContent).toContain("Discard changes to this draft?");
+    await click(button(container, "Keep editing"));
+    expect(input(container, "Keep matching mail out of Inbox").checked).toBe(true);
+    await click(button(container, "Cancel"));
+    await click(button(container, "Discard draft"));
+    await click(button(container, "Edit definition"));
+    expect(input(container, "Keep matching mail out of Inbox").checked).toBe(false);
+    await click(input(container, "Keep matching mail out of Inbox"));
+    await click(button(container, "Save changes"));
+    await click(button(container, "Edit definition"));
+    expect(input(container, "Keep matching mail out of Inbox").checked).toBe(true);
+  });
+});

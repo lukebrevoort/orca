@@ -212,3 +212,10 @@
 .views-workspace-sender-authoring .view-preview-results .view-thread-list { max-height: 260px; overflow: auto; }
 
 .views-workspace-sender-authoring .view-action[aria-expanded="true"] { background: var(--desktop-surface-hover); border-color: var(--desktop-border); color: var(--desktop-ink); }
+
+/* Inbox visibility is view metadata, available before opening Tune. */
+.view-composer .view-inbox-visibility { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 5px 9px; margin-top: 14px; cursor: pointer; }
+.view-composer .view-inbox-visibility input { grid-row: span 2; width: 16px; min-height: 16px; height: 16px; margin: 1px 0 0; padding: 0; accent-color: var(--desktop-accent); }
+.view-composer .view-inbox-visibility > span { color: var(--orca-ink); font: 650 11px/16px var(--desktop-sans); letter-spacing: 0; text-transform: none; }
+.view-composer .view-inbox-visibility > small { grid-column: 2; font-size: 10px; line-height: 15px; }
+.view-composer .view-inbox-visibility input:focus-visible { outline: 2px solid var(--desktop-focus); outline-offset: 3px; }

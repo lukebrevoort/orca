@@ -187,6 +187,7 @@ function demoPreparationResponse(preparation: OrganizationViewPreparationInput):
       source,
       identity,
       definition,
+      skipInbox: saved?.skipInbox ?? (preparation.kind !== "saved_view" ? preparation.skipInbox : false) ?? false,
       unsupportedClauses,
       preparationNotices,
       definitionDigest: `sha256:${"d".repeat(64)}`,
@@ -238,6 +239,8 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const [focusReplacement, setFocusReplacement] = useState(false);
   const tuneRef = useRef<HTMLButtonElement>(null);
   const seedIdentity = useRef("");
+  const seedSkipInbox = useRef(false);
+  const [skipInbox, setSkipInbox] = useState(false);
   const seedDefinition = useRef("");
   const [preparationRetry, setPreparationRetry] = useState(0);
   const [draftUndo, setDraftUndo] = useState<Array<{ fields: ViewDraftFields; unsupported: OrganizationViewUnsupportedClause[]; focus: HTMLElement | null }>>([]);
@@ -498,10 +501,10 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const generation = ++preparationRequest.current;
     setError(null); setComposerMode(null); setStatus("loading");
-    const preparation: OrganizationViewPreparationInput = view ? { kind: "saved_view", viewId: view.id } : { kind: "typed_definition", source: { kind: "manual", label: "Manual View" }, identity: { name: "All messages", description: "", color: "#70867d", position: views.length }, definition: { revision: 1 }, unsupportedClauses: [] };
+    const preparation: OrganizationViewPreparationInput = view ? { kind: "saved_view", viewId: view.id } : { kind: "typed_definition", skipInbox: false, source: { kind: "manual", label: "Manual View" }, identity: { name: "All messages", description: "", color: "#70867d", position: views.length }, definition: { revision: 1 }, unsupportedClauses: [] };
     try {
       const prepared = demoMode
-        ? view ? { workspaceRevision, draft: { ...demoPreparationResponse({ kind: "saved_view", viewId: view.id }).draft, viewId: view.id, viewRevision: view.revision, definition: view.definition, identity: { name: view.name, description: view.description, color: view.color, position: view.position } } } : demoPreparationResponse(preparation)
+        ? view ? { workspaceRevision, draft: { ...demoPreparationResponse({ kind: "saved_view", viewId: view.id }).draft, viewId: view.id, viewRevision: view.revision, skipInbox: view.skipInbox ?? false, definition: view.definition, identity: { name: view.name, description: view.description, color: view.color, position: view.position } } } : demoPreparationResponse(preparation)
         : organizationViewPrepareResponseSchema.parse(await authority.request("/v1/organization/views/prepare", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(preparation) }, { operation: "read", capability: "query", hasReliableData: true }));
       if (generation !== preparationRequest.current) return;
       setWorkspaceRevision(prepared.workspaceRevision); loadPreparedComposer(prepared.draft); setNameTouched(Boolean(view)); setStatus("ready");
@@ -512,6 +515,8 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   function loadPreparedComposer(prepared: OrganizationViewPrepareResponse["draft"]) {
     censusGeneration.current += 1; setCorrection(null);
     const definition = prepared.definition;
+    seedSkipInbox.current = prepared.skipInbox ?? false;
+    setSkipInbox(seedSkipInbox.current);
     setDraftUndo([]); editingControl.current = null; seedFields.current = JSON.stringify(hydrateViewDraft(definition)); setDiscardPending(false); seedIdentity.current = JSON.stringify(prepared.identity); seedDefinition.current = JSON.stringify([prepared.definition, prepared.unsupportedClauses]);
     setComposerMode(prepared.mode === "update" ? "edit" : "create"); setPendingRemoveId(null); setError(null); setFilterMenuOpen(false); setMoreFiltersOpen(false);
     previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitEnvelope.current = null; commitRetryDraftKey.current = "";
@@ -555,7 +560,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
   function cancelComposer() {
     if (status === "saving") return;
-    if (composerMode && seedDefinition.current && (seedFields.current !== JSON.stringify(draftFields) || seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition }))) {
+    if (composerMode && seedDefinition.current && (seedSkipInbox.current !== skipInbox || seedFields.current !== JSON.stringify(draftFields) || seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition }))) {
       setDiscardPending(true); window.setTimeout(() => workspaceRef.current?.querySelector<HTMLElement>(".view-discard-keep")?.focus(), 0); return;
     }
     finishCancel();
@@ -708,6 +713,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     source: draftSource,
     identity: { name: name.trim() || "Untitled View", description: description.trim(), color, position: draftPosition },
     definition: draft,
+    skipInbox,
     unsupportedClauses,
   } : null;
   const draftClientKey = draftInput ? JSON.stringify(draftInput) : "";
@@ -857,7 +863,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         return;
       }
       if (composerMode === "edit" && activeView) {
-        const updated = { ...activeView, name: name.trim(), description: description.trim(), color, definition, revision: activeView.revision + 1, updatedAt: new Date().toISOString() };
+        const updated = { ...activeView, name: name.trim(), description: description.trim(), color, definition, skipInbox, revision: activeView.revision + 1, updatedAt: new Date().toISOString() };
         if (requestId !== mutationRequest.current) return;
         setViews((current) => current.map((view) => view.id === updated.id ? updated : view)); setWorkspaceRevision((current) => current + 1);
         setResults(null);
@@ -865,7 +871,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         setComposerMode(null); setStatus("ready");
         if (!demoMode) announceMutation();
       } else {
-        const created = { id: `view_demo_${views.length + 1}`, workspaceId: "workspace_demo", name: name.trim(), description: description.trim(), color, position: views.length, definition, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as OrganizationView;
+        const created = { id: `view_demo_${views.length + 1}`, workspaceId: "workspace_demo", name: name.trim(), description: description.trim(), color, position: views.length, definition, skipInbox, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as OrganizationView;
         if (requestId !== mutationRequest.current) return;
         setViews((current) => [...current, created]); setWorkspaceRevision((current) => current + 1); setActiveViewId(created.id); setResults(null); setComposerMode(null); setName(""); setStatus("ready");
         if (demoMode) setUnevaluatedDemoViewIds((current) => new Set(current).add(created.id));
@@ -971,6 +977,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
       {!senderAuthoring ? composerHeader : null}
       <fieldset className="view-builder-fieldset" disabled={!canMutate || status === "saving"}>
         <div className="view-identity"><label><span>View name</span><input autoFocus={!authoringEntry} maxLength={120} onInput={(event) => { setNameTouched(true); setName(event.currentTarget.value); }} value={name}/><small>{composerMode === "create" && !nameTouched ? `Suggested from your filters · ${suggestedName}` : "A short name shown in your workspace."}</small></label>{!senderAuthoring ? <><label><span>Description <i>optional</i></span><input maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="What this perspective is for" value={description}/></label><label className="view-color-field"><span>Color</span><input aria-label="View color" onChange={(event) => setColor(event.target.value)} type="color" value={color}/></label></> : null}</div>
+        <label className="view-inbox-visibility"><input aria-label="Keep matching mail out of Inbox" aria-describedby="view-inbox-visibility-hint" checked={skipInbox} onChange={(event) => setSkipInbox(event.target.checked)} type="checkbox"/><span>Keep matching mail out of Inbox</span><small id="view-inbox-visibility-hint">Current and future matching conversations stay in this View and All Mail. This does not archive mail with your provider.</small></label>
         <section className="view-scope-sentence"><span>Current scope</span><p>{scopeSummary}</p>{preservedConstraintDetails.length ? <details className="view-preserved-constraints" open><summary>Preserved constraints · {preservedConstraintDetails.length}</summary><ul>{preservedConstraintDetails.map((detail) => <li key={detail}>{detail}</li>)}</ul></details> : null}</section>
         {preparationNotices.length ? <section className="view-preparation-notices" aria-label="Preparation notices" role="status"><span>Selection adjusted</span>{preparationNotices.map((notice) => <div key={notice.code}><strong>{notice.detail}</strong>{notice.code === "self_sender_omitted" ? <small>Included external senders · {draft.sender?.addresses?.join(", ") ?? "None"}</small> : null}</div>)}</section> : null}
         {unsupportedClauses.length || removedUnsupportedClauses.length ? <section className="view-unsupported-clauses" aria-label="Unsupported source clauses"><header><div><span>Needs review</span><strong>{unsupportedClauses.length ? "Replace or remove unsupported clauses" : "Unsupported clauses resolved"}</strong></div></header>{unsupportedClauses.length ? <ul>{unsupportedClauses.map((clause) => <li key={clause.id}><div><strong>{clause.label}</strong><span>{clause.reason}</span></div>{clauseReplacements.filter((replacement) => replacement.clauseId === clause.id).map((replacement) => <button className="view-action" key={replacement.label} onClick={() => replaceSourceClause(replacement)} type="button">{replacement.label}</button>)}<button className="view-action" onClick={() => { rememberDraft(); setUnsupportedClauses((current) => current.filter((item) => item.id !== clause.id)); }} type="button">Remove blocker</button></li>)}</ul> : <p>Add an equivalent supported filter if the removed meaning still matters.</p>}</section> : null}

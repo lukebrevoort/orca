@@ -1292,9 +1292,10 @@ export function InboxApp({
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
   const savedViewsRequest = useRef(0);
+  const [viewMutationRefreshKey, setViewMutationRefreshKey] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    const refresh = () => { const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
+    const refresh = () => { setViewMutationRefreshKey((key) => key + 1); if (!demoMode) void refreshDestinations().catch(() => {}); const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
     window.addEventListener("orca:views-changed", refresh);
     return () => { controller.abort(); window.removeEventListener("orca:views-changed", refresh); };
   }, [demoMode]);
@@ -1664,7 +1665,7 @@ export function InboxApp({
       abortController.abort();
       if (gmailBackgroundRefreshRef.current === refreshGmailInBackground) gmailBackgroundRefreshRef.current = null;
     };
-  }, [classificationView, demoMode, refreshKey]);
+  }, [classificationView, demoMode, refreshKey, viewMutationRefreshKey]);
 
   useEffect(() => {
     if (demoMode || status !== "ready") return;
@@ -1819,7 +1820,7 @@ export function InboxApp({
     }).catch(error => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationLoading(false); });
     return () => { controller.abort(); ++destinationRequest.current; };
-  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision]);
+  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision, viewMutationRefreshKey]);
   useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
   const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "all");
@@ -6308,7 +6309,7 @@ export function senderAttentionTargetKey(target: BulkAttentionTarget) {
 
 export function selectedSenderPreparation(messages: readonly Pick<InboxMessage, "id" | "accountId" | "threadId">[], returnTarget: string): OrganizationViewPreparationInput {
   return {
-    kind: "selected_senders",
+    kind: "selected_senders", skipInbox: false,
     source: { kind: "sender_selection", label: "Selected message senders", returnTarget },
     identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
     references: messages.map((message) => ({ accountId: message.accountId, threadId: message.threadId, messageId: message.id })),

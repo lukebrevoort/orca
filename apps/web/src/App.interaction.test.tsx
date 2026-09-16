@@ -1404,6 +1404,38 @@ describe("Desktop evidence and navigation", () => {
     restoreDom();
   });
 
+  test("view mutation refreshes Inbox messages and destination counts without provider sync", async () => {
+    const originalFetch = globalThis.fetch;
+    let changed = false;
+    let inboxReads = 0;
+    let catalogReads = 0;
+    let syncWrites = 0;
+    const before = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture });
+    const after = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [] });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox") inboxReads++;
+      if (url.pathname === "/v1/destinations") catalogReads++;
+      if (url.pathname === "/v1/sync/gmail") syncWrites++;
+      return (changed ? after : before)(input, init);
+    }) as typeof fetch;
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await waitFor(20);
+      const originalInboxReads = inboxReads;
+      const originalCatalogReads = catalogReads;
+      const originalSyncWrites = syncWrites;
+      expect(browserWindow.document.querySelectorAll("button.message-row").length).toBeGreaterThan(0);
+      changed = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("orca:views-changed")); });
+      await waitFor(20);
+      expect(inboxReads).toBeGreaterThan(originalInboxReads);
+      expect(catalogReads).toBeGreaterThan(originalCatalogReads);
+      expect(syncWrites).toBe(originalSyncWrites);
+      expect(browserWindow.document.querySelectorAll("button.message-row").length).toBe(0);
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
   test("keeps evidence modal, closes the top layer with Escape, and restores trigger focus", async () => {
     await renderApp();
     const rowEvidence = browserWindow.document.querySelector("button.message-evidence-button") as unknown as HTMLButtonElement;
@@ -2122,7 +2154,7 @@ describe("Pin navigation and bulk sender actions", () => {
       { id: "message-two", accountId: "account-a", threadId: "thread-two" },
     ], "/dev/inbox?q=maya");
     expect(input).toEqual({
-      kind: "selected_senders",
+      kind: "selected_senders", skipInbox: false,
       source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/dev/inbox?q=maya" },
       identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
       references: [
