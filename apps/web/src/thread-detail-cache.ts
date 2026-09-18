@@ -2,9 +2,21 @@ import type { InboxMessage, ThreadDetail } from "@orca/shared";
 
 export type ThreadReference = Pick<InboxMessage, "accountId" | "threadId">;
 
+export type VersionedThreadReference = ThreadReference & {
+  version: string;
+};
+
 export type CachedThreadDetail = {
   detail: ThreadDetail;
   fetchedAt: number;
+  version: string | null;
+  stale: boolean;
+};
+
+type InFlightThreadDetail = {
+  generation: number;
+  promise: Promise<ThreadDetail>;
+  version: string | null;
 };
 
 const cacheKey = ({ accountId, threadId }: ThreadReference) => JSON.stringify([accountId, threadId]);
@@ -16,7 +28,8 @@ const cacheKey = ({ accountId, threadId }: ThreadReference) => JSON.stringify([a
  */
 export class ThreadDetailCache {
   private readonly details = new Map<string, CachedThreadDetail>();
-  private readonly inFlight = new Map<string, Promise<ThreadDetail>>();
+  private readonly generations = new Map<string, number>();
+  private readonly inFlight = new Map<string, InFlightThreadDetail>();
 
   constructor(private readonly capacity = 30) {}
 
@@ -29,25 +42,49 @@ export class ThreadDetailCache {
     return cached;
   }
 
-  isFresh(reference: ThreadReference, maxAgeMs: number, now = Date.now()) {
+  isFresh(reference: ThreadReference, maxAgeMs: number, now = Date.now(), version?: string) {
     const cached = this.details.get(cacheKey(reference));
-    return Boolean(cached && now - cached.fetchedAt <= maxAgeMs);
+    return Boolean(
+      cached
+      && !cached.stale
+      && now - cached.fetchedAt <= maxAgeMs
+      && (version === undefined || cached.version === version),
+    );
   }
 
   invalidate(reference: ThreadReference) {
-    this.details.delete(cacheKey(reference));
+    const key = cacheKey(reference);
+    this.supersede(key);
+    this.details.delete(key);
   }
 
-  load(reference: ThreadReference, loader: () => Promise<ThreadDetail>, options: { refresh?: boolean } = {}) {
+  markStale(reference: ThreadReference) {
     const key = cacheKey(reference);
-    const pending = this.inFlight.get(key);
-    if (pending) return pending;
+    this.supersede(key);
     const cached = this.details.get(key);
-    if (cached && !options.refresh) return Promise.resolve(cached.detail);
+    if (cached) cached.stale = true;
+  }
 
+  load(
+    reference: ThreadReference,
+    loader: () => Promise<ThreadDetail>,
+    options: { refresh?: boolean; version?: string } = {},
+  ) {
+    const key = cacheKey(reference);
+    const requestedVersion = options.version ?? null;
+    const pending = this.inFlight.get(key);
+    if (pending && pending.version === requestedVersion) return pending.promise;
+    if (pending) this.supersede(key);
+    const cached = this.details.get(key);
+    if (cached && !cached.stale && cached.version === requestedVersion && !options.refresh) {
+      return Promise.resolve(cached.detail);
+    }
+
+    const generation = this.generations.get(key) ?? 0;
     const request = loader().then((detail) => {
+      if ((this.generations.get(key) ?? 0) !== generation) return detail;
       this.details.delete(key);
-      this.details.set(key, { detail, fetchedAt: Date.now() });
+      this.details.set(key, { detail, fetchedAt: Date.now(), version: requestedVersion, stale: false });
       while (this.details.size > Math.max(1, this.capacity)) {
         const oldest = this.details.keys().next().value as string | undefined;
         if (oldest === undefined) break;
@@ -55,15 +92,15 @@ export class ThreadDetailCache {
       }
       return detail;
     }).finally(() => {
-      if (this.inFlight.get(key) === request) this.inFlight.delete(key);
+      if (this.inFlight.get(key)?.promise === request) this.inFlight.delete(key);
     });
-    this.inFlight.set(key, request);
+    this.inFlight.set(key, { generation, promise: request, version: requestedVersion });
     return request;
   }
 
   async prefetch(
-    references: readonly ThreadReference[],
-    loader: (reference: ThreadReference) => Promise<ThreadDetail>,
+    references: readonly VersionedThreadReference[],
+    loader: (reference: VersionedThreadReference) => Promise<ThreadDetail>,
     options: { concurrency?: number; shouldContinue?: () => boolean } = {},
   ) {
     let cursor = 0;
@@ -71,9 +108,9 @@ export class ThreadDetailCache {
     const worker = async () => {
       while (cursor < references.length && (options.shouldContinue?.() ?? true)) {
         const reference = references[cursor++];
-        if (!reference || this.details.has(cacheKey(reference))) continue;
+        if (!reference || this.isFresh(reference, Number.POSITIVE_INFINITY, Date.now(), reference.version)) continue;
         try {
-          await this.load(reference, () => loader(reference));
+          await this.load(reference, () => loader(reference), { version: reference.version });
         } catch {
           // Prefetch is opportunistic. A foreground open can retry normally.
         }
@@ -81,19 +118,62 @@ export class ThreadDetailCache {
     };
     await Promise.all(Array.from({ length: Math.min(concurrency, references.length) }, worker));
   }
+
+  private supersede(key: string) {
+    this.generations.set(key, (this.generations.get(key) ?? 0) + 1);
+    this.inFlight.delete(key);
+  }
 }
 
-export function recentThreadReferences(messages: readonly InboxMessage[], limit = 30): ThreadReference[] {
-  const newestByThread = new Map<string, InboxMessage>();
+/**
+ * Explicit post-mutation refreshes (send and routing) share this operation so
+ * they preserve the visible payload while guaranteeing the next generation
+ * cannot be satisfied by a still-fresh entry or an older in-flight read.
+ */
+export function scheduleThreadDetailRefresh(
+  cache: ThreadDetailCache,
+  reference: ThreadReference | null,
+  schedule: () => void,
+) {
+  if (reference) cache.markStale(reference);
+  schedule();
+}
+
+export function threadMailboxVersion(messages: readonly InboxMessage[]) {
+  return messages
+    .map((message) => JSON.stringify([
+      message.id,
+      message.providerMessageId,
+      message.receivedAt,
+      message.subject,
+      message.snippet,
+      message.unread,
+      message.labels,
+      message.humanSignal,
+      message.humanClassification,
+    ]))
+    .sort()
+    .join("\n");
+}
+
+export function recentThreadReferences(messages: readonly InboxMessage[], limit = 30): VersionedThreadReference[] {
+  const messagesByThread = new Map<string, InboxMessage[]>();
   for (const message of messages) {
     const key = cacheKey(message);
-    const current = newestByThread.get(key);
-    if (!current || message.receivedAt > current.receivedAt || (message.receivedAt === current.receivedAt && message.id > current.id)) {
-      newestByThread.set(key, message);
-    }
+    const threadMessages = messagesByThread.get(key) ?? [];
+    threadMessages.push(message);
+    messagesByThread.set(key, threadMessages);
   }
-  return [...newestByThread.values()]
-    .sort((left, right) => right.receivedAt.localeCompare(left.receivedAt) || cacheKey(left).localeCompare(cacheKey(right)))
+  return [...messagesByThread.values()]
+    .map((threadMessages) => ({
+      newest: threadMessages.reduce((current, message) => (
+        message.receivedAt > current.receivedAt || (message.receivedAt === current.receivedAt && message.id > current.id)
+          ? message
+          : current
+      )),
+      version: threadMailboxVersion(threadMessages),
+    }))
+    .sort((left, right) => right.newest.receivedAt.localeCompare(left.newest.receivedAt) || cacheKey(left.newest).localeCompare(cacheKey(right.newest)))
     .slice(0, Math.max(0, limit))
-    .map(({ accountId, threadId }) => ({ accountId, threadId }));
+    .map(({ newest: { accountId, threadId }, version }) => ({ accountId, threadId, version }));
 }

@@ -45,7 +45,7 @@ import { TopLayer, useTopLayerActive } from "./top-layer";
 import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
 import { isMailSearchResultReader, openMailSearch, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
-import { recentThreadReferences, ThreadDetailCache } from "./thread-detail-cache";
+import { recentThreadReferences, scheduleThreadDetailRefresh, threadMailboxVersion, ThreadDetailCache } from "./thread-detail-cache";
 import {
   SurfaceHistory,
   canRestoreSurfaceFocus,
@@ -1927,17 +1927,7 @@ export function InboxApp({
 
   const selectedThreadLatestMessage =
     selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
-  const selectedThreadVersion = useMemo(() => selectedThreadMessages.map((message) => JSON.stringify([
-    message.id,
-    message.providerMessageId,
-    message.receivedAt,
-    message.subject,
-    message.snippet,
-    message.unread,
-    message.labels,
-    message.humanSignal,
-    message.humanClassification,
-  ])).join("\n"), [selectedThreadMessages]);
+  const selectedThreadVersion = useMemo(() => threadMailboxVersion(selectedThreadMessages), [selectedThreadMessages]);
 
   useEffect(() => {
     if (demoMode || allMailMessages.length === 0) return;
@@ -1988,11 +1978,11 @@ export function InboxApp({
       setReaderStatus("loading");
     }
     setReaderError(null);
-    if (cached && cache.isFresh(reference, threadDetailFreshnessMs)) return;
+    if (cached && cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion)) return;
     cache.load(
       reference,
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
-      { refresh: Boolean(cached) },
+      { refresh: Boolean(cached), version: selectedThreadVersion },
     )
       .then((detail) => {
         if (!active) return;
@@ -2028,7 +2018,7 @@ export function InboxApp({
     threadDetailCacheRef.current!.load(
       reference,
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
-      { refresh: true },
+      { refresh: true, version: selectedThreadVersion },
     )
       .then((detail) => {
         if (!active || readerSilentRequestRef.current !== request) return;
@@ -2456,13 +2446,22 @@ export function InboxApp({
     });
   }
 
+  function refreshSelectedThreadDetail() {
+    const reference = selectedThreadId && readerAccountId
+      ? { accountId: readerAccountId, threadId: selectedThreadId }
+      : null;
+    scheduleThreadDetailRefresh(threadDetailCacheRef.current!, reference, () => {
+      setReaderRefreshKey((key) => key + 1);
+    });
+  }
+
   async function reconcileSentMessage() {
     if (demoMode) {
-      setReaderRefreshKey((key) => key + 1);
+      refreshSelectedThreadDetail();
       return;
     }
     await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, undefined, { method: "POST" });
-    setReaderRefreshKey((key) => key + 1);
+    refreshSelectedThreadDetail();
   }
 
   function closePanel() {
@@ -2991,7 +2990,7 @@ export function InboxApp({
     setMessages(inbox.messages); setClassificationCursor(inbox.nextCursor);
     setClassificationCounts(toClassificationCounts(inbox.counts.classification));
     setRoutingCounts(all.counts.attention);
-    setReaderRefreshKey(key => key + 1);
+    refreshSelectedThreadDetail();
     setClassificationLoading(false);
     window.dispatchEvent(new Event("orca:routing-changed"));
     return true;

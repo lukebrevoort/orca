@@ -2448,6 +2448,80 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
+  test("revalidates a prefetched conversation when its mailbox version changes before opening", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const updatedMessage = {
+      ...selectedMessage,
+      subject: `${selectedMessage.subject} — new reply`,
+      snippet: `${selectedMessage.snippet} A new reply arrived.`,
+    };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let threadReadCount = 0;
+    let mailboxChanged = false;
+    let updatedInboxReads = 0;
+
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox" && mailboxChanged) {
+        updatedInboxReads += 1;
+        return jsonResponse({
+          accounts: [accountFixture],
+          messages: [updatedMessage],
+          nextCursor: null,
+          counts: {
+            attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+            classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+          },
+        });
+      }
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
+        threadReadCount += 1;
+        const response = await baseFetch(input, init);
+        if (mailboxChanged) {
+          const detail = await response.json() as ThreadDetail;
+          return jsonResponse({
+            ...detail,
+            thread: { ...detail.thread, subject: updatedMessage.subject },
+            messages: detail.messages.map((message) => ({
+              ...message,
+              subject: updatedMessage.subject,
+              snippet: updatedMessage.snippet,
+              bodyText: updatedMessage.snippet,
+            })),
+          });
+        }
+        return response;
+      }
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 30 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 20 && threadReadCount < 1; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+      const refreshButton = () => browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement | null;
+      for (let index = 0; index < 30 && refreshButton()?.disabled; index += 1) await waitFor(0);
+      expect(refreshButton()?.disabled).toBe(false);
+
+      mailboxChanged = true;
+      await act(async () => refreshButton()!.click());
+      for (let index = 0; index < 30 && (updatedInboxReads === 0 || refreshButton()?.disabled); index += 1) await waitFor(0);
+      expect(updatedInboxReads).toBeGreaterThan(0);
+      const row = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+      await act(async () => row.click());
+
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      for (let index = 0; index < 30 && browserWindow.document.querySelector("#reader-title")?.textContent !== updatedMessage.subject; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(2);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedMessage.subject);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = inboxFixture[0]!;
