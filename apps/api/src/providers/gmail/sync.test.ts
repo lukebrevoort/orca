@@ -300,6 +300,30 @@ describe("syncGmailAccountPage", () => {
     }
   });
 
+  test("keeps a fresh Gmail grant on quota failure and still identifies missing permission", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    let reason = "rateLimitExceeded";
+    const client: GmailClient = {
+      async getMessage() { throw new Error("unexpected message fetch"); },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() { throw new GmailApiError("forbidden", 403, [reason]); },
+    };
+    try {
+      db.insert(users).values({ id: "user_403", email: "fresh@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "acct_403", userId: "user_403", provider: "gmail", providerEmail: "fresh@example.com", providerId: "fresh-google" }).run();
+      await storeProviderTokens(db, { oauthAccountId: "acct_403", accessToken: "fresh-access", refreshToken: "valid-refresh", tokenExpiry: null });
+      for (const [nextReason, code] of [["rateLimitExceeded", "provider_error"], ["accessNotConfigured", "provider_error"], ["insufficientPermissions", "provider_auth_error"]]) {
+        reason = nextReason!;
+        await assert.rejects(() => syncGmailAccountPage(db, {
+          accountId: "acct_403", gmailClient: client, oauthConfig: testOAuthConfig,
+          tokenFetch: async () => { throw new Error("A 403 must not refresh a valid token"); },
+        }), (error: unknown) => error instanceof GmailSyncError && error.code === code);
+      }
+      assert.equal((await readProviderTokens(db, "acct_403"))?.accessToken, "fresh-access");
+    } finally { sqlite.close(); }
+  });
+
   test("coalesces concurrent refreshes for one Gmail account", async () => {
     setAuthEnv();
 

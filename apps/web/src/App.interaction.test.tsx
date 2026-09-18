@@ -1404,6 +1404,89 @@ describe("Desktop evidence and navigation", () => {
     restoreDom();
   });
 
+  test("view mutation supersedes a delayed provider Inbox snapshot", async () => {
+    const originalFetch = globalThis.fetch;
+    const oldMessage = inboxFixture[0]!;
+    const freshMessage = { ...oldMessage, id: "message_after_policy", threadId: "thread_after_policy", subject: "Current mailbox after saving view" };
+    const before = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [oldMessage] });
+    const after = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [freshMessage, { ...freshMessage, id: "message_after_policy_2", threadId: "thread_after_policy_2" }] });
+    let changed = false;
+    let armProviderRead = false;
+    let holdNextSnapshot = false;
+    let releaseOldSnapshot: (() => void) | undefined;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/sync/gmail" && init?.method === "POST" && armProviderRead) {
+        armProviderRead = false;
+        holdNextSnapshot = true;
+      }
+      if (url.pathname === "/v1/inbox" && !url.searchParams.has("destinationId") && holdNextSnapshot) {
+        // Only the snapshot after the explicitly armed provider sync is held.
+        // Initial rendering and guidance can issue independent Inbox reads.
+        holdNextSnapshot = false;
+        const oldSnapshot = await before(input, init);
+        return new Promise<Response>(resolve => { releaseOldSnapshot = () => resolve(oldSnapshot); });
+      }
+      return (changed ? after : before)(input, init);
+    }) as typeof fetch;
+    try {
+      browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await waitFor(20);
+      expect(releaseOldSnapshot).toBeUndefined();
+      armProviderRead = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("focus")); });
+      await waitFor(20);
+      expect(releaseOldSnapshot).toBeDefined();
+      changed = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("orca:views-changed")); });
+      await waitFor(20);
+      const rows = () => [...browserWindow.document.querySelectorAll("button.message-row")].map(row => row.textContent).join(" ");
+      expect(rows()).toContain(freshMessage.subject);
+      await act(async () => { releaseOldSnapshot!(); });
+      await waitFor(20);
+      // The pre-save provider response cannot restore stale rows or counts.
+      expect(rows()).toContain(freshMessage.subject);
+      expect(rows()).not.toContain(oldMessage.subject);
+      expect(browserWindow.document.querySelectorAll("button.message-row").length).toBe(2);
+      const inboxButton = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(item => item.querySelector(":scope > span:last-of-type")?.textContent === "Inbox");
+      expect(inboxButton).toBeDefined();
+      expect(inboxButton!.querySelector(":scope > small")?.textContent).toBe("2");
+    } finally { releaseOldSnapshot?.(); globalThis.fetch = originalFetch; }
+  });
+
+  test("view mutation refreshes Inbox messages and destination counts without provider sync", async () => {
+    const originalFetch = globalThis.fetch;
+    let changed = false;
+    let inboxReads = 0;
+    let catalogReads = 0;
+    let syncWrites = 0;
+    const before = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture });
+    const after = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [] });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox") inboxReads++;
+      if (url.pathname === "/v1/destinations") catalogReads++;
+      if (url.pathname === "/v1/sync/gmail") syncWrites++;
+      return (changed ? after : before)(input, init);
+    }) as typeof fetch;
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await waitFor(20);
+      const originalInboxReads = inboxReads;
+      const originalCatalogReads = catalogReads;
+      const originalSyncWrites = syncWrites;
+      expect(browserWindow.document.querySelectorAll("button.message-row").length).toBeGreaterThan(0);
+      changed = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("orca:views-changed")); });
+      await waitFor(20);
+      expect(inboxReads).toBeGreaterThan(originalInboxReads);
+      expect(catalogReads).toBeGreaterThan(originalCatalogReads);
+      expect(syncWrites).toBe(originalSyncWrites);
+      expect(browserWindow.document.querySelectorAll("button.message-row").length).toBe(0);
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
   test("keeps evidence modal, closes the top layer with Escape, and restores trigger focus", async () => {
     await renderApp();
     const rowEvidence = browserWindow.document.querySelector("button.message-evidence-button") as unknown as HTMLButtonElement;
@@ -1691,9 +1774,55 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
+  test.each(["organization", "attention"])("%s links reopen Organization sender management", async (destination) => {
+    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`);
+    await renderApp();
+    expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Organization");
+    expect(browserWindow.document.querySelector(".organization-studio")).toBeNull();
+  });
+
+  test("the internal authoring link reopens the Organization studio", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=organization-studio");
+    await renderApp();
+    expect(browserWindow.document.querySelector(".organization-studio")).not.toBeNull();
+    expect(browserWindow.document.querySelector("#simple-attention-title")).toBeNull();
+  });
+
+  test("Settings Organization navigation opens the sender workspace", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/settings");
+    await renderSettingsHome("light", true);
+    const entries = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization");
+    expect(entries).toHaveLength(1);
+    await act(async () => (entries[0] as unknown as HTMLButtonElement).click());
+    expect(browserWindow.location.pathname).toBe("/dev/inbox");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("attention");
+  });
+
+  test("Settings opens the same Customize tools workflow as the main sidebar", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/settings");
+    await renderSettingsHome("light", true);
+    const customize = [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Customize tools") as unknown as HTMLButtonElement;
+    await act(async () => customize.click());
+    expect(browserWindow.location.pathname).toBe("/dev/inbox");
+    expect(new URL(browserWindow.location.href).searchParams.get("customize")).toBe("tools");
+    await act(async () => root!.unmount()); root = null;
+    await renderApp();
+    expect(browserWindow.document.querySelector("#manage-spaces-title")?.textContent).toBe("Customize tools");
+    expect(browserWindow.document.querySelector(".desktop-spaces-dialog")?.textContent).toContain("Create a collection");
+    await act(async () => (browserWindow.document.querySelector('.desktop-spaces-dialog button[aria-label="Close"]') as unknown as HTMLButtonElement).click());
+    expect(new URL(browserWindow.location.href).searchParams.has("customize")).toBe(false);
+    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Organization") as unknown as HTMLButtonElement;
+    await act(async () => senders.click());
+    expect(senders.getAttribute("aria-current")).toBe("page");
+    expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Organization");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("attention");
+    expect([...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization")).toHaveLength(1);
+    expect(browserWindow.document.querySelector(".simple-attention")?.textContent).not.toContain("Advanced organization");
+  });
+
   test("persists hidden workspace visibility across a reload", async () => {
     await renderApp();
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "customize tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
     const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Life admin"))!;
@@ -1709,7 +1838,7 @@ describe("Desktop evidence and navigation", () => {
 
   test("persists one absolute order when a drag crosses multiple rows", async () => {
     await renderApp();
-    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "customize tools") as unknown as HTMLButtonElement;
     await act(async () => { manage.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]')!;
     const rows = [...dialog.querySelectorAll(".desktop-space-list article")];
@@ -1724,7 +1853,7 @@ describe("Desktop evidence and navigation", () => {
       await Promise.resolve();
     });
     const labels = [...dialog.querySelectorAll(".desktop-space-list article > div > strong")].map((label) => label.textContent);
-    expect(labels).toEqual(["Life admin", "Later", "Orca launch"]);
+    expect(labels).toEqual(["Life admin", "Later", "Orca launch", "Weekly production review", "Urgent humans", "Orca launch context"]);
   });
 
   test("keeps Inbox and Settings on the same customized sidebar projection in both themes", async () => {
@@ -1790,12 +1919,12 @@ describe("Desktop evidence and navigation", () => {
 
   test("keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback", async () => {
     await renderApp();
-    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage tools") as unknown as HTMLButtonElement;
+    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "customize tools") as unknown as HTMLButtonElement;
     await act(async () => manageButton().click());
-    const createTrigger = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "+ Create a workflow space") as unknown as HTMLButtonElement;
+    const createTrigger = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "+ Create a collection") as unknown as HTMLButtonElement;
     await act(async () => createTrigger.click());
     const createForm = browserWindow.document.querySelector(".desktop-create-space") as unknown as HTMLElement;
-    const nameInput = createForm.querySelector('input[aria-label="Workflow space name"]') as unknown as HTMLInputElement;
+    const nameInput = createForm.querySelector('input[aria-label="Collection name"]') as unknown as HTMLInputElement;
     await enterInput(nameInput, "Launch review");
     const createButton = [...createForm.querySelectorAll("button")].find((button) => button.textContent === "Create") as unknown as HTMLButtonElement;
     expect(createButton.disabled).toBe(false);
@@ -2100,7 +2229,7 @@ describe("Pin navigation and bulk sender actions", () => {
       { id: "message-two", accountId: "account-a", threadId: "thread-two" },
     ], "/dev/inbox?q=maya");
     expect(input).toEqual({
-      kind: "selected_senders",
+      kind: "selected_senders", skipInbox: false,
       source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/dev/inbox?q=maya" },
       identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
       references: [
@@ -2143,6 +2272,10 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(authoringSurface.style.zIndex).toBe("151");
     const authoringHeading = authoringSurface.querySelector("#views-title") as unknown as HTMLElement;
     expect(authoringHeading.tabIndex).toBe(-1);
+    expect(authoringHeading.textContent).toBe("Save a sender view");
+    expect(authoringSurface.querySelector(".view-composer h3")).toBeNull();
+    expect(authoringSurface.querySelector("#search-view-tune")?.hasAttribute("hidden")).toBe(true);
+    expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("deploy@status.example.com");
     expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);
     setScroll({ x: 0, y: 0 });
     const cancel = [...browserWindow.document.querySelectorAll(".selected-view-authoring button")].find((candidate) => candidate.textContent === "Cancel") as unknown as HTMLButtonElement;
@@ -2150,6 +2283,31 @@ describe("Pin navigation and bulk sender actions", () => {
     flushAnimationFrames();
     expect(scrollPosition).toEqual({ x: 12, y: 380 });
     expect(focusCalls.at(-1)).toEqual({ preventScroll: true });
+    expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
+  });
+
+  test("sender authoring tucks extra fields into Tune and guards dirty Escape before returning selection", async () => {
+    await renderApp();
+    const byText = (text: string) => [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === text) as unknown as HTMLButtonElement;
+    await act(async () => byText("Select").click());
+    await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
+    await act(async () => { byText("Use these senders").click(); await Promise.resolve(); });
+    const tunePanel = browserWindow.document.querySelector("#search-view-tune")!;
+    expect(tunePanel.hasAttribute("hidden")).toBe(true);
+    expect(tunePanel.querySelector('input[aria-label="View color"]')).not.toBeNull();
+    await act(async () => byText("Tune").click());
+    expect(tunePanel.hasAttribute("hidden")).toBe(false);
+    const name = browserWindow.document.querySelector(".view-identity input") as unknown as HTMLInputElement;
+    await enterInput(name, "Friends");
+    const workspace = browserWindow.document.querySelector(".views-workspace-sender-authoring")!;
+    await act(async () => workspace.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(tunePanel.hasAttribute("hidden")).toBe(true);
+    expect(workspace.textContent).not.toContain("Discard changes to this draft?");
+    await act(async () => workspace.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(workspace.textContent).toContain("Discard changes to this draft?");
+    await act(async () => byText("Discard draft").click());
+    flushAnimationFrames();
+    expect(browserWindow.document.querySelector(".selected-view-authoring")).toBeNull();
     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
   });
 
@@ -2419,6 +2577,235 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector(".reader-kicker")?.textContent).toStartWith(`${label} ·`);
   }
 
+  test("opens a recently prefetched conversation without showing Reader loading", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let threadReadCount = 0;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) threadReadCount += 1;
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 20 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 20 && threadReadCount < 1; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+
+      const row = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+      await act(async () => row.click());
+
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(selectedMessage.subject);
+      expect(threadReadCount).toBe(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("revalidates a prefetched conversation when its mailbox version changes before opening", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const updatedMessage = {
+      ...selectedMessage,
+      subject: `${selectedMessage.subject} — new reply`,
+      snippet: `${selectedMessage.snippet} A new reply arrived.`,
+    };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let threadReadCount = 0;
+    let mailboxChanged = false;
+    let updatedInboxReads = 0;
+
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox" && mailboxChanged) {
+        updatedInboxReads += 1;
+        return jsonResponse({
+          accounts: [accountFixture],
+          messages: [updatedMessage],
+          nextCursor: null,
+          counts: {
+            attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+            classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+          },
+        });
+      }
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
+        threadReadCount += 1;
+        const response = await baseFetch(input, init);
+        if (mailboxChanged) {
+          const detail = await response.json() as ThreadDetail;
+          return jsonResponse({
+            ...detail,
+            thread: { ...detail.thread, subject: updatedMessage.subject },
+            messages: detail.messages.map((message) => ({
+              ...message,
+              subject: updatedMessage.subject,
+              snippet: updatedMessage.snippet,
+              bodyText: updatedMessage.snippet,
+            })),
+          });
+        }
+        return response;
+      }
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 30 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 20 && threadReadCount < 1; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+      const refreshButton = () => browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement | null;
+      for (let index = 0; index < 30 && refreshButton()?.disabled; index += 1) await waitFor(0);
+      expect(refreshButton()?.disabled).toBe(false);
+
+      mailboxChanged = true;
+      await act(async () => refreshButton()!.click());
+      for (let index = 0; index < 30 && (updatedInboxReads === 0 || refreshButton()?.disabled); index += 1) await waitFor(0);
+      expect(updatedInboxReads).toBeGreaterThan(0);
+      const row = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+      await act(async () => row.click());
+
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      for (let index = 0; index < 30 && browserWindow.document.querySelector("#reader-title")?.textContent !== updatedMessage.subject; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(2);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedMessage.subject);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("does not let an older foreground detail overwrite a newer mailbox-version response", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const mailboxMessages = [
+      selectedMessage,
+      { ...selectedMessage, subject: `${selectedMessage.subject} — mailbox v1`, snippet: `${selectedMessage.snippet} First update.` },
+      { ...selectedMessage, subject: `${selectedMessage.subject} — mailbox v2`, snippet: `${selectedMessage.snippet} Second update.` },
+    ];
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let mailboxVersion = 0;
+    let updatedInboxReads = 0;
+    let threadReadCount = 0;
+    const detailResolvers: Array<(response: Response) => void> = [];
+
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox" && mailboxVersion > 0) {
+        updatedInboxReads += 1;
+        return jsonResponse({
+          accounts: [accountFixture],
+          messages: [mailboxMessages[mailboxVersion]!],
+          nextCursor: null,
+          counts: {
+            attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+            classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+          },
+        });
+      }
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
+        threadReadCount += 1;
+        if (threadReadCount > 1) return new Promise<Response>((resolve) => detailResolvers.push(resolve));
+      }
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    const detailResponse = async (message: InboxMessage) => {
+      const response = await baseFetch(`/v1/threads/${encodeURIComponent(selectedMessage.threadId)}?accountId=${encodeURIComponent(selectedMessage.accountId)}`);
+      const detail = await response.json() as ThreadDetail;
+      return jsonResponse({
+        ...detail,
+        thread: { ...detail.thread, subject: message.subject },
+        messages: detail.messages.map((item) => ({ ...item, subject: message.subject, snippet: message.snippet, bodyText: message.snippet })),
+      });
+    };
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 30 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 30 && (threadReadCount < 1 || (browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement | null)?.disabled); index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+      const refreshButton = () => browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement;
+
+      mailboxVersion = 1;
+      await act(async () => refreshButton().click());
+      for (let index = 0; index < 30 && (updatedInboxReads < 1 || refreshButton().disabled); index += 1) await waitFor(0);
+      await act(async () => (browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement).click());
+      for (let index = 0; index < 30 && threadReadCount < 2; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(threadReadCount).toBe(2);
+
+      mailboxVersion = 2;
+      const inboxReadsBeforeV2 = updatedInboxReads;
+      await act(async () => refreshButton().click());
+      for (let index = 0; index < 30 && (updatedInboxReads === inboxReadsBeforeV2 || threadReadCount < 3); index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(3);
+
+      await act(async () => {
+        detailResolvers[1]!(await detailResponse(mailboxMessages[2]!));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 30 && browserWindow.document.querySelector("#reader-title")?.textContent !== mailboxMessages[2]!.subject; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(mailboxMessages[2]!.subject);
+
+      await act(async () => {
+        detailResolvers[0]!(await detailResponse(mailboxMessages[1]!));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 5; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(mailboxMessages[2]!.subject);
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("keeps cached space geometry during revalidation and clears a recovered sync failure", async () => {
+    const originalFetch = globalThis.fetch;
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    let syncCalls = 0;
+    let holdDestination = false;
+    let destinationHeld = false;
+    let resolveDestination!: (response: Response) => void;
+    const delayedDestination = new Promise<Response>(resolve => { resolveDestination = resolve; });
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=destination%3Ainbox");
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/sync/gmail" && ++syncCalls === 1) return apiError(401, "provider_auth_error", "Reconnect required");
+      if (url.pathname === "/v1/inbox" && url.searchParams.has("destinationId") && holdDestination) { destinationHeld = true; return delayedDestination; }
+      return baseFetch(input, init);
+    }) as typeof fetch;
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 30 && !browserWindow.document.querySelector(".inbox-sync-alert"); i++) await waitFor(0);
+      expect(browserWindow.document.querySelector(".inbox-sync-alert")?.textContent).toContain("Reconnect required");
+      const header = browserWindow.document.querySelector(".pane-header");
+      const rows = browserWindow.document.querySelector(".message-list");
+      expect(header).not.toBeNull();
+      expect(rows).not.toBeNull();
+      holdDestination = true;
+      await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("focus")); });
+      for (let i = 0; i < 30 && !destinationHeld; i++) await waitFor(0);
+      expect(destinationHeld).toBe(true);
+      expect(browserWindow.document.querySelector(".inbox-sync-alert")).toBeNull();
+      expect(browserWindow.document.body.textContent).not.toContain("Loading mail…");
+      expect(isSameNode(browserWindow.document.querySelector(".pane-header"), header)).toBe(true);
+      expect(isSameNode(browserWindow.document.querySelector(".message-list"), rows)).toBe(true);
+    } finally {
+      resolveDestination(await baseFetch("/v1/inbox?destinationId=inbox"));
+      await waitFor(0);
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = inboxFixture[0]!;
@@ -2582,26 +2969,30 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
-  test("waits for the primary Reader request before refreshing a newer mailbox version", async () => {
+  test("hands an uncached loading Reader to the newer mailbox-version request", async () => {
     const originalFetch = globalThis.fetch;
-    const selectedMessage = inboxFixture[0]!;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
     const updatedSubject = `${selectedMessage.subject} — arrived during primary load`;
-    const refreshedMessages = inboxFixture.map((message, index) => index === 0
-      ? { ...message, subject: updatedSubject, snippet: `${message.snippet} New reply.` }
-      : { ...message });
-    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
-    let inboxReadCount = 0;
+    const refreshedMessage = { ...selectedMessage, subject: updatedSubject, snippet: `${selectedMessage.snippet} New reply.` };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let mailboxChanged = false;
+    let updatedInboxReads = 0;
     let threadReadCount = 0;
-    let resolveDelayedInbox!: (response: Response) => void;
-    const delayedInbox = new Promise<Response>((resolve) => { resolveDelayedInbox = resolve; });
     const detailResolvers: Array<(response: Response) => void> = [];
 
-    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(selectedMessage.threadId)}&accountId=${encodeURIComponent(selectedMessage.accountId)}`);
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
-      if (url.pathname === "/v1/inbox") {
-        inboxReadCount += 1;
-        if (inboxReadCount === 2) return delayedInbox;
+      if (url.pathname === "/v1/inbox" && mailboxChanged) {
+        updatedInboxReads += 1;
+        return jsonResponse({
+          accounts: [accountFixture],
+          messages: [refreshedMessage],
+          nextCursor: null,
+          counts: {
+            attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+            classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+          },
+        });
       }
       if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
         threadReadCount += 1;
@@ -2622,44 +3013,38 @@ describe("Inbox reader viewport restoration", () => {
 
     try {
       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
-      for (let index = 0; index < 30 && (threadReadCount < 1 || inboxReadCount < 2); index += 1) await waitFor(0);
+      for (let index = 0; index < 30 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await act(async () => (browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement).click());
+      for (let index = 0; index < 30 && threadReadCount < 1; index += 1) await waitFor(0);
       expect(threadReadCount).toBe(1);
+      expect(browserWindow.document.querySelector(".reader-loading")).not.toBeNull();
+      const refreshButton = () => browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement;
+      for (let index = 0; index < 30 && refreshButton().disabled; index += 1) await waitFor(0);
 
-      await act(async () => {
-        resolveDelayedInbox(jsonResponse({
-          accounts: [accountFixture],
-          messages: refreshedMessages,
-          nextCursor: null,
-          counts: {
-            attention: { focus: 0, normal: refreshedMessages.length, quiet: 0, hidden: 0, all: refreshedMessages.length },
-            classification: { likely_human: refreshedMessages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: refreshedMessages.length },
-          },
-        }));
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      for (let index = 0; index < 10; index += 1) await waitFor(0);
-
-      expect(threadReadCount).toBe(1);
+      mailboxChanged = true;
+      await act(async () => refreshButton().click());
+      for (let index = 0; index < 30 && (updatedInboxReads === 0 || threadReadCount < 2); index += 1) await waitFor(0);
+      await waitFor(150);
+      expect(threadReadCount).toBe(2);
       expect(browserWindow.document.querySelector(".reader-loading")).not.toBeNull();
 
       await act(async () => {
-        detailResolvers[0]!(await detailResponse(selectedMessage.subject));
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      for (let index = 0; index < 20 && threadReadCount < 2; index += 1) await waitFor(0);
-      expect(threadReadCount).toBe(2);
-
-      await act(async () => {
-        detailResolvers[1]!(await detailResponse(updatedSubject));
+        detailResolvers.at(-1)!(await detailResponse(updatedSubject));
         await Promise.resolve();
         await Promise.resolve();
       });
       for (let index = 0; index < 20 && browserWindow.document.querySelector("#reader-title")?.textContent !== updatedSubject; index += 1) await waitFor(0);
-
       expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedSubject);
       expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+
+      await act(async () => {
+        detailResolvers[0]!(apiError(500, "stale_detail_failure", "The superseded detail request failed late"));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 5; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedSubject);
+      expect(browserWindow.document.querySelector(".reader-state")).toBeNull();
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -3476,7 +3861,7 @@ describe("BRE-386 guidance navigation", () => {
       expect(browserWindow.document.querySelector(".first-view-starts")).toBeNull();
     }
   });
-  test.each(["organization", "all"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
+  test.each(["organization-studio", "all"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
     const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture.map(message => ({ ...message, attentionBehavior: "quiet" })) });
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
@@ -3496,7 +3881,7 @@ describe("BRE-386 guidance navigation", () => {
     expect(browserWindow.location.search).toContain("destination=all");
     expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("true");
     expect(browserWindow.document.activeElement?.classList.contains("selection-mode-toggle")).toBe(true);
-    for (const destination of ["organization", "all"]) {
+    for (const destination of ["organization-studio", "all"]) {
       await act(async () => { browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`); browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate")); });
       await waitFor(0);
     }

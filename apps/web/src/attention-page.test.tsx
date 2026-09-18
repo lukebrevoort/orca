@@ -231,7 +231,7 @@ async function render(chooser = false) {
             }}
           />
         ) : (
-          <AttentionPage onAdvanced={() => {}} />
+          <AttentionPage />
         )}
       </AttentionRoutingProvider>,
     ),
@@ -632,7 +632,7 @@ for (const mailbox of ["Inbox", "Signals"]) {
     if (mailbox === "Signals") await nav("Signals");
     await click("Load more messages");
     expect(held).toBe(true);
-    await nav("Attention");
+    await nav("Organization");
     await select("Space for maya@example.com", quietId);
     expect(delayedRoutingRead).toBe(true);
     await nav(mailbox);
@@ -666,7 +666,7 @@ test("App ignores a pre-save background snapshot after Quiet save, retaining row
   };
   await renderMailbox();
   expect(held).toBe(true);
-  await nav("Attention");
+  await nav("Organization");
   await select("Space for maya@example.com", quietId);
   await nav("Inbox");
   expect([...document.querySelectorAll(".message-row")].some(row => row.textContent?.includes("Mail a"))).toBe(false);
@@ -712,7 +712,7 @@ test("App accepts final provider status after routing invalidates its completed 
   expect(held).toBe(true);
   expect(syncs).toBe(1);
   expect(document.querySelector(".sync-status-chip")?.textContent).toBe("Syncing Gmail…");
-  await nav("Attention");
+  await nav("Organization");
   await select("Space for maya@example.com", quietId);
   await nav("Inbox");
   const rows = () => [...document.querySelectorAll(".message-row")].map(row => row.textContent);
@@ -856,7 +856,7 @@ for (const entry of ["focus", "interval", "manual"] as const) {
     const refreshed = Date.now() + 2000;
     while (!document.querySelector(".content-pane")?.textContent?.includes("Incoming Quiet mail") && Date.now() < refreshed) await settle();
     expect(document.querySelector(".content-pane")?.textContent).toContain("Incoming Quiet mail");
-    expect([...document.querySelectorAll(".desktop-sidebar-item")].map(b => b.textContent)).toContain("Quiet106");
+    expect([...document.querySelectorAll(".desktop-sidebar-item")].map(b => b.textContent)).toContain("Quiet99+");
     expect(document.querySelector<HTMLButtonElement>(".refresh-button")?.disabled).toBe(false);
     expect(button("Load more messages").disabled).toBe(false);
     await click("Load more messages");
@@ -898,10 +898,10 @@ test("create from sidebar opens durable destination; sender routing covers futur
   expect(clients, document.querySelector(".destination-manager")?.outerHTML).toBeDefined();
   expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
   expect(document.querySelector(".content-pane")?.textContent).toContain("No mail in Clients yet");
-  expect(document.querySelector(".content-pane")?.textContent).toContain("choose Clients for a sender in Attention");
+  expect(document.querySelector(".content-pane")?.textContent).toContain("choose Clients for a sender in Organization");
   expect(document.querySelector(".content-pane")?.textContent).not.toContain("Keep useful mail together");
   expect(document.querySelector(".content-pane")?.textContent).not.toContain("When synced mail arrives");
-  await nav("Attention");
+  await nav("Organization");
   await select("Space for maya@example.com", clients.id);
   await nav("Clients");
   expect(document.querySelector(".content-pane")?.textContent).toContain("Mail a");

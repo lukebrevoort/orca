@@ -285,7 +285,7 @@ export function OrganizationRecoveryBanner() {
   return <section aria-live="polite" className={`organization-recovery organization-recovery-${state.kind}`} data-organization-authority={state.kind} role={state.kind === "loading" ? "status" : "alert"}>
     <div><span>Organization authority</span><h2>{state.title}</h2><p>{state.detail}</p><p className="organization-recovery-safe"><strong>Safe now ·</strong> {state.safe}</p></div>
     {state.action === "retry" ? <button onClick={retry} type="button">{state.actionLabel}</button> : null}
-    {state.action === "reconnect" ? <a href="/login?returnTo=%2F%3Fdestination%3Dorganization">{state.actionLabel}</a> : null}
+    {state.action === "reconnect" ? <a href="/login?returnTo=%2F%3Fdestination%3Dorganization-studio">{state.actionLabel}</a> : null}
     {state.action === "ask_owner" ? <a href="mailto:?subject=Request%20Orca%20Organization%20access">{state.actionLabel}</a> : null}
     {state.action === "connect_account" ? <a href="/settings/integrations/gmail">{state.actionLabel}</a> : null}
   </section>;

@@ -275,6 +275,7 @@ export const organizationViews = sqliteTable(
     color: text("color").notNull(),
     position: integer("position").notNull(),
     definition: text("definition").notNull(),
+    skipInbox: integer("skip_inbox", { mode: "boolean" }).notNull().default(false),
     revision: integer("revision").notNull().default(1),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),

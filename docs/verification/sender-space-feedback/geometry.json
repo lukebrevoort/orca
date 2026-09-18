@@ -1,0 +1,96 @@
+{
+  "method": "agent-browser eval of real DOM bounding rectangles",
+  "notice": "Provider-refresh 403 with long message injected into disposable review browser; stored mail and organization APIs real SQLite/Hono",
+  "measurements": [
+    {
+      "alertBottom": 355.5625,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "100 conversations selected",
+      "theme": "dark",
+      "toolbarTop": 371.5625,
+      "width": 1024
+    },
+    {
+      "alertBottom": 235.5625,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "100 conversations selected",
+      "theme": "dark",
+      "toolbarTop": 251.5625,
+      "width": 1024
+    },
+    {
+      "alertBottom": 338.171875,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "100 conversations selected",
+      "theme": "light",
+      "toolbarTop": 354.171875,
+      "width": 1440
+    },
+    {
+      "alertBottom": 338.171875,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "Select messages",
+      "theme": "light",
+      "toolbarTop": 354.171875,
+      "width": 1440
+    },
+    {
+      "alertBottom": 338.171875,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "1 conversation selected",
+      "theme": "light",
+      "toolbarTop": 354.171875,
+      "width": 1440
+    },
+    {
+      "alertBottom": 355.5625,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "1 conversation selected",
+      "theme": "light",
+      "toolbarTop": 371.5625,
+      "width": 1024
+    },
+    {
+      "alertBottom": 355.5625,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "Select messages",
+      "theme": "light",
+      "toolbarTop": 371.5625,
+      "width": 1024
+    },
+    {
+      "alertBottom": 355.5625,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "Select messages",
+      "theme": "dark",
+      "toolbarTop": 371.5625,
+      "width": 1024
+    },
+    {
+      "alertBottom": 355.5625,
+      "expanded": true,
+      "gap": 16,
+      "position": "relative",
+      "selection": "1 conversation selected",
+      "theme": "dark",
+      "toolbarTop": 371.5625,
+      "width": 1024
+    }
+  ]
+}

@@ -38,13 +38,14 @@ import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
-import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
+import { reconcileWorkflowSpaceOrder, mergeWorkflowSpaceOrder, createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
 import { isMailSearchResultReader, openMailSearch, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import { recentThreadReferences, scheduleThreadDetailRefresh, threadMailboxVersion, ThreadDetailCache } from "./thread-detail-cache";
 import {
   SurfaceHistory,
   canRestoreSurfaceFocus,
@@ -83,6 +84,10 @@ const readerDensityHint = "Calm gives each message more room. Compact fits more 
 type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
+
+const recentThreadCacheSize = 30;
+const threadDetailFreshnessMs = 30_000;
+const recentThreadPrefetchDelayMs = 100;
 
 const pinMailboxOptions: Array<{ id: PinMailbox; label: string }> = [
   { id: "inbox", label: "Inbox" },
@@ -130,7 +135,7 @@ function readerOriginLabelForDestination(destination: DesktopDestination, spaces
   if (space) return space.label;
   if (destination === "all") return "All Mail";
   if (destination === "drafts") return "Drafts";
-  if (destination === "organization") return "Organization";
+  if (destination === "organization-studio" || destination === "attention" || destination === "organization") return "Organization";
   if (destination === "settings") return "Settings";
   if (destination.startsWith("space:")) return "Workflow space";
   return destination.charAt(0).toUpperCase() + destination.slice(1);
@@ -1292,9 +1297,10 @@ export function InboxApp({
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
   const savedViewsRequest = useRef(0);
+  const [viewMutationRefreshKey, setViewMutationRefreshKey] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    const refresh = () => { const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
+    const refresh = () => { mailboxSnapshotEpochRef.current += 1; setViewMutationRefreshKey((key) => key + 1); if (!demoMode) void refreshDestinations().catch(() => {}); const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
     window.addEventListener("orca:views-changed", refresh);
     return () => { controller.abort(); window.removeEventListener("orca:views-changed", refresh); };
   }, [demoMode]);
@@ -1322,9 +1328,9 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
-  const [organizationStudioOpen, setOrganizationStudioOpen] = useState<false | "organization" | "attention">(() => {
+  const [organizationStudioOpen, setOrganizationStudioOpen] = useState<false | "organization-studio" | "attention">(() => {
     const destination = typeof window !== "undefined" ? desktopDestinationFromLocation(window.location) : "inbox";
-    return destination === "organization" || destination === "attention" ? destination : false;
+    return destination === "organization-studio" || destination === "attention" ? destination : false;
   });
   const bre320EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
@@ -1343,7 +1349,7 @@ export function InboxApp({
   }, []);
   const bre358PartialServedRef = useRef(false);
   const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
-  const [manageToolsOpen, setManageToolsOpen] = useState(false);
+  const [manageToolsOpen, setManageToolsOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "tools");
   const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
   const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
   const [spacePreferencesReady, setSpacePreferencesReady] = useState(false);
@@ -1382,6 +1388,8 @@ export function InboxApp({
   const [mailboxRefreshGeneration, setMailboxRefreshGeneration] = useState(0);
   const readerMailboxSnapshotRef = useRef<{ selectionKey: string; version: string } | null>(null);
   const readerSilentRequestRef = useRef<{ selectionKey: string; version: string } | null>(null);
+  const threadDetailCacheRef = useRef<ThreadDetailCache | null>(null);
+  if (!threadDetailCacheRef.current) threadDetailCacheRef.current = new ThreadDetailCache(recentThreadCacheSize);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
@@ -1477,12 +1485,10 @@ export function InboxApp({
 
   useEffect(() => {
     setSpaceOrder((current) => {
-      const collectionIds = collections.map((collection) => collection.id);
-      const next = current.filter((id) => ["later"].includes(id) || collectionIds.includes(id));
-      for (const id of collectionIds) if (!next.includes(id)) next.push(id);
+      const next = reconcileWorkflowSpaceOrder(current, ["later", ...collections.slice().sort((a, b) => a.position - b.position).map(item => item.id), ...savedViews.slice().sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)).map(item => item.id)]);
       return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next;
     });
-  }, [collections]);
+  }, [collections, savedViews]);
 
   useEffect(() => {
     return () => {
@@ -1531,12 +1537,15 @@ export function InboxApp({
 
     async function loadInbox() {
       if (isInitialLoad) setStatus("loading");
-      else if (shouldRefreshGmail) setStatus("syncing");
+      // Background refresh preserves the ready surface, including empty states.
       setClassificationCursor(null);
       setClassificationLoading(true);
-      setErrorMessage(null);
-      setErrorStatus(null);
-      setClassificationError(null);
+      // Keep an actionable failure visible until a successful refresh resolves it.
+      if (isInitialLoad) {
+        setErrorMessage(null);
+        setErrorStatus(null);
+        setClassificationError(null);
+      }
 
       try {
         const [currentAccount, nextSyncStatus] = await Promise.all([
@@ -1617,6 +1626,9 @@ export function InboxApp({
           if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
           // Routing can supersede the mailbox snapshot without superseding provider status.
           setSyncStatus(nextStatus);
+          setErrorMessage(null);
+          setErrorStatus(null);
+          setClassificationError(null);
           if (classificationViewRef.current !== refreshedView || refreshed.inbox.epoch !== mailboxSnapshotEpochRef.current) return;
           classificationPageRequestRef.current += 1;
           allMailPageRequestRef.current += 1;
@@ -1658,7 +1670,7 @@ export function InboxApp({
       abortController.abort();
       if (gmailBackgroundRefreshRef.current === refreshGmailInBackground) gmailBackgroundRefreshRef.current = null;
     };
-  }, [classificationView, demoMode, refreshKey]);
+  }, [classificationView, demoMode, refreshKey, viewMutationRefreshKey]);
 
   useEffect(() => {
     if (demoMode || status !== "ready") return;
@@ -1813,7 +1825,7 @@ export function InboxApp({
     }).catch(error => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationLoading(false); });
     return () => { controller.abort(); ++destinationRequest.current; };
-  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision]);
+  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision, viewMutationRefreshKey]);
   useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
   const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "all");
@@ -1920,17 +1932,24 @@ export function InboxApp({
 
   const selectedThreadLatestMessage =
     selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
-  const selectedThreadVersion = useMemo(() => selectedThreadMessages.map((message) => JSON.stringify([
-    message.id,
-    message.providerMessageId,
-    message.receivedAt,
-    message.subject,
-    message.snippet,
-    message.unread,
-    message.labels,
-    message.humanSignal,
-    message.humanClassification,
-  ])).join("\n"), [selectedThreadMessages]);
+  const selectedThreadVersion = useMemo(() => threadMailboxVersion(selectedThreadMessages), [selectedThreadMessages]);
+
+  useEffect(() => {
+    if (demoMode || allMailMessages.length === 0) return;
+    let active = true;
+    const references = recentThreadReferences(allMailMessages, recentThreadCacheSize);
+    const timer = setTimeout(() => {
+      void threadDetailCacheRef.current?.prefetch(
+        references,
+        (reference) => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+        { concurrency: 3, shouldContinue: () => active },
+      );
+    }, recentThreadPrefetchDelayMs);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [allMailMessages, demoMode]);
 
   useEffect(() => {
     if (!selectedThreadId || !readerAccountId || !account) {
@@ -1952,26 +1971,44 @@ export function InboxApp({
       return;
     }
 
-    const controller = new AbortController();
-    setThreadDetail(null);
-    setReaderStatus("loading");
+    const reference = { accountId: readerAccountId, threadId: selectedThreadId };
+    const cache = threadDetailCacheRef.current!;
+    const cached = cache.peek(reference);
+    let active = true;
+    if (cached) {
+      setThreadDetail(cached.detail);
+      setReaderStatus("ready");
+    } else {
+      setThreadDetail(null);
+      setReaderStatus("loading");
+    }
     setReaderError(null);
-    fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
+    if (cached && cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion)) return;
+    const request = cache.load(
+      reference,
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      { refresh: Boolean(cached), version: selectedThreadVersion },
+    );
+    const requestGeneration = cache.currentGeneration(reference);
+    request
       .then((detail) => {
-        if (controller.signal.aborted) return;
+        if (!active || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
       })
       .catch((error) => {
-        if (controller.signal.aborted) return;
+        if (!active || cached || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
       });
-    return () => controller.abort();
+    return () => { active = false; };
   }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
 
   useEffect(() => {
-    if (!selectedThreadId || !readerAccountId || !account || readerStatus !== "ready" || !threadDetail) return;
+    if (!selectedThreadId || !readerAccountId || !account) return;
+    const hasVisibleDetail = readerStatus === "ready" && Boolean(threadDetail);
+    const isAwaitingDetail = readerStatus === "loading" && !threadDetail;
+    if (!hasVisibleDetail && !isAwaitingDetail) return;
     const selectionKey = accountScopedIdentityKey(readerAccountId, selectedThreadId);
     const previousSnapshot = readerMailboxSnapshotRef.current;
     if (!previousSnapshot || previousSnapshot.selectionKey !== selectionKey || previousSnapshot.version === selectedThreadVersion) return;
@@ -1980,27 +2017,39 @@ export function InboxApp({
 
     if (demoMode) {
       setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
+      setReaderStatus("ready");
       readerMailboxSnapshotRef.current = { selectionKey, version: selectedThreadVersion };
       return;
     }
 
-    const controller = new AbortController();
+    let active = true;
     const request = { selectionKey, version: selectedThreadVersion };
+    const reference = { accountId: readerAccountId, threadId: selectedThreadId };
     readerSilentRequestRef.current = request;
-    fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
+    const cache = threadDetailCacheRef.current!;
+    const detailRequest = cache.load(
+      reference,
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      { refresh: true, version: selectedThreadVersion },
+    );
+    const requestGeneration = cache.currentGeneration(reference);
+    detailRequest
       .then((detail) => {
-        if (controller.signal.aborted || readerSilentRequestRef.current !== request) return;
+        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
+        setReaderStatus("ready");
         readerMailboxSnapshotRef.current = request;
       })
-      .catch(() => {
-        // Keep the already loaded conversation usable when background revalidation fails.
+      .catch((error) => {
+        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration) || hasVisibleDetail) return;
+        setReaderStatus("error");
+        setReaderError(getErrorMessage(error));
       })
       .finally(() => {
         if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
       });
     return () => {
-      controller.abort();
+      active = false;
       if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
     };
   }, [demoMode, mailboxRefreshGeneration, readerAccountId, readerStatus, selectedThreadId, selectedThreadVersion, threadDetail]);
@@ -2154,13 +2203,13 @@ export function InboxApp({
     setManageToolsOpen(false);
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     setStreamQuery(location.query);
-    setOrganizationStudioOpen(destination === "organization" || destination === "attention" ? destination : false);
+    setOrganizationStudioOpen(destination === "organization-studio" || destination === "attention" ? destination : false);
     setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
     if (destination.startsWith("space:")) {
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
       setActiveCollectionId(null);
-      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
+      if (destination !== "organization-studio" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
     }
 
     const history = surfaceHistoryRef.current;
@@ -2414,13 +2463,22 @@ export function InboxApp({
     });
   }
 
+  function refreshSelectedThreadDetail() {
+    const reference = selectedThreadId && readerAccountId
+      ? { accountId: readerAccountId, threadId: selectedThreadId }
+      : null;
+    scheduleThreadDetailRefresh(threadDetailCacheRef.current!, reference, () => {
+      setReaderRefreshKey((key) => key + 1);
+    });
+  }
+
   async function reconcileSentMessage() {
     if (demoMode) {
-      setReaderRefreshKey((key) => key + 1);
+      refreshSelectedThreadDetail();
       return;
     }
     await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, undefined, { method: "POST" });
-    setReaderRefreshKey((key) => key + 1);
+    refreshSelectedThreadDetail();
   }
 
   function closePanel() {
@@ -2949,7 +3007,7 @@ export function InboxApp({
     setMessages(inbox.messages); setClassificationCursor(inbox.nextCursor);
     setClassificationCounts(toClassificationCounts(inbox.counts.classification));
     setRoutingCounts(all.counts.attention);
-    setReaderRefreshKey(key => key + 1);
+    refreshSelectedThreadDetail();
     setClassificationLoading(false);
     window.dispatchEvent(new Event("orca:routing-changed"));
     return true;
@@ -2997,9 +3055,9 @@ export function InboxApp({
     }
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     surfaceHistoryRef.current?.navigate(destination);
-    if (destination === "organization" || destination === "attention") {
+    if (destination === "organization-studio" || destination === "attention") {
       runUiTransition("content", () => {
-        setOrganizationStudioOpen(destination as "organization" | "attention");
+        setOrganizationStudioOpen(destination as "organization-studio" | "attention");
         setSelectedThreadId(null);
         setSelectedThreadAccountId(null);
         setActiveCollectionId(null);
@@ -3043,22 +3101,18 @@ export function InboxApp({
   }
 
   async function reorderWorkflowSpaces(nextOrder: string[]) {
-    if (nextOrder.length !== spaceOrder.length || nextOrder.some((id) => !spaceOrder.includes(id))) return;
+    const mergedOrder = mergeWorkflowSpaceOrder(spaceOrder, workflowSpaces.filter(space => space.kind !== "destination").map(space => space.id), nextOrder);
+    if (!mergedOrder) return;
     const previousOrder = spaceOrder;
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
-    setSpaceOrder(nextOrder);
+    setSpaceOrder(mergedOrder);
     try {
-      if (!demoMode) {
-        const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+      const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+      const previousCustomIds = collections.slice().sort((a, b) => a.position - b.position).map(item => item.id);
+      if (!demoMode && customIds.some((id, index) => id !== previousCustomIds[index])) {
         await Promise.all(customIds.map((id, position) => {
-          const collection = collections.find((item) => item.id === id)!;
           return fetchJson(`/v1/collections/${encodeURIComponent(id)}`, collectionSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
-        }));
-        const builtIns = nextOrder.filter((id) => ["focus", "signals", "quiet"].includes(id));
-        await Promise.all(builtIns.map((id, position) => {
-          const behavior = id === "signals" ? "notify" : id;
-          return fetchJson(`/v1/attention/view-settings/${behavior}`, attentionViewSettingSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
         }));
         setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
       }
@@ -3071,6 +3125,7 @@ export function InboxApp({
   }
 
   async function renameWorkflowSpace(space: WorkflowSpace, name: string) {
+    if (space.kind === "view") return;
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
     const collection = collections.find((item) => item.id === space.id);
@@ -3097,6 +3152,17 @@ export function InboxApp({
     }
   }
 
+  function deletedSavedView(id: string) {
+    // Invalidate in-flight list reads before removing the confirmed deleted view.
+    savedViewsRequest.current += 1;
+    setSavedViews(current => current.filter(view => view.id !== id));
+    setHiddenSpaceIds(current => current.filter(item => item !== id));
+    setSpaceOrder(current => current.filter(item => item !== id));
+    setSpaceLabels(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== id)));
+    if (activeSavedViewId === id) navigateDesktop("inbox");
+    window.dispatchEvent(new Event("orca:views-changed"));
+  }
+
   function restoreWorkflowSpace(space: WorkflowSpace) {
     setSpaceOperationError(null);
     setHiddenSpaceIds((current) => current.filter((id) => id !== space.id));
@@ -3121,18 +3187,18 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} onAdvanced={() => navigateDesktop("organization")} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Attention</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}
             {selectedDestination?.retiredAt && <p role="status">This space has been removed. <button onClick={() => navigateDesktop("inbox")}>Open default space</button></p>}
-            {requestedDestinationId && destinationLoading && <p role="status">Loading mail…</p>}
+            {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization-studio")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${requestedDestinationId}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
@@ -3217,7 +3283,10 @@ export function InboxApp({
               onSaveReminder={saveReminder}
               onFinishReminder={finishReminder}
               onBack={closeThread}
-              onRetry={() => setReaderRefreshKey((key) => key + 1)}
+              onRetry={() => {
+                if (selectedThreadId && readerAccountId) threadDetailCacheRef.current?.invalidate({ accountId: readerAccountId, threadId: selectedThreadId });
+                setReaderRefreshKey((key) => key + 1);
+              }}
               onSent={reconcileSentMessage}
               status={readerStatus}
             />
@@ -3226,7 +3295,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageToolsOpen ? <ManageSpacesDialog busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => setManageToolsOpen(false)} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} spaces={workflowSpaces.filter(space => space.kind !== "view" && space.kind !== "destination")} /> : null}
+      {manageToolsOpen ? <ManageSpacesDialog demoMode={demoMode} savedViews={savedViews} onDeleted={deletedSavedView} busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
       {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} onRemoved={(id, fallbackId) => { if (requestedDestinationId === id) navigateDesktop(`destination:${fallbackId}`, true); }} /> : null}
 
       {organizerMessage ? (
@@ -4852,7 +4921,7 @@ function InboxView({
   function openSelectedSenderAuthoring() {
     if (!selectedRows.size || selectedAccountCount !== 1) return;
     const preparation = selectedSenderPreparation([...selectedRows.values()], `${window.location.pathname}${window.location.search}${window.location.hash}`);
-    setViewAuthoringEntry({ preparation, returnContext: { scrollX: window.scrollX, scrollY: window.scrollY, focus: "use-selected-senders" } });
+    setViewAuthoringEntry({ preparation, accountLabels: account ? { [account.id]: account.email } : {}, returnContext: { scrollX: window.scrollX, scrollY: window.scrollY, focus: "use-selected-senders" } });
   }
 
   function restoreFromViewAuthoring(context: InboxViewAuthoringReturnContext) {
@@ -4922,7 +4991,7 @@ function InboxView({
         </div>
       </header>
 
-      {errorMessage && status === "ready" ? <InboxSyncAlert errorMessage={errorMessage} errorStatus={errorStatus} /> : null}
+      {errorMessage && status === "ready" ? <InboxSyncAlert errorMessage={errorMessage} errorStatus={errorStatus} onRetry={onRetry} /> : null}
 
       <div className="classification-panel">
         {classificationActionMessage ? <p className="classification-action-message" role="status">{classificationActionMessage}</p> : null}
@@ -5056,7 +5125,7 @@ function InboxView({
               <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
               {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
             </div>
-            <details><summary>Advanced legacy attention preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
+            <details><summary>Sender preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
               <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
               <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
               <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
@@ -5064,7 +5133,7 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
-        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
@@ -5114,7 +5183,7 @@ function InboxView({
                 ? `No threads in your inbox include ${personFilter} yet.`
                 : isCollectionView
                   ? "Use Add to collection on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
-                  : destinationName ? `Move a conversation here or choose ${destinationName} for a sender in Attention.` : "When synced mail arrives, your inbox list will appear here."
+                  : destinationName ? `Move a conversation here or choose ${destinationName} for a sender in Organization.` : "When synced mail arrives, your inbox list will appear here."
             }
             eyebrow={searchQuery.trim() || personFilter ? "No matches" : isCollectionView ? "Collection empty" : destinationName ? "Space empty" : "Inbox empty"}
             title={searchQuery.trim() ? "Nothing found" : personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : destinationName ? `No mail in ${destinationName} yet` : "No messages yet"}
@@ -5218,13 +5287,13 @@ function InboxView({
   );
 }
 
-export function InboxSyncAlert({ errorMessage, errorStatus }: { errorMessage: string; errorStatus: number | null }) {
+export function InboxSyncAlert({ errorMessage, errorStatus, onRetry }: { errorMessage: string; errorStatus: number | null; onRetry?: () => void }) {
   return (
     <div className="inbox-sync-alert" role="alert">
       <span>{errorMessage}</span>
-      <a className="inbox-reconnect-link inbox-sync-alert-action" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>
+      {errorStatus === 401 || errorStatus === 403 || errorStatus === 404 ? <a className="inbox-reconnect-link inbox-sync-alert-action" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>
         Reconnect Gmail <span aria-hidden="true">→</span>
-      </a>
+      </a> : <button className="inbox-sync-alert-action" onClick={onRetry} type="button">Try again <span aria-hidden="true">↻</span></button>}
     </div>
   );
 }
@@ -6302,7 +6371,7 @@ export function senderAttentionTargetKey(target: BulkAttentionTarget) {
 
 export function selectedSenderPreparation(messages: readonly Pick<InboxMessage, "id" | "accountId" | "threadId">[], returnTarget: string): OrganizationViewPreparationInput {
   return {
-    kind: "selected_senders",
+    kind: "selected_senders", skipInbox: false,
     source: { kind: "sender_selection", label: "Selected message senders", returnTarget },
     identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
     references: messages.map((message) => ({ accountId: message.accountId, threadId: message.threadId, messageId: message.id })),

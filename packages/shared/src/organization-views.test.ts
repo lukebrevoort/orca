@@ -193,3 +193,10 @@ describe("BRE-381 reviewed View draft contracts", () => {
     assert.equal(organizationViewReviewedDraftSchema.safeParse({ ...base, mode: "create", viewId: null, viewRevision: 7 }).success, false);
   });
 });
+
+ test("Inbox exclusion metadata defaults off and stays outside predicates", () => {
+ const base = { idempotencyKey: "skip", expectedWorkspaceRevision: 1, name: "GitHub", definition: { revision: 1 } };
+ assert.equal(organizationViewCreateRequestSchema.parse(base).skipInbox, false);
+ assert.equal(organizationViewCreateRequestSchema.parse({ ...base, skipInbox: true }).skipInbox, true);
+ assert.equal(organizationViewDefinitionSchema.safeParse({ revision: 1, skipInbox: true }).success, false);
+ });

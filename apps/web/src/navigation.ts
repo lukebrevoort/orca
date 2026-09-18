@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { Collection, OrganizationView, MailDestination } from "@orca/shared";
 
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
+export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "organization-studio" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -39,6 +39,10 @@ export type SidebarNavigationProjection = {
   online: boolean;
   spaces: WorkflowSpace[];
 };
+
+export function formatNavigationCount(count: number) {
+  return count >= 100 ? "99+" : String(Math.max(0, count));
+}
 
 type BuiltInSpaceId = "focus" | "signals" | "quiet" | "later";
 
@@ -80,6 +84,9 @@ export function writeSpacePreferences(accountId: string, preferences: StoredSpac
 
 export function parseDesktopDestination(value: string | null | undefined): DesktopDestination | null {
   if (!value) return null;
+  // Old Organization bookmarks now open sender management; authoring has its own route.
+  if (value === "organization") return "attention";
+  if (value === "organization-studio") return "organization-studio";
   if (rootDestinations.has(value as DesktopDestination)) return value as DesktopDestination;
   if (value === "settings") return "settings";
   if (value.startsWith("destination:") && value.slice(12).trim()) return value as `destination:${string}`;
@@ -115,6 +122,20 @@ export function destinationForSpace(space: Pick<WorkflowSpace, "custom" | "id" |
   return space.custom ? `space:${space.id}` : parseDesktopDestination(space.id) ?? "inbox";
 }
 
+// Keep unresolved IDs: an empty/failed asynchronous list is not proof of deletion.
+// Projection omits absent tools; their device preferences remain safe for hydration.
+export function reconcileWorkflowSpaceOrder(current: readonly string[], knownIds: readonly string[]): string[] {
+  const next = [...new Set([...current, ...knownIds])];
+  return next;
+}
+
+export function mergeWorkflowSpaceOrder(current: readonly string[], knownIds: readonly string[], nextOrder: readonly string[]): string[] | null {
+  const known = new Set(knownIds);
+  if (nextOrder.length !== known.size || new Set(nextOrder).size !== known.size || nextOrder.some(id => !known.has(id))) return null;
+  let index = 0;
+  return reconcileWorkflowSpaceOrder(current, knownIds).map(id => known.has(id) ? nextOrder[index++]! : id);
+}
+
 export function projectWorkflowSpaces({ collections, views = [], counts = {}, hidden = [], labels = {}, order = builtInSpaceIds }: {
   collections: readonly Collection[];
   views?: readonly OrganizationView[];
@@ -123,7 +144,7 @@ export function projectWorkflowSpaces({ collections, views = [], counts = {}, hi
   labels?: Readonly<Record<string, string>>;
   order?: readonly string[];
 }) {
-  const customSpaces = new Map(collections
+  const customSpaces = new Map<string, WorkflowSpace>(collections
     .slice()
     .sort((left, right) => left.position - right.position)
     .map((collection) => [collection.id, {
@@ -135,6 +156,9 @@ export function projectWorkflowSpaces({ collections, views = [], counts = {}, hi
       custom: true,
       kind: "collection" as const,
     } satisfies WorkflowSpace]));
+  for (const view of views.slice().sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))) {
+    customSpaces.set(view.id, { id: view.id, label: view.name, description: "saved view", color: view.color, kind: "view" } as WorkflowSpace);
+  }
   const knownIds = new Set([...builtInSpaceIds, ...customSpaces.keys()]);
   const canonicalOrder = [...new Set(order.filter((id) => knownIds.has(id)))];
   for (const id of builtInSpaceIds) if (!canonicalOrder.includes(id)) canonicalOrder.push(id);
@@ -147,14 +171,7 @@ export function projectWorkflowSpaces({ collections, views = [], counts = {}, hi
       ? { ...builtIn, label: labels[id] ?? builtIn.label, count: counts[id as BuiltInSpaceId] }
       : customSpaces.get(id);
     return space ? [{ ...space, kind: space.kind ?? "built_in", hidden: hiddenIds.has(id) }] : [];
-  }).concat(views.slice().sort((left, right) => left.position - right.position || left.id.localeCompare(right.id)).map((view) => ({
-    id: view.id,
-    label: view.name,
-    description: "live View",
-    color: view.color,
-    kind: "view" as const,
-    hidden: false,
-  })));
+  });
 }
 
 export function deriveSidebarHealth({ attention = false, known = true, online, syncing = false }: {

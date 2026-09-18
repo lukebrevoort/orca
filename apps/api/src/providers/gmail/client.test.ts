@@ -95,3 +95,17 @@ test("fetches history ordering metadata without payloads and preserves provider 
   const missing = createGmailClient((async () => new Response(null, { status: 404 })) as unknown as typeof fetch);
   await assert.rejects(() => missing.getMessageMetadata!("synthetic-token", "missing"), (error: unknown) => error instanceof GmailApiError && error.status === 404);
 });
+
+
+describe("Gmail authorization classification", () => {
+  for (const [reason, reconnect] of [["rateLimitExceeded", false], ["userRateLimitExceeded", false], ["accessNotConfigured", false], ["insufficientPermissions", true], ["authError", true]] as const) {
+    test(`classifies 403 ${reason} without discarding Google's reason`, async () => {
+      const client = createGmailClient((async () => Response.json({ error: { errors: [{ reason }] } }, { status: 403 })) as unknown as typeof fetch);
+      await assert.rejects(() => client.listLabels("fresh-token"), (error: unknown) => {
+        assert.ok(error instanceof GmailApiError);
+        assert.equal(error.requiresReconnect, reconnect);
+        return true;
+      });
+    });
+  }
+});

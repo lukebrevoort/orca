@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BRE-300 · Production bundle evidence</title>
+<style>
+:root{color-scheme:light dark;font:17px/1.6 system-ui,sans-serif;background:#f7f7f2;color:#243830}body{max-width:900px;margin:auto;padding:36px 22px}h1{line-height:1.15}h2{margin-top:36px}code{font-size:.9em;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #ccd2cc}th:last-child,td:last-child{text-align:right}.bar{height:18px;background:#698677;border-radius:4px;margin:6px 0 18px}.before{background:#a56b52}.note{padding:16px;background:#e8eee7;border-radius:8px}.muted{color:#53645c}@media(prefers-color-scheme:dark){:root{background:#141916;color:#e6eee7}.note{background:#24332b}.muted{color:#bdcabf}th,td{border-color:#425148}}
+</style>
+</head>
+<body>
+<p class="muted">BRE-300 · Production build · 2026-09-15</p>
+<h1>Largest JavaScript chunk: 931.96 → 441.40 kB</h1>
+<p>The default Vite 500 kB warning threshold is unchanged. A production build now emits four coherent JavaScript chunks with no size warning and no static chunk import cycles.</p>
+<div aria-label="Before: 931.96 kilobytes">Before · 931.96 kB<div class="bar before" style="width:100%"></div></div>
+<div aria-label="After: 441.40 kilobytes">After · 441.40 kB<div class="bar" style="width:47.36%"></div></div>
+<table><thead><tr><th>Production chunk</th><th>Minified kB</th><th>Gzip kB</th></tr></thead><tbody>
+<tr><td>Application entry</td><td>441.40</td><td>125.58</td></tr>
+<tr><td>Mail contracts + Zod</td><td>205.00</td><td>50.88</td></tr>
+<tr><td>React + React DOM + scheduler</td><td>192.36</td><td>60.97</td></tr>
+<tr><td>Organization Views + supporting contexts</td><td>88.91</td><td>25.39</td></tr>
+</tbody></table>
+<p class="note">Production chunks still load eagerly. This change reduces the largest chunk and separates cacheable dependency families; it does not claim a large reduction in initial transfer. Total JavaScript is about 927.67 kB (262.82 kB gzip), versus 931.96 kB (262.46 kB gzip) before.</p>
+<h2>Why these boundaries</h2>
+<p>React is a stable runtime family. Mail contracts group shared schemas and Zod so schema initialization stays together. Organization Views is an existing feature module; Rollup includes its dependency closure, including guidance and top-layer contexts, to prevent back-imports into the application entry. No application, desktop shell, or style source edits were required.</p>
+<p>The development feedback widget now loads through a guarded dynamic import. Its JavaScript and stylesheet are removed from production. CSS decreases from 378.73 to 367.34 kB total. Existing Orca CSS overrides for development feedback remain.</p>
+<h2>Measured contributors</h2>
+<p>The report identifies React DOM as the largest framework contributor, Zod and shared schemas as the largest contract contributors, and App, Organization Views, desktop shell, and compose as the largest application contributors. Per-module rendered lengths are measured before final minification; only the chunk totals above represent minified bytes.</p>
+<h2>Reproduce and verify</h2>
+<pre><code>bun apps/web/scripts/check-bundle.ts</code></pre>
+<p>This builds using the production Vite config, prints chunk sizes and the five largest module contributors per chunk, and fails if any JavaScript chunk exceeds 500,000 bytes, static chunk imports form a cycle, or development feedback modules appear in production. The resulting <code>apps/web/dist</code> is ready to preview.</p>
+<p>Verified here: direct baseline and final production builds; bundle budget, static import graph, and development-code exclusion checks. Full-suite tests and production browser evidence are handled by the parent integration agent to serialize work under machine memory pressure.</p>
+<h2>Production smoke handoff</h2>
+<ol>
+<li>Serve the production dist with the API available; load the inbox and open a thread.</li>
+<li>Open Compose, enter draft text, switch to Zen, then return and confirm text remains.</li>
+<li>Open Organization Views and its authoring surface; confirm shared context and guidance initialize correctly.</li>
+<li>Open Settings and switch light/dark themes; confirm navigation and controls remain labeled.</li>
+<li>Reload a deep link; inspect browser errors and failed asset requests for initialization or missing-chunk errors. Confirm development feedback is absent.</li>
+</ol>
+<p class="muted">Ticket historical baseline: 593.22 kB. This report uses the current branch's freshly measured 931.96 kB baseline.</p>
+</body></html>

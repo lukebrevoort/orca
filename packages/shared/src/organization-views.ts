@@ -116,6 +116,7 @@ const uniqueSelectedMessageReferencesSchema = z.array(organizationViewSelectedMe
 export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("typed_definition"),
+    skipInbox: z.boolean().default(false),
     source: organizationViewDraftSourceSchema.omit({ kind: true }).extend({
       kind: z.enum(["manual", "search", "sender_selection"]),
     }).strict(),
@@ -129,6 +130,7 @@ export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind
   }).strict(),
   z.object({
     kind: z.literal("selected_senders"),
+    skipInbox: z.boolean().default(false),
     source: organizationViewDraftSourceSchema.omit({ kind: true }).extend({
       kind: z.literal("sender_selection"),
     }).strict(),
@@ -140,6 +142,7 @@ export type OrganizationViewPreparationInput = z.infer<typeof organizationViewPr
 
 export const organizationViewDraftInputSchema = z.object({
   mode: z.enum(["create", "update"]),
+  skipInbox: z.boolean().default(false),
   viewId: identifierSchema.nullable(),
   viewRevision: z.number().int().positive().nullable(),
   source: organizationViewDraftSourceSchema,
@@ -209,6 +212,7 @@ export const organizationViewResultProvenanceSchema = z.object({
 export type OrganizationViewResultProvenance = z.infer<typeof organizationViewResultProvenanceSchema>;
 
 export const organizationViewSchema = z.object({
+  skipInbox: z.boolean().default(false),
   id: identifierSchema,
   workspaceId: identifierSchema,
   name: nonEmptyStringSchema.max(120),
@@ -223,6 +227,7 @@ export const organizationViewSchema = z.object({
 export type OrganizationView = z.infer<typeof organizationViewSchema>;
 
 export const organizationViewCreateRequestSchema = z.object({
+  skipInbox: z.boolean().default(false),
   idempotencyKey: identifierSchema,
   expectedWorkspaceRevision: z.number().int().positive(),
   name: nonEmptyStringSchema.max(120),
@@ -238,6 +243,7 @@ export const organizationViewUpdateRequestSchema = z.object({
   expectedWorkspaceRevision: z.number().int().positive(),
   expectedRevision: z.number().int().positive(),
   patch: z.object({
+    skipInbox: z.boolean().optional(),
     name: nonEmptyStringSchema.max(120).optional(),
     description: z.string().trim().max(500).optional(),
     color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),

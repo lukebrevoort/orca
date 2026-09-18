@@ -55,6 +55,12 @@ describe("App", () => {
     expect(isSessionUnauthorizedError(new ApiRequestError(401, "Authentication required", "unauthorized"))).toBe(true);
   });
 
+  test("offers retry rather than reconnect for temporary sync failures", () => {
+    const html = renderToStaticMarkup(<InboxSyncAlert errorMessage="Sync temporarily unavailable" errorStatus={502} onRetry={() => {}} />);
+    expect(html).toContain("Try again");
+    expect(html).not.toContain("Reconnect Gmail");
+  });
+
   test("renders the Gmail reconnect action in the top sync alert", () => {
     const html = renderToStaticMarkup(<InboxSyncAlert errorMessage="Could not refresh Gmail just now." errorStatus={401} />);
 
