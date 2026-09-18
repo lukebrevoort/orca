@@ -1992,7 +1992,7 @@ export function InboxApp({
         setReaderStatus("ready");
       })
       .catch((error) => {
-        if (!active || cached) return;
+        if (!active || cached || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
       });

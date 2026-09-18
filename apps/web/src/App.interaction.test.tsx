@@ -2842,12 +2842,13 @@ describe("Inbox reader viewport restoration", () => {
       expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
 
       await act(async () => {
-        detailResolvers[0]!(await detailResponse(selectedMessage.subject));
+        detailResolvers[0]!(apiError(500, "stale_detail_failure", "The superseded detail request failed late"));
         await Promise.resolve();
         await Promise.resolve();
       });
       for (let index = 0; index < 5; index += 1) await waitFor(0);
       expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedSubject);
+      expect(browserWindow.document.querySelector(".reader-state")).toBeNull();
     } finally {
       globalThis.fetch = originalFetch;
     }
