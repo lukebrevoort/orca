@@ -45,6 +45,7 @@ import { TopLayer, useTopLayerActive } from "./top-layer";
 import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
 import { isMailSearchResultReader, openMailSearch, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import { recentThreadReferences, ThreadDetailCache } from "./thread-detail-cache";
 import {
   SurfaceHistory,
   canRestoreSurfaceFocus,
@@ -83,6 +84,10 @@ const readerDensityHint = "Calm gives each message more room. Compact fits more 
 type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
+
+const recentThreadCacheSize = 30;
+const threadDetailFreshnessMs = 30_000;
+const recentThreadPrefetchDelayMs = 100;
 
 const pinMailboxOptions: Array<{ id: PinMailbox; label: string }> = [
   { id: "inbox", label: "Inbox" },
@@ -1382,6 +1387,8 @@ export function InboxApp({
   const [mailboxRefreshGeneration, setMailboxRefreshGeneration] = useState(0);
   const readerMailboxSnapshotRef = useRef<{ selectionKey: string; version: string } | null>(null);
   const readerSilentRequestRef = useRef<{ selectionKey: string; version: string } | null>(null);
+  const threadDetailCacheRef = useRef<ThreadDetailCache | null>(null);
+  if (!threadDetailCacheRef.current) threadDetailCacheRef.current = new ThreadDetailCache(recentThreadCacheSize);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
@@ -1933,6 +1940,23 @@ export function InboxApp({
   ])).join("\n"), [selectedThreadMessages]);
 
   useEffect(() => {
+    if (demoMode || allMailMessages.length === 0) return;
+    let active = true;
+    const references = recentThreadReferences(allMailMessages, recentThreadCacheSize);
+    const timer = setTimeout(() => {
+      void threadDetailCacheRef.current?.prefetch(
+        references,
+        (reference) => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+        { concurrency: 3, shouldContinue: () => active },
+      );
+    }, recentThreadPrefetchDelayMs);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [allMailMessages, demoMode]);
+
+  useEffect(() => {
     if (!selectedThreadId || !readerAccountId || !account) {
       readerMailboxSnapshotRef.current = null;
       setThreadDetail(null);
@@ -1952,22 +1976,35 @@ export function InboxApp({
       return;
     }
 
-    const controller = new AbortController();
-    setThreadDetail(null);
-    setReaderStatus("loading");
+    const reference = { accountId: readerAccountId, threadId: selectedThreadId };
+    const cache = threadDetailCacheRef.current!;
+    const cached = cache.peek(reference);
+    let active = true;
+    if (cached) {
+      setThreadDetail(cached.detail);
+      setReaderStatus("ready");
+    } else {
+      setThreadDetail(null);
+      setReaderStatus("loading");
+    }
     setReaderError(null);
-    fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
+    if (cached && cache.isFresh(reference, threadDetailFreshnessMs)) return;
+    cache.load(
+      reference,
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      { refresh: Boolean(cached) },
+    )
       .then((detail) => {
-        if (controller.signal.aborted) return;
+        if (!active) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
       })
       .catch((error) => {
-        if (controller.signal.aborted) return;
+        if (!active || cached) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
       });
-    return () => controller.abort();
+    return () => { active = false; };
   }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
 
   useEffect(() => {
@@ -1984,12 +2021,17 @@ export function InboxApp({
       return;
     }
 
-    const controller = new AbortController();
+    let active = true;
     const request = { selectionKey, version: selectedThreadVersion };
+    const reference = { accountId: readerAccountId, threadId: selectedThreadId };
     readerSilentRequestRef.current = request;
-    fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
+    threadDetailCacheRef.current!.load(
+      reference,
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      { refresh: true },
+    )
       .then((detail) => {
-        if (controller.signal.aborted || readerSilentRequestRef.current !== request) return;
+        if (!active || readerSilentRequestRef.current !== request) return;
         setThreadDetail(detail);
         readerMailboxSnapshotRef.current = request;
       })
@@ -2000,7 +2042,7 @@ export function InboxApp({
         if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
       });
     return () => {
-      controller.abort();
+      active = false;
       if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
     };
   }, [demoMode, mailboxRefreshGeneration, readerAccountId, readerStatus, selectedThreadId, selectedThreadVersion, threadDetail]);
@@ -3217,7 +3259,10 @@ export function InboxApp({
               onSaveReminder={saveReminder}
               onFinishReminder={finishReminder}
               onBack={closeThread}
-              onRetry={() => setReaderRefreshKey((key) => key + 1)}
+              onRetry={() => {
+                if (selectedThreadId && readerAccountId) threadDetailCacheRef.current?.invalidate({ accountId: readerAccountId, threadId: selectedThreadId });
+                setReaderRefreshKey((key) => key + 1);
+              }}
               onSent={reconcileSentMessage}
               status={readerStatus}
             />

@@ -2419,6 +2419,35 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector(".reader-kicker")?.textContent).toStartWith(`${label} ·`);
   }
 
+  test("opens a recently prefetched conversation without showing Reader loading", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let threadReadCount = 0;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) threadReadCount += 1;
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 20 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 20 && threadReadCount < 1; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+
+      const row = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+      await act(async () => row.click());
+
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(selectedMessage.subject);
+      expect(threadReadCount).toBe(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = inboxFixture[0]!;

@@ -5,6 +5,7 @@ import {
   desktopDestinationFromLocation,
   desktopDestinationHref,
   desktopDestinationUrl,
+  formatNavigationCount,
   parseDesktopDestination,
   readSpacePreferences,
   spacePreferencesKey,
@@ -17,6 +18,13 @@ const collections: Collection[] = [
 ];
 
 describe("shared desktop navigation contract", () => {
+  test("caps three-digit navigation counts without exposing the exact total", () => {
+    expect(formatNavigationCount(0)).toBe("0");
+    expect(formatNavigationCount(99)).toBe("99");
+    expect(formatNavigationCount(100)).toBe("99+");
+    expect(formatNavigationCount(12_450)).toBe("99+");
+  });
+
   test("parses one destination grammar and serializes stable production and preview URLs", () => {
     expect(parseDesktopDestination("destination:client-id")).toBe("destination:client-id");
     expect(parseDesktopDestination("destination:")).toBeNull();

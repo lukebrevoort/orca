@@ -856,7 +856,7 @@ for (const entry of ["focus", "interval", "manual"] as const) {
     const refreshed = Date.now() + 2000;
     while (!document.querySelector(".content-pane")?.textContent?.includes("Incoming Quiet mail") && Date.now() < refreshed) await settle();
     expect(document.querySelector(".content-pane")?.textContent).toContain("Incoming Quiet mail");
-    expect([...document.querySelectorAll(".desktop-sidebar-item")].map(b => b.textContent)).toContain("Quiet106");
+    expect([...document.querySelectorAll(".desktop-sidebar-item")].map(b => b.textContent)).toContain("Quiet99+");
     expect(document.querySelector<HTMLButtonElement>(".refresh-button")?.disabled).toBe(false);
     expect(button("Load more messages").disabled).toBe(false);
     await click("Load more messages");

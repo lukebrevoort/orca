@@ -3,7 +3,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragE
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { GlobalMailSearch, openMailSearch } from "./global-search";
-import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, readSpacePreferences, useOnlineStatus, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
+import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, formatNavigationCount, readSpacePreferences, useOnlineStatus, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
 import { OrganizationAuthorityError, OrganizationAuthorityProvider, OrganizationRecoveryBanner, useOrganizationAuthority } from "./organization-authority";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace, type ViewPreviewEvidenceState } from "./organization-views";
@@ -40,13 +40,13 @@ function OrcaBlackMark() {
 
 function SidebarItem({ active, count, icon, label, onClick }: { active: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
   return <button aria-current={active ? "page" : undefined} className="desktop-sidebar-item" onClick={onClick} type="button">
-    {icon}<span>{label}</span>{count !== undefined ? <small>{count}</small> : null}
+    {icon}<span>{label}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
   </button>;
 }
 
 function MobileMenuItem({ active = false, count, icon, label, onClick }: { active?: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
   return <button aria-current={active ? "page" : undefined} className="desktop-mobile-menu-item" onClick={onClick} role="menuitem" type="button">
-    {icon}<span>{label}</span>{count !== undefined ? <small>{count}</small> : null}
+    {icon}<span>{label}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
   </button>;
 }
 

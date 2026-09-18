@@ -40,6 +40,10 @@ export type SidebarNavigationProjection = {
   spaces: WorkflowSpace[];
 };
 
+export function formatNavigationCount(count: number) {
+  return count >= 100 ? "99+" : String(Math.max(0, count));
+}
+
 type BuiltInSpaceId = "focus" | "signals" | "quiet" | "later";
 
 const builtInSpaceIds: BuiltInSpaceId[] = ["later"];
