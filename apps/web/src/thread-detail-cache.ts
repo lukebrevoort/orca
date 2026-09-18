@@ -65,6 +65,14 @@ export class ThreadDetailCache {
     if (cached) cached.stale = true;
   }
 
+  currentGeneration(reference: ThreadReference) {
+    return this.generations.get(cacheKey(reference)) ?? 0;
+  }
+
+  isCurrentGeneration(reference: ThreadReference, generation: number) {
+    return this.currentGeneration(reference) === generation;
+  }
+
   load(
     reference: ThreadReference,
     loader: () => Promise<ThreadDetail>,

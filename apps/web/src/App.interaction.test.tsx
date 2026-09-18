@@ -2522,6 +2522,94 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
+  test("does not let an older foreground detail overwrite a newer mailbox-version response", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const mailboxMessages = [
+      selectedMessage,
+      { ...selectedMessage, subject: `${selectedMessage.subject} — mailbox v1`, snippet: `${selectedMessage.snippet} First update.` },
+      { ...selectedMessage, subject: `${selectedMessage.subject} — mailbox v2`, snippet: `${selectedMessage.snippet} Second update.` },
+    ];
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let mailboxVersion = 0;
+    let updatedInboxReads = 0;
+    let threadReadCount = 0;
+    const detailResolvers: Array<(response: Response) => void> = [];
+
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox" && mailboxVersion > 0) {
+        updatedInboxReads += 1;
+        return jsonResponse({
+          accounts: [accountFixture],
+          messages: [mailboxMessages[mailboxVersion]!],
+          nextCursor: null,
+          counts: {
+            attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+            classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+          },
+        });
+      }
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
+        threadReadCount += 1;
+        if (threadReadCount > 1) return new Promise<Response>((resolve) => detailResolvers.push(resolve));
+      }
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    const detailResponse = async (message: InboxMessage) => {
+      const response = await baseFetch(`/v1/threads/${encodeURIComponent(selectedMessage.threadId)}?accountId=${encodeURIComponent(selectedMessage.accountId)}`);
+      const detail = await response.json() as ThreadDetail;
+      return jsonResponse({
+        ...detail,
+        thread: { ...detail.thread, subject: message.subject },
+        messages: detail.messages.map((item) => ({ ...item, subject: message.subject, snippet: message.snippet, bodyText: message.snippet })),
+      });
+    };
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 30 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 30 && (threadReadCount < 1 || (browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement | null)?.disabled); index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+      const refreshButton = () => browserWindow.document.querySelector(".refresh-button") as unknown as HTMLButtonElement;
+
+      mailboxVersion = 1;
+      await act(async () => refreshButton().click());
+      for (let index = 0; index < 30 && (updatedInboxReads < 1 || refreshButton().disabled); index += 1) await waitFor(0);
+      await act(async () => (browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement).click());
+      for (let index = 0; index < 30 && threadReadCount < 2; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(threadReadCount).toBe(2);
+
+      mailboxVersion = 2;
+      const inboxReadsBeforeV2 = updatedInboxReads;
+      await act(async () => refreshButton().click());
+      for (let index = 0; index < 30 && (updatedInboxReads === inboxReadsBeforeV2 || threadReadCount < 3); index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(3);
+
+      await act(async () => {
+        detailResolvers[1]!(await detailResponse(mailboxMessages[2]!));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 30 && browserWindow.document.querySelector("#reader-title")?.textContent !== mailboxMessages[2]!.subject; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(mailboxMessages[2]!.subject);
+
+      await act(async () => {
+        detailResolvers[0]!(await detailResponse(mailboxMessages[1]!));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 5; index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(mailboxMessages[2]!.subject);
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = inboxFixture[0]!;

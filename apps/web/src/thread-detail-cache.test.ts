@@ -103,10 +103,16 @@ describe("recent thread detail cache", () => {
     const reference = { accountId: "account", threadId: "thread-1" };
 
     const older = cache.load(reference, loader, { version: "mailbox-v1" });
+    const olderGeneration = cache.currentGeneration(reference);
     const newer = cache.load(reference, loader, { version: "mailbox-v2" });
+    const newerGeneration = cache.currentGeneration(reference);
     const newest = cache.load(reference, loader, { version: "mailbox-v3" });
+    const newestGeneration = cache.currentGeneration(reference);
 
     expect(reads).toBe(3);
+    expect(cache.isCurrentGeneration(reference, olderGeneration)).toBe(false);
+    expect(cache.isCurrentGeneration(reference, newerGeneration)).toBe(false);
+    expect(cache.isCurrentGeneration(reference, newestGeneration)).toBe(true);
     resolvers[0]!(detail(1));
     await older;
     expect(cache.peek(reference)).toBeNull();

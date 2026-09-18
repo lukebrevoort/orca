@@ -1979,13 +1979,15 @@ export function InboxApp({
     }
     setReaderError(null);
     if (cached && cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion)) return;
-    cache.load(
+    const request = cache.load(
       reference,
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
       { refresh: Boolean(cached), version: selectedThreadVersion },
-    )
+    );
+    const requestGeneration = cache.currentGeneration(reference);
+    request
       .then((detail) => {
-        if (!active) return;
+        if (!active || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
       })
@@ -2015,13 +2017,16 @@ export function InboxApp({
     const request = { selectionKey, version: selectedThreadVersion };
     const reference = { accountId: readerAccountId, threadId: selectedThreadId };
     readerSilentRequestRef.current = request;
-    threadDetailCacheRef.current!.load(
+    const cache = threadDetailCacheRef.current!;
+    const detailRequest = cache.load(
       reference,
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
       { refresh: true, version: selectedThreadVersion },
-    )
+    );
+    const requestGeneration = cache.currentGeneration(reference);
+    detailRequest
       .then((detail) => {
-        if (!active || readerSilentRequestRef.current !== request) return;
+        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
         readerMailboxSnapshotRef.current = request;
       })
