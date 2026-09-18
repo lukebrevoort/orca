@@ -8,6 +8,7 @@ import {
   desktopDestinationFromLocation,
   desktopDestinationHref,
   desktopDestinationUrl,
+  formatNavigationCount,
   parseDesktopDestination,
   readSpacePreferences,
   spacePreferencesKey,
@@ -20,6 +21,13 @@ const collections: Collection[] = [
 ];
 
 describe("shared desktop navigation contract", () => {
+  test("caps three-digit navigation counts without exposing the exact total", () => {
+    expect(formatNavigationCount(0)).toBe("0");
+    expect(formatNavigationCount(99)).toBe("99");
+    expect(formatNavigationCount(100)).toBe("99+");
+    expect(formatNavigationCount(12_450)).toBe("99+");
+  });
+
   test("legacy Organization links open sender management while saved-view authoring stays reachable", () => {
     expect(parseDesktopDestination("organization")).toBe("attention");
     expect(desktopDestinationFromLocation({ pathname: "/", search: "?destination=organization" })).toBe("attention");
