@@ -3810,7 +3810,13 @@ textarea {
 .reader-state button { background: var(--orca-control); border: 0; border-radius: 7px; color: var(--orca-control-ink); cursor: pointer; font-size: 13px; font-weight: 700; padding: 10px 14px; }
 
 .reader-loading { animation: reader-enter .45s ease both; }
-.reader-loading .reader-heading h1 { color: color-mix(in srgb, var(--orca-canvas-ink) 58%, transparent); }
+.reader-loading .reader-heading { padding-bottom: 28px; padding-top: 28px; }
+.reader-loading .reader-heading h1 { color: var(--orca-canvas-ink); }
+.reader-loading .reader-participants { color: var(--orca-muted); }
+.reader-loading-preview { border-bottom: 1px solid var(--orca-border); border-top: 1px solid var(--orca-border); padding: 30px 0 34px; }
+.reader-loading-preview > p { color: var(--orca-canvas-ink); font-family: var(--orca-font-display); font-size: clamp(17px, 1.8vw, 22px); line-height: 1.65; margin: 18px 0 0; max-width: 760px; }
+.reader-loading-status { align-items: center; color: var(--orca-muted); display: flex; font-size: 10px; font-weight: 750; gap: 8px; letter-spacing: .08em; text-transform: uppercase; }
+.reader-loading-status > span { animation: reader-pulse 1.2s ease-in-out infinite; background: var(--orca-accent); border-radius: 50%; height: 7px; width: 7px; }
 .reader-loading-line { animation: reader-pulse 1.5s ease-in-out infinite; background: var(--orca-surface-hover); border-radius: 4px; height: 12px; margin-top: 54px; width: 84%; }
 .reader-loading-line-short { margin-top: 15px; width: 57%; }
 
@@ -3821,13 +3827,15 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .reader-document,
   :root:not([data-motion="full"]) .reader-loading,
-  :root:not([data-motion="full"]) .reader-loading-line { animation: none !important; }
+  :root:not([data-motion="full"]) .reader-loading-line,
+  :root:not([data-motion="full"]) .reader-loading-status > span { animation: none !important; }
   :root:not([data-motion="full"]) .reader-back { transition: none; }
 }
 
 :root[data-motion="reduced"] .reader-document,
 :root[data-motion="reduced"] .reader-loading,
-:root[data-motion="reduced"] .reader-loading-line { animation: none !important; }
+:root[data-motion="reduced"] .reader-loading-line,
+:root[data-motion="reduced"] .reader-loading-status > span { animation: none !important; }
 :root[data-motion="reduced"] .reader-back { transition: none; }
 
 @media (max-width: 760px) {

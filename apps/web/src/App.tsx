@@ -5811,7 +5811,19 @@ function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish
 }
 
 function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
-  return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
+  const preview = messages[messages.length - 1] ?? null;
+  return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite">
+    <header className="reader-heading">
+      <p className="reader-kicker">Opening conversation · {messages.length || 1} {messages.length === 1 ? "message" : "messages"}</p>
+      <h1 id="reader-title">{title}</h1>
+      {preview ? <p className="reader-participants">{preview.from.name ?? preview.from.email} · {formatReceivedAt(preview.receivedAt)}</p> : null}
+    </header>
+    {preview ? <div className="reader-loading-preview">
+      <div className="reader-loading-status"><span aria-hidden="true" />Fetching the full conversation</div>
+      <p>{preview.snippet || "The message preview is ready. Its full contents are still loading."}</p>
+    </div> : <><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /></>}
+    <span className="visually-hidden">Loading {messages.length || 1} message conversation</span>
+  </section>;
 }
 
 function SenderAttentionControl({ message, reader = false }: { message: SenderAttentionControlTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
