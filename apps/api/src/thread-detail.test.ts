@@ -66,6 +66,11 @@ test("thread detail loads bodies once while preserving multi-message labels, att
     const headers = { cookie: `orca_session=${session.token}` };
     const response = await app.request("/v1/threads/thread?accountId=a", { headers });
     assert.equal(response.status, 200);
+    assert.equal(
+      observed.some(({ query }) => /organization_thread_lane_states/i.test(query)),
+      false,
+      "opening one thread must not enumerate the account's Organization lane snapshot",
+    );
     const detail = threadDetailSchema.parse(await response.json());
     assert.deepEqual(detail.messages.map((message) => message.id), ["a", "b", "c", "d"]);
     assert.deepEqual(detail.messages.map((message) => [...message.labels].sort()), [["Inbox", "Work"], ["Work"], [], []]);

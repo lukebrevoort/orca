@@ -2577,6 +2577,43 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector(".reader-kicker")?.textContent).toStartWith(`${label} ·`);
   }
 
+  test("keeps the selected message readable while an uncached conversation is opening", async () => {
+    const originalFetch = globalThis.fetch;
+    const selectedMessage = {
+      ...inboxFixture[0]!,
+      unread: false,
+      snippet: "The inbox preview stays visible while the full conversation is fetched.",
+    };
+    let resolveThread!: (response: Response) => void;
+    const delayedThread = new Promise<Response>((resolve) => { resolveThread = resolve; });
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) return delayedThread;
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 20 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await act(async () => (browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement).click());
+
+      const loading = browserWindow.document.querySelector(".reader-loading");
+      expect(loading).not.toBeNull();
+      expect(loading?.textContent).toContain(selectedMessage.subject);
+      expect(loading?.textContent).toContain(selectedMessage.from.name ?? selectedMessage.from.email);
+      expect(loading?.textContent).toContain(selectedMessage.snippet);
+      expect(loading?.textContent).toContain("Fetching the full conversation");
+
+      await act(async () => {
+        resolveThread(await baseFetch(`/v1/threads/${encodeURIComponent(selectedMessage.threadId)}?accountId=${encodeURIComponent(selectedMessage.accountId)}`));
+        await Promise.resolve();
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("opens a recently prefetched conversation without showing Reader loading", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = { ...inboxFixture[0]!, unread: false };

@@ -2290,15 +2290,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
-          const organized = createOrganization(createSqliteOrganizationRepository(db)).query({
-            scope: {
-              actor: { id: c.get("auth").userId, type: "human" },
-              workspaceId: c.get("auth").userId,
-              accountIds: [account.id],
-            },
-            query: { accountIds: [account.id], threadId: c.req.param("threadId"), attention: "all", classification: "all", limit: 1 },
-          });
-          if (organized.threads.length === 0) throw new McpReadError("not_found", "Thread not found");
           return jsonWithSchema(c, threadDetailSchema, readThreadDetail(
             db,
             account,
