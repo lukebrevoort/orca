@@ -2000,7 +2000,10 @@ export function InboxApp({
   }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
 
   useEffect(() => {
-    if (!selectedThreadId || !readerAccountId || !account || readerStatus !== "ready" || !threadDetail) return;
+    if (!selectedThreadId || !readerAccountId || !account) return;
+    const hasVisibleDetail = readerStatus === "ready" && Boolean(threadDetail);
+    const isAwaitingDetail = readerStatus === "loading" && !threadDetail;
+    if (!hasVisibleDetail && !isAwaitingDetail) return;
     const selectionKey = accountScopedIdentityKey(readerAccountId, selectedThreadId);
     const previousSnapshot = readerMailboxSnapshotRef.current;
     if (!previousSnapshot || previousSnapshot.selectionKey !== selectionKey || previousSnapshot.version === selectedThreadVersion) return;
@@ -2009,6 +2012,7 @@ export function InboxApp({
 
     if (demoMode) {
       setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
+      setReaderStatus("ready");
       readerMailboxSnapshotRef.current = { selectionKey, version: selectedThreadVersion };
       return;
     }
@@ -2028,10 +2032,13 @@ export function InboxApp({
       .then((detail) => {
         if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
+        setReaderStatus("ready");
         readerMailboxSnapshotRef.current = request;
       })
-      .catch(() => {
-        // Keep the already loaded conversation usable when background revalidation fails.
+      .catch((error) => {
+        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration) || hasVisibleDetail) return;
+        setReaderStatus("error");
+        setReaderError(getErrorMessage(error));
       })
       .finally(() => {
         if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
