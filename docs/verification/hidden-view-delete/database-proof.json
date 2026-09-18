@@ -1,0 +1,52 @@
+{
+  "mailAndProviderTablesUnchanged": true,
+  "comparedTables": [
+    "emails",
+    "threads",
+    "email_labels",
+    "labels",
+    "oauth_accounts",
+    "contacts",
+    "sender_attention_rules",
+    "thread_attention_overrides",
+    "organization_thread_lane_states",
+    "organization_lane_policies",
+    "message_drafts",
+    "collection_threads",
+    "collections"
+  ],
+  "deletedView": {
+    "id": "view_44181a05-ccab-4d1f-9872-5beb7c3c092e",
+    "name": "Maya correspondence",
+    "skipInboxBefore": true
+  },
+  "remainingViewUnchanged": "view_5baa5d48-35e6-4b03-a177-df46263eceed",
+  "beforeInboxPageCount": 9,
+  "afterInboxPageCount": 100,
+  "matchingThreadReturnedToInbox": "work-0",
+  "currentViews": [
+    {
+      "skipInbox": false,
+      "id": "view_5baa5d48-35e6-4b03-a177-df46263eceed",
+      "workspaceId": "reviewer",
+      "name": "Project senders",
+      "description": "",
+      "color": "#0b9b84",
+      "position": 0,
+      "definition": {
+        "revision": 1,
+        "accountIds": [
+          "work"
+        ],
+        "sender": {
+          "addresses": [
+            "sender0@example.com"
+          ]
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-16T15:28:54.000Z",
+      "updatedAt": "2026-09-16T15:28:54.000Z"
+    }
+  ]
+}

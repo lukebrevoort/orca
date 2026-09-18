@@ -38,3 +38,26 @@ describe("BRE-313 Views migration", () => {
     }
   });
 });
+
+test("Inbox policy upgrades old views default-off and persists opt-in across reopen", () => {
+  const directory = mkdtempSync(join(tmpdir(), "orca-view-policy-migration-"));
+  const path = join(directory, "views.sqlite");
+  const folder = resolve(import.meta.dir, "../../../drizzle");
+  let client = createDatabaseClient(path);
+  try {
+    const journal = JSON.parse(readFileSync(join(folder, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
+    for (const migration of journal.entries.filter(entry => entry.idx < 45)) client.sqlite.exec(readFileSync(join(folder, `${migration.tag}.sql`), "utf8"));
+    client.sqlite.exec(`INSERT INTO users(id,email) VALUES ('owner','owner@example.com');
+      INSERT INTO organization_views(workspace_id,id,name,color,position,definition) VALUES ('owner','old','Old','#0b9b84',0,'{"revision":1}');`);
+    client.sqlite.exec(readFileSync(join(folder, "0045_view_inbox_policy.sql"), "utf8"));
+    assert.deepEqual(client.sqlite.query("SELECT skip_inbox FROM organization_views WHERE id='old'").get(), { skip_inbox: 0 });
+    assert.throws(() => client.sqlite.exec("UPDATE organization_views SET skip_inbox=2"));
+    client.sqlite.exec("UPDATE organization_views SET skip_inbox=1 WHERE id='old'");
+    client.sqlite.close();
+    client = createDatabaseClient(path);
+    assert.deepEqual(client.sqlite.query("SELECT skip_inbox FROM organization_views WHERE id='old'").get(), { skip_inbox: 1 });
+  } finally {
+    client.sqlite.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

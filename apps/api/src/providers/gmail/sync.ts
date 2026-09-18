@@ -1025,7 +1025,7 @@ function mapGmailError(error: unknown): GmailSyncError {
   }
 
   if (error instanceof GmailApiError) {
-    if (error.status === 401 || error.status === 403) {
+    if (error.requiresReconnect) {
       return new GmailSyncError("Gmail credentials need to be refreshed", "provider_auth_error");
     }
 
@@ -1040,5 +1040,5 @@ function mapGmailError(error: unknown): GmailSyncError {
 }
 
 function isGmailAuthorizationError(error: unknown): error is GmailApiError {
-  return error instanceof GmailApiError && (error.status === 401 || error.status === 403);
+  return error instanceof GmailApiError && error.status === 401;
 }

@@ -1,3 +1,4 @@
+import { createDestinations } from "../../destinations/service.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1127,4 +1128,212 @@ describe("BRE-313 independent View lifecycle verification", () => {
     assert.equal(buildOrganizationViewDetailQuery(maximumKeys).params.length, organizationViewBounds.maximumResultsPerPage * 2);
     assert.throws(() => buildOrganizationViewDetailQuery([...maximumKeys, { accountId: "account_a", threadId: "thread_overflow" }]), /requires 1-100 page keys/);
   });
+});
+
+test("skipInbox roundtrips, excludes whole matching threads before pagination and preserves All Mail", { timeout: 30_000 }, async () => {
+  const { app, headers, path, ownerLane } = await setup();
+  const view = await createView(app, headers, { name: "Maya", skipInbox: true, definition: { revision: 1, accountIds: ["account_a"], sender: { addresses: ["maya@example.com"] } } });
+  assert.equal(view.skipInbox, true);
+  const db = createDatabaseClient(path);
+  try {
+    const reader = createMailboxReader(db.sqlite);
+    const authorization = { userId: "owner" };
+    const inbox = reader.read({ authorization, query: { destinationId: ownerLane, view: "all", limit: 1 } }).response;
+    assert.deepEqual(inbox.messages.map(m => m.id), ["message_account_b"]);
+    assert.equal(inbox.nextCursor, null);
+    assert.equal(inbox.counts.attention.all, 1);
+    assert.deepEqual(createDestinations(db.db, "owner").list().destinations.find(d => d.id === ownerLane)!.counts, { total: 1, unread: 1 });
+    assert.equal(reader.read({ authorization, query: { view: "normal", limit: 50 } }).response.messages.length, 1);
+    const all = reader.read({ authorization, query: { view: "all", limit: 50 } }).response;
+    assert.equal(all.messages.length, 4);
+  } finally { db.sqlite.close(); }
+});
+
+async function updatePolicyView(fixture: Awaited<ReturnType<typeof setup>>, view: OrganizationView, patch: unknown) {
+  const list = await (await fixture.app.request("/v1/organization/views", { headers: fixture.headers })).json();
+  const response = await fixture.app.request(`/v1/organization/views/${view.id}`, { method: "PATCH", headers: fixture.headers,
+    body: JSON.stringify({ idempotencyKey: crypto.randomUUID(), expectedWorkspaceRevision: list.workspaceRevision, expectedRevision: view.revision, patch }) });
+  assert.equal(response.status, 200, await response.clone().text());
+  return await response.json() as OrganizationView;
+}
+
+async function removePolicyView(fixture: Awaited<ReturnType<typeof setup>>, view: OrganizationView) {
+  const list = await (await fixture.app.request("/v1/organization/views", { headers: fixture.headers })).json();
+  const current = list.items.find((item: OrganizationView) => item.id === view.id);
+  const response = await fixture.app.request(`/v1/organization/views/${view.id}?expectedRevision=${current.revision}&expectedWorkspaceRevision=${list.workspaceRevision}&idempotencyKey=${crypto.randomUUID()}`, { method: "DELETE", headers: fixture.headers });
+  assert.equal(response.status, 204, await response.clone().text());
+}
+
+test("skipInbox preparation, toggle-only commits, replay binding and audit preserve authority", { timeout: 30_000 }, async () => {
+  const fixture = await setup();
+  const { app, headers, path } = fixture;
+  const post = (path: string, value: unknown) => app.request(path, { method: "POST", headers, body: JSON.stringify(value) });
+  const prepared = await (await post("/v1/organization/views/prepare", { kind: "selected_senders", skipInbox: true, source: { kind: "sender_selection", label: "Selection" }, identity: { name: "Maya" }, references: [{ accountId: "account_a", threadId: "thread_a", messageId: "message_maya" }] })).json();
+  assert.equal(prepared.draft.skipInbox, true);
+  const envelope = { draft: prepared.draft, expectedRevisions: { workspace: prepared.workspaceRevision, view: null }, retryKey: "skip-create" };
+  const savedResponse = await post("/v1/organization/views/commit", envelope);
+  assert.equal(savedResponse.status, 200, await savedResponse.clone().text());
+  const saved = await savedResponse.json();
+  assert.equal(saved.view.skipInbox, true);
+  assert.equal((await post("/v1/organization/views/commit", envelope)).status, 200);
+  assert.equal((await post("/v1/organization/views/commit", { ...envelope, draft: { ...envelope.draft, skipInbox: false } })).status, 409);
+  const edit = await (await post("/v1/organization/views/prepare", { kind: "saved_view", viewId: saved.view.id })).json();
+  assert.equal(edit.draft.skipInbox, true);
+  const unchanged = { draft: edit.draft, expectedRevisions: { workspace: edit.workspaceRevision, view: saved.view.revision }, retryKey: "skip-no-op" };
+  assert.equal((await post("/v1/organization/views/commit", unchanged)).status, 400);
+  const toggledResponse = await post("/v1/organization/views/commit", { ...unchanged, retryKey: "skip-toggle", draft: { ...edit.draft, skipInbox: false } });
+  assert.equal(toggledResponse.status, 200, await toggledResponse.clone().text());
+  const toggled = await toggledResponse.json();
+  assert.equal(toggled.view.skipInbox, false);
+  assert.equal(toggled.view.revision, saved.view.revision + 1);
+  const db = createDatabaseClient(path);
+  try {
+    const audit = db.sqlite.query("SELECT before_json,after_json FROM organization_change_actions WHERE action_kind='view_update'").get() as { before_json: string; after_json: string };
+    assert.equal(JSON.parse(audit.before_json).skipInbox, true);
+    assert.equal(JSON.parse(audit.after_json).skipInbox, false);
+    assert.equal(createSqliteOrganizationViewsRepository(db.sqlite).get("owner", saved.view.id)!.skipInbox, false);
+  } finally { db.sqlite.close(); }
+});
+
+test("skipInbox overlap, off, delete and scope edits restore only eligible mail without routing writes", { timeout: 30_000 }, async () => {
+  const fixture = await setup();
+  const { app, headers, path, ownerLane } = fixture;
+  const db = createDatabaseClient(path);
+  try {
+    const reader = createMailboxReader(db.sqlite);
+    const inbox = () => reader.read({ authorization: { userId: "owner" }, query: { view: "all", destinationId: ownerLane, limit: 50 } }).response;
+    const tables = ["emails", "threads", "oauth_accounts", "organization_thread_lane_states", "organization_destination_bindings", "sender_attention_rules", "thread_attention_overrides"];
+    const snapshot = () => tables.map(table => db.sqlite.query(`SELECT * FROM ${table} ORDER BY rowid`).all());
+    const before = snapshot();
+    const definition = { revision: 1, sender: { addresses: ["maya@example.com"] } };
+    let first = await createView(app, headers, { name: "First", skipInbox: true, definition });
+    const second = await createView(app, headers, { name: "Second", skipInbox: true, definition, position: 1 });
+    assert.equal(inbox().messages.length, 1);
+    const oldCursor = reader.read({ authorization: { userId: "owner" }, query: { view: "all", limit: 1 } }).response.nextCursor!;
+    first = await updatePolicyView(fixture, first, { skipInbox: false });
+    assert.equal(inbox().messages.length, 1);
+    assert.throws(() => reader.read({ authorization: { userId: "owner" }, query: { view: "all", limit: 1, cursor: oldCursor } }), MailboxCursorError);
+    await removePolicyView(fixture, second);
+    assert.equal(inbox().messages.length, 4);
+    first = await updatePolicyView(fixture, first, { skipInbox: true });
+    assert.equal(inbox().messages.length, 1);
+    const revisionBefore = db.sqlite.query("SELECT account_id,revision FROM mailbox_revisions ORDER BY account_id").all() as Array<{ account_id: string; revision: number }>;
+    first = await updatePolicyView(fixture, first, { definition: { revision: 1, accountIds: ["account_b"], sender: { addresses: ["ari@example.com"] } } });
+    assert.equal(inbox().messages.length, 3);
+    const revisionAfter = db.sqlite.query("SELECT account_id,revision FROM mailbox_revisions ORDER BY account_id").all() as typeof revisionBefore;
+    for (const old of revisionBefore) assert.equal(revisionAfter.find(row => row.account_id === old.account_id)!.revision > old.revision, old.account_id !== "account_foreign");
+    await removePolicyView(fixture, first);
+    assert.equal(inbox().messages.length, 4);
+    assert.deepEqual(snapshot(), before);
+  } finally { db.sqlite.close(); }
+});
+
+test("skipInbox manual Inbox and safety locks win, clearing overrides resumes the policy", { timeout: 30_000 }, async () => {
+  const { app, headers, path, ownerLane } = await setup();
+  await createView(app, headers, { name: "Maya", skipInbox: true, definition: { revision: 1, sender: { addresses: ["maya@example.com"] } } });
+  const db = createDatabaseClient(path);
+  try {
+    const reader = createMailboxReader(db.sqlite);
+    const inbox = () => reader.read({ authorization: { userId: "owner" }, query: { view: "all", destinationId: ownerLane, limit: 50 } }).response.messages;
+    db.sqlite.query("UPDATE organization_thread_lane_states SET manual_override_lane_id=? WHERE workspace_id='owner' AND account_id='account_a' AND thread_id='thread_a'").run(ownerLane);
+    db.sqlite.query("UPDATE organization_thread_lane_states SET safety_locked=1,safety_lock_lane_id=? WHERE workspace_id='owner' AND account_id='account_a' AND thread_id='thread_b'").run(ownerLane);
+    assert.equal(inbox().length, 4);
+    assert.equal(createDestinations(db.db, "owner").list().destinations.find(d => d.id === ownerLane)!.counts.total, 4);
+    db.sqlite.query("UPDATE organization_thread_lane_states SET manual_override_lane_id=NULL,safety_locked=0,safety_lock_lane_id=NULL WHERE workspace_id='owner'").run();
+    assert.deepEqual(inbox().map(m => m.id), ["message_account_b"]);
+  } finally { db.sqlite.close(); }
+});
+
+test("skipInbox uses same-message predicates for future mail across owned accounts", { timeout: 30_000 }, async () => {
+  const { app, headers, path, ownerLane } = await setup();
+  const db = createDatabaseClient(path);
+  try {
+    const definition = { revision: 1, sender: { addresses: ["github@example.com"] }, humanSignal: { minimumScore: 7 }, date: { receivedAfter: "2026-08-26T00:00:00.000Z" } };
+    const view = await createView(app, headers, { name: "GitHub signal", skipInbox: true, definition });
+    const add = (accountId: string, id: string, threadId: string, address: string, score: number, date: string) => {
+      db.db.insert(threads).values({ accountId, id: threadId, providerThreadId: threadId, subject: "Future", latestReceivedAt: new Date(date) }).onConflictDoNothing().run();
+      db.db.insert(emails).values({ accountId, id, threadId, providerMessageId: id, fromAddress: address, receivedAt: new Date(date), humanSignal: score }).run();
+    };
+    add("account_a", "old-github", "same", "github@example.com", 9, "2026-08-25T18:00:00Z");
+    add("account_a", "new-other", "same", "other@example.com", 9, "2026-08-27T18:00:00Z");
+    add("account_b", "new-github", "same_b", "github@example.com", 9, "2026-08-27T18:00:00Z");
+    add("account_b", "reply", "same_b", "other@example.com", 1, "2026-08-27T19:00:00Z");
+    add("account_a", "low-github", "low", "github@example.com", 1, "2026-08-27T18:00:00Z");
+    const reader = createMailboxReader(db.sqlite);
+    const inbox = () => reader.read({ authorization: { userId: "owner" }, query: { view: "all", destinationId: ownerLane, limit: 50 } }).response.messages;
+    assert.ok(inbox().some(m => m.id === "old-github"));
+    assert.ok(inbox().some(m => m.id === "new-other"));
+    assert.ok(inbox().some(m => m.id === "low-github"));
+    assert.ok(!inbox().some(m => ["new-github", "reply"].includes(m.id)));
+    const results = await (await app.request(`/v1/organization/views/${view.id}/results?limit=50`, { headers })).json();
+    assert.deepEqual(results.items.map((item: { accountId: string; threadId: string }) => [item.accountId, item.threadId]), [["account_b", "same_b"]]);
+    add("account_a", "matching-later", "same", "github@example.com", 9, "2026-08-28T18:00:00Z");
+    assert.ok(!inbox().some(m => ["same", "same_b"].includes(m.threadId)));
+    const all = reader.read({ authorization: { userId: "owner" }, query: { view: "all", limit: 50 } }).response.messages;
+    assert.equal(all.length, 10);
+  } finally { db.sqlite.close(); }
+});
+
+test("skipInbox dynamic facet/workflow/context predicates track membership and invalidate cursors", { timeout: 30_000 }, async () => {
+  const { app, headers, path, ownerLane } = await setup();
+  const db = createDatabaseClient(path);
+  try {
+    const cases = [
+      { definition: { facetFilters: [{ facetId: "facet_owner", operator: "equals", value: "yes" }] },
+        insert: `INSERT INTO organization_thread_facet_values(workspace_id,facet_id,account_id,thread_id,value) VALUES ('owner','facet_owner','account_a','thread_a','"yes"')`,
+        update: `UPDATE organization_thread_facet_values SET value='"no"' WHERE workspace_id='owner'`,
+        remove: `DELETE FROM organization_thread_facet_values WHERE workspace_id='owner'` },
+      { definition: { workflowStateIds: ["workflow_owner"] },
+        insert: `INSERT INTO organization_thread_workflow_states(workspace_id,account_id,thread_id,state_id) VALUES ('owner','account_a','thread_a','workflow_owner')`,
+        update: `UPDATE organization_thread_workflow_states SET thread_id='thread_b' WHERE workspace_id='owner'`,
+        remove: `DELETE FROM organization_thread_workflow_states WHERE workspace_id='owner'` },
+      { definition: { contextFilters: [{ context: { contextTypeId: "context_type_owner", contextId: "context_owner" }, relationshipTypeId: "relationship_owner" }] },
+        insert: `INSERT INTO organization_thread_context_relationships(workspace_id,id,account_id,thread_id,context_type_id,context_id,relationship_type_id,direction) VALUES ('owner','edge','account_a','thread_a','context_type_owner','context_owner','relationship_owner','thread_to_context')`,
+        update: `UPDATE organization_thread_context_relationships SET thread_id='thread_b' WHERE workspace_id='owner'`,
+        remove: `DELETE FROM organization_thread_context_relationships WHERE workspace_id='owner'` },
+    ];
+    const reader = createMailboxReader(db.sqlite);
+    const authorization = { userId: "owner" };
+    const query = { view: "all" as const, destinationId: ownerLane, limit: 1 };
+    for (const [index, testCase] of cases.entries()) {
+      const view = await createView(app, headers, { name: `Dynamic ${index}`, position: index, skipInbox: true, definition: { revision: 1, ...testCase.definition } });
+      for (const mutation of [testCase.insert, testCase.update, testCase.remove]) {
+        const before = reader.read({ authorization, query }).response;
+        assert.ok(before.nextCursor);
+        db.sqlite.exec(mutation);
+        assert.throws(() => reader.read({ authorization, query: { ...query, cursor: before.nextCursor! } }), MailboxCursorError);
+        const visible = reader.read({ authorization, query: { ...query, limit: 50 } }).response.messages;
+        const results = await (await app.request(`/v1/organization/views/${view.id}/results?limit=50`, { headers })).json();
+        const hidden = new Set(results.items.map((item: { accountId: string; threadId: string }) => JSON.stringify([item.accountId, item.threadId])));
+        const all = reader.read({ authorization, query: { view: "all", limit: 50 } }).response.messages;
+        assert.deepEqual(visible.map(m => m.id), all.filter(m => !hidden.has(JSON.stringify([m.accountId, m.threadId]))).map(m => m.id));
+      }
+    }
+  } finally { db.sqlite.close(); }
+});
+
+test("skipInbox honors catalog normal mapping without hiding other destinations or capping views", { timeout: 30_000 }, async () => {
+  const { path, ownerLane } = await setup();
+  const db = createDatabaseClient(path);
+  try {
+    const destinations = createDestinations(db.db, "owner");
+    const created = destinations.create({ name: "Actual normal", expectedRevision: destinations.list().revision });
+    const normal = created.destinationId;
+    db.sqlite.query("INSERT INTO organization_destination_legacy(workspace_id,behavior,destination_id) VALUES ('owner','normal',?)").run(normal);
+    // Inbox follows the catalog's explicit normal mapping, not the different fallback.
+    db.sqlite.query("UPDATE organization_thread_lane_states SET primary_lane_id=?,placement_source='lane_policy' WHERE workspace_id='owner' AND thread_id='thread_a'").run(normal);
+    for (let index = 0; index < 125; index++) {
+      db.sqlite.query("INSERT INTO organization_views(workspace_id,id,name,color,position,definition,skip_inbox) VALUES ('owner',?,?,'#0b9b84',?,?,1)")
+        .run(`policy-${String(index).padStart(3, '0')}`, `Policy ${index}`, index, JSON.stringify({ revision: 1, sender: { addresses: [index === 124 ? "maya@example.com" : `nobody${index}@example.com`] } }));
+    }
+    const reader = createMailboxReader(db.sqlite);
+    const read = (destinationId?: string) => reader.read({ authorization: { userId: "owner" }, query: { view: "all", limit: 50, destinationId } }).response;
+    assert.equal(read(normal).messages.length, 0);
+    assert.equal(read(ownerLane).messages.length, 3);
+    assert.equal(read().messages.length, 4);
+    const catalog = destinations.list();
+    assert.equal(catalog.legacyDestinationIds.normal, normal);
+    assert.equal(catalog.destinations.find(d => d.id === normal)!.counts.total, 0);
+    assert.equal(catalog.destinations.find(d => d.id === ownerLane)!.counts.total, 3);
+  } finally { db.sqlite.close(); }
 });

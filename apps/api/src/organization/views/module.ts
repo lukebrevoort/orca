@@ -295,6 +295,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         viewRevision: null,
         source: parsed.source,
         identity: parsed.identity,
+        skipInbox: parsed.skipInbox,
         definition: parsed.definition,
         unsupportedClauses: parsed.unsupportedClauses,
       }), preparationNotices: [] };
@@ -308,6 +309,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         viewRevision: null,
         source: parsed.source,
         identity: parsed.identity,
+        skipInbox: parsed.skipInbox,
         definition: { revision: 1, accountIds: [resolved.accountId], sender: { addresses: resolved.addresses } },
         unsupportedClauses: [],
       }), preparationNotices: resolved.omittedSelfCount > 0 ? [{
@@ -325,6 +327,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       source: { kind: "saved_view", label: view.name },
       identity: { name: view.name, description: view.description, color: view.color, position: view.position },
       definition: view.definition,
+      skipInbox: view.skipInbox,
       unsupportedClauses: [],
     }), preparationNotices: [] };
   }
@@ -410,6 +413,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         viewRevision: request.draft.viewRevision,
         source: request.draft.source,
         identity: request.draft.identity,
+        skipInbox: request.draft.skipInbox,
         definition: request.draft.definition,
         unsupportedClauses: request.draft.unsupportedClauses,
       }, false);
@@ -430,7 +434,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
               idempotencyKey: request.retryKey,
               expectedWorkspaceRevision: request.expectedRevisions.workspace,
               expectedRevision: request.expectedRevisions.view,
-              patch: { ...derived.identity, definition: derived.definition },
+              patch: { ...derived.identity, skipInbox: derived.skipInbox, definition: derived.definition },
             });
             return { kind: "update" as const, viewId: derived.viewId, request: mutationRequest, boundRequest: { kind: "update", viewId: derived.viewId, request: mutationRequest } };
           })()
@@ -439,6 +443,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
               idempotencyKey: request.retryKey,
               expectedWorkspaceRevision: request.expectedRevisions.workspace,
               ...derived.identity,
+              skipInbox: derived.skipInbox,
               definition: derived.definition,
             });
             return { kind: "create" as const, request: mutationRequest, boundRequest: { kind: "create", request: mutationRequest } };
@@ -463,8 +468,8 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         if (!saved) {
           const current = repository.get(input.scope.workspaceId, mutation.viewId);
           if (!current) throw new OrganizationViewNotFoundError();
-          const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, definition: current.definition })
-            === canonicalOrganizationJson({ ...derived.identity, definition: derived.definition });
+          const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, skipInbox: current.skipInbox, definition: current.definition })
+            === canonicalOrganizationJson({ ...derived.identity, skipInbox: derived.skipInbox, definition: derived.definition });
           if (isNoOp) throw new OrganizationViewValidationError("Change at least one View field before saving");
           saved = module.update({ scope: input.scope, viewId: mutation.viewId, request: mutation.request });
         }

@@ -1,0 +1,54 @@
+{
+  "sourceSha": "9f6fb3f321111753cdd955a98a26e7cfe9564500",
+  "baseline": "df3a199",
+  "mode": "built-SPA, scratch SQLite, provider refresh no-op",
+  "bundle": "PASS",
+  "browser": {
+    "createSelectedWorkSender": "PASS",
+    "checkboxDefaultFalseOutsideTune": "PASS",
+    "inboxCountBefore": 121,
+    "inboxCountAfterEnable": 9,
+    "matchingWorkConversationsExcluded": 112,
+    "personalMayaRemains": true,
+    "savedViewMatchingMailVisible": true,
+    "allMailMatchingMailVisible": true,
+    "inboxCountAfterDisable": 121,
+    "matchingWorkMailRestoredWithoutReload": true,
+    "organizationDesktopSettingsMobileLegacy": "PASS",
+    "hiddenStudioDirectAndReload": "PASS",
+    "savedRowLongSubjectLight1440Dark1024HoverFocus": "PASS",
+    "checkboxLightDarkDefaultCheckedFocus": "PASS",
+    "checkboxDisabledVisualFixture": "PASS"
+  },
+  "findings": [
+    {
+      "severity": "P2",
+      "status": "Fixed: guard7170ef4 source-reviewed; parent red/green regression at223a137 passed (1test,8assertions), unguarded variant reproduced stale-row overwrite.",
+      "description": "Views-changed does not advance mailboxSnapshotEpochRef, allowing already-running provider snapshot response to overwrite newer policy snapshot."
+    }
+  ],
+  "status": "PASS bounded browser and source acceptance; parent race regression passed",
+  "reviewedFixSha": "7170ef44496676f3507a62a2a91b45c03bec721e",
+  "limitations": [
+    "Browser asset bundle was built at9f6fb3f; later fixture and epoch-guard commits were not rebuilt for this browser run. Guard7170ef4 reviewed semantically; parent reported delayed-response RED/GREEN success; full CI remains parent responsibility.",
+    "API future-arrival/cursor/account-isolation test results were supplied by parent, not rerun.",
+    "Dark1440/light1024 row matrix was not exhaustively repeated; row evidence covers light1440 and actual dark1024. Checkbox focus/disabled covers both themes at1024, light creation at1440.",
+    "Disabled state was a labeled DOM-only fixture; long subject was changed only in disposable SQLite fixture.",
+    "Reconnect URL and dirty-cancel behavior reviewed in source/existing tests, not forced in browser.",
+    "Final browser error log contains one AbortError: Transition was skipped. Console log had no messages. No claim of zero runtime errors.",
+    "An initial Settings Attention Views link screenshot was captured during loading and superseded by actual Settings sidebar Organization navigation evidence."
+  ],
+  "reviewedFinalSha": "223a13744ea9c2afd2a2746fb7915ea9c814da1c",
+  "parentReportedRegression": {
+    "green": "1 test,8 assertions passed,4.35s",
+    "red": "without guard, fresh rows replaced by old response",
+    "independentlyRerun": false
+  },
+  "parentRegression": {
+    "head": "223a137",
+    "red": "provider-race-red.txt",
+    "green": "provider-race-green.txt",
+    "pass": 1,
+    "assertions": 8
+  }
+}
