@@ -883,7 +883,7 @@ async function inputValue(input: HTMLInputElement, value: string) {
   });
 }
 
-test("create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement rejects references safely", async () => {
+test("create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and occupied retirement redirects safely", async () => {
   intercept = async path => syncNoop(path);
   await renderMailbox();
   await click("Manage spaces");
@@ -925,15 +925,27 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
   expect((await state()).senders[0]?.destinationId).toBe(clients.id);
-  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.getAttribute("aria-label") === "Remove Partners")!.click());
-  await settle();
+  expect(details.textContent).toContain("moves its mail and sender/account choices to Inbox");
+  const retirementGate = deferred();
+  intercept = async (path, init) => {
+    if (path.endsWith("/retire") && init?.method === "POST") { await retirementGate.promise; return Response.json({ error: { message: "Protected conversation. Review its safety lock in Organization. Nothing was moved or removed." } }, { status: 409 }); }
+    return syncNoop(path);
+  };
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Remove Partners"]')!.click());
+  expect(document.querySelector<HTMLButtonElement>('[aria-label="Remove Partners"]')!.disabled).toBe(true);
+  expect(document.querySelector<HTMLButtonElement>('[aria-label="Remove Partners"]')!.textContent).toContain("Moving mail to Inbox");
+  await act(async () => retirementGate.release()); await settle();
+  expect(details.querySelector('[role="alert"]')?.textContent).toContain("safety lock");
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
-  expect(document.querySelector(".destination-manager [role=alert]")).not.toBeNull();
-  const latest = await state();
-  await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: latest.revision, target: { scope: "sender", address: "maya@example.com" }, destinationId: null }) });
-  await act(async () => refreshDestinations());
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
+  intercept = async path => syncNoop(path);
   await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.getAttribute("aria-label") === "Remove Partners")!.click());
   await settle();
+  expect(document.querySelector(".destination-manager [role=alert]")).toBeNull();
+  expect(document.querySelector(".destination-manager [role=status]")?.textContent).toContain("No mail was deleted");
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${fallbackId}`);
+  expect(document.activeElement).toBe(document.querySelector('.destination-manager input'));
+  expect((await state()).senders[0]?.destinationId).toBe(fallbackId);
   expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Partners");
   const retired = await (await request("/v1/destinations")).json();
   expect(retired.destinations.find((item: {id: string}) => item.id === clients.id).retiredAt).not.toBeNull();
@@ -1364,4 +1376,73 @@ test("superseded mail snapshot cannot satisfy explicit recovery", async () => {
   expect(recovered).toBe(false);
   expect(updates.recoveryRequired).toBe(true);
   expect(updates.recovering).toBe(false);
+});
+
+
+test("Space removal recovers a lost success response from the refreshed catalog and redirects the current route", async () => {
+  intercept = async path => syncNoop(path);
+  window.history.replaceState(null, "", `/?destination=${encodeURIComponent(`destination:${quietId}`)}`);
+  await renderMailbox();
+  await click("Manage spaces");
+  intercept = async (path, init) => {
+    if (path.endsWith("/retire") && init?.method === "POST") {
+      const committed = await request(path, init);
+      expect(committed.status).toBe(200);
+      return Response.json({ error: { message: "Response lost" } }, { status: 503 });
+    }
+    return syncNoop(path);
+  };
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Remove Quiet"]')!.click());
+  await settle(); await settle();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${fallbackId}`);
+  expect(document.querySelector(".destination-manager [role=alert]")).toBeNull();
+  expect(document.querySelector(".destination-manager [role=status]")?.textContent).toContain("No mail was deleted");
+  expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Quiet");
+});
+
+
+test("Space removal reconciles a lost response after failed automatic refresh and successful manual reload", async () => {
+  intercept = async path => syncNoop(path);
+  window.history.replaceState(null, "", `/?destination=${encodeURIComponent(`destination:${quietId}`)}`);
+  await renderMailbox(); await click("Manage spaces");
+  let committed = false, failedRefresh = false;
+  intercept = async (path, init) => {
+    if (path.endsWith("/retire") && init?.method === "POST") {
+      const result = await request(path, init); expect(result.status).toBe(200); committed = true;
+      return Response.json({ error: { message: "Response lost" } }, { status: 503 });
+    }
+    if (committed && !failedRefresh && path === "/v1/destinations") {
+      failedRefresh = true;
+      return Response.json({ error: { message: "Catalog unavailable" } }, { status: 503 });
+    }
+    return syncNoop(path);
+  };
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Remove Quiet"]')!.click());
+  await settle(); await settle();
+  expect(failedRefresh).toBe(true);
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${quietId}`);
+  await click("Reload spaces"); await settle();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${fallbackId}`);
+  expect(document.querySelector(".destination-manager [role=alert]")).toBeNull();
+  expect(document.querySelector(".destination-manager [role=status]")?.textContent).toContain("No mail was deleted");
+  expect(document.activeElement).toBe(document.querySelector('.destination-manager input'));
+});
+
+test("obsolete Space removal completion preserves newer history navigation after manager unmount", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await nav("Drafts"); await nav("Quiet"); await click("Manage spaces");
+  const gate = deferred();
+  intercept = async (path, init) => {
+    if (path.endsWith("/retire") && init?.method === "POST") await gate.promise;
+    return syncNoop(path);
+  };
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Remove Quiet"]')!.click());
+  await act(async () => { window.history.back(); }); await settle();
+  expect(document.querySelector(".destination-manager")).toBeNull();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe("drafts");
+  await act(async () => gate.release()); await settle(); await settle();
+  expect(new URL(window.location.href).searchParams.get("destination")).toBe("drafts");
+  expect(document.querySelector(".destination-manager")).toBeNull();
+  const catalog = await (await request("/v1/destinations")).json();
+  expect(catalog.destinations.find((item: {id: string}) => item.id === quietId).retiredAt).not.toBeNull();
 });

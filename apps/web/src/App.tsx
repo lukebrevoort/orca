@@ -3046,8 +3046,8 @@ export function InboxApp({
     setLaterLabel(displayName);
   }
 
-  function navigateDesktop(destination: DesktopDestination) {
-    setManageSpacesOpen(false);
+  function navigateDesktop(destination: DesktopDestination, keepSpaceManager = false) {
+    if (!keepSpaceManager) setManageSpacesOpen(false);
     setManageToolsOpen(false);
     if (destination === "settings") {
       window.location.assign("/settings");
@@ -3296,7 +3296,7 @@ export function InboxApp({
       </main>
 
       {manageToolsOpen ? <ManageSpacesDialog demoMode={demoMode} savedViews={savedViews} onDeleted={deletedSavedView} busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
-      {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
+      {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} onRemoved={(id, fallbackId) => { if (requestedDestinationId === id) navigateDesktop(`destination:${fallbackId}`, true); }} /> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer

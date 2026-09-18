@@ -296,7 +296,7 @@ function bindLaneCommand(command: ReturnType<typeof organizationLaneApplySchema.
       resourceId = lanePolicyResourceId(action.policyId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = action.expectedRevision;
     } else if (action.kind === "define_lane") {
       resourceId = laneResourceId(action.id); mutation = "create"; kind = "mutate_lane";
-    } else if (action.kind === "update_lane") {
+    } else if (action.kind === "update_lane" || action.kind === "retire_lane_to_fallback") {
       resourceId = laneResourceId(action.laneId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = action.expectedRevision;
     } else if (action.kind === "set_fallback_lane") {
       resourceId = fallbackResourceId(workspaceId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = 1;
@@ -625,6 +625,13 @@ export function createOrganization(repository: OrganizationRepository, dependenc
       if (laneResult.success) {
         if (!repository.lanes) throw new OrganizationOperationDisabledError("apply");
         const applyCommand = laneResult.data;
+        if (applyCommand.actions.some(action => action.kind === "retire_lane_to_fallback")) {
+          const owned = repository.listAccountIds(scope.workspaceId);
+          if (scope.actor.type !== "human" || scope.actor.id !== scope.workspaceId
+            || owned.length !== accountIds.length || owned.some(id => !accountIds.includes(id))) {
+            throw new OrganizationAuthorityError("actor_operation_denied", "Space removal requires the workspace owner and all connected accounts.");
+          }
+        }
         const replay = repository.lanes.replay({ scope: { ...scope, accountIds }, command: applyCommand, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
         if (replay) return organizationLaneApplyResponseSchema.parse(replay);
         const bound = bindLaneCommand(applyCommand, scope.workspaceId);

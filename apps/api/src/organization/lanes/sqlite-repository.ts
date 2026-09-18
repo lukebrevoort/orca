@@ -30,6 +30,7 @@ import { canonicalOrganizationJson, digestOrganizationCommand } from "../authori
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "../module.ts";
 import {
   OrganizationLaneValidationError,
+  OrganizationSafetyLockError,
   destinationBindingResource,
   applyLaneActions,
   digestLaneActions,
@@ -238,6 +239,15 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             throw new OrganizationAuthorityError("actor_operation_denied", "The persisted MCP Organization grant changed before commit");
           }
         }
+        const retirement = parsed.actions.find(action => action.kind === "retire_lane_to_fallback");
+        if (retirement) {
+          const owned = executor.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, workspaceId)).all();
+          if (input.executionContext.actor.type !== "human" || input.executionContext.actor.id !== workspaceId
+            || owned.length !== input.executionContext.accountIds.length
+            || owned.some(account => !input.executionContext.accountIds.includes(account.id))) {
+            throw new OrganizationAuthorityError("actor_operation_denied", "Space removal requires the workspace owner and all connected accounts.");
+          }
+        }
         const lowerCandidatesByThread = new Map<string, LowerPlacementCandidate>();
         const current = loadSnapshot(executor, workspaceId, input.executionContext.accountIds, lowerCandidatesByThread);
         const currentLowerCandidatesByThread = new Map(lowerCandidatesByThread);
@@ -261,6 +271,33 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           .where(inArray(threads.accountId, [...input.executionContext.accountIds])).all().map((row) => `${row.accountId}\0${row.threadId}`));
         const now = new Date().toISOString();
         const actionSnapshot = structuredClone(current);
+        // Derive the unbounded redirect set under the same revision-checked transaction.
+        // Historical rule revisions remain immutable; only active rules can still route mail.
+        const legacyRedirects: Array<{ behavior: string; destinationId: string }> = [];
+        const effectiveRedirects: Array<{ accountId: string; threadId: string; source: string }> = [];
+        if (retirement) {
+          if (retirement.fallbackLaneId !== current.configuration.fallbackLaneId || retirement.laneId === retirement.fallbackLaneId) {
+            throw new OrganizationLaneValidationError("Space removal must redirect to the current Inbox fallback; Inbox cannot be removed.");
+          }
+          if (executor.all(sql`select 1 from organization_thread_lane_states where workspace_id=${workspaceId} and safety_locked=1
+            and (primary_lane_id=${retirement.laneId} or manual_override_lane_id=${retirement.laneId} or safety_lock_lane_id=${retirement.laneId}) limit 1`).length) {
+            throw new OrganizationSafetyLockError("This space has protected conversation references. Review their safety locks in Organization. Nothing was moved or removed.");
+          }
+          if (executor.all(sql`select 1 from organization_rules r join organization_rule_revisions v
+            on v.workspace_id=r.workspace_id and v.rule_id=r.id and v.id=r.active_revision_id
+            where r.workspace_id=${workspaceId} and exists(select 1 from json_tree(v.compiled_json) where atom=${retirement.laneId}) limit 1`).length) {
+            throw new OrganizationLaneValidationError("An active advanced rule references this space. Update or deactivate it in Organization first. Nothing was moved or removed.");
+          }
+          legacyRedirects.push(...executor.all<{ behavior: string; destinationId: string }>(sql`select behavior,destination_id destinationId from organization_destination_legacy where workspace_id=${workspaceId} and destination_id=${retirement.laneId}`));
+          effectiveRedirects.push(...executor.all<{ accountId: string; threadId: string; source: string }>(sql`select account_id accountId,thread_id threadId,source from organization_effective_destinations where workspace_id=${workspaceId} and destination_id=${retirement.laneId}`));
+          // A current advanced winner would otherwise expose an unrelated lower account route.
+          // Preserve that conversation's explicit redirect without changing that account's future choice.
+          for (const effective of effectiveRedirects) if (effective.source === "advanced") {
+            const placement = actionSnapshot.placements.find(p => p.accountId === effective.accountId && p.threadId === effective.threadId);
+            if (!placement) throw new OrganizationLaneValidationError("Conversation placement changed. Refresh before removing the space.");
+            placement.manualOverride = { laneId: retirement.laneId, actor: input.executionContext.actor, reason: "Space removed; redirected to Inbox", updatedAt: now };
+          }
+        }
         // Capture only the effective input; preserve the stored candidate and audit before state.
         for (const action of parsed.actions) if (action.kind === "set_thread_safety_lock" && action.locked) {
           const p=actionSnapshot.placements.find(p=>p.accountId===action.accountId&&p.threadId===action.threadId);
@@ -303,6 +340,10 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             if (!placement.manualOverride && !placement.safetyLock.locked && !revealedLowerCandidate) {
               lower = lowerCandidateFromPlacement(placement);
             }
+            if (retirement && currentLowerCandidatesByThread.get(threadKey)?.primaryLaneId === retirement.laneId) {
+              lower = lowerCandidateFromPlacement(fallbackPlacement({ ...placement, fallbackLaneId: retirement.fallbackLaneId }));
+              if (previous && placement.revision === previous.revision) placement.revision = (placement.revision ?? 0) + 1;
+            }
             lowerCandidatesByThread.set(threadKey, lower);
             if (!revealedLowerCandidate) return placement;
             return placementWithLowerCandidate(placement, lower);
@@ -333,6 +374,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         const changedBindings = (next.destinationBindings ?? []).filter(b => !sameValue(current.destinationBindings?.find(old => old.accountId === b.accountId && old.scope === b.scope && old.value === b.value), b));
         const fallbackChanged = current.configuration.fallbackLaneId !== next.configuration.fallbackLaneId;
         const auditRows: Array<{ actionKind: string; resourceFamily: string; resourceId: string; before: unknown; after: unknown }> = [
+          ...legacyRedirects.map(mapping => ({ actionKind: "redirect_legacy_destination", resourceFamily: "lane", resourceId: `legacy:${mapping.behavior}`, before: mapping, after: { ...mapping, destinationId: retirement!.fallbackLaneId } })),
           ...changedBindings.map(b => ({ actionKind: "set_destination_binding", resourceFamily: "lane", resourceId: destinationBindingResource(b.accountId,b.scope,b.value), before: current.destinationBindings?.find(old => old.accountId === b.accountId && old.scope === b.scope && old.value === b.value) ?? null, after: b })),
           ...changedPolicies.map((policy) => ({ actionKind: currentPolicies.has(policy.id) ? "update_lane_policy" : "define_lane_policy", resourceFamily: "lane_policy", resourceId: policy.id, before: currentPolicies.get(policy.id) ?? null, after: policy })),
           ...changedLanes.map((lane) => ({ actionKind: currentLanes.has(lane.id) ? "update_lane" : "define_lane", resourceFamily: "lane", resourceId: lane.id, before: currentLanes.get(lane.id) ?? null, after: lane })),
@@ -349,8 +391,8 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             };
           }),
         ];
-        if (auditRows.length > 0) transaction.insert(organizationChangeActions).values(auditRows.map((row, position) => ({
-          workspaceId, changeId: input.boundCommand.id, position, actionKind: row.actionKind,
+        for (let offset = 0; offset < auditRows.length; offset += 250) transaction.insert(organizationChangeActions).values(auditRows.slice(offset, offset + 250).map((row, index) => ({
+          workspaceId, changeId: input.boundCommand.id, position: offset + index, actionKind: row.actionKind,
           resourceFamily: row.resourceFamily, resourceId: row.resourceId,
           beforeJson: row.before === null ? null : JSON.stringify(row.before),
           afterJson: row.after === null ? null : JSON.stringify(row.after),
@@ -400,6 +442,18 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           )).run();
         }
         for (const binding of changedBindings) transaction.insert(organizationDestinationBindings).values({ ...binding, workspaceId }).onConflictDoUpdate({ target: [organizationDestinationBindings.workspaceId,organizationDestinationBindings.accountId,organizationDestinationBindings.scope,organizationDestinationBindings.value], set: { destinationId: binding.destinationId, revision: binding.revision } }).run();
+        for (const mapping of legacyRedirects) executor.run(sql`update organization_destination_legacy set destination_id=${retirement!.fallbackLaneId} where workspace_id=${workspaceId} and behavior=${mapping.behavior}`);
+        if (retirement) {
+          for (const target of effectiveRedirects) {
+            if (readThreadDestination(executor, workspaceId, target.accountId, target.threadId)?.destinationId !== retirement.fallbackLaneId) {
+              throw new OrganizationLaneValidationError("A conversation could not safely move to Inbox. Nothing was moved or removed.");
+            }
+          }
+          if (executor.all(sql`select 1 from organization_thread_lane_states where workspace_id=${workspaceId}
+            and (primary_lane_id=${retirement.laneId} or manual_override_lane_id=${retirement.laneId} or safety_lock_lane_id=${retirement.laneId}) limit 1`).length) {
+            throw new OrganizationLaneValidationError("A protected placement still references this space. Nothing was moved or removed.");
+          }
+        }
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.configuration.workspaceRevision, updatedAt: new Date(now) })
           .where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.configuration.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.configuration.workspaceRevision, current.configuration.workspaceRevision + 1);

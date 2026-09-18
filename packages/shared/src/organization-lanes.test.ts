@@ -20,3 +20,12 @@ describe("BRE-311 Lane contracts", () => {
     }).success).toBe(false);
   });
 });
+
+
+test("Space retirement is a bounded sole action and cannot smuggle arbitrary redirects or provider deletion", () => {
+  const action = { kind: "retire_lane_to_fallback", laneId: "clients", fallbackLaneId: "inbox", expectedRevision: 1 };
+  const command = { id: "remove", idempotencyKey: "remove", expectedWorkspaceRevision: 1, actions: [action] };
+  expect(organizationLaneApplySchema.safeParse(command).success).toBe(true);
+  expect(organizationLaneApplySchema.safeParse({ ...command, actions: [action, action] }).success).toBe(false);
+  expect(organizationLaneApplySchema.safeParse({ ...command, actions: [{ ...action, deleteMail: true }] }).success).toBe(false);
+});
