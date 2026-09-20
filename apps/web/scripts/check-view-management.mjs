@@ -16,7 +16,7 @@ try {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(JSON.stringify({ name: error.name, message: error.message, stack: error.stack, url: page.url() })); });
-    const screenshot = async name => page.screenshot({ path: join(output, `${theme}-${width}-${name}.png`) });
+    const screenshot = async name => page.screenshot({ path: join(output, `${theme}-${width}-${name}.png`), animations: 'disabled' });
     const press = name => page.getByRole('button', { name, exact: true }).click();
     const go = async path => {
       await page.goto(`${base}${path}`); await page.locator('.desktop-workspace').waitFor();
