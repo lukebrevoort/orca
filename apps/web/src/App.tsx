@@ -34,6 +34,8 @@ import {
 import { AgentEventTimeline, type AgentEventControlAction } from "./agent-event-ui";
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
+import { invalidateWritingPreferences, useWritingPreferences } from "./use-writing-preferences";
+import { resolveWritingReplyAction, type WritingPreferenceState } from "./writing-preferences";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
@@ -811,6 +813,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     setAccountSaveNotice(null);
     try {
       const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      invalidateWritingPreferences();
       if (requestId !== accountSaveRequestRef.current) return;
       if (editVersion === accountEditVersionRef.current) {
         setAccountPreferences(value);
@@ -1452,7 +1455,8 @@ export function InboxApp({
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const agentEventSourceRefs = useRef(new Map<string, HTMLButtonElement>());
-  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts);
+  const writingPreferences = useWritingPreferences(status === "signedout" ? null : account, demoMode);
+  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts, { preferences: writingPreferences, enabled: panelMode === "compose" });
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
     const composer = readSurfaceLocation(window.location).composer;
@@ -5658,6 +5662,8 @@ export function MessageReader({
 export type ReaderMessageAction = "reply" | "reply_all" | "forward";
 
 function ThreadReplyComposer({ account, contacts, demoMode = false, detail, message, onSent }: { account: MailAccount; contacts: MailContact[]; demoMode?: boolean; detail: ThreadDetail; message?: ThreadDetailMessage; onSent: (result: DeliveryResult) => Promise<void> | void }) {
+  const writingPreferences = useWritingPreferences(account, demoMode);
+  const primaryReply = resolveWritingReplyAction("primary", account.id, writingPreferences) as "reply" | "reply_all";
   const topLayerActive = useTopLayerActive();
   const [action, setAction] = useState<ReaderMessageAction | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -5669,8 +5675,8 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (topLayerActive || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, [contenteditable=true]")) return;
-      const next = event.key.toLowerCase() === "r" ? "reply" : event.key.toLowerCase() === "a" ? "reply_all" : event.key.toLowerCase() === "f" ? "forward" : null;
+      if (topLayerActive || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, select, [contenteditable=true]")) return;
+      const next = event.key.toLowerCase() === "r" ? primaryReply : event.key.toLowerCase() === "a" ? "reply_all" : event.key.toLowerCase() === "f" ? "forward" : null;
       if (!next) return;
       event.preventDefault();
       setReconciliationError(null);
@@ -5678,22 +5684,22 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [topLayerActive]);
+  }, [primaryReply, topLayerActive]);
 
   if (!action || !message) {
     return (
       <section aria-label="Reply to conversation" className="reader-reply reader-reply-collapsed">
         <div><span aria-hidden="true">↩</span><div><strong>Continue the conversation</strong><p>Write back without leaving the thread.</p></div></div>
         {reconciliationError ? <p className="compose-delivery-error" role="alert">{reconciliationError}</p> : null}
-        <ReaderActionButtons active={null} onSelect={(next) => { setReconciliationError(null); setAction(next); }} ref={actionsRef} />
+        <ReaderActionButtons active={null} primaryReply={primaryReply} onSelect={(next) => { setReconciliationError(null); setAction(next); }} ref={actionsRef} />
       </section>
     );
   }
 
   return (
     <section className="reader-reply reader-reply-expanded">
-      <div className="reader-reply-heading"><ReaderActionButtons active={action} onSelect={setAction} ref={actionsRef} /><button aria-label={`Collapse ${readerActionLabel(action).toLowerCase()}`} onClick={() => setAction(null)} type="button">−</button></div>
-      <ThreadActionWorkspace action={action} account={account} contacts={contacts} demoMode={demoMode} detail={detail} key={action} message={message} onRequestSendAccess={() => setShowPermission(true)} onSent={async (result) => {
+      <div className="reader-reply-heading"><ReaderActionButtons active={action} primaryReply={primaryReply} onSelect={setAction} ref={actionsRef} /><button aria-label={`Collapse ${readerActionLabel(action).toLowerCase()}`} onClick={() => setAction(null)} type="button">−</button></div>
+      <ThreadActionWorkspace action={action} account={account} contacts={contacts} demoMode={demoMode} detail={detail} key={action} message={message} writingPreferences={writingPreferences} onRequestSendAccess={() => setShowPermission(true)} onSent={async (result) => {
         setAction(null);
         window.requestAnimationFrame(() => actionsRef.current?.querySelector<HTMLButtonElement>("button")?.focus());
         try {
@@ -5712,19 +5718,17 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
   );
 }
 
-const ReaderActionButtons = function ReaderActionButtons({ active, onSelect, ref }: { active: ReaderMessageAction | null; onSelect: (action: ReaderMessageAction) => void; ref?: Ref<HTMLDivElement> }) {
+const ReaderActionButtons = function ReaderActionButtons({ active, primaryReply, onSelect, ref }: { active: ReaderMessageAction | null; primaryReply: "reply" | "reply_all"; onSelect: (action: ReaderMessageAction) => void; ref?: Ref<HTMLDivElement> }) {
   return <div aria-label="Message actions" className="reader-reply-actions" ref={ref} role="toolbar">
-    {(["reply", "reply_all", "forward"] as const).map((action) => <button aria-keyshortcuts={action === "reply" ? "R" : action === "reply_all" ? "A" : "F"} aria-pressed={active === action} key={action} onClick={() => onSelect(action)} title={`${readerActionLabel(action)} (${action === "reply" ? "R" : action === "reply_all" ? "A" : "F"})`} type="button">{readerActionLabel(action)}</button>)}
+    <button aria-keyshortcuts="R" aria-pressed={active === primaryReply} onClick={() => onSelect(primaryReply)} title="Your default reply action (R)" type="button">{readerActionLabel(primaryReply)} (default)</button>
+    {(["reply", "reply_all", "forward"] as const).map((action) => <button aria-keyshortcuts={action === "reply_all" ? "A" : action === "forward" ? "F" : undefined} aria-pressed={active === action} key={action} onClick={() => onSelect(action)} title={readerActionLabel(action)} type="button">{readerActionLabel(action)}</button>)}
   </div>;
 };
 
-function ThreadActionWorkspace({ action, account, contacts, demoMode, detail, message, onRequestSendAccess, onSent }: { action: ReaderMessageAction; account: MailAccount; contacts: MailContact[]; demoMode: boolean; detail: ThreadDetail; message: ThreadDetailMessage; onRequestSendAccess: () => void; onSent: (result: DeliveryResult) => Promise<void> | void }) {
-  const controller = useComposeDraft(account.id, `${action}:${detail.thread.id}:${message.id}`, demoMode);
+function ThreadActionWorkspace({ action, account, contacts, demoMode, detail, message, onRequestSendAccess, onSent, writingPreferences }: { action: ReaderMessageAction; account: MailAccount; contacts: MailContact[]; demoMode: boolean; detail: ThreadDetail; message: ThreadDetailMessage; onRequestSendAccess: () => void; onSent: (result: DeliveryResult) => Promise<void> | void; writingPreferences: WritingPreferenceState }) {
   const fields = useMemo(() => buildReaderActionDraft(detail, message, action), [action, detail, message]);
-  useEffect(() => {
-    if (controller.isHydrated !== false && !controller.hasContent) controller.updateDraft(fields);
-  }, [controller.hasContent, controller.isHydrated, fields]);
-  const recipients = [...fields.to, ...fields.cc];
+  const controller = useComposeDraft(account.id, `${action}:${detail.thread.id}:${message.id}`, demoMode, undefined, undefined, { preferences: writingPreferences, initialFields: fields });
+  const recipients = [...controller.draft.to, ...controller.draft.cc];
   return <ComposeWorkspace
     actionLabel={readerActionLabel(action)}
     canSend={account.capabilities.send}

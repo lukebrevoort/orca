@@ -14,6 +14,7 @@ import {
   type SetStateAction,
 } from "react";
 import { TopLayer } from "./top-layer";
+import "./writing-preferences.css";
 import { initializeWritingDraft, serializeWritingBody, type WritingPreferenceState, type WritingPreferences } from "./writing-preferences";
 import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
@@ -61,6 +62,7 @@ export type ComposeWritingOptions = {
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
+  writingPreferenceStatus?: WritingPreferenceState["status"];
   recipientQueries?: RecipientQueries;
   setRecipientQueries?: Dispatch<SetStateAction<RecipientQueries>>;
   saveStatus: ComposeSaveStatus;
@@ -1010,6 +1012,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   return {
     draft,
+    writingPreferenceStatus: writing && !demoMode && isNewDraftRef.current ? writing.preferences.status : undefined,
     recipientQueries,
     setRecipientQueries: updateRecipientQueries,
     saveStatus,
@@ -1346,12 +1349,15 @@ export function ComposeWorkspace({
         canAttach={draft.attachments.length < MAX_COMPOSE_ATTACHMENTS}
         describedBy={deliveryReasonId}
         focusRef={messageBodyRef}
+        format={draft.composeFormat ?? "rich"}
         invalid={!hasDeliverableMessage && Boolean(deliveryValidationError)}
         onAttachClick={() => fileInputRef.current?.click()}
         onChange={(body) => { updateDraft({ body }); if (body.trim()) setDeliveryValidationError(null); }}
+        onFormatChange={(composeFormat) => updateDraft({ composeFormat })}
         onRemoveAttachment={onRemoveAttachment}
         placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? actionLabel === "Forward" ? "Add a note above the forwarded message…" : "Write a reply…" : "Start with the human part…"}
       />
+      {controller.writingPreferenceStatus === "loading" ? <p className="writing-preferences-note" role="status">Loading your writing defaults. You can start writing.</p> : controller.writingPreferenceStatus === "unavailable" ? <p className="writing-preferences-note" role="status">Writing defaults unavailable. New drafts use plain text without a signature.</p> : null}
       {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
       <input
         accept="*/*"
@@ -1421,9 +1427,11 @@ function RenderedBlockEditor({
   canAttach,
   describedBy,
   focusRef,
+  format,
   invalid,
   onAttachClick,
   onChange,
+  onFormatChange,
   onRemoveAttachment,
   placeholder,
 }: {
@@ -1433,15 +1441,18 @@ function RenderedBlockEditor({
   canAttach: boolean;
   describedBy?: string;
   focusRef: RefObject<HTMLDivElement | null>;
+  format: WritingPreferences["composeFormat"];
   invalid: boolean;
   onAttachClick: () => void;
   onChange: (body: string) => void;
+  onFormatChange: (format: WritingPreferences["composeFormat"]) => void;
   onRemoveAttachment: (attachmentId: string) => void;
   placeholder: string;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const commandListId = useId();
   const lastBodyRef = useRef(body);
+  const lastFormatRef = useRef(format);
   const [slash, setSlash] = useState<{ query: string; top: number } | null>(null);
   const [activeCommand, setActiveCommand] = useState(0);
   const commands = slash === null ? [] : slashCommands.filter((command) => `${command.id} ${command.label}`.toLowerCase().includes(slash.query));
@@ -1455,13 +1466,14 @@ function RenderedBlockEditor({
     const editor = editorRef.current;
     if (!editor) return;
     const externallyFilledEmptyEditor = Boolean(body.trim()) && !editor.textContent?.trim();
-    if (editor.innerHTML === "" || externallyFilledEmptyEditor || (lastBodyRef.current !== body && document.activeElement !== editor)) {
-      editor.innerHTML = markdownToEditorHtml(body);
+    if (editor.innerHTML === "" || externallyFilledEmptyEditor || lastFormatRef.current !== format || (lastBodyRef.current !== body && document.activeElement !== editor)) {
+      editor.innerHTML = format === "rich" ? markdownToEditorHtml(body) : body.split("\n").map(line => `<p>${escapeHtml(line) || "<br>"}</p>`).join("");
       if (!body.trim() && editor.firstElementChild) (editor.firstElementChild as HTMLElement).dataset.placeholder = placeholder;
       lastBodyRef.current = body;
+      lastFormatRef.current = format;
     }
     if (autoFocus) editor.focus();
-  }, [autoFocus, body, placeholder]);
+  }, [autoFocus, body, format, placeholder]);
 
   function emitChange() {
     const editor = editorRef.current;
@@ -1472,6 +1484,7 @@ function RenderedBlockEditor({
   }
 
   function updateSlashMenu() {
+    if (format === "plain") { setSlash(null); return; }
     const editor = editorRef.current;
     const selection = window.getSelection();
     if (!editor || !selection?.anchorNode || !editor.contains(selection.anchorNode)) {
@@ -1527,6 +1540,7 @@ function RenderedBlockEditor({
   }
 
   function onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (format === "plain" && (event.metaKey || event.ctrlKey) && ["b", "i", "u"].includes(event.key.toLowerCase())) { event.preventDefault(); return; }
     if (slash) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -1554,11 +1568,12 @@ function RenderedBlockEditor({
 
   return (
     <div className="compose-writing-field">
+      <label className="writing-format-choice"><span>Message format</span><select aria-label="Message format" onChange={(event) => { setSlash(null); onFormatChange(event.target.value as WritingPreferences["composeFormat"]); }} value={format}><option value="plain">Plain text</option><option value="rich">Rich text</option></select></label>
       <div aria-label="Formatting" className="compose-formatting" role="toolbar">
-        <button aria-label="Bold, Command B" onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
-        <button aria-label="Italic, Command I" onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
-        <button aria-label="Bulleted list" onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
-        <button aria-label="Quote" onClick={() => runToolbar("blockquote")} type="button">Quote</button>
+        <button aria-label="Bold, Command B" disabled={format === "plain"} onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
+        <button aria-label="Italic, Command I" disabled={format === "plain"} onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
+        <button aria-label="Bulleted list" disabled={format === "plain"} onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
+        <button aria-label="Quote" disabled={format === "plain"} onClick={() => runToolbar("blockquote")} type="button">Quote</button>
         <button aria-label="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach</button>
         <span>Type / for structure · drop anywhere to attach</span>
       </div>

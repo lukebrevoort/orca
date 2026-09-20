@@ -1,0 +1,90 @@
+[
+  {
+    "theme": "light",
+    "width": 1440,
+    "settingsInvalidation": true,
+    "newDraft": true,
+    "recoveredDraftPreserved": true,
+    "nextDraftFresh": true,
+    "defaultReplyAllRecipients": true,
+    "explicitReply": true,
+    "failureTyping": true,
+    "sends": 0,
+    "screenshots": [
+      "light-1440-settings-saved.png",
+      "light-1440-new-rich-signature.png",
+      "light-1440-plain-focused-disabled-formatting.png",
+      "light-1440-recovered-writing-preserved.png",
+      "light-1440-next-draft-updated-signature.png",
+      "light-1440-default-reply-all.png",
+      "light-1440-explicit-reply.png",
+      "light-1440-defaults-unavailable.png"
+    ]
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "settingsInvalidation": true,
+    "newDraft": true,
+    "recoveredDraftPreserved": true,
+    "nextDraftFresh": true,
+    "defaultReplyAllRecipients": true,
+    "explicitReply": true,
+    "failureTyping": true,
+    "sends": 0,
+    "screenshots": [
+      "light-390-settings-saved.png",
+      "light-390-new-rich-signature.png",
+      "light-390-plain-focused-disabled-formatting.png",
+      "light-390-recovered-writing-preserved.png",
+      "light-390-next-draft-updated-signature.png",
+      "light-390-default-reply-all.png",
+      "light-390-explicit-reply.png",
+      "light-390-defaults-unavailable.png"
+    ]
+  },
+  {
+    "theme": "dark",
+    "width": 1440,
+    "settingsInvalidation": true,
+    "newDraft": true,
+    "recoveredDraftPreserved": true,
+    "nextDraftFresh": true,
+    "defaultReplyAllRecipients": true,
+    "explicitReply": true,
+    "failureTyping": true,
+    "sends": 0,
+    "screenshots": [
+      "dark-1440-settings-saved.png",
+      "dark-1440-new-rich-signature.png",
+      "dark-1440-plain-focused-disabled-formatting.png",
+      "dark-1440-recovered-writing-preserved.png",
+      "dark-1440-next-draft-updated-signature.png",
+      "dark-1440-default-reply-all.png",
+      "dark-1440-explicit-reply.png",
+      "dark-1440-defaults-unavailable.png"
+    ]
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "settingsInvalidation": true,
+    "newDraft": true,
+    "recoveredDraftPreserved": true,
+    "nextDraftFresh": true,
+    "defaultReplyAllRecipients": true,
+    "explicitReply": true,
+    "failureTyping": true,
+    "sends": 0,
+    "screenshots": [
+      "dark-390-settings-saved.png",
+      "dark-390-new-rich-signature.png",
+      "dark-390-plain-focused-disabled-formatting.png",
+      "dark-390-recovered-writing-preserved.png",
+      "dark-390-next-draft-updated-signature.png",
+      "dark-390-default-reply-all.png",
+      "dark-390-explicit-reply.png",
+      "dark-390-defaults-unavailable.png"
+    ]
+  }
+]

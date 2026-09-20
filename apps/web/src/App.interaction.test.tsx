@@ -2311,7 +2311,7 @@ describe("Pin navigation and bulk sender actions", () => {
     // Section headings inside Tune are valid; the composer must not repeat the task title.
     expect(Boolean(authoringSurface.querySelector(".view-composer > header h3"))).toBe(false);
     expect(authoringSurface.querySelector("#search-view-tune")?.hasAttribute("hidden")).toBe(true);
-    expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("deploy@status.example.com");
+    expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("family@example.com");
     expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);
     setScroll({ x: 0, y: 0 });
     const cancel = [...browserWindow.document.querySelectorAll(".selected-view-authoring button")].find((candidate) => candidate.textContent === "Cancel") as unknown as HTMLButtonElement;
