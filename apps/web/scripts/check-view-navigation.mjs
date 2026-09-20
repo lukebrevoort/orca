@@ -11,7 +11,7 @@ mkdirSync(output, { recursive: true });
 import assert from 'node:assert/strict';
 const browser = await chromium.launch({headless:true});
 const page = await browser.newPage({viewport:{width:1440,height:1000}});
-const nav = name => page.locator('.desktop-sidebar-item').filter({hasText:new RegExp('^'+name+'(?:[0-9]+)?$')}).click();
+const nav = name => page.locator('.desktop-sidebar-item').filter({hasText:new RegExp('^'+name+'(?:View|[0-9]+)?$')}).click();
 const press = name => page.getByRole('button',{name,exact:true}).click();
 const name = page.getByRole('textbox',{name:/View name/});
 page.setDefaultTimeout(8000);

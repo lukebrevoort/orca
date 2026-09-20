@@ -19,6 +19,39 @@ function settleHistory() {
 }
 
 describe("surface history contract", () => {
+  test("same-destination Views edits retain distinct Back/Forward entries and source mail context", async () => {
+    const browser = createBrowser("http://localhost:5173/dev/inbox?destination=view%3Ahidden&q=maya&flag=kept&thread=t1&accountId=a1#mail");
+    const history = new SurfaceHistory(browser as never);
+    history.initialize();
+    history.navigate("organization-studio", { section: "views", editViewId: null });
+    const management = browser.location.href;
+    history.navigate("organization-studio", { section: "views", editViewId: "hidden" });
+    const edit = browser.location.href;
+    expect(edit).not.toBe(management);
+    expect(history.read().viewsManagement?.editViewId).toBe("hidden");
+    expect(history.read().reader).toBeNull();
+    history.openComposer({ draftId: "safe-draft", zen: true });
+    expect(history.read().viewsManagement?.editViewId).toBe("hidden");
+    history.dismiss("composer");
+    await settleHistory();
+    expect(browser.location.href).toBe(edit);
+    browser.history.back(); await settleHistory();
+    expect(browser.location.href).toBe(management);
+    browser.history.back(); await settleHistory();
+    expect(history.read().reader).toEqual({ threadId: "t1", accountId: "a1" });
+    browser.history.forward(); await settleHistory();
+    browser.history.forward(); await settleHistory();
+    expect(browser.location.href).toBe(edit);
+    history.navigate("inbox");
+    const url = new URL(browser.location.href);
+    expect(url.searchParams.get("section")).toBeNull();
+    expect(url.searchParams.get("editView")).toBeNull();
+    expect(url.searchParams.get("q")).toBe("maya");
+    expect(url.searchParams.get("flag")).toBe("kept");
+    expect(url.hash).toBe("#mail");
+    browser.close();
+  });
+
   test("reads legacy path links and keeps destination, query, and unknown parameters", () => {
     const browser = createBrowser("http://localhost:5173/accounts/account%201/threads/thread%2F1?destination=space%3Alaunch&q=moon&flag=kept#message-1");
     expect(readSurfaceLocation(browser.location)).toEqual({

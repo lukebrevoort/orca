@@ -238,6 +238,11 @@
   color: var(--desktop-control-selected-ink);
 }
 .desktop-sidebar-item small { justify-self: end; color: var(--desktop-faint); font: 700 9px/9px var(--desktop-mono); }
+.desktop-tool-kind { display: block; margin: 2px 0 4px; color: var(--desktop-muted); font: 500 9px/12px var(--desktop-sans); }
+.desktop-manage-views { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--desktop-border); border-radius: 8px; background: var(--desktop-surface); color: var(--desktop-ink); font: 650 11px/16px var(--desktop-sans); text-align: left; }
+.desktop-manage-views:hover { background: var(--desktop-surface-hover); }
+.desktop-manage-views:focus-visible,.desktop-hidden-edit:focus-visible { outline: 2px solid var(--desktop-focus); outline-offset: 2px; }
+.desktop-manage-views:disabled,.desktop-hidden-spaces button:disabled { background: var(--desktop-control-disabled-background); color: var(--desktop-control-disabled-ink); border-color: var(--desktop-control-disabled-border); cursor: not-allowed; }
 .desktop-nav-icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6px; }
 .desktop-sidebar-item[aria-current="page"] .desktop-nav-icon { color: var(--desktop-accent); }
 
@@ -1063,6 +1068,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .desktop-hidden-space-row .desktop-hidden-restore small { grid-column: 1; grid-row: 2; }
 .desktop-hidden-space-row .desktop-hidden-restore strong { grid-column: 2; grid-row: 1 / 3; }
 .desktop-hidden-space-row .desktop-hidden-delete { width: auto; display: block; color: var(--desktop-danger); }
+.desktop-hidden-space-row .desktop-hidden-edit { width: auto; display: block; }
+.desktop-spaces-dialog header p + p { margin-top: 10px; }
+@media (max-width: 600px) {
+  .desktop-spaces-dialog { padding: 20px 16px; }
+  .desktop-space-list article { grid-template-columns: 18px 18px minmax(0,1fr); }
+  .desktop-space-row-actions { grid-column: 2 / -1; }
+  .desktop-hidden-space-row { flex-wrap: wrap; gap: 0 8px; }
+  .desktop-hidden-space-row .desktop-hidden-restore { flex-basis: 100%; }
+  .desktop-hidden-space-row .desktop-hidden-edit,.desktop-hidden-space-row .desktop-hidden-delete { flex: 1; text-align: center; }
+}
 .desktop-view-delete { padding: 24px 0; }
 .desktop-view-delete h3 { margin: 0 0 14px; font: 500 23px/1.3 var(--desktop-serif); overflow-wrap: anywhere; }
 .desktop-view-delete p { font-size: 13px; line-height: 1.6; }

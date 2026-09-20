@@ -3937,11 +3937,58 @@ describe("BRE-413 saved-view growth entry", () => {
   });
 });
 
+describe("BRE-417 Views routes", () => {
+  beforeEach(installDom);
+  afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); });
+  test("skipped native animation readiness does not reject navigation or leave transition styling", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "full" });
+    const descriptor = Object.getOwnPropertyDescriptor(browserWindow.document, "startViewTransition");
+    let transitions = 0;
+    Object.defineProperty(browserWindow.document, "startViewTransition", { configurable: true, value: (update: () => void) => {
+      transitions++; update();
+      return { ready: Promise.reject(new DOMException("Transition was skipped", "AbortError")), finished: Promise.resolve() };
+    } });
+    try {
+      const manage = [...browserWindow.document.querySelectorAll("button")].find(node => node.textContent === "Manage saved views")!;
+      await act(async () => manage.click()); await waitFor(0);
+      expect(transitions).toBe(1);
+      expect(browserWindow.document.documentElement.dataset.orcaTransition).toBeUndefined();
+      expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    } finally {
+      if (descriptor) Object.defineProperty(browserWindow.document, "startViewTransition", descriptor);
+      else Reflect.deleteProperty(browserWindow.document, "startViewTransition");
+    }
+  });
+  test("direct edit opens the requested view and management history restores the Views section", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=organization-studio&section=views&editView=view_urgent_humans&q=kept");
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" }); await waitFor(20);
+    expect(browserWindow.document.querySelector("#views-title")?.textContent).toBe("Edit Urgent humans");
+    expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    const manage = [...browserWindow.document.querySelectorAll("button")].find(node => node.textContent === "Manage saved views")!;
+    await act(async () => manage.click()); await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("editView")).toBeNull();
+    expect(browserWindow.document.querySelector("#organization-views .view-composer")).toBeNull();
+    expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    await act(async () => browserWindow.history.back()); await waitFor(20);
+    expect(new URL(browserWindow.location.href).searchParams.get("editView")).toBe("view_urgent_humans");
+    expect(browserWindow.document.querySelector("#views-title")?.textContent).toBe("Edit Urgent humans");
+    expect(new URL(browserWindow.location.href).searchParams.get("q")).toBe("kept");
+  });
+  test("missing saved-view recovery lands directly on Views", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=view%3Amissing");
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" }); await waitFor(10);
+    const browse = [...browserWindow.document.querySelectorAll("button")].find(node => node.textContent === "Browse views")!;
+    expect(browse).toBeDefined(); await act(async () => browse.click()); await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("section")).toBe("views");
+    expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+  });
+});
+
 describe("BRE-415 unsaved View navigation", () => {
   beforeEach(installDom);
   afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); });
   const findButton = (label: string, selector = "button") => {
-    const found = [...browserWindow.document.querySelectorAll(selector)].find(node => node.textContent?.trim() === label || node.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
+    const found = [...browserWindow.document.querySelectorAll(selector)].find(node => node.textContent?.trim() === label || node.getAttribute("aria-label") === `${label}, saved view` || node.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
     if (!found) throw new Error(`Missing ${label}`);
     return found as unknown as HTMLButtonElement;
   };

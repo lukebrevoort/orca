@@ -39,7 +39,7 @@ import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
-import { reconcileWorkflowSpaceOrder, mergeWorkflowSpaceOrder, createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
+import { reconcileWorkflowSpaceOrder, mergeWorkflowSpaceOrder, createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, viewsManagementFromLocation, viewsManagementHref, type ViewsManagementRoute, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { OrganizationViewGrowthWorkspace } from "./organization-view-growth";
 import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
@@ -256,7 +256,7 @@ function agentEventPreviewState() {
 
 function runUiTransition(name: OrcaTransition, update: () => void) {
   const transitionDocument = document as Document & {
-    startViewTransition?: (callback: () => void) => { finished: Promise<void> };
+    startViewTransition?: (callback: () => void) => { ready?: Promise<void>; finished: Promise<void> };
   };
   if (!transitionDocument.startViewTransition || shouldReduceMotion()) {
     update();
@@ -264,9 +264,11 @@ function runUiTransition(name: OrcaTransition, update: () => void) {
   }
   document.documentElement.dataset.orcaTransition = name;
   const transition = transitionDocument.startViewTransition(update);
-  void transition.finished.finally(() => {
-    delete document.documentElement.dataset.orcaTransition;
-  });
+  // Native transitions reject ready when fast navigation skips their animation.
+  // The update still runs; finished remains the authority for update failures.
+  void transition.ready?.catch(() => {});
+  const cleanup = () => { delete document.documentElement.dataset.orcaTransition; };
+  void transition.finished.then(cleanup, error => { cleanup(); console.error("Orca navigation transition failed", error); });
 }
 
 function shouldReduceMotion() {
@@ -902,7 +904,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           <div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a>
         </SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint={readerDensityHint} name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
-        <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
+        <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Primary mail spaces give mail a home. Saved views show live matches across your mail; their filters and Inbox policy are managed in Organization. Hide or reorder tool shortcuts on this device from Customize tools.</p><a className="settings-row-link" href={`${demoMode ? "/dev/inbox" : "/"}?destination=inbox&customize=spaces`}>Manage primary mail spaces →</a><a className="settings-row-link" href={viewsManagementHref(demoMode ? "/dev/inbox" : "/")}>Manage saved views →</a></SettingsSection>
         <SettingsSection id="writing" title="Writing" note="Account + device">
           <div aria-busy={accountLoadStatus === "loading" ? "true" : undefined}>
             {accountLoadStatus === "loading" ? <p className="settings-account-status" role="status">Loading saved account choices before editing is enabled…</p> : null}
@@ -1350,8 +1352,10 @@ export function InboxApp({
     return new URLSearchParams(window.location.search).get("bre358Evidence") === "partial" ? "partial" : null;
   }, []);
   const bre358PartialServedRef = useRef(false);
-  const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
+  const [manageSpacesOpen, setManageSpacesOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "spaces");
   const [manageToolsOpen, setManageToolsOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "tools");
+  const [viewsManagementRoute, setViewsManagementRoute] = useState<ViewsManagementRoute | null>(() => typeof window === "undefined" ? null : viewsManagementFromLocation(window.location));
+  const [viewsEntryVersion, setViewsEntryVersion] = useState(0);
   const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
   const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
   const [spacePreferencesReady, setSpacePreferencesReady] = useState(false);
@@ -2207,6 +2211,7 @@ export function InboxApp({
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     setStreamQuery(location.query);
     setOrganizationStudioOpen(destination === "organization-studio" || destination === "attention" ? destination : false);
+    setViewsManagementRoute(location.viewsManagement ?? null);
     setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
     if (destination.startsWith("space:")) {
       setActiveCollectionId(destination.slice("space:".length) || null);
@@ -3053,7 +3058,15 @@ export function InboxApp({
     requestViewNavigation(() => navigateDesktopNow(destination));
   }
 
-  function navigateDesktopNow(destination: DesktopDestination) {
+  function navigateViews(editViewId: string | null = null) {
+    requestViewNavigation(() => {
+      // A deliberate Edit entry must reopen even after Cancel at this same URL.
+      setViewsEntryVersion(value => value + 1);
+      navigateDesktopNow("organization-studio", { section: "views", editViewId });
+    });
+  }
+
+  function navigateDesktopNow(destination: DesktopDestination, viewsRoute: ViewsManagementRoute | null = null) {
     setManageSpacesOpen(false);
     setManageToolsOpen(false);
     if (destination === "settings") {
@@ -3061,7 +3074,8 @@ export function InboxApp({
       return;
     }
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
-    surfaceHistoryRef.current?.navigate(destination);
+    surfaceHistoryRef.current?.navigate(destination, viewsRoute ?? undefined);
+    setViewsManagementRoute(viewsRoute);
     if (destination === "organization-studio" || destination === "attention") {
       runUiTransition("content", () => {
         setOrganizationStudioOpen(destination as "organization-studio" | "attention");
@@ -3184,6 +3198,7 @@ export function InboxApp({
           onCompose={() => openCompose()}
           onManageSpaces={() => setManageSpacesOpen(true)}
           onManageTools={() => setManageToolsOpen(true)}
+          onManageViews={() => navigateViews()}
           onNavigate={navigateDesktop}
           projection={sidebarProjection}
           theme={theme}
@@ -3197,7 +3212,7 @@ export function InboxApp({
             title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}
@@ -3205,7 +3220,7 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization-studio")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${requestedDestinationId}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
@@ -3302,8 +3317,8 @@ export function InboxApp({
         </section>
       </main>
 
-      {manageToolsOpen ? <ManageSpacesDialog demoMode={demoMode} savedViews={savedViews} onDeleted={deletedSavedView} busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState({}, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
-      {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => setManageSpacesOpen(false)} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
+      {manageToolsOpen ? <ManageSpacesDialog demoMode={demoMode} savedViews={savedViews} onDeleted={deletedSavedView} busy={spaceOperationStatus === "saving"} error={spaceOperationError ?? organizationError} onClose={() => { setManageToolsOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState(window.history.state, "", url); }} onCreate={createWorkflowSpace} onHide={hideWorkflowSpace} onReorder={reorderWorkflowSpaces} onRename={renameWorkflowSpace} onRestore={restoreWorkflowSpace} onOpen={(space) => navigateDesktop(destinationForSpace(space))} onManageViews={() => navigateViews()} onEditView={id => navigateViews(id)} spaces={workflowSpaces.filter(space => space.kind !== "destination")} /> : null}
+      {manageSpacesOpen ? <DestinationManager preview={demoMode} onClose={() => { setManageSpacesOpen(false); const url = new URL(window.location.href); url.searchParams.delete("customize"); window.history.replaceState(window.history.state, "", url); }} onCreated={id => navigateDesktop(`destination:${id}`)} /> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer

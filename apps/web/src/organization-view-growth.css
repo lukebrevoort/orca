@@ -3,3 +3,6 @@
 .view-growth-chooser .view-composer-actions { margin-top: 20px; }
 .views-workspace .view-identity[hidden], .views-workspace .view-inbox-visibility[hidden] { display: none; }
 .view-growth-chooser .view-scope-sentence { display: block; }
+.view-growth-return { margin: 0 0 16px; padding: 16px; border: 1px solid var(--desktop-border); border-radius: 12px; background: var(--desktop-surface-hover); color: var(--desktop-ink); font: 12px/1.6 var(--desktop-sans); }
+.view-growth-return p { margin: 6px 0 12px; }
+.view-growth-chooser .view-state p { margin: 0 0 10px; }
