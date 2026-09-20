@@ -39,7 +39,7 @@
 .view-composer input:focus,.view-composer select:focus { border-color: var(--desktop-accent); }
 .view-composer label > small,.view-clause > header small,.view-clause-heading small,.view-field-hint { color: var(--desktop-muted); font-size: 12px; line-height: 1.5; }
 .view-identity { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.35fr) 72px; gap: 16px; padding-top: 22px; }
-.view-color-field input { min-height: 44px; padding: 4px; }
+.view-identity > .color-preset-picker { grid-column: 1 / -1; margin: 0; }
 .view-scope-sentence { margin: 14px 0; padding: 13px 15px; border: 1px solid color-mix(in srgb,var(--desktop-accent) 36%,var(--desktop-border)); border-left: 3px solid var(--desktop-accent); border-radius: 4px 10px 10px 4px; background: color-mix(in srgb,var(--desktop-accent) 5%,var(--desktop-surface)); }
 .view-scope-sentence p { margin: 5px 0 0; color: var(--desktop-ink); font: 400 15px/1.6 var(--desktop-sans); letter-spacing: 0; }
 .view-preparation-notices { display: grid; gap: 7px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb,var(--desktop-accent) 42%,var(--desktop-border)); border-radius: 10px; background: color-mix(in srgb,var(--desktop-accent) 7%,var(--desktop-surface)); }
@@ -270,6 +270,9 @@
 /* The editor reads top to bottom: identity, rules, Inbox, evidence, then save. */
 .view-composer .view-section-heading { margin: 22px 0 0; font: 650 15px/1.4 var(--desktop-sans); letter-spacing: 0; }
 .view-section-heading + .view-identity { padding-top: 12px; }
+.view-identity { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+.views-workspace-sender-authoring .view-extra-identity { grid-template-columns: 1fr; }
+@media (max-width: 760px) { .view-identity { grid-template-columns: 1fr; } }
 .view-composer > .view-save-bar { padding: 16px 18px; border-top: 1px solid var(--desktop-border); border-bottom: 0; justify-content: flex-end; }
 .view-inbox-section { margin-top: 24px; padding-top: 4px; border-top: 1px solid var(--desktop-border); }
 .view-inbox-section > p { color: var(--desktop-muted); font-size: 13px; line-height: 1.6; margin: 8px 0; }

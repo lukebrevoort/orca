@@ -1,4 +1,5 @@
 import { TopLayer } from "./top-layer";
+import { ColorPresetPicker } from "./color-preset-picker";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { defaultSpaceColor, destinationCreateSchema, destinationListSchema, destinationMutationResultSchema, type MailDestination } from "@orca/shared";
 import { desktopDestinationHref, useOnlineStatus } from "./navigation";
@@ -98,7 +99,7 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
         }
       }}>
         <label>New space<input ref={newName} required maxLength={120} disabled={busy || catalog.locked} value={name} onInput={event => setName(event.currentTarget.value)} /></label>
-        <SpaceColorPicker color={color} onChange={setColor} disabled={busy || catalog.locked} />
+        <ColorPresetPicker color={color} onChange={setColor} disabled={busy || catalog.locked} />
         <button disabled={busy || catalog.locked || !validName(name)}>Create space</button>
       </form>
       <p className="space-name-help">Names must contain 1–120 characters. Leading and trailing spaces are removed.</p>
@@ -118,7 +119,7 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
             }
           }}>
             <label>Name<input aria-label={`Name for ${item.name}`} required value={draft.name} maxLength={120} disabled={busy || catalog.locked} onInput={event => { setStatus(""); setDrafts({ ...drafts, [item.id]: { name: event.currentTarget.value, color: draft.color } }); }} /></label>
-            <SpaceColorPicker color={draft.color} onChange={value => { setStatus(""); setDrafts({ ...drafts, [item.id]: { name: draft.name, color: value } }); }} disabled={busy || catalog.locked} />
+            <ColorPresetPicker color={draft.color} onChange={value => { setStatus(""); setDrafts({ ...drafts, [item.id]: { name: draft.name, color: value } }); }} disabled={busy || catalog.locked} />
             <button disabled={busy || catalog.locked || !validName(draft.name) || !changed}>Save changes</button>
           </form>
           <p>{item.isFallback ? "Your default space cannot be removed." : legacy ? "Legacy choices use this space. Keep it available until those choices are migrated." : changed ? "Save your name and color changes before removing this space." : "Review removal before making any changes. Mail is never deleted."}</p>
@@ -154,22 +155,4 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
       }}>{busy ? "Removing…" : error ? "Retry removal" : "Remove space"}</button></footer>
     </TopLayer>}
   </>;
-}
-
-const spacePalette = [
-  { name: "Sage", value: defaultSpaceColor },
-  { name: "Blue", value: "#648ac4" },
-  { name: "Violet", value: "#9a7bc0" },
-  { name: "Rose", value: "#c7788c" },
-  { name: "Amber", value: "#b58b48" },
-  { name: "Teal", value: "#459c98" },
-];
-function SpaceColorPicker({ color, onChange, disabled }: { color: string; onChange: (color: string) => void; disabled: boolean }) {
-  const choices = spacePalette.some(choice => choice.value.toLowerCase() === color.toLowerCase()) ? spacePalette : [...spacePalette, { name: "Custom", value: color }];
-  return <fieldset className="space-color-picker" disabled={disabled}><legend>Dot color</legend>
-    {choices.map(choice => <button key={choice.value} type="button" aria-pressed={color.toLowerCase() === choice.value.toLowerCase()} onClick={() => onChange(choice.value)}>
-      <span aria-hidden="true" className="desktop-space-mark" style={{ background: choice.value }} />
-      <span>{choice.name}</span><span aria-hidden="true" className="space-color-check">{color.toLowerCase() === choice.value.toLowerCase() ? "✓" : ""}</span>
-    </button>)}
-  </fieldset>;
 }

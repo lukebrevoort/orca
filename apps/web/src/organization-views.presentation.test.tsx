@@ -54,6 +54,24 @@ test("BRE-414 editor has one task heading, ordered groups, and plain mail separa
   expect(groups).toEqual(["view-identity", "view-scope-sentence", "view-clause-list", "view-inbox-section", "view-builder-footer", "view-save-bar"]);
 });
 
+test("view color uses named presets and preserves an existing non-palette color until changed", async () => {
+  const view = demoStore.create({ name: "Color test", description: "", color: "#123456", position: 9, skipInbox: false, definition: { revision: 1, sender: { addresses: ["family@example.com"] } } });
+  await renderEditor(view.id);
+  expect(container.querySelector('input[type="color"]')).toBeNull();
+  const picker = container.querySelector('.color-preset-picker')!;
+  const buttons = () => [...picker.querySelectorAll('button')];
+  expect(buttons().find(button => button.textContent?.includes('Existing color'))?.getAttribute('aria-pressed')).toBe('true');
+  expect(demoStore.getView(view.id)?.color).toBe('#123456');
+  await act(async () => buttons().find(button => button.textContent?.includes('Blue'))!.click());
+  expect(buttons().filter(button => button.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+  expect(buttons().find(button => button.textContent?.includes('Blue'))?.getAttribute('aria-pressed')).toBe('true');
+  await click('Save changes');
+  expect(demoStore.getView(view.id)?.color).toBe('#648ac4');
+  await act(async () => root.render(null));
+  await renderEditor(view.id);
+  expect(container.querySelector('.color-preset-picker button[aria-pressed="true"]')?.textContent).toContain('Blue');
+});
+
 test("BRE-417 consumes exact edit ID once and protects a dirty draft from replacement", async () => {
   await renderEditor(organizationViewsFixture[1]!.id);
   expect(container.querySelector<HTMLInputElement>(".view-identity input")?.value).toBe("Urgent humans");
