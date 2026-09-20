@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 import {
   organizationViewCreateRequestSchema,
+  growOrganizationViewSenders,
+  senderGrowthBlocker,
   organizationViewCommitRequestSchema,
   organizationViewDefinitionSchema,
   organizationViewDefinitionKind,
@@ -303,14 +305,21 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
     if (parsed.kind === "selected_senders") {
       const authorization = authorizeQuery(scope, { revision: 1 }, dependencies.agentCapabilitySource);
       const resolved = repository.resolveSelectedSenders({ scope, references: parsed.references, authorization });
+      const target = parsed.targetView ? repository.get(scope.workspaceId, parsed.targetView.id) : null;
+      if (parsed.targetView && !target) throw new OrganizationViewNotFoundError();
+      if (target && target.revision !== parsed.targetView!.revision) throw new OrganizationViewConflictError("This View changed. Return to the View chooser to review its latest definition. Your selected mail is kept.");
+      if (target) {
+        const blocker = senderGrowthBlocker(target.definition, resolved.accountId);
+        if (blocker) throw new OrganizationViewValidationError(blocker);
+      }
       return { draft: organizationViewDraftInputSchema.parse({
-        mode: "create",
-        viewId: null,
-        viewRevision: null,
+        mode: target ? "update" : "create",
+        viewId: target?.id ?? null,
+        viewRevision: target?.revision ?? null,
         source: parsed.source,
-        identity: parsed.identity,
-        skipInbox: parsed.skipInbox,
-        definition: { revision: 1, accountIds: [resolved.accountId], sender: { addresses: resolved.addresses } },
+        identity: target ? { name: target.name, description: target.description, color: target.color, position: target.position } : parsed.identity,
+        skipInbox: target?.skipInbox ?? parsed.skipInbox,
+        definition: target ? growOrganizationViewSenders(target.definition, resolved.accountId, resolved.addresses) : { revision: 1, accountIds: [resolved.accountId], sender: { addresses: resolved.addresses } },
         unsupportedClauses: [],
       }), preparationNotices: resolved.omittedSelfCount > 0 ? [{
         code: "self_sender_omitted",
@@ -468,6 +477,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         if (!saved) {
           const current = repository.get(input.scope.workspaceId, mutation.viewId);
           if (!current) throw new OrganizationViewNotFoundError();
+          if (current.revision !== mutation.request.expectedRevision) throw new OrganizationViewConflictError();
           const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, skipInbox: current.skipInbox, definition: current.definition })
             === canonicalOrganizationJson({ ...derived.identity, skipInbox: derived.skipInbox, definition: derived.definition });
           if (isNoOp) throw new OrganizationViewValidationError("Change at least one View field before saving");

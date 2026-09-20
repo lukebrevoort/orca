@@ -5,6 +5,7 @@ import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView, type OrganizationViewDefinition, type OrganizationViewDraftInput, type OrganizationViewPreparationInput, type OrganizationViewReviewedDraft } from "@orca/shared";
 import { OrganizationViewAuthoringWorkspace, OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
+import { OrganizationViewGrowthWorkspace } from "./organization-view-growth";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -1700,4 +1701,55 @@ describe("Inbox visibility metadata", () => {
     await click(button(container, "Edit definition"));
     expect(input(container, "Keep matching mail out of Inbox").checked).toBe(true);
   });
+});
+
+
+test("BRE-413 chooser reviews additive senders and preserves draft through failed save and cancel", async () => {
+  const current: OrganizationView = { ...organizationViewsFixture[0]!, name: "People", skipInbox: true, definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["existing@example.com"], domains: ["retained.example"] }, thread: { readState: "unread" } } };
+  const preparation: OrganizationViewPreparationInput = { kind: "selected_senders", skipInbox: false, source: { kind: "sender_selection", label: "Selected mail" }, identity: { name: "Selected senders", description: "", color: "#123456", position: 0 }, references: [{ accountId: "account_gmail", threadId: "thread_selected", messageId: "message_selected" }] };
+  const context = { anchor: "selected-message" };
+  const cancelled: unknown[] = [];
+  const commits: unknown[] = [];
+  let preparedRequest: unknown;
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [current, organizationViewsFixture[1]!] });
+    if (path === "/v1/organization/views/prepare") {
+      preparedRequest = JSON.parse(String(init?.body));
+      const definition = { ...current.definition, sender: { ...current.definition.sender, addresses: ["existing@example.com", "maya@example.com"] } };
+      const draft = { ...preparedCreateDraft(preparation, definition), mode: "update", viewId: current.id, viewRevision: current.revision, identity: { name: current.name, description: current.description, color: current.color, position: current.position }, skipInbox: true };
+      return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft });
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") { commits.push(JSON.parse(String(init?.body))); return Response.json({ error: { code: "revision_conflict", message: "View changed. Draft is safe." } }, { status: 409 }); }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewGrowthWorkspace compact entry={{ preparation, returnContext: context, accountLabels: { account_gmail: "owner@example.com" } }} onCancel={value => cancelled.push(value)} onCommitted={() => {}}/>));
+  await flush(); await flush();
+  const element = container as unknown as HTMLElement;
+  expect(button(element, "Preview added senders").disabled).toBe(true);
+  const choose = container.querySelector("select")!;
+  await act(async () => { choose.value = organizationViewsFixture[1]!.id; choose.dispatchEvent(new browserWindow.Event("change", { bubbles: true })); });
+  expect(container.textContent).toContain("would narrow it");
+  expect(button(element, "Preview added senders").disabled).toBe(true);
+  await act(async () => { choose.value = current.id; choose.dispatchEvent(new browserWindow.Event("change", { bubbles: true })); });
+  await click(button(element, "Preview added senders")); await flush(); await flush(); await flush();
+  expect(preparedRequest).toEqual({ ...preparation, targetView: { id: current.id, revision: current.revision } });
+  expect(container.textContent).toContain("Current addresses: existing@example.com");
+  expect(container.textContent).toContain("Proposed addresses: existing@example.com, maya@example.com");
+  expect(container.textContent).toContain("Other filters still apply");
+  expect(container.textContent).toContain("owner@example.com");
+  expect(commits).toHaveLength(0);
+  await click(button(element, "Save changes")); await flush();
+  expect(commits).toHaveLength(1);
+  expect(container.textContent).toContain("Proposed addresses: existing@example.com, maya@example.com");
+  expect((commits[0] as { draft: OrganizationViewReviewedDraft }).draft.skipInbox).toBe(true);
+  expect((commits[0] as { draft: OrganizationViewReviewedDraft }).draft.definition).toEqual({ ...current.definition, sender: { ...current.definition.sender, addresses: ["existing@example.com", "maya@example.com"] } });
+  expect((commits[0] as { draft: OrganizationViewReviewedDraft }).draft.identity).toEqual({ name: current.name, description: current.description, color: current.color, position: current.position });
+  await click(button(element, "Cancel")); await flush();
+  expect(container.textContent).toContain("Add to an existing View");
+  await click(button(element, "Cancel"));
+  expect(cancelled).toEqual([context]);
 });

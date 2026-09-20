@@ -40,6 +40,7 @@ import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
 import { reconcileWorkflowSpaceOrder, mergeWorkflowSpaceOrder, createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
+import { OrganizationViewGrowthWorkspace } from "./organization-view-growth";
 import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
@@ -4691,7 +4692,9 @@ function InboxView({
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
-  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(() => new URLSearchParams(window.location.search).has("addSendersTo"));
+  const [senderGrowth, setSenderGrowth] = useState(false);
+  const SenderAuthoringWorkspace = senderGrowth ? OrganizationViewGrowthWorkspace : OrganizationViewAuthoringWorkspace;
   const guidanceSelectionRequest = useViewGuidanceSelectionRequest(viewMode);
   const handledGuidanceSelection = useRef(0);
   const pendingGuidanceFocus = useRef(false);
@@ -4918,7 +4921,8 @@ function InboxView({
     }
   }
 
-  function openSelectedSenderAuthoring() {
+  function openSelectedSenderAuthoring(grow = false) {
+    setSenderGrowth(grow);
     if (!selectedRows.size || selectedAccountCount !== 1) return;
     const preparation = selectedSenderPreparation([...selectedRows.values()], `${window.location.pathname}${window.location.search}${window.location.hash}`);
     setViewAuthoringEntry({ preparation, accountLabels: account ? { [account.id]: account.email } : {}, returnContext: { scrollX: window.scrollX, scrollY: window.scrollY, focus: "use-selected-senders" } });
@@ -5122,7 +5126,8 @@ function InboxView({
               });
             }} />
             <div className="bulk-view-action">
-              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
+              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => openSelectedSenderAuthoring()} ref={useSelectedSendersRef} type="button">Create sender View</button>
+              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => openSelectedSenderAuthoring(true)} type="button">Add senders to existing View</button>
               {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
             </div>
             <details><summary>Sender preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
@@ -5133,7 +5138,8 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
-        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
+        {new URLSearchParams(window.location.search).has("addSendersTo") ? <p className="view-state">Select mail from one account, then choose Add senders to existing View. You’ll review the exact senders and matching mail before saving.</p> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><SenderAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">

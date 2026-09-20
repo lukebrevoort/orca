@@ -2252,7 +2252,7 @@ describe("Pin navigation and bulk sender actions", () => {
       buttonByName("Select Maya: Account A").click();
       buttonByName("Select Ari: Account B").click();
     });
-    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Use these senders") as unknown as HTMLButtonElement;
+    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Create sender View") as unknown as HTMLButtonElement;
     expect(useSenders.disabled).toBe(true);
     expect(browserWindow.document.querySelector(".bulk-view-action")?.textContent).toContain("Choose messages from one account");
     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(2);
@@ -2262,7 +2262,7 @@ describe("Pin navigation and bulk sender actions", () => {
     await renderApp();
     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
-    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Use these senders") as unknown as HTMLButtonElement;
+    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Create sender View") as unknown as HTMLButtonElement;
     const focusCalls = trackFocus(useSenders);
     setScroll({ x: 12, y: 380 });
     await act(async () => { useSenders.click(); await Promise.resolve(); });
@@ -2291,7 +2291,7 @@ describe("Pin navigation and bulk sender actions", () => {
     const byText = (text: string) => [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === text) as unknown as HTMLButtonElement;
     await act(async () => byText("Select").click());
     await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
-    await act(async () => { byText("Use these senders").click(); await Promise.resolve(); });
+    await act(async () => { byText("Create sender View").click(); await Promise.resolve(); });
     const tunePanel = browserWindow.document.querySelector("#search-view-tune")!;
     expect(tunePanel.hasAttribute("hidden")).toBe(true);
     expect(tunePanel.querySelector('input[aria-label="View color"]')).not.toBeNull();

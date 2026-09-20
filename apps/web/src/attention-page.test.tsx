@@ -1027,15 +1027,15 @@ test("destination switches clear hidden selections and actionable sender targets
   await renderMailbox();
   await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
-  expect(button("Use these senders").disabled).toBe(false);
+  expect(button("Create sender View").disabled).toBe(false);
   await nav("Quiet");
   expect(document.querySelector(".bulk-selection-toolbar")).toBeNull();
-  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
+  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Create sender View")).toBe(false);
   await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
-  expect(button("Use these senders").disabled).toBe(false);
+  expect(button("Create sender View").disabled).toBe(false);
   await nav("Inbox");
-  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
+  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Create sender View")).toBe(false);
   expect(puts).toHaveLength(0);
 });
 
@@ -1100,7 +1100,7 @@ test("App bulk move dedupes selected messages across accounts, refreshes counts/
   await openBulkMove();
   expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("2 conversations selected");
   expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("2 selected conversations across 2 accounts");
-  expect(button("Use these senders").disabled).toBe(true);
+  expect(button("Create sender View").disabled).toBe(true);
   const gate = deferred();
   intercept = async (path, init) => { if (path.endsWith("/routing/batch") && init?.method === "PUT") await gate.promise; return syncNoop(path); };
   const move = button("Move conversations");

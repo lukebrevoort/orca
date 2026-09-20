@@ -1337,3 +1337,52 @@ test("skipInbox honors catalog normal mapping without hiding other destinations 
     assert.equal(catalog.destinations.find(d => d.id === ownerLane)!.counts.total, 3);
   } finally { db.sqlite.close(); }
 });
+
+test("BRE-413 grows authoritative selected senders with preview, revision checks, domain OR, and skipInbox preserved", { timeout: 30_000 }, async () => {
+  const fixture = await setup();
+  const { app, headers } = fixture;
+  const seeded = createDatabaseClient(fixture.path);
+  for (const [id, subject] of [["retained_domain", "A / retained domain"], ["filtered_domain", "Other subject"]]) {
+    seeded.db.insert(threads).values({ id: id!, accountId: "account_a", providerThreadId: id!, subject: subject!, latestReceivedAt: new Date("2026-08-25T18:00:00.000Z") }).run();
+    seeded.db.insert(emails).values({ id: id!, accountId: "account_a", threadId: id!, providerMessageId: id!, fromAddress: "member@retained.example", subject: subject!, receivedAt: new Date("2026-08-25T18:00:00.000Z") }).run();
+  }
+  seeded.sqlite.close();
+  const post = (path: string, body: unknown) => app.request(path, { method: "POST", headers, body: JSON.stringify(body) });
+  const before = await createView(app, headers, { name: "Established", description: "Keep identity", color: "#123456", position: 3, skipInbox: true, definition: { revision: 1, accountIds: ["account_a"], sender: { addresses: ["existing@other.example"], domains: ["retained.example"] }, thread: { subjectContains: "A /" } } });
+  const selection = { kind: "selected_senders", targetView: { id: before.id, revision: before.revision }, source: { kind: "sender_selection", label: "Selected mail" }, identity: { name: "Must not replace identity" }, references: [{ accountId: "account_a", threadId: "thread_a", messageId: "message_maya" }, { accountId: "account_a", threadId: "thread_b", messageId: "message_maya_duplicate" }, { accountId: "account_a", threadId: "thread_b", messageId: "message_self" }] };
+  const response = await post("/v1/organization/views/prepare", selection);
+  assert.equal(response.status, 200, await response.clone().text());
+  const prepared = await response.json();
+  assert.equal(prepared.draft.mode, "update");
+  assert.equal(prepared.draft.skipInbox, true);
+  assert.deepEqual(prepared.draft.identity, { name: before.name, description: before.description, color: before.color, position: before.position });
+  assert.deepEqual(prepared.draft.definition, { ...before.definition, sender: { ...before.definition.sender, addresses: ["existing@other.example", "maya@example.com"] } });
+  assert.equal(prepared.draft.preparationNotices[0].omittedCount, 1);
+  const listed = await (await app.request("/v1/organization/views", { headers })).json();
+  assert.deepEqual(listed.items.find((view: OrganizationView) => view.id === before.id), before, "prepare never mutates the saved View");
+  const { preparationNotices, definitionDigest, definitionKind, effectiveAccountIds, summary, saveEligibility, ...draftInput } = prepared.draft;
+  const previewResponse = await post("/v1/organization/views/preview", { draft: draftInput, page: { limit: 50 } });
+  assert.equal(previewResponse.status, 200, await previewResponse.clone().text());
+  const preview = await previewResponse.json();
+  assert.ok(preview.results.items.some((item: { threadId: string }) => item.threadId === "thread_a"));
+  assert.ok(preview.results.items.some((item: { threadId: string }) => item.threadId === "retained_domain"), "domain matches remain OR with added addresses");
+  assert.ok(!preview.results.items.some((item: { threadId: string }) => item.threadId === "filtered_domain"), "unrelated subject filter still applies");
+  assert.ok(preview.results.items.every((item: { accountId: string }) => item.accountId === "account_a"));
+  const envelope = { draft: prepared.draft, expectedRevisions: { workspace: prepared.workspaceRevision, view: before.revision }, retryKey: "bre413-add" };
+  const committedResponse = await post("/v1/organization/views/commit", envelope);
+  assert.equal(committedResponse.status, 200, await committedResponse.clone().text());
+  const committed = await committedResponse.json();
+  assert.equal(committed.view.id, before.id);
+  assert.equal(committed.view.skipInbox, true);
+  assert.equal(committed.view.revision, before.revision + 1);
+  assert.deepEqual((await (await post("/v1/organization/views/commit", envelope)).json()).view, committed.view);
+  assert.equal((await post("/v1/organization/views/prepare", selection)).status, 409);
+  assert.equal((await post("/v1/organization/views/commit", { ...envelope, retryKey: "bre413-stale" })).status, 409);
+  const unchanged = await post("/v1/organization/views/prepare", { ...selection, targetView: { id: before.id, revision: committed.view.revision } });
+  assert.deepEqual((await unchanged.json()).draft.definition, committed.view.definition, "already included addresses remain deduplicated");
+  for (const definition of [{ revision: 1, accountIds: ["account_a"], thread: { readState: "unread" } }, { revision: 1, accountIds: ["account_b"], sender: { domains: ["example.com"] } }, { revision: 1, sender: { domains: ["example.com"] } }]) {
+    const unsupported = await createView(app, headers, { name: "Unsupported", definition });
+    assert.equal((await post("/v1/organization/views/prepare", { ...selection, targetView: { id: unsupported.id, revision: unsupported.revision } })).status, 400);
+  }
+  assert.equal((await post("/v1/organization/views/prepare", { ...selection, targetView: { id: "missing", revision: 1 } })).status, 404);
+});

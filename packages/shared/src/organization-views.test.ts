@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 
 import {
   organizationViewCreateRequestSchema,
+  growOrganizationViewSenders,
   organizationViewCommitRequestSchema,
   organizationViewDefinitionSchema,
   organizationViewDefinitionKind,
@@ -200,3 +201,17 @@ describe("BRE-381 reviewed View draft contracts", () => {
  assert.equal(organizationViewCreateRequestSchema.parse({ ...base, skipInbox: true }).skipInbox, true);
  assert.equal(organizationViewDefinitionSchema.safeParse({ revision: 1, skipInbox: true }).success, false);
  });
+
+describe("BRE-413 additive sender growth", () => {
+  test("deduplicates exact addresses while preserving domain OR and every other predicate", () => {
+    const before = organizationViewDefinitionSchema.parse({ revision: 1, accountIds: ["a"], sender: { addresses: ["maya@example.com"], domains: ["team.example"] }, thread: { readState: "unread" }, humanSignal: { minimumScore: 7 } });
+    const after = growOrganizationViewSenders(before, "a", [" MAYA@example.com ", "ari@example.net", "ari@example.net"]);
+    assert.deepEqual(after, { ...before, sender: { addresses: ["maya@example.com", "ari@example.net"], domains: ["team.example"] } });
+    assert.deepEqual(before.sender?.addresses, ["maya@example.com"]);
+  });
+  test("does not silently narrow unfiltered senders or expand account scope", () => {
+    for (const definition of [{ revision: 1 as const, accountIds: ["a"] }, { revision: 1 as const, sender: { domains: ["example.com"] } }, { revision: 1 as const, accountIds: ["b"], sender: { addresses: ["maya@example.com"] } }, { revision: 1 as const, accountIds: ["a", "b"], sender: { domains: ["example.com"] } }]) {
+      assert.throws(() => growOrganizationViewSenders(definition, "a", ["ari@example.com"]));
+    }
+  });
+});
