@@ -3925,3 +3925,14 @@ describe("BRE-386 guidance navigation", () => {
     expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("false");
   });
 });
+
+describe("BRE-413 saved-view growth entry", () => {
+  beforeEach(installDom);
+  afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } restoreDom(); });
+  test("survives the mailbox selection reset", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all&addSendersTo=view_weekly_production");
+    await renderApp();
+    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.textContent).toContain("Done selecting");
+    expect(browserWindow.document.body.textContent).toContain("Add senders to existing View");
+  });
+});

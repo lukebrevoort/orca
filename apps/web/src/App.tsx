@@ -4783,7 +4783,7 @@ function InboxView({
   }, [collection, topLayerActive]);
 
   useEffect(() => {
-    setSelectionMode(false);
+    setSelectionMode(viewMode === "all" && new URLSearchParams(window.location.search).has("addSendersTo"));
     setBulkSpaceBusy(false);
     setSelectedRows(new Map());
     setSelectedTargets(new Map());
