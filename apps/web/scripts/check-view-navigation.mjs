@@ -44,8 +44,21 @@ try {
  await page.screenshot({path:join(output, 'bre-415-focus-dark.png')});
  await page.evaluate(()=>history.forward()); await prompt.waitFor(); await press('Discard draft'); await page.getByRole('heading',{name:'Urgent humans',exact:true}).waitFor();
  await press('Edit'); await name.fill('Leave for Settings'); await nav('Settings'); await prompt.waitFor();
- let extraPrompt = false; page.on('dialog', async dialog => { extraPrompt = true; await dialog.dismiss(); });
- await press('Discard draft'); await page.waitForURL('**/settings'); assert.equal(extraPrompt,false);
+ const settingsDialogs = [];
+ const acceptSettingsReset = async dialog => {
+  settingsDialogs.push({type:dialog.type(),message:dialog.message()});
+  await dialog.accept();
+ };
+ page.on('dialog', acceptSettingsReset);
+ await page.addStyleTag({content:'@view-transition { navigation: none; }'});
+ await press('Discard draft'); await page.waitForURL('**/dev/settings');
+ page.off('dialog', acceptSettingsReset);
+ assert.equal(settingsDialogs.length,1);
+ assert.equal(settingsDialogs[0].type,'confirm');
+ assert.match(settingsDialogs[0].message,/reset/i);
+ // Keep in-document guard animations enabled; avoid Chromium's cross-document
+ // transition capture freeze when this replay immediately opens another page.
+ await page.addStyleTag({content:'@view-transition { navigation: none; }'});
  const organizationUrl = new URL(process.env.VIEW_GUARD_URL ?? 'http://localhost:5187/dev/inbox');
  organizationUrl.searchParams.set('destination','organization-studio');
  await page.goto(organizationUrl.href); await press('Views'); await press('Edit definition');
@@ -62,4 +75,8 @@ try {
  await press('Rules'); await prompt.waitFor(); await press('Discard draft'); await press('Views');
  assert.equal(await page.locator('#organization-views .view-composer').count(),0);
  console.log('PASS shell, Back/Forward Keep/Discard, exact URL/focus, requested view identity, light/dark screenshots');
-} catch (error) { await page.screenshot({path:join(output, "bre-415-failure.png")}); throw error; } finally { await browser.close(); }
+} catch (error) {
+ console.error(error);
+ await page.screenshot({path:join(output, "bre-415-failure.png"),timeout:2000}).catch(()=>{});
+ throw error;
+} finally { await browser.close(); }
