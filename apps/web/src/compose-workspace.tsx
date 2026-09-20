@@ -410,6 +410,12 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const [conflict, setConflict] = useState<ComposeDraftConflict | null>(null);
   const [hydratedScope, setHydratedScope] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const conflictRef = useRef(conflict);
+  conflictRef.current = conflict;
+  const resolvingRef = useRef(false);
+  const mountedRef = useRef(true);
   const storageScopeRef = useRef(scopeKey);
   const persistedDraftRef = useRef(JSON.stringify(persistableDraft(draft)));
   const pendingDraftRef = useRef<{ key: string; serialized: string } | null>(null);
@@ -431,9 +437,13 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     attachmentsRef.current = draft.attachments;
   }, [draft.attachments]);
 
-  useEffect(() => () => {
-    revokeComposeAttachments(attachmentsRef.current);
-    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      revokeComposeAttachments(attachmentsRef.current);
+      if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+    };
   }, []);
 
   const flushPendingDraft = useCallback(() => {
@@ -557,7 +567,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   const persistRemote = useCallback(async (snapshot: ComposeDraft, force = false, expectedScopeKey = scopeKey) => {
     if (storageScopeRef.current !== expectedScopeKey || saveScopeRef.current !== expectedScopeKey) return;
-    if (!hasComposeContent(snapshot) || conflict) return;
+    if (!hasComposeContent(snapshot) || conflictRef.current || resolvingRef.current) return;
     const signature = remoteContentSignature(snapshot);
     if (!force && signature === lastRemoteSignatureRef.current && serverIdRef.current) return;
     setSaveStatus("saving");
@@ -617,7 +627,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     );
     const forceRemoteSave = retryToken !== processedRetryTokenRef.current;
     pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
-    if (needsRemoteSave) {
+    if (needsRemoteSave && !conflict) {
       setSaveStatus("saving");
       setSaveMessage("Saving…");
     }
@@ -718,29 +728,61 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   async function resolveConflict(choice: "server" | "local") {
-    if (!conflict) return;
-    if (choice === "server") {
-      const restored = fromMessageDraft(conflict.server);
-      serverIdRef.current = conflict.server.id;
-      serverRevisionRef.current = conflict.server.revision;
+    const resolvingConflict = conflictRef.current;
+    if (!resolvingConflict || resolvingRef.current) return;
+    const local = draftRef.current;
+    const expectedScope = scopeKey;
+    resolvingRef.current = true;
+    setSaveStatus("saving");
+    setSaveMessage("Preserving your version as a separate draft…");
+    try {
+      // Checkpoint the live editor, never the snapshot captured by the failed save.
+      window.localStorage.setItem(draftStorageKey(accountId, scope), JSON.stringify(persistableDraft(local)));
+      const localAttachments = await Promise.all(local.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
+        id, filename, mimeType, size, contentBase64: await fileToBase64(file),
+      })));
+      const content = buildDraftContent(local, mergeDraftAttachments(serverAttachmentsRef.current, localAttachments), true);
+      // Both choices preserve the local original in Drafts before switching away.
+      // POST never patches the contested original or replays a send.
+      const recovered = await requestDraft("/v1/drafts", messageDraftSchema, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(content),
+      });
+      if (!mountedRef.current || storageScopeRef.current !== expectedScope) return;
+      if (conflictRef.current !== resolvingConflict || draftRef.current !== local) {
+        setSaveStatus("failed");
+        setSaveMessage("A recovery copy is in Drafts. The versions changed while saving — review them again.");
+        return;
+      }
+      const selected = choice === "server" ? resolvingConflict.server : recovered;
+      const restored = choice === "server" ? fromMessageDraft(selected) : {
+        ...local, id: recovered.id, revision: recovered.revision,
+        providerSyncStatus: recovered.providerSyncStatus, providerSyncError: recovered.providerSyncError,
+      };
+      // A storage failure must leave the live editor and conflict intact.
+      const serialized = JSON.stringify(persistableDraft(restored));
+      window.localStorage.setItem(draftStorageKey(accountId, scope), serialized);
+      pendingDraftRef.current = null;
+      persistedDraftRef.current = serialized;
+      serverIdRef.current = selected.id;
+      serverRevisionRef.current = selected.revision;
+      serverAttachmentsRef.current = selected.attachments;
       attachmentsDirtyRef.current = false;
-      serverAttachmentsRef.current = conflict.server.attachments;
       lastRemoteSignatureRef.current = remoteContentSignature(restored);
+      sendIdempotencyKeyRef.current = null;
+      if (choice === "server") revokeComposeAttachments(local.attachments);
       setDraft(restored);
       setConflict(null);
-      setSaveStatus(conflict.server.providerSyncStatus === "failed" ? "failed" : "saved");
-      setSaveMessage(providerSaveMessage(conflict.server));
-      return;
+      setSaveStatus(selected.providerSyncStatus === "failed" ? "failed" : "saved");
+      setSaveMessage(choice === "server" ? "Using newer version · your version is recoverable in Drafts" : "Your version saved as a separate draft · original preserved");
+    } catch {
+      if (!mountedRef.current || storageScopeRef.current !== expectedScope) return;
+      setSaveStatus("failed");
+      setSaveMessage("Couldn’t finish preserving your version. Keep this tab open and retry your choice.");
+    } finally {
+      resolvingRef.current = false;
     }
-    const local = { ...conflict.local, id: crypto.randomUUID(), revision: null, providerSyncStatus: null, providerSyncError: null, updatedAt: new Date().toISOString() };
-    serverIdRef.current = null;
-    serverRevisionRef.current = null;
-    lastRemoteSignatureRef.current = null;
-    attachmentsDirtyRef.current = local.attachments.length > 0;
-    serverAttachmentsRef.current = [];
-    setConflict(null);
-    setDraft(local);
-    setRetryToken((current) => current + 1);
   }
 
   async function sendDraft(deliveryFields?: Partial<ComposeDraftFields>): Promise<DeliveryResult> {
@@ -1210,7 +1252,7 @@ export function ComposeWorkspace({
         <div className="zen-stage">
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
             {editor}
-            {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+            {conflict ? <DraftConflictNotice conflict={conflict} local={draft} onResolve={resolveConflict} /> : null}
             <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
             {draggingFiles ? <ComposeDropOverlay /> : null}
           </div>
@@ -1223,7 +1265,7 @@ export function ComposeWorkspace({
     return (
       <section aria-label="Reply to conversation" className={`${workspaceClass} compose-workspace-reply`} {...dropHandlers}>
         {editor}
-        {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+        {conflict ? <DraftConflictNotice conflict={conflict} local={draft} onResolve={resolveConflict} /> : null}
         <ComposeDeliveryBar actionLabel={actionLabel} canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
         {draggingFiles ? <ComposeDropOverlay /> : null}
       </section>
@@ -1237,7 +1279,7 @@ export function ComposeWorkspace({
         <span className="compose-contact-count">{contactsLabel}</span>
       </div>
       {editor}
-      {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+      {conflict ? <DraftConflictNotice conflict={conflict} local={draft} onResolve={resolveConflict} /> : null}
       <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
       {draggingFiles ? <ComposeDropOverlay /> : null}
     </section>
@@ -1488,16 +1530,34 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
   );
 }
 
-function DraftConflictNotice({ conflict, onResolve }: { conflict: ComposeDraftConflict; onResolve: (choice: "server" | "local") => Promise<void> }) {
+export function DraftConflictNotice({ conflict, local, onResolve }: { conflict: ComposeDraftConflict; local: ComposeDraft; onResolve: (choice: "server" | "local") => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  async function resolve(choice: "server" | "local") {
+    setBusy(true);
+    try { await onResolve(choice); } finally { setBusy(false); }
+  }
   return (
-    <section aria-label="Draft recovery choice" className="compose-conflict" role="alert">
+    <section aria-busy={busy} aria-label="Draft recovery choice" className="compose-conflict" role="alert">
       <div>
         <strong>This draft changed in another tab.</strong>
-        <span>The newer saved copy is from {new Date(conflict.server.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Your words are still safe on this device.</span>
+        <span>Either choice saves your current version as a separate draft in Drafts. The original saved version is preserved. Nothing is sent.</span>
+        <details>
+          <summary>Compare your current version and the saved version</summary>
+          {[{ label: "Your current version", subject: local.subject, body: local.body, to: local.to, cc: local.cc, bcc: local.bcc, attachments: local.attachments, updatedAt: local.updatedAt, revision: local.revision }, { label: "Saved version", ...conflict.server, body: conflict.server.body.text }].map((version) => (
+            <div key={version.label}>
+              <strong>{version.label} · {new Date(version.updatedAt).toLocaleString()} · revision {version.revision ?? "unsaved"}</strong>
+              <p>Subject: {version.subject || "(no subject)"}</p>
+              <p>To: {version.to.map(contact => contact.email).join(", ") || "none"} · Cc: {version.cc.map(contact => contact.email).join(", ") || "none"} · Bcc: {version.bcc.map(contact => contact.email).join(", ") || "none"}</p>
+              <p style={{ whiteSpace: "pre-wrap", maxHeight: 120, overflow: "auto" }}>{version.body || "(empty message)"}</p>
+              <p>Attachments: {version.attachments.map(attachment => attachment.filename).join(", ") || "none"}</p>
+            </div>
+          ))}
+        </details>
+        {busy ? <span>Preserving your version…</span> : null}
       </div>
       <div>
-        <button onClick={() => void onResolve("server")} type="button">Use newer version</button>
-        <button onClick={() => void onResolve("local")} type="button">Keep mine as a new draft</button>
+        <button disabled={busy} onClick={() => void resolve("server")} type="button">Use newer version</button>
+        <button disabled={busy} onClick={() => void resolve("local")} type="button">Keep mine as a new draft</button>
       </div>
     </section>
   );

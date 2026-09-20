@@ -861,7 +861,7 @@ describe("App", () => {
       />,
     );
     expect(html).toContain("This draft changed in another tab.");
-    expect(html).toContain("Your words are still safe on this device.");
+    expect(html).toContain("Either choice saves your current version as a separate draft in Drafts.");
     expect(html).toContain("Use newer version");
     expect(html).toContain("Keep mine as a new draft");
     expect(html).toContain(">Retry</button>");
