@@ -2273,7 +2273,8 @@ describe("Pin navigation and bulk sender actions", () => {
     const authoringHeading = authoringSurface.querySelector("#views-title") as unknown as HTMLElement;
     expect(authoringHeading.tabIndex).toBe(-1);
     expect(authoringHeading.textContent).toBe("Save a sender view");
-    expect(authoringSurface.querySelector(".view-composer h3")).toBeNull();
+    // Section headings inside Tune are valid; the composer must not repeat the task title.
+    expect(Boolean(authoringSurface.querySelector(".view-composer > header h3"))).toBe(false);
     expect(authoringSurface.querySelector("#search-view-tune")?.hasAttribute("hidden")).toBe(true);
     expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("deploy@status.example.com");
     expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);

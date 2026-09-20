@@ -20,7 +20,10 @@ try {
     const press = name => page.getByRole('button', { name, exact: true }).click();
     const go = async path => {
       await page.goto(`${base}${path}`); await page.locator('.desktop-workspace').waitFor();
-      await page.evaluate(value => { document.documentElement.dataset.theme = value; document.documentElement.dataset.motion = 'reduced'; }, theme);
+      await page.evaluate(() => { document.documentElement.dataset.motion = 'reduced'; });
+      if (await page.evaluate(() => document.documentElement.dataset.theme) !== theme) {
+        await page.getByRole('button', { name: theme === 'dark' ? 'Switch to Orca Black' : 'Switch to Light', exact: true }).click();
+      }
       // Isolate the UI capture from Chromium's native cross-document cancellation.
       // Unchanged Settings → All Mail also emits AbortError with navigation:auto.
       await page.addStyleTag({ content: '@view-transition { navigation: none; }' });
@@ -32,8 +35,9 @@ try {
     try {
       await go('/dev/inbox?destination=view%3Aview_weekly_production');
       await page.getByRole('heading', { name: 'Weekly production review', exact: true }).waitFor();
-      if (width < 760) { await page.locator('.desktop-mobile-more').click(); await page.getByRole('menuitem', { name: 'Weekly production review, saved view' }).focus(); }
+      if (width < 760) { await page.locator('.desktop-mobile-more').click(); await page.getByRole('menuitem', { name: 'Weekly production review, saved view' }).scrollIntoViewIfNeeded(); await page.getByRole('menuitem', { name: 'Weekly production review, saved view' }).focus(); }
       else await page.getByRole('button', { name: 'Weekly production review, saved view' }).focus();
+      await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
       await screenshot('active-navigation-focus');
       if (width < 760) await page.keyboard.press('Escape');
       await tools();

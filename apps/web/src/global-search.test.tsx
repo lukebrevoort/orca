@@ -221,7 +221,7 @@ describe("GlobalMailSearch interaction", () => {
     await flush(); await flush();
     const original = browserWindow.location.href;
     await act(async () => button("Save as View").click()); await flush();
-    expect(browserWindow.document.querySelector("#views-title")?.textContent).toBe("Review this live View");
+    expect(browserWindow.document.querySelector("#views-title")?.textContent).toBe("Create a view");
     expect(browserWindow.document.body.textContent).toContain("General text search");
     await act(async () => button("Cancel").click()); await flush();
     expect(writes).toEqual([]);
