@@ -14,7 +14,7 @@ describe("BRE-378 Organization Views UI", () => {
     expect(html).toContain("Unresolved production failure");
     expect(html).toContain("Everything else");
     expect(html).toContain("2 accounts");
-    expect(html).toContain("Live from current Thread organization");
+    expect(html).toContain("A view is a live filter.");
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain("Load more");
   });

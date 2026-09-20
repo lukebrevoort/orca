@@ -933,13 +933,13 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
   test("edits the selected definition and display metadata", async () => {
     const container = await renderWorkspace();
     await click(button(container, "Edit definition"));
-    expect(container.textContent).toContain("Edit live perspective");
+    expect(container.textContent).toContain("Edit Weekly production review");
     expect(input(container, "View name").value).toBe("Weekly production review");
     expect(input(container, "Subject contains").value).toBe("production failure");
     await change(input(container, "View name"), "Release blocker review");
     await change(input(container, "Subject contains"), "release blocker");
     await click(button(container, "Save changes"));
-    expect(container.textContent).not.toContain("Edit live perspective");
+    expect(container.textContent).not.toContain("Edit Weekly production review");
     expect(container.querySelector(".view-results h3")?.textContent).toBe("Release blocker review");
     expect(orderedNames(container)[0]).toBe("Release blocker review");
   });
@@ -989,7 +989,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await flush(); await flush();
     expect(contextReads).toBe(1);
     expect(selectField(container, "Minimum Human Signal").value).toBe("");
-    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("5 predicate families · combined with AND");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Mail must match all 5 filters");
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("2 exact Threads");
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("1 additional Facet filter");
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("1 additional Context filter");
@@ -1202,7 +1202,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(scope.hasAttribute("aria-live")).toBe(false);
     expect(validation.getAttribute("aria-live")).toBe("polite");
     expect(validation.getAttribute("role")).toBe("status");
-    expect(validation.textContent).toBe("Ready to save this perspective.");
+    expect(validation.textContent).toBe("Ready to save this view.");
   });
 
   test("keeps every predicate family reachable while progressively disclosing infrequent filters", async () => {
@@ -1353,7 +1353,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     const container = await renderWorkspace();
     expect(container.textContent).toContain("Unresolved production failure");
     await click(button(container, "Edit definition"));
-    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Local preview does not evaluate sample mail");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Demo mail is not checked against edited filters");
     await change(input(container, "View name"), "Locally revised review");
     await click(button(container, "Save changes"));
     expect(container.querySelector(".view-thread-list")).toBeNull();
@@ -1591,9 +1591,9 @@ test("BRE-385 saved editing keeps only the latest refinement undo and guards dir
   expect(container.textContent).toContain("Discard changes to this draft?");
   await click(button(container, "Keep editing"));
   await flush();
-  const composerHeading = container.querySelector(".view-composer h3");
+  const composerHeading = container.querySelector("#views-title");
   if (!composerHeading) throw new Error("Expected the view composer heading after keeping edits");
-  expect(browserWindow.document.activeElement as unknown as Element).toBe(composerHeading);
+  expect(browserWindow.document.activeElement === composerHeading as unknown as typeof browserWindow.document.activeElement).toBe(true);
   await click(button(container, "Undo draft change"));
   expect(input(container, "Subject contains").value).toBe("production failure");
   expect(input(container, "View name").value).toBe("Renamed only in draft");
@@ -1831,4 +1831,39 @@ test("BRE-415 pending save locks navigation, failed save keeps guard, successful
   expect(navigations).toBe(1);
   const clean = new browserWindow.Event("beforeunload", { cancelable: true }); browserWindow.dispatchEvent(clean);
   expect(clean.defaultPrevented).toBe(false);
+});
+
+test("BRE-417 routed live edit waits for the list and retries preparation for the requested ID", async () => {
+  const selected = organizationViewsFixture[1]!;
+  let preparations = 0;
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+    if (path.includes("/results")) {
+      const view = organizationViewsFixture.find(item => path.includes(item.id))!;
+      return Response.json({ viewId: view.id, viewRevision: view.revision, accountIds: [], items: [], nextCursor: null, limit: 25 });
+    }
+    if (path === "/v1/organization/views/prepare") {
+      expect(JSON.parse(String(init?.body))).toEqual({ kind: "saved_view", viewId: selected.id });
+      preparations++;
+      if (preparations === 1) return Response.json({ error: { code: "temporary", message: "Try Edit again." } }, { status: 503 });
+      const preparation = { kind: "typed_definition" as const, skipInbox: false, source: { kind: "manual" as const, label: "Saved View" }, identity: { name: selected.name, description: selected.description, color: selected.color, position: selected.position }, definition: selected.definition, unsupportedClauses: [] };
+      return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: { ...preparedCreateDraft(preparation, selected.definition), mode: "update", viewId: selected.id, viewRevision: selected.revision } });
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+  await act(async () => root!.render(<OrganizationAuthorityProvider><OrganizationViewsWorkspace initialEditViewId={selected.id}/></OrganizationAuthorityProvider>));
+  await flush(); await flush(); await flush();
+  expect(preparations).toBe(1);
+  expect(container.querySelector("form")).toBeNull();
+  await click(button(container, "Retry connection"));
+  await flush(); await flush();
+  expect(container.querySelector(".view-results h3")?.textContent).toBe(selected.name);
+  await click(button(container, "Edit definition"));
+  await flush(); await flush();
+  expect(preparations).toBe(2);
+  expect(input(container, "View name").value).toBe(selected.name);
 });

@@ -266,3 +266,20 @@
   .view-builder-footer { padding: 16px 12px; }
   .view-preview-results { margin-inline: 12px; }
 }
+
+/* The editor reads top to bottom: identity, rules, Inbox, evidence, then save. */
+.view-composer .view-section-heading { margin: 22px 0 0; font: 650 15px/1.4 var(--desktop-sans); letter-spacing: 0; }
+.view-section-heading + .view-identity { padding-top: 12px; }
+.view-composer > .view-save-bar { padding: 16px 18px; border-top: 1px solid var(--desktop-border); border-bottom: 0; justify-content: flex-end; }
+.view-inbox-section { margin-top: 24px; padding-top: 4px; border-top: 1px solid var(--desktop-border); }
+.view-inbox-section > p { color: var(--desktop-muted); font-size: 13px; line-height: 1.6; margin: 8px 0; }
+.view-inbox-section .view-inbox-visibility { margin-block: 12px; }
+.view-saved-summary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px 24px; margin-block: 20px; padding: 18px; border: 1px solid var(--desktop-border); border-radius: 12px; background: var(--desktop-paper); }
+.view-saved-summary strong { font: 650 13px/1.5 var(--desktop-sans); }
+.view-saved-summary p { margin: 5px 0 0; color: var(--desktop-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.view-saved-summary > p { grid-column: 1 / -1; font-size: 12px; }
+.view-state p { margin: 0 0 14px; line-height: 1.6; }
+@media (max-width: 760px) { .view-saved-summary { grid-template-columns: 1fr; } }
+@media (max-width: 540px) {
+  .view-filter-menu { left: 0; right: auto; width: min(330px, calc(100vw - 96px)); }
+}
