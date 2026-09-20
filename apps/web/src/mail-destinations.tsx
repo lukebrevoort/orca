@@ -85,7 +85,7 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
   return <>
     <TopLayer ariaLabelledBy="destination-manager-title" className="simple-attention-dialog destination-manager" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close space manager" initialFocusSelector="input" dismissible={!busy} ariaBusy={busy} onClose={() => requestLeave()}>
       <h2 id="destination-manager-title">Your spaces</h2>
-      <p>Space names, colors, and removal apply across your accounts and devices. Hiding, reordering, and renaming sidebar shortcuts in Customize spaces changes only this device.</p>
+      <p>Space names, colors, and removal apply across your accounts and devices. Customize tools changes only this device’s tool shortcuts.</p>
       {preview && <p role="status">Synthetic preview. Connect an account to create or change spaces.</p>}
       <form onSubmit={async event => {
         event.preventDefault();
