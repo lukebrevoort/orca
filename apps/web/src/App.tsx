@@ -898,6 +898,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
 
   return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
     <section className="settings-home-page">
+    {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
@@ -2228,7 +2229,7 @@ export function InboxApp({
 
     const destination = parseDesktopDestination(location.destination) ?? "inbox";
     if (destination === "settings") {
-      window.location.assign("/settings");
+      window.location.assign(demoMode ? "/dev/settings" : "/settings");
       return;
     }
     setManageSpacesOpen(false);
@@ -3095,7 +3096,8 @@ export function InboxApp({
     setManageSpacesOpen(false);
     setManageToolsOpen(false);
     if (destination === "settings") {
-      window.location.assign("/settings");
+      if (demoMode && !window.confirm("Opening sample Settings starts a new demo page and resets your demo view changes. Continue?")) return;
+      window.location.assign(demoMode ? "/dev/settings" : "/settings");
       return;
     }
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);

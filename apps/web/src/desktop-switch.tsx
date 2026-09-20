@@ -352,7 +352,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
   return <div className="desktop-shell desktop-settings-frame">
     {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
-      onCompose={() => window.location.assign("/?compose=1")}
+      onCompose={() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`)}
       onManageSpaces={() => setManageDestinations(true)}
       onManageTools={() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`)}
       onManageViews={() => window.location.assign(viewsManagementHref(window.location.pathname))}

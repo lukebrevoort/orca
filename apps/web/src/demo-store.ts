@@ -7,7 +7,7 @@ import {
 } from "@orca/shared";
 import { demoAccount, demoAgentMessages, demoMessages, demoThreadHistoryExtras } from "./demo-data";
 
-export const demoSessionNotice = "Demonstration only. View changes last until this page is refreshed. No connected account is changed.";
+export const demoSessionNotice = "Demonstration only. View changes reset on refresh or when opening sample Settings. No connected account is changed.";
 export const demoSendNotice = "Demo send only — no real email is sent.";
 
 type DemoThread = { account: MailAccount; messages: InboxMessage[]; latest: InboxMessage };
