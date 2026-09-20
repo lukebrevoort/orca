@@ -468,3 +468,13 @@
   .destination-manager :is(form, details, label, footer) { min-width: 0; max-width: 100%; }
   .destination-manager :is(p, summary) { overflow-wrap: anywhere; }
 }
+
+/* BRE-416: explicit, recoverable space editing and removal. */
+.destination-manager .space-name-help { font-size: 12px; }
+.destination-manager .space-removal-links { display: grid; gap: 10px; margin: 20px 0; }
+.destination-manager .space-removal-links a { color: var(--orca-ink); text-underline-offset: 3px; }
+.destination-manager footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.destination-manager :is(button, input, summary, a):focus-visible { outline: 2px solid var(--orca-ink); outline-offset: 3px; }
+.destination-manager button:disabled { color: var(--orca-muted); cursor: not-allowed; }
+.destination-manager [role="alert"] { padding: 12px; border: 1px solid var(--orca-border); border-radius: 8px; background: var(--orca-surface-hover); }
+.destination-manager [role="status"] { color: var(--orca-ink); }
