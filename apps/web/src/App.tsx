@@ -4698,7 +4698,7 @@ function InboxView({
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
-  const [selectionMode, setSelectionMode] = useState(() => new URLSearchParams(window.location.search).has("addSendersTo"));
+  const [selectionMode, setSelectionMode] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("addSendersTo"));
   const [senderGrowth, setSenderGrowth] = useState(false);
   const SenderAuthoringWorkspace = senderGrowth ? OrganizationViewGrowthWorkspace : OrganizationViewAuthoringWorkspace;
   const guidanceSelectionRequest = useViewGuidanceSelectionRequest(viewMode);
@@ -5144,7 +5144,7 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
-        {new URLSearchParams(window.location.search).has("addSendersTo") ? <p className="view-state">Select mail from one account, then choose Add senders to existing View. You’ll review the exact senders and matching mail before saving.</p> : null}
+        {typeof window !== "undefined" && new URLSearchParams(window.location.search).has("addSendersTo") ? <p className="view-state">Select mail from one account, then choose Add senders to existing View. You’ll review the exact senders and matching mail before saving.</p> : null}
         {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><SenderAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>

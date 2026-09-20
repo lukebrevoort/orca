@@ -15,7 +15,7 @@ function GrowthChooser<T>(props: Props<T>) {
   const [views, setViews] = useState<OrganizationView[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
-  const [targetId, setTargetId] = useState(() => new URLSearchParams(window.location.search).get("addSendersTo") ?? "");
+  const [targetId, setTargetId] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("addSendersTo") ?? "");
   const [review, setReview] = useState<OrganizationViewAuthoringEntry<T> | null>(null);
   useEffect(() => {
     if (review) return;
