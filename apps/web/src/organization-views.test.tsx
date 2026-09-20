@@ -1,3 +1,4 @@
+import { demoStore } from "./demo-store";
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -8,15 +9,16 @@ const styles = await Bun.file(new URL("./organization-views.css", import.meta.ur
 
 describe("BRE-378 Organization Views UI", () => {
   test("renders an accepted live Views surface with a cross-Lane weekly review", () => {
+    demoStore.reset();
     const html = renderToStaticMarkup(<OrganizationAuthorityProvider previewMode><OrganizationViewsWorkspace demoMode /></OrganizationAuthorityProvider>);
     expect(html).toContain("Live Views");
     expect(html).toContain("Weekly production review");
     expect(html).toContain("Unresolved production failure");
-    expect(html).toContain("Everything else");
-    expect(html).toContain("2 accounts");
+    expect(html).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
+    expect(html).toContain("Demonstration only");
     expect(html).toContain("A view is a live filter.");
     expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain("Load more");
+    expect(html).not.toContain("Load more");
   });
 
   test("keeps default, hover, focus, selected, and disabled controls readable in both themes", () => {

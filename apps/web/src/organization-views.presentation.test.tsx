@@ -1,3 +1,4 @@
+import { demoStore } from "./demo-store";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -12,6 +13,7 @@ let browser: Window;
 let root: Root;
 let container: HTMLElement;
 beforeEach(() => {
+  demoStore.reset();
   browser = new Window({ url: "http://localhost/dev/inbox?destination=organization-studio&section=views" });
   for (const key of keys) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === "window" ? browser : browser[key as keyof Window] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
@@ -80,10 +82,11 @@ test("BRE-417 missing edit ID offers recovery without editing a different view",
 });
 
 test("BRE-414 saved empty view shows rules and Inbox policy with a working edit action", async () => {
-  await act(async () => root.render(<SavedOrganizationViewWorkspace demoMode previewMode viewId={organizationViewsFixture[1]!.id} onManage={() => {}} onOpenThread={() => {}}/>));
+  const empty = demoStore.create({ name: "Empty sample", description: "", color: "#70867d", position: 3, skipInbox: false, definition: { revision: 1, accountIds: ["acct_demo"], sender: { addresses: ["absent@example.net"] } } });
+  await act(async () => root.render(<SavedOrganizationViewWorkspace demoMode previewMode viewId={empty.id} onManage={() => {}} onOpenThread={() => {}}/>));
   expect(container.querySelector('[aria-label="Saved view rules"]')?.textContent).toContain("Inbox behavior");
   expect(container.textContent).toContain("All Mail");
-  expect(container.textContent).toContain("future mail that matches its rules");
+  expect(container.textContent).toContain("No sample conversations match these filters");
   await click("Edit matching rules");
-  expect(container.querySelector("h2")?.textContent).toBe("Edit Urgent humans");
+  expect(container.querySelector("h2")?.textContent).toBe("Edit Empty sample");
 });

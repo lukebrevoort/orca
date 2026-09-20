@@ -1,3 +1,4 @@
+import { demoStore } from "./demo-store";
 import { requestViewNavigation } from "./view-navigation-guard";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
@@ -16,6 +17,7 @@ let browserWindow: InstanceType<typeof Window>;
 let root: Root | null;
 
 beforeEach(() => {
+  demoStore.reset();
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox?destination=organization" });
   const values: Record<string, unknown> = {
     window: browserWindow, document: browserWindow.document, navigator: browserWindow.navigator,
@@ -184,9 +186,9 @@ test("an explicit source replacement preserves the account and Undo restores the
   await click(button(host, "Undo draft change"));
   expect(host.querySelector('.view-unsupported-clauses')?.textContent).toContain("General text");
   await click(button(host, "Use subject only"));
-  await click(button(host, "Work Outlook"));
+  await click(button(host, "luke@example.com · sample"));
   await click(button(host, "Undo draft change"));
-  expect(button(host, "Work Outlook").getAttribute("aria-pressed")).toBe("false");
+  expect(button(host, "luke@example.com · sample").getAttribute("aria-pressed")).toBe("false");
   expect(host.querySelector('.view-scope-sentence')?.textContent).toContain("apartment");
   expect(host.textContent).not.toContain("General text");
   expect(host.textContent).not.toContain("Undo draft change");
@@ -194,7 +196,7 @@ test("an explicit source replacement preserves the account and Undo restores the
 
 test("BRE-385 latest Undo follows removal then filter, filter then removal, and repeated removals", async () => {
   const container = await renderExternalAuthoring(() => {});
-  const outlook = () => button(container, "Work Outlook");
+  const outlook = () => button(container, "luke@example.com · sample");
   const hasBlocker = () => container.querySelector(".view-unsupported-clauses")?.textContent?.includes("Has PDF") ?? false;
   const undoButtons = () => [...container.querySelectorAll("button")].filter((element) => element.textContent?.trim().startsWith("Undo"));
   await click(button(container, "Remove blocker"));
@@ -207,10 +209,10 @@ test("BRE-385 latest Undo follows removal then filter, filter then removal, and 
   await click(button(container, "Cancel")); await click(button(container, "Discard draft"));
   await act(async () => root!.unmount()); root = null;
   const next = await renderExternalAuthoring(() => {});
-  await click(button(next, "Work Outlook"));
+  await click(button(next, "luke@example.com · sample"));
   await click(button(next, "Remove blocker"));
   await click(button(next, "Undo draft change"));
-  expect(button(next, "Work Outlook").getAttribute("aria-pressed")).toBe("true");
+  expect(button(next, "luke@example.com · sample").getAttribute("aria-pressed")).toBe("true");
   expect(next.querySelector(".view-unsupported-clauses")?.textContent).toContain("Has PDF");
   expect(next.textContent).not.toContain("Undo draft change");
   for (let i = 0; i < 2; i++) {
@@ -1202,7 +1204,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(scope.hasAttribute("aria-live")).toBe(false);
     expect(validation.getAttribute("aria-live")).toBe("polite");
     expect(validation.getAttribute("role")).toBe("status");
-    expect(validation.textContent).toBe("Ready to save this view.");
+    expect(validation.textContent).toBe("Ready to save this sample view.");
   });
 
   test("keeps every predicate family reachable while progressively disclosing infrequent filters", async () => {
@@ -1351,18 +1353,19 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
 
   test("clears stale demo results after save and persistently names the unevaluated preview state", async () => {
     const container = await renderWorkspace();
-    expect(container.textContent).toContain("Unresolved production failure");
+    expect(container.querySelector(".view-thread-row")).toBeNull();
+    expect(container.textContent).toContain("no Lane, Facet, Context, or Workflow evidence");
     await click(button(container, "Edit definition"));
-    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Demo mail is not checked against edited filters");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
     await change(input(container, "View name"), "Locally revised review");
     await click(button(container, "Save changes"));
     expect(container.querySelector(".view-thread-list")).toBeNull();
-    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
     expect(container.querySelector(".view-results")?.textContent).not.toContain("No Threads match right now");
     await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Urgent humans")) as unknown as HTMLButtonElement);
     await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Locally revised review")) as unknown as HTMLButtonElement);
     expect(container.querySelector(".view-thread-list")).toBeNull();
-    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
   });
 
   test("reorders Views deterministically while preserving selection", async () => {
@@ -1394,7 +1397,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click(button(container, "Confirm remove"));
 
     expect(container.querySelector('.view-chip[aria-pressed="true"] strong')?.textContent).toBe("Locally revised review");
-    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
     expect(container.querySelector(".view-thread-list")).toBeNull();
     expect(container.querySelector(".view-thread-row strong")?.textContent).not.toBe("Unresolved production failure");
   });

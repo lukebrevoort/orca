@@ -87,7 +87,7 @@ export function createDemoStore(options: { views?: readonly OrganizationView[]; 
   const accounts = structuredClone(options.accounts ?? [demoAccount]);
   let views: OrganizationView[] = [...structuredClone(initialViews)];
   const listeners = new Set<() => void>();
-  const publish = (next: OrganizationView[]) => { views = next; for (const listener of listeners) listener(); };
+  const publish = (next: OrganizationView[]) => { views = next.sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)); for (const listener of listeners) listener(); };
   const requireView = (id: string, revision?: number) => {
     const view = views.find(candidate => candidate.id === id);
     if (!view) throw new Error("This sample View no longer exists.");
@@ -99,6 +99,7 @@ export function createDemoStore(options: { views?: readonly OrganizationView[]; 
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     getView: (id: string) => views.find(view => view.id === id) ?? null,
     getAccounts: () => structuredClone(accounts),
+    preview: (definition: OrganizationViewDefinition) => evaluateDemoDefinition(definition, messages, accounts),
     evaluate(id: string): DemoViewEvaluation {
       const view = views.find(candidate => candidate.id === id);
       return view ? evaluateDemoDefinition(view.definition, messages, accounts) : { status: "missing", count: null, detail: "This sample View no longer exists." };
