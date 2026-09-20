@@ -14,6 +14,7 @@ import {
   type SetStateAction,
 } from "react";
 import { TopLayer } from "./top-layer";
+import { demoSendNotice } from "./demo-store";
 import "./writing-preferences.css";
 import { initializeWritingDraft, serializeWritingBody, type WritingPreferenceState, type WritingPreferences } from "./writing-preferences";
 import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
@@ -62,6 +63,7 @@ export type ComposeWritingOptions = {
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
+  demonstration?: boolean;
   writingPreferenceStatus?: WritingPreferenceState["status"];
   recipientQueries?: RecipientQueries;
   setRecipientQueries?: Dispatch<SetStateAction<RecipientQueries>>;
@@ -891,7 +893,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     };
     if (demoMode) {
       resetAfterSuccessfulSend();
-      return { draftId: deliveryDraft.id, status: "sent", providerMessageId: `demo-${deliveryDraft.id}`, providerThreadId: deliveryDraft.context?.providerThreadId ?? null, error: null };
+      return { draftId: deliveryDraft.id, status: "sent", providerMessageId: null, providerThreadId: null, error: null };
     }
     if (conflict) throw new Error("Resolve the saved draft conflict before sending.");
     sendingRef.current = true;
@@ -1012,6 +1014,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   return {
     draft,
+    demonstration: Boolean(demoMode),
     writingPreferenceStatus: writing && !demoMode && isNewDraftRef.current ? writing.preferences.status : undefined,
     recipientQueries,
     setRecipientQueries: updateRecipientQueries,
@@ -1166,7 +1169,7 @@ export function ComposeWorkspace({
   const hasPotentialTo = draft.to.length > 0 || (pendingRecipientResults.get("to")?.contacts.length ?? 0) > 0;
   const hasDeliverableMessage = Boolean(draft.body.trim()) || draft.attachments.length > 0;
   const deliveryReady = hasPotentialTo && invalidPendingKinds.length === 0 && hasDeliverableMessage;
-  const deliveryReason = invalidPendingKinds.length > 0
+  const deliveryValidationReason = invalidPendingKinds.length > 0
     ? `Finish the visible ${invalidPendingKinds.map((kind) => recipientLabels[kind]).join("/")} address ${invalidPendingKinds.length === 1 ? "field" : "fields"}. Choose a suggestion or enter every complete email address.`
     : !hasPotentialTo
     ? "Add at least one valid recipient to prepare this message."
@@ -1174,11 +1177,14 @@ export function ComposeWorkspace({
       ? variant === "reply"
         ? "Write a reply or add an attachment before sending. Attachment-only replies are supported when a file is attached."
         : "Write a message or add an attachment before sending. Attachment-only messages are supported when a file is attached."
+    : controller.demonstration
+      ? "Sending only simulates delivery in this preview."
     : canSend
       ? pendingRecipientKinds.length
         ? "Every complete visible address will be added before Orca saves and delivers this message."
         : "Gmail has confirmed draft and send access. Orca will save the draft first, then deliver it once."
       : "This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.";
+  const deliveryReason = controller.demonstration ? `${demoSendNotice} ${deliveryValidationReason}` : deliveryValidationReason;
 
   async function closeOrDiscard() {
     if (!hasContent) {
@@ -1670,7 +1676,7 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
           type="button"
         >{deliveryStatus === "sending" ? "Sending…" : canSend ? actionLabel === "Send" ? "Send" : `Send ${actionLabel.toLowerCase()}` : "Enable sending"}</button>
       </div>
-      <p aria-live="polite" className={deliveryError ? "compose-delivery-error" : undefined} id={deliveryReasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? "Sent. The conversation is refreshing." : deliveryReason)}</p>
+      <p aria-live="polite" className={deliveryError ? "compose-delivery-error" : undefined} id={deliveryReasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? controller.demonstration ? "Demo send complete. No real email was sent." : "Sent. The conversation is refreshing." : deliveryReason)}</p>
     </footer>
   );
 }

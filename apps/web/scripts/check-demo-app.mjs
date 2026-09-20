@@ -73,6 +73,15 @@ try {
       assert.deepEqual(writes, []); assert.deepEqual(errors, []);
       await page.reload(); await page.getByRole('heading', { name: 'View unavailable', exact: true }).waitFor();
       await capture('refresh-resets');
+      await page.locator(width < 760 ? '.desktop-mobile-compose' : '.desktop-compose').click();
+      await page.locator('input[name="to-recipient"]').fill('family@example.com');
+      await page.locator('[contenteditable="true"]').first().fill('A sample message only.');
+      const helper = page.locator('.compose-delivery-bar');
+      assert.match(await helper.innerText(), /Demo send only — no real email is sent/);
+      assert.doesNotMatch(await helper.innerText(), /Gmail has confirmed/);
+      await capture('demo-send');
+      await press('Send');
+      assert.deepEqual(writes, []); assert.deepEqual(errors, []);
       console.log(`PASS ${theme} ${width}: count/create/grow/edit/reopen/session-reset; no API writes`);
     } finally { await page.close(); }
   }

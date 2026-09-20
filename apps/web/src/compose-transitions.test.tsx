@@ -43,6 +43,23 @@ afterEach(async () => {
   for (const name of names) { const descriptor = originals.get(name); if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete (globalThis as any)[name]; }
   delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT;
 });
+test("demo delivery is labeled as simulation without verified Gmail access or provider IDs", async () => {
+  expect(controller.demonstration).toBe(true);
+  expect(browser.document.body.textContent).toContain("Demo send only — no real email is sent.");
+  await type("to", "family@example.com");
+  expect(browser.document.body.textContent).toContain("Sending only simulates delivery in this preview.");
+  expect(browser.document.body.textContent).not.toContain("Gmail has confirmed");
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = (async () => { requests++; throw new Error("Demo must stay local"); }) as unknown as typeof fetch;
+  try {
+    await act(async () => {
+      const result = await controller.sendDraft!({ to: [{ name: null, email: "family@example.com" }] });
+      expect(result).toMatchObject({ status: "sent", providerMessageId: null, providerThreadId: null });
+    });
+    expect(requests).toBe(0);
+  } finally { globalThis.fetch = originalFetch; }
+});
 test("pending To, Cc and Bcc survive panel/Zen remounts; invalid input prevents partial delivery", async () => {
   await click("Add Cc or Bcc");
   await type("to", "to@example.com"); await type("cc", "cc@example.com"); await type("bcc", "unfinished");
