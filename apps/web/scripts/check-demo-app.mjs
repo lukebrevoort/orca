@@ -20,6 +20,10 @@ try {
       if (width < 760) { await page.locator('.desktop-mobile-more').click(); await page.getByRole('menuitem', { name: `${name}, saved view`, exact: true }).click(); }
       else await press(`${name}, saved view`);
     };
+    const openSettings = async () => {
+      if (width < 760) { await page.locator('.desktop-mobile-more').click(); await page.getByRole('menuitem', { name: 'Settings', exact: true }).click(); }
+      else await page.locator('.desktop-sidebar').getByRole('button', { name: 'Settings', exact: true }).click();
+    };
     try {
       await page.goto(`${base}/dev/inbox`);
       await page.locator('button.message-row').first().waitFor();
@@ -70,8 +74,17 @@ try {
       assert.equal(await page.evaluate(() => window.__demoJourneyBoot), boot);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await capture('reopened');
+      page.once('dialog', async dialog => {
+        assert.match(dialog.message(), /resets your demo view changes/);
+        await dialog.dismiss();
+      });
+      await openSettings();
+      await page.getByRole('heading', { name: 'Family renamed', exact: true }).waitFor();
+      assert.equal(await page.evaluate(() => window.__demoJourneyBoot), boot);
+      assert.equal(await page.evaluate(mobile => document.activeElement?.matches(mobile ? '.desktop-mobile-more' : '.desktop-sidebar button') ?? false, width < 760), true);
       assert.deepEqual(writes, []); assert.deepEqual(errors, []);
       await page.reload(); await page.getByRole('heading', { name: 'View unavailable', exact: true }).waitFor();
+      await page.addStyleTag({ content: '@view-transition { navigation: none; }' });
       await capture('refresh-resets');
       await page.locator(width < 760 ? '.desktop-mobile-compose' : '.desktop-compose').click();
       await page.locator('input[name="to-recipient"]').fill('family@example.com');
@@ -81,6 +94,21 @@ try {
       assert.doesNotMatch(await helper.innerText(), /Gmail has confirmed/);
       await capture('demo-send');
       await press('Send');
+      await page.locator('input[name="to-recipient"]').waitFor({ state: 'hidden' });
+      await page.waitForTimeout(500);
+      page.once('dialog', async dialog => {
+        assert.match(dialog.message(), /resets your demo view changes/);
+        await dialog.accept();
+      });
+      await openSettings();
+      await page.waitForURL('**/dev/settings');
+      await page.locator('#settings-title').waitFor();
+      await page.addStyleTag({ content: '@view-transition { navigation: none; }' });
+      assert.match(await page.getByRole('note').innerText(), /opening sample Settings/);
+      await capture('settings-reset-boundary');
+      assert.deepEqual(writes, []); assert.deepEqual(errors, []);
+      await page.getByRole('link', { name: 'Manage saved views →', exact: true }).click();
+      await page.waitForURL('**/dev/inbox?**');
       assert.deepEqual(writes, []); assert.deepEqual(errors, []);
       console.log(`PASS ${theme} ${width}: count/create/grow/edit/reopen/session-reset; no API writes`);
     } finally { await page.close(); }
