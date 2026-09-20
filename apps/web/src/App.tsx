@@ -3388,8 +3388,10 @@ export function InboxApp({
               contacts={composeContacts}
               controller={composeDraft}
               closing={zenClosing}
+              onClose={closePanel}
               onExitZen={exitZen}
               onRequestSendAccess={() => setShowSendPermission(true)}
+              onSent={closePanel}
               variant="zen"
             />
           ) : null}

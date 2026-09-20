@@ -1279,6 +1279,41 @@ describe("App top-layer contract", () => {
     expect(isSameNode(browserWindow.document.activeElement, composeTrigger)).toBe(true);
   });
 
+  for (const startInZen of [false, true]) test(`synthetic Zen send restores reader context and focus; new draft is usable (default Zen ${startInZen})`, async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: startInZen, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    await openMessage("Mom");
+    const originalUrl = browserWindow.location.href;
+    const opener = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    opener.focus();
+    await act(async () => opener.click());
+    if (!startInZen) await act(async () => (browserWindow.document.querySelector("button.panel-zen") as unknown as HTMLButtonElement).click());
+    let zen = browserWindow.document.querySelector(".zen-canvas")!;
+    await enterInput(zen.querySelector('[name="to-recipient"]') as unknown as HTMLInputElement, "recipient@example.com");
+    expect(zen.querySelector('[name="subject"]')?.getAttribute("aria-label")).toBe("Subject");
+    await act(async () => {
+      const body = zen.querySelector('[aria-label="Message body"]')!;
+      body.textContent = "A synthetic note. No provider delivery.";
+      body.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true }));
+    });
+    await act(async () => {
+      (zen.querySelector("button.compose-send") as unknown as HTMLButtonElement).click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    await act(async () => flushAnimationFrames());
+    expect(Boolean(browserWindow.document.querySelector(".zen-canvas"))).toBe(false);
+    expect(Boolean(browserWindow.document.querySelector('[aria-label="Compose message"]'))).toBe(false);
+    expect(browserWindow.location.href).toBe(originalUrl);
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, opener)).toBe(true);
+
+    await act(async () => opener.click());
+    const surface = browserWindow.document.querySelector(startInZen ? ".zen-canvas" : '[aria-label="Compose message"]')!;
+    expect((surface.querySelector('[name="to-recipient"]') as unknown as HTMLInputElement).value).toBe("");
+    expect(surface.querySelector('[aria-label="Message body"]')?.textContent).toBe("");
+    expect((surface.querySelector("button.compose-send") as unknown as HTMLButtonElement).disabled).toBe(false);
+  });
+
   test("restores a stable visible app control when Remove pin deletes the opener", async () => {
     await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
     const savedPins = browserWindow.document.querySelector('[aria-label="Saved pins"]') as unknown as HTMLElement;
