@@ -64,6 +64,7 @@ let puts: Array<{ path: string; body: any }>;
 let refreshes: number;
 let quietId: string, fallbackId: string;
 let onRefresh: (() => Promise<void>) | undefined;
+const frameIds = new Set<ReturnType<typeof setTimeout>>();
 beforeEach(async () => {
   process.env.SESSION_SECRET = "attention-web-integration-test-session-secret";
   process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 19).toString("base64");
@@ -137,7 +138,19 @@ beforeEach(async () => {
       writable: true,
       value:
         name === "requestAnimationFrame"
-          ? (callback: FrameRequestCallback) => setTimeout(callback, 0)
+          ? (callback: FrameRequestCallback) => {
+              const id = setTimeout(() => {
+                frameIds.delete(id);
+                callback(performance.now());
+              }, 0);
+              frameIds.add(id);
+              return id;
+            }
+          : name === "cancelAnimationFrame"
+            ? (id: ReturnType<typeof setTimeout>) => {
+                clearTimeout(id);
+                frameIds.delete(id);
+              }
           : browser[name as keyof Window],
     });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -175,6 +188,10 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   await act(async () => root.unmount());
+  // These frames use native timers, so Happy DOM cannot cancel them for us.
+  for (const id of frameIds) clearTimeout(id);
+  frameIds.clear();
+  await browser.happyDOM.close();
   globalThis.fetch = originalFetch;
   for (const name of globals) {
     const old = originals.get(name);
@@ -182,7 +199,6 @@ afterEach(async () => {
     else delete (globalThis as Record<string, unknown>)[name];
   }
   delete (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT;
-  await browser.happyDOM.close();
   rmSync(directory, { recursive: true, force: true });
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) delete process.env[key];
@@ -405,6 +421,7 @@ test("account-list failure remains visible after a successful routing reload; of
   expect(button("+ Add sender").disabled).toBe(true);
   intercept = undefined;
   await click("Reload accounts");
+  await editableSelect("Space for maya@example.com");
   await act(async () => {
     Object.defineProperty(browser.navigator, "onLine", {
       configurable: true,
