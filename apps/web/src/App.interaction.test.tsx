@@ -2332,9 +2332,15 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { byText("Create sender View").click(); await Promise.resolve(); });
     const tunePanel = browserWindow.document.querySelector("#search-view-tune")!;
     expect(tunePanel.hasAttribute("hidden")).toBe(true);
-    expect(tunePanel.querySelector('input[aria-label="View color"]')).not.toBeNull();
+    const colors = tunePanel.querySelector(".color-preset-picker")!;
+    expect(colors.querySelector("legend")?.textContent).toBe("View color");
+    expect(colors.querySelectorAll("button")).toHaveLength(7);
+    expect(tunePanel.querySelector('input[type="color"]')).toBeNull();
     await act(async () => byText("Tune").click());
     expect(tunePanel.hasAttribute("hidden")).toBe(false);
+    const blue = [...colors.querySelectorAll("button")].find(button => button.textContent?.trim() === "Blue")!;
+    await act(async () => blue.click());
+    expect(blue.getAttribute("aria-pressed")).toBe("true");
     const name = browserWindow.document.querySelector(".view-identity input") as unknown as HTMLInputElement;
     await enterInput(name, "Friends");
     const workspace = browserWindow.document.querySelector(".views-workspace-sender-authoring")!;
