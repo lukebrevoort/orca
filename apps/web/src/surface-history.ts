@@ -271,6 +271,15 @@ export class SurfaceHistory {
     return this.read();
   }
 
+  openSenderSelection(viewId: string) {
+    const url = clearSurfaceParameters(new URL(this.browser.location.href));
+    for (const key of ["section", "editView", "customize"]) url.searchParams.delete(key);
+    url.searchParams.set("destination", "all");
+    url.searchParams.set("addSendersTo", viewId);
+    this.push(url, null);
+    return this.read();
+  }
+
   replaceDestination(destination: string) {
     const url = clearSurfaceParameters(new URL(this.browser.location.href));
     for (const key of ["section", "editView", "addSendersTo", "customize"]) url.searchParams.delete(key);

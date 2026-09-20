@@ -1034,7 +1034,7 @@ function SavedViewSummary({ view, demoMode }: { view: OrganizationView; demoMode
   return <section className="view-saved-summary" aria-label="Saved view rules"><div><strong>Matching rules</strong><p>{clauses.join(" · ")}</p></div><div><strong>Inbox behavior</strong><p>{view.skipInbox ? "Existing and future matching mail skips Orca’s Inbox." : "This view does not exclude matching mail from Inbox."}</p></div><p className="view-field-hint">A live filter that can overlap other views. Other spaces, All Mail, and provider mail stay unchanged. Hiding its shortcut does not change Inbox behavior.</p></section>;
 }
 
-function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread, viewId }: { demoMode?: boolean; onManage: () => void; onOpenThread: (target: { accountId: string; threadId: string }) => void; viewId: string }) {
+function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread, onAddSenders, viewId }: { onAddSenders?: (viewId: string) => void; demoMode?: boolean; onManage: () => void; onOpenThread: (target: { accountId: string; threadId: string }) => void; viewId: string }) {
   const authority = useOrganizationAuthority();
   const demoViews = useSyncExternalStore(demoStore.subscribe, demoStore.getSnapshot, demoStore.getSnapshot);
   const [liveView, setView] = useState<OrganizationView | null>(null);
@@ -1117,7 +1117,7 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
   if (editing) return <OrganizationViewsWorkspace correctionTarget={savedCorrectionTarget} authoringEntry={{ preparation: { kind: "saved_view", viewId }, returnContext: viewId }} demoMode={demoMode} onCancelAuthoring={() => { setEditing(false); window.setTimeout(() => savedEditOpener.current?.focus(), 0); }} onCommitted={() => { setEditing(false); setSavedRefresh((value) => value + 1); focusedViewId.current = null; }}/>;
 
   return <section aria-busy={status === "loading" || undefined} aria-labelledby="saved-view-title" className="views-workspace saved-view-workspace">
-    <header className="views-header"><div><h2 id="saved-view-title" ref={headingRef} tabIndex={-1}>{view?.name ?? (status === "missing" ? "View unavailable" : "Opening View…")}</h2>{view?.description ? <p>{view.description}</p> : null}{status === "ready" && page ? <p>{page.accountIds.length} {page.accountIds.length === 1 ? "account" : "accounts"} · {page.items.length} {page.nextCursor ? "shown" : "matches"}</p> : null}</div><button className="view-action" disabled={status !== "ready"} ref={savedEditOpener} onClick={() => { setSavedCorrectionTarget(null); setEditing(true); }} type="button">Edit</button><a className="view-action" href={`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?destination=all&addSendersTo=${encodeURIComponent(viewId)}`}>Add senders</a></header>
+    <header className="views-header"><div><h2 id="saved-view-title" ref={headingRef} tabIndex={-1}>{view?.name ?? (status === "missing" ? "View unavailable" : "Opening View…")}</h2>{view?.description ? <p>{view.description}</p> : null}{status === "ready" && page ? <p>{page.accountIds.length} {page.accountIds.length === 1 ? "account" : "accounts"} · {page.items.length} {page.nextCursor ? "shown" : "matches"}</p> : null}</div><button className="view-action" disabled={status !== "ready"} ref={savedEditOpener} onClick={() => { setSavedCorrectionTarget(null); setEditing(true); }} type="button">Edit</button><a className="view-action" onClick={event => { if (!demoMode || !onAddSenders) return; event.preventDefault(); onAddSenders(viewId); }} href={`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?destination=all&addSendersTo=${encodeURIComponent(viewId)}`}>Add senders</a></header>
     {demoMode ? <p className="view-state">{demoSessionNotice}</p> : null}
     {demoMode && evaluation && evaluation.status !== "evaluated" ? <p className="view-state">{evaluation.detail}</p> : null}
     {view && status === "ready" ? <SavedViewSummary view={view} demoMode={demoMode}/> : null}
@@ -1131,6 +1131,6 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
   </section>;
 }
 
-export function SavedOrganizationViewWorkspace({ demoMode = false, previewMode = false, ...props }: { demoMode?: boolean; onManage: () => void; onOpenThread: (target: { accountId: string; threadId: string }) => void; previewMode?: boolean; viewId: string }) {
+export function SavedOrganizationViewWorkspace({ demoMode = false, previewMode = false, ...props }: { onAddSenders?: (viewId: string) => void; demoMode?: boolean; onManage: () => void; onOpenThread: (target: { accountId: string; threadId: string }) => void; previewMode?: boolean; viewId: string }) {
   return <OrganizationAuthorityProvider previewMode={previewMode}><SavedOrganizationViewContent key={props.viewId} {...props} demoMode={demoMode}/></OrganizationAuthorityProvider>;
 }

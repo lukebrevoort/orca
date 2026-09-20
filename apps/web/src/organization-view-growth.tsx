@@ -1,8 +1,9 @@
 import "./organization-view-growth.css";
-import { useEffect, useState, type ComponentProps } from "react";
-import { organizationViewListResponseSchema, organizationViewsFixture, senderGrowthBlocker, type OrganizationView } from "@orca/shared";
+import { useEffect, useState, useSyncExternalStore, type ComponentProps } from "react";
+import { organizationViewListResponseSchema, senderGrowthBlocker, type OrganizationView } from "@orca/shared";
 import { OrganizationAuthorityProvider, useOrganizationAuthority } from "./organization-authority";
 import { OrganizationViewAuthoringWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
+import { demoStore } from "./demo-store";
 import { requestViewNavigation } from "./view-navigation-guard";
 
 type Props<T> = ComponentProps<typeof OrganizationViewAuthoringWorkspace<T>>;
@@ -13,7 +14,9 @@ export function OrganizationViewGrowthWorkspace<T>(props: Props<T>) {
 }
 function GrowthChooser<T>(props: Props<T>) {
   const authority = useOrganizationAuthority();
-  const [views, setViews] = useState<OrganizationView[] | null>(null);
+  const demoViews = useSyncExternalStore(demoStore.subscribe, demoStore.getSnapshot, demoStore.getSnapshot);
+  const [liveViews, setViews] = useState<OrganizationView[] | null>(null);
+  const views = props.demoMode ? demoViews : liveViews;
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [targetId, setTargetId] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("addSendersTo") ?? "");
@@ -29,7 +32,7 @@ function GrowthChooser<T>(props: Props<T>) {
     if (!props.demoMode && !authority.snapshot) return;
     const controller = new AbortController();
     setError(null);
-    if (props.demoMode) { setViews(organizationViewsFixture); return; }
+    if (props.demoMode) return;
     void authority.request("/v1/organization/views", { signal: controller.signal }, { operation: "read", capability: "query", hasReliableData: false }).then(body => {
       if (!controller.signal.aborted) setViews(organizationViewListResponseSchema.parse(body).items);
     }).catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Could not load Views."); });

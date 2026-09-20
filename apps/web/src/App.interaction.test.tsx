@@ -6,6 +6,7 @@ import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVEN
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
+import { demoStore } from "./demo-store";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
 
@@ -57,6 +58,7 @@ function isSameNode(left: unknown, right: unknown) {
 }
 
 function installDom() {
+  demoStore.reset();
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox" });
   scrollPosition = { x: 0, y: 0 };
   nextFrameId = 0;
@@ -4098,5 +4100,49 @@ describe("BRE-415 unsaved View navigation", () => {
     await press("Rules"); await press("Discard draft");
     await press("Views");
     expect(Boolean(browserWindow.document.querySelector("#organization-views .view-composer"))).toBe(false);
+  });
+});
+
+describe("BRE-418 canonical demo App journey", () => {
+  beforeEach(installDom);
+  afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); demoStore.reset(); });
+  const find = (label: string, selector = "button") => {
+    const button = [...browserWindow.document.querySelectorAll(selector)].find(node => node.textContent?.trim() === label || node.getAttribute("aria-label") === label || node.getAttribute("aria-label") === `${label}, saved view` || node.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
+    if (!button) throw new Error(`Missing ${label}`);
+    return button as unknown as HTMLButtonElement;
+  };
+  async function press(label: string, selector?: string) { await act(async () => find(label, selector).click()); await waitFor(0); }
+  test("selected Mom create/save/open/Add senders/grow/reopen stays in-page with matching Inbox count", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const rowCount = browserWindow.document.querySelectorAll("button.message-row").length;
+    expect(find("Inbox", ".desktop-sidebar-item").textContent).toBe(`Inbox${rowCount}`);
+    await press("Select"); await press("Select Mom: Dinner on Sunday?"); await press("Create sender View");
+    expect(browserWindow.document.querySelector(".view-scope-sentence")?.textContent).toContain("family@example.com");
+    expect(browserWindow.document.querySelector(".view-scope-sentence")?.textContent).not.toContain("deploy@");
+    const name = browserWindow.document.querySelector(".view-identity input") as unknown as HTMLInputElement;
+    await enterInput(name, "Family sample");
+    await press("Save");
+    const view = demoStore.getSnapshot().find(view => view.name === "Family sample")!;
+    expect(Boolean(view)).toBe(true);
+    expect(browserWindow.location.pathname).toBe("/dev/inbox");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe(`view:${view.id}`);
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
+    expect(browserWindow.document.querySelectorAll(".saved-view-results .view-thread-row")).toHaveLength(1);
+    expect(find("Family sample", ".desktop-sidebar-item").getAttribute("aria-current")).toBe("page");
+    await press("Add senders", "a");
+    expect(new URL(browserWindow.location.href).searchParams.get("addSendersTo")).toBe(view.id);
+    await press("Select Anika Lee: Design direction");
+    await press("Add senders to existing View");
+    const chooser = browserWindow.document.querySelector('select[aria-label="Saved View to grow"]') as unknown as HTMLSelectElement;
+    expect(chooser.value).toBe(view.id);
+    expect(find("Preview added senders").disabled).toBe(false);
+    await press("Preview added senders");
+    await press("Save changes");
+    expect(demoStore.getView(view.id)?.definition.sender?.addresses).toEqual(["family@example.com", "anika@example.com"]);
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
+    expect(browserWindow.document.querySelectorAll(".saved-view-results .view-thread-row")).toHaveLength(demoStore.evaluate(view.id).count!);
+    await press("Inbox", ".desktop-sidebar-item"); await press("Family sample", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
+    expect(demoStore.getView(view.id)?.revision).toBe(2);
   });
 });

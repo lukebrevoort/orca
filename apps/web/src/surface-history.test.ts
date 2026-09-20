@@ -19,6 +19,32 @@ function settleHistory() {
 }
 
 describe("surface history contract", () => {
+  test("demo sender growth uses canonical metadata and preserves Back/Forward source entries", async () => {
+    const browser = createBrowser("http://localhost:5173/dev/inbox?destination=view%3Asample&q=family");
+    const history = new SurfaceHistory(browser as never);
+    history.initialize();
+    const saved = browser.location.href;
+    const savedMetadata = readSurfaceHistoryMetadata(browser.history.state);
+    history.openSenderSelection("sample");
+    const selection = browser.location.href;
+    expect(history.read().destination).toBe("all");
+    expect(history.read().query).toBe("family");
+    expect(new URL(selection).searchParams.get("addSendersTo")).toBe("sample");
+    expect(readSurfaceHistoryMetadata(browser.history.state)?.signature).not.toBe(savedMetadata?.signature);
+    expect(readSurfaceHistoryMetadata(browser.history.state)?.canDismiss).toBe(true);
+    history.navigate("view:sample");
+    expect(new URL(browser.location.href).searchParams.has("addSendersTo")).toBe(false);
+    browser.history.back(); await settleHistory();
+    expect(browser.location.href).toBe(selection);
+    expect(readSurfaceHistoryMetadata(browser.history.state)?.signature).toContain('"destination":"all"');
+    browser.history.back(); await settleHistory();
+    expect(browser.location.href).toBe(saved);
+    browser.history.forward(); await settleHistory();
+    expect(browser.location.href).toBe(selection);
+    browser.history.forward(); await settleHistory();
+    expect(history.read().destination).toBe("view:sample");
+    browser.close();
+  });
   test("same-destination Views edits retain distinct Back/Forward entries and source mail context", async () => {
     const browser = createBrowser("http://localhost:5173/dev/inbox?destination=view%3Ahidden&q=maya&flag=kept&thread=t1&accountId=a1#mail");
     const history = new SurfaceHistory(browser as never);

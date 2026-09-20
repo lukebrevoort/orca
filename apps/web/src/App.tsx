@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type Dispatch,
   type MouseEvent,
@@ -19,7 +20,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, OrganizationViewPreparationInput, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, organizationViewsFixture, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoAgentEvents,
@@ -31,6 +32,7 @@ import {
   messageBodies,
   messageHtmlBodies,
 } from "./demo-data";
+import { demoStore, demoSessionNotice, evaluateDemoDefinition } from "./demo-store";
 import { AgentEventTimeline, type AgentEventControlAction } from "./agent-event-ui";
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
@@ -342,6 +344,7 @@ function getClassificationCounts(source: InboxMessage[]): ClassificationCounts {
 
 const demoMailWithAgentSources = [...demoMessages, ...demoAgentMessages];
 const demoClassificationCounts = getClassificationCounts(demoMailWithAgentSources);
+const demoNavigationAttention = Object.fromEntries(demoMailWithAgentSources.map(message => [senderAttentionTargetKey(senderAttentionTargetForMessage(message)), message.attentionBehavior]));
 
 function demoMessagesForClassification(view: ClassificationView, source = demoMessages) {
   return source.filter((message) => classificationMatchesView(message, view));
@@ -866,6 +869,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const connectedAccountsIssue = connectedAccountsStatus === "error" ? buildSettingsReadIssue("accounts", connectedAccountsError) : null;
   const agentConnectionsIssue = agentConnectionsStatus === "error" ? buildSettingsReadIssue("agents", agentConnectionsError) : null;
   const syncStatusIssue = settingsSyncReadStatus === "error" ? buildSettingsReadIssue("sync", settingsSyncError) : null;
+  const demoSavedViews = useSyncExternalStore(demoStore.subscribe, demoStore.getSnapshot, demoStore.getSnapshot);
   const settingsNavigationPreview = useMemo<SettingsNavigationPreview>(() => ({
     account: {
       displayName: (demoMode ? demoAccount.displayName : profileAccount?.displayName) ?? (demoMode ? demoAccount.email : profileAccount?.email) ?? "Orca workspace",
@@ -877,20 +881,20 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     accountId: demoMode ? demoAccount.id : profileAccount?.id ?? null,
     attention: !demoMode && (connectedAccountsStatus === "error" || settingsSyncReadStatus === "error" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error"))),
     collections: demoMode ? demoCollections : [],
-    views: demoMode ? organizationViewsFixture : [],
+    views: demoMode ? demoSavedViews : [],
     complete: demoMode,
     counts: demoMode ? {
-      focus: getMessagesForMailbox(demoMailWithAgentSources, "focus").length,
-      signals: getMessagesForMailbox(demoMailWithAgentSources, "signals").length,
-      quiet: getMessagesForMailbox(demoMailWithAgentSources, "quiet").length,
+      focus: getMessagesForMailbox(demoMailWithAgentSources, "focus", demoNavigationAttention).length,
+      signals: getMessagesForMailbox(demoMailWithAgentSources, "signals", demoNavigationAttention).length,
+      quiet: getMessagesForMailbox(demoMailWithAgentSources, "quiet", demoNavigationAttention).length,
       later: new Set(demoReminders.filter((item) => item.status === "scheduled" || item.status === "resurfaced").map((item) => item.threadId)).size,
     } : {},
     draftCount: demoMode ? demoDrafts.length : undefined,
-    inboxCount: demoMode ? demoMailWithAgentSources.length : undefined,
+    inboxCount: demoMode ? getLatestThreadRows(getMessagesForMailbox(demoMailWithAgentSources, "inbox", demoNavigationAttention)).length : undefined,
     known: demoMode || (connectedAccountsStatus === "ready" && settingsSyncReadStatus === "ready"),
     labels: {},
     syncing: !demoMode && (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "syncing"))),
-  }), [connectedAccounts.length, connectedAccountsStatus, demoMode, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
+  }), [connectedAccounts.length, connectedAccountsStatus, demoMode, demoSavedViews, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
   return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
     <section className="settings-home-page">
@@ -1302,7 +1306,9 @@ export function InboxApp({
   const [routingCounts, setRoutingCounts] = useState<InboxClassificationResponse["counts"]["attention"] | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
-  const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
+  const demoSavedViews = useSyncExternalStore(demoStore.subscribe, demoStore.getSnapshot, demoStore.getSnapshot);
+  const [liveSavedViews, setSavedViews] = useState<OrganizationView[]>([]);
+  const savedViews = demoMode ? demoSavedViews : liveSavedViews;
   const savedViewsRequest = useRef(0);
   const [viewMutationRefreshKey, setViewMutationRefreshKey] = useState(0);
   useEffect(() => {
@@ -1839,6 +1845,16 @@ export function InboxApp({
   }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision, viewMutationRefreshKey]);
   useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
+  const demoSkippedInboxThreads = useMemo(() => {
+    const skipped = new Set<string>();
+    if (!demoMode) return skipped;
+    for (const view of savedViews.filter(view => view.skipInbox)) {
+      const result = evaluateDemoDefinition(view.definition, allMailMessages, demoStore.getAccounts());
+      if (result.status === "evaluated") for (const thread of result.threads) skipped.add(JSON.stringify([thread.account.id, thread.latest.threadId]));
+    }
+    return skipped;
+  }, [demoMode, savedViews, allMailMessages]);
+  const demoInboxSource = useMemo(() => demoMode ? messages.filter(message => !demoSkippedInboxThreads.has(JSON.stringify([message.accountId, message.threadId]))) : messages, [demoMode, messages, demoSkippedInboxThreads]);
   const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "all");
   const mailboxMessages = useMemo(
     () => {
@@ -1846,12 +1862,12 @@ export function InboxApp({
       return destinationSurface && !demoMode ? (destinationPageKey.current === requestedDestinationId ? destinationPage?.messages ?? [] : []) : activeCollection
         ? allMailMessages.filter((message) => activeCollection.threadIds.includes(message.threadId))
         : isClassificationMailbox
-          ? getMessagesForMailbox(messages, activeMailbox, attentionByAddress)
+          ? getMessagesForMailbox(activeMailbox === "inbox" ? demoInboxSource : messages, activeMailbox, attentionByAddress)
           : activeMailbox === "later"
             ? allMailMessages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
             : getMessagesForMailbox(allMailMessages, activeMailbox, attentionByAddress);
     },
-    [destinationSurface, requestedDestinationId, destinationPage, activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, isClassificationMailbox, messages, reminders],
+    [destinationSurface, requestedDestinationId, destinationPage, activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, demoInboxSource, isClassificationMailbox, messages, reminders],
   );
 
   const visibleMessages = useMemo(() => {
@@ -1895,7 +1911,12 @@ export function InboxApp({
     active: activeDesktopDestination,
     attention: status === "error" || Boolean(syncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error")),
     collections,
-    destinations: catalog.active,
+    destinations: demoMode ? catalog.active.map(destination => {
+      const mailbox = destination.isFallback ? "inbox" : destination.id as Mailbox;
+      const sample = getMessagesForMailbox(destination.isFallback ? demoInboxSource : allMailMessages, mailbox, attentionByAddress);
+      const rows = destination.isFallback ? sample.filter(message => getLatestThreadRows(allMailMessages).some(latest => messageIdentityKey(latest) === messageIdentityKey(message))) : sample;
+      return { ...destination, counts: { total: rows.length, unread: rows.filter(message => message.unread).length } };
+    }) : catalog.active,
     views: savedViews,
     counts: {
       focus: routingCounts?.focus ?? getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
@@ -1911,7 +1932,7 @@ export function InboxApp({
     online,
     order: spaceOrder,
     syncing: status === "syncing" || isGmailRefreshing,
-  }), [catalog.data, routingCounts, account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
+  }), [catalog.data, routingCounts, account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, demoMode, demoInboxSource, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
@@ -3215,6 +3236,7 @@ export function InboxApp({
             theme={theme}
             title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
+          {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
@@ -3224,10 +3246,11 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${requestedDestinationId}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
+              onOpenSavedView={id => navigateDesktop(`view:${id}`)}
               agentEventActionErrors={agentEventActionErrors}
               agentEvents={agentEvents}
               agentEventsError={agentEventsError}
@@ -4612,6 +4635,7 @@ function InboxView({
   onReorderPin,
   onUpdatePin,
   onOpenThread,
+  onOpenSavedView,
   onPinPerson,
   onSelectPin,
   onRefresh,
@@ -4678,6 +4702,7 @@ function InboxView({
   onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
   onOpenThread: (message: InboxMessage) => void;
+  onOpenSavedView?: (id: string) => void;
   onPinPerson: (message: InboxMessage) => void;
   onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
@@ -5166,7 +5191,7 @@ function InboxView({
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
         {typeof window !== "undefined" && new URLSearchParams(window.location.search).has("addSendersTo") ? <p className="view-state">Select mail from one account, then choose Add senders to existing View. You’ll review the exact senders and matching mail before saving.</p> : null}
-        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><SenderAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><SenderAuthoringWorkspace compact dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => { if (demoMode && onOpenSavedView) { setViewAuthoringEntry(null); onOpenSavedView(result.view.id); } else window.location.assign(result.navigation.href); }}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
