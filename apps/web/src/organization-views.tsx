@@ -552,17 +552,19 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     setUnsupportedClauses((current) => current.filter((clause) => clause.id !== replacement.clauseId));
   }
 
-  function finishCancel() {
+  function discardComposer() {
     censusGeneration.current += 1; setCorrection(null);
     mutationRequest.current += 1; preparationRequest.current += 1; previewRequest.current += 1;
     setDraftUndo([]); setComposerMode(null);
+  }
+  function finishCancel() {
     const action = exitAfterDiscard.current; exitAfterDiscard.current = null;
     if (action) { action(); return; }
     if (authoringEntry && onCancelAuthoring) onCancelAuthoring(authoringEntry.returnContext);
     else focusSoon(openerRef.current);
   }
   const dirty = Boolean(composerMode && seedDefinition.current && (seedSkipInbox.current !== skipInbox || seedFields.current !== JSON.stringify(draftFields) || seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition })));
-  const navigationGuard = useViewNavigationGuard({ dirty, saving: status === "saving" || commitInFlight.current, editor: workspaceRef });
+  const navigationGuard = useViewNavigationGuard({ dirty, saving: status === "saving" || commitInFlight.current, editor: workspaceRef, onDiscard: discardComposer });
   function cancelComposer() { navigationGuard.request(finishCancel); }
   function dismissComposer() {
     if (status === "saving") return;

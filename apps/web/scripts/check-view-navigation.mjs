@@ -46,5 +46,20 @@ try {
  await press('Edit'); await name.fill('Leave for Settings'); await nav('Settings'); await prompt.waitFor();
  let extraPrompt = false; page.on('dialog', async dialog => { extraPrompt = true; await dialog.dismiss(); });
  await press('Discard draft'); await page.waitForURL('**/settings'); assert.equal(extraPrompt,false);
+ const organizationUrl = new URL(process.env.VIEW_GUARD_URL ?? 'http://localhost:5187/dev/inbox');
+ organizationUrl.searchParams.set('destination','organization-studio');
+ await page.goto(organizationUrl.href); await press('Views'); await press('Edit definition');
+ await name.fill('First dirty Organization draft'); await press('Rules'); await prompt.waitFor(); await press('Discard draft');
+ await press('Views'); assert.equal(await page.locator('#organization-views .view-composer').count(),0);
+ await press('Edit definition'); assert.equal(await name.inputValue(),'Weekly production review');
+ await name.fill('Second dirty Organization draft'); await name.focus(); await press('Rules'); await prompt.waitFor();
+ await page.evaluate(()=>document.documentElement.dataset.theme='light');
+ await page.screenshot({path:join(output,'bre-415-return-prompt-light.png')});
+ await page.evaluate(()=>document.documentElement.dataset.theme='dark');
+ await page.screenshot({path:join(output,'bre-415-return-prompt-dark.png')});
+ await press('Keep editing'); await wait(); assert.equal(await name.inputValue(),'Second dirty Organization draft');
+ assert.equal(await name.evaluate(el=>el===document.activeElement),true);
+ await press('Rules'); await prompt.waitFor(); await press('Discard draft'); await press('Views');
+ assert.equal(await page.locator('#organization-views .view-composer').count(),0);
  console.log('PASS shell, Back/Forward Keep/Discard, exact URL/focus, requested view identity, light/dark screenshots');
 } catch (error) { await page.screenshot({path:join(output, "bre-415-failure.png")}); throw error; } finally { await browser.close(); }

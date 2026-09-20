@@ -4002,5 +4002,18 @@ describe("BRE-415 unsaved View navigation", () => {
     await press("Keep editing"); expect(field.value).toBe("Organization draft");
     await press("Rules"); await press("Discard draft");
     expect(browserWindow.document.querySelector("#organization-rules")).not.toBeNull();
+    await press("Views");
+    expect(Boolean(browserWindow.document.querySelector("#organization-views .view-composer"))).toBe(false);
+    await press("Edit definition");
+    const reopened = [...browserWindow.document.querySelectorAll("label")].find(label => label.textContent?.startsWith("View name"))!.querySelector("input") as unknown as HTMLInputElement;
+    expect(reopened.value).toBe("Weekly production review");
+    await enterInput(reopened, "Second Organization draft");
+    await press("Rules");
+    expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    await press("Keep editing");
+    expect(reopened.value).toBe("Second Organization draft");
+    await press("Rules"); await press("Discard draft");
+    await press("Views");
+    expect(Boolean(browserWindow.document.querySelector("#organization-views .view-composer"))).toBe(false);
   });
 });

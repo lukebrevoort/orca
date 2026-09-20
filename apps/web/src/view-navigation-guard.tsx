@@ -53,7 +53,7 @@ export function installViewNavigationHistory(browser: Window) {
   };
 }
 
-export function useViewNavigationGuard({ dirty, saving, editor }: { dirty: boolean; saving: boolean; editor: RefObject<HTMLElement | null> }) {
+export function useViewNavigationGuard({ dirty, saving, editor, onDiscard }: { dirty: boolean; saving: boolean; editor: RefObject<HTMLElement | null>; onDiscard: () => void }) {
   const latest = useRef({ dirty, saving }); latest.current = { dirty, saving };
   const pending = useRef<(() => void) | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -99,11 +99,17 @@ export function useViewNavigationGuard({ dirty, saving, editor }: { dirty: boole
     if (latest.current.saving) return;
     const leave = pending.current; pending.current = null; setAsking(false);
     released.current = true;
+    // A destination can hide the editor without unmounting it. Clear the draft
+    // before leaving so the next edit is protected by a fresh guard.
+    onDiscard();
     leave?.();
     // Stay released until the old draft clears: full-page navigation may dispatch
     // beforeunload after this event, and must not ask for a second confirmation.
   };
-  return { asking, keep, discard, request: (leave: () => void) => blocked() ? ask(leave) : leave(), release: () => { released.current = true; } };
+  return { asking, keep, discard, request: (leave: () => void) => {
+    if (blocked()) ask(leave);
+    else { onDiscard(); leave(); } // Local Cancel also closes a clean draft.
+  }, release: () => { released.current = true; } };
 }
 
 export function ViewDiscardDialog({ onKeep, onDiscard }: { onKeep: () => void; onDiscard: () => void }) {
