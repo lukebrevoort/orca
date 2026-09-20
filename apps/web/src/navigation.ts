@@ -106,6 +106,34 @@ export function desktopDestinationHref(destination: DesktopDestination, sourcePa
   return `${rootPath}?destination=${encodeURIComponent(destination)}`;
 }
 
+export type ViewsManagementRoute = { section: "views"; editViewId: string | null };
+
+/** Views remain a section of Organization, not a second global destination.
+ * IDs are opaque; missing/hidden IDs must reach management for safe recovery.
+ */
+export function viewsManagementFromLocation(location: Pick<Location, "pathname" | "search">): ViewsManagementRoute | null {
+  if (desktopDestinationFromLocation(location) !== "organization-studio") return null;
+  const params = new URLSearchParams(location.search);
+  if (params.get("section") !== "views") return null;
+  const editViewId = params.get("editView");
+  return { section: "views", editViewId: editViewId?.trim() ? editViewId : null };
+}
+
+export function viewsManagementHref(sourcePathname = "/", editViewId?: string | null) {
+  const params = new URLSearchParams({ destination: "organization-studio", section: "views" });
+  if (editViewId?.trim()) params.set("editView", editViewId);
+  const pathname = sourcePathname.startsWith("/dev/") ? "/dev/inbox" : "/";
+  return `${pathname}?${params}`;
+}
+
+/** In-place navigation preserves unrelated mail filters, but never stale editor intent. */
+export function viewsManagementUrl(currentHref: string, editViewId?: string | null) {
+  const url = new URL(desktopDestinationUrl(currentHref, "organization-studio"), "http://orca.local");
+  url.searchParams.set("section", "views");
+  if (editViewId?.trim()) url.searchParams.set("editView", editViewId);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function desktopDestinationUrl(currentHref: string, destination: Exclude<DesktopDestination, "settings">) {
   const url = new URL(currentHref, "http://orca.local");
   url.pathname = url.pathname === "/dev/inbox" ? "/dev/inbox" : "/";
@@ -113,6 +141,9 @@ export function desktopDestinationUrl(currentHref: string, destination: Exclude<
   url.searchParams.delete("thread");
   url.searchParams.delete("accountId");
   url.searchParams.delete("compose");
+  url.searchParams.delete("section");
+  url.searchParams.delete("editView");
+  url.searchParams.delete("addSendersTo");
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
