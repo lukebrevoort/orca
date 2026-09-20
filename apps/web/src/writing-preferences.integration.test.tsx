@@ -5,6 +5,7 @@ import { Window } from "happy-dom";
 import { accountFixture, inboxFixture, type ThreadDetail } from "@orca/shared";
 import { MessageReader } from "./App";
 import { TopLayerProvider } from "./top-layer";
+import { editorToPlainText } from "./compose-workspace";
 
 const names = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "KeyboardEvent", "getComputedStyle"] as const;
 const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
@@ -88,4 +89,32 @@ test("format choice is explicit, preserves literal text, and controls saved HTML
   expect(editor.textContent).toBe("**Literal** <safe>");
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 460)); });
   expect(writes.at(-1)?.body).toEqual({ text: "**Literal** <safe>", html: null });
+});
+
+test("plain DOM soft breaks, paragraphs, blank lines and trailing spaces persist literally", async () => {
+  await render(); await click("Reply");
+  const editor = browser.document.querySelector('[aria-label="Message body"]')!;
+  await act(async () => {
+    editor.innerHTML = "<p>First line<br>Second line</p><p>Paragraph</p><p><br></p><p><br></p><p>Trailing  <br><br></p>";
+    editor.dispatchEvent(new browser.Event("input", { bubbles: true }));
+  });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 460)); });
+  expect(writes.at(-1)?.body).toEqual({ text: "First line\nSecond line\nParagraph\n\n\nTrailing  \n", html: null });
+});
+
+test("rich soft breaks do not silently join visible words in saved text or HTML", async () => {
+  await render(); await click("Reply");
+  const format = browser.document.querySelector('[aria-label="Message format"]') as unknown as HTMLSelectElement;
+  await act(async () => { format.value = "rich"; format.dispatchEvent(new browser.Event("change", { bubbles: true }) as unknown as Event); });
+  const editor = browser.document.querySelector('[aria-label="Message body"]')!;
+  await act(async () => { editor.innerHTML = "<p>Rich first<br>Rich second</p>"; editor.dispatchEvent(new browser.Event("input", { bubbles: true })); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 460)); });
+  expect(writes.at(-1)?.body).toEqual({ text: "Rich first\nRich second", html: "<p>Rich first</p><p>Rich second</p>" });
+});
+
+test("literal plain text nodes retain Unicode spaces and all terminal newlines", () => {
+  const editor = browser.document.createElement("div");
+  const literal = "  Literal\u00a0space\u2007\n\n\n";
+  editor.append(browser.document.createTextNode(literal));
+  expect(editorToPlainText(editor as unknown as HTMLElement)).toBe(literal);
 });

@@ -125,9 +125,38 @@ try {
       await page.getByText('Writing defaults unavailable. New drafts use plain text without a signature.').waitFor();
       await body.fill('Still free to write'); await capture('defaults-unavailable');
       assert.equal(await page.getByRole('combobox', { name: 'Message format' }).inputValue(), 'plain');
-      assert.equal(sends.length, 0);
+      if (process.env.WRITING_KEYBOARD === '1') {
+        await body.click(); await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.press('Backspace');
+        await page.keyboard.type('First line'); await page.keyboard.press('Shift+Enter'); await page.keyboard.type('Second line');
+        await page.keyboard.press('Enter'); await page.keyboard.type('Paragraph');
+        await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+        await page.keyboard.type('Trailing  '); await page.keyboard.press('Shift+Enter');
+        await page.waitForTimeout(600);
+        const expected = 'First line\nSecond line\nParagraph\n\n\nTrailing  \n';
+        assert.equal(writes.at(-1).body.text, expected);
+        assert.equal(writes.at(-1).body.html, null);
+        await capture('plain-keyboard-whitespace');
+        await page.locator('input[name="to-recipient"]').fill('recipient@example.com');
+        await page.getByRole('button', { name: 'Send', exact: true }).click();
+        await page.locator('[aria-label="Close panel"]').waitFor({ state: 'hidden' });
+        assert.equal(writes.at(-1).body.text, expected); assert.equal(writes.at(-1).body.html, null);
+        await compose();
+        await page.getByRole('combobox', { name: 'Message format' }).selectOption('rich');
+        await body.click(); await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.press('Backspace');
+        await page.keyboard.type('Rich first'); await page.keyboard.press('Shift+Enter'); await page.keyboard.type('Rich second');
+        await page.waitForTimeout(600);
+        assert.equal(writes.at(-1).body.text, 'Rich first\nRich second');
+        assert.equal(writes.at(-1).body.html, '<p>Rich first</p><p>Rich second</p>');
+        await capture('rich-keyboard-soft-break');
+        await page.locator('input[name="to-recipient"]').fill('recipient@example.com');
+        await page.getByRole('button', { name: 'Send', exact: true }).click();
+        await page.locator('[aria-label="Close panel"]').waitFor({ state: 'hidden' });
+        assert.equal(writes.at(-1).body.text, 'Rich first\nRich second');
+        assert.equal(writes.at(-1).body.html, '<p>Rich first</p><p>Rich second</p>');
+      }
+      assert.equal(sends.length, process.env.WRITING_KEYBOARD === '1' ? 2 : 0);
       assert.deepEqual(errors, []);
-      results.push({ theme, width, settingsInvalidation: true, newDraft: true, recoveredDraftPreserved: true, nextDraftFresh: true, defaultReplyAllRecipients: true, explicitReply: true, failureTyping: true, sends: sends.length, screenshots: shots });
+      results.push({ theme, width, settingsInvalidation: true, newDraft: true, recoveredDraftPreserved: true, nextDraftFresh: true, defaultReplyAllRecipients: true, explicitReply: true, failureTyping: true, literalPlainKeyboardSaveAndSend: process.env.WRITING_KEYBOARD === '1', richSoftBreakSaveAndSend: process.env.WRITING_KEYBOARD === '1', sends: sends.length, allRequestsMocked: true, screenshots: shots });
       console.log(`PASS ${theme} ${width}`);
     } catch (error) {
       writeFileSync(join(output, `${stamp}-bre419-failure.txt`), await page.locator('body').innerText());

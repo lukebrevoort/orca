@@ -4,3 +4,5 @@
 .writing-format-choice select:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
 .writing-preferences-note { color: var(--orca-muted); font-size: 11px; line-height: 1.5; margin: 8px 0; }
 .compose-writing-field .compose-formatting button:disabled { opacity: .75; }
+.compose-block-editor[data-format="plain"] { white-space: pre-wrap; }
+.compose-block-editor[data-format="plain"] > p { margin: 0; }

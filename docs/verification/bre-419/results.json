@@ -9,7 +9,10 @@
     "defaultReplyAllRecipients": true,
     "explicitReply": true,
     "failureTyping": true,
-    "sends": 0,
+    "literalPlainKeyboardSaveAndSend": true,
+    "richSoftBreakSaveAndSend": true,
+    "sends": 2,
+    "allRequestsMocked": true,
     "screenshots": [
       "light-1440-settings-saved.png",
       "light-1440-new-rich-signature.png",
@@ -18,7 +21,9 @@
       "light-1440-next-draft-updated-signature.png",
       "light-1440-default-reply-all.png",
       "light-1440-explicit-reply.png",
-      "light-1440-defaults-unavailable.png"
+      "light-1440-defaults-unavailable.png",
+      "light-1440-plain-keyboard-whitespace.png",
+      "light-1440-rich-keyboard-soft-break.png"
     ]
   },
   {
@@ -31,7 +36,10 @@
     "defaultReplyAllRecipients": true,
     "explicitReply": true,
     "failureTyping": true,
-    "sends": 0,
+    "literalPlainKeyboardSaveAndSend": true,
+    "richSoftBreakSaveAndSend": true,
+    "sends": 2,
+    "allRequestsMocked": true,
     "screenshots": [
       "light-390-settings-saved.png",
       "light-390-new-rich-signature.png",
@@ -40,7 +48,9 @@
       "light-390-next-draft-updated-signature.png",
       "light-390-default-reply-all.png",
       "light-390-explicit-reply.png",
-      "light-390-defaults-unavailable.png"
+      "light-390-defaults-unavailable.png",
+      "light-390-plain-keyboard-whitespace.png",
+      "light-390-rich-keyboard-soft-break.png"
     ]
   },
   {
@@ -53,7 +63,10 @@
     "defaultReplyAllRecipients": true,
     "explicitReply": true,
     "failureTyping": true,
-    "sends": 0,
+    "literalPlainKeyboardSaveAndSend": true,
+    "richSoftBreakSaveAndSend": true,
+    "sends": 2,
+    "allRequestsMocked": true,
     "screenshots": [
       "dark-1440-settings-saved.png",
       "dark-1440-new-rich-signature.png",
@@ -62,7 +75,9 @@
       "dark-1440-next-draft-updated-signature.png",
       "dark-1440-default-reply-all.png",
       "dark-1440-explicit-reply.png",
-      "dark-1440-defaults-unavailable.png"
+      "dark-1440-defaults-unavailable.png",
+      "dark-1440-plain-keyboard-whitespace.png",
+      "dark-1440-rich-keyboard-soft-break.png"
     ]
   },
   {
@@ -75,7 +90,10 @@
     "defaultReplyAllRecipients": true,
     "explicitReply": true,
     "failureTyping": true,
-    "sends": 0,
+    "literalPlainKeyboardSaveAndSend": true,
+    "richSoftBreakSaveAndSend": true,
+    "sends": 2,
+    "allRequestsMocked": true,
     "screenshots": [
       "dark-390-settings-saved.png",
       "dark-390-new-rich-signature.png",
@@ -84,7 +102,9 @@
       "dark-390-next-draft-updated-signature.png",
       "dark-390-default-reply-all.png",
       "dark-390-explicit-reply.png",
-      "dark-390-defaults-unavailable.png"
+      "dark-390-defaults-unavailable.png",
+      "dark-390-plain-keyboard-whitespace.png",
+      "dark-390-rich-keyboard-soft-break.png"
     ]
   }
 ]

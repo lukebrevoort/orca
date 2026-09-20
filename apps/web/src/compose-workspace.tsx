@@ -1478,7 +1478,7 @@ function RenderedBlockEditor({
   function emitChange() {
     const editor = editorRef.current;
     if (!editor) return;
-    const nextBody = editorToMarkdown(editor);
+    const nextBody = format === "plain" ? editorToPlainText(editor) : editorToMarkdown(editor);
     lastBodyRef.current = nextBody;
     onChange(nextBody);
   }
@@ -1588,11 +1588,13 @@ function RenderedBlockEditor({
         className="compose-writing-area compose-block-editor"
         contentEditable
         data-placeholder={placeholder}
+        data-format={format}
         onInput={onInput}
         onKeyDown={onKeyDown}
         onPaste={(event) => {
           event.preventDefault();
-          document.execCommand("insertText", false, normalizePastedText(event.clipboardData.getData("text")));
+          const text = event.clipboardData.getData("text");
+          document.execCommand("insertText", false, format === "plain" ? text.replace(/\r\n?/g, "\n") : normalizePastedText(text));
         }}
         ref={(editor) => { editorRef.current = editor; focusRef.current = editor; }}
         role="textbox"
@@ -1803,6 +1805,34 @@ export function editorToMarkdown(editor: HTMLElement) {
   }).join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
+/** Literal plain-editor text. Chrome uses BR for soft breaks and P/DIV for
+ * paragraph boundaries, with one terminal BR (or separate newline text node
+ * after a newline in pre-wrap mode) as a caret placeholder. Preserve
+ * every other break and every text-node character; rich Markdown rules do not
+ * apply here (in particular no trimEnd or blank-line collapsing).
+ */
+export function editorToPlainText(editor: HTMLElement): string {
+  const isBlock = (node: Node) => node.nodeType === Node.ELEMENT_NODE && /^(P|DIV)$/.test((node as Element).tagName);
+  const childrenText = (parent: Node): string => {
+    const children = [...parent.childNodes];
+    return children.map((node, index) => {
+      const previous = children[index - 1];
+      const boundary = previous && (isBlock(previous) || isBlock(node)) ? "\n" : "";
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent ?? "";
+        const terminalCaret = index === children.length - 1 && text === "\n"
+          && previous?.nodeType === Node.TEXT_NODE && previous.textContent?.endsWith("\n");
+        return boundary + (terminalCaret ? "" : text);
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return "";
+      const element = node as Element;
+      if (element.tagName === "BR") return index === children.length - 1 ? "" : "\n";
+      return boundary + childrenText(node);
+    }).join("");
+  };
+  return childrenText(editor);
+}
+
 function inlineNodeToMarkdown(node: Node): string {
   return [...node.childNodes].map((child) => {
     if (child.nodeType === Node.TEXT_NODE) return child.textContent ?? "";
@@ -1810,7 +1840,7 @@ function inlineNodeToMarkdown(node: Node): string {
     const content = inlineNodeToMarkdown(element);
     if (element.matches("strong, b")) return `**${content}**`;
     if (element.matches("em, i")) return `_${content}_`;
-    if (element.matches("br")) return "";
+    if (element.matches("br")) return "\n";
     return content;
   }).join("");
 }
