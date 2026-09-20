@@ -238,7 +238,6 @@
   color: var(--desktop-control-selected-ink);
 }
 .desktop-sidebar-item small { justify-self: end; color: var(--desktop-faint); font: 700 9px/9px var(--desktop-mono); }
-.desktop-tool-kind { display: block; margin: 2px 0 4px; color: var(--desktop-muted); font: 500 9px/12px var(--desktop-sans); }
 .desktop-manage-views { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--desktop-border); border-radius: 8px; background: var(--desktop-surface); color: var(--desktop-ink); font: 650 11px/16px var(--desktop-sans); text-align: left; }
 .desktop-manage-views:hover { background: var(--desktop-surface-hover); }
 .desktop-manage-views:focus-visible,.desktop-hidden-edit:focus-visible { outline: 2px solid var(--desktop-focus); outline-offset: 2px; }

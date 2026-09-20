@@ -44,7 +44,6 @@ function OrcaBlackMark() {
 }
 
 function ToolIcon({ space }: { space: WorkflowSpace }) {
-  if (space.kind === "view") return <NavIcon name="view"/>;
   if (space.kind === "collection") return <NavIcon name="collection"/>;
   if (space.id === "later") return <NavIcon name="later"/>;
   return <span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>;
@@ -52,13 +51,13 @@ function ToolIcon({ space }: { space: WorkflowSpace }) {
 
 function SidebarItem({ active, count, icon, label, savedView, onClick }: { active: boolean; count?: number; icon: ReactNode; label: string; savedView?: boolean; onClick: () => void }) {
   return <button aria-current={active ? "page" : undefined} aria-label={savedView ? `${label}, saved view` : undefined} className="desktop-sidebar-item" onClick={onClick} type="button">
-    {icon}<span>{label}{savedView ? <em className="desktop-tool-kind">View</em> : null}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
+    {icon}<span>{label}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
   </button>;
 }
 
 function MobileMenuItem({ active = false, count, icon, label, savedView, onClick }: { active?: boolean; count?: number; icon: ReactNode; label: string; savedView?: boolean; onClick: () => void }) {
   return <button aria-current={active ? "page" : undefined} aria-label={savedView ? `${label}, saved view` : undefined} className="desktop-mobile-menu-item" onClick={onClick} role="menuitem" type="button">
-    {icon}<span>{label}{savedView ? <em className="desktop-tool-kind">View</em> : null}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
+    {icon}<span>{label}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
   </button>;
 }
 

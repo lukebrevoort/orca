@@ -54,13 +54,23 @@ test("hidden views can be edited without restoring; restore retains mixed tool o
 test("saved-view semantics keep mixed order, active state and mobile management reachable", async () => {
   let managed = 0;
   await act(async () => root.render(<TopLayerProvider><AppSidebar theme="dark" onCompose={() => {}} onManageSpaces={() => {}} onManageTools={() => {}} onManageViews={() => { managed++; }} onNavigate={() => {}} projection={{ account: { displayName: "Owner", email: "owner@example.com", accountCount: 1, health: "synced" }, online: true, active: "view:live", spaces: [
-    { id: "live", label: "Live matches", description: "Saved view", kind: "view" },
+    { id: "live", label: "Live matches", description: "Saved view", kind: "view", color: "#c7788c" },
     { id: "manual", label: "Manual", description: "Collection", kind: "collection" },
     { id: "later", label: "Later", description: "Reminders", kind: "built_in" },
   ] }}/></TopLayerProvider>));
   expect(button("Live matches, saved view").getAttribute("aria-current")).toBe("page");
+  const view = button("Live matches, saved view");
+  expect(view.textContent).toBe("Live matches");
+  expect(view.querySelector("svg")).toBeNull();
+  expect(view.querySelector<HTMLElement>(".desktop-space-mark")?.style.background).toBe("#c7788c");
+  expect(button("Manual").querySelector("svg path")?.getAttribute("d")).toBe("M2 5h6l2 2h8v10H2z");
+  expect(button("Later").querySelector("svg circle")).not.toBeNull();
   await act(async () => document.querySelector<HTMLButtonElement>(".desktop-mobile-more")!.click());
   const menu = document.querySelector('[role="menu"]')!;
+  const mobileView = menu.querySelector<HTMLButtonElement>('[aria-label="Live matches, saved view"]')!;
+  expect(mobileView.textContent).toBe("Live matches");
+  expect(mobileView.querySelector("svg")).toBeNull();
+  expect(mobileView.querySelector<HTMLElement>(".desktop-space-mark")?.style.background).toBe("#c7788c");
   const manage = [...menu.querySelectorAll<HTMLButtonElement>("button")].find(node => node.textContent === "Manage saved views")!;
   manage.focus(); expect(document.activeElement).toBe(manage);
   await act(async () => manage.click()); expect(managed).toBe(1); expect(document.querySelector('[role="menu"]')).toBeNull();
