@@ -10,11 +10,14 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { TopLayer } from "./top-layer";
 import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
+export type RecipientQueries = Record<RecipientKind, string>;
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
 export type ComposeDeliveryStatus = "idle" | "sending" | "sent" | "error";
 
@@ -47,6 +50,8 @@ export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subje
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
+  recipientQueries?: RecipientQueries;
+  setRecipientQueries?: Dispatch<SetStateAction<RecipientQueries>>;
   saveStatus: ComposeSaveStatus;
   saveMessage?: string;
   conflict?: ComposeDraftConflict | null;
@@ -410,6 +415,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const [conflict, setConflict] = useState<ComposeDraftConflict | null>(null);
   const [hydratedScope, setHydratedScope] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  const [recipientQueries, setRecipientQueries] = useState<RecipientQueries>(emptyRecipientState);
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const conflictRef = useRef(conflict);
@@ -476,6 +482,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setConflict(null);
     setHydratedScope(null);
     setDraft(restored);
+    setRecipientQueries(emptyRecipientState());
     setSaveStatus("saved");
     setSaveMessage(hasComposeContent(restored) ? "Recovered from this device" : "Not saved yet");
   }, [accountId, flushPendingDraft, scope, scopeKey]);
@@ -664,7 +671,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     return () => window.removeEventListener("online", retry);
   }, []);
 
-  const hasContent = hasComposeContent(draft);
+  const hasContent = hasComposeContent(draft) || Object.values(recipientQueries).some(query => query.trim());
   useEffect(() => {
     if (!draft.attachments.length) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -724,6 +731,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setDraft(empty);
     setSaveStatus("saved");
     setSaveMessage("Draft discarded");
+    setRecipientQueries(emptyRecipientState());
     return true;
   }
 
@@ -788,10 +796,21 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   async function sendDraft(deliveryFields?: Partial<ComposeDraftFields>): Promise<DeliveryResult> {
-    const deliveryDraft = deliveryFields
-      ? { ...draft, ...deliveryFields, updatedAt: new Date().toISOString() }
-      : draft;
-    if (deliveryFields) setDraft(deliveryDraft);
+    if (sendingRef.current) throw new Error("This draft is already being sent.");
+    const deliveryDraft = { ...draftRef.current, ...deliveryFields, updatedAt: new Date().toISOString() };
+    // Validate every pending field before changing any recipient or starting delivery.
+    for (const kind of recipientKinds) {
+      const query = recipientQueries[kind];
+      if (!query.trim()) continue;
+      const parsed = parseRecipientInput(query);
+      if (parsed.invalid.length || !parsed.contacts.length) {
+        throw new Error(recipientValidationMessage(parsed.invalid.length ? parsed.invalid : [query.trim()]));
+      }
+      deliveryDraft[kind] = mergeRecipients(deliveryDraft[kind], parsed.contacts);
+    }
+    if (!deliveryDraft.to.length) throw new Error("Add at least one valid recipient before sending.");
+    setDraft(deliveryDraft);
+    setRecipientQueries(emptyRecipientState());
     pendingDraftRef.current = {
       key: draftStorageKey(accountId, scope),
       serialized: JSON.stringify(persistableDraft(deliveryDraft)),
@@ -910,10 +929,13 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setDraft(empty);
     setSaveStatus("saved");
     setSaveMessage("Not saved yet");
+    setRecipientQueries(emptyRecipientState());
   }
 
   return {
     draft,
+    recipientQueries,
+    setRecipientQueries,
     saveStatus,
     saveMessage,
     conflict,
@@ -1025,7 +1047,14 @@ export function ComposeWorkspace({
   const [deliveryStatus, setDeliveryStatus] = useState<ComposeDeliveryStatus>("idle");
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [deliveryValidationError, setDeliveryValidationError] = useState<string | null>(null);
-  const [recipientQueries, setRecipientQueries] = useState<Record<RecipientKind, string>>(emptyRecipientState);
+  const [localRecipientQueries, setLocalRecipientQueries] = useState<RecipientQueries>(emptyRecipientState);
+  const recipientQueries = controller.recipientQueries ?? localRecipientQueries;
+  const setRecipientQueries = controller.setRecipientQueries ?? setLocalRecipientQueries;
+  const deliveryInFlightRef = useRef(false);
+  const sentDraftIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (recipientQueries.cc || recipientQueries.bcc) setShowCarbonCopy(true);
+  }, [recipientQueries.cc, recipientQueries.bcc]);
   const [recipientErrors, setRecipientErrors] = useState<Record<RecipientKind, string>>(emptyRecipientState);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageBodyRef = useRef<HTMLDivElement>(null);
@@ -1033,6 +1062,22 @@ export function ComposeWorkspace({
   const deliveryReasonId = useId();
   const contactsLabel = contacts.length === 1 ? "1 contact" : `${contacts.length} contacts`;
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
+  useEffect(() => {
+    if (deliveryInFlightRef.current) return;
+    setDeliveryStatus("idle");
+    setDeliveryError(null);
+    setDeliveryValidationError(null);
+    setRecipientErrors(emptyRecipientState());
+    setAttachmentError(null);
+  }, [draft.id]);
+  useEffect(() => {
+    if (deliveryStatus === "sent" && draft.id !== sentDraftIdRef.current) {
+      setDeliveryStatus("idle");
+      setDeliveryError(null);
+      setDeliveryValidationError(null);
+      setRecipientErrors(emptyRecipientState());
+    }
+  }, [deliveryStatus, draft.id]);
   const pendingRecipientKinds = recipientKinds.filter((kind) => recipientQueries[kind].trim());
   const pendingRecipientResults = new Map(pendingRecipientKinds.map((kind) => [kind, parseRecipientInput(recipientQueries[kind])]));
   const invalidPendingKinds = pendingRecipientKinds.filter((kind) => {
@@ -1118,6 +1163,7 @@ export function ComposeWorkspace({
   }
 
   async function attemptDelivery() {
+    if (deliveryInFlightRef.current || deliveryStatus === "sent") return;
     const deliveryFields = resolvePendingRecipients();
     if (!deliveryFields) return;
     if (!hasDeliverableMessage) {
@@ -1136,11 +1182,13 @@ export function ComposeWorkspace({
   }
 
   async function sendCurrentDraft(deliveryFields: Partial<ComposeDraftFields>) {
+    deliveryInFlightRef.current = true;
     setDeliveryStatus("sending");
     setDeliveryError(null);
     try {
       const result = await sendDraft(deliveryFields);
       if (result.status !== "sent") throw new Error(result.error?.message ?? "Gmail did not confirm delivery. Check Drafts before retrying.");
+      sentDraftIdRef.current = draft.id;
       setDeliveryStatus("sent");
       try {
         await onSent?.(result);
@@ -1150,6 +1198,8 @@ export function ComposeWorkspace({
     } catch (error) {
       setDeliveryStatus("error");
       setDeliveryError(error instanceof Error ? error.message : "Orca could not confirm delivery.");
+    } finally {
+      deliveryInFlightRef.current = false;
     }
   }
 
@@ -1210,7 +1260,7 @@ export function ComposeWorkspace({
 
       {variant !== "reply" || editReplyDetails ? <label className="compose-subject-field">
         <span className="compose-subject-label">Sub</span>
-        <input autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
+        <input aria-label="Subject" autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
       </label> : null}
 
       <RenderedBlockEditor
