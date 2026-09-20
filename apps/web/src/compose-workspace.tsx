@@ -731,6 +731,8 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const resolvingConflict = conflictRef.current;
     if (!resolvingConflict || resolvingRef.current) return;
     const local = draftRef.current;
+    // Keep inherited attachments with this version while local bytes are read.
+    const inheritedAttachments = serverAttachmentsRef.current.map(attachment => ({ ...attachment }));
     const expectedScope = scopeKey;
     resolvingRef.current = true;
     setSaveStatus("saving");
@@ -741,7 +743,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       const localAttachments = await Promise.all(local.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
         id, filename, mimeType, size, contentBase64: await fileToBase64(file),
       })));
-      const content = buildDraftContent(local, mergeDraftAttachments(serverAttachmentsRef.current, localAttachments), true);
+      const content = buildDraftContent(local, mergeDraftAttachments(inheritedAttachments, localAttachments), true);
       // Both choices preserve the local original in Drafts before switching away.
       // POST never patches the contested original or replays a send.
       const recovered = await requestDraft("/v1/drafts", messageDraftSchema, {

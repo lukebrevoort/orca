@@ -121,3 +121,32 @@ test("duplicate resolution clicks create only one copy", async () => {
   await act(async () => { release(); await resolution; });
   expect(posts).toHaveLength(1); expect(controller.draft.id).toBe("copy-1");
 });
+
+for (const choice of ["local", "server"] as const) test(`${choice}: recovery keeps inherited attachments from before deferred byte conversion`, async () => {
+  const oldAttachment = { id: "old", filename: "old.txt", mimeType: "application/octet-stream", size: 3, contentBase64: btoa("old") };
+  const otherAttachment = { ...oldAttachment, id: "other", filename: "OTHER-VERSION.txt", contentBase64: btoa("new") };
+  available = [{ ...server, attachments: [oldAttachment] }];
+  await render();
+  const originalConflict = controller.conflict;
+  const file = new File(["new bytes"], "new.txt", { type: "application/octet-stream" });
+  const bytes = await file.arrayBuffer();
+  let release!: (bytes: ArrayBuffer) => void;
+  file.arrayBuffer = () => new Promise(resolve => { release = resolve; });
+  await act(async () => { controller.attachFiles([file]); });
+  let resolution!: Promise<void>;
+  await act(async () => { resolution = controller.resolveConflict!(choice); await Promise.resolve(); });
+  expect(posts).toHaveLength(0);
+  available = [{ ...server, revision: 3, attachments: [otherAttachment] }];
+  await render();
+  expect(controller.conflict).not.toBe(originalConflict);
+  expect(controller.conflict?.server.revision).toBe(3);
+  await act(async () => { release(bytes); await resolution; });
+  expect(posts).toHaveLength(1);
+  expect(posts[0]!.attachments).toEqual([
+    oldAttachment,
+    expect.objectContaining({ filename: "new.txt", contentBase64: btoa("new bytes") }),
+  ]);
+  expect(controller.conflict?.server.revision).toBe(3);
+  expect(controller.draft.body).toBe("Before conflict");
+  expect(mutations).toEqual(["PATCH /v1/drafts/original", "POST /v1/drafts"]);
+});
