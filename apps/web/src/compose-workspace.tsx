@@ -435,6 +435,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const [draft, setDraft] = useState(() => recoveredAtStart.current ?? createNewDraft());
   const isNewDraftRef = useRef(!recoveredAtStart.current && !requestedDraftId);
   const hasWritingEditsRef = useRef(false);
+  const initialFieldsAppliedRef = useRef(false);
   const waitingForWritingOpenRef = useRef(false);
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
   const [saveMessage, setSaveMessage] = useState("Not saved yet");
@@ -504,6 +505,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const restored = recovered ?? createNewDraft();
     isNewDraftRef.current = !recovered && !requestedDraftId;
     hasWritingEditsRef.current = false;
+    initialFieldsAppliedRef.current = false;
     waitingForWritingOpenRef.current = false;
     persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
     serverIdRef.current = restored.revision === null ? null : restored.id;
@@ -596,13 +598,20 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   useEffect(() => {
     if (writing?.enabled === false) waitingForWritingOpenRef.current = false;
     if (!writing || writing.enabled === false || waitingForWritingOpenRef.current || hydratedScope !== scopeKey || draft.accountId !== accountId) return;
-    const seed = writing.initialFields ? { ...draft, ...writing.initialFields } : draft;
+    const hasEdits = hasWritingEditsRef.current || Object.values(recipientQueries).some(query => query.trim());
+    let seed = draft;
+    // Recipients, subject and quoted content belong to the chosen action, not
+    // to Settings. Seed once after recovery even while preferences are loading.
+    if (writing.initialFields && !initialFieldsAppliedRef.current && isNewDraftRef.current && !hasEdits && !draft.writingPreferencesApplied) {
+      initialFieldsAppliedRef.current = true;
+      seed = { ...draft, ...writing.initialFields };
+    }
     const next = initializeWritingDraft(seed, writing.preferences, {
       isNew: isNewDraftRef.current,
       isHydrated: true,
-      hasEdits: hasWritingEditsRef.current || Object.values(recipientQueries).some(query => query.trim()),
+      hasEdits,
     });
-    if (next !== seed) setDraft(next);
+    if (next !== draft) setDraft(next);
   }, [accountId, draft, hydratedScope, recipientQueries, scopeKey, writing]);
 
   const pollProviderStatus = useCallback((draftId: string) => {
@@ -779,6 +788,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const empty = createNewDraft();
     isNewDraftRef.current = true;
     hasWritingEditsRef.current = false;
+    initialFieldsAppliedRef.current = false;
     waitingForWritingOpenRef.current = true;
     pendingDraftRef.current = null;
     revokeComposeAttachments(attachmentsRef.current);
@@ -979,6 +989,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const empty = createNewDraft();
     isNewDraftRef.current = true;
     hasWritingEditsRef.current = false;
+    initialFieldsAppliedRef.current = false;
     waitingForWritingOpenRef.current = true;
     revokeComposeAttachments(attachmentsRef.current);
     pendingDraftRef.current = null;

@@ -158,16 +158,38 @@ test("body typed then deleted stays empty after a late preference response", asy
   expect(controller.draft.body).toBe("");
 });
 
-test("new reply seed and signature initialize atomically, with no duplicate on settings refresh", async () => {
+test("new reply seeds before preferences arrive, with no duplicate on settings refresh", async () => {
   initialFields = { to: [{ name: null, email: "sender@example.com" }], cc: [{ name: null, email: "group@example.com" }], bcc: [], subject: "Re: A note", body: "Forwarded seed", context: null };
   preferences = { ...preferences, status: "loading" }; await render();
-  expect(controller.draft.to).toEqual([]);
+  expect(controller.draft.to).toEqual(initialFields.to);
+  expect(controller.draft.body).toBe("Forwarded seed");
   preferences = { ...preferences, status: "ready" }; await render();
   expect(controller.draft.to).toEqual(initialFields.to);
   expect(controller.draft.cc).toEqual(initialFields.cc);
   expect(controller.draft.body).toBe("\n\nBest, Alex\n\nForwarded seed");
   preferences = { ...preferences, preferences: { ...preferences.preferences, signature: "Changed" } }; await render();
   expect(controller.draft.body).toBe("\n\nBest, Alex\n\nForwarded seed");
+});
+
+test("typing while preferences load retains the once-only reply seed and skips late signature", async () => {
+  initialFields = { to: [{ name: null, email: "sender@example.com" }], cc: [{ name: null, email: "group@example.com" }], bcc: [], subject: "Re: Note", body: "Quoted body", context: null };
+  preferences = { ...preferences, status: "loading" }; await render();
+  expect(controller.draft).toMatchObject({ to: initialFields.to, cc: initialFields.cc, subject: "Re: Note", body: "Quoted body" });
+  await act(async () => controller.updateDraft({ body: `My reply\n\n${controller.draft.body}` }));
+  preferences = { ...preferences, status: "ready" }; await render();
+  expect(controller.draft).toMatchObject({ to: initialFields.to, cc: initialFields.cc, subject: "Re: Note", body: "My reply\n\nQuoted body" });
+  expect(controller.draft.writingPreferencesApplied).not.toBe(true);
+  initialFields = { ...initialFields, body: "Different quote", subject: "Changed seed" }; await render();
+  expect(controller.draft.body).toBe("My reply\n\nQuoted body");
+  expect(controller.draft.subject).toBe("Re: Note");
+});
+
+test("canonical reply seed never replaces recovered recipients, subject or body", async () => {
+  initialFields = { to: [{ name: null, email: "seed@example.com" }], cc: [], bcc: [], subject: "Seed subject", body: "Seed quote", context: null };
+  available = [remote({ to: [{ name: null, email: "saved@example.com" }], subject: "Saved subject", body: { text: "Saved writing", html: null } })];
+  preferences = { ...preferences, status: "loading" }; await render();
+  preferences = { ...preferences, status: "ready" }; await render();
+  expect(controller.draft).toMatchObject({ to: [{ email: "saved@example.com" }], subject: "Saved subject", body: "Saved writing" });
 });
 
 test("failed draft recovery never treats an unknown saved draft as new", async () => {
