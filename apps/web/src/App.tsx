@@ -1,3 +1,4 @@
+import { installViewNavigationHistory, requestViewNavigation } from "./view-navigation-guard";
 import { BulkSpaceMove, conversationKey, selectedConversations } from "./bulk-space-move";
 import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
 import { AttentionRoutingProvider } from "./attention-routing";
@@ -1396,6 +1397,7 @@ export function InboxApp({
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
   const surfaceHistoryRef = useRef<SurfaceHistory | null>(null);
   if (typeof window !== "undefined" && !surfaceHistoryRef.current) surfaceHistoryRef.current = new SurfaceHistory(window);
+  useLayoutEffect(() => installViewNavigationHistory(window), []);
   const historySynchronizerRef = useRef<(location: SurfaceLocation) => void>(() => {});
   historySynchronizerRef.current = synchronizeSurfaceLocation;
 
@@ -3048,6 +3050,10 @@ export function InboxApp({
   }
 
   function navigateDesktop(destination: DesktopDestination) {
+    requestViewNavigation(() => navigateDesktopNow(destination));
+  }
+
+  function navigateDesktopNow(destination: DesktopDestination) {
     setManageSpacesOpen(false);
     setManageToolsOpen(false);
     if (destination === "settings") {

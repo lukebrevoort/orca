@@ -1,3 +1,4 @@
+import { useViewNavigationGuard, ViewDiscardDialog } from "./view-navigation-guard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   mailAccountPageSchema,
@@ -238,7 +239,6 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     return () => controller.abort();
   }, [senderAuthoring, demoMode]);
   const [tuneOpen, setTuneOpen] = useState(!compact);
-  const [discardPending, setDiscardPending] = useState(false);
   const [focusReplacement, setFocusReplacement] = useState(false);
   const tuneRef = useRef<HTMLButtonElement>(null);
   const seedIdentity = useRef("");
@@ -520,7 +520,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     const definition = prepared.definition;
     seedSkipInbox.current = prepared.skipInbox ?? false;
     setSkipInbox(seedSkipInbox.current);
-    setDraftUndo([]); editingControl.current = null; seedFields.current = JSON.stringify(hydrateViewDraft(definition)); setDiscardPending(false); seedIdentity.current = JSON.stringify(prepared.identity); seedDefinition.current = JSON.stringify([prepared.definition, prepared.unsupportedClauses]);
+    setDraftUndo([]); editingControl.current = null; seedFields.current = JSON.stringify(hydrateViewDraft(definition)); seedIdentity.current = JSON.stringify(prepared.identity); seedDefinition.current = JSON.stringify([prepared.definition, prepared.unsupportedClauses]);
     setComposerMode(prepared.mode === "update" ? "edit" : "create"); setPendingRemoveId(null); setError(null); setFilterMenuOpen(false); setMoreFiltersOpen(false);
     previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitEnvelope.current = null; commitRetryDraftKey.current = "";
     setEditingDefinition(definition); setActiveClauses(clauseKinds(definition)); setDraftSource(prepared.source); setUnsupportedClauses(prepared.unsupportedClauses); setPreparationNotices(prepared.preparationNotices); setPreparedViewIdentity(prepared.mode === "update" ? { id: prepared.viewId!, revision: prepared.viewRevision! } : null);
@@ -555,22 +555,18 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   function finishCancel() {
     censusGeneration.current += 1; setCorrection(null);
     mutationRequest.current += 1; preparationRequest.current += 1; previewRequest.current += 1;
-    setDraftUndo([]); setDiscardPending(false); setComposerMode(null);
+    setDraftUndo([]); setComposerMode(null);
     const action = exitAfterDiscard.current; exitAfterDiscard.current = null;
     if (action) { action(); return; }
     if (authoringEntry && onCancelAuthoring) onCancelAuthoring(authoringEntry.returnContext);
     else focusSoon(openerRef.current);
   }
-  function cancelComposer() {
-    if (status === "saving") return;
-    if (composerMode && seedDefinition.current && (seedSkipInbox.current !== skipInbox || seedFields.current !== JSON.stringify(draftFields) || seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition }))) {
-      setDiscardPending(true); window.setTimeout(() => workspaceRef.current?.querySelector<HTMLElement>(".view-discard-keep")?.focus(), 0); return;
-    }
-    finishCancel();
-  }
+  const dirty = Boolean(composerMode && seedDefinition.current && (seedSkipInbox.current !== skipInbox || seedFields.current !== JSON.stringify(draftFields) || seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition })));
+  const navigationGuard = useViewNavigationGuard({ dirty, saving: status === "saving" || commitInFlight.current, editor: workspaceRef });
+  function cancelComposer() { navigationGuard.request(finishCancel); }
   function dismissComposer() {
     if (status === "saving") return;
-    if (discardPending) { setDiscardPending(false); exitAfterDiscard.current = null; focusSoon(null); return; }
+    if (navigationGuard.asking) { navigationGuard.keep(); exitAfterDiscard.current = null; return; }
     if (correction && correction.key === censusKey) { censusGeneration.current += 1; setCorrection(null); focusSoon(null); return; }
     if (filterMenuOpen) { setFilterMenuOpen(false); filterTriggerRef.current?.focus(); return; }
     if (confirmedZeroDigest) { setConfirmedZeroDigest(null); focusSoon(workspaceRef.current?.querySelector<HTMLElement>(".view-save") ?? null); return; }
@@ -861,6 +857,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         }, { operation: "mutation", capability: "apply", hasReliableData: true }));
         if (requestId !== mutationRequest.current || committingPreparationKey && currentAuthoringPreparationKey.current !== committingPreparationKey) return;
         commitRetryKey.current = null; commitEnvelope.current = null;
+        navigationGuard.release();
         announceMutation();
         if (committingPreparationKey && committingAuthoringEntry && onCommitted) onCommitted(committed, committingAuthoringEntry.returnContext);
         else window.location.assign(committed.navigation.href);
@@ -972,12 +969,12 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   return <section ref={workspaceRef} onKeyDown={(event) => { if (event.key === "Escape" && composerMode && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); dismissComposer(); } }} className={`views-workspace${authoringEntry ? " views-workspace-external-authoring" : ""}${senderAuthoring ? " views-workspace-sender-authoring" : ""}`} aria-labelledby="views-title">
     {!authoringEntry && !composerMode ? <><ViewGettingStarted/><FirstViewInvitation/></> : null}
     <header className="views-header"><div>{!senderAuthoring ? <span>{authoringEntry ? authoringSourceLabel : "Workspace queries · unlimited"}</span> : null}<h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry?.growthCurrentView ? "Review added senders" : senderAuthoring ? "Save a sender view" : authoringEntry ? "Review this live View" : "Live Views"}</h2>{!senderAuthoring ? <p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p> : null}</div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode ? cancelComposer() : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
-    {discardPending ? <section className="view-preparation-state" role="alert"><strong>Discard changes to this draft?</strong><span>Your saved View, source and mail stay unchanged.</span><button className="view-action view-discard-keep" onClick={() => { exitAfterDiscard.current = null; setDiscardPending(false); focusSoon(null); }} type="button">Keep editing</button><button className="view-action" onClick={finishCancel} type="button">Discard draft</button></section> : null}
+    {navigationGuard.asking ? <ViewDiscardDialog onKeep={() => { exitAfterDiscard.current = null; navigationGuard.keep(); }} onDiscard={navigationGuard.discard}/> : null}
     {!senderAuthoring ? <div className="views-live-note"><i aria-hidden="true"/><strong>Live from current Thread organization</strong><span>No membership list is stored.</span></div> : null}
     {authoringEntry && !demoMode && !canMutate && authority.state.kind !== "loading" ? <section className="view-preparation-state" role="alert"><strong>{authority.state.title}</strong><span>{authority.state.detail}</span><button className="view-action" onClick={authority.retry} type="button">Retry connection</button><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
     {authoringEntry && (demoMode || authority.snapshot || authority.state.kind === "loading") && displayedPreparationState.status === "loading" ? <section className="view-preparation-state" role="status"><strong>Preparing this live View…</strong><span>Orca is validating the source against current stored mail and Workspace authority.</span></section> : null}
     {authoringEntry && displayedPreparationState.status === "error" ? <section className="view-preparation-state view-preparation-error" role="alert"><strong>Could not prepare this View.</strong><span>{displayedPreparationState.error}</span><button className="view-action" onClick={() => setPreparationRetry((value) => value + 1)} type="button">Retry preparation</button><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
-    {composerMode && preparationMatchesCurrentEntry ? <form className="view-composer" hidden={discardPending} data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onInputCapture={(event) => { if ((event.target as HTMLElement).closest("[data-clause]")) rememberDraft(event.target); }} onChangeCapture={(event) => { if ((event.target as HTMLElement).matches("select") && (event.target as HTMLElement).closest("[data-clause]")) rememberDraft(); }} onBlurCapture={() => { editingControl.current = null; }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !(event.target as HTMLElement).matches('input,textarea,select,[contenteditable="true"]')) { event.preventDefault(); undoDraft(); } if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); event.currentTarget.requestSubmit(); } }} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
+    {composerMode && preparationMatchesCurrentEntry ? <form className="view-composer" data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onInputCapture={(event) => { if ((event.target as HTMLElement).closest("[data-clause]")) rememberDraft(event.target); }} onChangeCapture={(event) => { if ((event.target as HTMLElement).matches("select") && (event.target as HTMLElement).closest("[data-clause]")) rememberDraft(); }} onBlurCapture={() => { editingControl.current = null; }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !(event.target as HTMLElement).matches('input,textarea,select,[contenteditable="true"]')) { event.preventDefault(); undoDraft(); } if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); event.currentTarget.requestSubmit(); } }} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
       {!senderAuthoring ? composerHeader : null}
       {authoringEntry?.growthCurrentView ? <section className="view-scope-sentence" aria-label="Sender change review"><span>{name} · current → proposed</span><p>Current addresses: {authoringEntry.growthCurrentView.definition.sender?.addresses?.join(", ") ?? "None"}</p><p>Proposed addresses: {draft.sender?.addresses?.join(", ") ?? "None"}</p><p>Domains retained: {draft.sender?.domains?.join(", ") ?? "None"}. Addresses and domains match with OR.</p><p>Account scope unchanged: {draft.accountIds?.map(id => authoringEntry.accountLabels?.[id] ?? accountOptions.find(option => option.id === id)?.label ?? id).join(", ")}. Other filters still apply: {summarizeOrganizationViewDefinition({ ...draft, sender: undefined }).text}</p><p>Inbox policy unchanged: {skipInbox ? "Keep matching mail out of Inbox" : "Keep matching mail in Inbox"}. Name, color, order, and other filters are preserved. Only Save changes updates this View.</p></section> : null}
       <fieldset className="view-builder-fieldset" disabled={!canMutate || status === "saving"}>
@@ -1075,7 +1072,7 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
     continuation.current = null;
     const controller = new AbortController();
     const requestId = ++request.current;
-    setStatus("loading"); setLoadingMore(false); setError(null); setPage(null);
+    setStatus("loading"); setLoadingMore(false); setError(null); setView(null); setPage(null);
     void authority.request("/v1/organization/views", { signal: controller.signal }, { operation: "read", capability: "query", hasReliableData: false }).then(async (body) => {
       const listed = organizationViewListResponseSchema.parse(body);
       const selected = listed.items.find((candidate) => candidate.id === viewId);
@@ -1085,7 +1082,8 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
       }
       const resultBody = await authority.request(`/v1/organization/views/${encodeURIComponent(viewId)}/results?limit=25`, { signal: controller.signal }, { operation: "read", capability: "query", hasReliableData: false });
       const results = organizationViewResultPageSchema.parse(resultBody);
-      if (!controller.signal.aborted && requestId === request.current && results.viewRevision === selected.revision) {
+      if (results.viewId !== viewId || results.viewRevision !== selected.revision) throw new Error("This View changed while opening. Retry to load its current definition and results.");
+      if (!controller.signal.aborted && requestId === request.current) {
         setView(selected); setPage(results); setStatus("ready");
       }
     }).catch((reason) => {
@@ -1133,14 +1131,14 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
     <header className="views-header"><div><h2 id="saved-view-title" ref={headingRef} tabIndex={-1}>{view?.name ?? (status === "missing" ? "View unavailable" : "Opening View…")}</h2>{view?.description ? <p>{view.description}</p> : null}{status === "ready" && page ? <p>{page.accountIds.length} {page.accountIds.length === 1 ? "account" : "accounts"} · {page.items.length} {page.nextCursor ? "shown" : "matches"}</p> : null}</div><button className="view-action" disabled={status !== "ready"} ref={savedEditOpener} onClick={() => { setSavedCorrectionTarget(null); setEditing(true); }} type="button">Edit</button><a className="view-action" href={`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?destination=all&addSendersTo=${encodeURIComponent(viewId)}`}>Add senders</a></header>
     {status === "loading" ? <p className="view-state" role="status">Loading the saved definition and current results…</p> : null}
     {status === "missing" ? <p className="view-state">This view is no longer available. <button className="view-action" onClick={onManage} type="button">Browse views</button></p> : null}
-    {status === "error" ? <div className="view-state view-state-error" role="alert"><p>Could not open this View. {error}</p><button className="view-action" onClick={() => { request.current += 1; window.location.reload(); }} type="button">Reload View</button></div> : null}
+    {status === "error" ? <div className="view-state view-state-error" role="alert"><p>Could not open this View. {error}</p><button className="view-action" onClick={() => setSavedRefresh(value => value + 1)} type="button">Reload View</button></div> : null}
     {status === "ready" && page ? <section aria-label="Matching messages" className="view-results saved-view-results">
       {page.items.length ? <div className="view-thread-list">{page.items.map((item) => <div className="view-thread-with-actions" key={`${item.accountId}:${item.threadId}`}><ViewThreadRow item={item} onOpen={() => onOpenThread({ accountId: item.accountId, threadId: item.threadId })}/><ViewThreadActions item={item} onCorrect={() => { setSavedCorrectionTarget(item); setEditing(true); }}/></div>)}</div> : <p className="view-state">No Threads match this filtered View right now. The View remains ready for future mail.</p>}
-      {page.items.length ? <div className="view-continuation"><button className="view-action" disabled={!page.nextCursor || loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more Threads…" : page.nextCursor ? "Load more" : "All matching Threads loaded"}</button>{error ? <p className="view-state view-state-error" role="alert">{error}</p> : null}</div> : null}
+      {page.items.length ? <div className="view-continuation"><button className="view-action" disabled={!page.nextCursor || loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more Threads…" : page.nextCursor ? "Load more" : "All matching Threads loaded"}</button>{error ? <p className="view-state view-state-error" role="alert">{error} <button className="view-action" onClick={() => setSavedRefresh(value => value + 1)} type="button">Reload View</button></p> : null}</div> : null}
     </section> : null}
   </section>;
 }
 
 export function SavedOrganizationViewWorkspace({ demoMode = false, previewMode = false, ...props }: { demoMode?: boolean; onManage: () => void; onOpenThread: (target: { accountId: string; threadId: string }) => void; previewMode?: boolean; viewId: string }) {
-  return <OrganizationAuthorityProvider previewMode={previewMode}><SavedOrganizationViewContent {...props} demoMode={demoMode}/></OrganizationAuthorityProvider>;
+  return <OrganizationAuthorityProvider previewMode={previewMode}><SavedOrganizationViewContent key={props.viewId} {...props} demoMode={demoMode}/></OrganizationAuthorityProvider>;
 }

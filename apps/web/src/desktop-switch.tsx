@@ -1,3 +1,4 @@
+import { requestViewNavigation } from "./view-navigation-guard";
 import { SavedViewDeletion } from "./saved-view-deletion";
 import { DestinationManager, useDestinations } from "./mail-destinations";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
@@ -1064,7 +1065,7 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
       <div className="organization-intro-status" data-authority={organizationAuthority.state.kind}><span><i aria-hidden="true"/>{authorityHeadline}</span><small>{authorityDetail}</small></div>
     </header>
     <nav aria-label="Organization sections" className="organization-section-nav">
-      {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => setSection(item)} ref={item === "rules" ? rulesNavigationRef : undefined} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
+      {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => { if (section !== item) requestViewNavigation(() => setSection(item)); }} ref={item === "rules" ? rulesNavigationRef : undefined} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
     </nav>
     <section aria-labelledby="organization-overview-title" className="organization-overview" hidden={section !== "overview"} id="organization-overview">
       <div className="organization-overview-heading">

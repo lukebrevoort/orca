@@ -3936,3 +3936,71 @@ describe("BRE-413 saved-view growth entry", () => {
     expect(browserWindow.document.body.textContent).toContain("Add senders to existing View");
   });
 });
+
+describe("BRE-415 unsaved View navigation", () => {
+  beforeEach(installDom);
+  afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); });
+  const findButton = (label: string, selector = "button") => {
+    const found = [...browserWindow.document.querySelectorAll(selector)].find(node => node.textContent?.trim() === label || node.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
+    if (!found) throw new Error(`Missing ${label}`);
+    return found as unknown as HTMLButtonElement;
+  };
+  async function press(label: string, selector?: string) { await act(async () => findButton(label, selector).click()); await waitFor(0); }
+  async function editSavedView() {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    await press("Weekly production review", ".desktop-sidebar-item");
+    await press("Edit"); await waitFor(20);
+    const name = browserWindow.document.querySelector('input[aria-label="View name"]') as unknown as HTMLInputElement
+      ?? [...browserWindow.document.querySelectorAll("label")].find(label => label.textContent?.startsWith("View name"))?.querySelector("input") as unknown as HTMLInputElement;
+    expect(name).toBeDefined();
+    name.focus(); await enterInput(name, "My unsaved review");
+    return name;
+  }
+  test("shell Keep editing preserves the exact editor, URL, scroll and focus; Discard visits the requested view once", async () => {
+    const name = await editSavedView();
+    const url = browserWindow.location.href;
+    const workspace = browserWindow.document.querySelector(".desktop-workspace")!;
+    workspace.scrollTop = 155;
+    await press("Inbox", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    expect(browserWindow.location.href).toBe(url);
+    await press("Keep editing"); await waitFor(20);
+    expect(name.value).toBe("My unsaved review");
+    expect(name.isConnected).toBe(true);
+    expect(isSameNode(browserWindow.document.activeElement, name)).toBe(true);
+    expect(workspace.scrollTop).toBe(155);
+    const length = browserWindow.history.length;
+    await press("Urgent humans", ".desktop-sidebar-item");
+    await press("Discard draft");
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Urgent humans");
+    expect(browserWindow.document.querySelector(".view-composer")).toBeNull();
+    expect(browserWindow.history.length).toBe(length + 1);
+    await press("Edit");
+    expect(browserWindow.document.querySelector(".view-composer")?.textContent).toContain("View name");
+    await press("Inbox", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("dialog")).toBeNull();
+  });
+  test("Settings and Organization sections guard edits; reload warns only while dirty", async () => {
+    await editSavedView();
+    await press("Settings", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    await press("Keep editing");
+    const unload = new browserWindow.Event("beforeunload", { cancelable: true });
+    browserWindow.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(true);
+    await press("Organization", ".desktop-sidebar-item"); await press("Discard draft");
+    const clean = new browserWindow.Event("beforeunload", { cancelable: true });
+    browserWindow.dispatchEvent(clean); expect(clean.defaultPrevented).toBe(false);
+    // Organization studio sections share the same guard as the shell.
+    await act(async () => {
+      browserWindow.history.pushState({}, "", "/dev/inbox?destination=organization-studio");
+      browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate", { state: browserWindow.history.state }));
+    });
+    await press("Views"); await press("Edit definition");
+    const field = [...browserWindow.document.querySelectorAll("label")].find(label => label.textContent?.startsWith("View name"))!.querySelector("input") as unknown as HTMLInputElement;
+    field.focus(); await enterInput(field, "Organization draft");
+    await press("Lanes"); expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    await press("Keep editing"); expect(field.value).toBe("Organization draft");
+    await press("Rules"); await press("Discard draft");
+    expect(browserWindow.document.querySelector("#organization-rules")).not.toBeNull();
+  });
+});

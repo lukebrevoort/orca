@@ -1,3 +1,4 @@
+import { requestViewNavigation } from "./view-navigation-guard";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -1752,4 +1753,82 @@ test("BRE-413 chooser reviews additive senders and preserves draft through faile
   expect(container.textContent).toContain("Add to an existing View");
   await click(button(element, "Cancel"));
   expect(cancelled).toEqual([context]);
+});
+
+test("BRE-415 same-component View changes atomically reset header, results and edit target", async () => {
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const render = async (viewId: string) => act(async () => root!.render(<SavedOrganizationViewWorkspace demoMode previewMode viewId={viewId} onManage={() => {}} onOpenThread={() => {}}/>));
+  await render(organizationViewsFixture[0]!.id);
+  await click(button(container as unknown as HTMLElement, "Edit")); await flush();
+  await render(organizationViewsFixture[1]!.id);
+  expect(container.querySelector(".view-composer")).toBeNull();
+  expect(container.querySelector("h2")?.textContent).toBe(organizationViewsFixture[1]!.name);
+  await click(button(container as unknown as HTMLElement, "Edit")); await flush();
+  expect(input(container as unknown as HTMLElement, "View name").value).toBe(organizationViewsFixture[1]!.name);
+});
+
+test("BRE-415 stale initial loads cannot restore the previous View and revision mismatch retries locally", async () => {
+  const first = organizationViewsFixture[0]!; const second = organizationViewsFixture[1]!;
+  let resolveFirst!: (response: Response) => void;
+  const delayed = new Promise<Response>(resolve => { resolveFirst = resolve; });
+  let mismatch = true;
+  globalThis.fetch = (async (request: string | URL | Request) => {
+    const path = String(request);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+    if (path.includes(`/views/${first.id}/results`)) return delayed;
+    if (path.includes(`/views/${second.id}/results`)) return Response.json({ viewId: second.id, viewRevision: second.revision + (mismatch ? 1 : 0), accountIds: [], items: [], nextCursor: null, limit: 25 });
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const render = async (viewId: string) => act(async () => root!.render(<SavedOrganizationViewWorkspace previewMode viewId={viewId} onManage={() => {}} onOpenThread={() => {}}/>));
+  await render(first.id); await flush();
+  await render(second.id); await flush(); await flush();
+  expect(container.textContent).toContain("This View changed while opening");
+  await act(async () => resolveFirst(Response.json({ viewId: first.id, viewRevision: first.revision, accountIds: [], items: [], nextCursor: null, limit: 25 })));
+  expect(container.textContent).not.toContain(first.name);
+  mismatch = false;
+  await click(button(container as unknown as HTMLElement, "Reload View")); await flush(); await flush();
+  expect(container.querySelector("h2")?.textContent).toBe(second.name);
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+});
+
+test("BRE-415 pending save locks navigation, failed save keeps guard, successful save releases it", async () => {
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Search" }, identity: { name: "Alpha", description: "", color: "#0b9b84", position: 0 }, definition: { revision: 1, accountIds: ["account_gmail"] }, unsupportedClauses: [] };
+  let complete!: () => void;
+  let attempts = 0; let committed = 0; let navigations = 0;
+  globalThis.fetch = (async (request, init) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, { revision: 1, accountIds: ["account_gmail"] }) });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      attempts += 1;
+      await new Promise<void>(resolve => { complete = resolve; });
+      return attempts === 1 ? Response.json({ error: { code: "revision_conflict", message: "Try again" } }, { status: 409 }) : committedResponse(init);
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: null }} onCancel={() => {}} onCommitted={() => { committed += 1; }}/>));
+  await flush(); await flush(); await flush();
+  await change(input(container as unknown as HTMLElement, "View name"), "Changed draft"); await flush(); await flush();
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await act(async () => requestViewNavigation(() => { navigations += 1; }));
+  expect(navigations).toBe(0); expect(container.querySelector("dialog")).toBeNull();
+  const unload = new browserWindow.Event("beforeunload", { cancelable: true }); browserWindow.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  await act(async () => complete()); await flush();
+  await act(async () => requestViewNavigation(() => { navigations += 1; }));
+  expect(container.querySelector("dialog[open]")).not.toBeNull();
+  await click(button(container as unknown as HTMLElement, "Keep editing"));
+  expect(input(container as unknown as HTMLElement, "View name").value).toBe("Changed draft");
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await act(async () => complete()); await flush(); expect(committed).toBe(1);
+  await act(async () => requestViewNavigation(() => { navigations += 1; }));
+  expect(navigations).toBe(1);
+  const clean = new browserWindow.Event("beforeunload", { cancelable: true }); browserWindow.dispatchEvent(clean);
+  expect(clean.defaultPrevented).toBe(false);
 });
