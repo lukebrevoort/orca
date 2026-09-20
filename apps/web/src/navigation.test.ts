@@ -13,6 +13,9 @@ import {
   readSpacePreferences,
   spacePreferencesKey,
   writeSpacePreferences,
+  viewsManagementFromLocation,
+  viewsManagementHref,
+  viewsManagementUrl,
 } from "./navigation";
 
 const collections: Collection[] = [
@@ -21,6 +24,32 @@ const collections: Collection[] = [
 ];
 
 describe("shared desktop navigation contract", () => {
+  test("Views management and selected edit links retain the existing destination grammar", () => {
+    for (const pathname of ["/", "/settings", "/dev/inbox", "/dev/settings"]) {
+      for (const id of [undefined, "hidden-view", "missing-view", "opaque:/?& #é"]) {
+        const url = new URL(viewsManagementHref(pathname, id), "http://orca.local");
+        expect(url.pathname).toBe(pathname.startsWith("/dev/") ? "/dev/inbox" : "/");
+        expect(desktopDestinationFromLocation(url)).toBe("organization-studio");
+        expect(viewsManagementFromLocation(url)).toEqual({ section: "views", editViewId: id ?? null });
+      }
+    }
+    expect(viewsManagementFromLocation({ pathname: "/", search: "?destination=organization-studio" })).toBeNull();
+    for (const destination of ["organization", "attention", "view:old-bookmark", "inbox"]) {
+      expect(viewsManagementFromLocation({ pathname: "/", search: `?destination=${destination}&section=views&editView=ignored` })).toBeNull();
+    }
+    expect(viewsManagementFromLocation({ pathname: "/settings", search: "?destination=organization-studio&section=views" })).toBeNull();
+    expect(viewsManagementFromLocation({ pathname: "/", search: "?destination=organization-studio&section=views&editView=%20" })).toEqual({ section: "views", editViewId: null });
+  });
+
+  test("leaving management clears edit intent while retaining unrelated URL context", () => {
+    const original = "http://orca.local/dev/inbox?q=maya&destination=all&thread=t1&accountId=a1&compose=1&addSendersTo=old#mail";
+    const edit = viewsManagementUrl(original, "saved-view");
+    expect(edit).toBe("/dev/inbox?q=maya&destination=organization-studio&section=views&editView=saved-view#mail");
+    expect(viewsManagementUrl(edit)).toBe("/dev/inbox?q=maya&destination=organization-studio&section=views#mail");
+    expect(desktopDestinationUrl(edit, "view:saved-view")).toBe("/dev/inbox?q=maya&destination=view%3Asaved-view#mail");
+    expect(desktopDestinationUrl(edit, "organization-studio")).toBe("/dev/inbox?q=maya&destination=organization-studio#mail");
+  });
+
   test("caps three-digit navigation counts without exposing the exact total", () => {
     expect(formatNavigationCount(0)).toBe("0");
     expect(formatNavigationCount(99)).toBe("99");

@@ -10,11 +10,17 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { TopLayer } from "./top-layer";
+import { demoSendNotice } from "./demo-store";
+import "./writing-preferences.css";
+import { initializeWritingDraft, serializeWritingBody, type WritingPreferenceState, type WritingPreferences } from "./writing-preferences";
 import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
+export type RecipientQueries = Record<RecipientKind, string>;
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
 export type ComposeDeliveryStatus = "idle" | "sending" | "sent" | "error";
 
@@ -38,15 +44,29 @@ export type ComposeDraft = {
   bcc: MailContact[];
   subject: string;
   body: string;
+  composeFormat?: WritingPreferences["composeFormat"];
+  writingPreferencesApplied?: boolean;
   context: OutboundContext | null;
   attachments: ComposeAttachment[];
   updatedAt: string;
 };
 
-export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context">;
+export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "composeFormat">;
+
+export type ComposeWritingOptions = {
+  preferences: WritingPreferenceState;
+  /** False while the always-mounted controller is not open for writing. */
+  enabled?: boolean;
+  /** Reply/forward seed fields, applied only when no saved draft is recovered. */
+  initialFields?: ComposeDraftFields;
+};
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
+  demonstration?: boolean;
+  writingPreferenceStatus?: WritingPreferenceState["status"];
+  recipientQueries?: RecipientQueries;
+  setRecipientQueries?: Dispatch<SetStateAction<RecipientQueries>>;
   saveStatus: ComposeSaveStatus;
   saveMessage?: string;
   conflict?: ComposeDraftConflict | null;
@@ -181,13 +201,14 @@ function persistableDraft(draft: ComposeDraft) {
   return rest;
 }
 
-function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "attachments">) {
+function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "attachments" | "composeFormat">) {
   return JSON.stringify({
     to: draft.to,
     cc: draft.cc,
     bcc: draft.bcc,
     subject: draft.subject,
     body: draft.body,
+    composeFormat: draft.composeFormat,
     context: draft.context,
     attachments: draft.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size })),
   });
@@ -211,6 +232,8 @@ function fromMessageDraft(draft: MessageDraft): ComposeDraft {
     bcc: draft.bcc,
     subject: draft.subject,
     body: draft.body.text,
+    composeFormat: draft.body.html === null ? "plain" : "rich",
+    writingPreferencesApplied: true,
     context: draft.context,
     attachments: [],
     updatedAt: draft.updatedAt,
@@ -245,7 +268,7 @@ type DurableDraftContent = Omit<Pick<MessageDraft, "to" | "cc" | "bcc" | "subjec
 };
 
 export function buildDraftContent(
-  draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context">,
+  draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "composeFormat">,
   attachments: MessageDraft["attachments"],
   includeAttachments: boolean,
 ): DurableDraftContent {
@@ -254,7 +277,7 @@ export function buildDraftContent(
     cc: draft.cc,
     bcc: draft.bcc,
     subject: draft.subject,
-    body: { text: draft.body, html: null },
+    body: serializeWritingBody(draft.body, draft.composeFormat, markdownToEditorHtml),
     context: draft.context,
   };
   if (includeAttachments) content.attachments = attachments;
@@ -380,11 +403,15 @@ export function collectComposeContacts(messages: InboxMessage[], accountEmail: s
 }
 
 export function readComposeDraft(accountId: string, storage?: Pick<Storage, "getItem">, scope = "new"): ComposeDraft {
+  return readSavedComposeDraft(accountId, storage, scope) ?? createEmptyComposeDraft(accountId);
+}
+
+function readSavedComposeDraft(accountId: string, storage?: Pick<Storage, "getItem">, scope = "new"): ComposeDraft | null {
   const fallback = createEmptyComposeDraft(accountId);
-  if (!storage) return fallback;
+  if (!storage) return null;
   try {
     const parsed = JSON.parse(storage.getItem(draftStorageKey(accountId, scope)) ?? "null") as Partial<ComposeDraft> | null;
-    if (!parsed || parsed.accountId !== accountId || typeof parsed.id !== "string") return fallback;
+    if (!parsed || parsed.accountId !== accountId || typeof parsed.id !== "string") return null;
     return {
       ...fallback,
       ...parsed,
@@ -393,23 +420,39 @@ export function readComposeDraft(accountId: string, storage?: Pick<Storage, "get
       bcc: Array.isArray(parsed.bcc) ? parsed.bcc.filter((contact) => isValidEmail(contact.email)) : [],
       subject: typeof parsed.subject === "string" ? parsed.subject : "",
       body: typeof parsed.body === "string" ? parsed.body : "",
+      composeFormat: parsed.composeFormat === "plain" || parsed.composeFormat === "rich" ? parsed.composeFormat : undefined,
+      writingPreferencesApplied: parsed.writingPreferencesApplied === true,
       // Attachment bytes are kept in memory only — never round-trip through localStorage.
       attachments: [],
     };
   } catch {
-    return fallback;
+    return null;
   }
 }
 
-export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean, demoDraft?: MessageDraft, availableDrafts?: MessageDraft[] | null): ComposeDraftController {
+export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean, demoDraft?: MessageDraft, availableDrafts?: MessageDraft[] | null, writing?: ComposeWritingOptions): ComposeDraftController {
+  const createNewDraft = (): ComposeDraft => ({ ...createEmptyComposeDraft(accountId), ...(writing ? { composeFormat: "plain" as const } : {}) });
   const scopeKey = `${accountId}:${scope}`;
   const requestedDraftId = scope.startsWith("draft:") ? scope.slice("draft:".length) : null;
-  const [draft, setDraft] = useState(() => readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope));
+  const recoveredAtStart = useRef<ComposeDraft | null | undefined>(undefined);
+  if (recoveredAtStart.current === undefined) recoveredAtStart.current = readSavedComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
+  const [draft, setDraft] = useState(() => recoveredAtStart.current ?? createNewDraft());
+  const isNewDraftRef = useRef(!recoveredAtStart.current && !requestedDraftId);
+  const hasWritingEditsRef = useRef(false);
+  const initialFieldsAppliedRef = useRef(false);
+  const waitingForWritingOpenRef = useRef(false);
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
   const [saveMessage, setSaveMessage] = useState("Not saved yet");
   const [conflict, setConflict] = useState<ComposeDraftConflict | null>(null);
   const [hydratedScope, setHydratedScope] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  const [recipientQueries, setRecipientQueries] = useState<RecipientQueries>(emptyRecipientState);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const conflictRef = useRef(conflict);
+  conflictRef.current = conflict;
+  const resolvingRef = useRef(false);
+  const mountedRef = useRef(true);
   const storageScopeRef = useRef(scopeKey);
   const persistedDraftRef = useRef(JSON.stringify(persistableDraft(draft)));
   const pendingDraftRef = useRef<{ key: string; serialized: string } | null>(null);
@@ -431,9 +474,13 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     attachmentsRef.current = draft.attachments;
   }, [draft.attachments]);
 
-  useEffect(() => () => {
-    revokeComposeAttachments(attachmentsRef.current);
-    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      revokeComposeAttachments(attachmentsRef.current);
+      if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+    };
   }, []);
 
   const flushPendingDraft = useCallback(() => {
@@ -458,7 +505,12 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     attachmentsDirtyRef.current = false;
     serverAttachmentsRef.current = [];
     revokeComposeAttachments(attachmentsRef.current);
-    const restored = readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
+    const recovered = readSavedComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
+    const restored = recovered ?? createNewDraft();
+    isNewDraftRef.current = !recovered && !requestedDraftId;
+    hasWritingEditsRef.current = false;
+    initialFieldsAppliedRef.current = false;
+    waitingForWritingOpenRef.current = false;
     persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
     serverIdRef.current = restored.revision === null ? null : restored.id;
     serverRevisionRef.current = restored.revision;
@@ -466,6 +518,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setConflict(null);
     setHydratedScope(null);
     setDraft(restored);
+    setRecipientQueries(emptyRecipientState());
     setSaveStatus("saved");
     setSaveMessage(hasComposeContent(restored) ? "Recovered from this device" : "Not saved yet");
   }, [accountId, flushPendingDraft, scope, scopeKey]);
@@ -474,6 +527,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     if (demoMode) {
       setHydratedScope(scopeKey);
       if (requestedDraftId && demoDraft?.id === requestedDraftId) {
+        isNewDraftRef.current = false;
         const restored = fromMessageDraft(demoDraft);
         setDraft(restored);
         setSaveMessage("Saved on this device");
@@ -491,12 +545,13 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       : Promise.resolve(availableDrafts);
     void loadDrafts.then((drafts) => {
       if (cancelled) return;
-      const editableDrafts = drafts.filter((item) => item.deliveryStatus === "draft");
-      const local = readComposeDraft(accountId, window.localStorage, scope);
+      const editableDrafts = drafts.filter((item) => item.accountId === accountId && item.deliveryStatus === "draft");
+      const local = hasWritingEditsRef.current ? draftRef.current : readComposeDraft(accountId, window.localStorage, scope);
       const sameDraft = local.revision === null ? null : editableDrafts.find((item) => item.id === local.id);
       const requestedDraft = requestedDraftId ? editableDrafts.find((item) => item.id === requestedDraftId) : null;
       const latest = requestedDraft ?? sameDraft ?? editableDrafts.find((item) => draftMatchesScope(item, scope)) ?? null;
-      if (!hasComposeContent(local) && latest) {
+      if (latest) isNewDraftRef.current = false;
+      if (!hasComposeContent(local) && !hasWritingEditsRef.current && latest) {
         const restored = fromMessageDraft(latest);
         serverIdRef.current = latest.id;
         serverRevisionRef.current = latest.revision;
@@ -508,8 +563,11 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         setDraft(restored);
         setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
         setSaveMessage(providerSaveMessage(latest));
-      } else if (hasComposeContent(local) && latest) {
+      } else if ((hasComposeContent(local) || hasWritingEditsRef.current) && latest) {
         const serverDraft = fromMessageDraft(latest);
+        // Legacy local drafts predate format persistence; absence of metadata
+        // alone is not a content conflict with an otherwise identical server copy.
+        if (local.composeFormat === undefined) serverDraft.composeFormat = undefined;
         serverIdRef.current = latest.id;
         serverRevisionRef.current = latest.revision;
         attachmentsDirtyRef.current = false;
@@ -530,6 +588,8 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       setHydratedScope(scopeKey);
     }).catch(() => {
       if (cancelled) return;
+      // Recovery failed: absence of a saved draft has not been established.
+      isNewDraftRef.current = false;
       setHydratedScope(scopeKey);
       if (hasComposeContent(draft)) {
         setSaveStatus("failed");
@@ -538,6 +598,25 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     });
     return () => { cancelled = true; };
   }, [accountId, availableDrafts, demoDraft, demoMode, requestedDraftId, scope, scopeKey]);
+
+  useEffect(() => {
+    if (writing?.enabled === false) waitingForWritingOpenRef.current = false;
+    if (!writing || writing.enabled === false || waitingForWritingOpenRef.current || hydratedScope !== scopeKey || draft.accountId !== accountId) return;
+    const hasEdits = hasWritingEditsRef.current || Object.values(recipientQueries).some(query => query.trim());
+    let seed = draft;
+    // Recipients, subject and quoted content belong to the chosen action, not
+    // to Settings. Seed once after recovery even while preferences are loading.
+    if (writing.initialFields && !initialFieldsAppliedRef.current && isNewDraftRef.current && !hasEdits && !draft.writingPreferencesApplied) {
+      initialFieldsAppliedRef.current = true;
+      seed = { ...draft, ...writing.initialFields };
+    }
+    const next = initializeWritingDraft(seed, writing.preferences, {
+      isNew: isNewDraftRef.current,
+      isHydrated: true,
+      hasEdits,
+    });
+    if (next !== draft) setDraft(next);
+  }, [accountId, draft, hydratedScope, recipientQueries, scopeKey, writing]);
 
   const pollProviderStatus = useCallback((draftId: string) => {
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
@@ -557,7 +636,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   const persistRemote = useCallback(async (snapshot: ComposeDraft, force = false, expectedScopeKey = scopeKey) => {
     if (storageScopeRef.current !== expectedScopeKey || saveScopeRef.current !== expectedScopeKey) return;
-    if (!hasComposeContent(snapshot) || conflict) return;
+    if (!hasComposeContent(snapshot) || conflictRef.current || resolvingRef.current) return;
     const signature = remoteContentSignature(snapshot);
     if (!force && signature === lastRemoteSignatureRef.current && serverIdRef.current) return;
     setSaveStatus("saving");
@@ -617,7 +696,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     );
     const forceRemoteSave = retryToken !== processedRetryTokenRef.current;
     pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
-    if (needsRemoteSave) {
+    if (needsRemoteSave && !conflict) {
       setSaveStatus("saving");
       setSaveMessage("Saving…");
     }
@@ -654,7 +733,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     return () => window.removeEventListener("online", retry);
   }, []);
 
-  const hasContent = hasComposeContent(draft);
+  const hasContent = hasComposeContent(draft) || Object.values(recipientQueries).some(query => query.trim());
   useEffect(() => {
     if (!draft.attachments.length) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -666,10 +745,19 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }, [draft.attachments.length]);
 
   function updateDraft(update: Partial<ComposeDraftFields>) {
+    hasWritingEditsRef.current = true;
     setDraft((current) => ({ ...current, ...update, updatedAt: new Date().toISOString() }));
   }
 
+  const updateRecipientQueries = useCallback<Dispatch<SetStateAction<RecipientQueries>>>((update) => {
+    // Preserve the existing query setter semantics; even typing then deleting
+    // establishes that the user has started this draft before preferences arrive.
+    hasWritingEditsRef.current = true;
+    setRecipientQueries(update);
+  }, []);
+
   function attachFiles(files: Iterable<File>): ComposeAttachmentAcceptance {
+    hasWritingEditsRef.current = true;
     let acceptance: ComposeAttachmentAcceptance = { accepted: [], rejected: [] };
     setDraft((current) => {
       acceptance = acceptComposeFiles(current.attachments, files);
@@ -681,6 +769,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   function removeAttachment(attachmentId: string) {
+    hasWritingEditsRef.current = true;
     setDraft((current) => {
       const remaining = current.attachments.filter((attachment) => attachment.id !== attachmentId);
       if (remaining.length === current.attachments.length) return current;
@@ -700,7 +789,11 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       setSaveMessage(error instanceof DraftRequestError ? error.message : "Couldn’t discard this draft. It is still safe.");
       return false;
     }
-    const empty = createEmptyComposeDraft(accountId);
+    const empty = createNewDraft();
+    isNewDraftRef.current = true;
+    hasWritingEditsRef.current = false;
+    initialFieldsAppliedRef.current = false;
+    waitingForWritingOpenRef.current = true;
     pendingDraftRef.current = null;
     revokeComposeAttachments(attachmentsRef.current);
     window.localStorage.removeItem(draftStorageKey(accountId, scope));
@@ -714,47 +807,93 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setDraft(empty);
     setSaveStatus("saved");
     setSaveMessage("Draft discarded");
+    setRecipientQueries(emptyRecipientState());
     return true;
   }
 
   async function resolveConflict(choice: "server" | "local") {
-    if (!conflict) return;
-    if (choice === "server") {
-      const restored = fromMessageDraft(conflict.server);
-      serverIdRef.current = conflict.server.id;
-      serverRevisionRef.current = conflict.server.revision;
+    const resolvingConflict = conflictRef.current;
+    if (!resolvingConflict || resolvingRef.current) return;
+    const local = draftRef.current;
+    // Keep inherited attachments with this version while local bytes are read.
+    const inheritedAttachments = serverAttachmentsRef.current.map(attachment => ({ ...attachment }));
+    const expectedScope = scopeKey;
+    resolvingRef.current = true;
+    setSaveStatus("saving");
+    setSaveMessage("Preserving your version as a separate draft…");
+    try {
+      // Checkpoint the live editor, never the snapshot captured by the failed save.
+      window.localStorage.setItem(draftStorageKey(accountId, scope), JSON.stringify(persistableDraft(local)));
+      const localAttachments = await Promise.all(local.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
+        id, filename, mimeType, size, contentBase64: await fileToBase64(file),
+      })));
+      const content = buildDraftContent(local, mergeDraftAttachments(inheritedAttachments, localAttachments), true);
+      // Both choices preserve the local original in Drafts before switching away.
+      // POST never patches the contested original or replays a send.
+      const recovered = await requestDraft("/v1/drafts", messageDraftSchema, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(content),
+      });
+      if (!mountedRef.current || storageScopeRef.current !== expectedScope) return;
+      if (conflictRef.current !== resolvingConflict || draftRef.current !== local) {
+        setSaveStatus("failed");
+        setSaveMessage("A recovery copy is in Drafts. The versions changed while saving — review them again.");
+        return;
+      }
+      const selected = choice === "server" ? resolvingConflict.server : recovered;
+      const restored = choice === "server" ? fromMessageDraft(selected) : {
+        ...local, id: recovered.id, revision: recovered.revision,
+        providerSyncStatus: recovered.providerSyncStatus, providerSyncError: recovered.providerSyncError,
+      };
+      // A storage failure must leave the live editor and conflict intact.
+      const serialized = JSON.stringify(persistableDraft(restored));
+      window.localStorage.setItem(draftStorageKey(accountId, scope), serialized);
+      pendingDraftRef.current = null;
+      persistedDraftRef.current = serialized;
+      serverIdRef.current = selected.id;
+      serverRevisionRef.current = selected.revision;
+      serverAttachmentsRef.current = selected.attachments;
       attachmentsDirtyRef.current = false;
-      serverAttachmentsRef.current = conflict.server.attachments;
       lastRemoteSignatureRef.current = remoteContentSignature(restored);
+      sendIdempotencyKeyRef.current = null;
+      if (choice === "server") revokeComposeAttachments(local.attachments);
       setDraft(restored);
       setConflict(null);
-      setSaveStatus(conflict.server.providerSyncStatus === "failed" ? "failed" : "saved");
-      setSaveMessage(providerSaveMessage(conflict.server));
-      return;
+      setSaveStatus(selected.providerSyncStatus === "failed" ? "failed" : "saved");
+      setSaveMessage(choice === "server" ? "Using newer version · your version is recoverable in Drafts" : "Your version saved as a separate draft · original preserved");
+    } catch {
+      if (!mountedRef.current || storageScopeRef.current !== expectedScope) return;
+      setSaveStatus("failed");
+      setSaveMessage("Couldn’t finish preserving your version. Keep this tab open and retry your choice.");
+    } finally {
+      resolvingRef.current = false;
     }
-    const local = { ...conflict.local, id: crypto.randomUUID(), revision: null, providerSyncStatus: null, providerSyncError: null, updatedAt: new Date().toISOString() };
-    serverIdRef.current = null;
-    serverRevisionRef.current = null;
-    lastRemoteSignatureRef.current = null;
-    attachmentsDirtyRef.current = local.attachments.length > 0;
-    serverAttachmentsRef.current = [];
-    setConflict(null);
-    setDraft(local);
-    setRetryToken((current) => current + 1);
   }
 
   async function sendDraft(deliveryFields?: Partial<ComposeDraftFields>): Promise<DeliveryResult> {
-    const deliveryDraft = deliveryFields
-      ? { ...draft, ...deliveryFields, updatedAt: new Date().toISOString() }
-      : draft;
-    if (deliveryFields) setDraft(deliveryDraft);
+    if (sendingRef.current) throw new Error("This draft is already being sent.");
+    const deliveryDraft = { ...draftRef.current, ...deliveryFields, updatedAt: new Date().toISOString() };
+    // Validate every pending field before changing any recipient or starting delivery.
+    for (const kind of recipientKinds) {
+      const query = recipientQueries[kind];
+      if (!query.trim()) continue;
+      const parsed = parseRecipientInput(query);
+      if (parsed.invalid.length || !parsed.contacts.length) {
+        throw new Error(recipientValidationMessage(parsed.invalid.length ? parsed.invalid : [query.trim()]));
+      }
+      deliveryDraft[kind] = mergeRecipients(deliveryDraft[kind], parsed.contacts);
+    }
+    if (!deliveryDraft.to.length) throw new Error("Add at least one valid recipient before sending.");
+    setDraft(deliveryDraft);
+    setRecipientQueries(emptyRecipientState());
     pendingDraftRef.current = {
       key: draftStorageKey(accountId, scope),
       serialized: JSON.stringify(persistableDraft(deliveryDraft)),
     };
     if (demoMode) {
       resetAfterSuccessfulSend();
-      return { draftId: deliveryDraft.id, status: "sent", providerMessageId: `demo-${deliveryDraft.id}`, providerThreadId: deliveryDraft.context?.providerThreadId ?? null, error: null };
+      return { draftId: deliveryDraft.id, status: "sent", providerMessageId: null, providerThreadId: null, error: null };
     }
     if (conflict) throw new Error("Resolve the saved draft conflict before sending.");
     sendingRef.current = true;
@@ -778,7 +917,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         cc: deliveryDraft.cc,
         bcc: deliveryDraft.bcc,
         subject: deliveryDraft.subject,
-        body: { text: deliveryDraft.body, html: deliveryDraft.body.trim() ? markdownToEditorHtml(deliveryDraft.body) : null },
+        body: serializeWritingBody(deliveryDraft.body, deliveryDraft.composeFormat, markdownToEditorHtml),
         context: deliveryDraft.context,
       };
       if (attachmentsDirtyRef.current || serverIdRef.current === null) {
@@ -851,7 +990,11 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   function resetAfterSuccessfulSend() {
-    const empty = createEmptyComposeDraft(accountId);
+    const empty = createNewDraft();
+    isNewDraftRef.current = true;
+    hasWritingEditsRef.current = false;
+    initialFieldsAppliedRef.current = false;
+    waitingForWritingOpenRef.current = true;
     revokeComposeAttachments(attachmentsRef.current);
     pendingDraftRef.current = null;
     persistedDraftRef.current = JSON.stringify(persistableDraft(empty));
@@ -866,10 +1009,15 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setDraft(empty);
     setSaveStatus("saved");
     setSaveMessage("Not saved yet");
+    setRecipientQueries(emptyRecipientState());
   }
 
   return {
     draft,
+    demonstration: Boolean(demoMode),
+    writingPreferenceStatus: writing && !demoMode && isNewDraftRef.current ? writing.preferences.status : undefined,
+    recipientQueries,
+    setRecipientQueries: updateRecipientQueries,
     saveStatus,
     saveMessage,
     conflict,
@@ -981,7 +1129,14 @@ export function ComposeWorkspace({
   const [deliveryStatus, setDeliveryStatus] = useState<ComposeDeliveryStatus>("idle");
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [deliveryValidationError, setDeliveryValidationError] = useState<string | null>(null);
-  const [recipientQueries, setRecipientQueries] = useState<Record<RecipientKind, string>>(emptyRecipientState);
+  const [localRecipientQueries, setLocalRecipientQueries] = useState<RecipientQueries>(emptyRecipientState);
+  const recipientQueries = controller.recipientQueries ?? localRecipientQueries;
+  const setRecipientQueries = controller.setRecipientQueries ?? setLocalRecipientQueries;
+  const deliveryInFlightRef = useRef(false);
+  const sentDraftIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (recipientQueries.cc || recipientQueries.bcc) setShowCarbonCopy(true);
+  }, [recipientQueries.cc, recipientQueries.bcc]);
   const [recipientErrors, setRecipientErrors] = useState<Record<RecipientKind, string>>(emptyRecipientState);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageBodyRef = useRef<HTMLDivElement>(null);
@@ -989,6 +1144,22 @@ export function ComposeWorkspace({
   const deliveryReasonId = useId();
   const contactsLabel = contacts.length === 1 ? "1 contact" : `${contacts.length} contacts`;
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
+  useEffect(() => {
+    if (deliveryInFlightRef.current) return;
+    setDeliveryStatus("idle");
+    setDeliveryError(null);
+    setDeliveryValidationError(null);
+    setRecipientErrors(emptyRecipientState());
+    setAttachmentError(null);
+  }, [draft.id]);
+  useEffect(() => {
+    if (deliveryStatus === "sent" && draft.id !== sentDraftIdRef.current) {
+      setDeliveryStatus("idle");
+      setDeliveryError(null);
+      setDeliveryValidationError(null);
+      setRecipientErrors(emptyRecipientState());
+    }
+  }, [deliveryStatus, draft.id]);
   const pendingRecipientKinds = recipientKinds.filter((kind) => recipientQueries[kind].trim());
   const pendingRecipientResults = new Map(pendingRecipientKinds.map((kind) => [kind, parseRecipientInput(recipientQueries[kind])]));
   const invalidPendingKinds = pendingRecipientKinds.filter((kind) => {
@@ -998,7 +1169,7 @@ export function ComposeWorkspace({
   const hasPotentialTo = draft.to.length > 0 || (pendingRecipientResults.get("to")?.contacts.length ?? 0) > 0;
   const hasDeliverableMessage = Boolean(draft.body.trim()) || draft.attachments.length > 0;
   const deliveryReady = hasPotentialTo && invalidPendingKinds.length === 0 && hasDeliverableMessage;
-  const deliveryReason = invalidPendingKinds.length > 0
+  const deliveryValidationReason = invalidPendingKinds.length > 0
     ? `Finish the visible ${invalidPendingKinds.map((kind) => recipientLabels[kind]).join("/")} address ${invalidPendingKinds.length === 1 ? "field" : "fields"}. Choose a suggestion or enter every complete email address.`
     : !hasPotentialTo
     ? "Add at least one valid recipient to prepare this message."
@@ -1006,11 +1177,14 @@ export function ComposeWorkspace({
       ? variant === "reply"
         ? "Write a reply or add an attachment before sending. Attachment-only replies are supported when a file is attached."
         : "Write a message or add an attachment before sending. Attachment-only messages are supported when a file is attached."
+    : controller.demonstration
+      ? "Sending only simulates delivery in this preview."
     : canSend
       ? pendingRecipientKinds.length
         ? "Every complete visible address will be added before Orca saves and delivers this message."
         : "Gmail has confirmed draft and send access. Orca will save the draft first, then deliver it once."
       : "This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.";
+  const deliveryReason = controller.demonstration ? `${demoSendNotice} ${deliveryValidationReason}` : deliveryValidationReason;
 
   async function closeOrDiscard() {
     if (!hasContent) {
@@ -1074,6 +1248,7 @@ export function ComposeWorkspace({
   }
 
   async function attemptDelivery() {
+    if (deliveryInFlightRef.current || deliveryStatus === "sent") return;
     const deliveryFields = resolvePendingRecipients();
     if (!deliveryFields) return;
     if (!hasDeliverableMessage) {
@@ -1092,11 +1267,13 @@ export function ComposeWorkspace({
   }
 
   async function sendCurrentDraft(deliveryFields: Partial<ComposeDraftFields>) {
+    deliveryInFlightRef.current = true;
     setDeliveryStatus("sending");
     setDeliveryError(null);
     try {
       const result = await sendDraft(deliveryFields);
       if (result.status !== "sent") throw new Error(result.error?.message ?? "Gmail did not confirm delivery. Check Drafts before retrying.");
+      sentDraftIdRef.current = draft.id;
       setDeliveryStatus("sent");
       try {
         await onSent?.(result);
@@ -1106,6 +1283,8 @@ export function ComposeWorkspace({
     } catch (error) {
       setDeliveryStatus("error");
       setDeliveryError(error instanceof Error ? error.message : "Orca could not confirm delivery.");
+    } finally {
+      deliveryInFlightRef.current = false;
     }
   }
 
@@ -1166,7 +1345,7 @@ export function ComposeWorkspace({
 
       {variant !== "reply" || editReplyDetails ? <label className="compose-subject-field">
         <span className="compose-subject-label">Sub</span>
-        <input autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
+        <input aria-label="Subject" autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
       </label> : null}
 
       <RenderedBlockEditor
@@ -1176,12 +1355,15 @@ export function ComposeWorkspace({
         canAttach={draft.attachments.length < MAX_COMPOSE_ATTACHMENTS}
         describedBy={deliveryReasonId}
         focusRef={messageBodyRef}
+        format={draft.composeFormat ?? "rich"}
         invalid={!hasDeliverableMessage && Boolean(deliveryValidationError)}
         onAttachClick={() => fileInputRef.current?.click()}
         onChange={(body) => { updateDraft({ body }); if (body.trim()) setDeliveryValidationError(null); }}
+        onFormatChange={(composeFormat) => updateDraft({ composeFormat })}
         onRemoveAttachment={onRemoveAttachment}
         placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? actionLabel === "Forward" ? "Add a note above the forwarded message…" : "Write a reply…" : "Start with the human part…"}
       />
+      {controller.writingPreferenceStatus === "loading" ? <p className="writing-preferences-note" role="status">Loading your writing defaults. You can start writing.</p> : controller.writingPreferenceStatus === "unavailable" ? <p className="writing-preferences-note" role="status">Writing defaults unavailable. New drafts use plain text without a signature.</p> : null}
       {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
       <input
         accept="*/*"
@@ -1210,7 +1392,7 @@ export function ComposeWorkspace({
         <div className="zen-stage">
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
             {editor}
-            {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+            {conflict ? <DraftConflictNotice conflict={conflict} local={draft} onResolve={resolveConflict} /> : null}
             <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
             {draggingFiles ? <ComposeDropOverlay /> : null}
           </div>
@@ -1223,7 +1405,7 @@ export function ComposeWorkspace({
     return (
       <section aria-label="Reply to conversation" className={`${workspaceClass} compose-workspace-reply`} {...dropHandlers}>
         {editor}
-        {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+        {conflict ? <DraftConflictNotice conflict={conflict} local={draft} onResolve={resolveConflict} /> : null}
         <ComposeDeliveryBar actionLabel={actionLabel} canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
         {draggingFiles ? <ComposeDropOverlay /> : null}
       </section>
@@ -1237,7 +1419,7 @@ export function ComposeWorkspace({
         <span className="compose-contact-count">{contactsLabel}</span>
       </div>
       {editor}
-      {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+      {conflict ? <DraftConflictNotice conflict={conflict} local={draft} onResolve={resolveConflict} /> : null}
       <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
       {draggingFiles ? <ComposeDropOverlay /> : null}
     </section>
@@ -1251,9 +1433,11 @@ function RenderedBlockEditor({
   canAttach,
   describedBy,
   focusRef,
+  format,
   invalid,
   onAttachClick,
   onChange,
+  onFormatChange,
   onRemoveAttachment,
   placeholder,
 }: {
@@ -1263,15 +1447,18 @@ function RenderedBlockEditor({
   canAttach: boolean;
   describedBy?: string;
   focusRef: RefObject<HTMLDivElement | null>;
+  format: WritingPreferences["composeFormat"];
   invalid: boolean;
   onAttachClick: () => void;
   onChange: (body: string) => void;
+  onFormatChange: (format: WritingPreferences["composeFormat"]) => void;
   onRemoveAttachment: (attachmentId: string) => void;
   placeholder: string;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const commandListId = useId();
   const lastBodyRef = useRef(body);
+  const lastFormatRef = useRef(format);
   const [slash, setSlash] = useState<{ query: string; top: number } | null>(null);
   const [activeCommand, setActiveCommand] = useState(0);
   const commands = slash === null ? [] : slashCommands.filter((command) => `${command.id} ${command.label}`.toLowerCase().includes(slash.query));
@@ -1285,23 +1472,25 @@ function RenderedBlockEditor({
     const editor = editorRef.current;
     if (!editor) return;
     const externallyFilledEmptyEditor = Boolean(body.trim()) && !editor.textContent?.trim();
-    if (editor.innerHTML === "" || externallyFilledEmptyEditor || (lastBodyRef.current !== body && document.activeElement !== editor)) {
-      editor.innerHTML = markdownToEditorHtml(body);
+    if (editor.innerHTML === "" || externallyFilledEmptyEditor || lastFormatRef.current !== format || (lastBodyRef.current !== body && document.activeElement !== editor)) {
+      editor.innerHTML = format === "rich" ? markdownToEditorHtml(body) : body.split("\n").map(line => `<p>${escapeHtml(line) || "<br>"}</p>`).join("");
       if (!body.trim() && editor.firstElementChild) (editor.firstElementChild as HTMLElement).dataset.placeholder = placeholder;
       lastBodyRef.current = body;
+      lastFormatRef.current = format;
     }
     if (autoFocus) editor.focus();
-  }, [autoFocus, body, placeholder]);
+  }, [autoFocus, body, format, placeholder]);
 
   function emitChange() {
     const editor = editorRef.current;
     if (!editor) return;
-    const nextBody = editorToMarkdown(editor);
+    const nextBody = format === "plain" ? editorToPlainText(editor) : editorToMarkdown(editor);
     lastBodyRef.current = nextBody;
     onChange(nextBody);
   }
 
   function updateSlashMenu() {
+    if (format === "plain") { setSlash(null); return; }
     const editor = editorRef.current;
     const selection = window.getSelection();
     if (!editor || !selection?.anchorNode || !editor.contains(selection.anchorNode)) {
@@ -1357,6 +1546,7 @@ function RenderedBlockEditor({
   }
 
   function onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (format === "plain" && (event.metaKey || event.ctrlKey) && ["b", "i", "u"].includes(event.key.toLowerCase())) { event.preventDefault(); return; }
     if (slash) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -1384,11 +1574,12 @@ function RenderedBlockEditor({
 
   return (
     <div className="compose-writing-field">
+      <label className="writing-format-choice"><span>Message format</span><select aria-label="Message format" onChange={(event) => { setSlash(null); onFormatChange(event.target.value as WritingPreferences["composeFormat"]); }} value={format}><option value="plain">Plain text</option><option value="rich">Rich text</option></select></label>
       <div aria-label="Formatting" className="compose-formatting" role="toolbar">
-        <button aria-label="Bold, Command B" onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
-        <button aria-label="Italic, Command I" onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
-        <button aria-label="Bulleted list" onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
-        <button aria-label="Quote" onClick={() => runToolbar("blockquote")} type="button">Quote</button>
+        <button aria-label="Bold, Command B" disabled={format === "plain"} onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
+        <button aria-label="Italic, Command I" disabled={format === "plain"} onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
+        <button aria-label="Bulleted list" disabled={format === "plain"} onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
+        <button aria-label="Quote" disabled={format === "plain"} onClick={() => runToolbar("blockquote")} type="button">Quote</button>
         <button aria-label="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach</button>
         <span>Type / for structure · drop anywhere to attach</span>
       </div>
@@ -1403,11 +1594,13 @@ function RenderedBlockEditor({
         className="compose-writing-area compose-block-editor"
         contentEditable
         data-placeholder={placeholder}
+        data-format={format}
         onInput={onInput}
         onKeyDown={onKeyDown}
         onPaste={(event) => {
           event.preventDefault();
-          document.execCommand("insertText", false, normalizePastedText(event.clipboardData.getData("text")));
+          const text = event.clipboardData.getData("text");
+          document.execCommand("insertText", false, format === "plain" ? text.replace(/\r\n?/g, "\n") : normalizePastedText(text));
         }}
         ref={(editor) => { editorRef.current = editor; focusRef.current = editor; }}
         role="textbox"
@@ -1483,21 +1676,39 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
           type="button"
         >{deliveryStatus === "sending" ? "Sending…" : canSend ? actionLabel === "Send" ? "Send" : `Send ${actionLabel.toLowerCase()}` : "Enable sending"}</button>
       </div>
-      <p aria-live="polite" className={deliveryError ? "compose-delivery-error" : undefined} id={deliveryReasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? "Sent. The conversation is refreshing." : deliveryReason)}</p>
+      <p aria-live="polite" className={deliveryError ? "compose-delivery-error" : undefined} id={deliveryReasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? controller.demonstration ? "Demo send complete. No real email was sent." : "Sent. The conversation is refreshing." : deliveryReason)}</p>
     </footer>
   );
 }
 
-function DraftConflictNotice({ conflict, onResolve }: { conflict: ComposeDraftConflict; onResolve: (choice: "server" | "local") => Promise<void> }) {
+export function DraftConflictNotice({ conflict, local, onResolve }: { conflict: ComposeDraftConflict; local: ComposeDraft; onResolve: (choice: "server" | "local") => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  async function resolve(choice: "server" | "local") {
+    setBusy(true);
+    try { await onResolve(choice); } finally { setBusy(false); }
+  }
   return (
-    <section aria-label="Draft recovery choice" className="compose-conflict" role="alert">
+    <section aria-busy={busy} aria-label="Draft recovery choice" className="compose-conflict" role="alert">
       <div>
         <strong>This draft changed in another tab.</strong>
-        <span>The newer saved copy is from {new Date(conflict.server.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Your words are still safe on this device.</span>
+        <span>Either choice saves your current version as a separate draft in Drafts. The original saved version is preserved. Nothing is sent.</span>
+        <details>
+          <summary>Compare your current version and the saved version</summary>
+          {[{ label: "Your current version", subject: local.subject, body: local.body, to: local.to, cc: local.cc, bcc: local.bcc, attachments: local.attachments, updatedAt: local.updatedAt, revision: local.revision }, { label: "Saved version", ...conflict.server, body: conflict.server.body.text }].map((version) => (
+            <div key={version.label}>
+              <strong>{version.label} · {new Date(version.updatedAt).toLocaleString()} · revision {version.revision ?? "unsaved"}</strong>
+              <p>Subject: {version.subject || "(no subject)"}</p>
+              <p>To: {version.to.map(contact => contact.email).join(", ") || "none"} · Cc: {version.cc.map(contact => contact.email).join(", ") || "none"} · Bcc: {version.bcc.map(contact => contact.email).join(", ") || "none"}</p>
+              <p style={{ whiteSpace: "pre-wrap", maxHeight: 120, overflow: "auto" }}>{version.body || "(empty message)"}</p>
+              <p>Attachments: {version.attachments.map(attachment => attachment.filename).join(", ") || "none"}</p>
+            </div>
+          ))}
+        </details>
+        {busy ? <span>Preserving your version…</span> : null}
       </div>
       <div>
-        <button onClick={() => void onResolve("server")} type="button">Use newer version</button>
-        <button onClick={() => void onResolve("local")} type="button">Keep mine as a new draft</button>
+        <button disabled={busy} onClick={() => void resolve("server")} type="button">Use newer version</button>
+        <button disabled={busy} onClick={() => void resolve("local")} type="button">Keep mine as a new draft</button>
       </div>
     </section>
   );
@@ -1600,6 +1811,34 @@ export function editorToMarkdown(editor: HTMLElement) {
   }).join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
+/** Literal plain-editor text. Chrome uses BR for soft breaks and P/DIV for
+ * paragraph boundaries, with one terminal BR (or separate newline text node
+ * after a newline in pre-wrap mode) as a caret placeholder. Preserve
+ * every other break and every text-node character; rich Markdown rules do not
+ * apply here (in particular no trimEnd or blank-line collapsing).
+ */
+export function editorToPlainText(editor: HTMLElement): string {
+  const isBlock = (node: Node) => node.nodeType === Node.ELEMENT_NODE && /^(P|DIV)$/.test((node as Element).tagName);
+  const childrenText = (parent: Node): string => {
+    const children = [...parent.childNodes];
+    return children.map((node, index) => {
+      const previous = children[index - 1];
+      const boundary = previous && (isBlock(previous) || isBlock(node)) ? "\n" : "";
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent ?? "";
+        const terminalCaret = index === children.length - 1 && text === "\n"
+          && previous?.nodeType === Node.TEXT_NODE && previous.textContent?.endsWith("\n");
+        return boundary + (terminalCaret ? "" : text);
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return "";
+      const element = node as Element;
+      if (element.tagName === "BR") return index === children.length - 1 ? "" : "\n";
+      return boundary + childrenText(node);
+    }).join("");
+  };
+  return childrenText(editor);
+}
+
 function inlineNodeToMarkdown(node: Node): string {
   return [...node.childNodes].map((child) => {
     if (child.nodeType === Node.TEXT_NODE) return child.textContent ?? "";
@@ -1607,7 +1846,7 @@ function inlineNodeToMarkdown(node: Node): string {
     const content = inlineNodeToMarkdown(element);
     if (element.matches("strong, b")) return `**${content}**`;
     if (element.matches("em, i")) return `_${content}_`;
-    if (element.matches("br")) return "";
+    if (element.matches("br")) return "\n";
     return content;
   }).join("");
 }

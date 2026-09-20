@@ -239,7 +239,11 @@ describe("App", () => {
     expect(html).toContain("Make Orca");
     expect(html).toContain("Appearance &amp; reading");
     expect(html).toContain("Inbox &amp; attention");
-    expect(html).toContain("/settings/attention-views");
+    expect(html).toContain("/dev/inbox?destination=inbox&amp;customize=spaces");
+    expect(html).toContain("/dev/inbox?destination=organization-studio&amp;section=views");
+    expect(html).toContain("Manage primary mail spaces");
+    expect(html).toContain("Manage saved views");
+    expect(html).not.toContain("Manage Attention Views");
     expect(html).toContain("/settings/integrations/gmail");
     expect(html).toContain("Add Microsoft Outlook");
     expect(html).toContain("Connect Outlook");
@@ -861,7 +865,7 @@ describe("App", () => {
       />,
     );
     expect(html).toContain("This draft changed in another tab.");
-    expect(html).toContain("Your words are still safe on this device.");
+    expect(html).toContain("Either choice saves your current version as a separate draft in Drafts.");
     expect(html).toContain("Use newer version");
     expect(html).toContain("Keep mine as a new draft");
     expect(html).toContain(">Retry</button>");

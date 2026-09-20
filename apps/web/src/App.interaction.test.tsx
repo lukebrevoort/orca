@@ -6,6 +6,7 @@ import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVEN
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
+import { demoStore } from "./demo-store";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
 
@@ -57,6 +58,7 @@ function isSameNode(left: unknown, right: unknown) {
 }
 
 function installDom() {
+  demoStore.reset();
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox" });
   scrollPosition = { x: 0, y: 0 };
   nextFrameId = 0;
@@ -1279,6 +1281,41 @@ describe("App top-layer contract", () => {
     expect(isSameNode(browserWindow.document.activeElement, composeTrigger)).toBe(true);
   });
 
+  for (const startInZen of [false, true]) test(`synthetic Zen send restores reader context and focus; new draft is usable (default Zen ${startInZen})`, async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: startInZen, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    await openMessage("Mom");
+    const originalUrl = browserWindow.location.href;
+    const opener = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    opener.focus();
+    await act(async () => opener.click());
+    if (!startInZen) await act(async () => (browserWindow.document.querySelector("button.panel-zen") as unknown as HTMLButtonElement).click());
+    let zen = browserWindow.document.querySelector(".zen-canvas")!;
+    await enterInput(zen.querySelector('[name="to-recipient"]') as unknown as HTMLInputElement, "recipient@example.com");
+    expect(zen.querySelector('[name="subject"]')?.getAttribute("aria-label")).toBe("Subject");
+    await act(async () => {
+      const body = zen.querySelector('[aria-label="Message body"]')!;
+      body.textContent = "A synthetic note. No provider delivery.";
+      body.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true }));
+    });
+    await act(async () => {
+      (zen.querySelector("button.compose-send") as unknown as HTMLButtonElement).click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    await act(async () => flushAnimationFrames());
+    expect(Boolean(browserWindow.document.querySelector(".zen-canvas"))).toBe(false);
+    expect(Boolean(browserWindow.document.querySelector('[aria-label="Compose message"]'))).toBe(false);
+    expect(browserWindow.location.href).toBe(originalUrl);
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, opener)).toBe(true);
+
+    await act(async () => opener.click());
+    const surface = browserWindow.document.querySelector(startInZen ? ".zen-canvas" : '[aria-label="Compose message"]')!;
+    expect((surface.querySelector('[name="to-recipient"]') as unknown as HTMLInputElement).value).toBe("");
+    expect(surface.querySelector('[aria-label="Message body"]')?.textContent).toBe("");
+    expect((surface.querySelector("button.compose-send") as unknown as HTMLButtonElement).disabled).toBe(false);
+  });
+
   test("restores a stable visible app control when Remove pin deletes the opener", async () => {
     await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
     const savedPins = browserWindow.document.querySelector('[aria-label="Saved pins"]') as unknown as HTMLElement;
@@ -2252,7 +2289,7 @@ describe("Pin navigation and bulk sender actions", () => {
       buttonByName("Select Maya: Account A").click();
       buttonByName("Select Ari: Account B").click();
     });
-    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Use these senders") as unknown as HTMLButtonElement;
+    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Create sender View") as unknown as HTMLButtonElement;
     expect(useSenders.disabled).toBe(true);
     expect(browserWindow.document.querySelector(".bulk-view-action")?.textContent).toContain("Choose messages from one account");
     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(2);
@@ -2262,7 +2299,7 @@ describe("Pin navigation and bulk sender actions", () => {
     await renderApp();
     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
-    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Use these senders") as unknown as HTMLButtonElement;
+    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Create sender View") as unknown as HTMLButtonElement;
     const focusCalls = trackFocus(useSenders);
     setScroll({ x: 12, y: 380 });
     await act(async () => { useSenders.click(); await Promise.resolve(); });
@@ -2273,9 +2310,10 @@ describe("Pin navigation and bulk sender actions", () => {
     const authoringHeading = authoringSurface.querySelector("#views-title") as unknown as HTMLElement;
     expect(authoringHeading.tabIndex).toBe(-1);
     expect(authoringHeading.textContent).toBe("Save a sender view");
-    expect(authoringSurface.querySelector(".view-composer h3")).toBeNull();
+    // Section headings inside Tune are valid; the composer must not repeat the task title.
+    expect(Boolean(authoringSurface.querySelector(".view-composer > header h3"))).toBe(false);
     expect(authoringSurface.querySelector("#search-view-tune")?.hasAttribute("hidden")).toBe(true);
-    expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("deploy@status.example.com");
+    expect(authoringSurface.querySelector(".view-scope-sentence")?.textContent).toContain("family@example.com");
     expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);
     setScroll({ x: 0, y: 0 });
     const cancel = [...browserWindow.document.querySelectorAll(".selected-view-authoring button")].find((candidate) => candidate.textContent === "Cancel") as unknown as HTMLButtonElement;
@@ -2291,12 +2329,18 @@ describe("Pin navigation and bulk sender actions", () => {
     const byText = (text: string) => [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === text) as unknown as HTMLButtonElement;
     await act(async () => byText("Select").click());
     await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
-    await act(async () => { byText("Use these senders").click(); await Promise.resolve(); });
+    await act(async () => { byText("Create sender View").click(); await Promise.resolve(); });
     const tunePanel = browserWindow.document.querySelector("#search-view-tune")!;
     expect(tunePanel.hasAttribute("hidden")).toBe(true);
-    expect(tunePanel.querySelector('input[aria-label="View color"]')).not.toBeNull();
+    const colors = tunePanel.querySelector(".color-preset-picker")!;
+    expect(colors.querySelector("legend")?.textContent).toBe("View color");
+    expect(colors.querySelectorAll("button")).toHaveLength(7);
+    expect(tunePanel.querySelector('input[type="color"]')).toBeNull();
     await act(async () => byText("Tune").click());
     expect(tunePanel.hasAttribute("hidden")).toBe(false);
+    const blue = [...colors.querySelectorAll("button")].find(button => button.textContent?.trim() === "Blue")!;
+    await act(async () => blue.click());
+    expect(blue.getAttribute("aria-pressed")).toBe("true");
     const name = browserWindow.document.querySelector(".view-identity input") as unknown as HTMLInputElement;
     await enterInput(name, "Friends");
     const workspace = browserWindow.document.querySelector(".views-workspace-sender-authoring")!;
@@ -3923,5 +3967,188 @@ describe("BRE-386 guidance navigation", () => {
       await waitFor(0);
     }
     expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+describe("BRE-413 saved-view growth entry", () => {
+  beforeEach(installDom);
+  afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } restoreDom(); });
+  test("survives the mailbox selection reset", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all&addSendersTo=view_weekly_production");
+    await renderApp();
+    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.textContent).toContain("Done selecting");
+    expect(browserWindow.document.body.textContent).toContain("Add senders to existing View");
+  });
+});
+
+describe("BRE-417 Views routes", () => {
+  beforeEach(installDom);
+  afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); });
+  test("skipped native animation readiness does not reject navigation or leave transition styling", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "full" });
+    const descriptor = Object.getOwnPropertyDescriptor(browserWindow.document, "startViewTransition");
+    let transitions = 0;
+    Object.defineProperty(browserWindow.document, "startViewTransition", { configurable: true, value: (update: () => void) => {
+      transitions++; update();
+      return { ready: Promise.reject(new DOMException("Transition was skipped", "AbortError")), finished: Promise.resolve() };
+    } });
+    try {
+      const manage = [...browserWindow.document.querySelectorAll("button")].find(node => node.textContent === "Manage saved views")!;
+      await act(async () => manage.click()); await waitFor(0);
+      expect(transitions).toBe(1);
+      expect(browserWindow.document.documentElement.dataset.orcaTransition).toBeUndefined();
+      expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    } finally {
+      if (descriptor) Object.defineProperty(browserWindow.document, "startViewTransition", descriptor);
+      else Reflect.deleteProperty(browserWindow.document, "startViewTransition");
+    }
+  });
+  test("direct edit opens the requested view and management history restores the Views section", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=organization-studio&section=views&editView=view_urgent_humans&q=kept");
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" }); await waitFor(20);
+    expect(browserWindow.document.querySelector("#views-title")?.textContent).toBe("Edit Urgent humans");
+    expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    const manage = [...browserWindow.document.querySelectorAll("button")].find(node => node.textContent === "Manage saved views")!;
+    await act(async () => manage.click()); await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("editView")).toBeNull();
+    expect(browserWindow.document.querySelector("#organization-views .view-composer")).toBeNull();
+    expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    await act(async () => browserWindow.history.back()); await waitFor(20);
+    expect(new URL(browserWindow.location.href).searchParams.get("editView")).toBe("view_urgent_humans");
+    expect(browserWindow.document.querySelector("#views-title")?.textContent).toBe("Edit Urgent humans");
+    expect(new URL(browserWindow.location.href).searchParams.get("q")).toBe("kept");
+  });
+  test("missing saved-view recovery lands directly on Views", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=view%3Amissing");
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" }); await waitFor(10);
+    const browse = [...browserWindow.document.querySelectorAll("button")].find(node => node.textContent === "Browse views")!;
+    expect(browse).toBeDefined(); await act(async () => browse.click()); await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("section")).toBe("views");
+    expect(browserWindow.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+  });
+});
+
+describe("BRE-415 unsaved View navigation", () => {
+  beforeEach(installDom);
+  afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); });
+  const findButton = (label: string, selector = "button") => {
+    const found = [...browserWindow.document.querySelectorAll(selector)].find(node => node.textContent?.trim() === label || node.getAttribute("aria-label") === `${label}, saved view` || node.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
+    if (!found) throw new Error(`Missing ${label}`);
+    return found as unknown as HTMLButtonElement;
+  };
+  async function press(label: string, selector?: string) { await act(async () => findButton(label, selector).click()); await waitFor(0); }
+  async function editSavedView() {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    await press("Weekly production review", ".desktop-sidebar-item");
+    await press("Edit"); await waitFor(20);
+    const name = browserWindow.document.querySelector('input[aria-label="View name"]') as unknown as HTMLInputElement
+      ?? [...browserWindow.document.querySelectorAll("label")].find(label => label.textContent?.startsWith("View name"))?.querySelector("input") as unknown as HTMLInputElement;
+    expect(name).toBeDefined();
+    name.focus(); await enterInput(name, "My unsaved review");
+    return name;
+  }
+  test("shell Keep editing preserves the exact editor, URL, scroll and focus; Discard visits the requested view once", async () => {
+    const name = await editSavedView();
+    const url = browserWindow.location.href;
+    const workspace = browserWindow.document.querySelector(".desktop-workspace")!;
+    workspace.scrollTop = 155;
+    await press("Inbox", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    expect(browserWindow.location.href).toBe(url);
+    await press("Keep editing"); await waitFor(20);
+    expect(name.value).toBe("My unsaved review");
+    expect(name.isConnected).toBe(true);
+    expect(isSameNode(browserWindow.document.activeElement, name)).toBe(true);
+    expect(workspace.scrollTop).toBe(155);
+    const length = browserWindow.history.length;
+    await press("Urgent humans", ".desktop-sidebar-item");
+    await press("Discard draft");
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Urgent humans");
+    expect(browserWindow.document.querySelector(".view-composer")).toBeNull();
+    expect(browserWindow.history.length).toBe(length + 1);
+    await press("Edit");
+    expect(browserWindow.document.querySelector(".view-composer")?.textContent).toContain("View name");
+    await press("Inbox", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("dialog")).toBeNull();
+  });
+  test("Settings and Organization sections guard edits; reload warns only while dirty", async () => {
+    await editSavedView();
+    await press("Settings", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    await press("Keep editing");
+    const unload = new browserWindow.Event("beforeunload", { cancelable: true });
+    browserWindow.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(true);
+    await press("Organization", ".desktop-sidebar-item"); await press("Discard draft");
+    const clean = new browserWindow.Event("beforeunload", { cancelable: true });
+    browserWindow.dispatchEvent(clean); expect(clean.defaultPrevented).toBe(false);
+    // Organization studio sections share the same guard as the shell.
+    await act(async () => {
+      browserWindow.history.pushState({}, "", "/dev/inbox?destination=organization-studio");
+      browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate", { state: browserWindow.history.state }));
+    });
+    await press("Views"); await press("Edit definition");
+    const field = [...browserWindow.document.querySelectorAll("label")].find(label => label.textContent?.startsWith("View name"))!.querySelector("input") as unknown as HTMLInputElement;
+    field.focus(); await enterInput(field, "Organization draft");
+    await press("Lanes"); expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    await press("Keep editing"); expect(field.value).toBe("Organization draft");
+    await press("Rules"); await press("Discard draft");
+    expect(browserWindow.document.querySelector("#organization-rules")).not.toBeNull();
+    await press("Views");
+    expect(Boolean(browserWindow.document.querySelector("#organization-views .view-composer"))).toBe(false);
+    await press("Edit definition");
+    const reopened = [...browserWindow.document.querySelectorAll("label")].find(label => label.textContent?.startsWith("View name"))!.querySelector("input") as unknown as HTMLInputElement;
+    expect(reopened.value).toBe("Weekly production review");
+    await enterInput(reopened, "Second Organization draft");
+    await press("Rules");
+    expect(browserWindow.document.querySelector("dialog[open]")).not.toBeNull();
+    await press("Keep editing");
+    expect(reopened.value).toBe("Second Organization draft");
+    await press("Rules"); await press("Discard draft");
+    await press("Views");
+    expect(Boolean(browserWindow.document.querySelector("#organization-views .view-composer"))).toBe(false);
+  });
+});
+
+describe("BRE-418 canonical demo App journey", () => {
+  beforeEach(installDom);
+  afterEach(async () => { await act(async () => root?.unmount()); root = null; restoreDom(); demoStore.reset(); });
+  const find = (label: string, selector = "button") => {
+    const button = [...browserWindow.document.querySelectorAll(selector)].find(node => node.textContent?.trim() === label || node.getAttribute("aria-label") === label || node.getAttribute("aria-label") === `${label}, saved view` || node.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
+    if (!button) throw new Error(`Missing ${label}`);
+    return button as unknown as HTMLButtonElement;
+  };
+  async function press(label: string, selector?: string) { await act(async () => find(label, selector).click()); await waitFor(0); }
+  test("selected Mom create/save/open/Add senders/grow/reopen stays in-page with matching Inbox count", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const rowCount = browserWindow.document.querySelectorAll("button.message-row").length;
+    expect(find("Inbox", ".desktop-sidebar-item").textContent).toBe(`Inbox${rowCount}`);
+    await press("Select"); await press("Select Mom: Dinner on Sunday?"); await press("Create sender View");
+    expect(browserWindow.document.querySelector(".view-scope-sentence")?.textContent).toContain("family@example.com");
+    expect(browserWindow.document.querySelector(".view-scope-sentence")?.textContent).not.toContain("deploy@");
+    const name = browserWindow.document.querySelector(".view-identity input") as unknown as HTMLInputElement;
+    await enterInput(name, "Family sample");
+    await press("Save");
+    const view = demoStore.getSnapshot().find(view => view.name === "Family sample")!;
+    expect(Boolean(view)).toBe(true);
+    expect(browserWindow.location.pathname).toBe("/dev/inbox");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe(`view:${view.id}`);
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
+    expect(browserWindow.document.querySelectorAll(".saved-view-results .view-thread-row")).toHaveLength(1);
+    expect(find("Family sample", ".desktop-sidebar-item").getAttribute("aria-current")).toBe("page");
+    await press("Add senders", "a");
+    expect(new URL(browserWindow.location.href).searchParams.get("addSendersTo")).toBe(view.id);
+    await press("Select Anika Lee: Design direction");
+    await press("Add senders to existing View");
+    const chooser = browserWindow.document.querySelector('select[aria-label="Saved View to grow"]') as unknown as HTMLSelectElement;
+    expect(chooser.value).toBe(view.id);
+    expect(find("Preview added senders").disabled).toBe(false);
+    await press("Preview added senders");
+    await press("Save changes");
+    expect(demoStore.getView(view.id)?.definition.sender?.addresses).toEqual(["family@example.com", "anika@example.com"]);
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
+    expect(browserWindow.document.querySelectorAll(".saved-view-results .view-thread-row")).toHaveLength(demoStore.evaluate(view.id).count!);
+    await press("Inbox", ".desktop-sidebar-item"); await press("Family sample", ".desktop-sidebar-item");
+    expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
+    expect(demoStore.getView(view.id)?.revision).toBe(2);
   });
 });

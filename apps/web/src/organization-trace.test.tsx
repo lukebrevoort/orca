@@ -140,7 +140,7 @@ describe("Organization Glass Box Trace", () => {
     expect(overview.textContent).toContain("BecauseA person needs to respond now");
     expect(overview.textContent).not.toContain("Lanes choose the current.");
     expect(overview.textContent).not.toContain("Organization cannot send or delete provider mail");
-    expect(browser.document.querySelector(".organization-intro-status")?.textContent).toBe("Local previewNothing is saved or applied");
+    expect(browser.document.querySelector(".organization-intro-status")?.textContent).toBe("Local previewDemo view changes last until refresh; no connected mail changes");
 
     const primary = overview.querySelector(".organization-overview-primary") as unknown as HTMLButtonElement;
     expect(primary.textContent).toContain("Open Rules");

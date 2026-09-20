@@ -1,0 +1,7 @@
+.view-navigation-dialog { max-width: 420px; padding: 28px; border: 1px solid var(--orca-border); border-radius: 16px; color: var(--orca-ink); background: var(--orca-surface); box-shadow: 0 24px 80px #0004; }
+.view-navigation-dialog::backdrop { background: #0007; }
+.view-navigation-dialog h2 { margin: 0 0 12px; font-size: 24px; }
+.view-navigation-dialog p { margin: 0 0 24px; color: var(--orca-muted); }
+.view-navigation-dialog > div { display: flex; gap: 12px; }
+.view-navigation-dialog button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); color: var(--orca-ink); }
+.view-navigation-dialog button:focus-visible { outline: 2px solid var(--orca-ink); outline-offset: 3px; }

@@ -1,10 +1,11 @@
+import { requestViewNavigation } from "./view-navigation-guard";
 import { SavedViewDeletion } from "./saved-view-deletion";
 import { DestinationManager, useDestinations } from "./mail-destinations";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { GlobalMailSearch, openMailSearch } from "./global-search";
-import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, formatNavigationCount, readSpacePreferences, useOnlineStatus, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
+import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, formatNavigationCount, readSpacePreferences, useOnlineStatus, viewsManagementHref, type ViewsManagementRoute, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
 import { OrganizationAuthorityError, OrganizationAuthorityProvider, OrganizationRecoveryBanner, useOrganizationAuthority } from "./organization-authority";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace, type ViewPreviewEvidenceState } from "./organization-views";
@@ -22,6 +23,9 @@ const icons = {
   all: <><circle cx="10" cy="10" r="7"/><path d="M6 10h8M10 6v8"/></>,
   compose: <><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></>,
   more: <><circle cx="5" cy="10" r="1"/><circle cx="10" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></>,
+  view: <><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z"/><circle cx="10" cy="10" r="2"/></>,
+  collection: <path d="M2 5h6l2 2h8v10H2z"/>,
+  later: <><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></>,
 };
 
 function NavIcon({ name }: { name: keyof typeof icons }) {
@@ -39,25 +43,32 @@ function OrcaBlackMark() {
   </svg>;
 }
 
-function SidebarItem({ active, count, icon, label, onClick }: { active: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
-  return <button aria-current={active ? "page" : undefined} className="desktop-sidebar-item" onClick={onClick} type="button">
+function ToolIcon({ space }: { space: WorkflowSpace }) {
+  if (space.kind === "collection") return <NavIcon name="collection"/>;
+  if (space.id === "later") return <NavIcon name="later"/>;
+  return <span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>;
+}
+
+function SidebarItem({ active, count, icon, label, savedView, onClick }: { active: boolean; count?: number; icon: ReactNode; label: string; savedView?: boolean; onClick: () => void }) {
+  return <button aria-current={active ? "page" : undefined} aria-label={savedView ? `${label}, saved view` : undefined} className="desktop-sidebar-item" onClick={onClick} type="button">
     {icon}<span>{label}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
   </button>;
 }
 
-function MobileMenuItem({ active = false, count, icon, label, onClick }: { active?: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
-  return <button aria-current={active ? "page" : undefined} className="desktop-mobile-menu-item" onClick={onClick} role="menuitem" type="button">
+function MobileMenuItem({ active = false, count, icon, label, savedView, onClick }: { active?: boolean; count?: number; icon: ReactNode; label: string; savedView?: boolean; onClick: () => void }) {
+  return <button aria-current={active ? "page" : undefined} aria-label={savedView ? `${label}, saved view` : undefined} className="desktop-mobile-menu-item" onClick={onClick} role="menuitem" type="button">
     {icon}<span>{label}</span>{count !== undefined ? <small>{formatNavigationCount(count)}</small> : null}
   </button>;
 }
 
-export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onManageTools, onNavigate }: {
+export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onManageTools, onManageViews, onNavigate }: {
   projection: SidebarNavigationProjection;
   theme: "light" | "dark";
   composeButtonRef?: RefObject<HTMLButtonElement | null>;
   onCompose: () => void;
   onManageSpaces: () => void;
   onManageTools?: () => void;
+  onManageViews?: () => void;
   onNavigate: (destination: DesktopDestination) => void;
 }) {
   const { account, active, draftCount, inboxCount, spaces, fallbackDestination } = projection;
@@ -102,9 +113,10 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">{group === "Tools" ? "Customize tools" : "Manage spaces"}</button>}</div>
         {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <SidebarItem
           key={destinationForSpace(space)} active={active === destinationForSpace(space)} count={space.count}
-          icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
+          icon={<ToolIcon space={space}/>} savedView={space.kind === "view"}
           label={space.label} onClick={() => onNavigate(destinationForSpace(space))}
         />)}
+        {group === "Tools" && onManageViews ? <button className="desktop-manage-views" onClick={onManageViews} type="button">Manage saved views</button> : null}
       </Fragment>)}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
@@ -140,10 +152,11 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
             <p aria-hidden="true" className="desktop-mobile-menu-label">{group}</p>
             {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <MobileMenuItem
               active={active === destinationForSpace(space)} count={space.count}
-              icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
+              icon={<ToolIcon space={space}/>} savedView={space.kind === "view"}
               key={destinationForSpace(space)} label={space.label} onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
             {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={group === "Tools" ? "Customize tools" : "Manage spaces"} onClick={() => { setMobileMenuOpen(false); (group === "Spaces" ? onManageSpaces : onManageTools)?.(); }} />}
+            {group === "Tools" && onManageViews ? <MobileMenuItem icon={<NavIcon name="view"/>} label="Manage saved views" onClick={() => { setMobileMenuOpen(false); onManageViews(); }}/> : null}
           </div>)}
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
@@ -319,7 +332,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     active: "settings",
     attention: source.attention,
     collections: source.collections,
-    destinations: catalog.active,
+    destinations: navigationPreview?.complete ? catalog.active.map(destination => ({ ...destination, counts: { ...destination.counts, total: destination.isFallback ? source.inboxCount ?? destination.counts.total : source.counts[destination.id as keyof typeof source.counts] ?? destination.counts.total } })) : catalog.active,
     views: source.views,
     counts: source.counts,
     draftCount: source.draftCount,
@@ -338,9 +351,10 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
   return <div className="desktop-shell desktop-settings-frame">
     {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
-      onCompose={() => window.location.assign("/?compose=1")}
+      onCompose={() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`)}
       onManageSpaces={() => setManageDestinations(true)}
       onManageTools={() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`)}
+      onManageViews={() => window.location.assign(viewsManagementHref(window.location.pathname))}
       onNavigate={navigate}
       projection={projection}
       theme={theme}
@@ -357,7 +371,7 @@ export function ConnectivityNotice({ online, onOpenDrafts }: { online: boolean; 
   </div>;
 }
 
-export function ManageSpacesDialog({ busy = false, error = null, spaces, savedViews = [], demoMode = false, onDeleted, onClose, onCreate, onHide, onOpen, onReorder, onRename, onRestore }: {
+export function ManageSpacesDialog({ busy = false, error = null, spaces, savedViews = [], demoMode = false, onDeleted, onClose, onCreate, onHide, onOpen, onManageViews, onEditView, onReorder, onRename, onRestore }: {
   busy?: boolean;
   error?: string | null;
   spaces: WorkflowSpace[];
@@ -368,6 +382,8 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, savedVi
   onCreate: (name: string) => Promise<void> | void;
   onHide: (space: WorkflowSpace) => Promise<void> | void;
   onOpen?: (space: WorkflowSpace) => void;
+  onManageViews?: () => void;
+  onEditView?: (id: string) => void;
   onReorder: (order: string[]) => Promise<void> | void;
   onRename: (space: WorkflowSpace, name: string) => Promise<void> | void;
   onRestore: (space: WorkflowSpace) => Promise<void> | void;
@@ -411,14 +427,15 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, savedVi
   const visible = spaces.filter((space) => !space.hidden);
   const hidden = spaces.filter((space) => space.hidden);
   return <TopLayer ariaBusy={busy || deleting} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Customize tools" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy && !deleting} layerClassName="desktop-dialog-layer" onClose={close}>
-    <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Customize tools</h2><p>Reorder or hide Later, collections, and saved views on this device. Hiding a shortcut keeps its saved view and Inbox policy intact. Rename Later and collections here; open a saved view to edit it.</p></div><button ref={closeButton} aria-label="Close" disabled={busy || deleting} onClick={close} type="button">×</button></header>
+    <header><div><span>On this device</span><h2 id="manage-spaces-title">Customize tools</h2><p>Reorder or hide shortcuts here. Saved views match mail using live filters; collections hold threads you choose; Later holds reminders. Primary mail spaces are managed separately.</p><p>Hiding a view keeps its matching rules and Inbox policy intact. Edit changes its saved definition across your workspace.</p></div><button ref={closeButton} aria-label="Close" disabled={busy || deleting} onClick={close} type="button">×</button></header>
     {error ? <p className="desktop-space-operation-error" role="alert">{error}</p> : null}
     {pendingDelete && onDeleted ? <SavedViewDeletion demoMode={demoMode} demoView={savedViews.find(view => view.id === pendingDelete.id)} label={pendingDelete.label} viewId={pendingDelete.id} onBusyChange={setDeleting} onCancel={cancelDelete} onDeleted={id => { focusAfterDelete.current = null; setPendingDelete(null); setDeleting(false); onDeleted(id); }}/> : <>
+    {onManageViews ? <button className="desktop-manage-views" disabled={busy} onClick={onManageViews} type="button">Manage saved views</button> : null}
     <div className="desktop-space-list">{visible.map((space, index) => <article draggable={!busy} onDragStart={() => setDraggedId(space.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => void dropOn(event, space)} key={space.id}>
-      <span aria-hidden="true" className="desktop-drag-handle">⠿</span><span className="desktop-space-mark" style={space.color ? { background: space.color } : undefined}/><div><strong>{space.label}</strong><small>{space.description}</small></div>
-      <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button>{space.kind === "view" ? (onOpen ? <button disabled={busy} onClick={() => onOpen(space)} type="button">Open view</button> : null) : <button disabled={busy} onClick={() => { const name = window.prompt("Rename tool", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button>}<button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
+      <span aria-hidden="true" className="desktop-drag-handle">⠿</span><ToolIcon space={space}/><div><strong>{space.label}</strong><small>{space.kind === "view" ? "Saved view · live matching" : space.description}</small></div>
+      <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button>{space.kind === "view" ? <>{onEditView ? <button aria-label={`Edit ${space.label}`} disabled={busy} onClick={() => onEditView(space.id)} type="button">Edit view</button> : onOpen ? <button disabled={busy} onClick={() => onOpen(space)} type="button">Open view</button> : null}</> : <button disabled={busy} onClick={() => { const name = window.prompt("Rename tool", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button>}<button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
     </article>)}</div>
-    {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <div className="desktop-hidden-space-row" key={space.id}><button className="desktop-hidden-restore" disabled={busy} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>{space.kind === "view" ? "View and Inbox policy intact" : "Rules intact"}</small><strong>Restore</strong></button>{space.kind === "view" && onDeleted ? <button ref={element => { if (element) deleteButtons.current.set(space.id, element); else deleteButtons.current.delete(space.id); }} aria-label={`Delete ${space.label}`} className="desktop-hidden-delete" disabled={busy || demoMode} onClick={() => setPendingDelete(space)} type="button">Delete</button> : null}</div>)}{demoMode && onDeleted && hidden.some(space => space.kind === "view") ? <p className="desktop-demo-delete-note">Connect an account to delete saved views. Sample views cannot be deleted in this demo.</p> : null}</section> : null}
+    {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <div className="desktop-hidden-space-row" key={space.id}><button className="desktop-hidden-restore" disabled={busy} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>{space.kind === "view" ? "View and Inbox policy intact" : "Rules intact"}</small><strong>Restore</strong></button>{space.kind === "view" && onEditView ? <button aria-label={`Edit ${space.label}`} className="desktop-hidden-edit" disabled={busy} onClick={() => onEditView(space.id)} type="button">Edit view</button> : null}{space.kind === "view" && onDeleted ? <button ref={element => { if (element) deleteButtons.current.set(space.id, element); else deleteButtons.current.delete(space.id); }} aria-label={`Delete ${space.label}`} className="desktop-hidden-delete" disabled={busy || demoMode} onClick={() => setPendingDelete(space)} type="button">Delete</button> : null}</div>)}{demoMode && onDeleted && hidden.some(space => space.kind === "view") ? <p className="desktop-demo-delete-note">Deletion is unavailable in this sample dialog. Demo views can be removed from Manage views; changes reset on refresh.</p> : null}</section> : null}
     <footer>{creating ? <div className="desktop-create-space"><input aria-label="Collection name" autoFocus disabled={busy} maxLength={60} onInput={(event) => setNewName(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a collection"}</button>}</footer>
     </>}
   </TopLayer>;
@@ -836,9 +853,16 @@ function Bre320ReleaseEvidence({ operationState }: { operationState: LifecycleOp
   </section>;
 }
 
-function OrganizationStudioContent({ interactivePreview = false, releaseEvidenceState = null, viewPreviewEvidenceState = null }: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState }) {
+function OrganizationStudioContent({ interactivePreview = false, releaseEvidenceState = null, viewPreviewEvidenceState = null, viewsRoute = null }: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState; viewsRoute?: ViewsManagementRoute | null }) {
   const organizationAuthority = useOrganizationAuthority();
-  const [section, setSection] = useState<OrganizationSection>("overview");
+  const [section, setSection] = useState<OrganizationSection>(viewsRoute ? "views" : "overview");
+  useEffect(() => { setSection(viewsRoute ? "views" : "overview"); }, [viewsRoute]);
+  const viewsPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (section !== "views" || viewsRoute?.editViewId) return;
+    const heading = viewsPanel.current?.querySelector<HTMLElement>("#views-title");
+    heading?.setAttribute("tabindex", "-1"); heading?.focus({ preventScroll: true });
+  }, [section, viewsRoute]);
   const [mode, setMode] = useState<OrganizationMode>("glass");
   const [simulation, setSimulation] = useState<SimulationState>("idle");
   const [activeRevision, setActiveRevision] = useState(17);
@@ -1052,7 +1076,7 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
   const authorityHeadline = interactivePreview ? "Local preview"
     : organizationAuthority.state.kind === "ready" ? "Organization controls available"
     : organizationAuthority.state.title;
-  const authorityDetail = interactivePreview ? "Nothing is saved or applied"
+  const authorityDetail = interactivePreview ? "Demo view changes last until refresh; no connected mail changes"
     : organizationAuthority.state.kind === "ready" ? "Authority is current · provider mail stays untouched"
     : organizationAuthority.state.kind === "loading" ? "Confirming Workspace authority"
     : organizationAuthority.state.canRead ? "Read-only · provider mail untouched"
@@ -1064,7 +1088,7 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
       <div className="organization-intro-status" data-authority={organizationAuthority.state.kind}><span><i aria-hidden="true"/>{authorityHeadline}</span><small>{authorityDetail}</small></div>
     </header>
     <nav aria-label="Organization sections" className="organization-section-nav">
-      {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => setSection(item)} ref={item === "rules" ? rulesNavigationRef : undefined} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
+      {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => { if (section !== item) requestViewNavigation(() => setSection(item)); }} ref={item === "rules" ? rulesNavigationRef : undefined} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
     </nav>
     <section aria-labelledby="organization-overview-title" className="organization-overview" hidden={section !== "overview"} id="organization-overview">
       <div className="organization-overview-heading">
@@ -1082,7 +1106,7 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
         <button className="organization-overview-primary" onClick={() => { focusRulesNavigationRef.current = true; setSection("rules"); }} type="button"><span>Open Rules</span><b aria-hidden="true">→</b></button>
       </footer>
     </section>
-    <div hidden={section !== "views"} id="organization-views"><OrganizationViewsWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} previewEvidenceState={viewPreviewEvidenceState} refreshToken={organizationAuthority.refreshToken} /></div>
+    <div hidden={section !== "views"} id="organization-views" ref={viewsPanel}><OrganizationViewsWorkspace key={viewsRoute?.editViewId ?? "management"} demoMode={interactivePreview} initialEditViewId={viewsRoute?.editViewId ?? undefined} onWorkspaceMutation={invalidateOrganization} previewEvidenceState={viewPreviewEvidenceState} refreshToken={organizationAuthority.refreshToken} /></div>
     <div hidden={section !== "lanes"} id="organization-lanes"><OrganizationLaneWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationAuthority.refreshToken} /></div>
     <div hidden={section !== "rules"} id="organization-rules">
     {releaseEvidenceState ? <Bre320ReleaseEvidence operationState={releaseEvidenceState} /> : null}
@@ -1098,6 +1122,6 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
   </section>;
 }
 
-export function OrganizationStudio(props: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState }) {
+export function OrganizationStudio(props: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState; viewsRoute?: ViewsManagementRoute | null }) {
   return <OrganizationAuthorityProvider previewMode={props.interactivePreview}><OrganizationStudioContent {...props} /></OrganizationAuthorityProvider>;
 }

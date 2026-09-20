@@ -1,3 +1,5 @@
+import { viewsManagementFromLocation, type ViewsManagementRoute } from "./navigation";
+
 export const ORCA_SURFACE_HISTORY_KEY = "__orcaSurfaceHistoryV1";
 
 export type SurfaceReturnTarget =
@@ -12,6 +14,7 @@ export type SurfaceReturnContext = {
 
 export type SurfaceLocation = {
   destination: string;
+  viewsManagement?: ViewsManagementRoute;
   query: string;
   reader: { threadId: string; accountId: string | null } | null;
   composer: { draftId: string | null; zen: boolean } | null;
@@ -51,8 +54,10 @@ export function readSurfaceLocation(location: { pathname: string; search: string
   const params = new URLSearchParams(location.search);
   const selection = readInitialThreadSelection(location);
   const compose = params.get("compose") === "1";
+  const viewsManagement = viewsManagementFromLocation(location);
   return {
     destination: params.get("destination") ?? "inbox",
+    ...(viewsManagement ? { viewsManagement } : {}),
     query: params.get("q") ?? "",
     reader: selection.threadId ? { threadId: selection.threadId, accountId: selection.accountId } : null,
     composer: compose ? { draftId: params.get("draft"), zen: params.get("zen") === "1" } : null,
@@ -62,6 +67,7 @@ export function readSurfaceLocation(location: { pathname: string; search: string
 export function surfaceLocationSignature(location: SurfaceLocation) {
   return JSON.stringify({
     destination: location.destination,
+    ...(location.viewsManagement ? { viewsManagement: location.viewsManagement } : {}),
     query: location.query,
     reader: location.reader,
     composer: location.composer,
@@ -253,15 +259,30 @@ export class SurfaceHistory {
     this.push(url, null);
   }
 
-  navigate(destination: string) {
+  navigate(destination: string, viewsManagement?: ViewsManagementRoute) {
     const url = clearSurfaceParameters(new URL(this.browser.location.href));
+    for (const key of ["section", "editView", "addSendersTo", "customize"]) url.searchParams.delete(key);
     url.searchParams.set("destination", destination);
+    if (destination === "organization-studio" && viewsManagement) {
+      url.searchParams.set("section", "views");
+      if (viewsManagement.editViewId) url.searchParams.set("editView", viewsManagement.editViewId);
+    }
+    this.push(url, null);
+    return this.read();
+  }
+
+  openSenderSelection(viewId: string) {
+    const url = clearSurfaceParameters(new URL(this.browser.location.href));
+    for (const key of ["section", "editView", "customize"]) url.searchParams.delete(key);
+    url.searchParams.set("destination", "all");
+    url.searchParams.set("addSendersTo", viewId);
     this.push(url, null);
     return this.read();
   }
 
   replaceDestination(destination: string) {
     const url = clearSurfaceParameters(new URL(this.browser.location.href));
+    for (const key of ["section", "editView", "addSendersTo", "customize"]) url.searchParams.delete(key);
     url.searchParams.set("destination", destination);
     const next = readSurfaceLocation(url);
     this.browser.history.replaceState(

@@ -130,6 +130,7 @@ export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind
   }).strict(),
   z.object({
     kind: z.literal("selected_senders"),
+    targetView: z.object({ id: identifierSchema, revision: z.number().int().positive() }).strict().optional(),
     skipInbox: z.boolean().default(false),
     source: organizationViewDraftSourceSchema.omit({ kind: true }).extend({
       kind: z.literal("sender_selection"),
@@ -407,4 +408,19 @@ export function summarizeOrganizationViewDefinition(definition: OrganizationView
       : `Threads matching ${clauses.join("; ")}.`,
     clauses,
   });
+}
+
+/** Additive sender growth deliberately keeps account and all other predicates intact. */
+export function senderGrowthBlocker(definition: OrganizationViewDefinition, accountId: string): string | null {
+  if (!definition.sender) return "This View already accepts every sender allowed by its other filters. Adding a sender filter would narrow it. Use Edit to review those filters, or create a separate sender View.";
+  if (definition.accountIds?.length !== 1 || definition.accountIds[0] !== accountId) return "Adding selected senders supports a View scoped to this same single account. Use Edit to review account scope explicitly, or create a separate sender View; this action never changes account scope.";
+  return null;
+}
+
+export function growOrganizationViewSenders(definition: OrganizationViewDefinition, accountId: string, addresses: readonly string[]): OrganizationViewDefinition {
+  const blocker = senderGrowthBlocker(definition, accountId);
+  if (blocker) throw new Error(blocker);
+  return organizationViewDefinitionSchema.parse({ ...definition, sender: { ...definition.sender,
+    addresses: [...new Set([...(definition.sender?.addresses ?? []), ...addresses].map(address => address.trim().toLowerCase()))],
+  } });
 }

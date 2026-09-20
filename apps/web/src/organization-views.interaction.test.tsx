@@ -1,3 +1,5 @@
+import { demoStore } from "./demo-store";
+import { requestViewNavigation } from "./view-navigation-guard";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -5,6 +7,7 @@ import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView, type OrganizationViewDefinition, type OrganizationViewDraftInput, type OrganizationViewPreparationInput, type OrganizationViewReviewedDraft } from "@orca/shared";
 import { OrganizationViewAuthoringWorkspace, OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
+import { OrganizationViewGrowthWorkspace } from "./organization-view-growth";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -14,6 +17,7 @@ let browserWindow: InstanceType<typeof Window>;
 let root: Root | null;
 
 beforeEach(() => {
+  demoStore.reset();
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox?destination=organization" });
   const values: Record<string, unknown> = {
     window: browserWindow, document: browserWindow.document, navigator: browserWindow.navigator,
@@ -182,9 +186,9 @@ test("an explicit source replacement preserves the account and Undo restores the
   await click(button(host, "Undo draft change"));
   expect(host.querySelector('.view-unsupported-clauses')?.textContent).toContain("General text");
   await click(button(host, "Use subject only"));
-  await click(button(host, "Work Outlook"));
+  await click(button(host, "luke@example.com · sample"));
   await click(button(host, "Undo draft change"));
-  expect(button(host, "Work Outlook").getAttribute("aria-pressed")).toBe("false");
+  expect(button(host, "luke@example.com · sample").getAttribute("aria-pressed")).toBe("false");
   expect(host.querySelector('.view-scope-sentence')?.textContent).toContain("apartment");
   expect(host.textContent).not.toContain("General text");
   expect(host.textContent).not.toContain("Undo draft change");
@@ -192,7 +196,7 @@ test("an explicit source replacement preserves the account and Undo restores the
 
 test("BRE-385 latest Undo follows removal then filter, filter then removal, and repeated removals", async () => {
   const container = await renderExternalAuthoring(() => {});
-  const outlook = () => button(container, "Work Outlook");
+  const outlook = () => button(container, "luke@example.com · sample");
   const hasBlocker = () => container.querySelector(".view-unsupported-clauses")?.textContent?.includes("Has PDF") ?? false;
   const undoButtons = () => [...container.querySelectorAll("button")].filter((element) => element.textContent?.trim().startsWith("Undo"));
   await click(button(container, "Remove blocker"));
@@ -205,10 +209,10 @@ test("BRE-385 latest Undo follows removal then filter, filter then removal, and 
   await click(button(container, "Cancel")); await click(button(container, "Discard draft"));
   await act(async () => root!.unmount()); root = null;
   const next = await renderExternalAuthoring(() => {});
-  await click(button(next, "Work Outlook"));
+  await click(button(next, "luke@example.com · sample"));
   await click(button(next, "Remove blocker"));
   await click(button(next, "Undo draft change"));
-  expect(button(next, "Work Outlook").getAttribute("aria-pressed")).toBe("true");
+  expect(button(next, "luke@example.com · sample").getAttribute("aria-pressed")).toBe("true");
   expect(next.querySelector(".view-unsupported-clauses")?.textContent).toContain("Has PDF");
   expect(next.textContent).not.toContain("Undo draft change");
   for (let i = 0; i < 2; i++) {
@@ -931,13 +935,13 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
   test("edits the selected definition and display metadata", async () => {
     const container = await renderWorkspace();
     await click(button(container, "Edit definition"));
-    expect(container.textContent).toContain("Edit live perspective");
+    expect(container.textContent).toContain("Edit Weekly production review");
     expect(input(container, "View name").value).toBe("Weekly production review");
     expect(input(container, "Subject contains").value).toBe("production failure");
     await change(input(container, "View name"), "Release blocker review");
     await change(input(container, "Subject contains"), "release blocker");
     await click(button(container, "Save changes"));
-    expect(container.textContent).not.toContain("Edit live perspective");
+    expect(container.textContent).not.toContain("Edit Weekly production review");
     expect(container.querySelector(".view-results h3")?.textContent).toBe("Release blocker review");
     expect(orderedNames(container)[0]).toBe("Release blocker review");
   });
@@ -987,7 +991,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await flush(); await flush();
     expect(contextReads).toBe(1);
     expect(selectField(container, "Minimum Human Signal").value).toBe("");
-    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("5 predicate families · combined with AND");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Mail must match all 5 filters");
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("2 exact Threads");
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("1 additional Facet filter");
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("1 additional Context filter");
@@ -1200,7 +1204,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(scope.hasAttribute("aria-live")).toBe(false);
     expect(validation.getAttribute("aria-live")).toBe("polite");
     expect(validation.getAttribute("role")).toBe("status");
-    expect(validation.textContent).toBe("Ready to save this perspective.");
+    expect(validation.textContent).toBe("Ready to save this sample view.");
   });
 
   test("keeps every predicate family reachable while progressively disclosing infrequent filters", async () => {
@@ -1349,18 +1353,19 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
 
   test("clears stale demo results after save and persistently names the unevaluated preview state", async () => {
     const container = await renderWorkspace();
-    expect(container.textContent).toContain("Unresolved production failure");
+    expect(container.querySelector(".view-thread-row")).toBeNull();
+    expect(container.textContent).toContain("no Lane, Facet, Context, or Workflow evidence");
     await click(button(container, "Edit definition"));
-    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Local preview does not evaluate sample mail");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
     await change(input(container, "View name"), "Locally revised review");
     await click(button(container, "Save changes"));
     expect(container.querySelector(".view-thread-list")).toBeNull();
-    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
     expect(container.querySelector(".view-results")?.textContent).not.toContain("No Threads match right now");
     await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Urgent humans")) as unknown as HTMLButtonElement);
     await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Locally revised review")) as unknown as HTMLButtonElement);
     expect(container.querySelector(".view-thread-list")).toBeNull();
-    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
   });
 
   test("reorders Views deterministically while preserving selection", async () => {
@@ -1392,7 +1397,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click(button(container, "Confirm remove"));
 
     expect(container.querySelector('.view-chip[aria-pressed="true"] strong')?.textContent).toBe("Locally revised review");
-    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).toContain("This sample mail has no Lane, Facet, Context, or Workflow evidence");
     expect(container.querySelector(".view-thread-list")).toBeNull();
     expect(container.querySelector(".view-thread-row strong")?.textContent).not.toBe("Unresolved production failure");
   });
@@ -1589,9 +1594,9 @@ test("BRE-385 saved editing keeps only the latest refinement undo and guards dir
   expect(container.textContent).toContain("Discard changes to this draft?");
   await click(button(container, "Keep editing"));
   await flush();
-  const composerHeading = container.querySelector(".view-composer h3");
+  const composerHeading = container.querySelector("#views-title");
   if (!composerHeading) throw new Error("Expected the view composer heading after keeping edits");
-  expect(browserWindow.document.activeElement as unknown as Element).toBe(composerHeading);
+  expect(browserWindow.document.activeElement === composerHeading as unknown as typeof browserWindow.document.activeElement).toBe(true);
   await click(button(container, "Undo draft change"));
   expect(input(container, "Subject contains").value).toBe("production failure");
   expect(input(container, "View name").value).toBe("Renamed only in draft");
@@ -1700,4 +1705,168 @@ describe("Inbox visibility metadata", () => {
     await click(button(container, "Edit definition"));
     expect(input(container, "Keep matching mail out of Inbox").checked).toBe(true);
   });
+});
+
+
+test("BRE-413 chooser reviews additive senders and preserves draft through failed save and cancel", async () => {
+  const current: OrganizationView = { ...organizationViewsFixture[0]!, name: "People", skipInbox: true, definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["existing@example.com"], domains: ["retained.example"] }, thread: { readState: "unread" } } };
+  const preparation: OrganizationViewPreparationInput = { kind: "selected_senders", skipInbox: false, source: { kind: "sender_selection", label: "Selected mail" }, identity: { name: "Selected senders", description: "", color: "#123456", position: 0 }, references: [{ accountId: "account_gmail", threadId: "thread_selected", messageId: "message_selected" }] };
+  const context = { anchor: "selected-message" };
+  const cancelled: unknown[] = [];
+  const commits: unknown[] = [];
+  let preparedRequest: unknown;
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [current, organizationViewsFixture[1]!] });
+    if (path === "/v1/organization/views/prepare") {
+      preparedRequest = JSON.parse(String(init?.body));
+      const definition = { ...current.definition, sender: { ...current.definition.sender, addresses: ["existing@example.com", "maya@example.com"] } };
+      const draft = { ...preparedCreateDraft(preparation, definition), mode: "update", viewId: current.id, viewRevision: current.revision, identity: { name: current.name, description: current.description, color: current.color, position: current.position }, skipInbox: true };
+      return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft });
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") { commits.push(JSON.parse(String(init?.body))); return Response.json({ error: { code: "revision_conflict", message: "View changed. Draft is safe." } }, { status: 409 }); }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewGrowthWorkspace compact entry={{ preparation, returnContext: context, accountLabels: { account_gmail: "owner@example.com" } }} onCancel={value => cancelled.push(value)} onCommitted={() => {}}/>));
+  await flush(); await flush();
+  const element = container as unknown as HTMLElement;
+  expect(button(element, "Preview added senders").disabled).toBe(true);
+  const choose = container.querySelector("select")!;
+  await act(async () => { choose.value = organizationViewsFixture[1]!.id; choose.dispatchEvent(new browserWindow.Event("change", { bubbles: true })); });
+  expect(container.textContent).toContain("would narrow it");
+  expect(button(element, "Preview added senders").disabled).toBe(true);
+  await act(async () => { choose.value = current.id; choose.dispatchEvent(new browserWindow.Event("change", { bubbles: true })); });
+  await click(button(element, "Preview added senders")); await flush(); await flush(); await flush();
+  expect(preparedRequest).toEqual({ ...preparation, targetView: { id: current.id, revision: current.revision } });
+  expect(container.textContent).toContain("Current addresses: existing@example.com");
+  expect(container.textContent).toContain("Proposed addresses: existing@example.com, maya@example.com");
+  expect(container.textContent).toContain("Other filters still apply");
+  expect(container.textContent).toContain("owner@example.com");
+  expect(commits).toHaveLength(0);
+  await click(button(element, "Save changes")); await flush();
+  expect(commits).toHaveLength(1);
+  expect(container.textContent).toContain("Proposed addresses: existing@example.com, maya@example.com");
+  expect((commits[0] as { draft: OrganizationViewReviewedDraft }).draft.skipInbox).toBe(true);
+  expect((commits[0] as { draft: OrganizationViewReviewedDraft }).draft.definition).toEqual({ ...current.definition, sender: { ...current.definition.sender, addresses: ["existing@example.com", "maya@example.com"] } });
+  expect((commits[0] as { draft: OrganizationViewReviewedDraft }).draft.identity).toEqual({ name: current.name, description: current.description, color: current.color, position: current.position });
+  await click(button(element, "Cancel")); await flush();
+  expect(container.textContent).toContain("Add to an existing View");
+  await click(button(element, "Cancel"));
+  expect(cancelled).toEqual([context]);
+});
+
+test("BRE-415 same-component View changes atomically reset header, results and edit target", async () => {
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const render = async (viewId: string) => act(async () => root!.render(<SavedOrganizationViewWorkspace demoMode previewMode viewId={viewId} onManage={() => {}} onOpenThread={() => {}}/>));
+  await render(organizationViewsFixture[0]!.id);
+  await click(button(container as unknown as HTMLElement, "Edit")); await flush();
+  await render(organizationViewsFixture[1]!.id);
+  expect(container.querySelector(".view-composer")).toBeNull();
+  expect(container.querySelector("h2")?.textContent).toBe(organizationViewsFixture[1]!.name);
+  await click(button(container as unknown as HTMLElement, "Edit")); await flush();
+  expect(input(container as unknown as HTMLElement, "View name").value).toBe(organizationViewsFixture[1]!.name);
+});
+
+test("BRE-415 stale initial loads cannot restore the previous View and revision mismatch retries locally", async () => {
+  const first = organizationViewsFixture[0]!; const second = organizationViewsFixture[1]!;
+  let resolveFirst!: (response: Response) => void;
+  const delayed = new Promise<Response>(resolve => { resolveFirst = resolve; });
+  let mismatch = true;
+  globalThis.fetch = (async (request: string | URL | Request) => {
+    const path = String(request);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+    if (path.includes(`/views/${first.id}/results`)) return delayed;
+    if (path.includes(`/views/${second.id}/results`)) return Response.json({ viewId: second.id, viewRevision: second.revision + (mismatch ? 1 : 0), accountIds: [], items: [], nextCursor: null, limit: 25 });
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const render = async (viewId: string) => act(async () => root!.render(<SavedOrganizationViewWorkspace previewMode viewId={viewId} onManage={() => {}} onOpenThread={() => {}}/>));
+  await render(first.id); await flush();
+  await render(second.id); await flush(); await flush();
+  expect(container.textContent).toContain("This View changed while opening");
+  await act(async () => resolveFirst(Response.json({ viewId: first.id, viewRevision: first.revision, accountIds: [], items: [], nextCursor: null, limit: 25 })));
+  expect(container.textContent).not.toContain(first.name);
+  mismatch = false;
+  await click(button(container as unknown as HTMLElement, "Reload View")); await flush(); await flush();
+  expect(container.querySelector("h2")?.textContent).toBe(second.name);
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+});
+
+test("BRE-415 pending save locks navigation, failed save keeps guard, successful save releases it", async () => {
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", skipInbox: false, source: { kind: "search", label: "Search" }, identity: { name: "Alpha", description: "", color: "#0b9b84", position: 0 }, definition: { revision: 1, accountIds: ["account_gmail"] }, unsupportedClauses: [] };
+  let complete!: () => void;
+  let attempts = 0; let committed = 0; let navigations = 0;
+  globalThis.fetch = (async (request, init) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, { revision: 1, accountIds: ["account_gmail"] }) });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      attempts += 1;
+      await new Promise<void>(resolve => { complete = resolve; });
+      return attempts === 1 ? Response.json({ error: { code: "revision_conflict", message: "Try again" } }, { status: 409 }) : committedResponse(init);
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: null }} onCancel={() => {}} onCommitted={() => { committed += 1; }}/>));
+  await flush(); await flush(); await flush();
+  await change(input(container as unknown as HTMLElement, "View name"), "Changed draft"); await flush(); await flush();
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await act(async () => requestViewNavigation(() => { navigations += 1; }));
+  expect(navigations).toBe(0); expect(container.querySelector("dialog")).toBeNull();
+  const unload = new browserWindow.Event("beforeunload", { cancelable: true }); browserWindow.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  await act(async () => complete()); await flush();
+  await act(async () => requestViewNavigation(() => { navigations += 1; }));
+  expect(container.querySelector("dialog[open]")).not.toBeNull();
+  await click(button(container as unknown as HTMLElement, "Keep editing"));
+  expect(input(container as unknown as HTMLElement, "View name").value).toBe("Changed draft");
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await act(async () => complete()); await flush(); expect(committed).toBe(1);
+  await act(async () => requestViewNavigation(() => { navigations += 1; }));
+  expect(navigations).toBe(1);
+  const clean = new browserWindow.Event("beforeunload", { cancelable: true }); browserWindow.dispatchEvent(clean);
+  expect(clean.defaultPrevented).toBe(false);
+});
+
+test("BRE-417 routed live edit waits for the list and retries preparation for the requested ID", async () => {
+  const selected = organizationViewsFixture[1]!;
+  let preparations = 0;
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+    if (path.includes("/results")) {
+      const view = organizationViewsFixture.find(item => path.includes(item.id))!;
+      return Response.json({ viewId: view.id, viewRevision: view.revision, accountIds: [], items: [], nextCursor: null, limit: 25 });
+    }
+    if (path === "/v1/organization/views/prepare") {
+      expect(JSON.parse(String(init?.body))).toEqual({ kind: "saved_view", viewId: selected.id });
+      preparations++;
+      if (preparations === 1) return Response.json({ error: { code: "temporary", message: "Try Edit again." } }, { status: 503 });
+      const preparation = { kind: "typed_definition" as const, skipInbox: false, source: { kind: "manual" as const, label: "Saved View" }, identity: { name: selected.name, description: selected.description, color: selected.color, position: selected.position }, definition: selected.definition, unsupportedClauses: [] };
+      return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: { ...preparedCreateDraft(preparation, selected.definition), mode: "update", viewId: selected.id, viewRevision: selected.revision } });
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+  await act(async () => root!.render(<OrganizationAuthorityProvider><OrganizationViewsWorkspace initialEditViewId={selected.id}/></OrganizationAuthorityProvider>));
+  await flush(); await flush(); await flush();
+  expect(preparations).toBe(1);
+  expect(container.querySelector("form")).toBeNull();
+  await click(button(container, "Retry connection"));
+  await flush(); await flush();
+  expect(container.querySelector(".view-results h3")?.textContent).toBe(selected.name);
+  await click(button(container, "Edit definition"));
+  await flush(); await flush();
+  expect(preparations).toBe(2);
+  expect(input(container, "View name").value).toBe(selected.name);
 });

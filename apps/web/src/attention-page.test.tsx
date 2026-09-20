@@ -64,6 +64,7 @@ let puts: Array<{ path: string; body: any }>;
 let refreshes: number;
 let quietId: string, fallbackId: string;
 let onRefresh: (() => Promise<void>) | undefined;
+const frameIds = new Set<ReturnType<typeof setTimeout>>();
 beforeEach(async () => {
   process.env.SESSION_SECRET = "attention-web-integration-test-session-secret";
   process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 19).toString("base64");
@@ -137,7 +138,19 @@ beforeEach(async () => {
       writable: true,
       value:
         name === "requestAnimationFrame"
-          ? (callback: FrameRequestCallback) => setTimeout(callback, 0)
+          ? (callback: FrameRequestCallback) => {
+              const id = setTimeout(() => {
+                frameIds.delete(id);
+                callback(performance.now());
+              }, 0);
+              frameIds.add(id);
+              return id;
+            }
+          : name === "cancelAnimationFrame"
+            ? (id: ReturnType<typeof setTimeout>) => {
+                clearTimeout(id);
+                frameIds.delete(id);
+              }
           : browser[name as keyof Window],
     });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -175,6 +188,10 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   await act(async () => root.unmount());
+  // These frames use native timers, so Happy DOM cannot cancel them for us.
+  for (const id of frameIds) clearTimeout(id);
+  frameIds.clear();
+  await browser.happyDOM.close();
   globalThis.fetch = originalFetch;
   for (const name of globals) {
     const old = originals.get(name);
@@ -182,7 +199,6 @@ afterEach(async () => {
     else delete (globalThis as Record<string, unknown>)[name];
   }
   delete (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT;
-  await browser.happyDOM.close();
   rmSync(directory, { recursive: true, force: true });
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) delete process.env[key];
@@ -405,6 +421,7 @@ test("account-list failure remains visible after a successful routing reload; of
   expect(button("+ Add sender").disabled).toBe(true);
   intercept = undefined;
   await click("Reload accounts");
+  await editableSelect("Space for maya@example.com");
   await act(async () => {
     Object.defineProperty(browser.navigator, "onLine", {
       configurable: true,
@@ -896,6 +913,10 @@ test("create from sidebar opens durable destination; sender routing covers futur
   expect(clients.color).toBe("#648ac4");
   expect([...document.querySelectorAll<HTMLButtonElement>(".desktop-sidebar-item")].find(b => b.textContent?.startsWith("Clients"))?.querySelector<HTMLElement>(".desktop-space-mark")?.style.background).toBe("#648ac4");
   expect(clients, document.querySelector(".destination-manager")?.outerHTML).toBeDefined();
+  expect(document.querySelector(".destination-manager")).not.toBeNull();
+  expect(new URL(window.location.href).searchParams.get("destination")).not.toBe(`destination:${clients.id}`);
+  await click("Open created space");
+  expect(document.querySelector(".destination-manager")).toBeNull();
   expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
   expect(document.querySelector(".content-pane")?.textContent).toContain("No mail in Clients yet");
   expect(document.querySelector(".content-pane")?.textContent).toContain("choose Clients for a sender in Organization");
@@ -927,12 +948,17 @@ test("create from sidebar opens durable destination; sender routing covers futur
   expect((await state()).senders[0]?.destinationId).toBe(clients.id);
   await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.getAttribute("aria-label") === "Remove Partners")!.click());
   await settle();
+  const removalDialog = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Remove Partners?"]')!;
+  expect(removalDialog).not.toBeNull();
+  expect((await (await request("/v1/destinations")).json()).destinations.find((item: { id: string }) => item.id === clients.id).retiredAt).toBeNull();
+  await act(async () => [...removalDialog.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Remove space")!.click());
+  await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
   expect(document.querySelector(".destination-manager [role=alert]")).not.toBeNull();
   const latest = await state();
   await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: latest.revision, target: { scope: "sender", address: "maya@example.com" }, destinationId: null }) });
   await act(async () => refreshDestinations());
-  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.getAttribute("aria-label") === "Remove Partners")!.click());
+  await click("Retry removal");
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Partners");
   const retired = await (await request("/v1/destinations")).json();
@@ -1027,15 +1053,15 @@ test("destination switches clear hidden selections and actionable sender targets
   await renderMailbox();
   await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
-  expect(button("Use these senders").disabled).toBe(false);
+  expect(button("Create sender View").disabled).toBe(false);
   await nav("Quiet");
   expect(document.querySelector(".bulk-selection-toolbar")).toBeNull();
-  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
+  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Create sender View")).toBe(false);
   await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
-  expect(button("Use these senders").disabled).toBe(false);
+  expect(button("Create sender View").disabled).toBe(false);
   await nav("Inbox");
-  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Use these senders")).toBe(false);
+  expect([...document.querySelectorAll("button")].some(item => item.textContent === "Create sender View")).toBe(false);
   expect(puts).toHaveLength(0);
 });
 
@@ -1100,7 +1126,7 @@ test("App bulk move dedupes selected messages across accounts, refreshes counts/
   await openBulkMove();
   expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("2 conversations selected");
   expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("2 selected conversations across 2 accounts");
-  expect(button("Use these senders").disabled).toBe(true);
+  expect(button("Create sender View").disabled).toBe(true);
   const gate = deferred();
   intercept = async (path, init) => { if (path.endsWith("/routing/batch") && init?.method === "PUT") await gate.promise; return syncNoop(path); };
   const move = button("Move conversations");
