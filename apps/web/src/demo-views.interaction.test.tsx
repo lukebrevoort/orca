@@ -50,7 +50,7 @@ test("Mom creates a truthful sample view, reopens and edits canonically, switche
   await saved(id);
   expect(container.querySelector("h2")?.textContent).toBe("Family sample");
   expect(container.querySelectorAll(".view-thread-row")).toHaveLength(demoStore.evaluate(id).count!);
-  expect(container.textContent).toContain("until this page is refreshed");
+  expect(container.textContent).toContain("View changes reset on refresh or when opening sample Settings");
   await click("Edit");
   const field = container.querySelector<HTMLInputElement>(".view-identity input")!;
   await act(async () => {
