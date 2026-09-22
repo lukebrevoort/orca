@@ -2,7 +2,31 @@ import SwiftUI
 
 @MainActor final class InboxViewModel: ObservableObject {
     @Published var messages = [InboxMessage](); @Published var nextCursor: String?; @Published var isLoading = false; @Published var error: String?; @Published var search = ""; @Published var view = "normal"
-    func load(state: AppState, reset: Bool = true) async { guard !isLoading, let account = state.selectedAccount else { return }; if state.demoMode { messages = DemoData.messages.filter { view == "all" || $0.attentionBehavior == view }; return }; guard let client = state.client else { return }; isLoading = true; defer { isLoading = false }; let key = "\(state.ownerScope)|\(account.id)|inbox|\(view)|\(search)"; do { let page = try await client.inbox(accountId: account.id, view: view, query: search.isEmpty ? nil : search, cursor: reset ? nil : nextCursor); messages = reset ? page.messages : messages + page.messages; nextCursor = page.nextCursor; if reset { try? await state.cache.save(page, key: key) }; error = nil } catch { if reset, let cached: InboxPage = await state.cache.load(InboxPage.self, key: key) { messages = cached.messages; nextCursor = cached.nextCursor; self.error = "Offline — showing saved mail" } else { self.error = error.localizedDescription } } }
+    private var requestGeneration = UUID()
+    private var activeKey: String?
+    func load(state: AppState, reset: Bool = true) async {
+        guard let account = state.selectedAccount, reset || !isLoading else { return }
+        let scope = state.ownerScope, requestedView = view, requestedSearch = search
+        let key = "\(scope)|\(account.id)|inbox|\(requestedView)|\(requestedSearch)"
+        if activeKey != key { messages = []; nextCursor = nil; error = nil; activeKey = key }
+        requestGeneration = UUID(); let generation = requestGeneration
+        if state.demoMode { messages = DemoData.messages.filter { requestedView == "all" || $0.attentionBehavior == requestedView }; return }
+        guard let client = state.client else { return }
+        isLoading = true
+        defer { if generation == requestGeneration { isLoading = false } }
+        do {
+            let page = try await client.inbox(accountId: account.id, view: requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: reset ? nil : nextCursor)
+            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+            messages = reset ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
+            if reset { try? await state.cache.save(page, key: key) }
+        } catch {
+            let cached: InboxPage? = reset ? await state.cache.load(InboxPage.self, key: key) : nil
+            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+            if let cached { messages = cached.messages; nextCursor = nil; self.error = "Offline — showing saved mail" }
+            else { self.error = error.localizedDescription }
+        }
+    }
+
 }
 
 struct InboxView: View {
@@ -14,14 +38,16 @@ struct InboxView: View {
             else if model.messages.isEmpty { ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here.")) }
             else { List(model.messages) { message in NavigationLink(value: message) { MessageRow(message: message) }.accessibilityIdentifier("inbox.message.\(message.id)").onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } } }.listStyle(.plain).accessibilityIdentifier("inbox.list") }
         }
+        .safeAreaInset(edge: .bottom) { if let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
         .navigationTitle(model.view == "focus" ? "Focus" : (model.view == "all" ? "All Mail" : "Inbox"))
         .searchable(text: $model.search, prompt: "Search mail").accessibilityIdentifier("inbox.search")
+        .onChange(of: model.search) { if model.search.isEmpty { Task { await model.load(state: state) } } }
         .onSubmit(of: .search) { Task { await model.load(state: state) } }
         .toolbar { ToolbarItem(placement: .topBarLeading) { Picker("Inbox view", selection: $model.view) { Text("Inbox").tag("normal"); Text("Focus").tag("focus"); Text("All Mail").tag("all") }.pickerStyle(.menu).onChange(of: model.view) { Task { await model.load(state: state) } } }; ToolbarItem(placement: .topBarTrailing) { NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose").accessibilityIdentifier("compose.open") } }
         .navigationDestination(for: InboxMessage.self) { ThreadView(message: $0) }
         .task(id: state.selectedAccountID) { await model.load(state: state) }
         .refreshable { await model.load(state: state) }
-        .onChange(of: state.routedThread?.id) { if let route = state.routedThread { selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil) } }
+        .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread { selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
         .navigationDestination(item: $selected) { ThreadView(message: $0) }
         }
     }

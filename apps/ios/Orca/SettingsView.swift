@@ -20,8 +20,8 @@ struct SettingsView: View {
                 }
                 Section("Connection") {
                     LabeledContent("Server", value: state.baseURLText)
-                    Button("Sign out", role: .destructive) { Task { await notifications.unregister(); notifications.identityWillChange(); await state.logout() } }.accessibilityIdentifier("settings.sign-out")
-                    Button("Change server") { Task { await notifications.unregister(); notifications.identityWillChange(); await state.logout(); state.phase = .configuring } }
+                    Button("Sign out", role: .destructive) { Task { await notifications.unregister(); if await state.logout() { notifications.identityWillChange() } } }.accessibilityIdentifier("settings.sign-out")
+                    Button("Change server") { Task { await notifications.unregister(); if await state.logout() { notifications.identityWillChange(); state.phase = .configuring } } }
                 }
                 Section { Text("Orca keeps access tokens in the iOS Keychain and local drafts protected on this device.").font(.caption).foregroundStyle(.secondary) }
             }.accessibilityIdentifier("settings.root")

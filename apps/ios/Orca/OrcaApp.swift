@@ -3,8 +3,9 @@ import SwiftUI
 @main struct OrcaApp: App {
     @UIApplicationDelegateAdaptor(NotificationManager.self) var notifications
     @StateObject private var state = AppState()
+    @Environment(\.scenePhase) private var scenePhase
     init() { UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: UIColor.label] }
-    var body: some Scene { WindowGroup { RootView().environmentObject(state).environmentObject(notifications).tint(Color(red: 0.10, green: 0.42, blue: 0.65)).task { notifications.state = state; await notifications.refreshPermission(); await state.start(); if state.phase == .ready { notifications.reconcile(); await notifications.loadServerStatus() } }.onChange(of: state.phase) { if state.phase == .ready { notifications.reconcile() } }.alert("Orca", isPresented: Binding(get: { state.errorMessage != nil }, set: { if !$0 { state.errorMessage = nil } })) { Button("OK") { state.errorMessage = nil } } message: { Text(state.errorMessage ?? "") } } }
+    var body: some Scene { WindowGroup { RootView().environmentObject(state).environmentObject(notifications).tint(Color(red: 0.10, green: 0.42, blue: 0.65)).task { notifications.state = state; await notifications.refreshPermission(); await state.start(); if state.phase == .ready { notifications.openPendingNotification(); notifications.reconcile() } }.onChange(of: state.phase) { if state.phase == .ready { notifications.openPendingNotification(); notifications.reconcile() } }.onChange(of: scenePhase) { if scenePhase == .active && state.phase == .ready { notifications.reconcile() } }.alert("Orca", isPresented: Binding(get: { state.errorMessage != nil }, set: { if !$0 { state.errorMessage = nil } })) { Button("OK") { state.errorMessage = nil } } message: { Text(state.errorMessage ?? "") } } }
 }
 
 struct RootView: View {
@@ -20,4 +21,4 @@ struct SignInView: View {
     @EnvironmentObject var state: AppState
     var body: some View { VStack(spacing: 20) { Spacer(); Image(systemName: "water.waves").font(.system(size: 54)).foregroundStyle(.cyan); Text("Orca").font(.largeTitle.bold()); Text("Read and write with less noise.").foregroundStyle(.secondary); Button("Continue securely") { Task { await state.signIn() } }.buttonStyle(.borderedProminent).controlSize(.large); Button("Change server") { state.phase = .configuring }; Spacer() }.padding() }
 }
-struct MainView: View { var body: some View { TabView { InboxView().tabItem { Label("Inbox", systemImage: "tray") }; DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }; SettingsView().tabItem { Label("Settings", systemImage: "gearshape") } } } }
+struct MainView: View { @EnvironmentObject var state: AppState; var body: some View { TabView(selection: $state.selectedTab) { InboxView().tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox"); DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts"); SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings") } } }

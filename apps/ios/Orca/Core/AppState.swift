@@ -8,6 +8,8 @@ import SwiftUI
     @Published var accounts = [MailAccount]()
     @Published var selectedAccountID: String? { didSet { UserDefaults.standard.set(selectedAccountID, forKey: "selectedAccountID") } }
     @Published var errorMessage: String?
+    @Published var selectedTab = "inbox"
+    private var connectionGeneration = UUID()
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()
     let draftStore = DraftStore()
@@ -33,30 +35,54 @@ import SwiftUI
         configure(url); phase = await keychain.read(origin: origin(url)) == nil ? .signedOut : .loading
         if phase == .loading { await loadAccounts() }
     }
-    func validatedBaseURL(_ text: String) -> URL? { guard let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)), url.scheme == "https" || (url.scheme == "http" && ["localhost", "127.0.0.1"].contains(url.host)) else { return nil }; return url }
+    func validatedBaseURL(_ text: String) -> URL? {
+        guard let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let host = url.host, !host.isEmpty, url.user == nil, url.password == nil,
+              url.query == nil, url.fragment == nil, url.path.isEmpty || url.path == "/",
+              url.scheme == "https" || (url.scheme == "http" && ["localhost", "127.0.0.1"].contains(host)) else { return nil }
+        return url
+    }
     func saveServer() async { guard let url = validatedBaseURL(baseURLText) else { errorMessage = "Use HTTPS. HTTP is allowed only for localhost development."; return }; UserDefaults.standard.set(url.absoluteString, forKey: "apiBaseURL"); fixtureToken = nil; configure(url); phase = await keychain.read(origin: origin(url)) == nil ? .signedOut : .loading; if phase == .loading { await loadAccounts() } }
     func signIn() async { guard let client, let url = validatedBaseURL(baseURLText) else { return }; do { let exchange = try await BrowserAuth().authenticate(client: client); try await keychain.save(exchange.accessToken, origin: origin(url)); configure(url); phase = .loading; await loadAccounts() } catch { errorMessage = error.localizedDescription } }
     func loadAccounts() async {
-        guard let client, let url = validatedBaseURL(baseURLText) else { return }; let origin = origin(url)
+        guard let client, let url = validatedBaseURL(baseURLText) else { return }; let origin = origin(url), generation = connectionGeneration
         do {
             let session: AuthSession = try await client.request("v1/auth/session")
+            guard generation == connectionGeneration else { return }
             guard session.isAuthenticated, let user = session.user else { phase = .signedOut; return }
             userID = user.id; UserDefaults.standard.set(user.id, forKey: "lastUser|\(origin)")
-            accounts = try await client.accounts(); try? await cache.save(accounts, key: "\(origin)|\(user.id)|accounts")
-            if selectedAccount == nil { selectedAccountID = accounts.first?.id }; phase = .ready
+            let loadedAccounts = try await client.accounts()
+            guard generation == connectionGeneration else { return }
+            accounts = loadedAccounts; try? await cache.save(accounts, key: "\(origin)|\(user.id)|accounts")
+            if !accounts.contains(where: { $0.id == selectedAccountID }) { selectedAccountID = accounts.first?.id }; phase = .ready
         } catch let APIClient.ClientError.http(code, _) where code == 401 {
+            guard generation == connectionGeneration else { return }
             phase = .signedOut; errorMessage = "Your session expired. Local drafts are still safe."
         } catch {
+            guard generation == connectionGeneration else { return }
             userID = UserDefaults.standard.string(forKey: "lastUser|\(origin)")
-            if let userID, let cached: [MailAccount] = await cache.load([MailAccount].self, key: "\(origin)|\(userID)|accounts") { accounts = cached; if selectedAccount == nil { selectedAccountID = accounts.first?.id }; phase = .ready }
+            if let userID, let cached: [MailAccount] = await cache.load([MailAccount].self, key: "\(origin)|\(userID)|accounts") { accounts = cached; if !accounts.contains(where: { $0.id == selectedAccountID }) { selectedAccountID = accounts.first?.id }; phase = .ready }
             else { phase = .signedOut }
             errorMessage = "You’re offline. Cached mail and local drafts remain available."
         }
     }
-    func logout() async { if let client { let _: EmptyResponse? = try? await client.request("v1/mobile/auth/session", method: "DELETE") }; if let url = validatedBaseURL(baseURLText) { await keychain.clear(origin: origin(url)) }; accounts = []; userID = nil; phase = .signedOut }
-    func routeNotification(_ userInfo: [AnyHashable: Any]) { guard let thread = userInfo["threadId"] as? String, let account = userInfo["accountId"] as? String else { return }; selectedAccountID = account; routedThread = (thread, account) }
-    private func configure(_ url: URL) { let keychain = keychain, fixtureToken = fixtureToken, key = origin(url); client = APIClient(baseURL: url) { if let fixtureToken { return fixtureToken }; return await keychain.read(origin: key) } }
-    private func origin(_ url: URL) -> String { var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased(); parts.port = url.port; return parts.string ?? url.absoluteString }
+    @discardableResult func logout() async -> Bool {
+        if let client {
+            do { let _: EmptyResponse = try await client.request("v1/mobile/auth/session", method: "DELETE") }
+            catch let APIClient.ClientError.http(code, _) where code == 401 { /* Already revoked or expired. */ }
+            catch { errorMessage = "Could not revoke this device's session. Reconnect and try signing out again."; return false }
+        }
+        if let url = validatedBaseURL(baseURLText) { await keychain.clear(origin: origin(url)) }
+        connectionGeneration = UUID(); accounts = []; userID = nil; routedThread = nil; fixtureToken = nil; if let url = validatedBaseURL(baseURLText) { configure(url) }; phase = .signedOut
+        return true
+    }
+    func routeNotification(_ userInfo: [AnyHashable: Any]) {
+        guard phase == .ready, let thread = userInfo["threadId"] as? String, !thread.isEmpty,
+              let account = userInfo["accountId"] as? String, accounts.contains(where: { $0.id == account }) else { return }
+        selectedAccountID = account; selectedTab = "inbox"; routedThread = (thread, account)
+    }
+    private func configure(_ url: URL) { connectionGeneration = UUID(); let keychain = keychain, fixtureToken = fixtureToken, key = origin(url); client = APIClient(baseURL: url) { if let fixtureToken { return fixtureToken }; return await keychain.read(origin: key) } }
+    private func origin(_ url: URL) -> String { var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased(); parts.port = url.port == (url.scheme == "https" ? 443 : 80) ? nil : url.port; return parts.string ?? url.absoluteString }
 #if DEBUG
     private func fixtureConfiguration() -> (url: URL, token: String)? {
         let args = ProcessInfo.processInfo.arguments
