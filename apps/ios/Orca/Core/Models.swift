@@ -50,3 +50,22 @@ struct AuthSession: Codable { var isAuthenticated: Bool; var user: AuthUser?; va
 struct PushDevice: Codable, Identifiable { var installationId: String; var environment: String; var notificationMode: String; var generation: Int; var registeredAt: String; var lastSeenAt: String; var updatedAt: String; var disabledAt: String?; var disabledReason: String?; var id: String { installationId } }
 struct PushStatus: Codable { var configured: Bool; var deliveryEnabled: Bool; var disabledReason: String?; var devices: [PushDevice] }
 struct PushRegistration: Codable { struct Configuration: Codable { var configured: Bool; var disabledReason: String? }; var device: PushDevice; var push: Configuration }
+
+
+enum MailDate {
+    static func parse(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
+    static func compact(_ value: String) -> String {
+        guard let date = parse(value) else { return "" }
+        if Calendar.current.isDateInToday(date) { return date.formatted(date: .omitted, time: .shortened) }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+    static func full(_ value: String) -> String {
+        parse(value)?.formatted(date: .abbreviated, time: .shortened) ?? value
+    }
+}
