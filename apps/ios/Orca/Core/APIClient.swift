@@ -10,8 +10,8 @@ actor APIClient {
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
-    init(baseURL: URL, session: URLSession = .shared, token: @escaping @Sendable () async -> String?) {
-        self.baseURL = baseURL; self.session = session; self.token = token
+    init(baseURL: URL, session: URLSession? = nil, token: @escaping @Sendable () async -> String?) {
+        self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
     }
     func updateBaseURL(_ url: URL) { baseURL = url }
     func request<T: Decodable>(_ path: String, method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> T {
@@ -33,6 +33,14 @@ actor APIClient {
         return (data, http)
     }
 }
+private final class CredentialSafeRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        guard let original = task.originalRequest?.url, let redirected = request.url, redirected.scheme == "https" || original.scheme == "http" else { completionHandler(nil); return }
+        var safe = request
+        if original.scheme?.lowercased() != redirected.scheme?.lowercased() || original.host?.lowercased() != redirected.host?.lowercased() || original.port != redirected.port { safe.setValue(nil, forHTTPHeaderField: "Authorization") }
+        completionHandler(safe)
+    }
+}
 struct EmptyResponse: Codable {}
 private struct AnyEncodable: Encodable { let value: any Encodable; init(_ value: any Encodable) { self.value = value }; func encode(to encoder: Encoder) throws { try value.encode(to: encoder) } }
 
@@ -50,5 +58,8 @@ extension APIClient {
     func updateDraft(_ id: String, accountId: String, revision: Int, content: DraftContent) async throws -> MessageDraft { struct Update: Encodable { var revision: Int; var to: [Recipient]; var cc: [Recipient]; var bcc: [Recipient]; var subject: String; var body: DraftBody; var context: DraftContext?; var attachments: [OutboundAttachment] }; return try await request("v1/drafts/\(id)", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: Update(revision: revision, to: content.to, cc: content.cc, bcc: content.bcc, subject: content.subject, body: content.body, context: content.context, attachments: content.attachments)) }
     func sendDraft(_ id: String, accountId: String, revision: Int, idempotencyKey: String) async throws -> DeliveryResult { struct Command: Encodable { var revision: Int; var idempotencyKey: String }; return try await request("v1/drafts/\(id)/send", method: "POST", query: [.init(name: "accountId", value: accountId)], body: Command(revision: revision, idempotencyKey: idempotencyKey)) }
     func deleteDraft(_ id: String, accountId: String) async throws { let _: EmptyResponse = try await request("v1/drafts/\(id)", method: "DELETE", query: [.init(name: "accountId", value: accountId)]) }
-    func attachment(_ id: String, accountId: String) async throws -> Data { try await raw("v1/attachments/\(id)", query: [.init(name: "accountId", value: accountId)]).0 }
+    func attachment(_ id: String, accountId: String) async throws -> Data { let data = try await raw("v1/attachments/\(id)", query: [.init(name: "accountId", value: accountId)]).0; guard data.count <= 25 * 1024 * 1024 else { throw ClientError.http(413, APIErrorBody(code: "attachment_limit", message: "Attachment exceeds the 25 MB device limit", retryable: false)) }; return data }
+    func pushStatus(installationId: String) async throws -> PushStatus { try await request("v1/mobile/push/status", query: [.init(name: "installationId", value: installationId)]) }
+    func registerDevice(installationId: String, token: String, environment: String, mode: String) async throws -> PushRegistration { struct Body: Encodable { var token: String; var environment: String; var notificationMode: String }; return try await request("v1/mobile/devices/\(installationId)", method: "PUT", body: Body(token: token, environment: environment, notificationMode: mode)) }
+    func unregisterDevice(installationId: String) async throws { let _: EmptyResponse = try await request("v1/mobile/devices/\(installationId)", method: "DELETE") }
 }

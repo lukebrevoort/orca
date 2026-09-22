@@ -47,4 +47,6 @@ struct AuthStart: Codable { var authorizationUrl: URL }
 struct AuthExchange: Codable { var accessToken: String; var expiresAt: String }
 struct AuthUser: Codable { var id: String; var email: String; var name: String? }
 struct AuthSession: Codable { var isAuthenticated: Bool; var user: AuthUser?; var expiresAt: String?; var onboardingCompletedAt: String? }
-
+struct PushDevice: Codable, Identifiable { var installationId: String; var environment: String; var notificationMode: String; var generation: Int; var registeredAt: String; var lastSeenAt: String; var updatedAt: String; var disabledAt: String?; var disabledReason: String?; var id: String { installationId } }
+struct PushStatus: Codable { var configured: Bool; var deliveryEnabled: Bool; var disabledReason: String?; var devices: [PushDevice] }
+struct PushRegistration: Codable { struct Configuration: Codable { var configured: Bool; var disabledReason: String? }; var device: PushDevice; var push: Configuration }

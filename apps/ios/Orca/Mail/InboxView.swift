@@ -12,12 +12,12 @@ struct InboxView: View {
             if model.isLoading && model.messages.isEmpty { ProgressView("Getting your inbox") }
             else if let error = model.error, model.messages.isEmpty { ContentUnavailableView("Inbox unavailable", systemImage: "wifi.exclamationmark", description: Text("Your mail is safe. \(error)")); Button("Try again") { Task { await model.load(state: state) } } }
             else if model.messages.isEmpty { ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here.")) }
-            else { List(model.messages) { message in NavigationLink(value: message) { MessageRow(message: message) }.onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } } }.listStyle(.plain) }
+            else { List(model.messages) { message in NavigationLink(value: message) { MessageRow(message: message) }.accessibilityIdentifier("inbox.message.\(message.id)").onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } } }.listStyle(.plain).accessibilityIdentifier("inbox.list") }
         }
         .navigationTitle(model.view == "focus" ? "Focus" : (model.view == "all" ? "All Mail" : "Inbox"))
-        .searchable(text: $model.search, prompt: "Search mail")
+        .searchable(text: $model.search, prompt: "Search mail").accessibilityIdentifier("inbox.search")
         .onSubmit(of: .search) { Task { await model.load(state: state) } }
-        .toolbar { ToolbarItem(placement: .topBarLeading) { Picker("Inbox view", selection: $model.view) { Text("Inbox").tag("normal"); Text("Focus").tag("focus"); Text("All Mail").tag("all") }.pickerStyle(.menu).onChange(of: model.view) { Task { await model.load(state: state) } } }; ToolbarItem(placement: .topBarTrailing) { NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose") } }
+        .toolbar { ToolbarItem(placement: .topBarLeading) { Picker("Inbox view", selection: $model.view) { Text("Inbox").tag("normal"); Text("Focus").tag("focus"); Text("All Mail").tag("all") }.pickerStyle(.menu).onChange(of: model.view) { Task { await model.load(state: state) } } }; ToolbarItem(placement: .topBarTrailing) { NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose").accessibilityIdentifier("compose.open") } }
         .navigationDestination(for: InboxMessage.self) { ThreadView(message: $0) }
         .task(id: state.selectedAccountID) { await model.load(state: state) }
         .refreshable { await model.load(state: state) }
