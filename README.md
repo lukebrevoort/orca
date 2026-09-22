@@ -18,6 +18,15 @@ the location of synthetic connection details for a Debug simulator build. Stop
 the process to remove its mailbox. The fixture transport simulates draft mirroring
 and delivery; it does not validate real Gmail or Apple push delivery.
 
+To exercise the production Swift models and API client against that fixture:
+
+```bash
+bash apps/ios/Tools/check-api.sh /path/printed/by/the/fixture/connection.json
+```
+
+This verifies read, draft create/update, send and idempotent replay, including
+exactly one simulated provider delivery. It refuses non-loopback/non-fixture sessions.
+
 For real notifications, configure the optional `APNS_*` server settings in
 `.env.example`, enable Push Notifications for your Apple App ID, and install a
 properly signed app whose bundle identifier matches `APNS_BUNDLE_ID`. Gmail push
