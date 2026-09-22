@@ -31,7 +31,7 @@ final class OrcaTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let file = directory.appending(path: "drafts.json"), original = Data("not-json".utf8); try original.write(to: file)
         let store = DraftStore(directory: directory)
-        XCTAssertNotNil(await store.recoveryMessage())
+        let recoveryMessage = await store.recoveryMessage(); XCTAssertNotNil(recoveryMessage)
         do { try await store.save(LocalDraft(ownerScope: "o", accountId: "a")); XCTFail("Expected recovery protection") } catch {}
         XCTAssertEqual(try Data(contentsOf: file), original)
     }
