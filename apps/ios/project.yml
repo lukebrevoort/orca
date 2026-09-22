@@ -24,7 +24,7 @@ targets:
         Release:
           CODE_SIGN_ENTITLEMENTS: Orca/Resources/OrcaRelease.entitlements
     scheme:
-      testTargets: [OrcaTests]
+      testTargets: [OrcaTests, OrcaUITests]
   OrcaTests:
     type: bundle.unit-test
     platform: iOS
@@ -34,4 +34,14 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.orca.mail.tests
+        GENERATE_INFOPLIST_FILE: YES
+  OrcaUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [OrcaUITests]
+    dependencies:
+      - target: Orca
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.orca.mail.uitests
         GENERATE_INFOPLIST_FILE: YES

@@ -45,4 +45,6 @@ struct APIErrorBody: Codable, Error { var code: String; var message: String; var
 struct ErrorEnvelope: Codable { var error: APIErrorBody }
 struct AuthStart: Codable { var authorizationUrl: URL }
 struct AuthExchange: Codable { var accessToken: String; var expiresAt: String }
+struct AuthUser: Codable { var id: String; var email: String; var name: String? }
+struct AuthSession: Codable { var isAuthenticated: Bool; var user: AuthUser?; var expiresAt: String?; var onboardingCompletedAt: String? }
 

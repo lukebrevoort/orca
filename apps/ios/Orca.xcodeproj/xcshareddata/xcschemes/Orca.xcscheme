@@ -50,6 +50,17 @@
                ReferencedContainer = "container:Orca.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EAEA571F4E2BD60A5B09A7EB"
+               BuildableName = "OrcaUITests.xctest"
+               BlueprintName = "OrcaUITests"
+               ReferencedContainer = "container:Orca.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

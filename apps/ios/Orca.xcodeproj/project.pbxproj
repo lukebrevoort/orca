@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57E40AE57BF8791404307E4 /* Security.swift */; };
+		06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22789472C398207011CE37F6 /* OrcaUITests.swift */; };
 		187407EC35EEB360A5B6F2EA /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE4FCB22922231897F52AA1 /* Models.swift */; };
 		294FCE53ADDB43333296B0E3 /* DraftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9937C36EBC157F5D1525CD52 /* DraftsView.swift */; };
 		3438B7C0BB24FF274C23EE5E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53E3B1FB2C695482B92B910C /* Assets.xcassets */; };
@@ -21,6 +22,7 @@
 		CCB8FEAFDCB6B0C123E3304C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406859584F10CD09652E6CC /* SettingsView.swift */; };
 		CE2B1790BCC8808A1B7B934A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654DBEFED4AB0FA22340D491 /* AppState.swift */; };
 		D30AB1467E58403F9E88A0BE /* DraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186C21621603B2A5EE639EDC /* DraftStore.swift */; };
+		EA80960E50258D55C9917494 /* CacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADD581980498D42BE0AB0D5 /* CacheStore.swift */; };
 		ED573088B33A83A102E6FD17 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07450C2D63ED60304D85D8E /* APIClient.swift */; };
 		EEBEDF73B67CC16DE0F3A264 /* ThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A8BEAFF621E5292BE1D0AB /* ThreadView.swift */; };
 /* End PBXBuildFile section */
@@ -33,10 +35,18 @@
 			remoteGlobalIDString = 98ABB6DF2187371CCC2DE3BC;
 			remoteInfo = Orca;
 		};
+		E092DC02D653A0FE9F395E73 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 177056152CBB36F12F7B7771 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 98ABB6DF2187371CCC2DE3BC;
+			remoteInfo = Orca;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		186C21621603B2A5EE639EDC /* DraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStore.swift; sourceTree = "<group>"; };
+		22789472C398207011CE37F6 /* OrcaUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaUITests.swift; sourceTree = "<group>"; };
 		25F395E83971062876EDA98A /* OrcaTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		38B3670FB7670AC43E86DDC4 /* Orca.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Orca.entitlements; sourceTree = "<group>"; };
 		3D81D0FCC40527F4FEA9C167 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
@@ -45,6 +55,7 @@
 		53E3B1FB2C695482B92B910C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		654DBEFED4AB0FA22340D491 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		6D108A85307BC09FDB5E904C /* OrcaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaTests.swift; sourceTree = "<group>"; };
+		73FDDC2097E5205DC11746F6 /* OrcaUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8587CA495B60BF565130609C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		91BD233053BA8E2AE240779D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9937C36EBC157F5D1525CD52 /* DraftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsView.swift; sourceTree = "<group>"; };
@@ -56,6 +67,7 @@
 		C406859584F10CD09652E6CC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C5A8BEAFF621E5292BE1D0AB /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
 		D37A570067B803935C5436A6 /* ComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposeView.swift; sourceTree = "<group>"; };
+		FADD581980498D42BE0AB0D5 /* CacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheStore.swift; sourceTree = "<group>"; };
 		FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -73,6 +85,7 @@
 			children = (
 				A07450C2D63ED60304D85D8E /* APIClient.swift */,
 				654DBEFED4AB0FA22340D491 /* AppState.swift */,
+				FADD581980498D42BE0AB0D5 /* CacheStore.swift */,
 				BDE4FCB22922231897F52AA1 /* Models.swift */,
 				B57E40AE57BF8791404307E4 /* Security.swift */,
 			);
@@ -104,6 +117,7 @@
 			children = (
 				E624BCE8C3A8A741B4B24F83 /* Orca */,
 				0763D512766A3EABD4DC5F18 /* OrcaTests */,
+				B49A8BEC19BAFA2AE0214C8F /* OrcaUITests */,
 				B1F302EA567EF8FFC6BE0E73 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -133,8 +147,17 @@
 			children = (
 				4C42EBDA4E73C177140914B8 /* Orca.app */,
 				25F395E83971062876EDA98A /* OrcaTests.xctest */,
+				73FDDC2097E5205DC11746F6 /* OrcaUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B49A8BEC19BAFA2AE0214C8F /* OrcaUITests */ = {
+			isa = PBXGroup;
+			children = (
+				22789472C398207011CE37F6 /* OrcaUITests.swift */,
+			);
+			path = OrcaUITests;
 			sourceTree = "<group>";
 		};
 		E624BCE8C3A8A741B4B24F83 /* Orca */ = {
@@ -190,6 +213,24 @@
 			productReference = 4C42EBDA4E73C177140914B8 /* Orca.app */;
 			productType = "com.apple.product-type.application";
 		};
+		EAEA571F4E2BD60A5B09A7EB /* OrcaUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F5D8EA53898645E5FC6A76E /* Build configuration list for PBXNativeTarget "OrcaUITests" */;
+			buildPhases = (
+				447EC9E7F67301B853D764E9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A9C9FDD45C6A26C2A67B4451 /* PBXTargetDependency */,
+			);
+			name = OrcaUITests;
+			packageProductDependencies = (
+			);
+			productName = OrcaUITests;
+			productReference = 73FDDC2097E5205DC11746F6 /* OrcaUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -204,6 +245,10 @@
 					};
 					98ABB6DF2187371CCC2DE3BC = {
 						DevelopmentTeam = "";
+					};
+					EAEA571F4E2BD60A5B09A7EB = {
+						DevelopmentTeam = "";
+						TestTargetID = 98ABB6DF2187371CCC2DE3BC;
 					};
 				};
 			};
@@ -223,6 +268,7 @@
 			targets = (
 				98ABB6DF2187371CCC2DE3BC /* Orca */,
 				5C363189F31E83593BE05FAB /* OrcaTests */,
+				EAEA571F4E2BD60A5B09A7EB /* OrcaUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -240,12 +286,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		447EC9E7F67301B853D764E9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D2437E26E2D50B8B0D9AF3A4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				ED573088B33A83A102E6FD17 /* APIClient.swift in Sources */,
 				CE2B1790BCC8808A1B7B934A /* AppState.swift in Sources */,
+				EA80960E50258D55C9917494 /* CacheStore.swift in Sources */,
 				8E6D753A2F712AE9FD20E3E4 /* ComposeView.swift in Sources */,
 				D30AB1467E58403F9E88A0BE /* DraftStore.swift in Sources */,
 				294FCE53ADDB43333296B0E3 /* DraftsView.swift in Sources */,
@@ -275,6 +330,11 @@
 			isa = PBXTargetDependency;
 			target = 98ABB6DF2187371CCC2DE3BC /* Orca */;
 			targetProxy = DC2678368A2EE37B1553B3CA /* PBXContainerItemProxy */;
+		};
+		A9C9FDD45C6A26C2A67B4451 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 98ABB6DF2187371CCC2DE3BC /* Orca */;
+			targetProxy = E092DC02D653A0FE9F395E73 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -417,6 +477,23 @@
 			};
 			name = Debug;
 		};
+		7CDF813111890624A8C8EA22 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.orca.mail.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Orca;
+			};
+			name = Release;
+		};
 		8A18B070502CFC60530FA8B8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -470,6 +547,23 @@
 			};
 			name = Release;
 		};
+		E0DCE45F4274453525D38790 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.orca.mail.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Orca;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -487,6 +581,15 @@
 			buildConfigurations = (
 				2083DF032948502D3846D6D4 /* Debug */,
 				1B457839C3D395641851F5C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6F5D8EA53898645E5FC6A76E /* Build configuration list for PBXNativeTarget "OrcaUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E0DCE45F4274453525D38790 /* Debug */,
+				7CDF813111890624A8C8EA22 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
