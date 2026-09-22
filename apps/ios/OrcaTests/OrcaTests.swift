@@ -2,6 +2,24 @@ import XCTest
 @testable import Orca
 
 final class OrcaTests: XCTestCase {
+    @MainActor func testBaseURLRequiresCleanRootOrigin() {
+        let state = AppState()
+        XCTAssertNotNil(state.validatedBaseURL("https://mail.example.com"))
+        XCTAssertNil(state.validatedBaseURL("https://user:secret@mail.example.com"))
+        XCTAssertNil(state.validatedBaseURL("https://mail.example.com/api"))
+        XCTAssertNil(state.validatedBaseURL("https://mail.example.com?token=secret"))
+        XCTAssertNil(state.validatedBaseURL("http://mail.example.com"))
+    }
+    @MainActor func testUnknownAccountNotificationDoesNotRoute() {
+        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = DemoData.accounts[0].id
+        state.routeNotification(["threadId": "thread-unknown", "accountId": "other-account"])
+        XCTAssertNil(state.routedThread); XCTAssertEqual(state.selectedAccountID, DemoData.accounts[0].id)
+    }
+    @MainActor func testOwnedAccountNotificationSelectsAccountAndThread() {
+        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = nil
+        state.routeNotification(["threadId": "thread-owned", "accountId": DemoData.accounts[0].id])
+        XCTAssertEqual(state.selectedAccountID, DemoData.accounts[0].id); XCTAssertEqual(state.routedThread?.id, "thread-owned")
+    }
     func testInboxDecodesExistingWireContract() throws {
         let json = #"{"accounts":[],"messages":[],"nextCursor":null,"counts":{"focus":1,"normal":2,"quiet":3,"hidden":4,"all":10}}"#.data(using: .utf8)!
         let page = try JSONDecoder().decode(InboxPage.self, from: json); XCTAssertEqual(page.counts.all, 10)
