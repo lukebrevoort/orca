@@ -434,7 +434,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || calendarPreview || availabilityPreview || onboardingPreview || devPreview) return;
+    if (isLoginRoute() || isMobileAuthRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || calendarPreview || availabilityPreview || onboardingPreview || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then(async (response) => {
@@ -474,6 +474,10 @@ export function App() {
 
   if (isLoginRoute()) {
     return <OAuthLoginPage />;
+  }
+
+  if (isMobileAuthRoute()) {
+    return <MobileAuthConsentPage />;
   }
 
   if (isReaderPreferencesRoute()) {
@@ -3829,7 +3833,7 @@ export async function syncGmailLabelsUntilReady(
   return migration;
 }
 
-function OAuthLoginPage() {
+function OAuthLoginPage({ loginIntent = false, returnToOverride }: { loginIntent?: boolean; returnToOverride?: string } = {}) {
   const [connectStatus, setConnectStatus] = useState<OAuthConnectStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
@@ -3838,7 +3842,7 @@ function OAuthLoginPage() {
   const connectInFlightRef = useRef(false);
   const availabilityInFlightRef = useRef(false);
   const availabilityRequestRef = useRef(0);
-  const isLogin = typeof window !== "undefined" && window.location.pathname === "/login";
+  const isLogin = loginIntent || (typeof window !== "undefined" && window.location.pathname === "/login");
   const isOnboarding = typeof window !== "undefined" && window.location.pathname === "/onboarding";
   const returnProvider = returnStatus?.provider ?? "gmail";
 
@@ -3876,9 +3880,9 @@ function OAuthLoginPage() {
     connectInFlightRef.current = true;
     setActiveProvider(provider);
     setReturnStatus(null);
-    const returnTo = typeof window === "undefined"
+    const returnTo = returnToOverride ?? (typeof window === "undefined"
       ? "/onboarding"
-      : `${window.location.origin}${isLogin || isOnboarding ? "/onboarding" : "/"}`;
+      : `${window.location.origin}${isLogin || isOnboarding ? "/onboarding" : "/"}`);
     const result = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
     if (result === "started") return;
 
@@ -4008,6 +4012,81 @@ function OAuthLoginPage() {
       </section>
     </main>
   );
+}
+
+function MobileAuthConsentPage() {
+  const requestToken = new URLSearchParams(window.location.search).get("request");
+  const [status, setStatus] = useState<"loading" | "signedout" | "ready" | "granting" | "error">("loading");
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!requestToken) {
+      setStatus("error");
+      return;
+    }
+    const abortController = new AbortController();
+    fetch(`/v1/mobile/auth/authorize?${new URLSearchParams({ request: requestToken })}`, {
+      credentials: "include",
+      signal: abortController.signal,
+    }).then(async (response) => {
+      if (response.status === 401) {
+        setStatus("signedout");
+        return;
+      }
+      const body = await readJsonObject(response);
+      if (!response.ok) throw new Error("mobile_authorization_unavailable");
+      const email = getStringField(body, "accountEmail");
+      const csrf = getStringField(body, "csrfToken");
+      if (!email || !csrf) throw new Error("invalid_mobile_authorization_response");
+      setAccountEmail(email);
+      setCsrfToken(csrf);
+      setStatus("ready");
+    }).catch(() => {
+      if (!abortController.signal.aborted) setStatus("error");
+    });
+    return () => abortController.abort();
+  }, [requestToken]);
+
+  if (status === "signedout") {
+    return <OAuthLoginPage loginIntent returnToOverride={window.location.href} />;
+  }
+
+  async function grant() {
+    if (!csrfToken) return;
+    setStatus("granting");
+    try {
+      const response = await fetch("/v1/mobile/auth/grant", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ csrfToken }),
+      });
+      const body = await readJsonObject(response);
+      const redirectUrl = getStringField(body, "redirectUrl");
+      if (!response.ok || !redirectUrl) throw new Error("mobile_authorization_failed");
+      window.location.assign(redirectUrl);
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return <main className="oauth-page login-required-page">
+    <section className="login-required-shell" aria-labelledby="mobile-auth-title">
+      <div className="oauth-brand"><span className="oauth-brand-mark"><WaveGlyph /></span><span>Orca</span></div>
+      <p className="oauth-eyebrow">Orca for iPhone</p>
+      <h1 id="mobile-auth-title">Connect this iPhone?</h1>
+      {status === "loading" ? <p role="status">Checking this secure request…</p> : null}
+      {status === "ready" || status === "granting" ? <>
+        <p>This will sign the Orca iPhone app in as <strong>{accountEmail}</strong>. It will not expose your Gmail or Outlook password or provider tokens.</p>
+        <button className="oauth-provider-button oauth-enter-button" disabled={status === "granting"} onClick={() => void grant()} type="button">
+          {status === "granting" ? "Connecting…" : "Connect this iPhone"} <span aria-hidden="true">→</span>
+        </button>
+        <button className="oauth-retry-button" disabled={status === "granting"} onClick={() => window.close()} type="button">Cancel</button>
+      </> : null}
+      {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>This request can’t be completed.</strong><span>Return to the Orca app and start sign-in again.</span></div> : null}
+    </section>
+  </main>;
 }
 
 function providerDisplayName(provider: OAuthProvider) {
@@ -6727,6 +6806,10 @@ function isLoginRoute() {
     return false;
   }
   return window.location.pathname === "/login";
+}
+
+function isMobileAuthRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/mobile-auth";
 }
 
 function isOnboardingRoute() {
