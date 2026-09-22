@@ -30,6 +30,17 @@ import {
 } from "./fixtures.ts";
 
 describe("shared API schemas", () => {
+  test("validates attachment base64 bytes against declared and aggregate size", () => {
+    const attachment = { id: "a", filename: "note.txt", mimeType: "text/plain", size: 5, contentBase64: "aGVsbG8=" };
+    assert.equal(createMessageDraftSchema.safeParse({ attachments: [attachment] }).success, true);
+    for (const change of [{ size: 1 }, { contentBase64: "aGVsbG8$" }, { contentBase64: "aGVsbG8" }]) {
+      assert.equal(createMessageDraftSchema.safeParse({ attachments: [{ ...attachment, ...change }] }).success, false);
+    }
+    assert.equal(createMessageDraftSchema.safeParse({ attachments: [
+      { ...attachment, size: 25 * 1024 * 1024, contentBase64: null }, attachment,
+    ] }).success, false);
+  });
+
   test("parses the fixture inbox response shape", () => {
     assert.deepEqual(
       inboxResponseSchema.parse({

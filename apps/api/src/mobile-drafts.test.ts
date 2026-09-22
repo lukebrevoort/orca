@@ -53,6 +53,10 @@ test("explicit draft account scopes reads, writes and delivery without falling b
     assert.equal(db.select().from(threads).where(eq(threads.id, "second-thread")).get()!.isRead, false);
     assert.equal((await app.request(readPath, { method: "PATCH", headers, body: JSON.stringify({ isRead: "false" }) })).status, 400);
     assert.equal((await app.request("/v1/threads/second-thread/read?accountId=first", { method: "PATCH", headers })).status, 404);
+    for (const [method, route] of [["POST", "/v1/drafts"], ["PATCH", "/v1/drafts/missing"]]) {
+      const oversized = await app.request(route!, { method, headers: { ...headers, "content-length": String(36 * 1024 * 1024 + 1) }, body: "{}" });
+      assert.equal(oversized.status, 413, `${method} rejects oversized draft bodies before parsing`);
+    }
     const create = (account: string) => app.request(`/v1/drafts?accountId=${account}`, {
       method: "POST", headers, body: JSON.stringify({ subject: "Phone draft", to: [{ name: null, email: "recipient@example.com" }] }),
     });

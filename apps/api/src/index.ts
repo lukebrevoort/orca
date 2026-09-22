@@ -1984,7 +1984,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
+  app.post("/v1/drafts", requireAuth({ dbFactory }), bodyLimit({ maxSize: 36 * 1024 * 1024 }), validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const requestedAccountId = c.req.query("accountId");
@@ -2030,7 +2030,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
+  app.patch("/v1/drafts/:id", requireAuth({ dbFactory }), bodyLimit({ maxSize: 36 * 1024 * 1024 }), validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const requestedAccountId = c.req.query("accountId");
@@ -2204,7 +2204,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     });
   }
 
-  app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
+  app.post("/v1/drafts/:id/send", requireAuth({ dbFactory }), bodyLimit({ maxSize: 4096 }), validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const requestedAccountId = c.req.query("accountId");

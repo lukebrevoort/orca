@@ -388,7 +388,15 @@ const outboundAttachmentSchema = z.object({
   mimeType: z.string().trim().max(255).regex(/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/),
   size: z.number().int().positive().max(25 * 1024 * 1024),
   contentBase64: z.string().max(36 * 1024 * 1024).nullable().default(null),
-}).strict();
+}).strict().superRefine((attachment, context) => {
+  const encoded = attachment.contentBase64;
+  if (encoded === null) return;
+  const padding = encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0;
+  if (encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)
+    || encoded.length / 4 * 3 - padding !== attachment.size) {
+    context.addIssue({ code: "custom", path: ["contentBase64"], message: "Attachment data must be valid base64 matching its declared size" });
+  }
+});
 export type OutboundAttachment = z.infer<typeof outboundAttachmentSchema>;
 
 const outboundContentShape = {
