@@ -27,10 +27,15 @@ struct DraftsView: View {
         }
     }
     func load() async {
-        guard let account = state.selectedAccount else { return }
-        localDrafts = await state.draftStore.all(ownerScope: state.ownerScope, accountId: account.id)
-        guard !state.demoMode, let client = state.client else { return }
-        do { serverDrafts = try await client.drafts(accountId: account.id); error = nil } catch { self.error = error.localizedDescription }
+        guard let account = state.selectedAccount else { localDrafts = []; serverDrafts = []; return }
+        let scope = state.ownerScope, accountID = account.id, client = state.client
+        func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == accountID }
+        serverDrafts = []; error = nil
+        let stored = await state.draftStore.all(ownerScope: scope, accountId: accountID)
+        guard identityIsCurrent() else { return }; localDrafts = stored
+        guard !state.demoMode, let client else { return }
+        do { let loaded = try await client.drafts(accountId: accountID); guard identityIsCurrent() else { return }; serverDrafts = loaded; error = nil }
+        catch { guard identityIsCurrent() else { return }; self.error = error.localizedDescription }
     }
 }
 private struct DraftRow: View {
