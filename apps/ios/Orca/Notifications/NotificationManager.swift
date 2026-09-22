@@ -71,6 +71,7 @@ import UserNotifications
         }
     }
     func loadServerStatus() async {
+        await reconciliation?.value
         guard let state, let client = state.client else { return }
         let scope = state.ownerScope, operation = operationID
         await refreshPermission()
