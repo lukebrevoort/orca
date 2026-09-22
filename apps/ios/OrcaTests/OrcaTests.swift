@@ -58,4 +58,10 @@ final class OrcaTests: XCTestCase {
         try await store.save(draft); let first = try await store.prepareSend(draft.id); let second = try await store.prepareSend(draft.id)
         XCTAssertNotNil(first.idempotencyKey); XCTAssertEqual(first.idempotencyKey, second.idempotencyKey)
     }
+    func testAttachmentLimitIsAggregate() {
+        let mib = 1024 * 1024
+        XCTAssertTrue(ComposeView.acceptsAttachment(existingSize: 20 * mib, candidateSize: 5 * mib))
+        XCTAssertFalse(ComposeView.acceptsAttachment(existingSize: 20 * mib, candidateSize: 5 * mib + 1))
+        XCTAssertFalse(ComposeView.acceptsAttachment(existingSize: 0, candidateSize: 0))
+    }
 }
