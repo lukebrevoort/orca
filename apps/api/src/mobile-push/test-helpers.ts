@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -39,11 +39,6 @@ export function createMobilePushTestDb() {
   const path = join(directory, "push.sqlite");
   const client = createDatabaseClient(path);
   migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
-  const hasPushTables = client.sqlite.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mobile_push_devices'").get();
-  if (!hasPushTables) {
-    const migration = readFileSync(resolve(import.meta.dir, "../../drizzle/0047_mobile_push.sql"), "utf8");
-    for (const statement of migration.split("--> statement-breakpoint")) if (statement.trim()) client.sqlite.exec(statement);
-  }
   return { ...client, path };
 }
 

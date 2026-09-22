@@ -25,6 +25,8 @@ describe("mobile push routes", () => {
 
     const unauthorized = await app.request("http://orca.test/v1/mobile/devices/phone", { method: "PUT", headers: { "content-type": "application/json" }, body });
     assert.equal(unauthorized.status, 401);
+    const oversized = await app.request("http://orca.test/v1/mobile/devices/phone", { method: "PUT", headers: { cookie: `${sessionCookieName}=${owner.token}`, "content-type": "application/json" }, body: JSON.stringify({ token: "a".repeat(4096) }) });
+    assert.equal(oversized.status, 413);
     const registered = await app.request("http://orca.test/v1/mobile/devices/phone", { method: "PUT", headers: { cookie: `${sessionCookieName}=${owner.token}`, "content-type": "application/json" }, body });
     assert.equal(registered.status, 200);
     const registeredBody = await registered.json() as Record<string, unknown>;

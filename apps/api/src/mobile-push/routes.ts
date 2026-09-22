@@ -1,4 +1,5 @@
 import type { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 
 import { requireAuth, type AuthVariables } from "../auth/middleware.ts";
@@ -36,7 +37,7 @@ export function registerMobilePushRoutes(app: MobilePushApp, options: {
   const config = options.config ?? loadMobilePushConfig();
   const now = options.now ?? (() => new Date());
 
-  app.put("/v1/mobile/devices/:installationId", requireAuth({ dbFactory }), async (c) => {
+  app.put("/v1/mobile/devices/:installationId", requireAuth({ dbFactory }), bodyLimit({ maxSize: 4096 }), async (c) => {
     const installation = installationIdSchema.safeParse(c.req.param("installationId"));
     let body: unknown;
     try { body = await c.req.json(); } catch { body = null; }

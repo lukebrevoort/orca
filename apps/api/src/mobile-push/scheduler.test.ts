@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, test } from "node:test";
 
+import { createMobileSession, revokeMobileSession } from "../auth/mobile/store.ts";
+import { isMobilePushSessionActive } from "../mobile-session-policy.ts";
 import type { ApnsTransport } from "./apns.ts";
 import { deliverReady, runMobilePushCycle, scanAndEnqueue } from "./scheduler.ts";
 import { registerDevice } from "./store.ts";
@@ -147,6 +149,24 @@ describe("mobile push scheduler", () => {
     client.sqlite.query("UPDATE sessions SET invalidated_at=NULL, expires_at=? WHERE id=?").run(4_000, "session-user");
     assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(4_100), batchSize: 100 }).enqueued, 0);
     client.sqlite.close();
+  });
+
+  test("uses the production mobile session checker before scan and queued delivery", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "mobile-user", "mobile-account");
+      const session = createMobileSession(client.db, "mobile-user", new Date(1_000));
+      await registerDevice(client.sqlite, { userId: "mobile-user", sessionId: session.sessionId, installationId: "mobile-phone", token: tokenA, environment: "sandbox", notificationMode: "all", now: new Date(1_000) });
+      seedMessage(client.sqlite, { id: "mobile-queued", accountId: "mobile-account", createdAt: 2_000 });
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(2_500), batchSize: 100, isSessionActive: isMobilePushSessionActive }).enqueued, 1);
+      revokeMobileSession(client.db, session.sessionId, "mobile-user", new Date(2_600));
+      let sends = 0;
+      const result = await deliverReady(client.sqlite, { now: new Date(3_000), batchSize: 100, config: testConfig, isSessionActive: isMobilePushSessionActive, transport: { async send() { sends += 1; return { outcome: "success", status: 200 }; } } });
+      assert.equal(result.discarded, 1);
+      assert.equal(sends, 0);
+      seedMessage(client.sqlite, { id: "mobile-after-revoke", accountId: "mobile-account", createdAt: 4_000 });
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(4_100), batchSize: 100, isSessionActive: isMobilePushSessionActive }).enqueued, 0);
+    } finally { client.sqlite.close(); }
   });
 
   test("atomically reassigns a token on account switch and removes the former owner's outbox", async () => {

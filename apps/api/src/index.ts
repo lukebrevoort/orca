@@ -1,6 +1,8 @@
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
+import { registerMobilePushRoutes, createMobilePushScheduler } from "./mobile-push/index.ts";
+import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
@@ -279,6 +281,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerDestinationRoutes(app, { dbFactory });
   registerAttachmentRoutes(app, { dbFactory });
   app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
+  registerMobilePushRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 
@@ -3770,6 +3773,7 @@ function toPublicPushError(error: unknown) {
 const { port } = serverConfig;
 
 if (import.meta.main) {
+  const mobilePush = createMobilePushScheduler({ isSessionActive: isMobilePushSessionActive, logger: console });
   const server = serve({
     fetch: app.fetch,
     port,
@@ -3780,6 +3784,7 @@ if (import.meta.main) {
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.on(signal, () => {
       console.log(`${signal} received, shutting down gracefully`);
+      mobilePush.stop();
       server.close(() => process.exit(0));
     });
   }

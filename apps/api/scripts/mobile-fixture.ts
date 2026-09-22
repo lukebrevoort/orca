@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import type { AuthVariables } from "../src/auth/middleware.ts";
 
 const directory = mkdtempSync(join(tmpdir(), "orca-ios-fixture-"));
+process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
 process.env.DATABASE_PATH = join(directory, "mail.sqlite");
 process.env.SESSION_SECRET = "synthetic-ios-fixture-session-secret-not-a-production-key";
 process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 19).toString("base64");
@@ -45,7 +46,7 @@ messages.forEach(([name, address, subject, body], i) => {
   const receivedAt = new Date(now.getTime() - i * 45 * 60_000);
   db.insert(threads).values({ id: threadId, accountId, providerThreadId: `provider-thread-${i + 1}`, subject, latestReceivedAt: receivedAt, messageCount: 1, isRead: i > 1 }).run();
   db.insert(emails).values({ id: messageId, accountId, threadId, providerMessageId: `provider-message-${i + 1}`, fromName: name, fromAddress: address, subject, snippet: body!.slice(0, 150), bodyText: body, bodyHtml: null, toRecipients: JSON.stringify([{ name: "Luke", email: "luke@example.com" }]), ccRecipients: "[]", bccRecipients: "[]", references: "[]", internetMessageId: `<fixture-${i + 1}@example.com>`, receivedAt, internalDate: receivedAt, isRead: i > 1, humanSignal: 9, humanClassification: "likely_human", humanClassificationReasons: "[]" }).run();
-  db.insert(emailLabels).values({ emailId: messageId, labelId: "ios-fixture-inbox" }).run();
+  db.insert(emailLabels).values({ id: `ios-fixture-label-${i + 1}`, emailId: messageId, labelId: "ios-fixture-inbox" }).run();
 });
 const credential = createMobileSession(db, userId);
 sqlite.close();

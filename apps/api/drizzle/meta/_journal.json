@@ -330,6 +330,13 @@
       "when": 1789776000000,
       "tag": "0046_mobile_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789862400000,
+      "tag": "0047_mobile_push",
+      "breakpoints": true
     }
   ]
 }

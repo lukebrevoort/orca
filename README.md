@@ -25,6 +25,13 @@ ingestion and Apple notification delivery are separate server stages. Missing
 APNs configuration leaves the mail APIs available and reports notifications as
 unconfigured.
 
+Run the API as an always-on Bun service using `bun run --cwd apps/api start` with
+persistent SQLite storage. The entrypoint starts the push worker after migrations
+and stops it on shutdown; importing the Hono app into a serverless handler does
+not run that worker. Delivery scans default to every 15 seconds after ingestion.
+The notification payload uses generic text and opaque account/thread IDs, keeping
+sender names, subjects, and message bodies off the lock screen.
+
 The [iPhone acceptance card](docs/ixd/ios/device-acceptance.html) documents physical
 device setup and manual checks. Simulator tests do not establish device signing,
 production authentication, or real push delivery. Outlook sync and sending remain

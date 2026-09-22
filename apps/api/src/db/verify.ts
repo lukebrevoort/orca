@@ -23,7 +23,7 @@ const requiredTables = [
   "organization_context_relationship_types", "organization_contexts", "organization_thread_context_relationships",
   "organization_saved_queries", "organization_collection_pin_audits", "organization_mutation_attempts",
   "organization_correction_receipts",
-  "mobile_auth_requests", "mobile_sessions",
+  "mobile_auth_requests", "mobile_sessions", "mobile_push_devices", "mobile_push_outbox",
 ];
 
 function verifyTables(client: DatabaseClient, label: string) {
