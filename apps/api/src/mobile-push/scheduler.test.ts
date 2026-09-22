@@ -151,6 +151,28 @@ describe("mobile push scheduler", () => {
     client.sqlite.close();
   });
 
+  test("mode changes invalidate queued alerts, including off then on before a delivery cycle", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "mode-user", "mode-account");
+      const device = { userId: "mode-user", sessionId: "session-mode-user", installationId: "phone", token: tokenA, environment: "sandbox" as const };
+      await registerDevice(client.sqlite, { ...device, notificationMode: "all", now: new Date(1_000) });
+      seedMessage(client.sqlite, { id: "queued-bulk", accountId: "mode-account", createdAt: 2_000, classification: "automated_or_bulk" });
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(2_500), batchSize: 100 }).enqueued, 1);
+      await registerDevice(client.sqlite, { ...device, notificationMode: "human", now: new Date(2_600) });
+      let sends = 0;
+      const transport: ApnsTransport = { async send() { sends += 1; return { outcome: "success", status: 200 }; } };
+      await deliverReady(client.sqlite, { now: new Date(3_000), batchSize: 100, config: testConfig, transport });
+      assert.equal(sends, 0);
+      seedMessage(client.sqlite, { id: "queued-human", accountId: "mode-account", createdAt: 4_000 });
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(4_100), batchSize: 100 }).enqueued, 1);
+      await registerDevice(client.sqlite, { ...device, notificationMode: "off", now: new Date(4_200) });
+      await registerDevice(client.sqlite, { ...device, notificationMode: "human", now: new Date(4_300) });
+      await deliverReady(client.sqlite, { now: new Date(4_500), batchSize: 100, config: testConfig, transport });
+      assert.equal(sends, 0);
+    } finally { client.sqlite.close(); }
+  });
+
   test("uses the production mobile session checker before scan and queued delivery", async () => {
     const client = createMobilePushTestDb();
     try {

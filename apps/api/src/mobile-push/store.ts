@@ -48,7 +48,7 @@ export async function registerDevice(sqlite: Database, input: {
     const current = sqlite.query(`SELECT ${deviceProjection} FROM mobile_push_devices WHERE user_id = ? AND installation_id = ?`)
       .get(input.userId, input.installationId) as DeviceRow | null;
     const registrationChanged = current
-      ? current.tokenHash !== tokenHash || current.environment !== input.environment || current.sessionId !== input.sessionId
+      ? current.tokenHash !== tokenHash || current.environment !== input.environment || current.sessionId !== input.sessionId || current.notificationMode !== input.notificationMode
       : true;
     const modeEnabled = current?.notificationMode === "off" && input.notificationMode !== "off";
     const resetWatermark = !current || modeEnabled || current.sessionId !== input.sessionId;
