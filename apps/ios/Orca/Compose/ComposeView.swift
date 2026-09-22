@@ -17,6 +17,7 @@ struct ComposeView: View {
     @State private var draftAccountID: String?
     @State private var draftOwnerScope: String?
     @State private var completed = false
+    @State private var staleConflict = false
     init(context: ThreadDetail? = nil, kind: String = "new", localDraft: LocalDraft? = nil, serverDraft: MessageDraft? = nil) {
         self.context = context; self.kind = kind; seedServer = serverDraft
         let content = localDraft?.content ?? serverDraft.map { DraftContent(to: $0.to, cc: $0.cc, bcc: $0.bcc, subject: $0.subject, body: $0.body, context: $0.context, attachments: $0.attachments) }
@@ -26,7 +27,7 @@ struct ComposeView: View {
         _subject = State(initialValue: content?.subject ?? ""); _messageBody = State(initialValue: content?.body.text ?? ""); _local = State(initialValue: localDraft)
         _draftAccountID = State(initialValue: localDraft?.accountId ?? serverDraft?.accountId); _draftOwnerScope = State(initialValue: localDraft?.ownerScope)
     }
-    var body: some View { Form { Section("Recipients") { TextField("To", text: $to).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).accessibilityIdentifier("compose.to"); DisclosureGroup("Cc and Bcc") { TextField("Cc", text: $cc); TextField("Bcc", text: $bcc) } }.disabled(deliveryFrozen); Section { TextField("Subject", text: $subject).accessibilityIdentifier("compose.subject"); TextEditor(text: $messageBody).frame(minHeight: 240).accessibilityLabel("Message body").accessibilityIdentifier("compose.body"); Button { showingImporter = true } label: { Label("Attach file", systemImage: "paperclip") }.disabled(deliveryFrozen); if let local { ForEach(local.content.attachments) { Text($0.filename).font(.caption) } } }.disabled(deliveryFrozen); Section { HStack { Label(status, systemImage: status.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("compose.save-status"); Spacer(); Button(deliveryFrozen ? "Check delivery" : "Send") { Task { await send() } }.disabled(sending || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || deliveryFrozen && local?.idempotencyKey == nil).accessibilityIdentifier("compose.send") } } }.accessibilityIdentifier("compose.form")
+    var body: some View { Form { Section("Recipients") { TextField("To", text: $to).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).accessibilityIdentifier("compose.to"); DisclosureGroup("Cc and Bcc") { TextField("Cc", text: $cc); TextField("Bcc", text: $bcc) } }.disabled(deliveryFrozen); Section { TextField("Subject", text: $subject).accessibilityIdentifier("compose.subject"); TextEditor(text: $messageBody).frame(minHeight: 240).accessibilityLabel("Message body").accessibilityIdentifier("compose.body"); Button { showingImporter = true } label: { Label("Attach file", systemImage: "paperclip") }.disabled(deliveryFrozen); if let local { ForEach(local.content.attachments) { Text($0.filename).font(.caption) } } }.disabled(deliveryFrozen); Section { HStack { Label(status, systemImage: status.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("compose.save-status"); Spacer(); Button(deliveryFrozen ? "Check delivery" : "Send") { Task { await send() } }.disabled(sending || staleConflict || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || deliveryFrozen && local?.idempotencyKey == nil).accessibilityIdentifier("compose.send") }; if staleConflict { Button("Keep both drafts") { Task { await keepBothDrafts() } }.accessibilityHint("Keeps the changed server draft and saves this version as a new draft") } } }.accessibilityIdentifier("compose.form")
         .navigationTitle(kind == "new" ? "New message" : kind.replacingOccurrences(of: "_", with: " ").capitalized).navigationBarTitleDisplayMode(.inline)
         .task { if draftAccountID == nil { draftAccountID = state.selectedAccount?.id }; if draftOwnerScope == nil { draftOwnerScope = state.ownerScope }; seed(); _ = await saveLocal() }.onChange(of: snapshot) { saveTask?.cancel(); saveTask = Task { try? await Task.sleep(for: .milliseconds(350)); guard !Task.isCancelled, !sending, !completed else { return }; _ = await saveLocal() } }
         .onChange(of: scenePhase) { if scenePhase == .inactive || scenePhase == .background { flushForTransition() } }
@@ -57,7 +58,8 @@ struct ComposeView: View {
         do {
             if current.serverID == nil { let server = try await client.createDraft(accountId: account.id, content: current.content); current.serverID = server.id; current.serverRevision = server.revision; try await state.draftStore.save(current) }
             else if let id = current.serverID, let revision = current.serverRevision { let server = try await client.updateDraft(id, accountId: account.id, revision: revision, content: current.content); current.serverRevision = server.revision; try await state.draftStore.save(current) }
-        } catch { status = "Could not save to server — local draft is safe"; return }
+        } catch let APIClient.ClientError.http(code, body) where code == 409 && body?.code == "stale_draft" { staleConflict = true; status = "This draft changed elsewhere. Your local version is safe."; return }
+        catch { status = "Could not save to server — local draft is safe"; return }
         do {
             current = try await state.draftStore.prepareSend(current.id); local = current
             guard let id = current.serverID, let revision = current.serverRevision, let key = current.idempotencyKey else { return }
@@ -66,5 +68,11 @@ struct ComposeView: View {
             else if result.status == "ambiguous" || result.status == "sending" { try await state.draftStore.markAmbiguous(current.id); status = "Delivery uncertain — check before retrying" }
             else { status = result.error?.message ?? "Send failed; draft is safe" }
         } catch { try? await state.draftStore.markAmbiguous(current.id); status = "Delivery uncertain — draft and delivery key are safe" }
+    }
+    func keepBothDrafts() async {
+        guard staleConflict, !deliveryFrozen, var draft = local else { return }
+        draft.serverID = nil; draft.serverRevision = nil; draft.idempotencyKey = nil; draft.deliveryState = "local"
+        do { try await state.draftStore.save(draft); local = draft; staleConflict = false; status = "Both drafts kept. This version will send as a new draft." }
+        catch { status = "Could not preserve both drafts — no server copy was changed" }
     }
 }

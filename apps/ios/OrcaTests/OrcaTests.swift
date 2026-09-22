@@ -11,14 +11,19 @@ final class OrcaTests: XCTestCase {
         XCTAssertNil(state.validatedBaseURL("http://mail.example.com"))
     }
     @MainActor func testUnknownAccountNotificationDoesNotRoute() {
-        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = DemoData.accounts[0].id
+        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = DemoData.accounts[0].id; state.phase = .ready
         state.routeNotification(["threadId": "thread-unknown", "accountId": "other-account"])
         XCTAssertNil(state.routedThread); XCTAssertEqual(state.selectedAccountID, DemoData.accounts[0].id)
     }
     @MainActor func testOwnedAccountNotificationSelectsAccountAndThread() {
-        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = nil
+        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = nil; state.phase = .ready
         state.routeNotification(["threadId": "thread-owned", "accountId": DemoData.accounts[0].id])
         XCTAssertEqual(state.selectedAccountID, DemoData.accounts[0].id); XCTAssertEqual(state.routedThread?.id, "thread-owned")
+    }
+    @MainActor func testNotificationDoesNotRouteUntilSessionIsReady() {
+        let state = AppState(); state.accounts = DemoData.accounts; state.selectedAccountID = nil; state.phase = .configuring
+        state.routeNotification(["threadId": "thread-owned", "accountId": DemoData.accounts[0].id])
+        XCTAssertNil(state.selectedAccountID); XCTAssertNil(state.routedThread)
     }
     func testInboxDecodesExistingWireContract() throws {
         let json = #"{"accounts":[],"messages":[],"nextCursor":null,"counts":{"focus":1,"normal":2,"quiet":3,"hidden":4,"all":10}}"#.data(using: .utf8)!
