@@ -144,6 +144,6 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
 
 export function redirectReturningUserToWorkspace(redirectUrl: string): string {
   const url = new URL(redirectUrl);
-  url.pathname = "/";
+  if (url.pathname === "/onboarding") url.pathname = "/";
   return url.toString();
 }

@@ -1,7 +1,10 @@
+import { isIP } from "node:net";
+
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context, MiddlewareHandler } from "hono";
+import { getConnInfo } from "@hono/node-server/conninfo";
 import { eq } from "drizzle-orm";
 
 import { getServerConfig } from "../../config/server.ts";
@@ -20,8 +23,8 @@ const requestBindingCookie = "orca_mobile_auth_request";
 const pkceValuePattern = /^[A-Za-z0-9_-]{43,128}$/;
 const statePattern = /^[A-Za-z0-9_-]{32,128}$/;
 const startAdmissionWindowMs = 60_000;
-const startAdmissionMaximum = 120;
-let startAdmissionWindow = { startedAt: 0, count: 0 };
+const startAdmissionMaximumPerClient = 120;
+const startAdmissionMaximumGlobal = 10_000;
 
 type MobileAuthAppOptions = {
   dbFactory?: typeof createDatabaseClient;
@@ -29,6 +32,10 @@ type MobileAuthAppOptions = {
   now?: () => Date;
   cookieSecure?: boolean;
   cookieAuthMiddleware?: MiddlewareHandler<{ Variables: AuthVariables }>;
+  startAdmissionClientKey?: (c: Context) => string;
+  startAdmissionTrustedProxyHops?: number;
+  startAdmissionMaximumPerClient?: number;
+  startAdmissionMaximumGlobal?: number;
 };
 
 export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
@@ -39,15 +46,26 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
   const now = options.now ?? (() => new Date());
   const cookieSecure = options.cookieSecure ?? process.env.NODE_ENV === "production";
   const cookieAuth = options.cookieAuthMiddleware ?? requireAuth({ dbFactory, allowMobileBearer: false });
+  const trustedProxyHops = options.startAdmissionTrustedProxyHops
+    ?? readTrustedProxyHops(process.env.MOBILE_AUTH_TRUSTED_PROXY_HOPS);
+  const admitStart = createStartAdmission({
+    clientKey: options.startAdmissionClientKey ?? ((c) => transportClientKey(c, trustedProxyHops)),
+    maximumPerClient: options.startAdmissionMaximumPerClient ?? startAdmissionMaximumPerClient,
+    maximumGlobal: options.startAdmissionMaximumGlobal ?? startAdmissionMaximumGlobal,
+    now: () => now().getTime(),
+  });
   const app = new Hono<{ Variables: AuthVariables }>();
 
-  app.use("/start", bodyLimit({
+  const boundedJsonBody = bodyLimit({
     maxSize: 4 * 1024,
     onError: (c) => error(c, 413, "payload_too_large", "The mobile authorization request is too large"),
-  }));
+  });
+  app.use("/start", boundedJsonBody);
+  app.use("/grant", boundedJsonBody);
+  app.use("/exchange", boundedJsonBody);
 
   app.post("/start", async (c) => {
-    if (!admitStartAt(Date.now())) {
+    if (!admitStart(c)) {
       c.header("Retry-After", "60");
       return error(c, 429, "rate_limited", "Too many mobile authorization requests are starting; try again shortly");
     }
@@ -201,11 +219,67 @@ function error(c: Context, status: 400 | 401 | 403 | 409 | 413 | 429 | 503, code
   return c.json({ error: { code, message } }, status);
 }
 
-function admitStartAt(timestamp: number) {
-  if (timestamp - startAdmissionWindow.startedAt >= startAdmissionWindowMs) {
-    startAdmissionWindow = { startedAt: timestamp, count: 0 };
+function createStartAdmission(options: {
+  clientKey: (c: Context) => string;
+  maximumPerClient: number;
+  maximumGlobal: number;
+  now: () => number;
+}) {
+  let globalWindow = { startedAt: 0, count: 0 };
+  const clientWindows = new Map<string, { startedAt: number; count: number }>();
+
+  return (c: Context) => {
+    const timestamp = options.now();
+    if (timestamp - globalWindow.startedAt >= startAdmissionWindowMs) {
+      globalWindow = { startedAt: timestamp, count: 0 };
+      clientWindows.clear();
+    }
+
+    const key = options.clientKey(c);
+    let clientWindow = clientWindows.get(key);
+    if (!clientWindow || timestamp - clientWindow.startedAt >= startAdmissionWindowMs) {
+      clientWindow = { startedAt: timestamp, count: 0 };
+      clientWindows.set(key, clientWindow);
+    }
+
+    if (clientWindow.count >= options.maximumPerClient || globalWindow.count >= options.maximumGlobal) return false;
+    clientWindow.count += 1;
+    globalWindow.count += 1;
+    return true;
+  };
+}
+
+/** Uses the socket peer only. Proxy-forwarded headers are intentionally not trusted here. */
+function transportClientKey(c: Context, trustedProxyHops: number) {
+  try {
+    const remoteAddress = getConnInfo(c).remote.address;
+    return `peer:${selectTransportClientAddress(remoteAddress, c.req.header("x-forwarded-for"), trustedProxyHops)}`;
+  } catch {
+    // Hono's in-memory app.request() has no transport socket. Production's
+    // @hono/node-server adapter always supplies one.
+    return "peer:unknown";
   }
-  if (startAdmissionWindow.count >= startAdmissionMaximum) return false;
-  startAdmissionWindow.count += 1;
-  return true;
+}
+
+export function selectTransportClientAddress(
+  directAddress: string | undefined,
+  forwardedFor: string | undefined,
+  trustedProxyHops: number,
+) {
+  const fallback = directAddress && isIP(directAddress) ? directAddress : "unknown";
+  if (trustedProxyHops === 0 || !Number.isInteger(trustedProxyHops) || trustedProxyHops < 0 || trustedProxyHops > 5) {
+    return fallback;
+  }
+  if (!forwardedFor || forwardedFor.length > 1_024) return fallback;
+  const chain = forwardedFor.split(",").map((address) => address.trim());
+  if (chain.length < trustedProxyHops || chain.length > 16 || chain.some((address) => !isIP(address))) return fallback;
+  return chain[chain.length - trustedProxyHops]!;
+}
+
+function readTrustedProxyHops(value: string | undefined) {
+  if (value === undefined || value === "") return 0;
+  if (!/^[0-5]$/.test(value)) {
+    throw new Error("MOBILE_AUTH_TRUSTED_PROXY_HOPS must be an integer from 0 to 5");
+  }
+  return Number(value);
 }

@@ -12,7 +12,7 @@ import { users } from "../../db/schema.ts";
 import { buildSessionCookie } from "../jwt.ts";
 import { requireAuth, type AuthVariables } from "../middleware.ts";
 import { createSession } from "../session-store.ts";
-import { createMobileAuthApp } from "./routes.ts";
+import { createMobileAuthApp, selectTransportClientAddress } from "./routes.ts";
 import { admitMobileAuthRequest, createMobileAuthRequest } from "./store.ts";
 
 const verifier = "a".repeat(43);
@@ -168,6 +168,15 @@ describe("mobile native authentication", () => {
     });
     expect(oversized.status).toBe(413);
 
+    for (const route of ["grant", "exchange"]) {
+      const response = await fixture.app.request(`/v1/mobile/auth/${route}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "content-length": "5000" },
+        body: "x".repeat(5000),
+      });
+      expect(response.status).toBe(413);
+    }
+
     const { db, sqlite } = createDatabaseClient(fixture.dbPath);
     try {
       createMobileAuthRequest(db, { codeChallenge: challenge, state }, new Date(fixture.clock.getTime() - 11 * 60 * 1000));
@@ -180,9 +189,43 @@ describe("mobile native authentication", () => {
       sqlite.close();
     }
   });
+
+  test("limits starts per transport client while retaining a separate overload ceiling", async () => {
+    const limited = await createFixture({
+      startAdmissionClientKey: (c) => c.req.header("x-test-transport-client") ?? "test-client",
+      startAdmissionMaximumPerClient: 2,
+      startAdmissionMaximumGlobal: 5,
+    });
+    try {
+      const request = (client: string) => limited.app.request("/v1/mobile/auth/start", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-test-transport-client": client },
+        body: JSON.stringify({ codeChallenge: challenge, state }),
+      });
+
+      expect((await request("client-a")).status).toBe(200);
+      expect((await request("client-a")).status).toBe(200);
+      expect((await request("client-a")).status).toBe(429);
+      expect((await request("client-b")).status).toBe(200);
+      expect((await request("client-b")).status).toBe(200);
+      expect((await request("client-c")).status).toBe(200);
+      expect((await request("client-c")).status).toBe(429);
+    } finally {
+      limited.sqlite.close();
+      rmSync(limited.tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("selects a trusted forwarded client from the right and ignores spoofed leftmost entries", () => {
+    const directProxy = "10.0.0.9";
+    expect(selectTransportClientAddress(directProxy, "198.51.100.66, 203.0.113.7", 1)).toBe("203.0.113.7");
+    expect(selectTransportClientAddress(directProxy, "198.51.100.66, 203.0.113.7, 10.0.0.8", 2)).toBe("203.0.113.7");
+    expect(selectTransportClientAddress(directProxy, "198.51.100.66, not-an-ip", 1)).toBe(directProxy);
+    expect(selectTransportClientAddress(directProxy, "198.51.100.66", 0)).toBe(directProxy);
+  });
 });
 
-async function createFixture() {
+async function createFixture(options: Parameters<typeof createMobileAuthApp>[0] = {}) {
   process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
   process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
   const tempDir = mkdtempSync(join(tmpdir(), "orca-mobile-auth-"));
@@ -210,6 +253,7 @@ async function createFixture() {
     pendingCookie: cookie(pending.token, pending.expiresAt),
   };
   result.app.route("/v1/mobile/auth", createMobileAuthApp({
+    ...options,
     dbFactory: () => createDatabaseClient(dbPath),
     webOrigin,
     cookieSecure: true,
