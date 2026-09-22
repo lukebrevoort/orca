@@ -36,11 +36,13 @@ import UserNotifications
         errorMessage = error.localizedDescription; statusText = "Registration failed — try again"
     }
     func reconcile() {
-        reconciliation?.cancel(); operationID = UUID()
+        let previous = reconciliation
+        operationID = UUID()
         guard let state, state.phase == .ready, let client = state.client else { return }
         let operation = operationID, scope = state.ownerScope, desiredMode = mode
         reconciliation = Task { [weak self] in
-            guard let self else { return }
+            await previous?.value
+            guard let self, isCurrent(operation, scope) else { return }
             await refreshPermission()
             guard isCurrent(operation, scope) else { return }
             if desiredMode == "off" {
@@ -86,9 +88,17 @@ import UserNotifications
         } catch { guard isCurrent(operation, scope) else { return }; errorMessage = error.localizedDescription }
     }
     func unregister() async {
-        reconciliation?.cancel(); operationID = UUID()
+        let previous = reconciliation
+        operationID = UUID()
         guard let state, let client = state.client else { return }
-        await removeRegistration(client: client, operation: operationID, scope: state.ownerScope)
+        let operation = operationID, scope = state.ownerScope
+        let task = Task { [weak self] in
+            await previous?.value
+            guard let self, isCurrent(operation, scope) else { return }
+            await removeRegistration(client: client, operation: operation, scope: scope)
+        }
+        reconciliation = task
+        await task.value
     }
     private func removeRegistration(client: APIClient, operation: UUID, scope: String) async {
         do {
@@ -104,7 +114,7 @@ import UserNotifications
         !Task.isCancelled && operation == operationID && scope == state?.ownerScope && state?.phase == .ready
     }
     func identityWillChange() {
-        reconciliation?.cancel(); operationID = UUID(); pendingNotification = nil
+        operationID = UUID(); pendingNotification = nil
         statusText = "Not configured"; errorMessage = nil
     }
     func openPendingNotification() {
