@@ -121,6 +121,14 @@ import UserNotifications
         guard state?.phase == .ready, let pendingNotification else { return }
         self.pendingNotification = nil; state?.routeNotification(pendingNotification)
     }
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        await MainActor.run {
+            guard mode != "off", state?.phase == .ready,
+                  let account = notification.request.content.userInfo["accountId"] as? String,
+                  state?.accounts.contains(where: { $0.id == account }) == true else { return [] }
+            return [.banner, .list, .sound]
+        }
+    }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         await MainActor.run {
             pendingNotification = response.notification.request.content.userInfo
