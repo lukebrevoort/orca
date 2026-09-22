@@ -1,5 +1,6 @@
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
+import { createMobileAuthApp } from "./auth/mobile/routes.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
@@ -277,6 +278,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerAttentionRoutingRoutes(app, { dbFactory });
   registerDestinationRoutes(app, { dbFactory });
   registerAttachmentRoutes(app, { dbFactory });
+  app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 

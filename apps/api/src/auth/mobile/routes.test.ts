@@ -189,7 +189,6 @@ async function createFixture() {
   const dbPath = join(tempDir, "auth.sqlite");
   const { db, sqlite } = createDatabaseClient(dbPath);
   migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
-  sqlite.exec(await Bun.file(resolve(import.meta.dir, "../../../drizzle/0046_mobile_auth.sql")).text());
 
   const clockStart = new Date("2026-09-22T18:00:00.000Z");
   db.insert(users).values([
