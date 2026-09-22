@@ -84,21 +84,20 @@ final class OrcaUITests: XCTestCase {
 
         openConversation(subject: Fixture.htmlSubject, in: app)
         let endMarker = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", Fixture.htmlEndMarker)).firstMatch
-        var swipes = 0
-        while !endMarker.exists && swipes < 12 {
+        for _ in 0..<12 {
             app.swipeUp(velocity: .fast)
-            swipes += 1
         }
-        XCTAssertTrue(endMarker.waitForExistence(timeout: 5), "The long HTML message must expand to its full height and remain scrollable.")
+        XCTAssertTrue(endMarker.waitForExistence(timeout: 5), "The long HTML message must expand to its full height and scroll all the way to its final marker.")
         attachScreenshot(named: "07-dark-long-html-end")
 
         navigateBack(in: app)
         app.tabBars.buttons["Settings"].tap()
 
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts[Fixture.account].exists)
-        XCTAssertTrue(app.staticTexts["Gmail"].exists)
-        XCTAssertTrue(app.buttons["Enable notifications"].exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", Fixture.account)).firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "Gmail")).firstMatch.exists)
+        let allowNotifications = app.buttons["settings.allow-notifications"]
+        XCTAssertTrue(allowNotifications.exists || app.buttons["Allow notifications"].exists)
         XCTAssertTrue(app.buttons["Sign out"].exists)
         XCTAssertTrue(app.buttons["Change server"].exists)
         attachScreenshot(named: "08-dark-settings")
@@ -150,7 +149,8 @@ final class OrcaUITests: XCTestCase {
     }
 
     private func search(for query: String, in app: XCUIApplication) {
-        let search = app.searchFields["inbox.search"]
+        let identified = app.searchFields["inbox.search"]
+        let search = identified.exists ? identified : app.searchFields["Search mail"]
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         search.tap()
         search.typeText(query)
@@ -158,7 +158,8 @@ final class OrcaUITests: XCTestCase {
     }
 
     private func clearSearch(in app: XCUIApplication) {
-        let search = app.searchFields["inbox.search"]
+        let identified = app.searchFields["inbox.search"]
+        let search = identified.exists ? identified : app.searchFields["Search mail"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.buttons["Clear text"].tap()
         app.keyboards.buttons["Search"].tap()

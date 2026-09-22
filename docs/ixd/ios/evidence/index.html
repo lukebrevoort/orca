@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orca iOS native verification</title>
+  <style>
+    :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; background: #f4f5f7; color: #16181c; }
+    header, section { background: white; border: 1px solid #dfe3e8; border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+    h1, h2 { margin-top: 0; }
+    .pass { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #daf5e7; color: #0b6338; font-weight: 700; }
+    .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .fact { background: #f6f7f9; border-radius: 14px; padding: 16px; }
+    .fact strong { display: block; font-size: 1.5rem; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    figure { margin: 0; }
+    img { width: 100%; border-radius: 18px; border: 1px solid #cfd5dc; background: #000; }
+    figcaption { margin-top: 8px; color: #555f6d; }
+    code { word-break: break-word; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0d0e10; color: #f4f6f8; }
+      header, section { background: #17191d; border-color: #30343b; }
+      .fact { background: #22252a; }
+      figcaption { color: #b2bac5; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="pass">PASS</span>
+    <h1>Orca iOS native verification</h1>
+    <p>Fixture-backed iPhone 17 validation of the real inbox, reader, search, reply draft recovery, one-time send, long HTML rendering, and Settings.</p>
+    <div class="facts">
+      <div class="fact"><strong>17 / 17</strong>unit tests</div>
+      <div class="fact"><strong>2 / 2</strong>end-to-end UI flows</div>
+      <div class="fact"><strong>1</strong>fake-provider delivery</div>
+      <div class="fact"><strong>0</strong>real email deliveries</div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Light appearance</h2>
+    <div class="gallery">
+      <figure><img src="orca-light-inbox.png" alt="Orca inbox in light appearance"><figcaption>Inbox loaded from the isolated API with readable fractional-second timestamps.</figcaption></figure>
+      <figure><img src="orca-light-reader.png" alt="Conversation reader"><figcaption>Real conversation reader.</figcaption></figure>
+      <figure><img src="orca-light-compose-saved.png" alt="Saved reply compose view"><figcaption>Reply content and recipient after autosave.</figcaption></figure>
+      <figure><img src="orca-light-draft-reopened.png" alt="Reopened reply draft"><figcaption>Draft reopened with body, recipient, and reply context intact.</figcaption></figure>
+      <figure><img src="orca-light-send-complete.png" alt="Drafts screen after send"><figcaption>Composer dismissed and sent draft removed; ledger recorded exactly one delivery.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>System dark appearance</h2>
+    <div class="gallery">
+      <figure><img src="orca-dark-long-html-end.png" alt="End of long HTML message in dark appearance"><figcaption>All 18 paragraphs are scrollable; final marker is visible, remote image is blocked, and HTML text remains readable.</figcaption></figure>
+      <figure><img src="orca-dark-settings.png" alt="Settings in dark appearance"><figcaption>Account, notification status, adaptive accent controls, server, sign out, and change-server actions.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reproduce</h2>
+    <p>Run <code>apps/ios/OrcaUITests/run-fixture-tests.sh &lt;connection.json&gt; &lt;simulator-udid&gt; [derived-data-path]</code>. The synthetic bearer is read from fixture metadata, injected only into a copied <code>.xctestrun</code>, and never printed or committed.</p>
+    <p>Simulator notification delivery/tap was not exercised in this pass; notification ownership and routing are covered by unit tests.</p>
+  </section>
+</body>
+</html>
