@@ -235,6 +235,7 @@ function createStartAdmission(options: {
       clientWindows.clear();
     }
 
+    if (globalWindow.count >= options.maximumGlobal) return false;
     const key = options.clientKey(c);
     let clientWindow = clientWindows.get(key);
     if (!clientWindow || timestamp - clientWindow.startedAt >= startAdmissionWindowMs) {
@@ -249,7 +250,7 @@ function createStartAdmission(options: {
   };
 }
 
-/** Uses the socket peer only. Proxy-forwarded headers are intentionally not trusted here. */
+/** Forwarded addresses require an explicitly configured, fixed trusted proxy topology. */
 function transportClientKey(c: Context, trustedProxyHops: number) {
   try {
     const remoteAddress = getConnInfo(c).remote.address;
