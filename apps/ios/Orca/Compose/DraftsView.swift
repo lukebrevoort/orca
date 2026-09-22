@@ -13,7 +13,7 @@ struct DraftsView: View {
                     else { ContentUnavailableView("No drafts", systemImage: "doc.text", description: Text("Anything you start writing will be saved immediately.")) }
                 } else {
                     List {
-                        if !localDrafts.isEmpty { Section("On this device") { ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: draft.deliveryState == "ambiguous" ? "Delivery uncertain — check before retrying" : "Saved locally") }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } }
+                        if !localDrafts.isEmpty { Section("On this device") { ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: localStatus(draft.deliveryState)) }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } }
                         let localServerIDs = Set(localDrafts.compactMap(\.serverID))
                         let cloud = serverDrafts.filter { !localServerIDs.contains($0.id) }
                         if !cloud.isEmpty { Section("On server") { ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: draft.providerSyncStatus == "failed" ? "Provider copy needs attention" : "Saved · revision \(draft.revision)") }.accessibilityIdentifier("draft.\(draft.id)") } } }
@@ -23,9 +23,11 @@ struct DraftsView: View {
             .navigationTitle("Drafts")
             .toolbar { NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose").accessibilityIdentifier("compose.open") }
             .task(id: state.selectedAccountID) { await load() }
+            .onAppear { Task { await load() } }
             .refreshable { await load() }
         }
     }
+    func localStatus(_ deliveryState: String) -> String { switch deliveryState { case "ambiguous", "sending": "Delivery uncertain — check before retrying"; case "rejected": "Delivery rejected — edit a new copy"; default: "Saved locally" } }
     func load() async {
         guard let account = state.selectedAccount else { localDrafts = []; serverDrafts = []; return }
         let scope = state.ownerScope, accountID = account.id, client = state.client
@@ -34,7 +36,7 @@ struct DraftsView: View {
         let stored = await state.draftStore.all(ownerScope: scope, accountId: accountID)
         guard identityIsCurrent() else { return }; localDrafts = stored
         guard !state.demoMode, let client else { return }
-        do { let loaded = try await client.drafts(accountId: accountID); guard identityIsCurrent() else { return }; serverDrafts = loaded; error = nil }
+        do { let loaded = try await client.drafts(accountId: accountID); guard identityIsCurrent() else { return }; serverDrafts = loaded.filter { $0.deliveryStatus != "sent" }; error = nil }
         catch { guard identityIsCurrent() else { return }; self.error = error.localizedDescription }
     }
 }

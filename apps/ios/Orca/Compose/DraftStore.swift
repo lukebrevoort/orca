@@ -22,6 +22,7 @@ actor DraftStore {
     func remove(_ id: UUID) throws { try requireHealthy(); let candidate = drafts.filter { $0.id != id }; try persist(candidate); drafts = candidate }
     func prepareSend(_ id: UUID) throws -> LocalDraft { try requireHealthy(); guard let index = drafts.firstIndex(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }; var candidate = drafts; if candidate[index].idempotencyKey == nil { candidate[index].idempotencyKey = UUID().uuidString }; candidate[index].deliveryState = "sending"; try persist(candidate); drafts = candidate; return candidate[index] }
     func markAmbiguous(_ id: UUID) throws { try requireHealthy(); guard let index = drafts.firstIndex(where: { $0.id == id }) else { return }; var candidate = drafts; candidate[index].deliveryState = "ambiguous"; try persist(candidate); drafts = candidate }
+    func markRejected(_ id: UUID) throws -> LocalDraft? { try requireHealthy(); guard let index = drafts.firstIndex(where: { $0.id == id }) else { return nil }; var candidate = drafts; candidate[index].deliveryState = "rejected"; try persist(candidate); drafts = candidate; return candidate[index] }
     private func requireHealthy() throws { if recoveryError != nil { throw StoreError.recoveryRequired } }
     private func persist(_ value: [LocalDraft]) throws { try JSONEncoder().encode(value).write(to: fileURL, options: [.atomic, .completeFileProtection]) }
 }

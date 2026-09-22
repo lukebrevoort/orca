@@ -29,9 +29,21 @@ struct NormalizedThread: Codable, Hashable { var id: String; var provider: Strin
 struct ThreadAttention: Codable, Hashable { var attentionBehavior: String?; var hasUnread: Bool; var hasStarred: Bool; var hasDraft: Bool; var humanSignal: Int? }
 struct ThreadDetail: Codable { var account: MailAccount; var thread: NormalizedThread; var messages: [ThreadMessage] }
 
-struct Recipient: Codable, Hashable { var name: String?; var email: String }
-struct DraftBody: Codable, Hashable { var text: String; var html: String? }
-struct DraftContext: Codable, Hashable { var kind: String; var threadId: String; var messageId: String; var providerMessageId: String; var providerThreadId: String; var inReplyTo: String?; var references: [String] }
+struct Recipient: Codable, Hashable {
+    var name: String?; var email: String
+    enum CodingKeys: String, CodingKey { case name, email }
+    func encode(to encoder: Encoder) throws { var values = encoder.container(keyedBy: CodingKeys.self); if let name { try values.encode(name, forKey: .name) } else { try values.encodeNil(forKey: .name) }; try values.encode(email, forKey: .email) }
+}
+struct DraftBody: Codable, Hashable {
+    var text: String; var html: String?
+    enum CodingKeys: String, CodingKey { case text, html }
+    func encode(to encoder: Encoder) throws { var values = encoder.container(keyedBy: CodingKeys.self); try values.encode(text, forKey: .text); if let html { try values.encode(html, forKey: .html) } else { try values.encodeNil(forKey: .html) } }
+}
+struct DraftContext: Codable, Hashable {
+    var kind: String; var threadId: String; var messageId: String; var providerMessageId: String; var providerThreadId: String; var inReplyTo: String?; var references: [String]
+    enum CodingKeys: String, CodingKey { case kind, threadId, messageId, providerMessageId, providerThreadId, inReplyTo, references }
+    func encode(to encoder: Encoder) throws { var values = encoder.container(keyedBy: CodingKeys.self); try values.encode(kind, forKey: .kind); try values.encode(threadId, forKey: .threadId); try values.encode(messageId, forKey: .messageId); try values.encode(providerMessageId, forKey: .providerMessageId); try values.encode(providerThreadId, forKey: .providerThreadId); if let inReplyTo { try values.encode(inReplyTo, forKey: .inReplyTo) } else { try values.encodeNil(forKey: .inReplyTo) }; try values.encode(references, forKey: .references) }
+}
 struct OutboundAttachment: Codable, Identifiable, Hashable { var id: String; var filename: String; var mimeType: String; var size: Int; var contentBase64: String? }
 struct MessageDraft: Codable, Identifiable, Hashable {
     var id: String; var accountId: String; var to: [Recipient]; var cc: [Recipient]; var bcc: [Recipient]
