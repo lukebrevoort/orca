@@ -15,4 +15,29 @@ final class OrcaTests: XCTestCase {
     func testDraftsAreAccountIsolated() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString); let store = DraftStore(directory: directory); try await store.save(LocalDraft(ownerScope: "one", accountId: "a")); try await store.save(LocalDraft(ownerScope: "two", accountId: "a")); let a = await store.all(ownerScope: "one", accountId: "a"); let b = await store.all(ownerScope: "two", accountId: "a"); XCTAssertEqual(a.count, 1); XCTAssertEqual(b.count, 1)
     }
+    func testRecipientValidationRejectsPartialInvalidList() {
+        let view = ComposeView()
+        XCTAssertTrue(view.recipientsAreValid("one@example.com, two@example.com", allowingEmpty: false))
+        XCTAssertFalse(view.recipientsAreValid("one@example.com, not-an-address", allowingEmpty: false))
+        XCTAssertFalse(view.recipientsAreValid("one@example.com,", allowingEmpty: false))
+    }
+    func testReopenedDraftPreservesReplyContext() {
+        let context = DraftContext(kind: "reply", threadId: "t", messageId: "m", providerMessageId: "pm", providerThreadId: "pt", inReplyTo: "<m@example.com>", references: [])
+        let draft = LocalDraft(ownerScope: "origin|user", accountId: "a", content: DraftContent(context: context))
+        XCTAssertEqual(ComposeView(localDraft: draft).content().context, context)
+    }
+    func testCorruptDraftFileIsPreservedAndBlocksOverwrite() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = directory.appending(path: "drafts.json"), original = Data("not-json".utf8); try original.write(to: file)
+        let store = DraftStore(directory: directory)
+        XCTAssertNotNil(await store.recoveryMessage())
+        do { try await store.save(LocalDraft(ownerScope: "o", accountId: "a")); XCTFail("Expected recovery protection") } catch {}
+        XCTAssertEqual(try Data(contentsOf: file), original)
+    }
+    func testPrepareSendReusesStableIdempotencyKey() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString); let store = DraftStore(directory: directory); let draft = LocalDraft(ownerScope: "o", accountId: "a")
+        try await store.save(draft); let first = try await store.prepareSend(draft.id); let second = try await store.prepareSend(draft.id)
+        XCTAssertNotNil(first.idempotencyKey); XCTAssertEqual(first.idempotencyKey, second.idempotencyKey)
+    }
 }
