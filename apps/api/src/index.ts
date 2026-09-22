@@ -1,4 +1,5 @@
 import { registerDestinationRoutes } from "./destinations/routes.ts";
+import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
@@ -275,6 +276,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerAttentionPreferencesRoutes(app, { dbFactory });
   registerAttentionRoutingRoutes(app, { dbFactory });
   registerDestinationRoutes(app, { dbFactory });
+  registerAttachmentRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 
@@ -1962,7 +1964,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/drafts", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const requestedAccountId = c.req.query("accountId");
+      const account = requestedAccountId !== undefined
+        ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
+        : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const drafts = db.select().from(messageDrafts)
         .where(eq(messageDrafts.accountId, account.id))
@@ -1977,7 +1982,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const requestedAccountId = c.req.query("accountId");
+      const account = requestedAccountId !== undefined
+        ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
+        : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const id = crypto.randomUUID();
       const input = c.req.valid("json");
@@ -2005,7 +2013,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/drafts/:id", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const requestedAccountId = c.req.query("accountId");
+      const account = requestedAccountId !== undefined
+        ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
+        : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -2017,7 +2028,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const requestedAccountId = c.req.query("accountId");
+      const account = requestedAccountId !== undefined
+        ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
+        : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -2066,7 +2080,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/drafts/:id", requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const requestedAccountId = c.req.query("accountId");
+      const account = requestedAccountId !== undefined
+        ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
+        : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -2185,7 +2202,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const requestedAccountId = c.req.query("accountId");
+      const account = requestedAccountId !== undefined
+        ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
+        : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -2400,7 +2420,20 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       return result.data;
     }),
     requireAuth({ dbFactory }),
-    (c) => {
+    bodyLimit({ maxSize: 1024 }),
+    async (c) => {
+      let isRead = true;
+      const raw = await c.req.text();
+      if (raw.trim()) {
+        try {
+          const input = JSON.parse(raw);
+          if (!input || typeof input !== "object" || Array.isArray(input)
+            || typeof input.isRead !== "boolean" || Object.keys(input).length !== 1) throw new Error("Invalid read state");
+          isRead = input.isRead;
+        } catch {
+          return c.json({ error: { code: "validation_error", message: "Expected { isRead: boolean }" } }, 400);
+        }
+      }
       const { db, sqlite } = dbFactory();
       try {
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
@@ -2409,11 +2442,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();
         if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         db.update(emails)
-          .set({ isRead: true, updatedAt: now() })
+          .set({ isRead, updatedAt: now() })
           .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
           .run();
         db.update(threads)
-          .set({ isRead: true, updatedAt: now() })
+          .set({ isRead, updatedAt: now() })
           .where(eq(threads.id, thread.id))
           .run();
         return c.json({ ok: true });

@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Four everyday journeys.</title><style>:root{color-scheme:light dark;--bg:#f6faf7;--surface:#fff;--ink:#102522;--muted:#506661;--line:#c5d7d0;--accent:#067a68}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Avenir Next",system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:48px 24px 80px}header{padding-bottom:36px;border-bottom:1px solid var(--line)}h1{font:500 56px/1.03 "Iowan Old Style",Georgia,serif;letter-spacing:-2px;margin:18px 0}h2{font:500 30px/1.2 "Iowan Old Style",Georgia,serif;margin:38px 0 18px}h3{font-size:18px}small,.muted{color:var(--muted)}a{color:var(--accent)}nav{display:flex;flex-wrap:wrap;gap:16px;margin:24px 0}article{border-bottom:1px solid var(--line);padding:12px 0 20px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;padding:12px 8px;border-bottom:1px solid var(--line)}th{font-weight:650}pre{white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);padding:20px;border-radius:10px;font-size:13px}li{margin:8px 0}button{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px;border-radius:8px;cursor:pointer}button:hover{background:var(--bg)}button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.tag{font:700 11px/1.2 "Avenir Next",sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}@media(prefers-color-scheme:dark){:root{--bg:#050505;--surface:#171717;--ink:#f4f3ef;--muted:#aaa9a4;--line:#444b48;--accent:#8ac4ff}}@media(max-width:600px){main{padding:28px 18px 50px}h1{font-size:42px}table{font-size:12px}th,td{padding:10px 4px}}</style><main><header><div class="tag">Orca · iOS implementation</div><h1>Four everyday journeys.</h1><p class="muted">Native iPhone · Gmail first · 22 September 2026</p></header><nav><a href="phase1-context.html">Brief</a><a href="phase2-architecture.html">Pages</a><a href="phase3-userflows.html">Flows</a><a href="phase4-page-specs.html">Interaction</a><a href="phase5-components.html">Components</a><a href="phase6-visual.html">Visual system</a></nav><article><h2>Connect and return</h2><pre class="mermaid">flowchart TD
+ A[Enter server] --&gt; B[Create PKCE request]
+ B --&gt; C[System browser login]
+ C --&gt; D[Explicit named-account consent]
+ D --&gt; E[Single-use code callback]
+ E --&gt; F[Exchange with verifier]
+ F --&gt; G[Store credential in Keychain]
+ G --&gt; H[Inbox]
+ C -. Cancel .-&gt; A
+ F -. Invalid or expired .-&gt; A</pre><p>Validate HTTPS origin before networking. Browser consent names the account. Validate callback scheme, host and state before exchanging. A canceled attempt returns to the connect screen; it never signs in as a different account.</p></article><article><h2>Read and reply</h2><pre class="mermaid">flowchart TD
+ A[Inbox or notification] --&gt; B[Fetch scoped conversation]
+ B --&gt; C[Read]
+ C --&gt; D[Reply or reply all]
+ D --&gt; E[Persist local draft]
+ E --&gt; F[Save server revision]
+ F --&gt; G[Confirm send]
+ G --&gt; H[Persist idempotency key]
+ H --&gt; I[Send]
+ I --&gt; J[Confirmed delivery]
+ I -. Timeout .-&gt; K[Check delivery]
+ F -. Conflict .-&gt; L[Preserve local copy]</pre><p>The account and reply context stay fixed once writing begins. Reply-all deduplicates addresses and excludes the sending identity. Mark-read changes are local Orca state; no unsupported provider archive/star promise is shown.</p></article><article><h2>Recover interrupted writing</h2><pre class="mermaid">flowchart TD
+ A[Edit] --&gt; B[Atomic local save]
+ B --&gt; C{Online?}
+ C --&gt;|Yes| D[Revisioned server save]
+ C --&gt;|No| E[Saved on this phone]
+ E --&gt; F[Reconnect or reopen]
+ F --&gt; D
+ D -. Revision conflict .-&gt; G[Keep local words and show conflict]
+ A -. Dismiss .-&gt; H[Drafts]
+ H --&gt; A</pre><p>Local content is saved before network work, scoped to server and signed-in identity. Delivery states sending/sent/ambiguous are not editable drafts. A timeout must not generate a new send command. Confirmed sent items leave the editable list.</p></article><article><h2>Receive useful notifications</h2><pre class="mermaid">flowchart TD
+ A[Enable notifications] --&gt; B[System permission]
+ B --&gt; C[Register APNs token]
+ C --&gt; D[Authenticated device registration]
+ D --&gt; E[New eligible mail]
+ E --&gt; F[Durable deduplicated outbox]
+ F --&gt; G[APNs]
+ G --&gt; H[Tap]
+ H --&gt; I{Signed in?}
+ I --&gt;|Yes| J[Scoped conversation]
+ I --&gt;|No| K[Reconnect then resolve]
+ B -. Denied .-&gt; L[Explain settings path]</pre><p>Default eligibility is human mail. Device registration establishes a watermark; backfill does not alert. Payloads contain opaque routing IDs and generic text. Server configuration, system permission and device registration are separate statuses. Turning notifications off and signing out stop future delivery.</p></article><h2>Shared recovery behavior</h2><p>Every network operation has loading and retry feedback. Cached data is labeled. Authentication failure returns to connection while preserving owner-scoped draft recovery. Network failure never falls back silently to demonstration data. Provider consent is requested only when the user chooses the relevant writing capability.</p></main></html>
