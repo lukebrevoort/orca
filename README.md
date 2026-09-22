@@ -1,5 +1,35 @@
 # Orca
 
+## iPhone client
+
+The native SwiftUI client lives in `apps/ios/Orca.xcodeproj`. It targets iOS 17+
+and uses Orca's existing Gmail inbox, conversation, and revisioned draft APIs.
+Mobile authentication uses a system-browser consent flow and a revocable opaque
+credential; provider OAuth tokens remain on the API server.
+
+For a local mailbox that never sends real email, run:
+
+```bash
+bun apps/api/scripts/mobile-fixture.ts
+```
+
+This creates a temporary SQLite mailbox, binds a random loopback port, and prints
+the location of synthetic connection details for a Debug simulator build. Stop
+the process to remove its mailbox. The fixture transport simulates draft mirroring
+and delivery; it does not validate real Gmail or Apple push delivery.
+
+For real notifications, configure the optional `APNS_*` server settings in
+`.env.example`, enable Push Notifications for your Apple App ID, and install a
+properly signed app whose bundle identifier matches `APNS_BUNDLE_ID`. Gmail push
+ingestion and Apple notification delivery are separate server stages. Missing
+APNs configuration leaves the mail APIs available and reports notifications as
+unconfigured.
+
+The [iPhone acceptance card](docs/ixd/ios/device-acceptance.html) documents physical
+device setup and manual checks. Simulator tests do not establish device signing,
+production authentication, or real push delivery. Outlook sync and sending remain
+unimplemented in the current provider adapter.
+
 Orca is a messaging product focused on human-written communication. This repo starts as a Bun workspace with a Hono API, a React/Vite web app, and a shared TypeScript package for cross-app types.
 
 ## Prerequisites
