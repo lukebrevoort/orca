@@ -14,7 +14,7 @@ struct SettingsView: View {
                     Picker("Notify me about", selection: $notifications.mode) { Text("Human mail").tag("human"); Text("All mail").tag("all"); Text("Off").tag("off") }
                         .accessibilityIdentifier("settings.notificationMode").onChange(of: notifications.mode) { notifications.reconcile() }
                     LabeledContent("Status", value: notifications.statusText).accessibilityIdentifier("settings.notificationStatus")
-                    if notifications.authorization == .notDetermined { Button("Allow notifications") { Task { await notifications.requestPermission() } } }
+                    if notifications.authorization == .notDetermined { Button("Allow notifications") { Task { await notifications.requestPermission() } }.accessibilityIdentifier("settings.allow-notifications") }
                     else if notifications.authorization == .denied { Link("Open System Settings", destination: URL(string: UIApplication.openSettingsURLString)!) }
                     if notifications.errorMessage != nil { Button("Retry") { notifications.reconcile() }.accessibilityHint(notifications.errorMessage ?? "") }
                 }

@@ -54,14 +54,18 @@ import SwiftUI
             let loadedAccounts = try await client.accounts()
             guard generation == connectionGeneration else { return }
             accounts = loadedAccounts; try? await cache.save(accounts, key: "\(origin)|\(user.id)|accounts")
+            guard generation == connectionGeneration else { return }
             if !accounts.contains(where: { $0.id == selectedAccountID }) { selectedAccountID = accounts.first?.id }; phase = .ready
         } catch let APIClient.ClientError.http(code, _) where code == 401 {
             guard generation == connectionGeneration else { return }
             phase = .signedOut; errorMessage = "Your session expired. Local drafts are still safe."
         } catch {
             guard generation == connectionGeneration else { return }
-            userID = UserDefaults.standard.string(forKey: "lastUser|\(origin)")
-            if let userID, let cached: [MailAccount] = await cache.load([MailAccount].self, key: "\(origin)|\(userID)|accounts") { accounts = cached; if !accounts.contains(where: { $0.id == selectedAccountID }) { selectedAccountID = accounts.first?.id }; phase = .ready }
+            let cachedUserID = UserDefaults.standard.string(forKey: "lastUser|\(origin)")
+            let cached: [MailAccount]? = if let cachedUserID { await cache.load([MailAccount].self, key: "\(origin)|\(cachedUserID)|accounts") } else { nil }
+            guard generation == connectionGeneration else { return }
+            userID = cachedUserID
+            if let cached { accounts = cached; if !accounts.contains(where: { $0.id == selectedAccountID }) { selectedAccountID = accounts.first?.id }; phase = .ready }
             else { phase = .signedOut }
             errorMessage = "You’re offline. Cached mail and local drafts remain available."
         }
