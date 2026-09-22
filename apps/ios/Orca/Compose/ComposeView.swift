@@ -42,6 +42,7 @@ struct ComposeView: View {
     func recipientsAreValid(_ value: String, allowingEmpty: Bool) -> Bool { if allowingEmpty && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }; let values = value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }; return !values.isEmpty && values.allSatisfy(Self.isEmail) }
     static func isEmail(_ value: String) -> Bool { value.range(of: #"^[^\s@,]+@[^\s@,]+\.[^\s@,]+$"#, options: .regularExpression) != nil }
     static func acceptsAttachment(existingSize: Int, candidateSize: Int) -> Bool { candidateSize > 0 && existingSize >= 0 && candidateSize <= 25 * 1024 * 1024 - existingSize }
+    static func canKeepBoth(remoteDeliveryStatus: String, localDeliveryState: String, hasDeliveryKey: Bool) -> Bool { remoteDeliveryStatus == "draft" && !hasDeliveryKey && ["local", "draft"].contains(localDeliveryState) }
     func saveLocal() async -> Bool { guard !completed, let accountID = draftAccountID, let ownerScope = draftOwnerScope else { return false }; var draft = local ?? LocalDraft(ownerScope: ownerScope, accountId: accountID); if draft.serverID == nil, let seedServer { draft.serverID = seedServer.id; draft.serverRevision = seedServer.revision; draft.deliveryState = seedServer.deliveryStatus }; draft.content = content(); draft.recipientText = .init(to: to, cc: cc, bcc: bcc); do { try await state.draftStore.save(draft); local = draft; status = "Saved locally"; return true } catch { status = "Local save failed — sending is paused"; return false } }
     func attach(_ urls: [URL]) async { guard !sending, let accountID = draftAccountID, let ownerScope = draftOwnerScope else { return }; var attachments = local?.content.attachments ?? []; var total = attachments.reduce(0) { $0 + $1.size }; var rejected = false; for url in urls { let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }; guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, Self.acceptsAttachment(existingSize: total, candidateSize: size), let data = try? Data(contentsOf: url, options: .mappedIfSafe), data.count == size else { rejected = true; continue }; attachments.append(.init(id: UUID().uuidString, filename: url.lastPathComponent, mimeType: "application/octet-stream", size: data.count, contentBase64: data.base64EncodedString())); total += data.count }; var draft = local ?? LocalDraft(ownerScope: ownerScope, accountId: accountID); draft.content = content(); draft.content.attachments = attachments; do { try await state.draftStore.save(draft); local = draft; status = rejected ? "Some files were not added; attachments must total 25 MB or less" : "Attachment saved locally" } catch { status = "Attachment save failed" } }
     func flushForTransition() { guard !sending, !completed else { return }; saveTask?.cancel(); let taskID = UIApplication.shared.beginBackgroundTask(withName: "Save Orca draft"); Task { _ = await saveLocal(); if taskID != .invalid { UIApplication.shared.endBackgroundTask(taskID) } } }
@@ -58,7 +59,7 @@ struct ComposeView: View {
         do {
             if current.serverID == nil { let server = try await client.createDraft(accountId: account.id, content: current.content); current.serverID = server.id; current.serverRevision = server.revision; try await state.draftStore.save(current) }
             else if let id = current.serverID, let revision = current.serverRevision { let server = try await client.updateDraft(id, accountId: account.id, revision: revision, content: current.content); current.serverRevision = server.revision; try await state.draftStore.save(current) }
-        } catch let APIClient.ClientError.http(code, body) where code == 409 && body?.code == "stale_draft" { staleConflict = true; status = "This draft changed elsewhere. Your local version is safe."; return }
+        } catch let APIClient.ClientError.http(code, body) where code == 409 && body?.code == "stale_draft" { await inspectStaleConflict(client: client, accountID: account.id, ownerScope: ownerScope); return }
         catch { status = "Could not save to server — local draft is safe"; return }
         do {
             current = try await state.draftStore.prepareSend(current.id); local = current
@@ -69,8 +70,22 @@ struct ComposeView: View {
             else { status = result.error?.message ?? "Send failed; draft is safe" }
         } catch { try? await state.draftStore.markAmbiguous(current.id); status = "Delivery uncertain — draft and delivery key are safe" }
     }
+    func inspectStaleConflict(client: APIClient, accountID: String, ownerScope: String) async {
+        guard let draft = local, let serverID = draft.serverID else { status = "This draft changed elsewhere. Your local version is safe."; return }
+        do {
+            let remote = try await client.draft(serverID, accountId: accountID)
+            guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
+            if Self.canKeepBoth(remoteDeliveryStatus: remote.deliveryStatus, localDeliveryState: draft.deliveryState, hasDeliveryKey: draft.idempotencyKey != nil) { staleConflict = true; status = "This draft changed elsewhere. Keep both versions, or leave this local copy unchanged." }
+            else { staleConflict = false; status = "This draft’s delivery is \(remote.deliveryStatus). It cannot be detached safely." }
+        } catch { guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client else { return }; staleConflict = false; status = "This draft changed elsewhere. Delivery status could not be verified, so no copy was detached." }
+    }
     func keepBothDrafts() async {
-        guard staleConflict, !deliveryFrozen, var draft = local else { return }
+        guard staleConflict, !deliveryFrozen, var draft = local, draft.idempotencyKey == nil, let serverID = draft.serverID, let accountID = draftAccountID, draft.accountId == accountID, let ownerScope = draftOwnerScope, ownerScope == state.ownerScope, let client = state.client else { return }
+        do {
+            let remote = try await client.draft(serverID, accountId: accountID)
+            guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
+            guard Self.canKeepBoth(remoteDeliveryStatus: remote.deliveryStatus, localDeliveryState: draft.deliveryState, hasDeliveryKey: draft.idempotencyKey != nil) else { staleConflict = false; status = "This draft’s delivery is \(remote.deliveryStatus). It cannot be detached safely."; return }
+        } catch { guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client else { return }; staleConflict = false; status = "Delivery status could not be verified, so no copy was detached."; return }
         draft.serverID = nil; draft.serverRevision = nil; draft.idempotencyKey = nil; draft.deliveryState = "local"
         do { try await state.draftStore.save(draft); local = draft; staleConflict = false; status = "Both drafts kept. This version will send as a new draft." }
         catch { status = "Could not preserve both drafts — no server copy was changed" }

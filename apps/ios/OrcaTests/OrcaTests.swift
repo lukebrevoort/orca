@@ -44,6 +44,12 @@ final class OrcaTests: XCTestCase {
         XCTAssertFalse(view.recipientsAreValid("one@example.com, not-an-address", allowingEmpty: false))
         XCTAssertFalse(view.recipientsAreValid("one@example.com,", allowingEmpty: false))
     }
+    func testKeepBothRequiresUnreservedLocalAndRemoteDrafts() {
+        XCTAssertTrue(ComposeView.canKeepBoth(remoteDeliveryStatus: "draft", localDeliveryState: "local", hasDeliveryKey: false))
+        XCTAssertFalse(ComposeView.canKeepBoth(remoteDeliveryStatus: "sending", localDeliveryState: "local", hasDeliveryKey: false))
+        XCTAssertFalse(ComposeView.canKeepBoth(remoteDeliveryStatus: "draft", localDeliveryState: "ambiguous", hasDeliveryKey: false))
+        XCTAssertFalse(ComposeView.canKeepBoth(remoteDeliveryStatus: "draft", localDeliveryState: "local", hasDeliveryKey: true))
+    }
     func testReopenedDraftPreservesReplyContext() {
         let context = DraftContext(kind: "reply", threadId: "t", messageId: "m", providerMessageId: "pm", providerThreadId: "pt", inReplyTo: "<m@example.com>", references: [])
         let draft = LocalDraft(ownerScope: "origin|user", accountId: "a", content: DraftContent(context: context))
