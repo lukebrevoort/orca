@@ -58,10 +58,21 @@ PY
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
 result_dir=$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")
 result_bundle="$result_dir/Orca.xcresult"
+# AppleInterfaceStyle launch defaults do not reliably change simulator appearance.
+trap 'xcrun simctl ui "$simulator_udid" appearance light >/dev/null 2>&1 || true' EXIT
+xcrun simctl ui "$simulator_udid" appearance light
 
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
-  -resultBundlePath "$result_bundle"
+  -resultBundlePath "$result_bundle" \
+  -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode
+
+xcrun simctl ui "$simulator_udid" appearance dark
+xcodebuild test-without-building \
+  -xctestrun "$injected_xctestrun" \
+  -destination "platform=iOS Simulator,id=$simulator_udid" \
+  -resultBundlePath "$result_dir/OrcaDark.xcresult" \
+  -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode
 
 print "Result bundle: $result_bundle"

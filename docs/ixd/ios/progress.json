@@ -45,10 +45,14 @@
       "summary": "Implementation reference established; final app conformance checked during integration."
     },
     "7": {
-      "status": "pending"
+      "status": "done",
+      "file": "validation.html",
+      "summary": "Implemented native SwiftUI app replaces the prototype; simulator build, 17 unit tests and 2 UI flows passed."
     },
     "8": {
-      "status": "pending"
+      "status": "done",
+      "file": "device-acceptance.html",
+      "summary": "Implementation and independent review complete; local verification recorded in validation.html. Signing, deployment and physical APNs acceptance remain external."
     }
   },
   "lastUpdated": "2026-09-22"

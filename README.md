@@ -41,7 +41,8 @@ not run that worker. Delivery scans default to every 15 seconds after ingestion.
 The notification payload uses generic text and opaque account/thread IDs, keeping
 sender names, subjects, and message bodies off the lock screen.
 
-The [iPhone acceptance card](docs/ixd/ios/device-acceptance.html) documents physical
+The [implementation verification report](docs/ixd/ios/validation.html) records automated
+checks and native UI evidence. The [iPhone acceptance card](docs/ixd/ios/device-acceptance.html) documents physical
 device setup and manual checks. Simulator tests do not establish device signing,
 production authentication, or real push delivery. Outlook sync and sending remain
 unimplemented in the current provider adapter.
