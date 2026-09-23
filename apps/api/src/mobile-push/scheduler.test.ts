@@ -203,6 +203,108 @@ describe("mobile push scheduler", () => {
     assert.equal((client.sqlite.query("SELECT count(*) AS count FROM mobile_push_outbox").get() as { count: number }).count, 0);
     client.sqlite.close();
   });
+
+  test("uses a fresh lease timestamp for every serial delivery claim", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "lease-user", "lease-account");
+      await registerDevice(client.sqlite, { userId: "lease-user", sessionId: "session-lease-user", installationId: "phone", token: tokenA, environment: "sandbox", notificationMode: "all", now: new Date(1_000) });
+      seedMessage(client.sqlite, { id: "first", accountId: "lease-account", createdAt: 2_000 });
+      seedMessage(client.sqlite, { id: "second", accountId: "lease-account", createdAt: 2_100 });
+      scanAndEnqueue(client.sqlite, { now: new Date(2_500), batchSize: 100 });
+
+      let currentTime = 3_000;
+      let releaseSecond!: () => void;
+      let secondStarted!: () => void;
+      const secondStartedPromise = new Promise<void>((resolve) => { secondStarted = resolve; });
+      const secondReleasePromise = new Promise<void>((resolve) => { releaseSecond = resolve; });
+      let workerOneCalls = 0;
+      let workerTwoCalls = 0;
+      const workerOne = deliverReady(client.sqlite, {
+        now: () => new Date(currentTime), batchSize: 2, config: testConfig,
+        transport: { async send() {
+          workerOneCalls += 1;
+          if (workerOneCalls === 1) {
+            currentTime += 31_000;
+          } else {
+            secondStarted();
+            await secondReleasePromise;
+          }
+          return { outcome: "success", status: 200 };
+        } },
+      });
+      await secondStartedPromise;
+      const workerTwo = await deliverReady(client.sqlite, {
+        now: () => new Date(currentTime), batchSize: 2, config: testConfig,
+        transport: { async send() { workerTwoCalls += 1; return { outcome: "success", status: 200 }; } },
+      });
+      releaseSecond();
+      const workerOneResult = await workerOne;
+
+      assert.equal(workerOneCalls, 2);
+      assert.equal(workerTwoCalls, 0);
+      assert.equal(workerTwo.delivered, 0);
+      assert.equal(workerOneResult.delivered, 2);
+    } finally { client.sqlite.close(); }
+  });
+
+  test("does not let a stale lease owner overwrite the current owner's completion", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "fence-user", "fence-account");
+      await registerDevice(client.sqlite, { userId: "fence-user", sessionId: "session-fence-user", installationId: "phone", token: tokenA, environment: "sandbox", notificationMode: "all", now: new Date(1_000) });
+      seedMessage(client.sqlite, { id: "message", accountId: "fence-account", createdAt: 2_000 });
+      scanAndEnqueue(client.sqlite, { now: new Date(2_500), batchSize: 100 });
+
+      let currentTime = 3_000;
+      let releaseStale!: () => void;
+      let staleStarted!: () => void;
+      const staleStartedPromise = new Promise<void>((resolve) => { staleStarted = resolve; });
+      const staleReleasePromise = new Promise<void>((resolve) => { releaseStale = resolve; });
+      const staleWorker = deliverReady(client.sqlite, {
+        now: () => new Date(currentTime), batchSize: 1, config: testConfig,
+        transport: { async send() {
+          staleStarted();
+          await staleReleasePromise;
+          return { outcome: "retry", status: 503, reason: "stale response" };
+        } },
+      });
+      await staleStartedPromise;
+      currentTime += 31_000;
+      const currentWorker = await deliverReady(client.sqlite, {
+        now: () => new Date(currentTime), batchSize: 1, config: testConfig,
+        transport: { async send() { return { outcome: "success", status: 200 }; } },
+      });
+      releaseStale();
+      const staleResult = await staleWorker;
+
+      assert.equal(currentWorker.delivered, 1);
+      assert.deepEqual(staleResult, { delivered: 0, retried: 0, discarded: 0, disabledDevices: 0 });
+      assert.deepEqual(client.sqlite.query("SELECT state,attempt_count AS attempts,last_status AS status,last_error AS error FROM mobile_push_outbox").get(),
+        { state: "sent", attempts: 1, status: 200, error: null });
+    } finally { client.sqlite.close(); }
+  });
+
+  test("scans newly committed mail by insertion order across accounts", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "order-user", "order-account-a");
+      client.sqlite.query("INSERT INTO oauth_accounts (id,user_id,provider,provider_email,provider_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+        .run("order-account-b", "order-user", "gmail", "order-b@example.com", "provider-order-account-b", 1, 1);
+      client.sqlite.query("INSERT INTO labels (id,account_id,provider_label_id,name,type,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+        .run("inbox-order-account-b", "order-account-b", "INBOX", "Inbox", "system", 1, 1);
+      await registerDevice(client.sqlite, { userId: "order-user", sessionId: "session-order-user", installationId: "phone", token: tokenA, environment: "sandbox", notificationMode: "all", now: new Date(1_000) });
+
+      seedMessage(client.sqlite, { id: "committed-first", accountId: "order-account-a", createdAt: 3_000 });
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(4_000), batchSize: 100 }).enqueued, 1);
+      // This provider operation began earlier (and therefore has an older
+      // created_at) but committed after the device watermark advanced.
+      seedMessage(client.sqlite, { id: "committed-second", accountId: "order-account-b", createdAt: 2_000 });
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(4_100), batchSize: 100 }).enqueued, 1);
+      assert.deepEqual(client.sqlite.query("SELECT message_id AS messageId FROM mobile_push_outbox ORDER BY created_at,id").all(),
+        [{ messageId: "committed-first" }, { messageId: "committed-second" }]);
+    } finally { client.sqlite.close(); }
+  });
 });
 
 function createMobilePushTestDbConnection(path: string) {

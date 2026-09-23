@@ -337,6 +337,13 @@
       "when": 1789862400000,
       "tag": "0047_mobile_push",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790035200000,
+      "tag": "0048_mobile_push_commit_order",
+      "breakpoints": true
     }
   ]
 }
