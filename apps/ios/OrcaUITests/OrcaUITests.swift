@@ -130,6 +130,20 @@ final class OrcaUITests: XCTestCase {
         app.segmentedControls.buttons["Human mail"].tap()
     }
 
+    /// Run under both actual simulator appearances, not launch-default overrides.
+    func test04StyledHTMLUsesReadableCanvas() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        openConversation(subject: Fixture.htmlSubject, in: app)
+        let foreground = app.staticTexts["Explicit dark foreground stays readable."]
+        let background = app.staticTexts["Explicit pale background keeps readable inherited text."]
+        XCTAssertTrue(foreground.waitForExistence(timeout: 10))
+        XCTAssertTrue(background.waitForExistence(timeout: 10))
+        XCTAssertTrue(foreground.isHittable)
+        XCTAssertTrue(background.isHittable)
+        attachScreenshot(named: "13-styled-html-readable")
+    }
+
     private func launchApp() throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {

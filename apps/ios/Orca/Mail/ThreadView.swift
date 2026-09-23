@@ -20,7 +20,7 @@ struct ThreadView: View {
                                     Text(MailDate.full(item.receivedAt)).font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted)
                                 }
                             }
-                            if let html = item.bodyHtml, !html.isEmpty { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) }
+                            if let html = item.bodyHtml, !html.isEmpty { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 10)) }
                             else { Text(item.bodyText ?? item.snippet).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled) }
                             ForEach(item.attachments) { attachment in
                                 Button { Task { await download(attachment) } } label: {
