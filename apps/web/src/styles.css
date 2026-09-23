@@ -5759,3 +5759,15 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .bulk-space-dialog footer { border-top: 1px solid var(--orca-border); padding-top: 20px; margin-top: 4px; flex-wrap: wrap; gap: 12px; }
 .bulk-space-dialog footer button { min-height: 44px; }
 @media (max-width: 540px) { .bulk-action-bar { grid-template-columns: 1fr; } .bulk-space-dialog { padding: 20px; } }
+
+/* Mobile consent is a single decision, independent of the desktop login grid. */
+.mobile-auth-page { padding: 32px 24px; }
+.mobile-auth-shell { display: flex; flex-direction: column; align-items: stretch; width: 100%; max-width: 500px; min-height: auto; gap: 20px; }
+.mobile-auth-shell .oauth-brand { grid-area: auto; margin: 0 0 20px; gap: 12px; }
+.mobile-auth-shell .oauth-brand > span:last-child { display: inline; }
+.mobile-auth-shell .oauth-eyebrow { position: static; margin: 0; }
+.mobile-auth-shell h1 { font-family: var(--orca-font-reader, Georgia, serif); font-size: clamp(38px, 7vw, 58px); line-height: 1.05; letter-spacing: -.035em; }
+.mobile-auth-shell > p:not(.oauth-eyebrow) { margin: 0; font-size: 16px; line-height: 1.6; }
+.mobile-auth-shell .oauth-notice { margin: 0; width: 100%; box-sizing: border-box; }
+.mobile-auth-shell button { min-height: 44px; }
+.mobile-auth-shell > .oauth-retry-button { align-self: flex-start; }

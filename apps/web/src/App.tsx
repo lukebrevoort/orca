@@ -4117,8 +4117,8 @@ function MobileAuthConsentPage() {
     }
   }
 
-  return <main className="oauth-page login-required-page">
-    <section className="login-required-shell" aria-labelledby="mobile-auth-title">
+  return <main className="oauth-page login-required-page mobile-auth-page">
+    <section className="login-required-shell mobile-auth-shell" aria-labelledby="mobile-auth-title">
       <div className="oauth-brand"><span className="oauth-brand-mark"><WaveGlyph /></span><span>Orca</span></div>
       <p className="oauth-eyebrow">Orca for iPhone</p>
       <h1 id="mobile-auth-title">Connect this iPhone?</h1>

@@ -246,7 +246,10 @@ struct ComposeView: View {
         }
     }
     func recoverPreReservationFailure(_ error: Error, draft: LocalDraft, client: APIClient, accountID: String, ownerScope: String) async {
-        guard case let APIClient.ClientError.http(_, body) = error else { return }
+        func identityIsCurrent() -> Bool {
+            !Task.isCancelled && ownerScope == state.ownerScope && draftAccountID == accountID && state.client === client && local?.id == draft.id
+        }
+        guard identityIsCurrent(), case let APIClient.ClientError.http(_, body) = error else { return }
         if body?.code == "stale_draft" {
             guard let serverID = draft.serverID else {
                 if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: body?.currentRevision)) { local = recovered }
@@ -257,15 +260,17 @@ struct ComposeView: View {
                 let remote = try await client.draft(serverID, accountId: accountID)
                 guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
                 if remote.deliveryStatus == "draft", let recovered = try await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: nil)) {
+                    guard identityIsCurrent() else { return }
                     local = recovered; staleConflict = true; status = "This draft changed elsewhere. Keep both versions, or leave this local copy unchanged."
                 } else { await applyVerifiedDeliveryStatus(remote.deliveryStatus, draft: draft, message: "The draft changed while delivery was checked") }
             } catch {
-                if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain) { local = ambiguous }
+                guard identityIsCurrent() else { return }
+                if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain) { guard identityIsCurrent() else { return }; local = ambiguous }
                 staleConflict = false; status = "Delivery could not be verified. The original delivery key is preserved; check again before editing or retrying."
             }
             return
         }
-        if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: draft.serverRevision)) { local = recovered }
+        if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: draft.serverRevision)) { guard identityIsCurrent() else { return }; local = recovered }
         staleConflict = false
         status = body?.code == "missing_capability"
             ? "Sending needs account permission. Reconnect this account in Settings with send access; your draft stays editable."

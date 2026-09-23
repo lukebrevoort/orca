@@ -16,6 +16,7 @@ export const mobilePushDevices = sqliteTable("mobile_push_devices", {
   notificationMode: text("notification_mode").notNull().default("human"),
   generation: integer("generation").notNull().default(1),
   eligibleAfterAt: integer("eligible_after_at", { mode: "timestamp_ms" }).notNull(),
+  watermarkSequence: integer("watermark_sequence").notNull().default(0),
   watermarkCreatedAt: integer("watermark_created_at", { mode: "timestamp_ms" }).notNull(),
   watermarkEmailId: text("watermark_email_id").notNull().default(""),
   registeredAt: integer("registered_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
@@ -25,7 +26,7 @@ export const mobilePushDevices = sqliteTable("mobile_push_devices", {
   disabledReason: text("disabled_reason"),
 }, (table) => ({
   primaryKey: primaryKey({ columns: [table.userId, table.installationId] }),
-  scanIdx: index("mobile_push_devices_scan_idx").on(table.notificationMode, table.disabledAt, table.watermarkCreatedAt, table.watermarkEmailId),
+  scanIdx: index("mobile_push_devices_scan_idx").on(table.notificationMode, table.disabledAt, table.watermarkSequence),
   staleIdx: index("mobile_push_devices_stale_idx").on(table.lastSeenAt),
   tokenOwnerIdx: uniqueIndex("mobile_push_devices_token_owner_idx").on(table.tokenHash, table.environment),
   environmentCheck: check("mobile_push_devices_environment_check", sql`${table.environment} IN ('sandbox','production')`),
@@ -75,4 +76,20 @@ export const mobilePushOutbox = sqliteTable("mobile_push_outbox", {
   environmentCheck: check("mobile_push_outbox_environment_check", sql`${table.environment} IN ('sandbox','production')`),
   stateCheck: check("mobile_push_outbox_state_check", sql`${table.state} IN ('pending','delivering','sent','dead')`),
   attemptCheck: check("mobile_push_outbox_attempt_check", sql`${table.attemptCount} >= 0`),
+}));
+
+// Populated transactionally by the AFTER INSERT trigger in migration 0048.
+export const mobilePushSequenceCounter = sqliteTable("mobile_push_sequence_counter", {
+  id: integer("id").primaryKey(),
+  value: integer("value").notNull(),
+}, (table) => ({
+  singletonCheck: check("mobile_push_sequence_counter_singleton_check", sql`${table.id} = 1`),
+  valueCheck: check("mobile_push_sequence_counter_value_check", sql`${table.value} >= 0`),
+}));
+
+export const mobilePushEmailSequence = sqliteTable("mobile_push_email_sequence", {
+  emailId: text("email_id").primaryKey().references(() => emails.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+}, (table) => ({
+  sequenceIdx: uniqueIndex("mobile_push_email_sequence_sequence_unique_idx").on(table.sequence),
 }));
