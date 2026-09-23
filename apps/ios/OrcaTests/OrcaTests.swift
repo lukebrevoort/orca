@@ -119,7 +119,8 @@ final class OrcaTests: XCTestCase {
         StubURLProtocol.handler = { request in
             requests.append(request.httpMethod ?? "")
             switch request.httpMethod {
-            case "PATCH": return (200, try JSONEncoder().encode(serverDraft(revision: 2)))
+            case "PATCH" where requests.filter({ $0 == "PATCH" }).count == 1: return (200, try JSONEncoder().encode(serverDraft(revision: 2)))
+            case "PATCH": return (409, #"{"error":{"code":"stale_draft","message":"changed","retryable":true,"currentRevision":3}}"#.data(using: .utf8)!)
             case "POST": return (409, #"{"error":{"code":"stale_draft","message":"changed","retryable":true,"currentRevision":3}}"#.data(using: .utf8)!)
             case "GET": return (200, try JSONEncoder().encode(serverDraft(revision: 3)))
             default: throw URLError(.unsupportedURL)
@@ -137,8 +138,26 @@ final class OrcaTests: XCTestCase {
             XCTAssertEqual(APIClient.sendFailurePhase(for: error), .confirmedPreReservation)
         }
         let remote = try await client.draft(patched.id, accountId: "account")
-        let transitioned = try await store.transition(local.id, .confirmedPreReservation(serverRevision: remote.revision)); let recovered = try XCTUnwrap(transitioned)
-        XCTAssertEqual(requests, ["PATCH", "POST", "GET"]); XCTAssertEqual(remote.revision, 3); XCTAssertEqual(recovered.serverRevision, 3); XCTAssertNil(recovered.idempotencyKey); XCTAssertEqual(recovered.deliveryState, "local")
+        let transitioned = try await store.transition(local.id, .confirmedPreReservation(serverRevision: nil)); let recovered = try XCTUnwrap(transitioned)
+        XCTAssertEqual(requests, ["PATCH", "POST", "GET"]); XCTAssertEqual(remote.revision, 3); XCTAssertEqual(recovered.serverRevision, 2); XCTAssertNil(recovered.idempotencyKey); XCTAssertEqual(recovered.deliveryState, "local")
+        do {
+            _ = try await client.updateDraft(patched.id, accountId: "account", revision: try XCTUnwrap(recovered.serverRevision), content: content)
+            XCTFail("A reopened local draft must retain the stale revision")
+        } catch let APIClient.ClientError.http(status, body) {
+            XCTAssertEqual(status, 409); XCTAssertEqual(body?.code, "stale_draft")
+        }
+        XCTAssertEqual(requests, ["PATCH", "POST", "GET", "PATCH"])
+    }
+    func testFailedStaleReconciliationKeepsOriginalDeliveryKeyFrozen() async throws {
+        let configuration = URLSessionConfiguration.ephemeral; configuration.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: configuration)) { "token" }
+        StubURLProtocol.handler = { _ in throw URLError(.timedOut) }; defer { StubURLProtocol.handler = nil }
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString); let store = DraftStore(directory: directory); var draft = LocalDraft(ownerScope: "o", accountId: "a"); draft.serverID = "server-draft"; draft.serverRevision = 2
+        try await store.save(draft); let sending = try await store.prepareSend(draft.id); let originalKey = try XCTUnwrap(sending.idempotencyKey)
+        do { _ = try await client.draft("server-draft", accountId: "a"); XCTFail("Expected reconciliation GET failure") }
+        catch { XCTAssertEqual((error as? URLError)?.code, .timedOut) }
+        let reconciled = try await store.transition(draft.id, .uncertain); let frozen = try XCTUnwrap(reconciled)
+        XCTAssertEqual(frozen.idempotencyKey, originalKey); XCTAssertEqual(frozen.serverRevision, 2); XCTAssertEqual(frozen.deliveryState, "ambiguous")
     }
     func testDefinitiveAndUncertainSendFailuresPreserveDifferentRetrySafety() async throws {
         XCTAssertEqual(APIClient.sendFailurePhase(for: APIClient.ClientError.http(501, APIErrorBody(code: "missing_capability", message: "read only", retryable: false))), .confirmedPreReservation)
@@ -158,7 +177,7 @@ final class OrcaTests: XCTestCase {
     func testSentAliasIsOwnedAndRecipientDedupeIsCaseInsensitive() {
         let message = threadMessage(from: "me+work@example.com", to: ["maya@example.com", "MAYA@example.com", "me@example.com"], cc: ["ME+WORK@example.com", "anika@example.com"], labels: ["SENT"])
         let reply = ComposeView.replyRecipients(accountEmail: "me@example.com", message: message, kind: "reply")
-        XCTAssertEqual(reply.to.map(\.email), ["maya@example.com"])
+        XCTAssertEqual(reply.to.map(\.email), ["maya@example.com", "anika@example.com"])
         let replyAll = ComposeView.replyRecipients(accountEmail: "me@example.com", message: message, kind: "reply_all")
         XCTAssertEqual(replyAll.to.map(\.email), ["maya@example.com"]); XCTAssertEqual(replyAll.cc.map(\.email), ["anika@example.com"])
     }

@@ -256,12 +256,12 @@ struct ComposeView: View {
             do {
                 let remote = try await client.draft(serverID, accountId: accountID)
                 guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
-                if remote.deliveryStatus == "draft", let recovered = try await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: remote.revision)) {
+                if remote.deliveryStatus == "draft", let recovered = try await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: nil)) {
                     local = recovered; staleConflict = true; status = "This draft changed elsewhere. Keep both versions, or leave this local copy unchanged."
                 } else { await applyVerifiedDeliveryStatus(remote.deliveryStatus, draft: draft, message: "The draft changed while delivery was checked") }
             } catch {
-                if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: body?.currentRevision)) { local = recovered }
-                staleConflict = true; status = "This draft changed elsewhere. Your version is editable, but the server copy could not be loaded."
+                if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain) { local = ambiguous }
+                staleConflict = false; status = "Delivery could not be verified. The original delivery key is preserved; check again before editing or retrying."
             }
             return
         }
