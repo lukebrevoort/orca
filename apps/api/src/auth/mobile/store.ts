@@ -108,6 +108,74 @@ export function bindMobileAuthRequest(
   return request ? { ...request, csrfToken } : null;
 }
 
+export function cancelMobileAuthRequest(
+  db: DatabaseClient,
+  input: { requestToken: string; csrfToken: string; userId: string; browserSessionId: string },
+  now = new Date(),
+) {
+  return Boolean(db.update(mobileAuthRequests).set({
+    requestExpiresAt: now,
+    csrfTokenHash: null,
+  }).where(and(
+    eq(mobileAuthRequests.requestTokenHash, hashOpaqueToken(input.requestToken)),
+    eq(mobileAuthRequests.csrfTokenHash, hashOpaqueToken(input.csrfToken)),
+    eq(mobileAuthRequests.userId, input.userId),
+    eq(mobileAuthRequests.browserSessionId, input.browserSessionId),
+    gt(mobileAuthRequests.requestExpiresAt, now),
+    isNull(mobileAuthRequests.authorizedAt),
+  )).returning({ id: mobileAuthRequests.id }).get());
+}
+
+export function restartMobileAuthRequest(
+  db: DatabaseClient,
+  input: { previousRequestToken: string; requestToken: string; userId: string; browserSessionId: string },
+  now = new Date(),
+) {
+  const csrfToken = randomOpaqueToken();
+  const request = db.transaction((tx) => {
+    const previous = tx.select({ id: mobileAuthRequests.id }).from(mobileAuthRequests).where(and(
+      eq(mobileAuthRequests.requestTokenHash, hashOpaqueToken(input.previousRequestToken)),
+      eq(mobileAuthRequests.userId, input.userId),
+      eq(mobileAuthRequests.browserSessionId, input.browserSessionId),
+      gt(mobileAuthRequests.requestExpiresAt, now),
+      isNull(mobileAuthRequests.authorizedAt),
+    )).get();
+    if (!previous) return null;
+
+    const replacement = tx.select({ id: mobileAuthRequests.id }).from(mobileAuthRequests).where(and(
+      eq(mobileAuthRequests.requestTokenHash, hashOpaqueToken(input.requestToken)),
+      gt(mobileAuthRequests.requestExpiresAt, now),
+      isNull(mobileAuthRequests.userId),
+      isNull(mobileAuthRequests.browserSessionId),
+      isNull(mobileAuthRequests.authorizedAt),
+    )).get();
+    if (!replacement) return null;
+
+    const invalidated = tx.update(mobileAuthRequests).set({
+      requestExpiresAt: now,
+      csrfTokenHash: null,
+    }).where(and(
+      eq(mobileAuthRequests.id, previous.id),
+      gt(mobileAuthRequests.requestExpiresAt, now),
+      isNull(mobileAuthRequests.authorizedAt),
+    )).returning({ id: mobileAuthRequests.id }).get();
+    if (!invalidated) return null;
+
+    return tx.update(mobileAuthRequests).set({
+      userId: input.userId,
+      browserSessionId: input.browserSessionId,
+      csrfTokenHash: hashOpaqueToken(csrfToken),
+    }).where(and(
+      eq(mobileAuthRequests.id, replacement.id),
+      isNull(mobileAuthRequests.userId),
+      isNull(mobileAuthRequests.browserSessionId),
+      isNull(mobileAuthRequests.authorizedAt),
+      gt(mobileAuthRequests.requestExpiresAt, now),
+    )).returning({ expiresAt: mobileAuthRequests.requestExpiresAt }).get() ?? null;
+  });
+  return request ? { ...request, csrfToken } : null;
+}
+
 export function grantMobileAuthRequest(
   db: DatabaseClient,
   input: { requestToken: string; csrfToken: string; userId: string; browserSessionId: string },

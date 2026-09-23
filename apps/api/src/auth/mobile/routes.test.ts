@@ -160,6 +160,100 @@ describe("mobile native authentication", () => {
     expect(conflict.status).toBe(409);
   });
 
+  test("explicitly cancels a consent request and permits a fresh start in the same browser", async () => {
+    const first = await start(fixture.app);
+    const firstToken = new URL(first.authorizationUrl).searchParams.get("request")!;
+    const firstConsentResponse = await fixture.app.request(`/v1/mobile/auth/authorize?request=${firstToken}`, {
+      headers: { cookie: fixture.user1Cookie },
+    });
+    const firstConsent = await firstConsentResponse.json() as { csrfToken: string };
+    const firstBindingCookie = firstConsentResponse.headers.get("set-cookie")!.split(";", 1)[0]!;
+
+    const cancelled = await fixture.app.request("/v1/mobile/auth/cancel", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `${fixture.user1Cookie}; ${firstBindingCookie}`,
+        origin: webOrigin,
+      },
+      body: JSON.stringify({ csrfToken: firstConsent.csrfToken }),
+    });
+    expect(cancelled.status).toBe(204);
+    expect(cancelled.headers.get("set-cookie")).toContain("orca_mobile_auth_request=");
+    expect(cancelled.headers.get("set-cookie")).toContain("Max-Age=0");
+
+    const second = await start(fixture.app);
+    const secondToken = new URL(second.authorizationUrl).searchParams.get("request")!;
+    const secondConsent = await fixture.app.request(`/v1/mobile/auth/authorize?request=${secondToken}`, {
+      headers: { cookie: fixture.user1Cookie },
+    });
+    expect(secondConsent.status).toBe(200);
+    expect((await secondConsent.json() as { accountEmail: string }).accountEmail).toBe("one@example.com");
+  });
+
+  test("deliberately restarts after native cancellation without allowing request substitution", async () => {
+    const first = await start(fixture.app);
+    const second = await start(fixture.app);
+    const firstToken = new URL(first.authorizationUrl).searchParams.get("request")!;
+    const secondToken = new URL(second.authorizationUrl).searchParams.get("request")!;
+    const firstConsent = await fixture.app.request(`/v1/mobile/auth/authorize?request=${firstToken}`, {
+      headers: { cookie: fixture.user1Cookie },
+    });
+    const firstBindingCookie = firstConsent.headers.get("set-cookie")!.split(";", 1)[0]!;
+
+    const conflict = await fixture.app.request(`/v1/mobile/auth/authorize?request=${secondToken}`, {
+      headers: { cookie: `${fixture.user1Cookie}; ${firstBindingCookie}` },
+    });
+    expect(conflict.status).toBe(409);
+
+    const crossOrigin = await fixture.app.request("/v1/mobile/auth/restart", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `${fixture.user1Cookie}; ${firstBindingCookie}`,
+        origin: "https://evil.example",
+      },
+      body: JSON.stringify({ requestToken: secondToken }),
+    });
+    expect(crossOrigin.status).toBe(403);
+
+    const wrongSession = await fixture.app.request("/v1/mobile/auth/restart", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `${fixture.user2Cookie}; ${firstBindingCookie}`,
+        origin: webOrigin,
+      },
+      body: JSON.stringify({ requestToken: secondToken }),
+    });
+    expect(wrongSession.status).toBe(400);
+
+    const restarted = await fixture.app.request("/v1/mobile/auth/restart", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `${fixture.user1Cookie}; ${firstBindingCookie}`,
+        origin: webOrigin,
+      },
+      body: JSON.stringify({ requestToken: secondToken }),
+    });
+    expect(restarted.status).toBe(200);
+    const restartedBody = await restarted.json() as { accountEmail: string; csrfToken: string };
+    expect(restartedBody.accountEmail).toBe("one@example.com");
+    expect(restarted.headers.get("set-cookie")).toContain(`orca_mobile_auth_request=${secondToken}`);
+
+    const staleGrant = await fixture.app.request("/v1/mobile/auth/grant", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `${fixture.user1Cookie}; orca_mobile_auth_request=${firstToken}`,
+        origin: webOrigin,
+      },
+      body: JSON.stringify({ csrfToken: (await firstConsent.json() as { csrfToken: string }).csrfToken }),
+    });
+    expect(staleGrant.status).toBe(400);
+  });
+
   test("bounds start payloads, pending capacity, and prunes expired requests", async () => {
     const oversized = await fixture.app.request("/v1/mobile/auth/start", {
       method: "POST",

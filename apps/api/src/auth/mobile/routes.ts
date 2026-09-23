@@ -14,8 +14,10 @@ import { requireAuth, type AuthVariables } from "../middleware.ts";
 import {
   bindMobileAuthRequest,
   admitMobileAuthRequest,
+  cancelMobileAuthRequest,
   exchangeMobileAuthorizationCode,
   grantMobileAuthRequest,
+  restartMobileAuthRequest,
   revokeMobileSession,
 } from "./store.ts";
 
@@ -62,6 +64,8 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
   });
   app.use("/start", boundedJsonBody);
   app.use("/grant", boundedJsonBody);
+  app.use("/cancel", boundedJsonBody);
+  app.use("/restart", boundedJsonBody);
   app.use("/exchange", boundedJsonBody);
 
   app.post("/start", async (c) => {
@@ -162,6 +166,82 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
       redirectUrl.searchParams.set("code", granted.authorizationCode);
       redirectUrl.searchParams.set("state", granted.state);
       return c.json({ redirectUrl: redirectUrl.toString() });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post("/cancel", cookieAuth, async (c) => {
+    if (c.req.header("origin") !== webOrigin) {
+      return error(c, 403, "invalid_origin", "The authorization cancellation must come from Orca");
+    }
+    const requestToken = getCookie(c, requestBindingCookie);
+    const body = await readJson(c.req.raw);
+    const csrfToken = stringField(body, "csrfToken");
+    if (!requestToken || !csrfToken || !pkceValuePattern.test(csrfToken)) {
+      return error(c, 400, "invalid_request", "The authorization cancellation is invalid");
+    }
+    const auth = c.get("auth");
+    const { db, sqlite } = dbFactory();
+    try {
+      const cancelled = cancelMobileAuthRequest(db, {
+        requestToken,
+        csrfToken,
+        userId: auth.userId,
+        browserSessionId: auth.sessionId,
+      }, now());
+      if (!cancelled) {
+        return error(c, 400, "invalid_request", "The authorization cancellation is expired, used, or belongs to another session");
+      }
+      deleteCookie(c, requestBindingCookie, {
+        secure: cookieSecure,
+        path: "/v1/mobile/auth",
+      });
+      return c.body(null, 204);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post("/restart", cookieAuth, async (c) => {
+    if (c.req.header("origin") !== webOrigin) {
+      return error(c, 403, "invalid_origin", "The authorization restart must come from Orca");
+    }
+    const previousRequestToken = getCookie(c, requestBindingCookie);
+    const body = await readJson(c.req.raw);
+    const requestToken = stringField(body, "requestToken");
+    if (!previousRequestToken || !requestToken || !pkceValuePattern.test(requestToken) || previousRequestToken === requestToken) {
+      return error(c, 400, "invalid_request", "The authorization restart is invalid");
+    }
+    const auth = c.get("auth");
+    const { db, sqlite } = dbFactory();
+    try {
+      const user = db.select({ email: users.email, authenticatedAt: users.authenticatedAt })
+        .from(users).where(eq(users.id, auth.userId)).get();
+      if (!user?.authenticatedAt) {
+        return error(c, 403, "authenticated_user_required", "Finish signing in before connecting this device");
+      }
+      const restarted = restartMobileAuthRequest(db, {
+        previousRequestToken,
+        requestToken,
+        userId: auth.userId,
+        browserSessionId: auth.sessionId,
+      }, now());
+      if (!restarted) {
+        return error(c, 400, "invalid_request", "The authorization restart is expired or belongs to another session");
+      }
+      setCookie(c, requestBindingCookie, requestToken, {
+        httpOnly: true,
+        sameSite: "Lax",
+        secure: cookieSecure,
+        path: "/v1/mobile/auth",
+        maxAge: 10 * 60,
+      });
+      return c.json({
+        accountEmail: user.email,
+        csrfToken: restarted.csrfToken,
+        expiresAt: restarted.expiresAt.toISOString(),
+      });
     } finally {
       sqlite.close();
     }

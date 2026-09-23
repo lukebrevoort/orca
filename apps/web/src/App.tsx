@@ -4016,7 +4016,7 @@ function OAuthLoginPage({ loginIntent = false, returnToOverride }: { loginIntent
 
 function MobileAuthConsentPage() {
   const requestToken = new URLSearchParams(window.location.search).get("request");
-  const [status, setStatus] = useState<"loading" | "signedout" | "ready" | "granting" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "signedout" | "conflict" | "restarting" | "ready" | "granting" | "cancelling" | "cancelled" | "error">("loading");
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
@@ -4030,11 +4030,12 @@ function MobileAuthConsentPage() {
       credentials: "include",
       signal: abortController.signal,
     }).then(async (response) => {
-      if (response.status === 401) {
-        setStatus("signedout");
+      const body = await readJsonObject(response);
+      const responseState = mobileAuthorizationResponseState(response.status, body);
+      if (responseState) {
+        setStatus(responseState);
         return;
       }
-      const body = await readJsonObject(response);
       if (!response.ok) throw new Error("mobile_authorization_unavailable");
       const email = getStringField(body, "accountEmail");
       const csrf = getStringField(body, "csrfToken");
@@ -4071,22 +4072,80 @@ function MobileAuthConsentPage() {
     }
   }
 
+  async function restart() {
+    if (!requestToken) return;
+    setStatus("restarting");
+    try {
+      const response = await fetch("/v1/mobile/auth/restart", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestToken }),
+      });
+      const body = await readJsonObject(response);
+      const responseState = mobileAuthorizationResponseState(response.status, body);
+      if (responseState === "signedout") {
+        setStatus("signedout");
+        return;
+      }
+      const email = getStringField(body, "accountEmail");
+      const csrf = getStringField(body, "csrfToken");
+      if (!response.ok || !email || !csrf) throw new Error("mobile_authorization_restart_failed");
+      setAccountEmail(email);
+      setCsrfToken(csrf);
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  async function cancel() {
+    if (!csrfToken) return;
+    setStatus("cancelling");
+    try {
+      const response = await fetch("/v1/mobile/auth/cancel", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ csrfToken }),
+      });
+      if (!response.ok) throw new Error("mobile_authorization_cancel_failed");
+      setStatus("cancelled");
+      window.close();
+    } catch {
+      setStatus("error");
+    }
+  }
+
   return <main className="oauth-page login-required-page">
     <section className="login-required-shell" aria-labelledby="mobile-auth-title">
       <div className="oauth-brand"><span className="oauth-brand-mark"><WaveGlyph /></span><span>Orca</span></div>
       <p className="oauth-eyebrow">Orca for iPhone</p>
       <h1 id="mobile-auth-title">Connect this iPhone?</h1>
       {status === "loading" ? <p role="status">Checking this secure request…</p> : null}
-      {status === "ready" || status === "granting" ? <>
+      {status === "ready" || status === "granting" || status === "cancelling" ? <>
         <p>This will sign the Orca iPhone app in as <strong>{accountEmail}</strong>. It will not expose your Gmail or Outlook password or provider tokens.</p>
-        <button className="oauth-provider-button oauth-enter-button" disabled={status === "granting"} onClick={() => void grant()} type="button">
+        <button className="oauth-provider-button oauth-enter-button" disabled={status === "granting" || status === "cancelling"} onClick={() => void grant()} type="button">
           {status === "granting" ? "Connecting…" : "Connect this iPhone"} <span aria-hidden="true">→</span>
         </button>
-        <button className="oauth-retry-button" disabled={status === "granting"} onClick={() => window.close()} type="button">Cancel</button>
+        <button className="oauth-retry-button" disabled={status === "granting" || status === "cancelling"} onClick={() => void cancel()} type="button">{status === "cancelling" ? "Cancelling…" : "Cancel"}</button>
       </> : null}
-      {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>This request can’t be completed.</strong><span>Return to the Orca app and start sign-in again.</span></div> : null}
+      {status === "conflict" || status === "restarting" ? <div className="oauth-notice oauth-notice-error" role="alert">
+        <strong>A previous iPhone sign-in is still open.</strong>
+        <span>Start this new request only if you just restarted sign-in from the Orca app.</span>
+        <button className="oauth-retry-button" disabled={status === "restarting"} onClick={() => void restart()} type="button">{status === "restarting" ? "Starting fresh…" : "Start this new request"}</button>
+      </div> : null}
+      {status === "cancelled" ? <div className="oauth-notice" role="status"><strong>This sign-in request was cancelled.</strong><span>You can close this page and return to the Orca app.</span></div> : null}
+      {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>This request can’t be completed.</strong><span>Return to the Orca app and start sign-in again. If a previous request is still open, cancel it before retrying.</span></div> : null}
     </section>
   </main>;
+}
+
+export function mobileAuthorizationResponseState(status: number, body: Record<string, unknown>) {
+  const code = getNestedErrorCode(body);
+  if (status === 401 || (status === 403 && code === "authenticated_user_required")) return "signedout" as const;
+  if (status === 409 && code === "request_binding_conflict") return "conflict" as const;
+  return null;
 }
 
 function providerDisplayName(provider: OAuthProvider) {
