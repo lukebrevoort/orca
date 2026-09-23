@@ -87,6 +87,7 @@ struct InboxView: View {
                 NavigationLink(destination: ComposeView()) {
                     Image(systemName: "square.and.pencil")
                         .font(.system(size: 20, weight: .medium))
+                        .frame(width: 24, height: 24)
                 }
                 .tint(OrcaTheme.accent)
                 .accessibilityLabel("Compose")
