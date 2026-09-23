@@ -66,6 +66,14 @@ final class OrcaTests: XCTestCase {
         XCTAssertFalse(view.recipientsAreValid("one@example.com, not-an-address", allowingEmpty: false))
         XCTAssertFalse(view.recipientsAreValid("one@example.com,", allowingEmpty: false))
     }
+    func testReadOnlyCapabilityBlocksOnlyNormalSendAndShowsWebRepairPath() {
+        let account = MailAccount(id: "gmail", provider: "gmail", email: "me@example.com", displayName: "Me", avatarUrl: nil, capabilities: MailCapabilities(read: true, send: false, draft: false))
+        let normal = ComposeView.sendPermissionGate(account: account, deliveryState: "local")
+        XCTAssertTrue(normal.blocksNormalSend); XCTAssertEqual(normal.guidance, "This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then reconnect if prompted. Your draft remains editable.")
+        for state in ["sending", "ambiguous", "rejected"] { XCTAssertFalse(ComposeView.sendPermissionGate(account: account, deliveryState: state).blocksNormalSend) }
+        var unsupported = account; unsupported.provider = "outlook"
+        XCTAssertEqual(ComposeView.sendPermissionGate(account: unsupported, deliveryState: "local").guidance, "Sending is not supported for this provider yet. Your draft remains editable in Orca.")
+    }
     func testKeepBothRequiresUnreservedLocalAndRemoteDrafts() {
         XCTAssertTrue(ComposeView.canKeepBoth(remoteDeliveryStatus: "draft", localDeliveryState: "local", hasDeliveryKey: false))
         XCTAssertFalse(ComposeView.canKeepBoth(remoteDeliveryStatus: "sending", localDeliveryState: "local", hasDeliveryKey: false))

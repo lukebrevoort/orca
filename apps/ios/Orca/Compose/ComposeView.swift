@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct ComposeSendPermissionGate: Equatable {
+    var blocksNormalSend: Bool
+    var guidance: String?
+}
+
 struct ComposeView: View {
     @EnvironmentObject var state: AppState; @Environment(\.dismiss) var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -102,6 +107,16 @@ struct ComposeView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 Divider().overlay(OrcaTheme.border)
+                if let guidance = sendPermissionGate.guidance {
+                    Label(guidance, systemImage: "lock.fill")
+                        .font(OrcaTheme.ui(12, weight: .medium))
+                        .foregroundStyle(OrcaTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 12)
+                        .accessibilityIdentifier("compose.send-permission")
+                }
                 Group {
                     if dynamicTypeSize.isAccessibilitySize { composeActionsVertical }
                     else { composeActionsHorizontal }
@@ -137,7 +152,7 @@ struct ComposeView: View {
         Button(primaryActionTitle) { Task { if rejectedDelivery { await editRejectedCopy() } else { await send() } } }
             .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
             .buttonStyle(OrcaPrimaryButtonStyle())
-            .disabled(sending || staleConflict || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!rejectedDelivery && deliveryFrozen && local?.idempotencyKey == nil))
+            .disabled(sending || staleConflict || (!deliveryRecoveryAction && (sendPermissionGate.blocksNormalSend || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)) || (!rejectedDelivery && deliveryFrozen && local?.idempotencyKey == nil))
             .accessibilityIdentifier("compose.send")
     }
     private var composeActionsHorizontal: some View {
@@ -172,8 +187,19 @@ struct ComposeView: View {
     }
     var snapshot: String { [to, cc, bcc, subject, messageBody].joined(separator: "\u{1f}") }
     var rejectedDelivery: Bool { local?.deliveryState == "rejected" }
+    var deliveryRecoveryAction: Bool { local.map { ["sending", "ambiguous", "rejected"].contains($0.deliveryState) } ?? false }
     var deliveryFrozen: Bool { sending || (local.map { ["sending", "ambiguous", "rejected"].contains($0.deliveryState) } ?? false) }
     var primaryActionTitle: String { rejectedDelivery ? "Edit a new copy" : (deliveryFrozen ? "Check delivery" : "Send") }
+    var composeAccount: MailAccount? { guard let draftAccountID else { return state.selectedAccount }; return state.accounts.first(where: { $0.id == draftAccountID }) }
+    var sendPermissionGate: ComposeSendPermissionGate { Self.sendPermissionGate(account: composeAccount, deliveryState: local?.deliveryState) }
+    static func sendPermissionGate(account: MailAccount?, deliveryState: String?) -> ComposeSendPermissionGate {
+        guard let account, !account.capabilities.send else { return .init(blocksNormalSend: false, guidance: nil) }
+        let recoveryAction = ["sending", "ambiguous", "rejected"].contains(deliveryState ?? "")
+        let guidance = account.provider.lowercased() == "gmail"
+            ? "This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then reconnect if prompted. Your draft remains editable."
+            : "Sending is not supported for this provider yet. Your draft remains editable in Orca."
+        return .init(blocksNormalSend: !recoveryAction, guidance: guidance)
+    }
     func seed() { guard to.isEmpty, subject.isEmpty, let context, let last = context.messages.last else { return }; subject = kind == "forward" ? "Fwd: \(context.thread.subject)" : (context.thread.subject.lowercased().hasPrefix("re:") ? context.thread.subject : "Re: \(context.thread.subject)"); if kind != "forward" { let recipients = Self.replyRecipients(accountEmail: context.account.email, message: last, kind: kind); to = recipients.to.map(\.email).joined(separator: ", "); cc = recipients.cc.map(\.email).joined(separator: ", ") } else { messageBody = "\n\n---------- Forwarded message ----------\nFrom: \(last.from.name ?? last.from.email) <\(last.from.email)>\nDate: \(last.receivedAt)\nSubject: \(last.subject)\n\n\(last.bodyText ?? last.snippet)" } }
     static func replyRecipients(accountEmail: String, message: ThreadMessage, kind: String) -> (to: [MailContact], cc: [MailContact]) {
         var owned = Set([accountEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()])
@@ -221,7 +247,7 @@ struct ComposeView: View {
             return
         }
         guard recipientsAreValid(to, allowingEmpty: false), recipientsAreValid(cc, allowingEmpty: true), recipientsAreValid(bcc, allowingEmpty: true) else { status = "Fix invalid recipient addresses before sending"; return }
-        guard account.capabilities.send else { status = "Sending needs account permission. Reconnect this account in Settings with send access; your draft stays editable."; return }
+        guard account.capabilities.send else { status = sendPermissionGate.guidance ?? "Sending is unavailable; your draft stays editable."; return }
         guard await saveLocal(), var current = local else { return }
         do {
             if current.serverID == nil { let server = try await client.createDraft(accountId: account.id, content: current.content); current.serverID = server.id; current.serverRevision = server.revision; try await state.draftStore.save(current) }
@@ -273,7 +299,7 @@ struct ComposeView: View {
         if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: draft.serverRevision)) { guard identityIsCurrent() else { return }; local = recovered }
         staleConflict = false
         status = body?.code == "missing_capability"
-            ? "Sending needs account permission. Reconnect this account in Settings with send access; your draft stays editable."
+            ? (sendPermissionGate.guidance ?? "Sending is unavailable; your draft stays editable.")
             : "\(body?.message ?? "Send was rejected before delivery started"). Your draft stays editable."
     }
     func applyVerifiedDeliveryStatus(_ remoteStatus: String, draft: LocalDraft, message: String) async {
