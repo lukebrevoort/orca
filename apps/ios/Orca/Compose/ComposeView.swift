@@ -174,7 +174,25 @@ struct ComposeView: View {
     var rejectedDelivery: Bool { local?.deliveryState == "rejected" }
     var deliveryFrozen: Bool { sending || (local.map { ["sending", "ambiguous", "rejected"].contains($0.deliveryState) } ?? false) }
     var primaryActionTitle: String { rejectedDelivery ? "Edit a new copy" : (deliveryFrozen ? "Check delivery" : "Send") }
-    func seed() { guard to.isEmpty, subject.isEmpty, let context, let last = context.messages.last else { return }; subject = kind == "forward" ? "Fwd: \(context.thread.subject)" : (context.thread.subject.lowercased().hasPrefix("re:") ? context.thread.subject : "Re: \(context.thread.subject)"); if kind != "forward" { let mine = context.account.email.lowercased(); let contacts = ([last.from] + (kind == "reply_all" ? last.to + last.cc : [])).filter { $0.email.lowercased() != mine }; to = Array(Set(contacts.map(\.email))).joined(separator: ", ") } else { messageBody = "\n\n---------- Forwarded message ----------\nFrom: \(last.from.name ?? last.from.email) <\(last.from.email)>\nDate: \(last.receivedAt)\nSubject: \(last.subject)\n\n\(last.bodyText ?? last.snippet)" } }
+    func seed() { guard to.isEmpty, subject.isEmpty, let context, let last = context.messages.last else { return }; subject = kind == "forward" ? "Fwd: \(context.thread.subject)" : (context.thread.subject.lowercased().hasPrefix("re:") ? context.thread.subject : "Re: \(context.thread.subject)"); if kind != "forward" { let recipients = Self.replyRecipients(accountEmail: context.account.email, message: last, kind: kind); to = recipients.to.map(\.email).joined(separator: ", "); cc = recipients.cc.map(\.email).joined(separator: ", ") } else { messageBody = "\n\n---------- Forwarded message ----------\nFrom: \(last.from.name ?? last.from.email) <\(last.from.email)>\nDate: \(last.receivedAt)\nSubject: \(last.subject)\n\n\(last.bodyText ?? last.snippet)" } }
+    static func replyRecipients(accountEmail: String, message: ThreadMessage, kind: String) -> (to: [MailContact], cc: [MailContact]) {
+        var owned = Set([accountEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()])
+        if message.labels.contains(where: { $0.uppercased() == "SENT" }) { owned.insert(message.from.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) }
+        func dedupe(_ contacts: [MailContact], excluding: Set<String> = []) -> [MailContact] {
+            var seen = excluding
+            return contacts.filter { contact in
+                let email = contact.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                guard !email.isEmpty, !owned.contains(email), !seen.contains(email) else { return false }
+                seen.insert(email); return true
+            }
+        }
+        let sender = dedupe([message.from])
+        let to = kind == "reply"
+            ? (sender.isEmpty ? dedupe(message.to + message.cc) : sender)
+            : dedupe(sender + message.to)
+        let cc = kind == "reply_all" ? dedupe(message.cc, excluding: Set(to.map { $0.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })) : []
+        return (to, cc)
+    }
     func content() -> DraftContent { var result = DraftContent(to: validRecipients(to), cc: validRecipients(cc), bcc: validRecipients(bcc), subject: subject, body: .init(text: messageBody, html: nil), context: local?.content.context ?? seedServer?.context, attachments: local?.content.attachments ?? seedServer?.attachments ?? []); if let context, let last = context.messages.last { result.context = DraftContext(kind: kind, threadId: context.thread.id, messageId: last.id, providerMessageId: last.providerMessageId, providerThreadId: context.thread.providerThreadId, inReplyTo: last.internetMessageId, references: last.references) }; return result }
     func validRecipients(_ value: String) -> [Recipient] { value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { Self.isEmail($0) }.map { Recipient(name: nil, email: $0) } }
     func recipientsAreValid(_ value: String, allowingEmpty: Bool) -> Bool { if allowingEmpty && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }; let values = value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }; return !values.isEmpty && values.allSatisfy(Self.isEmail) }
@@ -195,10 +213,15 @@ struct ComposeView: View {
                 if result.status == "sent" { completed = true; try await state.draftStore.remove(current.id); dismiss() }
                 else if result.status == "rejected" { if let rejected = try await state.draftStore.markRejected(current.id) { local = rejected; status = result.error?.message ?? "Delivery was rejected. Edit a new copy to try again." } }
                 else { status = "Delivery remains uncertain — no duplicate was sent" }
-            } catch { status = "Could not confirm delivery — no duplicate was sent" }
+            } catch {
+                if APIClient.sendFailurePhase(for: error) == .confirmedPreReservation {
+                    await recoverPreReservationFailure(error, draft: current, client: client, accountID: account.id, ownerScope: ownerScope)
+                } else { status = "Could not confirm delivery — no duplicate was sent" }
+            }
             return
         }
         guard recipientsAreValid(to, allowingEmpty: false), recipientsAreValid(cc, allowingEmpty: true), recipientsAreValid(bcc, allowingEmpty: true) else { status = "Fix invalid recipient addresses before sending"; return }
+        guard account.capabilities.send else { status = "Sending needs account permission. Reconnect this account in Settings with send access; your draft stays editable."; return }
         guard await saveLocal(), var current = local else { return }
         do {
             if current.serverID == nil { let server = try await client.createDraft(accountId: account.id, content: current.content); current.serverID = server.id; current.serverRevision = server.revision; try await state.draftStore.save(current) }
@@ -213,7 +236,50 @@ struct ComposeView: View {
             else if result.status == "ambiguous" || result.status == "sending" { try await state.draftStore.markAmbiguous(current.id); status = "Delivery uncertain — check before retrying" }
             else if result.status == "rejected" { if let rejected = try await state.draftStore.markRejected(current.id) { local = rejected; status = result.error?.message ?? "Delivery was rejected. Edit a new copy to try again." } }
             else { status = result.error?.message ?? "Send failed; draft is safe" }
-        } catch { try? await state.draftStore.markAmbiguous(current.id); status = "Delivery uncertain — draft and delivery key are safe" }
+        } catch {
+            if APIClient.sendFailurePhase(for: error) == .confirmedPreReservation {
+                await recoverPreReservationFailure(error, draft: current, client: client, accountID: account.id, ownerScope: ownerScope)
+            } else {
+                if let ambiguous = try? await state.draftStore.transition(current.id, .uncertain) { local = ambiguous }
+                status = "Delivery uncertain — draft and delivery key are safe"
+            }
+        }
+    }
+    func recoverPreReservationFailure(_ error: Error, draft: LocalDraft, client: APIClient, accountID: String, ownerScope: String) async {
+        guard case let APIClient.ClientError.http(_, body) = error else { return }
+        if body?.code == "stale_draft" {
+            guard let serverID = draft.serverID else {
+                if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: body?.currentRevision)) { local = recovered }
+                staleConflict = true; status = "This draft changed elsewhere. Your local version is editable and was not sent."
+                return
+            }
+            do {
+                let remote = try await client.draft(serverID, accountId: accountID)
+                guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
+                if remote.deliveryStatus == "draft", let recovered = try await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: remote.revision)) {
+                    local = recovered; staleConflict = true; status = "This draft changed elsewhere. Keep both versions, or leave this local copy unchanged."
+                } else { await applyVerifiedDeliveryStatus(remote.deliveryStatus, draft: draft, message: "The draft changed while delivery was checked") }
+            } catch {
+                if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: body?.currentRevision)) { local = recovered }
+                staleConflict = true; status = "This draft changed elsewhere. Your version is editable, but the server copy could not be loaded."
+            }
+            return
+        }
+        if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: draft.serverRevision)) { local = recovered }
+        staleConflict = false
+        status = body?.code == "missing_capability"
+            ? "Sending needs account permission. Reconnect this account in Settings with send access; your draft stays editable."
+            : "\(body?.message ?? "Send was rejected before delivery started"). Your draft stays editable."
+    }
+    func applyVerifiedDeliveryStatus(_ remoteStatus: String, draft: LocalDraft, message: String) async {
+        switch remoteStatus {
+        case "sent":
+            completed = true; try? await state.draftStore.remove(draft.id); dismiss()
+        case "rejected":
+            if let rejected = try? await state.draftStore.transition(draft.id, .rejected) { local = rejected }; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again."
+        default:
+            if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain) { local = ambiguous }; staleConflict = false; status = "\(message). Delivery is \(remoteStatus); no new send was started."
+        }
     }
     func inspectStaleConflict(client: APIClient, accountID: String, ownerScope: String) async {
         guard let draft = local, let serverID = draft.serverID else { status = "This draft changed elsewhere. Your local version is safe."; return }

@@ -53,7 +53,7 @@ struct MessageDraft: Codable, Identifiable, Hashable {
 }
 struct DraftContent: Codable, Hashable { var to = [Recipient](); var cc = [Recipient](); var bcc = [Recipient](); var subject = ""; var body = DraftBody(text: "", html: nil); var context: DraftContext?; var attachments = [OutboundAttachment]() }
 struct DeliveryResult: Codable { var draftId: String; var status: String; var providerMessageId: String?; var providerThreadId: String?; var error: APIErrorBody? }
-struct APIErrorBody: Codable, Error { var code: String; var message: String; var retryable: Bool? }
+struct APIErrorBody: Codable, Error { var code: String; var message: String; var retryable: Bool?; var currentRevision: Int? = nil }
 struct ErrorEnvelope: Codable { var error: APIErrorBody }
 struct AuthStart: Codable { var authorizationUrl: URL }
 struct AuthExchange: Codable { var accessToken: String; var expiresAt: String }

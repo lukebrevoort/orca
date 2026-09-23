@@ -4,6 +4,16 @@ actor APIClient {
     enum ClientError: LocalizedError { case invalidBaseURL, invalidResponse, http(Int, APIErrorBody?), decoding(Error)
         var errorDescription: String? { switch self { case .invalidBaseURL: "Enter a valid server URL."; case .invalidResponse: "The server returned an unreadable response."; case let .http(code, body): body?.message ?? "Server error (\(code))."; case let .decoding(error): "Orca could not read the server response: \(error.localizedDescription)" } }
     }
+    enum SendFailurePhase: Equatable { case confirmedPreReservation, uncertain }
+    nonisolated static func sendFailurePhase(for error: Error) -> SendFailurePhase {
+        guard case let ClientError.http(status, body) = error else { return .uncertain }
+        switch (status, body?.code) {
+        case (409, "stale_draft"), (501, "missing_capability"), (409, "provider_rejected"):
+            return .confirmedPreReservation
+        default:
+            return .uncertain
+        }
+    }
     private var baseURL: URL
     private let session: URLSession
     private let token: @Sendable () async -> String?
