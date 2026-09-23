@@ -1,19 +1,20 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Database } from "bun:sqlite";
-import { humanClassificationEvidenceSchema } from "@orca/shared";
+import { organizationViewDefinitionSchema } from "@orca/shared";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { automaticClassificationColumns, classifyHumanSignal, humanClassifierVersion } from "../classification/human-signal.ts";
+import { inboxDestinationId, inboxVisibilityPredicate } from "../organization/views/inbox-policy.ts";
+import { threadMatchPredicate } from "../organization/views/thread-predicate.ts";
 import { createApnsTransport, type ApnsDeliveryResult, type ApnsTransport } from "./apns.ts";
 import { loadMobilePushConfig, type MobilePushConfig } from "./config.ts";
-import { readDeviceToken, type ApnsEnvironment, type NotificationMode } from "./store.ts";
+import { readDeviceToken, type ApnsEnvironment } from "./store.ts";
 
 type DeviceScanRow = {
   userId: string;
   installationId: string;
   sessionId: string;
   environment: ApnsEnvironment;
-  notificationMode: NotificationMode;
+  notifyInbox: number;
   generation: number;
   eligibleAfterAt: number;
   watermarkSequence: number;
@@ -27,11 +28,7 @@ type CandidateRow = {
   threadId: string;
   pushSequence: number;
   createdAt: number;
-  fromAddress: string | null;
-  humanClassification: string | null;
-  humanClassificationEvidence: string | null;
-  humanClassifierVersion: string | null;
-  overrideClassification: string | null;
+  matchesSelection: number;
 };
 
 type OutboxRow = {
@@ -39,6 +36,7 @@ type OutboxRow = {
   userId: string;
   installationId: string;
   deviceGeneration: number;
+  messageId: string;
   accountId: string;
   threadId: string;
   environment: ApnsEnvironment;
@@ -65,28 +63,6 @@ export const isLegacySessionActive: MobilePushSessionChecker = (sqlite, input) =
 
 const emptyResult = (): MobilePushCycleResult => ({ scanned: 0, enqueued: 0, delivered: 0, retried: 0, discarded: 0, disabledDevices: 0, staleDevicesRemoved: 0 });
 
-function parseEvidence(value: string | null) {
-  if (!value) return undefined;
-  try {
-    const parsed = humanClassificationEvidenceSchema.safeParse(JSON.parse(value));
-    return parsed.success ? parsed.data : undefined;
-  } catch { return undefined; }
-}
-
-function classifyCandidate(sqlite: Database, row: CandidateRow, now: number) {
-  let automatic = row.humanClassification ?? "unclassified";
-  if (row.humanClassifierVersion !== humanClassifierVersion) {
-    const classification = classifyHumanSignal(parseEvidence(row.humanClassificationEvidence));
-    const columns = automaticClassificationColumns(classification);
-    sqlite.query(`UPDATE emails SET human_signal=?, human_classification=?, human_classification_reasons=?, human_classifier_version=?, updated_at=?
-      WHERE id=? AND account_id=? AND COALESCE(human_classification_evidence,'')=COALESCE(?,'') AND COALESCE(human_classifier_version,'')=COALESCE(?,'')`)
-      .run(columns.humanSignal, columns.humanClassification, columns.humanClassificationReasons, columns.humanClassifierVersion,
-        now, row.messageId, row.accountId, row.humanClassificationEvidence, row.humanClassifierVersion);
-    automatic = classification.classification;
-  }
-  return row.overrideClassification ?? automatic;
-}
-
 function privatePayload(row: CandidateRow) {
   return {
     aps: { alert: { title: "New email", body: "You have a new message in Orca." }, sound: "default" },
@@ -96,46 +72,99 @@ function privatePayload(row: CandidateRow) {
   };
 }
 
+function selectionPredicate(sqlite: Database, device: Pick<DeviceScanRow, "userId" | "installationId" | "notifyInbox">) {
+  const parts: string[] = [];
+  const params: Array<string | number> = [];
+  if (device.notifyInbox) {
+    const inboxId = inboxDestinationId(sqlite, device.userId);
+    if (inboxId) {
+      const inboxPolicy = inboxVisibilityPredicate(sqlite, device.userId, "destination");
+      parts.push(`(destination.destination_id=? AND ${inboxPolicy.sql})`);
+      params.push(inboxId, ...inboxPolicy.params);
+    }
+  }
+  parts.push(`EXISTS (SELECT 1 FROM mobile_push_device_spaces selected
+    JOIN organization_lanes lane ON lane.workspace_id=selected.user_id AND lane.id=selected.resource_id AND lane.retired_at IS NULL
+    WHERE selected.user_id=? AND selected.installation_id=? AND selected.kind='destination'
+      AND selected.resource_id=destination.destination_id)`);
+  params.push(device.userId, device.installationId);
+  parts.push(`EXISTS (SELECT 1 FROM mobile_push_device_spaces selected
+    JOIN collections collection ON collection.id=selected.resource_id
+    JOIN collection_threads membership ON membership.collection_id=collection.id
+    JOIN oauth_accounts collection_account ON collection_account.id=collection.account_id AND collection_account.user_id=selected.user_id
+    WHERE selected.user_id=? AND selected.installation_id=? AND selected.kind='collection'
+      AND collection.account_id=e.account_id AND membership.thread_id=e.thread_id)`);
+  params.push(device.userId, device.installationId);
+
+  const accountIds = (sqlite.query("SELECT id FROM oauth_accounts WHERE user_id=? ORDER BY id").all(device.userId) as Array<{ id: string }>).map(({ id }) => id);
+  const views = sqlite.query(`SELECT view.id,view.definition FROM mobile_push_device_spaces selected
+    JOIN organization_views view ON view.workspace_id=selected.user_id AND view.id=selected.resource_id
+    WHERE selected.user_id=? AND selected.installation_id=? AND selected.kind='view' ORDER BY view.id`)
+    .all(device.userId, device.installationId) as Array<{ id: string; definition: string }>;
+  for (const view of views) {
+    let definitionValue: unknown;
+    try { definitionValue = JSON.parse(view.definition); } catch { continue; }
+    const parsed = organizationViewDefinitionSchema.safeParse(definitionValue);
+    if (!parsed.success) continue;
+    const definition = parsed.data;
+    if (definition.accountIds) {
+      const owned = definition.accountIds.filter((id) => accountIds.includes(id));
+      if (!owned.length) continue;
+      definition.accountIds = owned;
+    }
+    const predicate = threadMatchPredicate({ workspaceId: device.userId, accountIds }, { definition });
+    parts.push(`EXISTS (SELECT 1 FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id
+      JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id
+      WHERE t.account_id=e.account_id AND t.id=e.thread_id AND ${predicate.conditions.join(" AND ")})`);
+    params.push(...predicate.params);
+  }
+  return { sql: parts.length ? `(${parts.join(" OR ")})` : "0", params };
+}
+
+function messageStillEligible(sqlite: Database, device: Pick<DeviceScanRow, "userId" | "installationId" | "notifyInbox">, row: OutboxRow) {
+  const selection = selectionPredicate(sqlite, device);
+  return Boolean(sqlite.query(`SELECT 1 FROM emails e
+    JOIN oauth_accounts account ON account.id=e.account_id AND account.user_id=?
+    JOIN organization_effective_destinations destination ON destination.workspace_id=?
+      AND destination.account_id=e.account_id AND destination.thread_id=e.thread_id
+    WHERE e.id=? AND e.account_id=? AND e.is_read=0 AND e.is_draft=0
+      AND NOT EXISTS (SELECT 1 FROM email_labels el JOIN labels label ON label.id=el.label_id
+        WHERE el.email_id=e.id AND upper(label.provider_label_id) IN ('SENT','DRAFT'))
+      AND ${selection.sql} LIMIT 1`).get(device.userId, device.userId, row.messageId, row.accountId, ...selection.params));
+}
+
 export function scanAndEnqueue(sqlite: Database, options: { now: Date; batchSize: number; isSessionActive?: MobilePushSessionChecker }) {
   const now = options.now.getTime();
   const result = { scanned: 0, enqueued: 0 };
   const isSessionActive = options.isSessionActive ?? isLegacySessionActive;
   const devices = sqlite.query(`SELECT user_id AS userId, installation_id AS installationId, session_id AS sessionId, environment,
-    notification_mode AS notificationMode, generation, eligible_after_at AS eligibleAfterAt, watermark_sequence AS watermarkSequence,
+    notify_inbox AS notifyInbox, generation, eligible_after_at AS eligibleAfterAt, watermark_sequence AS watermarkSequence,
     watermark_created_at AS watermarkCreatedAt,
     watermark_email_id AS watermarkEmailId
-    FROM mobile_push_devices WHERE disabled_at IS NULL AND notification_mode <> 'off'
+    FROM mobile_push_devices WHERE disabled_at IS NULL AND (notify_inbox=1 OR EXISTS (
+      SELECT 1 FROM mobile_push_device_spaces selected WHERE selected.user_id=mobile_push_devices.user_id
+        AND selected.installation_id=mobile_push_devices.installation_id))
     ORDER BY user_id, installation_id`).all() as DeviceScanRow[];
 
   for (const device of devices) {
     if (!isSessionActive(sqlite, { userId: device.userId, sessionId: device.sessionId, now: options.now })) continue;
     sqlite.transaction(() => {
+      const selection = selectionPredicate(sqlite, device);
       const candidates = sqlite.query(`SELECT e.id AS messageId, e.account_id AS accountId, e.thread_id AS threadId,
-        ps.sequence AS pushSequence, e.created_at AS createdAt, e.from_address AS fromAddress, e.human_classification AS humanClassification,
-        e.human_classification_evidence AS humanClassificationEvidence, e.human_classifier_version AS humanClassifierVersion,
-        COALESCE(cm.classification, ca.classification, cd.classification) AS overrideClassification
+        ps.sequence AS pushSequence, e.created_at AS createdAt, ${selection.sql} AS matchesSelection
         FROM emails e
         JOIN mobile_push_email_sequence ps ON ps.email_id=e.id
         JOIN oauth_accounts a ON a.id=e.account_id AND a.user_id=?
-        LEFT JOIN human_classification_overrides cm ON cm.account_id=e.account_id AND cm.target_type='message' AND cm.target_value=e.id
-        LEFT JOIN human_classification_overrides ca ON ca.account_id=e.account_id AND ca.target_type='sender_address' AND ca.target_value=lower(trim(COALESCE(e.from_address,'')))
-        LEFT JOIN human_classification_overrides cd ON cd.account_id=e.account_id AND cd.target_type='sender_domain' AND cd.target_value=CASE WHEN instr(lower(trim(COALESCE(e.from_address,''))),'@')>0 THEN substr(lower(trim(e.from_address)),instr(lower(trim(e.from_address)),'@')+1) ELSE '' END
-        LEFT JOIN thread_attention_overrides at ON at.account_id=e.account_id AND at.thread_id=e.thread_id
-        LEFT JOIN account_attention_routing aa ON aa.account_id=e.account_id
-        LEFT JOIN sender_attention_rules asa ON asa.account_id=e.account_id AND asa.scope='address' AND asa.value=lower(trim(COALESCE(e.from_address,'')))
-        LEFT JOIN sender_attention_rules asd ON asd.account_id=e.account_id AND asd.scope='domain' AND asd.value=CASE WHEN instr(lower(trim(COALESCE(e.from_address,''))),'@')>0 THEN substr(lower(trim(e.from_address)),instr(lower(trim(e.from_address)),'@')+1) ELSE '' END
+        JOIN organization_effective_destinations destination ON destination.workspace_id=? AND destination.account_id=e.account_id AND destination.thread_id=e.thread_id
         WHERE e.is_read=0 AND e.is_draft=0
           AND ps.sequence>?
           AND COALESCE(e.received_at,e.internal_date)>=?
-          AND COALESCE(at.behavior,asa.behavior,asd.behavior,aa.default_behavior,'normal') NOT IN ('quiet','hidden')
-          AND EXISTS (SELECT 1 FROM email_labels el JOIN labels l ON l.id=el.label_id WHERE el.email_id=e.id AND upper(l.provider_label_id)='INBOX')
           AND NOT EXISTS (SELECT 1 FROM email_labels el JOIN labels l ON l.id=el.label_id WHERE el.email_id=e.id AND upper(l.provider_label_id) IN ('SENT','DRAFT'))
         ORDER BY ps.sequence LIMIT ?`)
-        .all(device.userId, device.watermarkSequence, device.eligibleAfterAt, options.batchSize) as CandidateRow[];
+        .all(...selection.params, device.userId, device.userId, device.watermarkSequence, device.eligibleAfterAt, options.batchSize) as CandidateRow[];
       for (const row of candidates) {
         result.scanned += 1;
-        const effectiveClassification = classifyCandidate(sqlite, row, now);
-        if (device.notificationMode === "all" || effectiveClassification === "likely_human") {
+        if (row.matchesSelection) {
           const inserted = sqlite.query(`INSERT OR IGNORE INTO mobile_push_outbox
             (id,user_id,installation_id,device_generation,message_id,account_id,thread_id,environment,payload_json,apns_id,state,attempt_count,available_at,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,'pending',0,?,?,?)`)
@@ -170,7 +199,7 @@ function claimNext(sqlite: Database, now: number, workerId: string, leaseMs = de
       .run(workerId, now + leaseMs, now, candidate.id, now, now);
     if (claimed.changes !== 1) return null;
     return sqlite.query(`SELECT id, user_id AS userId, installation_id AS installationId, device_generation AS deviceGeneration,
-      account_id AS accountId, thread_id AS threadId, environment, payload_json AS payloadJson, apns_id AS apnsId,
+      message_id AS messageId, account_id AS accountId, thread_id AS threadId, environment, payload_json AS payloadJson, apns_id AS apnsId,
       attempt_count AS attemptCount FROM mobile_push_outbox WHERE id=?`).get(candidate.id) as OutboxRow;
   }).immediate();
 }
@@ -227,11 +256,13 @@ export async function deliverReady(sqlite: Database, options: { now: Date | (() 
     const claimNow = readNow();
     const row = claimNext(sqlite, claimNow.getTime(), workerId);
     if (!row) break;
-    const device = sqlite.query(`SELECT session_id AS sessionId, notification_mode AS notificationMode, environment, disabled_at AS disabledAt
+    const device = sqlite.query(`SELECT session_id AS sessionId, notify_inbox AS notifyInbox, environment, disabled_at AS disabledAt,
+      EXISTS (SELECT 1 FROM mobile_push_device_spaces selected WHERE selected.user_id=mobile_push_devices.user_id
+        AND selected.installation_id=mobile_push_devices.installation_id) AS hasSpaces
       FROM mobile_push_devices WHERE user_id=? AND installation_id=? AND generation=?`)
-      .get(row.userId, row.installationId, row.deviceGeneration) as { sessionId: string; notificationMode: NotificationMode; environment: ApnsEnvironment; disabledAt: number | null } | null;
+      .get(row.userId, row.installationId, row.deviceGeneration) as { sessionId: string; notifyInbox: number; hasSpaces: number; environment: ApnsEnvironment; disabledAt: number | null } | null;
     const activeSession = device && (options.isSessionActive ?? isLegacySessionActive)(sqlite, { userId: row.userId, sessionId: device.sessionId, now: readNow() });
-    if (!device || !activeSession || device.disabledAt !== null || device.notificationMode === "off" || device.environment !== row.environment) {
+    if (!device || !activeSession || device.disabledAt !== null || (!device.notifyInbox && !device.hasSpaces) || device.environment !== row.environment) {
       const discarded = sqlite.query("UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL, last_error='registration_inactive' WHERE id=? AND state='delivering' AND lease_owner=?")
         .run(readNow().getTime(), row.id, workerId).changes;
       counts.discarded += discarded;
@@ -256,10 +287,19 @@ export async function deliverReady(sqlite: Database, options: { now: Date | (() 
     // Logout, account switching, or token refresh during claim processing must
     // suppress this old generation rather than relying on APNs to reject it.
     const current = sqlite.query(`SELECT session_id AS sessionId FROM mobile_push_devices
-      WHERE user_id=? AND installation_id=? AND generation=? AND disabled_at IS NULL AND notification_mode<>'off' AND environment=?`)
+      WHERE user_id=? AND installation_id=? AND generation=? AND disabled_at IS NULL AND environment=? AND (notify_inbox=1 OR EXISTS (
+        SELECT 1 FROM mobile_push_device_spaces selected WHERE selected.user_id=mobile_push_devices.user_id
+          AND selected.installation_id=mobile_push_devices.installation_id))`)
       .get(row.userId, row.installationId, row.deviceGeneration, row.environment) as { sessionId: string } | null;
     if (!current || !(options.isSessionActive ?? isLegacySessionActive)(sqlite, { userId: row.userId, sessionId: current.sessionId, now: readNow() })) {
       const discarded = sqlite.query("UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL, last_error='registration_inactive' WHERE id=? AND state='delivering' AND lease_owner=?")
+        .run(readNow().getTime(), row.id, workerId).changes;
+      counts.discarded += discarded;
+      continue;
+    }
+    if (!messageStillEligible(sqlite, { userId: row.userId, installationId: row.installationId, notifyInbox: device.notifyInbox }, row)) {
+      const discarded = sqlite.query(`UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL,
+        last_error='message_no_longer_eligible' WHERE id=? AND state='delivering' AND lease_owner=?`)
         .run(readNow().getTime(), row.id, workerId).changes;
       counts.discarded += discarded;
       continue;

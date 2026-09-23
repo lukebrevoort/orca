@@ -25,6 +25,13 @@ test("mobile push commit-order migration replays from the earliest unprocessed s
       tag: "0048_mobile_push_commit_order",
       breakpoints: true,
     });
+    assert.deepEqual(journal.entries.find(({ idx }) => idx === 49), {
+      idx: 49,
+      version: "7",
+      when: 1790121600000,
+      tag: "0049_mobile_push_destinations",
+      breakpoints: true,
+    });
     for (const entry of journal.entries.filter(({ idx }) => idx <= 47)) {
       writeFileSync(join(partial, `${entry.tag}.sql`), readFileSync(join(migrations, `${entry.tag}.sql`)));
     }
@@ -49,13 +56,21 @@ test("mobile push commit-order migration replays from the earliest unprocessed s
         INSERT INTO mobile_push_devices(user_id,installation_id,session_id,token_encrypted,token_hash,environment,notification_mode,
           generation,eligible_after_at,watermark_created_at,watermark_email_id,registered_at,last_seen_at,updated_at) VALUES
           ('user','phone-replay','session','encrypted','hash-replay','sandbox','all',1,1000,2000,'watermark-second',1000,1000,1000),
-          ('user','phone-current','session','encrypted','hash-current','sandbox','all',1,1000,3000,'newer-first',1000,1000,1000);
+          ('user','phone-current','session','encrypted','hash-current','sandbox','all',1,1000,3000,'newer-first',1000,1000,1000),
+          ('user','phone-human','session','encrypted','hash-human','sandbox','human',1,1000,3000,'newer-first',1000,1000,1000),
+          ('user','phone-off','session','encrypted','hash-off','sandbox','off',1,1000,3000,'newer-first',1000,1000,1000);
       `);
 
       migrate(client.db, { migrationsFolder: migrations });
       const watermark = (client.sqlite.query("SELECT watermark_sequence AS value FROM mobile_push_devices WHERE installation_id='phone-replay'").get() as { value: number }).value;
       assert.equal(watermark, 0);
       assert.equal((client.sqlite.query("SELECT watermark_sequence AS value FROM mobile_push_devices WHERE installation_id='phone-current'").get() as { value: number }).value, 2);
+      assert.deepEqual(client.sqlite.query("SELECT installation_id AS installationId,notify_inbox AS notifyInbox FROM mobile_push_devices ORDER BY installation_id").all(), [
+        { installationId: "phone-current", notifyInbox: 1 },
+        { installationId: "phone-human", notifyInbox: 1 },
+        { installationId: "phone-off", notifyInbox: 0 },
+        { installationId: "phone-replay", notifyInbox: 1 },
+      ]);
       assert.deepEqual(client.sqlite.query("SELECT email_id AS emailId FROM mobile_push_email_sequence WHERE sequence>? ORDER BY sequence").all(watermark), [
         { emailId: "newer-first" },
         { emailId: "watermark-second" },

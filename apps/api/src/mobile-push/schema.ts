@@ -13,7 +13,10 @@ export const mobilePushDevices = sqliteTable("mobile_push_devices", {
   tokenEncrypted: text("token_encrypted").notNull(),
   tokenHash: text("token_hash").notNull(),
   environment: text("environment").notNull(),
-  notificationMode: text("notification_mode").notNull().default("human"),
+  // Retained only so pre-0049 registrations can be migrated without losing an
+  // explicit opt-out. Runtime preference evaluation uses notifyInbox + spaces.
+  legacyNotificationMode: text("notification_mode").notNull().default("human"),
+  notifyInbox: integer("notify_inbox", { mode: "boolean" }).notNull().default(true),
   generation: integer("generation").notNull().default(1),
   eligibleAfterAt: integer("eligible_after_at", { mode: "timestamp_ms" }).notNull(),
   watermarkSequence: integer("watermark_sequence").notNull().default(0),
@@ -26,12 +29,29 @@ export const mobilePushDevices = sqliteTable("mobile_push_devices", {
   disabledReason: text("disabled_reason"),
 }, (table) => ({
   primaryKey: primaryKey({ columns: [table.userId, table.installationId] }),
-  scanIdx: index("mobile_push_devices_scan_idx").on(table.notificationMode, table.disabledAt, table.watermarkSequence),
+  scanIdx: index("mobile_push_devices_selection_scan_idx").on(table.notifyInbox, table.disabledAt, table.watermarkSequence),
   staleIdx: index("mobile_push_devices_stale_idx").on(table.lastSeenAt),
   tokenOwnerIdx: uniqueIndex("mobile_push_devices_token_owner_idx").on(table.tokenHash, table.environment),
   environmentCheck: check("mobile_push_devices_environment_check", sql`${table.environment} IN ('sandbox','production')`),
-  modeCheck: check("mobile_push_devices_mode_check", sql`${table.notificationMode} IN ('human','all','off')`),
+  modeCheck: check("mobile_push_devices_mode_check", sql`${table.legacyNotificationMode} IN ('human','all','off')`),
   generationCheck: check("mobile_push_devices_generation_check", sql`${table.generation} >= 1`),
+}));
+
+export const mobilePushDeviceSpaces = sqliteTable("mobile_push_device_spaces", {
+  userId: text("user_id").notNull(),
+  installationId: text("installation_id").notNull(),
+  spaceId: text("space_id").notNull(),
+  kind: text("kind").notNull(),
+  resourceId: text("resource_id").notNull(),
+}, (table) => ({
+  primaryKey: primaryKey({ columns: [table.userId, table.installationId, table.spaceId] }),
+  deviceForeignKey: foreignKey({
+    columns: [table.userId, table.installationId],
+    foreignColumns: [mobilePushDevices.userId, mobilePushDevices.installationId],
+    name: "mobile_push_device_spaces_device_fk",
+  }).onDelete("cascade"),
+  resourceIdx: index("mobile_push_device_spaces_resource_idx").on(table.kind, table.resourceId),
+  kindCheck: check("mobile_push_device_spaces_kind_check", sql`${table.kind} IN ('destination','collection','view')`),
 }));
 
 export const mobilePushOutbox = sqliteTable("mobile_push_outbox", {

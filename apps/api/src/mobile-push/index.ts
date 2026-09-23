@@ -10,5 +10,5 @@ export {
   type MobilePushCycleResult,
   type MobilePushSessionChecker,
 } from "./scheduler.ts";
-export { mobilePushDevices, mobilePushOutbox } from "./schema.ts";
-export { type ApnsEnvironment, type MobilePushDevice, type NotificationMode } from "./store.ts";
+export { mobilePushDevices, mobilePushDeviceSpaces, mobilePushOutbox } from "./schema.ts";
+export { type ApnsEnvironment, type MobilePushDevice, type NotificationSelection } from "./store.ts";
