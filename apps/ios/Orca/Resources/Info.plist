@@ -7,7 +7,8 @@
   <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>2</string>
+  <key>OrcaAPIBaseURL</key><string>https://orca-api-production-fbf9.up.railway.app</string>
   <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>orca</string></array></dict></array>
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>NSAppTransportSecurity</key><dict>

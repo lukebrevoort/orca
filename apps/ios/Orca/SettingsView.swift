@@ -124,12 +124,14 @@ struct SettingsView: View {
 
                     SettingsGroup(title: "Connection", scope: "Account") {
                         SettingsValue(label: "Server", value: state.baseURLText)
+#if DEBUG
                         SettingsRule()
                         Button("Change server") { Task { await notifications.unregister(); if await state.logout() { notifications.identityWillChange(); state.phase = .configuring } } }
                             .font(OrcaTheme.ui(13, weight: .semibold))
                             .foregroundStyle(OrcaTheme.accent)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                             .contentShape(Rectangle())
+#endif
                         SettingsRule()
                         Button("Sign out", role: .destructive) { Task { await notifications.unregister(); if await state.logout() { notifications.identityWillChange() } } }
                             .font(OrcaTheme.ui(13, weight: .semibold))

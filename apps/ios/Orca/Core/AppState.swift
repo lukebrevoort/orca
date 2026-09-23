@@ -4,7 +4,14 @@ import SwiftUI
 @MainActor final class AppState: ObservableObject {
     enum Phase { case configuring, signedOut, loading, ready }
     @Published var phase: Phase = .configuring
-    @Published var baseURLText = UserDefaults.standard.string(forKey: "apiBaseURL") ?? ""
+    @Published var baseURLText: String = {
+        let configured = Bundle.main.object(forInfoDictionaryKey: "OrcaAPIBaseURL") as? String ?? ""
+#if DEBUG
+        return UserDefaults.standard.string(forKey: "apiBaseURL") ?? configured
+#else
+        return configured
+#endif
+    }()
     @Published var accounts = [MailAccount]()
     @Published var selectedAccountID: String? { didSet { UserDefaults.standard.set(selectedAccountID, forKey: "selectedAccountID") } }
     @Published var errorMessage: String?

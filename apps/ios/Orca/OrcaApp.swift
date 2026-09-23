@@ -10,7 +10,17 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var state: AppState
-    var body: some View { Group { switch state.phase { case .configuring: ServerSetupView(); case .signedOut: SignInView(); case .loading: ProgressView("Opening Orca"); case .ready: MainView() } }.background(OrcaTheme.paper).preferredColorScheme(nil) }
+    var body: some View { Group { switch state.phase {
+    case .configuring:
+#if DEBUG
+        ServerSetupView()
+#else
+        ContentUnavailableView("Orca needs an update", systemImage: "exclamationmark.triangle", description: Text("The app’s connection settings are missing. Please install the latest build."))
+#endif
+    case .signedOut: SignInView()
+    case .loading: ProgressView("Opening Orca")
+    case .ready: MainView()
+    } }.background(OrcaTheme.paper).preferredColorScheme(nil) }
 }
 
 struct ServerSetupView: View {
@@ -19,6 +29,10 @@ struct ServerSetupView: View {
 }
 struct SignInView: View {
     @EnvironmentObject var state: AppState
-    var body: some View { VStack(spacing: 20) { Spacer(); Image(systemName: "water.waves").font(.system(size: 54)).foregroundStyle(OrcaTheme.accent); Text("Orca").font(.largeTitle.bold()); Text("Read and write with less noise.").foregroundStyle(.secondary); Button("Continue securely") { Task { await state.signIn() } }.buttonStyle(OrcaPrimaryButtonStyle()).controlSize(.large); Button("Change server") { state.phase = .configuring }; Spacer() }.padding() }
+    var body: some View { VStack(spacing: 20) { Spacer(); Image(systemName: "water.waves").font(.system(size: 54)).foregroundStyle(OrcaTheme.accent); Text("Orca").font(.largeTitle.bold()); Text("Read and write with less noise.").foregroundStyle(.secondary); Button("Continue with Google") { Task { await state.signIn() } }.buttonStyle(OrcaPrimaryButtonStyle()).controlSize(.large)
+#if DEBUG
+        Button("Change server") { state.phase = .configuring }
+#endif
+        Spacer() }.padding() }
 }
 struct MainView: View { @EnvironmentObject var state: AppState; var body: some View { TabView(selection: $state.selectedTab) { InboxView().tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox"); DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts"); SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings") } } }

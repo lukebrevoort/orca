@@ -30,6 +30,15 @@ private func requestBodyData(_ request: URLRequest) throws -> Data {
 }
 
 final class OrcaTests: XCTestCase {
+    @MainActor func testFreshInstallUsesProductionAPIWithoutServerSetup() {
+        let previous = UserDefaults.standard.string(forKey: "apiBaseURL")
+        UserDefaults.standard.removeObject(forKey: "apiBaseURL")
+        defer { UserDefaults.standard.set(previous, forKey: "apiBaseURL") }
+
+        let state = AppState()
+        XCTAssertEqual(state.baseURLText, "https://orca-api-production-fbf9.up.railway.app")
+        XCTAssertNotNil(state.validatedBaseURL(state.baseURLText))
+    }
     @MainActor func testBaseURLRequiresCleanRootOrigin() {
         let state = AppState()
         XCTAssertNotNil(state.validatedBaseURL("https://mail.example.com"))
