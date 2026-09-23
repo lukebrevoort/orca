@@ -10,7 +10,7 @@ import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
 import { decryptSecret, encryptSecret } from "../gmail/crypto.ts";
 import type { OutlookOAuthConfig } from "./config.ts";
-import { createOutlookAuthApp } from "./routes.ts";
+import { createOutlookAuthApp, redirectReturningUserToWorkspace } from "./routes.ts";
 
 const config: OutlookOAuthConfig = {
   clientId: "client-id",
@@ -26,6 +26,12 @@ const config: OutlookOAuthConfig = {
 };
 
 describe("Outlook auth routes", () => {
+  test("preserves a returning user's mobile authorization destination", () => {
+    expect(redirectReturningUserToWorkspace(
+      "http://localhost:5173/mobile-auth?request=device-request&status=success",
+    )).toBe("http://localhost:5173/mobile-auth?request=device-request&status=success");
+  });
+
   test("publishes safe configured and unavailable sign-in states", async () => {
     const ready = await createOutlookAuthApp({ config }).request("/status");
     expect(await ready.json()).toEqual({ provider: "outlook", available: true, reason: null });

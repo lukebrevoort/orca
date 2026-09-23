@@ -14,3 +14,8 @@ docs/outbound-delivery-contract.html
 .vercel
 .playwright-mcp/
 output/playwright/
+DerivedData/
+*.xcresult/
+*.xcuserstate
+xcuserdata/
+apps/ios/.build/

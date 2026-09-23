@@ -198,7 +198,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
             db.update(oauthAccounts).set({ userId: existingUser.id }).where(eq(oauthAccounts.id, pendingAccount.id)).run();
           }
           db.update(users)
-            .set({ onboardingCompletedAt: new Date() })
+            .set({ authenticatedAt: new Date(), onboardingCompletedAt: new Date() })
             .where(eq(users.id, existingUser.id))
             .run();
           db.delete(users).where(eq(users.id, auth.userId)).run();
@@ -265,6 +265,6 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
 
 export function redirectReturningUserToWorkspace(redirectUrl: string): string {
   const url = new URL(redirectUrl);
-  url.pathname = "/";
+  if (url.pathname === "/onboarding") url.pathname = "/";
   return url.toString();
 }

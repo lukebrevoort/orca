@@ -86,12 +86,14 @@ describe("Gmail push routes", () => {
     setAuthEnv();
     const { db, sqlite } = createMigratedClient();
     const historyGate = deferred();
+    let historyCompleted = false;
     const gmailClient: GmailClient = {
       async getMessage(_token, id) { return createMessage(id); },
       async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
       async listLabels() { return [{ id: "INBOX", name: "Inbox" }]; },
       async listHistory() {
         await historyGate.promise;
+        historyCompleted = true;
         return { messageIds: ["push-message"], deletedMessageIds: [], nextCursor: null, historyId: "11" };
       },
     };
@@ -120,7 +122,6 @@ describe("Gmail push routes", () => {
         gmailPushConfig: pushConfig,
       });
       const data = Buffer.from(JSON.stringify({ emailAddress: "LUKE@EXAMPLE.COM", historyId: "11" })).toString("base64url");
-      const requestStartedAt = performance.now();
       const response = await testApp.request("/v1/webhooks/gmail?token=push-secret", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -128,7 +129,7 @@ describe("Gmail push routes", () => {
       });
 
       assert.equal(response.status, 204);
-      assert.ok(performance.now() - requestStartedAt < 250, "valid push is acknowledged before provider fetch completes");
+      assert.equal(historyCompleted, false, "valid push is acknowledged while provider work is still held at the gate");
       assert.equal((sqlite.query("select count(*) as count from gmail_sync_jobs where account_id = 'acct_1'").get() as { count: number }).count, 1);
       assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "10");
       historyGate.resolve();

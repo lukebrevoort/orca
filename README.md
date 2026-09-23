@@ -1,5 +1,55 @@
 # Orca
 
+## iPhone client
+
+See the [native visual alignment gallery](docs/ixd/ios/visual-alignment/index.html)
+for the current iPhone design and before/after screenshots.
+
+The native SwiftUI client lives in `apps/ios/Orca.xcodeproj`. It targets iOS 17+
+and uses Orca's existing Gmail inbox, conversation, and revisioned draft APIs.
+Mobile authentication uses a system-browser consent flow and a revocable opaque
+credential; provider OAuth tokens remain on the API server.
+
+For a local mailbox that never sends real email, run:
+
+```bash
+bun apps/api/scripts/mobile-fixture.ts
+```
+
+This creates a temporary SQLite mailbox, binds a random loopback port, and prints
+the location of synthetic connection details for a Debug simulator build. Stop
+the process to remove its mailbox. The fixture transport simulates draft mirroring
+and delivery; it does not validate real Gmail or Apple push delivery.
+
+To exercise the production Swift models and API client against that fixture:
+
+```bash
+bash apps/ios/Tools/check-api.sh /path/printed/by/the/fixture/connection.json
+```
+
+This verifies read, draft create/update, send and idempotent replay, including
+exactly one simulated provider delivery. It refuses non-loopback/non-fixture sessions.
+
+For real notifications, configure the optional `APNS_*` server settings in
+`.env.example`, enable Push Notifications for your Apple App ID, and install a
+properly signed app whose bundle identifier matches `APNS_BUNDLE_ID`. Gmail push
+ingestion and Apple notification delivery are separate server stages. Missing
+APNs configuration leaves the mail APIs available and reports notifications as
+unconfigured.
+
+Run the API as an always-on Bun service using `bun run --cwd apps/api start` with
+persistent SQLite storage. The entrypoint starts the push worker after migrations
+and stops it on shutdown; importing the Hono app into a serverless handler does
+not run that worker. Delivery scans default to every 15 seconds after ingestion.
+The notification payload uses generic text and opaque account/thread IDs, keeping
+sender names, subjects, and message bodies off the lock screen.
+
+The [implementation verification report](docs/ixd/ios/validation.html) records automated
+checks and native UI evidence. The [iPhone acceptance card](docs/ixd/ios/device-acceptance.html) documents physical
+device setup and manual checks. Simulator tests do not establish device signing,
+production authentication, or real push delivery. Outlook sync and sending remain
+unimplemented in the current provider adapter.
+
 Orca is a messaging product focused on human-written communication. This repo starts as a Bun workspace with a Hono API, a React/Vite web app, and a shared TypeScript package for cross-app types.
 
 ## Prerequisites

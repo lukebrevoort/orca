@@ -92,6 +92,12 @@ describe("Gmail auth routes", () => {
         "https://orca.example/onboarding?status=success&email=luke%40example.com",
       ),
     ).toBe("https://orca.example/?status=success&email=luke%40example.com");
+
+    expect(
+      redirectReturningUserToWorkspace(
+        "https://orca.example/mobile-auth?request=device-request&status=success",
+      ),
+    ).toBe("https://orca.example/mobile-auth?request=device-request&status=success");
   });
 
   test("connect returns a Google authorization URL", async () => {
@@ -356,6 +362,8 @@ describe("Gmail auth routes", () => {
 
       const verificationClient = dbFactory();
       try {
+        expect(verificationClient.db.select({ authenticatedAt: users.authenticatedAt }).from(users).where(eq(users.id, "existing_user")).get()?.authenticatedAt)
+          .toBeInstanceOf(Date);
         const account = verificationClient.db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "existing_account")).get();
         expect(account).toBeTruthy();
         expect(decryptSecret(account!.accessTokenEncrypted!, config.tokenEncryptionKey)).toBe("returning-access-token");

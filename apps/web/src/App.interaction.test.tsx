@@ -646,6 +646,93 @@ describe("OAuth login availability and recovery", () => {
   });
 });
 
+describe("mobile authorization recovery", () => {
+  const originalFetch = globalThis.fetch;
+  const requestToken = "r".repeat(43);
+
+  beforeEach(() => {
+    installDom();
+    browserWindow.history.replaceState({}, "", `/mobile-auth?request=${requestToken}`);
+  });
+
+  afterEach(async () => {
+    globalThis.fetch = originalFetch;
+    if (root) {
+      await act(async () => root!.unmount());
+      root = null;
+    }
+    restoreDom();
+  });
+
+  async function renderMobileAuth() {
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<App />));
+    await waitFor(0);
+  }
+
+  function button(label: string) {
+    const match = [...browserWindow.document.querySelectorAll("button")]
+      .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+    if (!match) throw new Error(`Could not find button: ${label}`);
+    return match;
+  }
+
+  test("a cancelled pending login cookie returns to sign-in with the exact mobile request", async () => {
+    const loginStarts: URL[] = [];
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = new URL(String(input), browserWindow.location.origin);
+      if (url.pathname === "/v1/mobile/auth/authorize") {
+        return apiError(403, "authenticated_user_required", "Finish signing in");
+      }
+      if (url.pathname.endsWith("/status")) {
+        const provider = url.pathname.includes("outlook") ? "outlook" : "gmail";
+        return jsonResponse({ provider, available: true, reason: null });
+      }
+      if (url.pathname === "/v1/auth/gmail/login") {
+        loginStarts.push(url);
+        return apiError(503, "provider_unavailable", "Unavailable for test");
+      }
+      throw new Error(`Unexpected request: ${url.pathname}${url.search}`);
+    }) as typeof fetch;
+
+    await renderMobileAuth();
+    expect(browserWindow.document.body.textContent).toContain("Continue with Google");
+    await act(async () => button("Continue with Google").click());
+    await waitFor(0);
+
+    expect(loginStarts[0]?.searchParams.get("returnTo")).toBe(`${browserWindow.location.origin}/mobile-auth?request=${requestToken}`);
+  });
+
+  test("requires an explicit action before replacing an abandoned request binding", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.origin);
+      calls.push({ path: url.pathname, init });
+      if (url.pathname === "/v1/mobile/auth/authorize") {
+        return apiError(409, "request_binding_conflict", "Previous request remains active");
+      }
+      if (url.pathname === "/v1/mobile/auth/restart") {
+        return jsonResponse({ accountEmail: "one@example.com", csrfToken: "c".repeat(43) });
+      }
+      throw new Error(`Unexpected request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    await renderMobileAuth();
+    expect(calls.map((call) => call.path)).toEqual(["/v1/mobile/auth/authorize"]);
+    expect(browserWindow.document.body.textContent).toContain("A previous iPhone sign-in is still open");
+    await act(async () => button("Start this new request").click());
+    await waitFor(0);
+
+    expect(calls.map((call) => call.path)).toEqual(["/v1/mobile/auth/authorize", "/v1/mobile/auth/restart"]);
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ requestToken });
+    expect(browserWindow.document.body.textContent).toContain("one@example.com");
+    expect(browserWindow.document.querySelector(".oauth-enter-button")?.textContent).toContain("Connect this iPhone");
+  });
+});
+
 const loadedPreferences: UserPreferences = {
   firstViewGuidanceCompletedAt: null,
   signature: "Warmly, Luke",
