@@ -16,6 +16,19 @@ private final class StubURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
+private func requestBodyData(_ request: URLRequest) throws -> Data {
+    if let body = request.httpBody { return body }
+    guard let stream = request.httpBodyStream else { return Data() }
+    stream.open(); defer { stream.close() }
+    var data = Data(), buffer = [UInt8](repeating: 0, count: 4_096)
+    while true {
+        let count = stream.read(&buffer, maxLength: buffer.count)
+        if count > 0 { data.append(buffer, count: count) }
+        else if count == 0 { return data }
+        else { throw stream.streamError ?? URLError(.cannotDecodeRawData) }
+    }
+}
+
 final class OrcaTests: XCTestCase {
     @MainActor func testBaseURLRequiresCleanRootOrigin() {
         let state = AppState()
@@ -79,7 +92,8 @@ final class OrcaTests: XCTestCase {
             if request.url?.path == "/v1/mobile/push/catalog" {
                 return (200, ##"{"defaultSelection":{"inbox":true,"spaceIds":[]},"spaces":[{"id":"destination:projects","kind":"destination","name":"Projects","color":"#70867d"}]}"##.data(using: .utf8)!)
             }
-            let body = try XCTUnwrap(request.httpBody).withUnsafeBytes { Data($0) }
+            let body = try requestBodyData(request)
+            XCTAssertFalse(body.isEmpty)
             let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertNil(json["notificationMode"])
             XCTAssertEqual((json["notificationSelection"] as? [String: Any])?["inbox"] as? Bool, false)
