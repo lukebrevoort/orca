@@ -84,8 +84,14 @@ struct InboxView: View {
         .toolbar {
             ToolbarItem(placement: .principal) { OrcaWordmark().fixedSize() }
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(destination: ComposeView()) { Label("Compose", systemImage: "square.and.pencil").font(OrcaTheme.ui(12, weight: .semibold)) }
-                    .labelStyle(.titleAndIcon).fixedSize().buttonStyle(OrcaPrimaryButtonStyle()).accessibilityLabel("Compose").accessibilityIdentifier("compose.open")
+                NavigationLink(destination: ComposeView()) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 20, weight: .medium))
+                }
+                .tint(OrcaTheme.accent)
+                .accessibilityLabel("Compose")
+                .accessibilityHint("Write a new message")
+                .accessibilityIdentifier("compose.open")
             }
         }
         .navigationDestination(for: InboxMessage.self) { ThreadView(message: $0) }
