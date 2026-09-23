@@ -77,8 +77,9 @@ final class OrcaTests: XCTestCase {
         XCTAssertNil(defaults.string(forKey: "notificationMode"))
     }
     func testNotificationSelectionEncodingUsesInboxAndUniqueOpaqueSpaceIDs() throws {
-        let selection = NotificationSelection(inbox: false, spaceIds: ["destination:projects", "destination:projects", "view:today"]).normalized()
+        let selection = NotificationSelection(inbox: false, spaceIds: ["view:today", "destination:projects", "destination:projects"]).normalized()
         XCTAssertEqual(selection.spaceIds, ["destination:projects", "view:today"])
+        XCTAssertEqual(selection, NotificationSelection(inbox: false, spaceIds: ["destination:projects", "view:today"]).normalized())
         let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(selection)) as? [String: Any])
         XCTAssertEqual(json["inbox"] as? Bool, false)
         XCTAssertEqual(json["spaceIds"] as? [String], ["destination:projects", "view:today"])

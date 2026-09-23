@@ -70,7 +70,7 @@ struct NotificationSelection: Codable, Hashable {
         let spaces = spaceIds.filter { id in
             guard !id.isEmpty, allowedSpaceIDs?.contains(id) ?? true else { return false }
             return seen.insert(id).inserted
-        }
+        }.sorted()
         return NotificationSelection(inbox: inbox, spaceIds: spaces)
     }
 }
