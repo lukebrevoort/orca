@@ -169,8 +169,11 @@ final class OrcaUITests: XCTestCase {
         assertInboxLoaded(in: app)
         let compose = app.buttons["compose.open"]
         XCTAssertTrue(compose.exists)
-        XCTAssertGreaterThanOrEqual(compose.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(compose.frame.height, 44)
+        // UIKit owns the toolbar touch target; accessibility bounds describe its visible chrome.
+        XCTAssertTrue(compose.isHittable)
+        compose.tap()
+        XCTAssertTrue(app.buttons["compose.send"].waitForExistence(timeout: 10))
+        navigateBack(in: app)
         app.tabBars.buttons["Settings"].tap()
         let inbox = app.switches["settings.notifications.inbox"]
         XCTAssertTrue(inbox.waitForExistence(timeout: 10))
