@@ -23,6 +23,7 @@ delete process.env.APNS_PRIVATE_KEY;
 const { createDatabaseClient } = await import("../src/db/client.ts");
 const { users, oauthAccounts, threads, emails, labels, emailLabels } = await import("../src/db/schema.ts");
 const { createMobileSession } = await import("../src/auth/mobile/store.ts");
+const { createDestinations } = await import("../src/destinations/service.ts");
 const { createApp } = await import("../src/index.ts");
 const { ProviderRegistry } = await import("../src/providers/registry.ts");
 const { gmailProvider } = await import("../src/providers/gmail/provider.ts");
@@ -49,6 +50,11 @@ messages.forEach(([name, address, subject, body], i) => {
   db.insert(emails).values({ id: messageId, accountId, threadId, providerMessageId: `provider-message-${i + 1}`, fromName: name, fromAddress: address, subject, snippet: body!.slice(0, 150), bodyText: body, bodyHtml: i === 2 ? `<h2>Notes from our conversation</h2><div style="color:#222">Explicit dark foreground stays readable.</div><div style="background-color:#fff4cf">Explicit pale background keeps readable inherited text.</div>${Array.from({ length: 18 }, (_, paragraph) => `<p>Paragraph ${paragraph + 1}: Protect attention, make writing effortless, and never lose a draft.</p>`).join("")}<p>End of the long reading fixture.</p><img src="https://example.invalid/orca-fixture-tracker.png" alt="Remote image blocked">` : null, toRecipients: JSON.stringify([{ name: "Luke", email: "luke@example.com" }]), ccRecipients: "[]", bccRecipients: "[]", references: "[]", internetMessageId: `<fixture-${i + 1}@example.com>`, receivedAt, internalDate: receivedAt, isRead: i > 1, humanSignal: 9, humanClassification: "likely_human", humanClassificationReasons: "[]" }).run();
   db.insert(emailLabels).values({ id: `ios-fixture-label-${i + 1}`, emailId: messageId, labelId: "ios-fixture-inbox" }).run();
 });
+// Real workspace destinations make notification selection testable without static UI mocks.
+const destinations = createDestinations(db, userId);
+for (const name of ["Projects", "Friends"]) {
+  destinations.create({ expectedRevision: destinations.list().revision, name });
+}
 const credential = createMobileSession(db, userId);
 sqlite.close();
 

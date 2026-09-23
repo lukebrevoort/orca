@@ -125,9 +125,11 @@ final class OrcaUITests: XCTestCase {
         navigateBack(in: app)
         app.tabBars.buttons["Settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
-        app.segmentedControls.buttons["All mail"].tap()
+        let inboxNotifications = app.switches["settings.notifications.inbox"]
+        XCTAssertTrue(inboxNotifications.waitForExistence(timeout: 10))
+        inboxNotifications.tap()
         attachScreenshot(named: "12-settings-selected")
-        app.segmentedControls.buttons["Human mail"].tap()
+        inboxNotifications.tap()
     }
 
     /// Run under both actual simulator appearances, not launch-default overrides.
@@ -160,6 +162,54 @@ final class OrcaUITests: XCTestCase {
         XCTAssertFalse(app.buttons["compose.send"].isEnabled)
         XCTAssertTrue(app.descendants(matching: .any)["compose.send-permission"].exists)
         attachScreenshot(named: "14-read-only-editable-draft")
+    }
+
+    func test06NotificationDestinationsPersist() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let compose = app.buttons["compose.open"]
+        XCTAssertTrue(compose.exists)
+        XCTAssertGreaterThanOrEqual(compose.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(compose.frame.height, 44)
+        app.tabBars.buttons["Settings"].tap()
+        let inbox = app.switches["settings.notifications.inbox"]
+        XCTAssertTrue(inbox.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Human mail"].exists)
+        let projects = app.switches.matching(NSPredicate(format: "label CONTAINS %@", "Projects")).firstMatch
+        for _ in 0..<6 {
+            if projects.exists && projects.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(projects.waitForExistence(timeout: 10))
+        if projects.value as? String != "1" { projects.tap() }
+        XCTAssertEqual(projects.value as? String, "1")
+        attachScreenshot(named: "15-notifications-spaces-selected")
+        for _ in 0..<6 {
+            if inbox.isHittable { break }
+            app.swipeDown()
+        }
+        if inbox.value as? String != "0" { inbox.tap() }
+        XCTAssertEqual(inbox.value as? String, "0")
+        app.terminate()
+        let reopened = try launchApp()
+        assertInboxLoaded(in: reopened)
+        reopened.tabBars.buttons["Settings"].tap()
+        let restoredInbox = reopened.switches["settings.notifications.inbox"]
+        XCTAssertTrue(restoredInbox.waitForExistence(timeout: 10))
+        XCTAssertEqual(restoredInbox.value as? String, "0")
+        let restoredProjects = reopened.switches.matching(NSPredicate(format: "label CONTAINS %@", "Projects")).firstMatch
+        for _ in 0..<6 {
+            if restoredProjects.exists && restoredProjects.isHittable { break }
+            reopened.swipeUp()
+        }
+        XCTAssertEqual(restoredProjects.value as? String, "1")
+        attachScreenshot(named: "16-notifications-spaces-restored")
+        restoredProjects.tap()
+        for _ in 0..<6 {
+            if restoredInbox.isHittable { break }
+            reopened.swipeDown()
+        }
+        restoredInbox.tap()
     }
 
     private func launchApp() throws -> XCUIApplication {

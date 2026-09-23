@@ -6,7 +6,7 @@
 <p class="muted">Verification record for the native SwiftUI client and the mobile API. Simulator fixtures contain synthetic mail and simulate provider delivery.</p>
 <nav><a href="visual-alignment/index.html">Latest native visual refinement</a><a href="device-acceptance.html">Install &amp; test on your iPhone</a><a href="phase1-context.html">Product decisions</a></nav>
 <h2>What is implemented</h2>
-<p>Inbox, Focus, search and account switching; a conversation reader with protected HTML and authenticated attachments; durable local drafts, reply, reply all, forward, file attachment selection and idempotent delivery. Mobile sign-in uses browser consent and PKCE. Notifications support Human mail, All mail and Off, with private payloads and account-scoped routing.</p>
+<p>Inbox, Focus, search and account switching; a conversation reader with protected HTML and authenticated attachments; durable local drafts, reply, reply all, forward, file attachment selection and idempotent delivery. Mobile sign-in uses browser consent and PKCE. Notifications follow Inbox and individually selected Spaces, with private payloads and account-scoped routing. Selecting no destinations turns notifications off.</p>
 <h2>Verified locally</h2>
 <table><thead><tr><th>Area</th><th>Evidence</th></tr></thead><tbody>
 <tr><td>API regression coverage</td><td>All 101 test files have passing isolated runs. The combined Bun run encountered timeout cascades; isolated reruns passed. A Gmail push acknowledgment test now checks a deferred provider gate instead of a 250 ms wall-clock assertion.</td></tr>
