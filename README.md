@@ -2,6 +2,9 @@
 
 ## iPhone client
 
+See the [native visual alignment gallery](docs/ixd/ios/visual-alignment/index.html)
+for the current iPhone design and before/after screenshots.
+
 The native SwiftUI client lives in `apps/ios/Orca.xcodeproj`. It targets iOS 17+
 and uses Orca's existing Gmail inbox, conversation, and revisioned draft APIs.
 Mobile authentication uses a system-browser consent flow and a revocable opaque

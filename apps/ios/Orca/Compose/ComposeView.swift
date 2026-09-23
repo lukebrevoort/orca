@@ -3,6 +3,7 @@ import SwiftUI
 struct ComposeView: View {
     @EnvironmentObject var state: AppState; @Environment(\.dismiss) var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var context: ThreadDetail?; var kind = "new"; private var seedServer: MessageDraft?
     @State private var to = ""
     @State private var cc = ""
@@ -28,33 +29,146 @@ struct ComposeView: View {
         _draftAccountID = State(initialValue: localDraft?.accountId ?? serverDraft?.accountId); _draftOwnerScope = State(initialValue: localDraft?.ownerScope)
     }
     var body: some View {
-        Form {
-            Section("Recipients") {
-                TextField("To", text: $to).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).accessibilityIdentifier("compose.to")
-                DisclosureGroup("Cc and Bcc") { TextField("Cc", text: $cc); TextField("Bcc", text: $bcc) }
-            }.disabled(deliveryFrozen)
-            Section {
-                TextField("Subject", text: $subject).accessibilityIdentifier("compose.subject")
-                TextEditor(text: $messageBody).frame(minHeight: 240).accessibilityLabel("Message body").accessibilityIdentifier("compose.body")
-                Button { showingImporter = true } label: { Label("Attach file", systemImage: "paperclip") }.disabled(deliveryFrozen)
-                if let local { ForEach(local.content.attachments) { Text($0.filename).font(.caption) } }
-            }.disabled(deliveryFrozen)
-            Section {
-                HStack {
-                    Label(status, systemImage: status.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("compose.save-status")
-                    Spacer()
-                    Button(primaryActionTitle) { Task { if rejectedDelivery { await editRejectedCopy() } else { await send() } } }
-                        .disabled(sending || staleConflict || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!rejectedDelivery && deliveryFrozen && local?.idempotencyKey == nil))
-                        .accessibilityIdentifier("compose.send")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(spacing: 0) {
+                    recipientField("To", text: $to)
+                        .textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                    Divider().overlay(OrcaTheme.border)
+                    DisclosureGroup {
+                        VStack(spacing: 0) {
+                            recipientField("Cc", text: $cc)
+                            Divider().overlay(OrcaTheme.border)
+                            recipientField("Bcc", text: $bcc)
+                        }
+                    } label: {
+                        Text("Cc and Bcc")
+                            .font(OrcaTheme.ui(12, weight: .semibold))
+                            .foregroundStyle(OrcaTheme.muted)
+                            .textCase(.uppercase)
+                            .tracking(0.7)
+                            .padding(.vertical, 13)
+                    }
+                    .tint(OrcaTheme.muted)
                 }
-                if staleConflict { Button("Keep both drafts") { Task { await keepBothDrafts() } }.accessibilityHint("Keeps the changed server draft and saves this version as a new draft").accessibilityIdentifier("compose.keep-both") }
+                .disabled(deliveryFrozen)
+
+                Divider().overlay(OrcaTheme.border)
+
+                TextField("Subject", text: $subject, prompt: Text("Subject").foregroundStyle(OrcaTheme.muted))
+                    .font(OrcaTheme.reader(28))
+                    .foregroundStyle(OrcaTheme.ink)
+                    .padding(.vertical, 20)
+                    .accessibilityIdentifier("compose.subject")
+                    .disabled(deliveryFrozen)
+
+                Divider().overlay(OrcaTheme.border)
+
+                TextEditor(text: $messageBody)
+                    .font(OrcaTheme.reader(20))
+                    .foregroundStyle(OrcaTheme.ink)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 360, alignment: .topLeading)
+                    .padding(.vertical, 14)
+                    .accessibilityLabel("Message body")
+                    .accessibilityIdentifier("compose.body")
+                    .disabled(deliveryFrozen)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Button { showingImporter = true } label: {
+                        Label("Attach file", systemImage: "paperclip")
+                            .font(OrcaTheme.ui(13, weight: .semibold))
+                            .foregroundStyle(OrcaTheme.ink)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .disabled(deliveryFrozen)
+                    if let local {
+                        ForEach(local.content.attachments) {
+                            Label($0.filename, systemImage: "doc")
+                                .font(OrcaTheme.ui(12))
+                                .foregroundStyle(OrcaTheme.muted)
+                        }
+                    }
+                }
+                .padding(.vertical, 16)
             }
-        }.accessibilityIdentifier("compose.form")
+            .padding(.horizontal, 22)
+        }
+        .background(OrcaTheme.paper.ignoresSafeArea())
+        .accessibilityIdentifier("compose.form")
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider().overlay(OrcaTheme.border)
+                Group {
+                    if dynamicTypeSize.isAccessibilitySize { composeActionsVertical }
+                    else { composeActionsHorizontal }
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+            }
+            .background(OrcaTheme.surface)
+        }
         .navigationTitle(kind == "new" ? "New message" : kind.replacingOccurrences(of: "_", with: " ").capitalized).navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task { if draftAccountID == nil { draftAccountID = state.selectedAccount?.id }; if draftOwnerScope == nil { draftOwnerScope = state.ownerScope }; seed(); _ = await saveLocal() }.onChange(of: snapshot) { saveTask?.cancel(); saveTask = Task { try? await Task.sleep(for: .milliseconds(350)); guard !Task.isCancelled, !sending, !completed else { return }; _ = await saveLocal() } }
         .onChange(of: scenePhase) { if scenePhase == .inactive || scenePhase == .background { flushForTransition() } }
         .onDisappear { flushForTransition() }
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in if case let .success(urls) = result { Task { await attach(urls) } } }
+    }
+    private var saveStatus: some View {
+        Label(status, systemImage: status.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle")
+            .font(OrcaTheme.ui(11, weight: .medium))
+            .foregroundStyle(OrcaTheme.muted)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+            .accessibilityIdentifier("compose.save-status")
+    }
+    private var keepBothButton: some View {
+        Button("Keep both drafts") { Task { await keepBothDrafts() } }
+            .font(OrcaTheme.ui(12, weight: .semibold))
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, minHeight: 44)
+            .contentShape(Rectangle())
+            .accessibilityHint("Keeps the changed server draft and saves this version as a new draft")
+            .accessibilityIdentifier("compose.keep-both")
+    }
+    private var sendButton: some View {
+        Button(primaryActionTitle) { Task { if rejectedDelivery { await editRejectedCopy() } else { await send() } } }
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
+            .buttonStyle(OrcaPrimaryButtonStyle())
+            .disabled(sending || staleConflict || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!rejectedDelivery && deliveryFrozen && local?.idempotencyKey == nil))
+            .accessibilityIdentifier("compose.send")
+    }
+    private var composeActionsHorizontal: some View {
+        HStack(spacing: 14) {
+            saveStatus
+            Spacer(minLength: 8)
+            if staleConflict { keepBothButton }
+            sendButton
+        }
+    }
+    private var composeActionsVertical: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            saveStatus
+            if staleConflict { keepBothButton }
+            sendButton
+        }
+    }
+    private func recipientField(_ label: String, text: Binding<String>) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Text(label)
+                .font(OrcaTheme.ui(12, weight: .semibold))
+                .foregroundStyle(OrcaTheme.muted)
+                .frame(width: 34, alignment: .leading)
+            TextField(label, text: text, prompt: Text(label).foregroundStyle(OrcaTheme.muted))
+                .accessibilityIdentifier("compose.\(label.lowercased())")
+                .textInputAutocapitalization(.never)
+                .keyboardType(.emailAddress)
+                .font(OrcaTheme.ui(14))
+                .foregroundStyle(OrcaTheme.ink)
+        }
+        .padding(.vertical, 13)
     }
     var snapshot: String { [to, cc, bcc, subject, messageBody].joined(separator: "\u{1f}") }
     var rejectedDelivery: Bool { local?.deliveryState == "rejected" }

@@ -73,6 +73,7 @@ xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -resultBundlePath "$result_dir/OrcaDark.xcresult" \
-  -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode
+  -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode \
+  -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates
 
 print "Result bundle: $result_bundle"

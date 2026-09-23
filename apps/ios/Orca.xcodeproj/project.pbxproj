@@ -10,14 +10,20 @@
 		015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57E40AE57BF8791404307E4 /* Security.swift */; };
 		06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22789472C398207011CE37F6 /* OrcaUITests.swift */; };
 		187407EC35EEB360A5B6F2EA /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE4FCB22922231897F52AA1 /* Models.swift */; };
+		1BC24DE46C88B6C1486B8532 /* run-fixture-tests.sh in Resources */ = {isa = PBXBuildFile; fileRef = D55D7D1A9F41B9B7A8D1CC6D /* run-fixture-tests.sh */; };
+		275B112796C59711F6DF6334 /* Sora-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 2F1D18617985E045ED8A8768 /* Sora-OFL.txt */; };
 		294FCE53ADDB43333296B0E3 /* DraftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9937C36EBC157F5D1525CD52 /* DraftsView.swift */; };
+		30274F8B1C5D9E83C3EED181 /* OrcaTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0FE18FB4D740F39E2BFA11 /* OrcaTheme.swift */; };
 		3438B7C0BB24FF274C23EE5E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53E3B1FB2C695482B92B910C /* Assets.xcassets */; };
 		36DA95542453553EC1EB82AF /* OrcaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D108A85307BC09FDB5E904C /* OrcaTests.swift */; };
 		3A23AC2DC2DE74DFDAF93414 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 91BD233053BA8E2AE240779D /* PrivacyInfo.xcprivacy */; };
+		4FFA90C07D1829AB0E4563D4 /* Newsreader-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = BEDD5176BB7058B8A4B6A294 /* Newsreader-OFL.txt */; };
 		56BE5C3BB4538412527AAB5C /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB208EA5B5621CF0102845A4 /* InboxView.swift */; };
 		5CA23C48809601DE3E64F2F0 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D81D0FCC40527F4FEA9C167 /* NotificationManager.swift */; };
 		61B46085479CE081AC296FB8 /* SafeHTMLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */; };
+		7DDFD8F27F06D4CDC7711224 /* Newsreader.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 555BA4579AD5D0A43CBCA215 /* Newsreader.ttf */; };
 		8E6D753A2F712AE9FD20E3E4 /* ComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37A570067B803935C5436A6 /* ComposeView.swift */; };
+		9045165CC2F7EAB5EAD4D47E /* Sora.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EFEC2E77A289CF1F6C773D9D /* Sora.ttf */; };
 		B1917F5F3432CDB3A3E2AD68 /* OrcaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2544DA767943FF46A2CB6EF /* OrcaApp.swift */; };
 		CCB8FEAFDCB6B0C123E3304C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406859584F10CD09652E6CC /* SettingsView.swift */; };
 		CE2B1790BCC8808A1B7B934A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654DBEFED4AB0FA22340D491 /* AppState.swift */; };
@@ -48,11 +54,13 @@
 		186C21621603B2A5EE639EDC /* DraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStore.swift; sourceTree = "<group>"; };
 		22789472C398207011CE37F6 /* OrcaUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaUITests.swift; sourceTree = "<group>"; };
 		25F395E83971062876EDA98A /* OrcaTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F1D18617985E045ED8A8768 /* Sora-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Sora-OFL.txt"; sourceTree = "<group>"; };
 		38B3670FB7670AC43E86DDC4 /* Orca.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Orca.entitlements; sourceTree = "<group>"; };
 		3D81D0FCC40527F4FEA9C167 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		494671874013337FB38310E2 /* OrcaRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OrcaRelease.entitlements; sourceTree = "<group>"; };
 		4C42EBDA4E73C177140914B8 /* Orca.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Orca.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		53E3B1FB2C695482B92B910C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		555BA4579AD5D0A43CBCA215 /* Newsreader.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Newsreader.ttf; sourceTree = "<group>"; };
 		654DBEFED4AB0FA22340D491 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		6D108A85307BC09FDB5E904C /* OrcaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaTests.swift; sourceTree = "<group>"; };
 		73FDDC2097E5205DC11746F6 /* OrcaUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -64,9 +72,13 @@
 		B2544DA767943FF46A2CB6EF /* OrcaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaApp.swift; sourceTree = "<group>"; };
 		B57E40AE57BF8791404307E4 /* Security.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Security.swift; sourceTree = "<group>"; };
 		BDE4FCB22922231897F52AA1 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		BEDD5176BB7058B8A4B6A294 /* Newsreader-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Newsreader-OFL.txt"; sourceTree = "<group>"; };
 		C406859584F10CD09652E6CC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C5A8BEAFF621E5292BE1D0AB /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
+		CC0FE18FB4D740F39E2BFA11 /* OrcaTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaTheme.swift; sourceTree = "<group>"; };
 		D37A570067B803935C5436A6 /* ComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposeView.swift; sourceTree = "<group>"; };
+		D55D7D1A9F41B9B7A8D1CC6D /* run-fixture-tests.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "run-fixture-tests.sh"; sourceTree = "<group>"; };
+		EFEC2E77A289CF1F6C773D9D /* Sora.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Sora.ttf; sourceTree = "<group>"; };
 		FADD581980498D42BE0AB0D5 /* CacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheStore.swift; sourceTree = "<group>"; };
 		FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -80,6 +92,17 @@
 			path = OrcaTests;
 			sourceTree = "<group>";
 		};
+		1560CE7A484FE7711EFF9544 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				BEDD5176BB7058B8A4B6A294 /* Newsreader-OFL.txt */,
+				555BA4579AD5D0A43CBCA215 /* Newsreader.ttf */,
+				2F1D18617985E045ED8A8768 /* Sora-OFL.txt */,
+				EFEC2E77A289CF1F6C773D9D /* Sora.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
 		2DED08717BC463CBFCC5F794 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -87,6 +110,7 @@
 				654DBEFED4AB0FA22340D491 /* AppState.swift */,
 				FADD581980498D42BE0AB0D5 /* CacheStore.swift */,
 				BDE4FCB22922231897F52AA1 /* Models.swift */,
+				CC0FE18FB4D740F39E2BFA11 /* OrcaTheme.swift */,
 				B57E40AE57BF8791404307E4 /* Security.swift */,
 			);
 			path = Core;
@@ -108,6 +132,7 @@
 				38B3670FB7670AC43E86DDC4 /* Orca.entitlements */,
 				494671874013337FB38310E2 /* OrcaRelease.entitlements */,
 				91BD233053BA8E2AE240779D /* PrivacyInfo.xcprivacy */,
+				1560CE7A484FE7711EFF9544 /* Fonts */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -156,6 +181,7 @@
 			isa = PBXGroup;
 			children = (
 				22789472C398207011CE37F6 /* OrcaUITests.swift */,
+				D55D7D1A9F41B9B7A8D1CC6D /* run-fixture-tests.sh */,
 			);
 			path = OrcaUITests;
 			sourceTree = "<group>";
@@ -218,6 +244,7 @@
 			buildConfigurationList = 6F5D8EA53898645E5FC6A76E /* Build configuration list for PBXNativeTarget "OrcaUITests" */;
 			buildPhases = (
 				447EC9E7F67301B853D764E9 /* Sources */,
+				07CB4B38F1A6BBCAB2352D86 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -274,12 +301,24 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		07CB4B38F1A6BBCAB2352D86 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1BC24DE46C88B6C1486B8532 /* run-fixture-tests.sh in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		51EB7E5E415338613FFF7B15 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				3438B7C0BB24FF274C23EE5E /* Assets.xcassets in Resources */,
+				4FFA90C07D1829AB0E4563D4 /* Newsreader-OFL.txt in Resources */,
+				7DDFD8F27F06D4CDC7711224 /* Newsreader.ttf in Resources */,
 				3A23AC2DC2DE74DFDAF93414 /* PrivacyInfo.xcprivacy in Resources */,
+				275B112796C59711F6DF6334 /* Sora-OFL.txt in Resources */,
+				9045165CC2F7EAB5EAD4D47E /* Sora.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,6 +347,7 @@
 				187407EC35EEB360A5B6F2EA /* Models.swift in Sources */,
 				5CA23C48809601DE3E64F2F0 /* NotificationManager.swift in Sources */,
 				B1917F5F3432CDB3A3E2AD68 /* OrcaApp.swift in Sources */,
+				30274F8B1C5D9E83C3EED181 /* OrcaTheme.swift in Sources */,
 				61B46085479CE081AC296FB8 /* SafeHTMLView.swift in Sources */,
 				015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */,
 				CCB8FEAFDCB6B0C123E3304C /* SettingsView.swift in Sources */,

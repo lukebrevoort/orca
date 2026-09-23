@@ -2,9 +2,53 @@ import SwiftUI
 
 struct ThreadView: View {
     @EnvironmentObject var state: AppState; let message: InboxMessage; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
-    var body: some View { ScrollView { if let detail { LazyVStack(alignment: .leading, spacing: 16) { if let error { Label(error, systemImage: "info.circle").font(.callout).foregroundStyle(.secondary).padding(.horizontal).accessibilityIdentifier("thread.status") }; ForEach(detail.messages) { item in VStack(alignment: .leading, spacing: 10) { HStack { ContactGlyph(contact: item.from); VStack(alignment: .leading) { Text(item.from.name ?? item.from.email).font(.headline); Text(MailDate.full(item.receivedAt)).font(.caption).foregroundStyle(.secondary) } }; if let html = item.bodyHtml, !html.isEmpty { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) } else { Text(item.bodyText ?? item.snippet).textSelection(.enabled) }; ForEach(item.attachments) { attachment in Button { Task { await download(attachment) } } label: { Label("\(attachment.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(attachment.size), countStyle: .file))", systemImage: "paperclip") }.buttonStyle(.bordered) }; Divider() }.padding(.horizontal) } }.padding(.vertical) } else if let error { ContentUnavailableView("Conversation unavailable", systemImage: "exclamationmark.bubble", description: Text(error)); Button("Try again") { Task { await load() } } } else { ProgressView("Getting conversation").padding(.top, 80) } }
-        .navigationTitle(detail?.thread.subject ?? message.subject).navigationBarTitleDisplayMode(.inline)
-        .toolbar { if let detail { ToolbarItemGroup(placement: .bottomBar) { NavigationLink(destination: ComposeView(context: detail, kind: "reply")) { Label("Reply", systemImage: "arrowshape.turn.up.left") }; Spacer(); NavigationLink(destination: ComposeView(context: detail, kind: "reply_all")) { Label("Reply all", systemImage: "arrowshape.turn.up.left.2") }; Spacer(); NavigationLink(destination: ComposeView(context: detail, kind: "forward")) { Label("Forward", systemImage: "arrowshape.turn.up.right") } } } }
+    var body: some View {
+        ScrollView {
+            if let detail {
+                LazyVStack(alignment: .leading, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("CONVERSATION").font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.5).foregroundStyle(OrcaTheme.accent)
+                        Text(detail.thread.subject.isEmpty ? "(No subject)" : detail.thread.subject).font(OrcaTheme.reader(34)).tracking(-0.6).foregroundStyle(OrcaTheme.ink).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let error { Label(error, systemImage: "info.circle").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("thread.status") }
+                    ForEach(detail.messages) { item in
+                        VStack(alignment: .leading, spacing: 22) {
+                            HStack(spacing: 12) {
+                                ContactGlyph(contact: item.from)
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text(item.from.name ?? item.from.email).font(OrcaTheme.ui(13, weight: .semibold)).foregroundStyle(OrcaTheme.ink)
+                                    Text(MailDate.full(item.receivedAt)).font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted)
+                                }
+                            }
+                            if let html = item.bodyHtml, !html.isEmpty { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) }
+                            else { Text(item.bodyText ?? item.snippet).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled) }
+                            ForEach(item.attachments) { attachment in
+                                Button { Task { await download(attachment) } } label: {
+                                    Label("\(attachment.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(attachment.size), countStyle: .file))", systemImage: "paperclip").font(OrcaTheme.ui(12))
+                                }.buttonStyle(.bordered)
+                            }
+                            Rectangle().fill(OrcaTheme.border).frame(height: 1)
+                        }
+                    }
+                }.padding(24)
+            } else if let error {
+                ContentUnavailableView("Conversation unavailable", systemImage: "exclamationmark.bubble", description: Text(error))
+                Button("Try again") { Task { await load() } }
+            } else { ProgressView("Getting conversation").padding(.top, 80) }
+        }.background(OrcaTheme.paper)
+        .navigationTitle("Conversation").navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom) {
+            if let detail {
+                HStack(spacing: 12) {
+                    NavigationLink(destination: ComposeView(context: detail, kind: "reply")) { Label("Reply", systemImage: "arrowshape.turn.up.left") }.buttonStyle(OrcaPrimaryButtonStyle())
+                    Spacer(minLength: 0)
+                    NavigationLink(destination: ComposeView(context: detail, kind: "reply_all")) { Text("Reply all").frame(minHeight: 44).contentShape(Rectangle()) }.accessibilityLabel("Reply all")
+                    NavigationLink(destination: ComposeView(context: detail, kind: "forward")) { Image(systemName: "arrowshape.turn.up.right").frame(width: 44, height: 44) }.accessibilityLabel("Forward")
+                }.font(OrcaTheme.ui(12)).padding(.horizontal, 20).padding(.vertical, 12).background(OrcaTheme.paper)
+                    .overlay(alignment: .top) { Rectangle().fill(OrcaTheme.border).frame(height: 1) }
+            }
+        }
         .task { await load() }.sheet(isPresented: .constant(shareURL != nil), onDismiss: { if let shareURL { try? FileManager.default.removeItem(at: shareURL.deletingLastPathComponent()) }; shareURL = nil }) { if let shareURL { ShareSheet(items: [shareURL]) } }
     }
     func load() async {

@@ -42,7 +42,7 @@
     "6": {
       "status": "done",
       "file": "phase6-visual.html",
-      "summary": "Implementation reference established; final app conformance checked during integration."
+      "summary": "Native visual system now shares desktop colors, bundled Sora/Newsreader, brand marks, flat surfaces and explicit accessible control states."
     },
     "7": {
       "status": "done",

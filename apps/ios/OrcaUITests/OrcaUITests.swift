@@ -20,7 +20,7 @@ final class OrcaUITests: XCTestCase {
     /// Exercises the real fixture API through the same UI a person uses. Keeping this
     /// as one flow makes the draft/send assertions independent of XCTest method order.
     func test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode() throws {
-        let app = try launchApp(interfaceStyle: "Light")
+        let app = try launchApp()
         assertInboxLoaded(in: app)
         attachScreenshot(named: "01-light-inbox")
 
@@ -79,7 +79,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test02SettingsRenderInDarkMode() throws {
-        let app = try launchApp(interfaceStyle: "Dark")
+        let app = try launchApp()
         assertInboxLoaded(in: app)
 
         openConversation(subject: Fixture.htmlSubject, in: app)
@@ -103,7 +103,34 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "08-dark-settings")
     }
 
-    private func launchApp(interfaceStyle: String) throws -> XCUIApplication {
+    /// Reused in both system appearances to inspect actual control states.
+    func test03VisualControlStates() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        attachScreenshot(named: "09-inbox-controls")
+        app.buttons["compose.open"].tap()
+        let send = app.buttons["compose.send"]
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+        attachScreenshot(named: "10-compose-disabled")
+        let recipient = app.textFields["compose.to"]
+        XCTAssertTrue(recipient.waitForExistence(timeout: 5))
+        recipient.tap()
+        recipient.typeText("maya@example.com")
+        let body = messageBody(in: app)
+        body.tap()
+        body.typeText("A little more space to think.")
+        XCTAssertTrue(send.isEnabled)
+        attachScreenshot(named: "11-compose-focused")
+        navigateBack(in: app)
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
+        app.segmentedControls.buttons["All mail"].tap()
+        attachScreenshot(named: "12-settings-selected")
+        app.segmentedControls.buttons["Human mail"].tap()
+    }
+
+    private func launchApp() throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
             XCTFail("Set ORCA_FIXTURE_API_URL to the isolated fixture API URL before running OrcaUITests.")
@@ -120,7 +147,6 @@ final class OrcaUITests: XCTestCase {
             "--fixture-access-token", accessToken,
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
-            "-AppleInterfaceStyle", interfaceStyle,
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL",
         ]
         app.launch()
@@ -145,7 +171,8 @@ final class OrcaUITests: XCTestCase {
         let row = app.descendants(matching: .any)[identifier]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.tap()
-        XCTAssertTrue(app.navigationBars[subject].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[subject].waitForExistence(timeout: 10))
     }
 
     private func search(for query: String, in app: XCUIApplication) {
