@@ -29,14 +29,14 @@ ALTER TABLE `mobile_push_devices` ADD `watermark_sequence` integer NOT NULL DEFA
 --> statement-breakpoint
 UPDATE `mobile_push_devices` AS `device`
 SET `watermark_sequence` = COALESCE((
-	SELECT MAX(`push_order`.`sequence`)
+	SELECT MIN(`push_order`.`sequence`) - 1
 	FROM `emails` AS `email`
 	JOIN `mobile_push_email_sequence` AS `push_order` ON `push_order`.`email_id` = `email`.`id`
 	JOIN `oauth_accounts` AS `account` ON `account`.`id` = `email`.`account_id`
 	WHERE `account`.`user_id` = `device`.`user_id`
-		AND (`email`.`created_at` < `device`.`watermark_created_at`
-			OR (`email`.`created_at` = `device`.`watermark_created_at` AND `email`.`id` <= `device`.`watermark_email_id`))
-), 0);
+		AND (`email`.`created_at` > `device`.`watermark_created_at`
+			OR (`email`.`created_at` = `device`.`watermark_created_at` AND `email`.`id` > `device`.`watermark_email_id`))
+), (SELECT `value` FROM `mobile_push_sequence_counter` WHERE `id` = 1));
 --> statement-breakpoint
 DROP INDEX `mobile_push_devices_scan_idx`;
 --> statement-breakpoint

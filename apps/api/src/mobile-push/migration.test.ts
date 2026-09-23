@@ -10,7 +10,7 @@ import { createDatabaseClient } from "../db/client.ts";
 
 const migrations = resolve(import.meta.dir, "../../drizzle");
 
-test("mobile push commit-order migration preserves the existing device watermark", () => {
+test("mobile push commit-order migration replays from the earliest unprocessed sequence", () => {
   const directory = mkdtempSync(join(tmpdir(), "orca-mobile-push-migration-"));
   const partial = join(directory, "partial");
   mkdirSync(join(partial, "meta"), { recursive: true });
@@ -43,20 +43,29 @@ test("mobile push commit-order migration preserves the existing device watermark
           VALUES ('account','user','gmail','user@example.com','provider-user',1,1);
         INSERT INTO threads(id,account_id,provider_thread_id,created_at,updated_at)
           VALUES ('thread','account','thread',1,1);
-        INSERT INTO emails(id,account_id,thread_id,provider_message_id,created_at,updated_at)
-          VALUES ('before','account','thread','before',2000,2000);
+        INSERT INTO emails(id,account_id,thread_id,provider_message_id,created_at,updated_at) VALUES
+          ('newer-first','account','thread','newer-first',3000,3000),
+          ('watermark-second','account','thread','watermark-second',2000,2000);
         INSERT INTO mobile_push_devices(user_id,installation_id,session_id,token_encrypted,token_hash,environment,notification_mode,
-          generation,eligible_after_at,watermark_created_at,watermark_email_id,registered_at,last_seen_at,updated_at)
-          VALUES ('user','phone','session','encrypted','hash','sandbox','all',1,1000,2000,'before',1000,1000,1000);
+          generation,eligible_after_at,watermark_created_at,watermark_email_id,registered_at,last_seen_at,updated_at) VALUES
+          ('user','phone-replay','session','encrypted','hash-replay','sandbox','all',1,1000,2000,'watermark-second',1000,1000,1000),
+          ('user','phone-current','session','encrypted','hash-current','sandbox','all',1,1000,3000,'newer-first',1000,1000,1000);
       `);
 
       migrate(client.db, { migrationsFolder: migrations });
-      assert.equal((client.sqlite.query("SELECT watermark_sequence AS value FROM mobile_push_devices").get() as { value: number }).value, 1);
+      const watermark = (client.sqlite.query("SELECT watermark_sequence AS value FROM mobile_push_devices WHERE installation_id='phone-replay'").get() as { value: number }).value;
+      assert.equal(watermark, 0);
+      assert.equal((client.sqlite.query("SELECT watermark_sequence AS value FROM mobile_push_devices WHERE installation_id='phone-current'").get() as { value: number }).value, 2);
+      assert.deepEqual(client.sqlite.query("SELECT email_id AS emailId FROM mobile_push_email_sequence WHERE sequence>? ORDER BY sequence").all(watermark), [
+        { emailId: "newer-first" },
+        { emailId: "watermark-second" },
+      ]);
       client.sqlite.query("INSERT INTO emails(id,account_id,thread_id,provider_message_id,created_at,updated_at) VALUES (?,?,?,?,?,?)")
         .run("after", "account", "thread", "after", 1_000, 1_000);
       assert.deepEqual(client.sqlite.query("SELECT email_id AS emailId,sequence FROM mobile_push_email_sequence ORDER BY sequence").all(), [
-        { emailId: "before", sequence: 1 },
-        { emailId: "after", sequence: 2 },
+        { emailId: "newer-first", sequence: 1 },
+        { emailId: "watermark-second", sequence: 2 },
+        { emailId: "after", sequence: 3 },
       ]);
       assert.deepEqual(client.sqlite.query("PRAGMA foreign_key_check").all(), []);
     } finally {
