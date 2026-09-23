@@ -19,14 +19,60 @@ struct SettingsView: View {
                     }
 
                     SettingsGroup(title: "Notifications", scope: "This device") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Notify me about")
+                        Toggle(isOn: Binding(get: { notifications.inboxEnabled }, set: { notifications.setInboxEnabled($0) })) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Inbox").font(OrcaTheme.ui(12, weight: .semibold)).foregroundStyle(OrcaTheme.ink)
+                                Text("Notify for new messages delivered to Inbox.").font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted)
+                            }
+                        }
+                        .tint(OrcaTheme.accent)
+                        .accessibilityIdentifier("settings.notifications.inbox")
+                        SettingsRule()
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Spaces")
                                 .font(OrcaTheme.ui(12, weight: .semibold))
                                 .foregroundStyle(OrcaTheme.ink)
-                            Picker("Notify me about", selection: $notifications.mode) { Text("Human mail").tag("human"); Text("All mail").tag("all"); Text("Off").tag("off") }
-                                .pickerStyle(.segmented)
-                                .accessibilityIdentifier("settings.notificationMode")
-                                .onChange(of: notifications.mode) { notifications.reconcile() }
+                            Text("Choose any Spaces that should also notify you. Inbox and Spaces are independent.")
+                                .font(OrcaTheme.ui(10))
+                                .foregroundStyle(OrcaTheme.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if notifications.catalogLoading {
+                                HStack(spacing: 8) { ProgressView(); Text("Loading Spaces…") }
+                                    .font(OrcaTheme.ui(11))
+                                    .foregroundStyle(OrcaTheme.muted)
+                                    .accessibilityElement(children: .combine)
+                            } else if let catalogError = notifications.catalogErrorMessage {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Spaces could not be loaded. Your saved choices are unchanged.")
+                                        .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
+                                    Button("Retry loading Spaces") { Task { await notifications.loadCatalog(); notifications.reconcile() } }
+                                        .font(OrcaTheme.ui(12, weight: .semibold)).foregroundStyle(OrcaTheme.accent)
+                                        .accessibilityHint(catalogError)
+                                }
+                            } else if notifications.spaces.isEmpty && notifications.unavailableSelectedSpaceIDs.isEmpty {
+                                Text("No Spaces are available for notifications yet.")
+                                    .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
+                            } else {
+                                ForEach(notifications.spaces) { space in
+                                    NotificationSpaceToggle(
+                                        name: space.name,
+                                        detail: space.kindLabel,
+                                        isOn: Binding(
+                                            get: { notifications.selectedSpaceIDs.contains(space.id) },
+                                            set: { notifications.setSpace(space.id, enabled: $0) }
+                                        )
+                                    )
+                                    .accessibilityIdentifier("settings.notifications.space.\(space.id)")
+                                }
+                                ForEach(notifications.unavailableSelectedSpaceIDs, id: \.self) { id in
+                                    NotificationSpaceToggle(
+                                        name: "Unavailable Space",
+                                        detail: "No longer available · turn off to remove",
+                                        isOn: Binding(get: { notifications.selectedSpaceIDs.contains(id) }, set: { notifications.setSpace(id, enabled: $0) })
+                                    )
+                                    .accessibilityIdentifier("settings.notifications.space.\(id)")
+                                }
+                            }
                         }
                         SettingsRule()
                         SettingsValue(label: "Status", value: notifications.statusText)
@@ -92,8 +138,23 @@ struct SettingsView: View {
             .background(OrcaTheme.paper.ignoresSafeArea())
             .accessibilityIdentifier("settings.root")
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
-            .task { await notifications.refreshPermission(); await notifications.loadServerStatus() }
+            .task { await notifications.refreshPermission(); await notifications.loadCatalog(); notifications.reconcile(); await notifications.loadServerStatus() }
         }
+    }
+}
+
+private struct NotificationSpaceToggle: View {
+    var name: String
+    var detail: String
+    @Binding var isOn: Bool
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name).font(OrcaTheme.ui(12, weight: .semibold)).foregroundStyle(OrcaTheme.ink)
+                Text(detail).font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted)
+            }
+        }
+        .tint(OrcaTheme.accent)
     }
 }
 

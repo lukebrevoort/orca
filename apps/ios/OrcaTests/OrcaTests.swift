@@ -44,6 +44,56 @@ final class OrcaTests: XCTestCase {
         let json = #"{"accounts":[],"messages":[],"nextCursor":null,"counts":{"focus":1,"normal":2,"quiet":3,"hidden":4,"all":10}}"#.data(using: .utf8)!
         let page = try JSONDecoder().decode(InboxPage.self, from: json); XCTAssertEqual(page.counts.all, 10)
     }
+    func testNotificationPreferencesAreIdentityScopedAndDefaultToInbox() throws {
+        let suite = "OrcaTests.notifications.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
+        let store = NotificationPreferenceStore(defaults: defaults)
+        XCTAssertEqual(store.load(scope: "https://one.example|user-a"), .inboxOnly)
+        store.save(NotificationSelection(inbox: false, spaceIds: ["destination:projects"]), scope: "https://one.example|user-a")
+        XCTAssertEqual(store.load(scope: "https://one.example|user-a"), NotificationSelection(inbox: false, spaceIds: ["destination:projects"]))
+        XCTAssertEqual(store.load(scope: "https://one.example|user-b"), .inboxOnly)
+        XCTAssertEqual(store.load(scope: "https://two.example|user-a"), .inboxOnly)
+    }
+    func testLegacyNotificationOffMigratesOnceWithoutLeakingToAnotherIdentity() throws {
+        let suite = "OrcaTests.notifications.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("off", forKey: "notificationMode")
+        let store = NotificationPreferenceStore(defaults: defaults)
+        XCTAssertEqual(store.load(scope: "origin|first-user"), .off)
+        XCTAssertEqual(store.load(scope: "origin|second-user"), .inboxOnly)
+        XCTAssertNil(defaults.string(forKey: "notificationMode"))
+    }
+    func testNotificationSelectionEncodingUsesInboxAndUniqueOpaqueSpaceIDs() throws {
+        let selection = NotificationSelection(inbox: false, spaceIds: ["destination:projects", "destination:projects", "view:today"]).normalized()
+        XCTAssertEqual(selection.spaceIds, ["destination:projects", "view:today"])
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(selection)) as? [String: Any])
+        XCTAssertEqual(json["inbox"] as? Bool, false)
+        XCTAssertEqual(json["spaceIds"] as? [String], ["destination:projects", "view:today"])
+    }
+    func testPushClientUsesNotificationSelectionContractAndDecodesCatalog() async throws {
+        let configuration = URLSessionConfiguration.ephemeral; configuration.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: configuration)) { "token" }
+        var requests = [URLRequest]()
+        StubURLProtocol.handler = { request in
+            requests.append(request)
+            if request.url?.path == "/v1/mobile/push/catalog" {
+                return (200, ##"{"defaultSelection":{"inbox":true,"spaceIds":[]},"spaces":[{"id":"destination:projects","kind":"destination","name":"Projects","color":"#70867d"}]}"##.data(using: .utf8)!)
+            }
+            let body = try XCTUnwrap(request.httpBody).withUnsafeBytes { Data($0) }
+            let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertNil(json["notificationMode"])
+            XCTAssertEqual((json["notificationSelection"] as? [String: Any])?["inbox"] as? Bool, false)
+            XCTAssertEqual((json["notificationSelection"] as? [String: Any])?["spaceIds"] as? [String], ["destination:projects"])
+            return (200, #"{"device":{"installationId":"phone","environment":"sandbox","notificationSelection":{"inbox":false,"spaceIds":["destination:projects"]},"generation":2,"registeredAt":"2026-09-23T00:00:00Z","lastSeenAt":"2026-09-23T00:00:00Z","updatedAt":"2026-09-23T00:00:00Z","disabledAt":null,"disabledReason":null},"push":{"configured":true,"disabledReason":null}}"#.data(using: .utf8)!)
+        }
+        defer { StubURLProtocol.handler = nil }
+
+        let catalog = try await client.notificationCatalog()
+        XCTAssertEqual(catalog.defaultSelection, .inboxOnly); XCTAssertEqual(catalog.spaces.first?.name, "Projects")
+        let registration = try await client.registerDevice(installationId: "phone", token: "ab", environment: "sandbox", selection: NotificationSelection(inbox: false, spaceIds: ["destination:projects"]))
+        XCTAssertEqual(registration.device.notificationSelection.spaceIds, ["destination:projects"])
+        XCTAssertEqual(requests.map { $0.url?.path }, ["/v1/mobile/push/catalog", "/v1/mobile/devices/phone"])
+    }
     func testDraftWireEncodingEmitsRequiredNullFields() throws {
         let context = DraftContext(kind: "reply", threadId: "t", messageId: "m", providerMessageId: "pm", providerThreadId: "pt", inReplyTo: nil, references: [])
         let content = DraftContent(to: [Recipient(name: nil, email: "person@example.com")], body: DraftBody(text: "Hello", html: nil), context: context)

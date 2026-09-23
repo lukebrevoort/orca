@@ -59,7 +59,27 @@ struct AuthStart: Codable { var authorizationUrl: URL }
 struct AuthExchange: Codable { var accessToken: String; var expiresAt: String }
 struct AuthUser: Codable { var id: String; var email: String; var name: String? }
 struct AuthSession: Codable { var isAuthenticated: Bool; var user: AuthUser?; var expiresAt: String?; var onboardingCompletedAt: String? }
-struct PushDevice: Codable, Identifiable { var installationId: String; var environment: String; var notificationMode: String; var generation: Int; var registeredAt: String; var lastSeenAt: String; var updatedAt: String; var disabledAt: String?; var disabledReason: String?; var id: String { installationId } }
+struct NotificationSelection: Codable, Hashable {
+    var inbox: Bool
+    var spaceIds: [String]
+    static let inboxOnly = NotificationSelection(inbox: true, spaceIds: [])
+    static let off = NotificationSelection(inbox: false, spaceIds: [])
+    var isEnabled: Bool { inbox || !spaceIds.isEmpty }
+    func normalized(allowedSpaceIDs: Set<String>? = nil) -> NotificationSelection {
+        var seen = Set<String>()
+        let spaces = spaceIds.filter { id in
+            guard !id.isEmpty, allowedSpaceIDs?.contains(id) ?? true else { return false }
+            return seen.insert(id).inserted
+        }
+        return NotificationSelection(inbox: inbox, spaceIds: spaces)
+    }
+}
+struct NotificationSpace: Codable, Identifiable, Hashable {
+    var id: String; var kind: String; var name: String; var color: String
+    var kindLabel: String { switch kind { case "collection": "Collection"; case "view": "Saved view"; default: "Space" } }
+}
+struct NotificationCatalog: Codable { var defaultSelection: NotificationSelection; var spaces: [NotificationSpace] }
+struct PushDevice: Codable, Identifiable { var installationId: String; var environment: String; var notificationSelection: NotificationSelection; var generation: Int; var registeredAt: String; var lastSeenAt: String; var updatedAt: String; var disabledAt: String?; var disabledReason: String?; var id: String { installationId } }
 struct PushStatus: Codable { var configured: Bool; var deliveryEnabled: Bool; var disabledReason: String?; var devices: [PushDevice] }
 struct PushRegistration: Codable { struct Configuration: Codable { var configured: Bool; var disabledReason: String? }; var device: PushDevice; var push: Configuration }
 
