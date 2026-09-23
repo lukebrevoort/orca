@@ -113,12 +113,10 @@ struct NotificationPreferenceStore {
                 await loadCatalog()
                 guard isCurrent(operation, scope) else { return }
                 guard catalogScope == scope else { statusText = "Could not load Spaces — tap Retry"; return }
-                reconcile()
                 return
             }
             if !unavailableIDs(in: desiredSelection).isEmpty {
                 statusText = "Review unavailable Spaces"
-                errorMessage = "Remove unavailable Spaces before saving notification changes."
                 return
             }
             await refreshPermission()
@@ -161,6 +159,7 @@ struct NotificationPreferenceStore {
             catalogScope = scope
             catalogLoading = false
             if !unavailableIDs(in: selection).isEmpty { statusText = "Review unavailable Spaces" }
+            if !selection.spaceIds.isEmpty { reconcile() }
         } catch {
             guard operation == catalogOperationID, activeScope == scope, state.ownerScope == scope, state.phase == .ready else { return }
             catalogLoading = false; catalogErrorMessage = error.localizedDescription
@@ -181,9 +180,11 @@ struct NotificationPreferenceStore {
             else if !unavailableIDs(in: selection).isEmpty { statusText = "Review unavailable Spaces" }
             else if authorization != .authorized && authorization != .provisional {
                 statusText = authorization == .denied ? "Saved · denied in System Settings" : "Saved · permission not requested"
-            } else if let device = result.devices.first(where: { $0.installationId == installationID }), device.notificationSelection.normalized() != selection.normalized() {
-                statusText = "Saved · waiting to sync"
-            } else { statusText = result.deliveryEnabled ? "Active · \(selectionLabel(selection))" : (result.disabledReason ?? "Not registered — tap Retry") }
+            } else if let device = result.devices.first(where: { $0.installationId == installationID }) {
+                statusText = device.notificationSelection.normalized() == selection.normalized() && result.deliveryEnabled
+                    ? "Active · \(selectionLabel(selection))"
+                    : "Saved · waiting to sync"
+            } else { statusText = result.disabledReason ?? "Not registered — tap Retry" }
         } catch { guard isCurrent(operation, scope) else { return }; errorMessage = error.localizedDescription }
     }
 

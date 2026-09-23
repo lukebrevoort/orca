@@ -37,15 +37,33 @@ struct SettingsView: View {
                                 .foregroundStyle(OrcaTheme.muted)
                                 .fixedSize(horizontal: false, vertical: true)
                             if notifications.catalogLoading {
-                                HStack(spacing: 8) { ProgressView(); Text("Loading Spaces…") }
-                                    .font(OrcaTheme.ui(11))
-                                    .foregroundStyle(OrcaTheme.muted)
-                                    .accessibilityElement(children: .combine)
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack(spacing: 8) { ProgressView(); Text("Loading Spaces…") }
+                                        .font(OrcaTheme.ui(11))
+                                        .foregroundStyle(OrcaTheme.muted)
+                                        .accessibilityElement(children: .combine)
+                                    ForEach(notifications.unavailableSelectedSpaceIDs, id: \.self) { id in
+                                        NotificationSpaceToggle(
+                                            name: "Saved Space",
+                                            detail: "Available to turn off while Spaces load",
+                                            isOn: Binding(get: { notifications.selectedSpaceIDs.contains(id) }, set: { notifications.setSpace(id, enabled: $0) })
+                                        )
+                                        .accessibilityIdentifier("settings.notifications.space.\(id)")
+                                    }
+                                }
                             } else if let catalogError = notifications.catalogErrorMessage {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Spaces could not be loaded. Your saved choices are unchanged.")
                                         .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
-                                    Button("Retry loading Spaces") { Task { await notifications.loadCatalog(); notifications.reconcile() } }
+                                    ForEach(notifications.unavailableSelectedSpaceIDs, id: \.self) { id in
+                                        NotificationSpaceToggle(
+                                            name: "Saved Space",
+                                            detail: "Catalog unavailable · turn off to remove",
+                                            isOn: Binding(get: { notifications.selectedSpaceIDs.contains(id) }, set: { notifications.setSpace(id, enabled: $0) })
+                                        )
+                                        .accessibilityIdentifier("settings.notifications.space.\(id)")
+                                    }
+                                    Button("Retry loading Spaces") { Task { await notifications.loadCatalog() } }
                                         .font(OrcaTheme.ui(12, weight: .semibold)).foregroundStyle(OrcaTheme.accent)
                                         .accessibilityHint(catalogError)
                                 }
@@ -138,7 +156,7 @@ struct SettingsView: View {
             .background(OrcaTheme.paper.ignoresSafeArea())
             .accessibilityIdentifier("settings.root")
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
-            .task { await notifications.refreshPermission(); await notifications.loadCatalog(); notifications.reconcile(); await notifications.loadServerStatus() }
+            .task { await notifications.refreshPermission(); await notifications.loadCatalog(); await notifications.loadServerStatus() }
         }
     }
 }
