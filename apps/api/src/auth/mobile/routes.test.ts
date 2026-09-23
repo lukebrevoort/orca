@@ -254,6 +254,42 @@ describe("mobile native authentication", () => {
     expect(staleGrant.status).toBe(400);
   });
 
+  test("expires the browser binding with its request and explicitly restarts after pruning", async () => {
+    const first = await start(fixture.app);
+    const firstToken = new URL(first.authorizationUrl).searchParams.get("request")!;
+
+    fixture.clock = new Date(fixture.clock.getTime() + 5 * 60 * 1000);
+    const firstConsent = await fixture.app.request(`/v1/mobile/auth/authorize?request=${firstToken}`, {
+      headers: { cookie: fixture.user1Cookie },
+    });
+    expect(firstConsent.status).toBe(200);
+    expect(firstConsent.headers.get("set-cookie")).toContain("Max-Age=300");
+    const staleBindingCookie = firstConsent.headers.get("set-cookie")!.split(";", 1)[0]!;
+
+    fixture.clock = new Date(fixture.clock.getTime() + 6 * 60 * 1000);
+    const second = await start(fixture.app);
+    const secondToken = new URL(second.authorizationUrl).searchParams.get("request")!;
+    expect((fixture.sqlite.query("select count(*) count from mobile_auth_requests").get() as { count: number }).count).toBe(1);
+
+    const conflict = await fixture.app.request(`/v1/mobile/auth/authorize?request=${secondToken}`, {
+      headers: { cookie: `${fixture.user1Cookie}; ${staleBindingCookie}` },
+    });
+    expect(conflict.status).toBe(409);
+
+    const restarted = await fixture.app.request("/v1/mobile/auth/restart", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `${fixture.user1Cookie}; ${staleBindingCookie}`,
+        origin: webOrigin,
+      },
+      body: JSON.stringify({ requestToken: secondToken }),
+    });
+    expect(restarted.status).toBe(200);
+    expect(restarted.headers.get("set-cookie")).toContain("Max-Age=600");
+    expect(restarted.headers.get("set-cookie")).toContain(`orca_mobile_auth_request=${secondToken}`);
+  });
+
   test("bounds start payloads, pending capacity, and prunes expired requests", async () => {
     const oversized = await fixture.app.request("/v1/mobile/auth/start", {
       method: "POST",

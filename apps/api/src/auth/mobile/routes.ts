@@ -106,6 +106,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
     const auth = c.get("auth");
     const { db, sqlite } = dbFactory();
     try {
+      const currentTime = now();
       const user = db.select({ email: users.email, authenticatedAt: users.authenticatedAt })
         .from(users).where(eq(users.id, auth.userId)).get();
       if (!user?.authenticatedAt) {
@@ -115,7 +116,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
         requestToken,
         userId: auth.userId,
         browserSessionId: auth.sessionId,
-      }, now());
+      }, currentTime);
       if (!bound) {
         return error(c, 400, "invalid_request", "The mobile authorization request is expired, used, or belongs to another session");
       }
@@ -124,7 +125,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
         sameSite: "Lax",
         secure: cookieSecure,
         path: "/v1/mobile/auth",
-        maxAge: 10 * 60,
+        maxAge: bindingCookieMaxAge(bound.expiresAt, currentTime),
       });
       return c.json({
         accountEmail: user.email,
@@ -216,6 +217,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
     const auth = c.get("auth");
     const { db, sqlite } = dbFactory();
     try {
+      const currentTime = now();
       const user = db.select({ email: users.email, authenticatedAt: users.authenticatedAt })
         .from(users).where(eq(users.id, auth.userId)).get();
       if (!user?.authenticatedAt) {
@@ -226,7 +228,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
         requestToken,
         userId: auth.userId,
         browserSessionId: auth.sessionId,
-      }, now());
+      }, currentTime);
       if (!restarted) {
         return error(c, 400, "invalid_request", "The authorization restart is expired or belongs to another session");
       }
@@ -235,7 +237,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
         sameSite: "Lax",
         secure: cookieSecure,
         path: "/v1/mobile/auth",
-        maxAge: 10 * 60,
+        maxAge: bindingCookieMaxAge(restarted.expiresAt, currentTime),
       });
       return c.json({
         accountEmail: user.email,
@@ -293,6 +295,10 @@ async function readJson(request: Request): Promise<Record<string, unknown>> {
 function stringField(value: Record<string, unknown>, key: string) {
   const field = value[key];
   return typeof field === "string" ? field : null;
+}
+
+function bindingCookieMaxAge(expiresAt: Date, now: Date) {
+  return Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1_000));
 }
 
 function error(c: Context, status: 400 | 401 | 403 | 409 | 413 | 429 | 503, code: string, message: string) {
