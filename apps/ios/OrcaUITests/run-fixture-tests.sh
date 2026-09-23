@@ -50,6 +50,7 @@ with open(xctestrun_path, "rb") as handle:
 environment = xctestrun["OrcaUITests"].setdefault("EnvironmentVariables", {})
 environment["ORCA_FIXTURE_API_URL"] = connection["apiURL"]
 environment["ORCA_FIXTURE_ACCESS_TOKEN"] = connection["accessToken"]
+environment["ORCA_FIXTURE_READ_ONLY"] = "1" if connection.get("readOnly", False) else "0"
 
 with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
@@ -62,19 +63,26 @@ result_bundle="$result_dir/Orca.xcresult"
 trap 'xcrun simctl ui "$simulator_udid" appearance light >/dev/null 2>&1 || true' EXIT
 xcrun simctl ui "$simulator_udid" appearance light
 
+read_only=$(/usr/bin/python3 -c 'import json,sys; print("1" if json.load(open(sys.argv[1])).get("readOnly",False) else "0")' "$connection_file")
+if [[ $read_only == 1 ]]; then
+  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
+else
+  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas)
+fi
+
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -resultBundlePath "$result_bundle" \
-  -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode
+  "${light_tests[@]}"
 
 xcrun simctl ui "$simulator_udid" appearance dark
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -resultBundlePath "$result_dir/OrcaDark.xcresult" \
-  -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode \
-  -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates \
-  -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas
+  "${dark_tests[@]}"
 
 print "Result bundle: $result_bundle"

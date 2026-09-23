@@ -680,7 +680,7 @@ describe("mobile authorization recovery", () => {
   }
 
   test("a cancelled pending login cookie returns to sign-in with the exact mobile request", async () => {
-    let loginStartUrl: URL | null = null;
+    const loginStarts: URL[] = [];
     globalThis.fetch = (async (input: string | URL | Request) => {
       const url = new URL(String(input), browserWindow.location.origin);
       if (url.pathname === "/v1/mobile/auth/authorize") {
@@ -691,7 +691,7 @@ describe("mobile authorization recovery", () => {
         return jsonResponse({ provider, available: true, reason: null });
       }
       if (url.pathname === "/v1/auth/gmail/login") {
-        loginStartUrl = url;
+        loginStarts.push(url);
         return apiError(503, "provider_unavailable", "Unavailable for test");
       }
       throw new Error(`Unexpected request: ${url.pathname}${url.search}`);
@@ -702,7 +702,7 @@ describe("mobile authorization recovery", () => {
     await act(async () => button("Continue with Google").click());
     await waitFor(0);
 
-    expect(loginStartUrl?.searchParams.get("returnTo")).toBe(`${browserWindow.location.origin}/mobile-auth?request=${requestToken}`);
+    expect(loginStarts[0]?.searchParams.get("returnTo")).toBe(`${browserWindow.location.origin}/mobile-auth?request=${requestToken}`);
   });
 
   test("requires an explicit action before replacing an abandoned request binding", async () => {

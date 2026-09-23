@@ -144,6 +144,24 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "13-styled-html-readable")
     }
 
+    func test05ReadOnlyAccountKeepsDraftEditable() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_READ_ONLY"] == "1" else { throw XCTSkip("Requires --read-only fixture") }
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        app.buttons["compose.open"].tap()
+        let recipient = app.textFields["compose.to"]
+        XCTAssertTrue(recipient.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["compose.send-permission"].exists)
+        attachScreenshot(named: "14-read-only-permission-guidance")
+        recipient.tap(); recipient.typeText("maya@example.com")
+        let body = messageBody(in: app)
+        body.tap(); body.typeText("My draft stays editable while I enable sending.")
+        XCTAssertTrue(body.isEnabled)
+        XCTAssertFalse(app.buttons["compose.send"].isEnabled)
+        XCTAssertTrue(app.descendants(matching: .any)["compose.send-permission"].exists)
+        attachScreenshot(named: "14-read-only-editable-draft")
+    }
+
     private func launchApp() throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {

@@ -10,6 +10,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Hono } from "hono";
 import type { AuthVariables } from "../src/auth/middleware.ts";
 
+const readOnly = process.argv.includes("--read-only");
 const directory = mkdtempSync(join(tmpdir(), "orca-ios-fixture-"));
 process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
 process.env.DATABASE_PATH = join(directory, "mail.sqlite");
@@ -32,7 +33,7 @@ const now = new Date();
 const userId = "ios-fixture-user";
 const accountId = "ios-fixture-account";
 db.insert(users).values({ id: userId, email: "luke@example.com", displayName: "Luke", authenticatedAt: now, onboardingCompletedAt: now }).run();
-db.insert(oauthAccounts).values({ id: accountId, userId, provider: "gmail", providerId: "ios-fixture-provider", providerEmail: "luke@example.com", scope: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose", lastSyncedAt: now }).run();
+db.insert(oauthAccounts).values({ id: accountId, userId, provider: "gmail", providerId: "ios-fixture-provider", providerEmail: "luke@example.com", scope: readOnly ? "https://www.googleapis.com/auth/gmail.readonly" : "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose", lastSyncedAt: now }).run();
 db.insert(labels).values({ id: "ios-fixture-inbox", accountId, providerLabelId: "INBOX", name: "INBOX", type: "system" }).run();
 const messages = [
   ["Maya Chen", "maya@example.com", "A quieter kind of inbox", "I tried the new reading view this morning. The space around each conversation makes such a difference.\n\nCould we catch up tomorrow about the writing experience?\n\nMaya"],
@@ -57,7 +58,7 @@ const app = createApp({
   providerRegistry: new ProviderRegistry([{
     ...gmailProvider,
     createOAuthApp: () => new Hono<{ Variables: AuthVariables }>(),
-    detectCapabilities: () => ({ read: true, draft: true, send: true }),
+    detectCapabilities: () => ({ read: true, draft: !readOnly, send: !readOnly }),
     async syncPage() { return { nextCursor: null, emailCount: 0, threadCount: 0, labelCount: 0, contactCount: 0 }; },
     createTransport: () => ({
       async saveDraft(_db, _account, draft) { return { providerDraftId: `fixture-${draft.id}` }; },
@@ -71,7 +72,7 @@ const app = createApp({
   }]),
 });
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: app.fetch });
-const metadata = { apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
+const metadata = { readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
 const metadataPath = join(directory, "connection.json");
 writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
 console.log(`iOS fixture API: ${metadata.apiURL}`);
