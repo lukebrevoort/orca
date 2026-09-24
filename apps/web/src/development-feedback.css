@@ -1,0 +1,8 @@
+/* Reserve a development-only footer so feedback cannot cover workspace actions. */
+@media (min-width: 761px) {
+  body:has(.feedback-kit-root) .desktop-shell {
+    height: calc(100dvh - 64px);
+    min-height: calc(100dvh - 64px);
+  }
+  .feedback-kit-bottom-right { bottom: 10px; }
+}

@@ -30,6 +30,7 @@ import SwiftUI
 }
 
 struct InboxView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; @StateObject private var model = InboxViewModel(); @State private var selected: InboxMessage?
     var body: some View {
         NavigationStack { Group {
@@ -51,15 +52,15 @@ struct InboxView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
                                 .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.2).foregroundStyle(OrcaTheme.accent)
-                            Text(model.view == "focus" ? "A little more focus." : "What deserves you now")
-                                .font(OrcaTheme.reader(34)).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
-                            HStack {
+                            Text(dynamicTypeSize.isAccessibilitySize ? "Your mail" : (model.view == "focus" ? "A little more focus." : "What deserves you now"))
+                                .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 20 : 34)).fixedSize(horizontal: false, vertical: true).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
+                            (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12)) : AnyLayout(HStackLayout())) {
                                 Picker("Inbox view", selection: $model.view) { Text("Inbox").tag("normal"); Text("Focus").tag("focus"); Text("All Mail").tag("all") }
                                     .pickerStyle(.menu).font(OrcaTheme.ui(12, weight: .semibold))
                                     .padding(.horizontal, 8).background(OrcaTheme.selected, in: RoundedRectangle(cornerRadius: 10))
                                     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(OrcaTheme.border))
                                     .onChange(of: model.view) { Task { await model.load(state: state) } }
-                                Spacer()
+                                if !dynamicTypeSize.isAccessibilitySize { Spacer() }
                                 Text("\(model.messages.filter(\.unread).count) unread shown").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
                             }.textCase(nil)
                         }.padding(.vertical, 18)

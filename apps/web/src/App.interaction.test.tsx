@@ -1205,12 +1205,12 @@ describe("Write shortcut", () => {
     await act(async () => {
       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, bubbles: true, cancelable: true }));
     });
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]')).toBeNull();
 
     await act(async () => {
       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }));
     });
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]')).not.toBeNull();
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
   });
 
@@ -2129,7 +2129,7 @@ describe("Drafts mailbox", () => {
     await act(async () => {
       draftRow!.click();
     });
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]')).not.toBeNull();
     const subject = browserWindow.document.querySelector('input[name="subject"]') as unknown as HTMLInputElement | null;
     expect(subject?.value).toBe("A calmer launch note");
     const closePanel = browserWindow.document.querySelector('button[aria-label="Close panel"]') as unknown as HTMLButtonElement | null;
@@ -3926,7 +3926,7 @@ describe("Zen exit presence", () => {
     await waitFor(550);
 
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
-    const panel = browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]");
+    const panel = browserWindow.document.querySelector("[role=\"dialog\"][aria-label=\"Compose message\"]");
     expect(panel?.getAttribute("aria-hidden")).toBeNull();
     expect(panel?.hasAttribute("inert")).toBe(false);
   });
@@ -3942,7 +3942,7 @@ describe("Zen exit presence", () => {
     expect(browserWindow.document.querySelector(".zen-canvas")?.classList.contains("zen-canvas-closing")).toBe(true);
     await waitFor(550);
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]')).not.toBeNull();
   });
 
   test("returns straight to the inbox on Escape when Zen is the default", async () => {
@@ -3959,7 +3959,7 @@ describe("Zen exit presence", () => {
     });
 
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]')).toBeNull();
   });
 
   test("keeps Save & close returning to the panel when Zen is the default", async () => {
@@ -3978,7 +3978,7 @@ describe("Zen exit presence", () => {
     });
 
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]')).not.toBeNull();
   });
 
   test("returns immediately for reduced motion without delaying panel controls", async () => {
@@ -3993,7 +3993,7 @@ describe("Zen exit presence", () => {
     });
 
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
-    const panelAfterZenExit = browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]");
+    const panelAfterZenExit = browserWindow.document.querySelector("[role=\"dialog\"][aria-label=\"Compose message\"]");
     expect(panelAfterZenExit?.getAttribute("aria-hidden")).toBeNull();
 
     const closePanelButton = browserWindow.document.querySelector("button[aria-label=\"Close panel\"]") as unknown as HTMLButtonElement | null;
@@ -4001,7 +4001,7 @@ describe("Zen exit presence", () => {
     await act(async () => {
       closePanelButton.click();
     });
-    expect(browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]")).toBeNull();
+    expect(browserWindow.document.querySelector("[role=\"dialog\"][aria-label=\"Compose message\"]")).toBeNull();
   });
 });
 

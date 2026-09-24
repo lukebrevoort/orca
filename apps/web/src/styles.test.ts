@@ -106,9 +106,10 @@ describe("M8 desktop presentation regressions", () => {
     expect(desktopStyles).toContain("@media (max-width: 1100px) and (min-width: 761px)");
   });
 
-  test("keeps the reader return control inside the reader surface", () => {
+  test("keeps the reader return control in flow inside the reader surface", () => {
     expect(desktopStyles).toContain(".desktop-shell .message-reader { position: relative; }");
-    expect(desktopStyles).toContain(".desktop-shell .reader-nav { left: 28px; position: absolute; top: 28px;");
+    expect(desktopStyles).toContain(".desktop-shell .reader-nav { position: static; padding: 24px 28px 0; }");
+    expect(desktopStyles).toContain(".desktop-shell .reader-nav { padding: 18px 16px 0; }");
   });
 
   test("uses a light theme scrim and preserves a darker Black scrim", () => {

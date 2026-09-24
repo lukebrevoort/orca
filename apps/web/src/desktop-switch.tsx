@@ -359,7 +359,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
       projection={projection}
       theme={theme}
     />
-    <section className="desktop-workspace"><WorkspaceHeader health={projection.account.health} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/><ConnectivityNotice onOpenDrafts={() => navigate("drafts")} online={online}/>{children}</section>
+    <div className="desktop-workspace"><WorkspaceHeader health={projection.account.health} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/><ConnectivityNotice onOpenDrafts={() => navigate("drafts")} online={online}/>{children}</div>
   </div>;
 }
 

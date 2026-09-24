@@ -1,5 +1,6 @@
 import { FeedbackWidget } from "@feedback-kit/react";
 import "@feedback-kit/react/styles.css";
+import "./development-feedback.css";
 
 export default function DevelopmentFeedback() {
   return (

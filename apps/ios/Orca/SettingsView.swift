@@ -179,17 +179,19 @@ private struct NotificationSpaceToggle: View {
 }
 
 private struct SettingsGroup<Content: View>: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var title: String
     var scope: String
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
+            (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))) {
                 Text(title)
-                    .font(OrcaTheme.reader(22))
+                    .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 16 : 22))
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(OrcaTheme.ink)
-                Spacer()
+                if !dynamicTypeSize.isAccessibilitySize { Spacer() }
                 Text(scope)
                     .font(OrcaTheme.ui(9, weight: .bold))
                     .foregroundStyle(OrcaTheme.muted)
@@ -205,18 +207,20 @@ private struct SettingsGroup<Content: View>: View {
 }
 
 private struct SettingsValue: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var label: String
     var value: String
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 16) {
+        (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 16))) {
             Text(label)
                 .font(OrcaTheme.ui(12, weight: .semibold))
                 .foregroundStyle(OrcaTheme.ink)
-            Spacer(minLength: 16)
+            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 16) }
             Text(value)
                 .font(OrcaTheme.ui(12))
                 .foregroundStyle(OrcaTheme.muted)
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(dynamicTypeSize.isAccessibilitySize ? .leading : .trailing)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
