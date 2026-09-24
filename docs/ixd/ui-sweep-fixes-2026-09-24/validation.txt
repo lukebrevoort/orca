@@ -1,0 +1,11 @@
+PASS — bun run typecheck (all workspaces).
+PASS — bun run build (production build).
+PASS — App.test.tsx: 61 tests.
+PASS — focused App.interaction.test.tsx: 6 reader / Compose / Zen / draft tests.
+PASS — calendar-settings.test.tsx: 2 tests.
+PARTIAL — desktop-switch.test.ts: 6 passed, 2 exceeded their existing per-test deadlines (10.44s against 10s; 17.85s against 15s). The run completed 317 assertions without assertion failures. An earlier loaded run timed out 4 tests. This suite is not reported as green.
+PASS — native iOS build; 29 unit tests and 8 UI tests (4 light, 4 dark), including saved reply title assertion.
+PASS — 18 Chromium accessibility scans (9 screens × light/dark): zero automated violations.
+MANUAL — inspected native Inbox and Settings at Accessibility XXXL, both themes; saved reply title; mobile reader header/actions/reply navigation separation; Calendar footer; Compose focus/hover/disabled states.
+REVIEW — Dispatch persona orca-web-review, review #105: approved with no feedback items; reviewed code commit b05c4ac.
+SCOPE — synthetic demo/fixture data; Chromium desktop 1440×900 and mobile 390×844; iPhone 17e simulator iOS 26.4.1. Physical-device Safari, hardware keyboard and VoiceOver are not claimed as verified. Focused web tests only, not a green claim for the entire monorepo suite.
