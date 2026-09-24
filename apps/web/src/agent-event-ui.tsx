@@ -79,7 +79,7 @@ export function AgentEventTimeline({
         <div>
           <p>Orca signals · local estimates</p>
           <h2 id="orca-signals-title">Worth a look</h2>
-          <span>Explainable events from automated mail. The original messages stay in Tideline and All mail.</span>
+          <span>Explainable events from automated mail. The original messages stay in All Mail.</span>
         </div>
         {status === "ready" && quieted.length ? (
           <button

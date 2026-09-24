@@ -25,7 +25,7 @@ struct ComposeView: View {
     @State private var completed = false
     @State private var staleConflict = false
     init(context: ThreadDetail? = nil, kind: String = "new", localDraft: LocalDraft? = nil, serverDraft: MessageDraft? = nil) {
-        self.context = context; self.kind = kind; seedServer = serverDraft
+        self.context = context; self.kind = localDraft?.content.context?.kind ?? serverDraft?.context?.kind ?? kind; seedServer = serverDraft
         let content = localDraft?.content ?? serverDraft.map { DraftContent(to: $0.to, cc: $0.cc, bcc: $0.bcc, subject: $0.subject, body: $0.body, context: $0.context, attachments: $0.attachments) }
         _to = State(initialValue: localDraft?.recipientText?.to ?? content?.to.map(\.email).joined(separator: ", ") ?? "")
         _cc = State(initialValue: localDraft?.recipientText?.cc ?? content?.cc.map(\.email).joined(separator: ", ") ?? "")

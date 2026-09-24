@@ -63,6 +63,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(savedReply.waitForExistence(timeout: 10), "The locally saved reply must be visible in Drafts.")
         savedReply.tap()
 
+        XCTAssertTrue(app.navigationBars["Reply"].waitForExistence(timeout: 5), "A reopened reply must keep its Reply title.")
         let reopenedBody = messageBody(in: app)
         XCTAssertTrue(reopenedBody.waitForExistence(timeout: 10))
         XCTAssertEqual(reopenedBody.value as? String, Fixture.replyBody)

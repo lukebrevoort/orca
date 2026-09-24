@@ -11,7 +11,7 @@
   --desktop-border-strong: #b9c8c0;
   --desktop-accent: #087461;
   --desktop-accent-soft: #e4f5f0;
-  --desktop-warning: #a56820;
+  --desktop-warning: #805018;
   --desktop-danger: #a8463f;
   --desktop-focus: #087461;
   --desktop-rule-context: #3f67b0;
@@ -992,7 +992,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 /* Keep the reader return affordance inside the reading surface, clear of the
    persistent desktop identity and navigation. */
 .desktop-shell .message-reader { position: relative; }
-.desktop-shell .reader-nav { left: 28px; position: absolute; top: 28px; }
+.desktop-shell .reader-nav { position: static; padding: 24px 28px 0; }
+.desktop-shell .reader-document { width: 100%; padding-top: 28px; }
+.desktop-shell .reader-top-actions { position: static; width: fit-content; max-width: 100%; flex-wrap: wrap; margin-top: 20px; }
+.desktop-shell .reader-reply { position: relative; bottom: auto; }
+.desktop-shell .reader-jump-top { bottom: 90px; }
+@media (max-width: 760px) {
+  .desktop-shell .reader-nav { padding: 18px 16px 0; }
+  .desktop-shell .reader-document { padding: 24px 16px 32px; }
+  .desktop-shell .reader-top-actions .remind-menu { width: min(320px, calc(100vw - 44px)); }
+}
 
 /* BRE-361: phone and small-tablet rows become a vertical reading stack with a
    dedicated action band. Nothing depends on desktop absolute columns here. */
