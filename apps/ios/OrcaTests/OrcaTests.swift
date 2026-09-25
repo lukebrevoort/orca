@@ -273,3 +273,177 @@ final class OrcaTests: XCTestCase {
         XCTAssertFalse(ComposeView.acceptsAttachment(existingSize: 0, candidateSize: 0))
     }
 }
+
+extension OrcaTests {
+    @MainActor func testVisibleViewsPersistIndependentlyOfNotificationsAndIdentity() throws {
+        let suite = "OrcaTests.mailboxes.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
+        let notifications = NotificationPreferenceStore(defaults: defaults)
+        notifications.save(.off, scope: "origin|user")
+        let store = MailboxPreferenceStore(defaults: defaults)
+        let model = MailboxViews(preferences: store)
+        model.activate(scope: "origin|user")
+        XCTAssertEqual(model.options.map(\.id), ["normal", "focus", "all"])
+        model.selectedID = "focus"
+        model.setEnabled("focus", false)
+        XCTAssertEqual(model.selectedID, "normal")
+        model.setEnabled("all", false)
+        model.setEnabled("view:hub", true)
+        XCTAssertEqual(model.options.map(\.id), ["normal"], "Inbox remains a reachable fallback before the catalog loads")
+        XCTAssertEqual(notifications.load(scope: "origin|user"), .off)
+        let reopened = MailboxViews(preferences: store)
+        reopened.activate(scope: "origin|user")
+        XCTAssertEqual(reopened.enabledIDs, ["view:hub"])
+        reopened.activate(scope: "origin|other-user")
+        XCTAssertEqual(reopened.enabledIDs, ["focus", "all"])
+        reopened.activate(scope: "other-origin|user")
+        XCTAssertEqual(reopened.enabledIDs, ["focus", "all"])
+    }
+
+    func testSavedViewClientUsesCanonicalResultsAndOpaqueCursorWithoutPushWrites() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { "token" }
+        let cursor = "opaque+/=?&cursor"
+        var paths = [String]()
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            let url = try XCTUnwrap(request.url); paths.append(url.path)
+            if url.path == "/v1/organization/views" {
+                return (200, #"{"items":[{"id":"hub","name":"Hub notifications","description":"Browse without alerts","revision":7}]}"#.data(using: .utf8)!)
+            }
+            XCTAssertEqual(url.path, "/v1/organization/views/hub/results")
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+            XCTAssertEqual(query?.first { $0.name == "cursor" }?.value, cursor)
+            XCTAssertNil(query?.first { $0.name == "accountId" }, "A saved View owns its account scope")
+            return (200, #"{"viewId":"hub","viewRevision":7,"accountIds":["work"],"items":[{"accountId":"work","accountEmail":"work@example.com","provider":"gmail","threadId":"t","subject":"Hub update","latestReceivedAt":"2026-09-25T10:00:00Z","messageCount":2,"readState":"unread","sender":{"name":"Jordan","email":"jordan@example.com"}}],"nextCursor":null}"#.data(using: .utf8)!)
+        }
+        defer { StubURLProtocol.handler = nil }
+        let catalog = try await client.mailboxViews()
+        let page = try await client.mailboxViewResults(try XCTUnwrap(catalog.items.first).id, cursor: cursor)
+        XCTAssertEqual(page.items.first?.accountId, "work")
+        XCTAssertEqual(page.items.first?.threadId, "t")
+        XCTAssertEqual(paths, ["/v1/organization/views", "/v1/organization/views/hub/results"])
+    }
+
+    func testSavedViewIDIsEncodedAsOnePathComponent() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        StubURLProtocol.handler = { request in
+            let parts = try XCTUnwrap(URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false))
+            XCTAssertEqual(parts.percentEncodedPath, "/v1/organization/views/hub%2Fweekly%3F%23%25/results")
+            return (200, #"{"viewId":"hub/weekly?#%","viewRevision":1,"accountIds":[],"items":[],"nextCursor":null}"#.data(using: .utf8)!)
+        }
+        defer { StubURLProtocol.handler = nil }
+        _ = try await client.mailboxViewResults("hub/weekly?#%")
+    }
+
+    @MainActor func testSavedViewThreadHandoffSelectsOwnedAccountAndRejectsUnknownAccount() {
+        let state = AppState(); state.accounts = DemoData.accounts; state.phase = .ready
+        var second = DemoData.accounts[0]; second.id = "work"; second.email = "work@example.com"
+        state.accounts.append(second); state.selectedAccountID = DemoData.accounts[0].id
+        var row = savedViewThread(accountId: "work")
+        XCTAssertTrue(state.selectSavedViewThread(row)); XCTAssertEqual(state.selectedAccountID, "work")
+        let reader = ThreadView(accountId: row.accountId, threadId: row.threadId)
+        XCTAssertEqual(reader.accountId, "work"); XCTAssertEqual(reader.threadId, "thread")
+        row.accountId = "someone-else"
+        XCTAssertFalse(state.selectSavedViewThread(row)); XCTAssertEqual(state.selectedAccountID, "work")
+        state.phase = .signedOut; row.accountId = "work"
+        XCTAssertFalse(state.selectSavedViewThread(row))
+    }
+
+    @MainActor func testSavedViewResultsValidateViewRevisionAndAccountOwnership() {
+        let view = SavedMailboxView(id: "hub", name: "Hub", description: "", revision: 2)
+        var page = SavedViewPage(viewId: "hub", viewRevision: 2, accountIds: ["demo-account"], items: [savedViewThread(accountId: "demo-account")], nextCursor: nil)
+        XCTAssertTrue(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
+        page.viewRevision = 3
+        XCTAssertFalse(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
+        page.viewRevision = 2; page.viewId = "different"
+        XCTAssertFalse(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
+        page.viewId = "hub"; page.items[0].accountId = "someone-else"
+        XCTAssertFalse(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
+        page.accountIds.append("someone-else")
+        XCTAssertFalse(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
+    }
+
+    @MainActor func testViewCatalogRemovalFallsBackWithoutErasingSavedVisibility() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder)); state.phase = .ready
+        let suite = "OrcaTests.catalog.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
+        let model = MailboxViews(preferences: .init(defaults: defaults))
+        var available = true
+        StubURLProtocol.handler = { _ in
+            (200, (available ? #"{"items":[{"id":"hub","name":"Hub notifications","description":"","revision":1}]}"# : #"{"items":[]}"#).data(using: .utf8)!)
+        }
+        defer { StubURLProtocol.handler = nil }
+        await model.load(state: state); model.setEnabled("view:hub", true); model.selectedID = "view:hub"
+        XCTAssertEqual(model.title, "Hub notifications")
+        available = false; await model.load(state: state)
+        XCTAssertEqual(model.selectedID, "normal")
+        XCTAssertTrue(model.enabledIDs.contains("view:hub"))
+        XCTAssertEqual(model.unavailableIDs, ["view:hub"])
+    }
+
+    @MainActor func testSavedViewPaginationAndOfflineCacheAreScoped() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder)); state.phase = .ready; state.accounts = DemoData.accounts
+        let view = SavedMailboxView(id: "hub", name: "Hub", description: "", revision: 1)
+        var response = SavedViewPage(viewId: "hub", viewRevision: 1, accountIds: ["demo-account"], items: [savedViewThread(accountId: "demo-account")], nextCursor: "next")
+        var offline = false
+        StubURLProtocol.handler = { _ in
+            if offline { throw URLError(.notConnectedToInternet) }
+            return (200, try JSONEncoder().encode(response))
+        }
+        defer { StubURLProtocol.handler = nil }
+        let reader = SavedViewReader(); await reader.load(view: view, state: state)
+        response.items.append(SavedViewThread(accountId: "demo-account", accountEmail: "hello@example.com", provider: "gmail", threadId: "second", subject: "Second", latestReceivedAt: "2026-09-25T10:00:00Z", messageCount: 1, readState: "read", sender: .init(name: nil, email: "jordan@example.com")))
+        response.nextCursor = nil
+        await reader.load(view: view, state: state, reset: false)
+        XCTAssertEqual(reader.page?.items.map(\.threadId), ["thread", "second"], "Overlapping pages must not duplicate threads")
+        offline = true
+        let cached = SavedViewReader(); await cached.load(view: view, state: state)
+        XCTAssertEqual(cached.page?.items.count, 1); XCTAssertNil(cached.page?.nextCursor)
+        XCTAssertEqual(cached.error, "Offline — showing saved results")
+        state.baseURLText = "https://other.example"
+        await cached.load(view: view, state: state)
+        XCTAssertNil(cached.page, "Cached results cannot cross server/identity scopes")
+    }
+
+    @MainActor func testLateViewCatalogResponseCannotCrossIdentityScope() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        let state = AppState(client: client); state.phase = .ready
+        let started = expectation(description: "Catalog request started")
+        StubURLProtocol.handler = { _ in
+            started.fulfill()
+            Thread.sleep(forTimeInterval: 0.15)
+            return (200, #"{"items":[{"id":"private","name":"Previous identity","description":"","revision":1}]}"#.data(using: .utf8)!)
+        }
+        defer { StubURLProtocol.handler = nil }
+        let model = MailboxViews()
+        let pending = Task { await model.load(state: state) }
+        await fulfillment(of: [started], timeout: 3)
+        state.baseURLText = "https://another-identity.example"
+        model.activate(scope: state.ownerScope)
+        await pending.value
+        XCTAssertTrue(model.views.isEmpty)
+        XCTAssertEqual(model.selectedID, "normal")
+    }
+
+    @MainActor func testViewCacheIsNeverUsedForAuthorizationOrDeletedViewErrors() {
+        for status in [401, 403, 404, 409] {
+            XCTAssertFalse(MailboxViews.permitsOfflineCache(APIClient.ClientError.http(status, nil)))
+        }
+        XCTAssertTrue(MailboxViews.permitsOfflineCache(URLError(.notConnectedToInternet)))
+    }
+
+    private func savedViewThread(accountId: String) -> SavedViewThread {
+        SavedViewThread(accountId: accountId, accountEmail: "work@example.com", provider: "gmail", threadId: "thread", subject: "Hub update", latestReceivedAt: "2026-09-25T10:00:00Z", messageCount: 2, readState: "unread", sender: .init(name: "Jordan", email: "jordan@example.com"))
+    }
+}

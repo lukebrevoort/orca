@@ -243,6 +243,79 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(latest.isHittable, "Reopening must start at the newest message again.")
     }
 
+    func test08VisibleViewsAreIndependentAndPersist() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        app.tabBars.buttons["Settings"].tap()
+        app.buttons["settings.visible-views"].tap()
+        let hub = app.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.views.view:", "Hub notifications")).firstMatch
+        XCTAssertTrue(hub.waitForExistence(timeout: 10))
+        if hub.value as? String != "1" { hub.tap() }
+        let focus = app.switches["settings.views.focus"]
+        if focus.value as? String != "0" { focus.tap() }
+        attachScreenshot(named: "19-visible-views-selected")
+        navigateBack(in: app)
+        let notification = app.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.notifications.space.view:", "Hub notifications")).firstMatch
+        for _ in 0..<8 {
+            if notification.exists && notification.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(notification.exists)
+        XCTAssertEqual(notification.value as? String, "0", "Showing a View must not enable its notifications")
+        attachScreenshot(named: "20-view-notifications-still-off")
+        app.tabBars.buttons["Inbox"].tap()
+        app.buttons["inbox.view-picker"].tap()
+        attachScreenshot(named: "21-visible-views-menu")
+        XCTAssertFalse(app.buttons["Focus"].exists)
+        app.buttons["Hub notifications"].tap()
+        let match = app.buttons["view.thread.ios-fixture-thread-2"]
+        XCTAssertTrue(match.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["view.thread.ios-fixture-thread-1"].exists)
+        attachScreenshot(named: "22-saved-view-results")
+        match.tap()
+        XCTAssertTrue(app.buttons["Reply"].waitForExistence(timeout: 10))
+        app.buttons["Reply"].tap()
+        let recipient = app.textFields["compose.to"]
+        XCTAssertTrue(recipient.waitForExistence(timeout: 10))
+        XCTAssertTrue(String(describing: recipient.value).contains("jordan@example.com"))
+        app.terminate()
+        let reopened = try launchApp()
+        assertInboxLoaded(in: reopened)
+        reopened.buttons["inbox.view-picker"].tap()
+        XCTAssertTrue(reopened.buttons["Hub notifications"].exists)
+        XCTAssertFalse(reopened.buttons["Focus"].exists)
+        reopened.buttons["Hub notifications"].tap()
+        XCTAssertTrue(reopened.buttons["view.thread.ios-fixture-thread-2"].waitForExistence(timeout: 10))
+        reopened.tabBars.buttons["Settings"].tap()
+        reopened.buttons["settings.visible-views"].tap()
+        let restored = reopened.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.views.view:", "Hub notifications")).firstMatch
+        XCTAssertEqual(restored.value as? String, "1")
+        restored.tap()
+        reopened.switches["settings.views.focus"].tap()
+        reopened.tabBars.buttons["Inbox"].tap()
+        XCTAssertTrue(reopened.navigationBars["Inbox"].waitForExistence(timeout: 10), "Hiding the active View must return to Inbox")
+    }
+
+    func test09EmptySavedViewKeepsMailboxMenuAvailable() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        app.tabBars.buttons["Settings"].tap()
+        app.buttons["settings.visible-views"].tap()
+        let empty = app.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.views.view:", "Empty view")).firstMatch
+        XCTAssertTrue(empty.waitForExistence(timeout: 10))
+        if empty.value as? String != "1" { empty.tap() }
+        app.tabBars.buttons["Inbox"].tap()
+        app.buttons["inbox.view-picker"].tap()
+        app.buttons["Empty view"].tap()
+        XCTAssertTrue(app.staticTexts["No matching mail"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "23-empty-view-with-menu")
+        XCTAssertTrue(app.buttons["inbox.view-picker"].isHittable)
+        app.buttons["inbox.view-picker"].tap()
+        app.buttons["All Mail"].tap()
+        XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
+    }
+
     private func launchApp() throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {

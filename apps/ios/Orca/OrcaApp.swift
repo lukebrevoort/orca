@@ -35,4 +35,18 @@ struct SignInView: View {
 #endif
         Spacer() }.padding() }
 }
-struct MainView: View { @EnvironmentObject var state: AppState; var body: some View { TabView(selection: $state.selectedTab) { InboxView().tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox"); DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts"); SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings") } } }
+struct MainView: View {
+    @EnvironmentObject var state: AppState
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var mailboxes = MailboxViews()
+    var body: some View {
+        TabView(selection: $state.selectedTab) {
+            InboxView().tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox")
+            DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
+            SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
+        }
+        .environmentObject(mailboxes)
+        .task(id: state.ownerScope) { await mailboxes.load(state: state) }
+        .onChange(of: scenePhase) { if scenePhase == .active { Task { await mailboxes.load(state: state) } } }
+    }
+}

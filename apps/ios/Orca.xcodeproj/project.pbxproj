@@ -14,9 +14,11 @@
 		275B112796C59711F6DF6334 /* Sora-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 2F1D18617985E045ED8A8768 /* Sora-OFL.txt */; };
 		294FCE53ADDB43333296B0E3 /* DraftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9937C36EBC157F5D1525CD52 /* DraftsView.swift */; };
 		30274F8B1C5D9E83C3EED181 /* OrcaTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0FE18FB4D740F39E2BFA11 /* OrcaTheme.swift */; };
+		313FBF6A3EA30D227998377C /* SavedMailboxResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63653D38AA3104BDBDE5CCFA /* SavedMailboxResults.swift */; };
 		3438B7C0BB24FF274C23EE5E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53E3B1FB2C695482B92B910C /* Assets.xcassets */; };
 		36DA95542453553EC1EB82AF /* OrcaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D108A85307BC09FDB5E904C /* OrcaTests.swift */; };
 		3A23AC2DC2DE74DFDAF93414 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 91BD233053BA8E2AE240779D /* PrivacyInfo.xcprivacy */; };
+		4EA4FEDCE4B76A7E392093D6 /* MailboxViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434EE936EE558743123D3016 /* MailboxViews.swift */; };
 		4FFA90C07D1829AB0E4563D4 /* Newsreader-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = BEDD5176BB7058B8A4B6A294 /* Newsreader-OFL.txt */; };
 		56BE5C3BB4538412527AAB5C /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB208EA5B5621CF0102845A4 /* InboxView.swift */; };
 		5CA23C48809601DE3E64F2F0 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D81D0FCC40527F4FEA9C167 /* NotificationManager.swift */; };
@@ -57,10 +59,12 @@
 		2F1D18617985E045ED8A8768 /* Sora-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Sora-OFL.txt"; sourceTree = "<group>"; };
 		38B3670FB7670AC43E86DDC4 /* Orca.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Orca.entitlements; sourceTree = "<group>"; };
 		3D81D0FCC40527F4FEA9C167 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		434EE936EE558743123D3016 /* MailboxViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailboxViews.swift; sourceTree = "<group>"; };
 		494671874013337FB38310E2 /* OrcaRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OrcaRelease.entitlements; sourceTree = "<group>"; };
 		4C42EBDA4E73C177140914B8 /* Orca.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Orca.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		53E3B1FB2C695482B92B910C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		555BA4579AD5D0A43CBCA215 /* Newsreader.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Newsreader.ttf; sourceTree = "<group>"; };
+		63653D38AA3104BDBDE5CCFA /* SavedMailboxResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMailboxResults.swift; sourceTree = "<group>"; };
 		654DBEFED4AB0FA22340D491 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		6D108A85307BC09FDB5E904C /* OrcaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaTests.swift; sourceTree = "<group>"; };
 		73FDDC2097E5205DC11746F6 /* OrcaUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -151,7 +155,9 @@
 			isa = PBXGroup;
 			children = (
 				AB208EA5B5621CF0102845A4 /* InboxView.swift */,
+				434EE936EE558743123D3016 /* MailboxViews.swift */,
 				FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */,
+				63653D38AA3104BDBDE5CCFA /* SavedMailboxResults.swift */,
 				C5A8BEAFF621E5292BE1D0AB /* ThreadView.swift */,
 			);
 			path = Mail;
@@ -344,11 +350,13 @@
 				D30AB1467E58403F9E88A0BE /* DraftStore.swift in Sources */,
 				294FCE53ADDB43333296B0E3 /* DraftsView.swift in Sources */,
 				56BE5C3BB4538412527AAB5C /* InboxView.swift in Sources */,
+				4EA4FEDCE4B76A7E392093D6 /* MailboxViews.swift in Sources */,
 				187407EC35EEB360A5B6F2EA /* Models.swift in Sources */,
 				5CA23C48809601DE3E64F2F0 /* NotificationManager.swift in Sources */,
 				B1917F5F3432CDB3A3E2AD68 /* OrcaApp.swift in Sources */,
 				30274F8B1C5D9E83C3EED181 /* OrcaTheme.swift in Sources */,
 				61B46085479CE081AC296FB8 /* SafeHTMLView.swift in Sources */,
+				313FBF6A3EA30D227998377C /* SavedMailboxResults.swift in Sources */,
 				015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */,
 				CCB8FEAFDCB6B0C123E3304C /* SettingsView.swift in Sources */,
 				EEBEDF73B67CC16DE0F3A264 /* ThreadView.swift in Sources */,

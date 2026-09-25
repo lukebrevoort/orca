@@ -68,6 +68,16 @@ const destinations = createDestinations(db, userId);
 for (const name of ["Projects", "Friends"]) {
   destinations.create({ expectedRevision: destinations.list().revision, name });
 }
+const { createOrganizationViews } = await import("../src/organization/views/module.ts");
+const { createSqliteOrganizationViewsRepository } = await import("../src/organization/views/sqlite-repository.ts");
+const views = createOrganizationViews(createSqliteOrganizationViewsRepository(sqlite));
+const viewScope = { workspaceId: userId, accountIds: [accountId], actor: { id: userId, type: "human" as const } };
+for (const [name, threadId] of [["Hub notifications", "ios-fixture-thread-2"], ["Empty view", "no-matching-thread"]]) {
+  views.create({ scope: viewScope, request: {
+    idempotencyKey: `fixture-view-${threadId}`, expectedWorkspaceRevision: views.list({ scope: viewScope }).workspaceRevision,
+    name, description: "Mail you can browse without alerts", definition: { revision: 1, accountIds: [accountId], thread: threadId === "no-matching-thread" ? { subjectContains: "No fixture subject matches this" } : { ids: [threadId!] } },
+  } });
+}
 const credential = createMobileSession(db, userId);
 sqlite.close();
 

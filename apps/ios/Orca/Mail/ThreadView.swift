@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ThreadView: View {
-    @EnvironmentObject var state: AppState; let message: InboxMessage; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
+    @EnvironmentObject var state: AppState; let accountId: String; let threadId: String; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
+    init(message: InboxMessage) { accountId = message.accountId; threadId = message.threadId }
+    init(accountId: String, threadId: String) { self.accountId = accountId; self.threadId = threadId }
     var body: some View {
         ScrollView {
             if let detail {
@@ -56,14 +58,14 @@ struct ThreadView: View {
     }
     func load() async {
         guard !state.demoMode else { error = "Demo conversations are list-only."; return }
-        guard let client = state.client, state.selectedAccount?.id == message.accountId else { return }
-        let scope = state.ownerScope, key = "\(state.ownerScope)|\(message.accountId)|thread|\(message.threadId)"
-        func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == message.accountId }
+        guard let client = state.client, state.selectedAccount?.id == accountId else { return }
+        let scope = state.ownerScope, key = "\(state.ownerScope)|\(accountId)|thread|\(threadId)"
+        func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == accountId }
         do {
-            let loaded = try await client.thread(message.threadId, accountId: message.accountId)
+            let loaded = try await client.thread(threadId, accountId: accountId)
             guard identityIsCurrent() else { return }; detail = loaded; error = nil
             try? await state.cache.save(loaded, key: key)
-            guard identityIsCurrent() else { return }; try? await client.markRead(message.threadId, accountId: message.accountId)
+            guard identityIsCurrent() else { return }; try? await client.markRead(threadId, accountId: accountId)
         } catch {
             guard identityIsCurrent() else { return }
             if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; detail = cached; self.error = "Offline — showing saved conversation" }
@@ -71,12 +73,12 @@ struct ThreadView: View {
         }
     }
     func download(_ attachment: MailAttachment) async {
-        guard let client = state.client, state.selectedAccount?.id == message.accountId else { return }
+        guard let client = state.client, state.selectedAccount?.id == accountId else { return }
         let scope = state.ownerScope
-        func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == message.accountId }
+        func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == accountId }
         var temporaryDirectory: URL?
         do {
-            let data = try await client.attachment(attachment.id, accountId: message.accountId); guard identityIsCurrent() else { return }
+            let data = try await client.attachment(attachment.id, accountId: accountId); guard identityIsCurrent() else { return }
             let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString); temporaryDirectory = dir
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let safeName = attachment.filename.unicodeScalars.map { CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._- ")).contains($0) ? String($0) : "_" }.joined().replacingOccurrences(of: "..", with: "_")
