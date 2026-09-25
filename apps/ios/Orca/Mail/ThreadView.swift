@@ -11,7 +11,10 @@ struct ThreadView: View {
                         Text(detail.thread.subject.isEmpty ? "(No subject)" : detail.thread.subject).font(OrcaTheme.reader(34)).tracking(-0.6).foregroundStyle(OrcaTheme.ink).fixedSize(horizontal: false, vertical: true)
                     }
                     if let error { Label(error, systemImage: "info.circle").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("thread.status") }
-                    ForEach(detail.messages) { item in
+                    // The API is oldest-first. Reverse only the reading order so
+                    // opening a conversation shows the latest reply immediately.
+                    // Keep the original detail for Reply / Reply all / Forward.
+                    ForEach(detail.messages.reversed()) { item in
                         VStack(alignment: .leading, spacing: 22) {
                             HStack(spacing: 12) {
                                 ContactGlyph(contact: item.from)

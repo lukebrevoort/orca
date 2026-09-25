@@ -216,6 +216,33 @@ final class OrcaUITests: XCTestCase {
         restoredInbox.tap()
     }
 
+    func test07ConversationOpensAtLatestMessage() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        openConversation(subject: Fixture.inboxSubject, in: app)
+        let latest = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "I tried the new reading view")).firstMatch
+        XCTAssertTrue(latest.waitForExistence(timeout: 10))
+        XCTAssertTrue(latest.isHittable, "The newest message must be visible without scrolling past earlier replies.")
+        attachScreenshot(named: "17-latest-message-on-open")
+
+        let earlier = app.staticTexts["Earlier sender"]
+        for _ in 0..<5 {
+            if earlier.exists && earlier.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(earlier.isHittable, "Earlier replies must remain reachable below the latest message.")
+        attachScreenshot(named: "18-earlier-reply")
+        app.buttons["Reply"].tap()
+        let recipient = app.textFields["compose.to"]
+        XCTAssertTrue(recipient.waitForExistence(timeout: 5))
+        XCTAssertTrue(String(describing: recipient.value).contains("maya@example.com"), "Reply must still target the latest sender.")
+        navigateBack(in: app)
+        navigateBack(in: app)
+        openConversation(subject: Fixture.inboxSubject, in: app)
+        XCTAssertTrue(latest.waitForExistence(timeout: 10))
+        XCTAssertTrue(latest.isHittable, "Reopening must start at the newest message again.")
+    }
+
     private func launchApp() throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
