@@ -20,7 +20,7 @@ import SwiftUI
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()
     let draftStore = DraftStore()
-    let cache = CacheStore()
+    let cache: CacheStore
     @Published private(set) var userID: String?
     private(set) var client: APIClient?
 #if DEBUG
@@ -30,7 +30,7 @@ import SwiftUI
 #endif
     private var fixtureToken: String?
 
-    init() { selectedAccountID = UserDefaults.standard.string(forKey: "selectedAccountID") }
+    init(client: APIClient? = nil, cache: CacheStore = CacheStore()) { self.client = client; self.cache = cache; selectedAccountID = UserDefaults.standard.string(forKey: "selectedAccountID") }
     var selectedAccount: MailAccount? { accounts.first { $0.id == selectedAccountID } ?? accounts.first }
     var ownerScope: String { "\(validatedBaseURL(baseURLText).map(origin) ?? "unconfigured")|\(userID ?? "unknown-user")" }
     func start() async {
@@ -85,6 +85,11 @@ import SwiftUI
         }
         if let url = validatedBaseURL(baseURLText) { await keychain.clear(origin: origin(url)) }
         connectionGeneration = UUID(); accounts = []; userID = nil; routedThread = nil; fixtureToken = nil; if let url = validatedBaseURL(baseURLText) { configure(url) }; phase = .signedOut
+        return true
+    }
+    @discardableResult func selectSavedViewThread(_ thread: SavedViewThread) -> Bool {
+        guard phase == .ready, accounts.contains(where: { $0.id == thread.accountId }) else { return false }
+        selectedAccountID = thread.accountId
         return true
     }
     func routeNotification(_ userInfo: [AnyHashable: Any]) {

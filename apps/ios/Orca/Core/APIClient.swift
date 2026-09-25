@@ -24,13 +24,14 @@ actor APIClient {
         self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
     }
     func updateBaseURL(_ url: URL) { baseURL = url }
-    func request<T: Decodable>(_ path: String, method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> T {
-        let (data, _) = try await raw(path, method: method, query: query, body: body)
+    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> T {
+        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body)
         guard !data.isEmpty else { if T.self == EmptyResponse.self { return EmptyResponse() as! T }; throw ClientError.invalidResponse }
         do { return try decoder.decode(T.self, from: data) } catch { throw ClientError.decoding(error) }
     }
-    func raw(_ path: String, method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> (Data, HTTPURLResponse) {
-        guard var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
+    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> (Data, HTTPURLResponse) {
+        let endpoint = pathSuffix.reduce(baseURL.appending(path: path)) { $0.appending(component: $1) }
+        guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
         guard let url = components.url else { throw ClientError.invalidBaseURL }
         var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = 30
@@ -70,6 +71,12 @@ extension APIClient {
     func sendDraft(_ id: String, accountId: String, revision: Int, idempotencyKey: String) async throws -> DeliveryResult { struct Command: Encodable { var revision: Int; var idempotencyKey: String }; return try await request("v1/drafts/\(id)/send", method: "POST", query: [.init(name: "accountId", value: accountId)], body: Command(revision: revision, idempotencyKey: idempotencyKey)) }
     func deleteDraft(_ id: String, accountId: String) async throws { let _: EmptyResponse = try await request("v1/drafts/\(id)", method: "DELETE", query: [.init(name: "accountId", value: accountId)]) }
     func attachment(_ id: String, accountId: String) async throws -> Data { let data = try await raw("v1/attachments/\(id)", query: [.init(name: "accountId", value: accountId)]).0; guard data.count <= 25 * 1024 * 1024 else { throw ClientError.http(413, APIErrorBody(code: "attachment_limit", message: "Attachment exceeds the 25 MB device limit", retryable: false)) }; return data }
+    func mailboxViews() async throws -> SavedMailboxViewCatalog { try await request("v1/organization/views") }
+    func mailboxViewResults(_ id: String, cursor: String? = nil) async throws -> SavedViewPage {
+        var query = [URLQueryItem(name: "limit", value: "30")]
+        if let cursor { query.append(.init(name: "cursor", value: cursor)) }
+        return try await request("v1/organization/views", pathSuffix: [id, "results"], query: query)
+    }
     func notificationCatalog() async throws -> NotificationCatalog { try await request("v1/mobile/push/catalog") }
     func pushStatus(installationId: String) async throws -> PushStatus { try await request("v1/mobile/push/status", query: [.init(name: "installationId", value: installationId)]) }
     func registerDevice(installationId: String, token: String, environment: String, selection: NotificationSelection) async throws -> PushRegistration { struct Body: Encodable { var token: String; var environment: String; var notificationSelection: NotificationSelection }; return try await request("v1/mobile/devices/\(installationId)", method: "PUT", body: Body(token: token, environment: environment, notificationSelection: selection)) }
