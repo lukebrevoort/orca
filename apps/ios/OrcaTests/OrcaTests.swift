@@ -415,6 +415,41 @@ extension OrcaTests {
         XCTAssertNil(cached.page, "Cached results cannot cross server/identity scopes")
     }
 
+    @MainActor func testLateSavedViewCacheMissCannotOverwriteNewerResults() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder)); state.phase = .ready; state.accounts = DemoData.accounts
+        let oldView = SavedMailboxView(id: "old", name: "Old", description: "", revision: 1)
+        let newView = SavedMailboxView(id: "new", name: "New", description: "", revision: 1)
+        let response = SavedViewPage(viewId: "new", viewRevision: 1, accountIds: ["demo-account"], items: [savedViewThread(accountId: "demo-account")], nextCursor: "next")
+        StubURLProtocol.handler = { request in
+            if request.url!.path.contains("/old/") { throw URLError(.notConnectedToInternet) }
+            return (200, try JSONEncoder().encode(response))
+        }
+        defer { StubURLProtocol.handler = nil }
+        let cacheStarted = expectation(description: "Old request waiting for cache")
+        var cacheMiss: CheckedContinuation<SavedViewPage?, Never>?
+        let reader = SavedViewReader(loadCachedPage: { _, _ in
+            await withCheckedContinuation { continuation in
+                cacheMiss = continuation
+                cacheStarted.fulfill()
+            }
+        })
+        let oldLoad = Task { await reader.load(view: oldView, state: state) }
+        await fulfillment(of: [cacheStarted], timeout: 3)
+        await reader.load(view: newView, state: state)
+        XCTAssertEqual(reader.page?.viewId, "new")
+        cacheMiss?.resume(returning: nil)
+        await oldLoad.value
+        XCTAssertEqual(reader.page?.viewId, "new")
+        XCTAssertEqual(reader.page?.items.map(\.threadId), ["thread"])
+        XCTAssertEqual(reader.page?.nextCursor, "next")
+        XCTAssertNil(reader.error)
+        XCTAssertFalse(reader.loading)
+    }
+
     @MainActor func testLateViewCatalogResponseCannotCrossIdentityScope() async throws {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
         let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }

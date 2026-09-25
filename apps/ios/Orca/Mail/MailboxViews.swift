@@ -104,6 +104,10 @@ struct SavedViewPage: Codable {
     @Published private(set) var error: String?
     private var generation = UUID()
     private var key: String?
+    private let loadCachedPage: (CacheStore, String) async -> SavedViewPage?
+    init(loadCachedPage: @escaping (CacheStore, String) async -> SavedViewPage? = { cache, key in
+        await cache.load(SavedViewPage.self, key: key)
+    }) { self.loadCachedPage = loadCachedPage }
     func load(view: SavedMailboxView, state: AppState, reset: Bool = true) async {
         guard let client = state.client, reset || (!loading && page?.nextCursor != nil) else { return }
         let scope = state.ownerScope, requestedKey = "\(scope)|savedView|\(view.id)|\(view.revision)"
@@ -125,10 +129,12 @@ struct SavedViewPage: Codable {
             if reset { try? await state.cache.save(result, key: requestedKey) }
         } catch {
             guard current() else { return }
-            if reset, MailboxViews.permitsOfflineCache(error),
-               let cached = await state.cache.load(SavedViewPage.self, key: requestedKey),
-               Self.isValid(cached, view: view, accounts: state.accounts) {
+            var cached: SavedViewPage?
+            if reset, MailboxViews.permitsOfflineCache(error) {
+                cached = await loadCachedPage(state.cache, requestedKey)
                 guard current() else { return }
+            }
+            if let cached, Self.isValid(cached, view: view, accounts: state.accounts) {
                 page = cached; page?.nextCursor = nil; self.error = "Offline — showing saved results"
             } else {
                 if reset || !MailboxViews.permitsOfflineCache(error) { page = nil }
