@@ -30,6 +30,18 @@ private func requestBodyData(_ request: URLRequest) throws -> Data {
 }
 
 final class OrcaTests: XCTestCase {
+    func testViewDefinitionRoundTripPreservesServerOwnedFields() throws {
+        let raw = ##"{"mode":"update","skipInbox":true,"viewId":"v","viewRevision":2,"source":{"kind":"sender_selection","label":"iOS"},"identity":{"name":"People","color":"#aabbcc","position":3},"definition":{"revision":1,"accountIds":["a"],"sender":{"addresses":["maya@example.com"]},"thread":{"readState":"unread"},"humanSignal":{"minimumScore":7}},"unsupportedClauses":[],"definitionDigest":"sha256:example"}"##.data(using: .utf8)!
+        let reviewed = try JSONDecoder().decode(MailActionJSON.self, from: raw)
+        let input = reviewed.keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
+        let encoded = try JSONEncoder().encode(input)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        XCTAssertNil(object["definitionDigest"])
+        XCTAssertEqual(object["skipInbox"] as? Bool, true)
+        let original = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? [String: Any])
+        XCTAssertEqual(object["definition"] as? NSDictionary, original["definition"] as? NSDictionary)
+        XCTAssertEqual(object["identity"] as? NSDictionary, original["identity"] as? NSDictionary)
+    }
     @MainActor func testFreshInstallUsesProductionAPIWithoutServerSetup() {
         let previous = UserDefaults.standard.string(forKey: "apiBaseURL")
         UserDefaults.standard.removeObject(forKey: "apiBaseURL")

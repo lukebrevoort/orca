@@ -17,6 +17,122 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test10NativeLongPressMovesConversationAndBuildsSenderView() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let maya = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        maya.press(forDuration: 1.4)
+        XCTAssertTrue(app.buttons["Move mail…"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "10-native-long-press-menu")
+        app.buttons["Move mail…"].tap()
+        let destination = app.buttons["mail-action.destination"]
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+        destination.tap()
+        app.buttons["Focus"].tap()
+        attachScreenshot(named: "11-native-focus-choice")
+        app.buttons["mail-action.move"].tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        XCTAssertTrue(maya.waitForNonExistence(timeout: 10))
+        chooseMailbox("Focus", in: app)
+        XCTAssertTrue(maya.waitForExistence(timeout: 10))
+        attachScreenshot(named: "12-native-focus-result")
+        chooseMailbox("All Mail", in: app)
+        XCTAssertTrue(maya.waitForExistence(timeout: 10))
+        attachScreenshot(named: "13-native-all-mail-retention")
+
+        maya.press(forDuration: 1.4)
+        app.buttons["Move mail…"].tap()
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+        destination.tap()
+        app.buttons.matching(identifier: "Inbox").firstMatch.tap()
+        app.buttons["mail-action.move"].tap()
+        XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
+        chooseMailbox("Focus", in: app)
+        XCTAssertTrue(app.staticTexts["Nothing here"].waitForExistence(timeout: 10))
+        chooseMailbox("Inbox", in: app)
+        XCTAssertTrue(maya.waitForExistence(timeout: 10))
+
+        maya.press(forDuration: 1.4)
+        app.buttons["Use sender in View…"].tap()
+        let name = app.textFields["mail-action.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        let viewName = "People " + String(UUID().uuidString.prefix(6))
+        name.tap()
+        name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (name.value as? String ?? "").count))
+        XCTAssertFalse(app.buttons["mail-action.preview"].isEnabled)
+        attachScreenshot(named: "14a-native-disabled-preview-and-name-focus")
+        name.typeText(viewName)
+        app.buttons["mail-action.preview"].tap()
+        XCTAssertTrue(app.buttons["mail-action.save-view"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "14-native-sender-view-preview")
+        app.buttons["mail-action.save-view"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-1"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "15-native-created-view-result")
+        chooseMailbox("Inbox", in: app)
+        let jordan = app.descendants(matching: .any)["inbox.message.ios-fixture-message-2"].firstMatch
+        XCTAssertTrue(jordan.waitForExistence(timeout: 10))
+        jordan.press(forDuration: 1.4)
+        app.buttons["Use sender in View…"].tap()
+        let viewPicker = app.buttons["mail-action.view"]
+        XCTAssertTrue(viewPicker.waitForExistence(timeout: 5))
+        viewPicker.tap()
+        app.buttons.matching(NSPredicate(format: "label CONTAINS %@", viewName)).firstMatch.tap()
+        app.buttons["mail-action.preview"].tap()
+        XCTAssertTrue(app.buttons["mail-action.save-view"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "16-native-existing-view-preview")
+        app.buttons["mail-action.save-view"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-1"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-2"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "17-native-existing-view-result")
+        chooseMailbox("Inbox", in: app)
+        XCTAssertTrue(maya.waitForExistence(timeout: 10))
+        XCTAssertTrue(jordan.exists)
+    }
+
+    func test11NativeSenderMoveRetainsBothConversationsInAllMail() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let jordan = app.descendants(matching: .any)["inbox.message.ios-fixture-message-2"].firstMatch
+        jordan.press(forDuration: 1.4)
+        app.buttons["Move mail…"].tap()
+        let destination = app.buttons["mail-action.destination"]
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+        destination.tap(); app.buttons["Focus"].tap()
+        app.buttons["mail-action.scope"].tap()
+        app.buttons["Mail from this sender"].tap()
+        attachScreenshot(named: "18-native-sender-scope")
+        app.buttons["mail-action.move"].tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        XCTAssertTrue(jordan.waitForNonExistence(timeout: 10))
+        chooseMailbox("Focus", in: app)
+        XCTAssertTrue(jordan.waitForExistence(timeout: 10))
+        let second = app.descendants(matching: .any)["inbox.message.ios-fixture-message-5"].firstMatch
+        XCTAssertTrue(second.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].exists)
+        attachScreenshot(named: "19-native-sender-focus-results")
+        chooseMailbox("All Mail", in: app)
+        XCTAssertTrue(jordan.waitForExistence(timeout: 10))
+        app.swipeUp()
+        XCTAssertTrue(second.waitForExistence(timeout: 10))
+        attachScreenshot(named: "20-native-sender-all-mail-retention")
+        app.swipeDown()
+        // Restore the isolated fixture for the dark appearance run.
+        jordan.press(forDuration: 1.4); app.buttons["Move mail…"].tap()
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+        destination.tap(); app.buttons.matching(identifier: "Inbox").firstMatch.tap()
+        app.buttons["mail-action.scope"].tap(); app.buttons["Mail from this sender"].tap()
+        app.buttons["mail-action.move"].tap()
+        XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
+    }
+
+    private func chooseMailbox(_ title: String, in app: XCUIApplication) {
+        let picker = app.buttons["inbox.view-picker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        picker.tap()
+        app.buttons.matching(identifier: title).firstMatch.tap()
+        XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10))
+    }
+
     /// Exercises the real fixture API through the same UI a person uses. Keeping this
     /// as one flow makes the draft/send assertions independent of XCTest method order.
     func test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode() throws {

@@ -1,0 +1,98 @@
+[
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "target": {
+        "threadId": "ios-fixture-thread-1",
+        "scope": "conversation"
+      },
+      "destinationId": "6686781d-e0d8-4153-9023-ddf7e3c8de46",
+      "expectedRevision": 6
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "destinationId": "8bc3a259-190c-4482-a1fb-4397dc4c8e0e",
+      "target": {
+        "scope": "conversation",
+        "threadId": "ios-fixture-thread-1"
+      },
+      "expectedRevision": 7
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "target": {
+        "address": "jordan@example.com",
+        "scope": "sender"
+      },
+      "destinationId": "6686781d-e0d8-4153-9023-ddf7e3c8de46",
+      "expectedRevision": 10
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "destinationId": "8bc3a259-190c-4482-a1fb-4397dc4c8e0e",
+      "expectedRevision": 11,
+      "target": {
+        "scope": "sender",
+        "address": "jordan@example.com"
+      }
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "destinationId": "6686781d-e0d8-4153-9023-ddf7e3c8de46",
+      "expectedRevision": 12,
+      "target": {
+        "scope": "conversation",
+        "threadId": "ios-fixture-thread-1"
+      }
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "expectedRevision": 13,
+      "target": {
+        "scope": "conversation",
+        "threadId": "ios-fixture-thread-1"
+      },
+      "destinationId": "8bc3a259-190c-4482-a1fb-4397dc4c8e0e"
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "destinationId": "6686781d-e0d8-4153-9023-ddf7e3c8de46",
+      "expectedRevision": 16,
+      "target": {
+        "address": "jordan@example.com",
+        "scope": "sender"
+      }
+    },
+    "status": 200
+  },
+  {
+    "accountId": "ios-fixture-account",
+    "body": {
+      "target": {
+        "scope": "sender",
+        "address": "jordan@example.com"
+      },
+      "expectedRevision": 17,
+      "destinationId": "8bc3a259-190c-4482-a1fb-4397dc4c8e0e"
+    },
+    "status": 200
+  }
+]

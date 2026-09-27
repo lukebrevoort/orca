@@ -57,9 +57,10 @@ private struct AnyEncodable: Encodable { let value: any Encodable; init(_ value:
 
 extension APIClient {
     func accounts() async throws -> [MailAccount] { struct Page: Decodable { var items: [MailAccount] }; let page: Page = try await request("v1/accounts"); return page.items }
-    func inbox(accountId: String, view: String, query text: String?, cursor: String? = nil) async throws -> InboxPage {
+    func inbox(accountId: String, view: String, query text: String?, cursor: String? = nil, destinationId: String? = nil) async throws -> InboxPage {
         var q = [URLQueryItem(name: "accountId", value: accountId), .init(name: "view", value: view), .init(name: "limit", value: "30")]
         if let text, !text.isEmpty { q.append(.init(name: "query", value: text)) }; if let cursor { q.append(.init(name: "cursor", value: cursor)) }
+        if let destinationId { q.append(.init(name: "destinationId", value: destinationId)) }
         return try await request("v1/inbox", query: q)
     }
     func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)]) }

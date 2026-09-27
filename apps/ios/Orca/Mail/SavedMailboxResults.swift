@@ -4,6 +4,7 @@ struct SavedMailboxResults: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var mailboxes: MailboxViews
     @StateObject private var reader = SavedViewReader()
+    @State private var actionTarget: MailActionTarget?
     let view: SavedMailboxView
     let onOpen: (SavedViewThread) -> Void
 
@@ -30,6 +31,9 @@ struct SavedMailboxResults: View {
                                 .listRowSeparatorTint(OrcaTheme.border)
                                 .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
                                 .accessibilityIdentifier("view.thread.\(item.threadId)")
+                                .contextMenu {
+                                    MailActionMenu(message: InboxMessage(id: item.threadId, accountId: item.accountId, provider: item.provider, providerMessageId: "", threadId: item.threadId, from: item.sender, subject: item.subject, snippet: "", receivedAt: item.latestReceivedAt, unread: item.readState != "read", labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil), resolveMessage: true) { actionTarget = $0 }
+                                }
                         }
                         if reader.page?.nextCursor != nil {
                             Button { Task { await reader.load(view: view, state: state, reset: false) } } label: {
@@ -55,6 +59,7 @@ struct SavedMailboxResults: View {
             }
         }
         .task(id: "\(state.ownerScope)|\(view.id)|\(view.revision)") { await reader.load(view: view, state: state) }
+        .sheet(item: $actionTarget) { target in MailActionsSheet(target: target) { await reload() } }
     }
     private func reload() async {
         await mailboxes.load(state: state)
