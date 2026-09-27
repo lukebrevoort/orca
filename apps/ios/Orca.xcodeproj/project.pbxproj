@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        AABB00112233445566778801 /* MailActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB00112233445566778802 /* MailActions.swift */; };
 		015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57E40AE57BF8791404307E4 /* Security.swift */; };
 		06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22789472C398207011CE37F6 /* OrcaUITests.swift */; };
 		187407EC35EEB360A5B6F2EA /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE4FCB22922231897F52AA1 /* Models.swift */; };
@@ -53,6 +54,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+        AABB00112233445566778802 /* MailActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailActions.swift; sourceTree = "<group>"; };
 		186C21621603B2A5EE639EDC /* DraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStore.swift; sourceTree = "<group>"; };
 		22789472C398207011CE37F6 /* OrcaUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaUITests.swift; sourceTree = "<group>"; };
 		25F395E83971062876EDA98A /* OrcaTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -155,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				AB208EA5B5621CF0102845A4 /* InboxView.swift */,
+                AABB00112233445566778802 /* MailActions.swift */,
 				434EE936EE558743123D3016 /* MailboxViews.swift */,
 				FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */,
 				63653D38AA3104BDBDE5CCFA /* SavedMailboxResults.swift */,
@@ -350,6 +353,7 @@
 				D30AB1467E58403F9E88A0BE /* DraftStore.swift in Sources */,
 				294FCE53ADDB43333296B0E3 /* DraftsView.swift in Sources */,
 				56BE5C3BB4538412527AAB5C /* InboxView.swift in Sources */,
+                AABB00112233445566778801 /* MailActions.swift in Sources */,
 				4EA4FEDCE4B76A7E392093D6 /* MailboxViews.swift in Sources */,
 				187407EC35EEB360A5B6F2EA /* Models.swift in Sources */,
 				5CA23C48809601DE3E64F2F0 /* NotificationManager.swift in Sources */,

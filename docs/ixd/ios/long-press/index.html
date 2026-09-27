@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orca · Native iOS mail actions</title>
+<style>
+  :root{color-scheme:light dark;font:16px/1.6 system-ui;background:#f4f8f6;color:#17342e}
+  body{max-width:1080px;margin:auto;padding:32px 20px}h1{font:clamp(32px,5vw,54px)/1.1 Georgia,serif}h2{margin-top:40px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#087b67}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+  figure{margin:0}img{width:100%;border-radius:20px;border:1px solid #97ada455}figcaption{font-size:14px;margin:8px 0 20px}
+  code,pre{font:13px/1.5 ui-monospace,monospace}pre{padding:18px;background:#dcece6;overflow:auto;border-radius:12px}
+  table{border-collapse:collapse;width:100%}td,th{text-align:left;vertical-align:top;padding:14px;border-bottom:1px solid #97ada455}a{color:#087b67}
+  @media(prefers-color-scheme:dark){:root{background:#10221d;color:#e3eee9}.eyebrow,a{color:#71d8ba}pre{background:#19362b}}
+</style>
+<p class="eyebrow">Native SwiftUI · iOS Simulator</p>
+<h1>Hold a mail.<br>Choose where it belongs.</h1>
+<p>Long-press an Inbox, Focus, All Mail, destination, or saved-View row. Choose <b>Move mail…</b>, select a destination, and choose <b>Just this conversation</b> or <b>Mail from this sender</b> before confirming.</p>
+<table>
+  <tr><th>Choice</th><th>Effect</th></tr>
+  <tr><td>Just this conversation</td><td>Moves the selected account/thread only, including its replies. Other conversations from the sender are unchanged.</td></tr>
+  <tr><td>Mail from this sender</td><td>Sets a sender-address routing rule within the selected account, for existing and future mail. Explicit conversation moves and safety locks retain precedence; the sheet explains this.</td></tr>
+  <tr><td>All Mail</td><td>Remains an aggregate, not a move destination. Mail stays available here after either kind of move.</td></tr>
+  <tr><td>Use sender in View…</td><td>Creates a sender-based saved View or adds the sender to a compatible existing View. Preview and confirmation are required; unsupported existing definitions are rejected by the server without rewriting them. This is sender-wide, not individual-conversation membership.</td></tr>
+</table>
+<h2>Simulator evidence</h2>
+<p id="validation"><b>Passed: 40 native unit tests and both end-to-end action flows in light and dark mode (4 UI runs).</b> Dedicated iPhone 17 Pro Simulator, iOS 26.3.1; real API routes backed by an isolated synthetic mailbox. API typecheck and diff whitespace checks also passed. No personal mailbox or mail-provider writes.</p>
+<div class="grid">
+  <figure><img src="menu-light.png" alt="Native long-press context menu in light mode"><figcaption>The system context menu after a 1.4-second hold.</figcaption></figure>
+  <figure><img src="scope-light.png" alt="Destination and sender scope selected in light mode"><figcaption>Destination and scope are separate, explicit choices.</figcaption></figure>
+  <figure><img src="scope-dark.png" alt="Destination and sender scope selected in dark mode"><figcaption>The same native controls in dark mode.</figcaption></figure>
+  <figure><img src="focus-dark.png" alt="Two sender conversations in Focus"><figcaption>Sender-wide move: both conversations appear in Focus.</figcaption></figure>
+  <figure><img src="all-mail-dark.png" alt="Moved mail still visible in All Mail"><figcaption>All Mail retains the moved conversations.</figcaption></figure>
+  <figure><img src="view-preview-dark.png" alt="Review sender View before saving"><figcaption>Existing View updates are previewed before saving.</figcaption></figure>
+</div>
+<h2>Try it yourself</h2>
+<ol>
+  <li>Hold a mail row, choose <b>Move mail…</b>, and select Focus or another available destination.</li>
+  <li>Leave <b>Just this conversation</b> selected. Confirm, then open Focus and All Mail to verify placement and retention.</li>
+  <li>Repeat with <b>Mail from this sender</b> on a sender with multiple conversations. Verify both conversations in Focus and All Mail.</li>
+  <li>Hold a row and choose <b>Use sender in View…</b>. Name a new View, preview, and save. Repeat with another sender and select that existing View.</li>
+</ol>
+<h2>Reproduce the automated checks</h2>
+<pre>bun apps/api/scripts/mobile-fixture.ts
+# Use the connection.json path printed by the isolated fixture:
+ORCA_UI_TEST_SCOPE=actions apps/ios/OrcaUITests/run-fixture-tests.sh \
+  /path/to/connection.json SIMULATOR_UDID /tmp/OrcaLongPressDerived</pre>
+<p>The harness builds the native app, drives long presses and actions through XCTest, runs light and dark appearances, and retains screenshots in its result bundles. <a href="routing-requests.json">Sanitized routing requests</a> show exact conversation/sender scope and account IDs.</p>
+<p>Base: <code>65fca0c</code> · Branch: <code>feat/ios-mail-long-press</code>. Physical-device behavior and TestFlight distribution are not covered by this Simulator run.</p>
+</html>

@@ -24,6 +24,7 @@ struct MailboxPreferenceStore {
 
 @MainActor final class MailboxViews: ObservableObject {
     @Published private(set) var views = [SavedMailboxView]()
+    @Published private(set) var destinations = [MailboxOption]()
     @Published private(set) var enabledIDs: Set<String> = ["focus", "all"]
     @Published private(set) var loading = false
     @Published private(set) var error: String?
@@ -36,6 +37,7 @@ struct MailboxPreferenceStore {
     var options: [MailboxOption] {
         [MailboxOption(id: "normal", name: "Inbox")]
             + [MailboxOption(id: "focus", name: "Focus"), MailboxOption(id: "all", name: "All Mail")].filter { enabledIDs.contains($0.id) }
+            + destinations
             + views.filter { enabledIDs.contains($0.selectionID) }.map { MailboxOption(id: $0.selectionID, name: $0.name) }
     }
     var selectedView: SavedMailboxView? { views.first { $0.selectionID == selectedID } }
@@ -45,7 +47,7 @@ struct MailboxPreferenceStore {
     func activate(scope: String) {
         guard self.scope != scope else { return }
         generation = UUID(); self.scope = scope
-        views = []; error = nil; loading = false; selectedID = "normal"
+        views = []; destinations = []; error = nil; loading = false; selectedID = "normal"
         enabledIDs = preferences.load(scope: scope)
     }
     func setEnabled(_ id: String, _ enabled: Bool) {
@@ -68,6 +70,15 @@ struct MailboxPreferenceStore {
         do {
             let catalog = try await client.mailboxViews()
             guard current() else { return }
+            let routing: MailActionJSON = try await client.request("v1/destinations")
+            guard current() else { return }
+            if case .array(let items) = routing["destinations"] {
+                let builtIns = [routing["legacyDestinationIds"]["normal"].text, routing["legacyDestinationIds"]["focus"].text]
+                destinations = items.compactMap { item in
+                    guard let id = item["id"].text, let name = item["name"].text, !builtIns.contains(id), item["retiredAt"].text == nil else { return nil }
+                    return MailboxOption(id: "destination:" + id, name: name)
+                }
+            }
             views = catalog.items; ensureSelection()
             try? await state.cache.save(catalog, key: "\(requestedScope)|mailboxViews")
         } catch {

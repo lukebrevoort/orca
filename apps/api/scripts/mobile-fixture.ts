@@ -42,6 +42,7 @@ const messages = [
   ["Jordan Lee", "jordan@example.com", "Friday by the water?", "There is a small place near the harbor I think you would like. Friday, around six?\n\nNo agenda, just a chance to catch up."],
   ["Sofia Martinez", "sofia@example.com", "Notes from our conversation", "Here are the three things I took away: protect people's attention, make writing effortless, and never lose a draft.\n\nThat feels like the right place to start."],
   ["Sam Patel", "sam@example.com", "The first build is ready", "The pieces are coming together. I left some notes on the notification flow and would love your perspective."],
+  ["Jordan Lee", "jordan@example.com", "Another note from Jordan", "A second conversation proves sender routing differs from a single-conversation move."],
 ];
 messages.forEach(([name, address, subject, body], i) => {
   const threadId = `ios-fixture-thread-${i + 1}`;
@@ -68,6 +69,9 @@ const destinations = createDestinations(db, userId);
 for (const name of ["Projects", "Friends"]) {
   destinations.create({ expectedRevision: destinations.list().revision, name });
 }
+// Match a migrated workspace's Focus mapping, without touching a real mailbox.
+const focus = destinations.create({ expectedRevision: destinations.list().revision, name: "Focus" });
+sqlite.query("INSERT INTO organization_destination_legacy(workspace_id,behavior,destination_id) VALUES (?, 'focus', ?)").run(userId, focus.destinationId);
 const { createOrganizationViews } = await import("../src/organization/views/module.ts");
 const { createSqliteOrganizationViewsRepository } = await import("../src/organization/views/sqlite-repository.ts");
 const views = createOrganizationViews(createSqliteOrganizationViewsRepository(sqlite));
@@ -100,7 +104,18 @@ const app = createApp({
     }),
   }]),
 });
-const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: app.fetch });
+const routingRequests: unknown[] = [];
+const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+  const url = new URL(request.url);
+  if (request.method === "PUT" && url.pathname === "/v1/destinations/routing") {
+    const body = await request.clone().json();
+    const response = await app.fetch(request);
+    routingRequests.push({ accountId: url.searchParams.get("accountId"), body, status: response.status });
+    writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
+    return response;
+  }
+  return app.fetch(request);
+} });
 const metadata = { readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
 const metadataPath = join(directory, "connection.json");
 writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
