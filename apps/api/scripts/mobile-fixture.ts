@@ -105,8 +105,60 @@ const app = createApp({
   }]),
 });
 const routingRequests: unknown[] = [];
+// Hold one real inbox response so UI tests can inspect the refreshing layout.
+// This control exists only in this loopback fixture server, never the API app.
+type RefreshGate = {
+  started: Promise<void>;
+  markStarted: () => void;
+  released: Promise<void>;
+  release: () => void;
+  pending: boolean;
+};
+let refreshGate: RefreshGate | undefined;
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/__fixture/inbox-refresh/")) {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) {
+      return new Response(null, { status: 401 });
+    }
+    if (request.method === "POST" && url.pathname.endsWith("/arm")) {
+      refreshGate?.release();
+      let markStarted!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => { markStarted = resolve; });
+      const released = new Promise<void>((resolve) => { release = resolve; });
+      refreshGate = { started, markStarted, released, release, pending: false };
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === "POST" && url.pathname.endsWith("/release")) {
+      refreshGate?.release();
+      refreshGate = undefined;
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === "GET" && url.pathname.endsWith("/wait")) {
+      const gate = refreshGate;
+      if (!gate) return new Response(null, { status: 409 });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([gate.started, new Promise<void>((resolve) => { timer = setTimeout(resolve, 5_000); })]);
+        return new Response(null, { status: gate.pending ? 204 : 408 });
+      } finally { clearTimeout(timer); }
+    }
+    return new Response(null, { status: 404 });
+  }
+  if (request.method === "GET" && url.pathname === "/v1/inbox" && !url.searchParams.has("cursor") && refreshGate) {
+    const gate = refreshGate;
+    gate.pending = true;
+    gate.markStarted();
+    // Fail open if the test exits before cleanup; remain below the client's 30s timeout.
+    const timer = setTimeout(gate.release, 20_000);
+    try { await gate.released; }
+    finally {
+      clearTimeout(timer);
+      gate.pending = false;
+      if (refreshGate === gate) refreshGate = undefined;
+    }
+  }
   if (request.method === "PUT" && url.pathname === "/v1/destinations/routing") {
     const body = await request.clone().json();
     const response = await app.fetch(request);

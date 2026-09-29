@@ -17,6 +17,79 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test13MailboxControlsRemainVisibleWhileRefreshing() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let list = app.collectionViews["inbox.list"]
+        let picker = app.buttons["inbox.view-picker"]
+        let settings = app.buttons["Choose visible views"]
+        let search = app.searchFields["Search mail"]
+        let title = app.staticTexts["What deserves you now"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        XCTAssertTrue(search.isHittable)
+        XCTAssertTrue(picker.isHittable)
+        XCTAssertTrue(settings.isHittable)
+        let initialPickerY = picker.frame.minY
+        let initialTitleY = title.frame.minY
+
+        try refreshFixture("arm", method: "POST")
+        // Release the pending response even if an assertion fails.
+        addTeardownBlock { try self.refreshFixture("release", method: "POST") }
+        let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+        let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        // The server acknowledges only after the gesture makes a real inbox request.
+        // Its response remains blocked while these assertions and screenshots run.
+        try refreshFixture("wait", method: "GET")
+        attachScreenshot(named: "27-inbox-refresh-pending")
+        XCTAssertTrue(search.isHittable)
+        XCTAssertTrue(picker.isHittable)
+        XCTAssertTrue(settings.isHittable)
+        XCTAssertTrue(app.buttons["compose.open"].isHittable)
+        XCTAssertTrue(app.tabBars.buttons["Inbox"].isHittable)
+        XCTAssertTrue(app.tabBars.buttons["Drafts"].isHittable)
+        XCTAssertTrue(app.tabBars.buttons["Settings"].isHittable)
+        XCTAssertEqual(picker.frame.minY, initialPickerY, accuracy: 2)
+        XCTAssertGreaterThanOrEqual(picker.frame.minY, search.frame.maxY)
+        XCTAssertGreaterThanOrEqual(list.frame.minY, max(picker.frame.maxY, settings.frame.maxY))
+
+        // Check actual interaction as well as accessibility hit testing.
+        picker.tap()
+        XCTAssertTrue(app.buttons["All Mail"].waitForExistence(timeout: 3))
+        attachScreenshot(named: "28-mailbox-picker-during-refresh")
+        try refreshFixture("wait", method: "GET")
+        try refreshFixture("release", method: "POST")
+        app.buttons.matching(identifier: "Inbox").firstMatch.tap()
+        let settled = NSPredicate { _, _ in
+            title.isHittable && abs(title.frame.minY - initialTitleY) < 12
+        }
+        expectation(for: settled, evaluatedWith: nil)
+        waitForExpectations(timeout: 10)
+        attachScreenshot(named: "29-inbox-refresh-recovered")
+    }
+
+    private func refreshFixture(_ action: String, method: String) throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let base = environment["ORCA_FIXTURE_API_URL"], let url = URL(string: base),
+              ["127.0.0.1", "localhost"].contains(url.host ?? ""),
+              let token = environment["ORCA_FIXTURE_ACCESS_TOKEN"] else {
+            throw TestConfigurationError.missingFixtureEnvironment
+        }
+        var request = URLRequest(url: url.appendingPathComponent("__fixture/inbox-refresh/\(action)"))
+        request.httpMethod = method
+        request.timeoutInterval = 8
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let completed = expectation(description: "Fixture refresh \(action)")
+        let task = URLSession.shared.dataTask(with: request) { _, response, error in
+            XCTAssertNil(error)
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204)
+            completed.fulfill()
+        }
+        task.resume()
+        wait(for: [completed], timeout: 10)
+        task.cancel()
+    }
+
     func test12InboxIntroductionScrollsWithMailAndRefreshSettles() throws {
         let app = try launchApp()
         assertInboxLoaded(in: app)
