@@ -8,6 +8,7 @@ import { threadMatchPredicate } from "../organization/views/thread-predicate.ts"
 import { createApnsTransport, type ApnsDeliveryResult, type ApnsTransport } from "./apns.ts";
 import { loadMobilePushConfig, type MobilePushConfig } from "./config.ts";
 import { readDeviceToken, type ApnsEnvironment } from "./store.ts";
+import { notificationPayload, type NotificationMessage } from "./payload.ts";
 
 type DeviceScanRow = {
   userId: string;
@@ -22,10 +23,8 @@ type DeviceScanRow = {
   watermarkEmailId: string;
 };
 
-type CandidateRow = {
+type CandidateRow = NotificationMessage & {
   messageId: string;
-  accountId: string;
-  threadId: string;
   pushSequence: number;
   createdAt: number;
   matchesSelection: number;
@@ -62,15 +61,6 @@ export const isLegacySessionActive: MobilePushSessionChecker = (sqlite, input) =
   WHERE id=? AND user_id=? AND invalidated_at IS NULL AND expires_at>?`).get(input.sessionId, input.userId, input.now.getTime()));
 
 const emptyResult = (): MobilePushCycleResult => ({ scanned: 0, enqueued: 0, delivered: 0, retried: 0, discarded: 0, disabledDevices: 0, staleDevicesRemoved: 0 });
-
-function privatePayload(row: CandidateRow) {
-  return {
-    aps: { alert: { title: "New email", body: "You have a new message in Orca." }, sound: "default" },
-    version: 1,
-    accountId: row.accountId,
-    threadId: row.threadId,
-  };
-}
 
 function selectionPredicate(sqlite: Database, device: Pick<DeviceScanRow, "userId" | "installationId" | "notifyInbox">) {
   const parts: string[] = [];
@@ -151,6 +141,8 @@ export function scanAndEnqueue(sqlite: Database, options: { now: Date; batchSize
     sqlite.transaction(() => {
       const selection = selectionPredicate(sqlite, device);
       const candidates = sqlite.query(`SELECT e.id AS messageId, e.account_id AS accountId, e.thread_id AS threadId,
+        e.from_name AS fromName, e.from_address AS fromAddress, e.subject, e.snippet,
+        substr(e.body_text,1,4096) AS bodyText,
         ps.sequence AS pushSequence, e.created_at AS createdAt, ${selection.sql} AS matchesSelection
         FROM emails e
         JOIN mobile_push_email_sequence ps ON ps.email_id=e.id
@@ -169,7 +161,7 @@ export function scanAndEnqueue(sqlite: Database, options: { now: Date; batchSize
             (id,user_id,installation_id,device_generation,message_id,account_id,thread_id,environment,payload_json,apns_id,state,attempt_count,available_at,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,'pending',0,?,?,?)`)
             .run(randomUUID(), device.userId, device.installationId, device.generation, row.messageId, row.accountId, row.threadId,
-              device.environment, JSON.stringify(privatePayload(row)), randomUUID(), now, now, now);
+              device.environment, JSON.stringify(notificationPayload(row)), randomUUID(), now, now, now);
           result.enqueued += inserted.changes;
         }
       }
