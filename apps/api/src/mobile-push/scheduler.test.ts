@@ -44,7 +44,7 @@ describe("mobile push scheduler", () => {
     const payloads = client.sqlite.query("SELECT payload_json AS payload FROM mobile_push_outbox ORDER BY account_id").all() as Array<{ payload: string }>;
     assert.equal(payloads.every(({ payload }) => {
       const parsed = JSON.parse(payload) as { aps: { alert: { title: string; body: string } }; accountId: string; threadId: string };
-      return parsed.aps.alert.title === "New email" && parsed.aps.alert.body === "You have a new message in Orca."
+      return parsed.aps.alert.title === "person@example.com" && parsed.aps.alert.body === "Open Orca to read this message."
         && Object.keys(parsed).sort().join(",") === "accountId,aps,threadId,version";
     }), true);
     client.sqlite.close();
@@ -154,6 +154,77 @@ describe("mobile push scheduler", () => {
       assert.equal(sends, 0);
       assert.equal(delivered.discarded, 3);
       assert.deepEqual(client.sqlite.query("SELECT DISTINCT last_error AS error FROM mobile_push_outbox").all(), [{ error: "message_no_longer_eligible" }]);
+    } finally { client.sqlite.close(); }
+  });
+
+  test("delivers only each device's selected destinations, with one preview per matching message", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "choices-user", "choices-account");
+      const destinations = createDestinations(client.db, "choices-user");
+      const projects = destinations.create({ expectedRevision: destinations.list().revision, name: "Projects" }).state.destinations.find(({ name }) => name === "Projects")!;
+      client.sqlite.query("INSERT INTO collections (id,account_id,name,color,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
+        .run("selected", "choices-account", "Selected", "#123456", 0, 1, 1_000, 1_000);
+      const selections = [
+        { inbox: false, spaceIds: [] },
+        { inbox: true, spaceIds: [] },
+        { inbox: false, spaceIds: ["collection:selected"] },
+        { inbox: true, spaceIds: ["collection:selected"] },
+      ];
+      for (const [index, notificationSelection] of selections.entries()) {
+        await registerDevice(client.sqlite, { userId: "choices-user", sessionId: "session-choices-user", installationId: `phone-${index}`,
+          token: String(index + 1).repeat(64), environment: "production", notificationSelection, now: new Date(1_000) });
+      }
+      for (const id of ["inbox", "space", "both", "neither"]) {
+        seedMessage(client.sqlite, { id, accountId: "choices-account", createdAt: 2_000 });
+        client.sqlite.query("UPDATE emails SET from_name=?,subject=?,snippet=? WHERE id=?")
+          .run("Alex Rivera", "Design review", "Can we review the updated screens tomorrow?", id);
+        if (id === "space" || id === "neither") destinations.save("choices-account", {
+          expectedRevision: destinations.list().revision, target: { scope: "conversation", threadId: `thread-${id}` }, destinationId: projects.id });
+        if (id === "space" || id === "both") client.sqlite.query("INSERT INTO collection_threads (id,collection_id,thread_id,created_at) VALUES (?,?,?,?)")
+          .run(`member-${id}`, "selected", `thread-${id}`, 2_000);
+      }
+      const sent: Record<string, string[]> = {};
+      const transport: ApnsTransport = { async send(request) {
+        (sent[request.token[0]!] ??= []).push(String(request.payload.threadId));
+        assert.deepEqual((request.payload.aps as { alert: unknown }).alert, {
+          title: "Alex Rivera", subtitle: "Design review", body: "Can we review the updated screens tomorrow?",
+        });
+        return { outcome: "success", status: 200 };
+      } };
+      const result = await runMobilePushCycle({ dbFactory: () => createMobilePushTestDbConnection(client.path), config: testConfig, transport, now: () => new Date(3_000) });
+      for (const ids of Object.values(sent)) ids.sort();
+      assert.equal(result.delivered, 7);
+      assert.deepEqual(sent, {
+        "2": ["thread-both", "thread-inbox"],
+        "3": ["thread-both", "thread-space"],
+        "4": ["thread-both", "thread-inbox", "thread-space"],
+      });
+    } finally { client.sqlite.close(); }
+  });
+
+  test("deselecting one Space suppresses its queued and future alerts while another remains enabled", async () => {
+    const client = createMobilePushTestDb();
+    try {
+      seedAccount(client.sqlite, "change-user", "change-account");
+      const destinations = createDestinations(client.db, "change-user");
+      const first = destinations.create({ expectedRevision: destinations.list().revision, name: "First" }).state.destinations.find(({ name }) => name === "First")!;
+      const second = destinations.create({ expectedRevision: destinations.list().revision, name: "Second" }).state.destinations.find(({ name }) => name === "Second")!;
+      const device = { userId: "change-user", sessionId: "session-change-user", installationId: "phone", token: tokenA, environment: "production" as const };
+      await registerDevice(client.sqlite, { ...device, notificationSelection: { inbox: false, spaceIds: [`destination:${first.id}`, `destination:${second.id}`] }, now: new Date(1_000) });
+      const add = (id: string, destinationId: string, at: number) => {
+        seedMessage(client.sqlite, { id, accountId: "change-account", createdAt: at });
+        destinations.save("change-account", { expectedRevision: destinations.list().revision, target: { scope: "conversation", threadId: `thread-${id}` }, destinationId });
+      };
+      add("queued", first.id, 2_000);
+      assert.equal(scanAndEnqueue(client.sqlite, { now: new Date(2_100), batchSize: 100 }).enqueued, 1);
+      await registerDevice(client.sqlite, { ...device, notificationSelection: { inbox: false, spaceIds: [`destination:${second.id}`] }, now: new Date(2_200) });
+      add("deselected", first.id, 3_000);
+      add("selected", second.id, 3_100);
+      const sent: unknown[] = [];
+      await runMobilePushCycle({ dbFactory: () => createMobilePushTestDbConnection(client.path), config: testConfig, now: () => new Date(4_000),
+        transport: { async send(request) { sent.push(request.payload.threadId); return { outcome: "success", status: 200 }; } } });
+      assert.deepEqual(sent, ["thread-selected"]);
     } finally { client.sqlite.close(); }
   });
 
