@@ -1,3 +1,5 @@
+import { decodeHTML } from "entities";
+
 export type NotificationMessage = {
   accountId: string;
   threadId: string;
@@ -18,12 +20,15 @@ function preview(value: string | null, limit: number) {
 
 /** Use only plain-text mail fields; never include raw HTML, attachments, or recipients. */
 export function notificationPayload(message: NotificationMessage) {
+  // Provider snippets can contain HTML entities. Decode once, without parsing
+  // markup; headers and bodyText are already literal plain text.
+  const snippet = decodeHTML(message.snippet ?? "");
   return {
     aps: {
       alert: {
         title: preview(message.fromName, 80) || preview(message.fromAddress, 80) || "New email",
         subtitle: preview(message.subject, 120) || "(No subject)",
-        body: preview(message.snippet, 240) || preview(message.bodyText, 240) || "Open Orca to read this message.",
+        body: preview(snippet, 240) || preview(message.bodyText, 240) || "Open Orca to read this message.",
       },
       sound: "default",
     },

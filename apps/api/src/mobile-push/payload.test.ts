@@ -28,6 +28,20 @@ test("preview normalizes whitespace and control characters without interpreting 
     "Hello there 2 < 3 & 4 > 1");
 });
 
+test("Gmail snippet entities decode once before normalization and truncation", () => {
+  assert.equal(notificationPayload({ ...message, snippet: "I&#39;ll review Tom &amp; Ana&#39;s notes.&nbsp;Thanks! &#x1F30A; &#128640;" }).aps.alert.body,
+    "I'll review Tom & Ana's notes. Thanks! 🌊 🚀");
+  assert.equal(notificationPayload({ ...message, snippet: "&amp;lt;b&amp;gt; &lt;b&gt;literal&lt;/b&gt;" }).aps.alert.body,
+    "&lt;b&gt; <b>literal</b>");
+  assert.equal(notificationPayload({ ...message, snippet: "&#128640;".repeat(241) }).aps.alert.body, "🚀".repeat(239) + "…");
+});
+
+test("entity-only snippet whitespace falls back without decoding literal body or header text", () => {
+  const payload = notificationPayload({ ...message, fromName: "Tom &amp; Ana", subject: "Literal &#39; example",
+    snippet: "&nbsp;&#32;&#x09;&#10;", bodyText: "Keep &amp; and <b>literal</b>" });
+  assert.deepEqual(payload.aps.alert, { title: "Tom &amp; Ana", subtitle: "Literal &#39; example", body: "Keep &amp; and <b>literal</b>" });
+});
+
 test("long Unicode previews remain valid and fit Apple's 4096-byte payload limit", () => {
   const payload = notificationPayload({ ...message, fromName: "😀".repeat(1000), subject: "🚀".repeat(1000), snippet: "🌊".repeat(2000) });
   assert.equal(Array.from(payload.aps.alert.title).length, 80);
