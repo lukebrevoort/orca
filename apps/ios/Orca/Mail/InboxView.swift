@@ -50,26 +50,30 @@ struct InboxView: View {
             else if model.messages.isEmpty { ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here.")) }
             else {
                 List {
-                    Section {
-                        ForEach(model.messages) { message in
-                            NavigationLink(value: message) { MessageRow(message: message) }
-                                .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
-                                .listRowSeparatorTint(OrcaTheme.border)
-                                .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
-                                .accessibilityIdentifier("inbox.message.\(message.id)")
-                                .contextMenu { MailActionMenu(message: message) { actionTarget = $0 } }
-                                .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
-                        }
-                    } header: {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
-                                .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.2).foregroundStyle(OrcaTheme.accent)
-                            Text(dynamicTypeSize.isAccessibilitySize ? "Your mail" : (model.view == "focus" ? "A little more focus." : "What deserves you now"))
-                                .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 20 : 34)).fixedSize(horizontal: false, vertical: true).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
-                            Text("\(model.messages.filter(\.unread).count) unread shown").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).textCase(nil)
-                        }.padding(.vertical, 18)
+                    // Keep the introduction in the scrolling content. Plain List section
+                    // headers pin above rows and participate in refresh inset layout.
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
+                            .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.2).foregroundStyle(OrcaTheme.accent)
+                        Text(dynamicTypeSize.isAccessibilitySize ? "Your mail" : (model.view == "focus" ? "A little more focus." : "What deserves you now"))
+                            .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 20 : 34)).fixedSize(horizontal: false, vertical: true).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
+                            .accessibilityAddTraits(.isHeader)
+                        Text("\(model.messages.filter(\.unread).count) unread shown").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).textCase(nil)
+                    }.padding(.vertical, 18)
+                    .listRowBackground(OrcaTheme.paper)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                    ForEach(model.messages) { message in
+                        NavigationLink(value: message) { MessageRow(message: message) }
+                            .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
+                            .listRowSeparatorTint(OrcaTheme.border)
+                            .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
+                            .accessibilityIdentifier("inbox.message.\(message.id)")
+                            .contextMenu { MailActionMenu(message: message) { actionTarget = $0 } }
+                            .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
                     }
                 }.listStyle(.plain).scrollContentBackground(.hidden).accessibilityIdentifier("inbox.list")
+                    .refreshable { await model.load(state: state) }
             }
         }
         .background(OrcaTheme.paper)
@@ -115,7 +119,6 @@ struct InboxView: View {
         .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)") {
             if mailboxes.selectedView == nil { model.view = mailboxes.selectedID; await model.load(state: state) }
         }
-        .refreshable { if mailboxes.selectedView == nil { await model.load(state: state) } }
         .navigationDestination(item: $savedThread) { ThreadView(accountId: $0.accountId, threadId: $0.threadId) }
         .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread { selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
         .navigationDestination(item: $selected) { ThreadView(message: $0) }

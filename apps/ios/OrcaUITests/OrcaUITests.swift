@@ -17,6 +17,45 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test12InboxIntroductionScrollsWithMailAndRefreshSettles() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let list = app.collectionViews["inbox.list"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        let title = app.staticTexts["What deserves you now"]
+        XCTAssertTrue(title.isHittable)
+        let initialY = title.frame.minY
+        attachScreenshot(named: "24-inbox-before-scroll")
+
+        // The editorial introduction is content, not a pinned section heading.
+        let scrollStart = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+        let scrollEnd = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+        scrollStart.press(forDuration: 0.05, thenDragTo: scrollEnd)
+        // Wait for the native scroll animation before inspecting geometry.
+        let moved = NSPredicate { _, _ in
+            !title.exists || title.frame.minY < initialY - 40
+        }
+        let movement = expectation(for: moved, evaluatedWith: nil)
+        wait(for: [movement], timeout: 5)
+        attachScreenshot(named: "25-inbox-scrolled")
+        XCTAssertTrue(!title.exists || (title.frame.minY < initialY - 40 &&
+                      (!title.isHittable || title.frame.maxY < list.frame.minY + 40)),
+                      "The large introduction must scroll away with the messages")
+
+        list.swipeDown()
+        let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+        let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        for _ in 0..<3 { start.press(forDuration: 0.1, thenDragTo: end) }
+        let settled = NSPredicate { _, _ in
+            title.isHittable && abs(title.frame.minY - initialY) < 12
+        }
+        expectation(for: settled, evaluatedWith: nil)
+        waitForExpectations(timeout: 10)
+        attachScreenshot(named: "26-inbox-after-refresh")
+        XCTAssertTrue(app.buttons["compose.open"].isHittable)
+        XCTAssertTrue(app.buttons["inbox.view-picker"].isHittable)
+    }
+
     func test10NativeLongPressMovesConversationAndBuildsSenderView() throws {
         let app = try launchApp()
         assertInboxLoaded(in: app)
