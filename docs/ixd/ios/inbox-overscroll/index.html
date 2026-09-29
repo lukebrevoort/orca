@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inbox scrolling review</title>
+<style>:root{color-scheme:light dark}body{max-width:860px;margin:48px auto;padding:0 24px;font:16px/1.6 system-ui;background:light-dark(#f6faf7,#050505);color:light-dark(#102522,#f4f3ef)}h1{font:44px Georgia}code{overflow-wrap:anywhere}li{margin:12px 0}aside{padding:18px;border:1px solid #87968e;border-radius:12px}img{width:100%;max-width:360px}a{color:light-dark(#087461,#6aa9f5)}</style>
+<h1>Let the inbox scroll.</h1>
+<p>The date, introduction, and unread count are now ordinary list content. They scroll away with the messages instead of acting as a pinned section header. Pull-to-refresh belongs to the inbox list; saved Views retain their own refresh action.</p>
+<h2>Simulator evidence</h2>
+<p>Light appearance: the focused UI test passed. The heading leaves the viewport, then returns to its original position after three pull gestures.</p>
+<figure><a href="light-24-inbox-before-scroll.png"><img src="light-24-inbox-before-scroll.png" alt="Light inbox before scrolling"></a><figcaption>Initial position</figcaption></figure>
+<figure><a href="light-25-inbox-scrolled.png"><img src="light-25-inbox-scrolled.png" alt="Light inbox scrolled with introduction offscreen"></a><figcaption>Introduction scrolled away</figcaption></figure>
+<figure><a href="light-26-inbox-after-refresh.png"><img src="light-26-inbox-after-refresh.png" alt="Light inbox settled after repeated pulls"></a><figcaption>After three refresh pulls</figcaption></figure>
+<figure><a href="dark-25-inbox-scrolled.png"><img src="dark-25-inbox-scrolled.png" alt="Dark inbox scrolled with introduction offscreen"></a><figcaption>Dark: introduction scrolled away</figcaption></figure>
+<figure><a href="dark-26-inbox-after-refresh.png"><img src="dark-26-inbox-after-refresh.png" alt="Dark inbox settled after repeated pulls"></a><figcaption>Dark: after three refresh pulls</figcaption></figure>
+<h2>Validation</h2><ul><li>iOS simulator build-for-testing passed.</li><li>Focused scrolling and refresh geometry test passed in Light and Dark on iPhone 17 Pro, iOS 26.4.</li><li>All 40 native unit tests passed.</li><li>Independent subagent review: no blocking findings; light screenshots inspected.</li><li>Shell syntax and git diff whitespace checks passed.</li></ul>
+<p>The first baseline test failed the scroll-away assertion. Its swipe was replaced with an explicit drag and an animation wait before final verification; this is not a strict identical-test red/green comparison. Physical-device reproduction of the submitted gap and larger accessibility text remain manual checks.</p>
+<h2>Check on an iPhone</h2>
+<ol><li>Open an Inbox with enough messages to scroll. Note the introduction’s starting position.</li><li>Scroll down through the messages. The large introduction should leave the screen.</li><li>Return to the top, pull to refresh, and release. Repeat three times. After refreshing ends, the introduction should return to its starting position without a persistent blank gap.</li><li>Open a message, return, and use Search, Compose, and the mailbox picker. Verify the toolbar remains reachable.</li><li>Repeat in Light and Dark appearance, then with larger accessibility text.</li></ol>
+<aside>Normal iOS elastic movement while a finger is pulling remains enabled. A persistent gap after release is not expected. The submitted screenshot alone does not establish whether the gap persisted.</aside>
+<h2>Repeat the automated check</h2>
+<p>Start the synthetic API with <code>bun apps/api/scripts/mobile-fixture.ts</code>, then run:</p>
+<pre><code>ORCA_UI_TEST_SCOPE=overscroll \
+apps/ios/OrcaUITests/run-fixture-tests.sh \
+/path/to/connection.json SIMULATOR_UDID</code></pre>
+<p>The check covers scrolling the introduction away, three pull gestures, recovery to the initial position, and toolbar reachability. It does not assert that new mail was fetched.</p>
+</html>
