@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import type { MailOAuthTransaction, MailOAuthTransactionStore, OAuthOwner } from "../mail-oauth-transactions.ts";
 
 import type { GmailOAuthConfig } from "./config.ts";
 import { encryptSecret } from "./crypto.ts";
@@ -7,7 +7,6 @@ import type { OAuthAccountStore } from "./oauth-accounts.ts";
 const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 const googleTokenUrl = "https://oauth2.googleapis.com/token";
 const googleUserInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo";
-const maxStateAgeMs = 1000 * 60 * 10;
 
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -42,29 +41,17 @@ type UserInfoResponse = {
   picture?: string;
 };
 
-type SignedStatePayload = {
-  nonce: string;
-  returnTo: string | null;
-  issuedAt: string;
-  intent: GmailOAuthIntent;
-  accountId: string | null;
-  initialLogin?: boolean;
-};
-
-type VerifiedStatePayload = Omit<SignedStatePayload, "initialLogin"> & {
-  initialLogin: boolean;
-};
-
 export type GmailOAuthService = {
-  getAuthorizationUrl(returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null, initialLogin?: boolean): { url: string; state: string; scopes: string[] };
-  handleCallback(params: URLSearchParams, userId: string): Promise<GmailOAuthCallbackResult>;
+  getAuthorizationUrl(owner: OAuthOwner, returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null, pendingEmail?: string | null): { url: string; state: string; scopes: string[] };
+  handleCallback(params: URLSearchParams, owner: OAuthOwner): Promise<GmailOAuthCallbackResult>;
 };
 
 export type GmailOAuthCallbackResult =
   | {
       ok: true;
       redirectUrl: string | null;
-      initialLogin: boolean;
+      pendingEmail: string | null;
+      scopeReturned: boolean;
       account: {
         providerEmail: string;
         providerAccountId: string;
@@ -81,24 +68,18 @@ export type GmailOAuthCallbackResult =
 export function createGmailOAuthService(options: {
   config: GmailOAuthConfig;
   store: OAuthAccountStore;
+  transactions: MailOAuthTransactionStore;
   fetch?: FetchLike;
 }): GmailOAuthService {
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    getAuthorizationUrl(returnTo, intent = "connect", accountId = null, initialLogin = false) {
+    getAuthorizationUrl(owner, returnTo, intent = "connect", accountId = null, pendingEmail = null) {
       const scopes = intent === "upgrade" ? options.config.composeScopes : options.config.scopes;
-      const state = signState(
-        {
-          nonce: randomUUID(),
-          returnTo: normalizeReturnTo(returnTo, options.config.webOrigin),
-          issuedAt: new Date().toISOString(),
-          intent,
-          accountId: accountId ?? null,
-          initialLogin,
-        },
-        options.config.stateSecret,
-      );
+      const { state, codeChallenge } = options.transactions.create({
+        ...owner, provider: "gmail", returnTo: normalizeReturnTo(returnTo, options.config.webOrigin),
+        intent, accountId, pendingEmail,
+      });
       const url = new URL(googleAuthUrl);
       url.searchParams.set("client_id", options.config.clientId);
       url.searchParams.set("redirect_uri", options.config.redirectUri);
@@ -108,6 +89,8 @@ export function createGmailOAuthService(options: {
       url.searchParams.set("include_granted_scopes", "true");
       url.searchParams.set("prompt", "consent");
       url.searchParams.set("state", state);
+      url.searchParams.set("code_challenge", codeChallenge);
+      url.searchParams.set("code_challenge_method", "S256");
 
       return {
         url: url.toString(),
@@ -116,13 +99,14 @@ export function createGmailOAuthService(options: {
       };
     },
 
-    async handleCallback(params, userId) {
+    async handleCallback(params, owner) {
+      const { userId } = owner;
       const state = params.get("state");
       if (!state) {
         return buildError(options.config.errorRedirectUrl, "missing_state", "Missing OAuth state.");
       }
 
-      const decodedState = verifyState(state, options.config.stateSecret);
+      const decodedState = options.transactions.consume(state, owner, "gmail");
       if (!decodedState) {
         return buildError(
           options.config.errorRedirectUrl,
@@ -153,6 +137,7 @@ export function createGmailOAuthService(options: {
 
       const tokenResponse = await exchangeCode({
         code,
+        codeVerifier: decodedState.codeVerifier,
         config: options.config,
         fetchImpl,
         requestedScopes: decodedState.intent === "upgrade" ? options.config.composeScopes : options.config.scopes,
@@ -232,8 +217,12 @@ export function createGmailOAuthService(options: {
         }
       }
 
+      if (!options.transactions.isActive(owner) || (decodedState.pendingEmail && !options.transactions.isPending(owner, decodedState.pendingEmail))) {
+        return buildError(options.config.errorRedirectUrl, "invalid_state", "The pending login is no longer available.");
+      }
+
       try {
-        await options.store.upsert({
+        await options.store.upsert({ authorization: { sessionId: owner.sessionId, pendingEmail: decodedState.pendingEmail ?? null },
           userId,
           provider: "gmail",
           providerAccountId: userInfoResponse.providerAccountId,
@@ -267,7 +256,8 @@ export function createGmailOAuthService(options: {
           status: "success",
           intent: decodedState.intent,
         }),
-        initialLogin: decodedState.initialLogin,
+        pendingEmail: decodedState.pendingEmail ?? null,
+        scopeReturned: tokenResponse.scopeReturned,
         account: {
           providerEmail: userInfoResponse.providerEmail,
           providerAccountId: userInfoResponse.providerAccountId,
@@ -420,6 +410,7 @@ async function readTokenErrorCode(response: Response): Promise<string | null> {
 
 async function exchangeCode(options: {
   code: string;
+  codeVerifier: string;
   config: GmailOAuthConfig;
   fetchImpl: FetchLike;
   requestedScopes: string[];
@@ -456,6 +447,7 @@ async function exchangeCode(options: {
       },
       body: new URLSearchParams({
         code: options.code,
+        code_verifier: options.codeVerifier,
         client_id: options.config.clientId,
         client_secret: options.config.clientSecret,
         redirect_uri: options.config.redirectUri,
@@ -567,86 +559,6 @@ function normalizeProviderImageUrl(value: string | undefined): string | null {
   }
 }
 
-function signState(payload: SignedStatePayload, secret: string): string {
-  const encodedPayload = encodeJson(payload);
-  const signature = signValue(encodedPayload, secret);
-  return `${encodedPayload}.${signature}`;
-}
-
-function verifyState(value: string, secret: string): VerifiedStatePayload | null {
-  const [encodedPayload, signature] = value.split(".");
-  if (!encodedPayload || !signature) {
-    return null;
-  }
-
-  const expected = signValue(encodedPayload, secret);
-
-  if (!safeEquals(signature, expected)) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(
-      Buffer.from(encodedPayload, "base64url").toString("utf8"),
-    ) as SignedStatePayload;
-
-    const issuedAt = Date.parse(payload.issuedAt);
-    if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > maxStateAgeMs) {
-      return null;
-    }
-
-    const hasInitialLoginMarker = Object.hasOwn(payload, "initialLogin");
-    if (
-      (!(["connect", "upgrade"] as const).includes(payload.intent))
-      || (payload.accountId !== null && typeof payload.accountId !== "string")
-      || (typeof payload.returnTo !== "string" && payload.returnTo !== null)
-      || (hasInitialLoginMarker && typeof payload.initialLogin !== "boolean")
-    ) {
-      return null;
-    }
-
-    return {
-      ...payload,
-      initialLogin: hasInitialLoginMarker
-        ? payload.initialLogin as boolean
-        : payload.intent === "connect" && isLegacyOnboardingReturnTo(payload.returnTo),
-    };
-  } catch {
-    return null;
-  }
-}
-
-function isLegacyOnboardingReturnTo(returnTo: string | null): boolean {
-  if (!returnTo) {
-    return false;
-  }
-
-  try {
-    return new URL(returnTo).pathname === "/onboarding";
-  } catch {
-    return false;
-  }
-}
-
-function safeEquals(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-
-  if (leftBuffer.byteLength !== rightBuffer.byteLength) {
-    return false;
-  }
-
-  return timingSafeEqual(leftBuffer, rightBuffer);
-}
-
-function signValue(value: string, secret: string): string {
-  return createHmac("sha256", secret).update(value).digest("base64url");
-}
-
-function encodeJson(value: SignedStatePayload): string {
-  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
-}
-
 function buildError(
   redirectBaseUrl: string | null,
   code: GmailOAuthErrorCode,
@@ -678,7 +590,7 @@ function appendStatus(baseUrl: string | null, params: Record<string, string>): s
   return url.toString();
 }
 
-function resolveReturnTo(state: SignedStatePayload | null, fallback: string | null): string | null {
+function resolveReturnTo(state: MailOAuthTransaction | null, fallback: string | null): string | null {
   return state?.returnTo ?? fallback;
 }
 

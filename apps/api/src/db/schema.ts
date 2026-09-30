@@ -1389,6 +1389,20 @@ export const messageDrafts = sqliteTable(
   }),
 );
 
+export const mailOAuthTransactions = sqliteTable("mail_oauth_transactions", {
+  stateHash: text("state_hash").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Web sessions and mobile bearer sessions share AuthContext, but use different tables.
+  sessionId: text("session_id").notNull(),
+  provider: text("provider", { enum: ["gmail", "outlook"] }).notNull(),
+  intent: text("intent", { enum: ["connect", "upgrade"] }).notNull(),
+  accountId: text("account_id"),
+  returnTo: text("return_to"),
+  pendingEmail: text("pending_email"),
+  codeVerifier: text("code_verifier").notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => ({ expiresAtIdx: index("mail_oauth_transactions_expires_at_idx").on(table.expiresAt) }));
+
 export const sessions = sqliteTable(
   "sessions",
   {

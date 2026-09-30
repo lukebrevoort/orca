@@ -1,6 +1,7 @@
+import { DatabaseMailOAuthTransactionStore, type MailOAuthTransactionStore } from "../mail-oauth-transactions.ts";
+import { completeMailOAuthLogin } from "../mail-oauth-login.ts";
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
-import { and, eq } from "drizzle-orm";
 
 import { requireAuth, type AuthVariables } from "../middleware.ts";
 import {
@@ -14,7 +15,7 @@ import {
 } from "./oauth-accounts.ts";
 import { createGmailOAuthService, type FetchLike } from "./oauth.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { oauthAccounts, users } from "../../db/schema.ts";
+import { users } from "../../db/schema.ts";
 import { buildSessionCookie, getSessionCookieOptions } from "../jwt.ts";
 import { createSession } from "../session-store.ts";
 
@@ -22,6 +23,7 @@ type GmailAuthAppOptions = {
   authMiddleware?: MiddlewareHandler<{ Variables: AuthVariables }>;
   config?: GmailOAuthConfig;
   store?: OAuthAccountStore;
+  transactions?: MailOAuthTransactionStore;
   fetch?: FetchLike;
   dbFactory?: typeof createDatabaseClient;
 };
@@ -35,6 +37,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
   const service = createGmailOAuthService({
     config,
     store,
+    transactions: options.transactions ?? new DatabaseMailOAuthTransactionStore(dbFactory),
     fetch: options.fetch,
   });
   const authMiddleware = options.authMiddleware ?? requireAuth({ dbFactory });
@@ -72,7 +75,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
 
     const returnTo = c.req.query("returnTo");
     const accountId = c.req.query("accountId") ?? null;
-    const result = service.getAuthorizationUrl(returnTo, "connect", accountId);
+    const result = service.getAuthorizationUrl(c.get("auth"), returnTo, "connect", accountId);
 
     return c.json({
       provider: "gmail",
@@ -101,7 +104,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     if (!account) {
       return c.json({ error: "gmail_account_not_found", message: "Connect Gmail read-only before enabling compose and send." }, 404);
     }
-    const result = service.getAuthorizationUrl(c.req.query("returnTo"), "upgrade", account.id);
+    const result = service.getAuthorizationUrl(auth, c.req.query("returnTo"), "upgrade", account.id);
     return c.json({
       provider: "gmail",
       intent: "upgrade",
@@ -126,14 +129,15 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     const { db, sqlite } = dbFactory();
     try {
       const userId = `user_${crypto.randomUUID()}`;
+      const pendingEmail = `pending-${crypto.randomUUID()}@orca.invalid`;
       db.insert(users).values({
         id: userId,
-        email: `pending-${crypto.randomUUID()}@orca.invalid`,
+        email: pendingEmail,
       }).run();
       const session = await createSession(db, userId);
       c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
       const returnTo = c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`;
-      const result = service.getAuthorizationUrl(returnTo, "connect", null, true);
+      const result = service.getAuthorizationUrl(session, returnTo, "connect", null, pendingEmail);
       return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
     } finally {
       sqlite.close();
@@ -144,7 +148,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     const auth = c.get("auth");
     let result;
     try {
-      result = await service.handleCallback(new URLSearchParams(c.req.query()), auth.userId);
+      result = await service.handleCallback(new URLSearchParams(c.req.query()), auth);
     } catch (error) {
       console.error("Gmail authorization callback failed", { error });
       return c.json({
@@ -154,79 +158,20 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
       }, 502);
     }
 
-    const isInitialLogin = result.ok && result.initialLogin;
-
-    if (result.ok && isInitialLogin) {
+    if (result.ok && result.pendingEmail) {
       const { db, sqlite } = dbFactory();
       try {
-        const existingUser = db.select({ id: users.id }).from(users)
-          .where(eq(users.email, result.account.providerEmail)).get();
-
-        if (existingUser && existingUser.id !== auth.userId) {
-          const existingAccount = db.select().from(oauthAccounts)
-            .where(and(
-              eq(oauthAccounts.userId, existingUser.id),
-              eq(oauthAccounts.provider, "gmail"),
-              eq(oauthAccounts.providerId, result.account.providerAccountId),
-            )).get();
-          const pendingAccount = db.select().from(oauthAccounts)
-            .where(and(
-              eq(oauthAccounts.userId, auth.userId),
-              eq(oauthAccounts.provider, "gmail"),
-              eq(oauthAccounts.providerId, result.account.providerAccountId),
-            )).get();
-
-          if (pendingAccount && existingAccount) {
-            // The callback stores the newly exchanged Google credentials under
-            // the temporary login user. Keep the existing account id so its
-            // cached mail remains attached, but move the fresh credentials
-            // onto that account before removing the temporary record.
-            db.update(oauthAccounts)
-              .set({
-                providerEmail: pendingAccount.providerEmail,
-                providerId: pendingAccount.providerId,
-                profileImageUrl: pendingAccount.profileImageUrl ?? existingAccount.profileImageUrl,
-                accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
-                refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
-                tokenExpiry: pendingAccount.tokenExpiry,
-                updatedAt: new Date(),
-              })
-              .where(eq(oauthAccounts.id, existingAccount.id))
-              .run();
-            db.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
-          } else if (pendingAccount) {
-            db.update(oauthAccounts).set({ userId: existingUser.id }).where(eq(oauthAccounts.id, pendingAccount.id)).run();
-          }
-          db.update(users)
-            .set({ authenticatedAt: new Date(), onboardingCompletedAt: new Date() })
-            .where(eq(users.id, existingUser.id))
-            .run();
-          db.delete(users).where(eq(users.id, auth.userId)).run();
-          const session = await createSession(db, existingUser.id);
+        const completion = completeMailOAuthLogin(db, {
+          userId: auth.userId, sessionId: auth.sessionId, pendingEmail: result.pendingEmail, provider: "gmail", scopeReturned: result.scopeReturned,
+          ...result.account,
+        });
+        if (!completion.ok) return c.json({ ok: false, error: "invalid_state", message: "The pending login is no longer available. Try again from Orca." }, 400);
+        if (completion.returningUserId) {
+          const session = await createSession(db, completion.returningUserId);
           c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
-
-          // A returning user should land in their workspace, not the first-time
-          // onboarding screen that initiated the OAuth flow.
-          if (result.redirectUrl) {
-            return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
-          }
-        } else {
-          db.update(users)
-            .set({ email: result.account.providerEmail, authenticatedAt: new Date() })
-            .where(eq(users.id, auth.userId))
-            .run();
+          if (result.redirectUrl) return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
         }
-      } finally {
-        sqlite.close();
-      }
-      if (result.redirectUrl) {
-        return c.redirect(result.redirectUrl, 302);
-      }
-      return c.json({
-        ok: true,
-        provider: "gmail",
-        account: result.account,
-      });
+      } finally { sqlite.close(); }
     }
 
     if (result.ok) {

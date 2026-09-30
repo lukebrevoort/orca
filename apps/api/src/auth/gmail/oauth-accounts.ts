@@ -3,6 +3,8 @@ import type { MailProvider } from "@orca/shared";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts } from "../../db/schema.ts";
+import { isMailOAuthSessionActive, pendingUserWhere } from "../mail-oauth-transactions.ts";
+import { users } from "../../db/schema.ts";
 
 type DatabaseFactory = typeof createDatabaseClient;
 
@@ -22,6 +24,7 @@ export type OAuthAccountRecord = {
 };
 
 export type OAuthAccountUpsert = {
+  authorization?: { sessionId: string; pendingEmail: string | null };
   userId: string;
   provider: MailProvider;
   providerAccountId: string;
@@ -56,8 +59,9 @@ export class InMemoryOAuthAccountStore implements OAuthAccountStore {
     const now = new Date();
     const key = buildKey(input.userId, input.provider, input.providerAccountId);
     const existing = this.records.get(key);
+    const { authorization: _authorization, ...accountInput } = input;
     const record: OAuthAccountRecord = {
-      ...input,
+      ...accountInput,
       profileImageUrl: input.profileImageUrl ?? existing?.profileImageUrl ?? null,
       grantedScopes: input.grantedScopes,
       encryptedRefreshToken: input.encryptedRefreshToken ?? existing?.encryptedRefreshToken ?? null,
@@ -112,57 +116,65 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
     const now = new Date();
 
     try {
-      const grantedScopes = input.grantedScopes;
-      db
-        .insert(oauthAccounts)
-        .values({
-          id: `oauth_${crypto.randomUUID()}`,
-          userId: input.userId,
-          provider: input.provider,
-          providerEmail: input.providerEmail,
-          providerId: input.providerAccountId,
-          profileImageUrl: input.profileImageUrl,
-          accessTokenEncrypted: input.encryptedAccessToken,
-          refreshTokenEncrypted: input.encryptedRefreshToken,
-          tokenExpiry: input.expiresAt,
-          scope: grantedScopes.join(" "),
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [
-            oauthAccounts.userId,
-            oauthAccounts.provider,
-            oauthAccounts.providerId,
-          ],
-          set: {
+      return db.transaction((tx) => {
+        if (input.authorization) {
+          const owner = { userId: input.userId, sessionId: input.authorization.sessionId };
+          if (!isMailOAuthSessionActive(tx, owner) || (input.authorization.pendingEmail && !tx.select({ id: users.id }).from(users).where(pendingUserWhere(input.userId, input.authorization.pendingEmail)).get())) {
+            throw new Error("OAuth transaction owner is no longer available");
+          }
+        }
+        const grantedScopes = input.grantedScopes;
+        tx
+          .insert(oauthAccounts)
+          .values({
+            id: `oauth_${crypto.randomUUID()}`,
+            userId: input.userId,
+            provider: input.provider,
             providerEmail: input.providerEmail,
-            profileImageUrl: sql<string | null>`coalesce(excluded.profile_image_url, ${oauthAccounts.profileImageUrl})`,
+            providerId: input.providerAccountId,
+            profileImageUrl: input.profileImageUrl,
             accessTokenEncrypted: input.encryptedAccessToken,
-            refreshTokenEncrypted: sql<string | null>`coalesce(excluded.refresh_token_encrypted, ${oauthAccounts.refreshTokenEncrypted})`,
+            refreshTokenEncrypted: input.encryptedRefreshToken,
             tokenExpiry: input.expiresAt,
             scope: grantedScopes.join(" "),
             updatedAt: now,
-          },
-        })
-        .run();
+          })
+          .onConflictDoUpdate({
+            target: [
+              oauthAccounts.userId,
+              oauthAccounts.provider,
+              oauthAccounts.providerId,
+            ],
+            set: {
+              providerEmail: input.providerEmail,
+              profileImageUrl: sql<string | null>`coalesce(excluded.profile_image_url, ${oauthAccounts.profileImageUrl})`,
+              accessTokenEncrypted: input.encryptedAccessToken,
+              refreshTokenEncrypted: sql<string | null>`coalesce(excluded.refresh_token_encrypted, ${oauthAccounts.refreshTokenEncrypted})`,
+              tokenExpiry: input.expiresAt,
+              scope: grantedScopes.join(" "),
+              updatedAt: now,
+            },
+          })
+          .run();
 
-      const record = db
-        .select()
-        .from(oauthAccounts)
-        .where(
-          and(
-            eq(oauthAccounts.userId, input.userId),
-            eq(oauthAccounts.provider, input.provider),
-            eq(oauthAccounts.providerId, input.providerAccountId),
-          ),
-        )
-        .get();
+        const record = tx
+          .select()
+          .from(oauthAccounts)
+          .where(
+            and(
+              eq(oauthAccounts.userId, input.userId),
+              eq(oauthAccounts.provider, input.provider),
+              eq(oauthAccounts.providerId, input.providerAccountId),
+            ),
+          )
+          .get();
 
-      if (!record) {
-        throw new Error("OAuth account record could not be loaded after upsert");
-      }
+        if (!record) {
+          throw new Error("OAuth account record could not be loaded after upsert");
+        }
 
-      return mapRecord(record);
+        return mapRecord(record);
+      });
     } finally {
       sqlite.close();
     }
