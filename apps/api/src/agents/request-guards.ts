@@ -106,6 +106,9 @@ export class McpRequestLimiter {
   }
 
   acquire(input: { connectionId: string; workspaceId: string; cost: number }): McpRequestLease {
+    if (!Number.isFinite(input.cost) || !Number.isInteger(input.cost) || input.cost <= 0) {
+      throw new RangeError("MCP request cost must be a finite positive integer");
+    }
     const now = this.#now();
     const connectionSweep = this.#sweep(this.#connections, this.#connectionSweepCursor, input.connectionId, now);
     this.#connectionSweepCursor = connectionSweep.cursor;
@@ -174,7 +177,7 @@ export function mcpToolRequestCost(name: string | null): number {
     list_agent_events: 2,
     get_connection_status: 1,
   } as const satisfies Record<OrcaMcpToolName, number>;
-  return name && name in costs ? costs[name as OrcaMcpToolName] : 1;
+  return name !== null && Object.hasOwn(costs, name) ? costs[name as OrcaMcpToolName] : 1;
 }
 
 function typedBoundaryResponse(code: "invalid_request" | "payload_limit" | "rate_limit", message: string, status: 400 | 413 | 429, retryAfterSeconds?: number): Response {

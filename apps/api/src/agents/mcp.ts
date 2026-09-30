@@ -709,10 +709,9 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
         return mcpInvalidRequestResponse("Orca MCP accepts one JSON-RPC request per bounded HTTP request; batches are not supported");
       }
       request = bounded.request;
+      const toolName = requestedToolName(bounded.body);
+      const tool = orcaMcpTools.find((candidate) => candidate.name === toolName);
       if (request.method === "POST") {
-        const body = bounded.body;
-        const name = requestedToolName(body);
-        const tool = orcaMcpTools.find((candidate) => candidate.name === name);
         if (tool?.requiredScopes.length === 1) requiredScopes = [getOAuthScopeForResourceScope(tool.requiredScopes[0]!)];
       }
       const bearerOptions = { verifier, requiredScopes, resourceMetadataUrl };
@@ -723,10 +722,19 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
       try {
         const authInfo = await verifyBearerToken(authorizationHeader || undefined, bearerOptions);
         const authorization = getOrcaAuthorization(authInfo).authorization;
+        if (toolName !== null && !tool) {
+          const body = bounded.body as { id?: unknown; payload?: { id?: unknown } };
+          const id = body.id ?? body.payload?.id;
+          return Response.json({
+            jsonrpc: "2.0",
+            id: typeof id === "string" || typeof id === "number" ? id : null,
+            error: { code: -32602, message: `Tool ${toolName} not found` },
+          });
+        }
         const lease = requestLimiter.acquire({
           connectionId: authorization.connectionId,
           workspaceId: authorization.userId,
-          cost: mcpToolRequestCost(requestedToolName(bounded.body)),
+          cost: mcpToolRequestCost(toolName),
         });
         if (!lease.allowed) return mcpRateLimitResponse(lease.retryAfterSeconds);
         try {
