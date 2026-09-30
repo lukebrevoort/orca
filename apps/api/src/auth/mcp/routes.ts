@@ -1,3 +1,4 @@
+import { readBoundedRequestBody } from "../../request-body.ts";
 import { createHash } from "node:crypto";
 import { and, count, desc, eq, gt, gte, isNull } from "drizzle-orm";
 import type { Context, Hono, MiddlewareHandler } from "hono";
@@ -126,10 +127,8 @@ function oauthError(c: McpContext, status: 400 | 401 | 413 | 429 | 500, error: s
 }
 
 async function readBoundedBody(c: McpContext, maximumBytes: number) {
-  const contentLength = Number(c.req.header("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > maximumBytes) return null;
-  const text = await c.req.text();
-  return new TextEncoder().encode(text).byteLength <= maximumBytes ? text : null;
+  const bytes = await readBoundedRequestBody(c.req.raw, maximumBytes);
+  return bytes === null ? null : new TextDecoder().decode(bytes);
 }
 
 async function readBoundedForm(c: McpContext, maximumBytes: number) {

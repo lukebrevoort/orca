@@ -1,3 +1,4 @@
+import { bodyLimit, ordinaryJsonBodyBytes } from "../request-body.ts";
 import type { Hono } from "hono";
 import { ZodError } from "zod";
 import { destinationRoutingQuerySchema } from "@orca/shared";
@@ -12,7 +13,7 @@ export function registerDestinationRoutes(app: Hono<{
     dbFactory?: typeof createDatabaseClient;
 } = {}) {
     for (const [method, path] of [["put", "/v1/destinations/routing/batch"], ["get", "/v1/destinations"], ["post", "/v1/destinations"], ["get", "/v1/destinations/routing"], ["put", "/v1/destinations/routing"], ["patch", "/v1/destinations/:id"], ["post", "/v1/destinations/:id/retire"]] as const)
-        app[method](path, requireAuth({ dbFactory }), async (c) => {
+        app[method](path, requireAuth({ dbFactory }), bodyLimit({ maxSize: ordinaryJsonBodyBytes }), async (c) => {
             const { db, sqlite } = dbFactory();
             try {
                 const service = createDestinations(db, c.get("auth").userId);

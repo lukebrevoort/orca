@@ -1,3 +1,4 @@
+import { bodyLimit, ordinaryJsonBodyBytes } from "../request-body.ts";
 import type { Hono } from "hono";
 import { ZodError } from "zod";
 import { requireAuth, type AuthVariables } from "../auth/middleware.ts";
@@ -5,7 +6,7 @@ import { createDatabaseClient } from "../db/client.ts";
 import { AttentionPreferencesError, createAttentionPreferences } from "./preferences.ts";
 
 export function registerAttentionPreferencesRoutes(app: Hono<{ Variables: AuthVariables }>, { dbFactory = createDatabaseClient }: { dbFactory?: typeof createDatabaseClient } = {}) {
-  for (const method of ["get", "put"] as const) app[method]("/v1/attention/preferences", requireAuth({ dbFactory }), async c => {
+  for (const method of ["get", "put"] as const) app[method]("/v1/attention/preferences", requireAuth({ dbFactory }), bodyLimit({ maxSize: ordinaryJsonBodyBytes }), async c => {
     const accountId = c.req.query("accountId");
     if (!accountId || accountId.length > 256) return c.json({ error: { message: "Choose an account." } }, 400);
     const client = dbFactory();

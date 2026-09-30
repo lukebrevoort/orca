@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 
 import { Hono } from "hono";
-import { bodyLimit } from "hono/body-limit";
+import { bodyLimit } from "../../request-body.ts";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context, MiddlewareHandler } from "hono";
 import { getConnInfo } from "@hono/node-server/conninfo";
@@ -63,9 +63,6 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
     onError: (c) => error(c, 413, "payload_too_large", "The mobile authorization request is too large"),
   });
   app.use("/start", boundedJsonBody);
-  app.use("/grant", boundedJsonBody);
-  app.use("/cancel", boundedJsonBody);
-  app.use("/restart", boundedJsonBody);
   app.use("/exchange", boundedJsonBody);
 
   app.post("/start", async (c) => {
@@ -137,7 +134,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
     }
   });
 
-  app.post("/grant", cookieAuth, async (c) => {
+  app.post("/grant", cookieAuth, boundedJsonBody, async (c) => {
     if (c.req.header("origin") !== webOrigin) {
       return error(c, 403, "invalid_origin", "The authorization confirmation must come from Orca");
     }
@@ -172,7 +169,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
     }
   });
 
-  app.post("/cancel", cookieAuth, async (c) => {
+  app.post("/cancel", cookieAuth, boundedJsonBody, async (c) => {
     if (c.req.header("origin") !== webOrigin) {
       return error(c, 403, "invalid_origin", "The authorization cancellation must come from Orca");
     }
@@ -204,7 +201,7 @@ export function createMobileAuthApp(options: MobileAuthAppOptions = {}): Hono<{
     }
   });
 
-  app.post("/restart", cookieAuth, async (c) => {
+  app.post("/restart", cookieAuth, boundedJsonBody, async (c) => {
     if (c.req.header("origin") !== webOrigin) {
       return error(c, 403, "invalid_origin", "The authorization restart must come from Orca");
     }
