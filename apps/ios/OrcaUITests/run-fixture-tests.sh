@@ -65,8 +65,8 @@ xcrun simctl ui "$simulator_udid" appearance light
 
 read_only=$(/usr/bin/python3 -c 'import json,sys; print("1" if json.load(open(sys.argv[1])).get("readOnly",False) else "0")' "$connection_file")
 if [[ ${ORCA_UI_TEST_SCOPE:-all} == overscroll ]]; then
-  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles)
-  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles)
+  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == actions ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test10NativeLongPressMovesConversationAndBuildsSenderView -only-testing:OrcaUITests/OrcaUITests/test11NativeSenderMoveRetainsBothConversationsInAllMail)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test10NativeLongPressMovesConversationAndBuildsSenderView -only-testing:OrcaUITests/OrcaUITests/test11NativeSenderMoveRetainsBothConversationsInAllMail)
