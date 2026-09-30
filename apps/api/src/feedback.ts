@@ -4,6 +4,7 @@ import {
   type FeedbackReport,
   type FeedbackSubmissionResult,
 } from "@feedback-kit/core";
+import { readBoundedRequestBody } from "./request-body.ts";
 
 const MAX_FEEDBACK_BODY_BYTES = 40 * 1024 * 1024;
 
@@ -59,14 +60,11 @@ export async function handleFeedbackRequest(
   }
 
   try {
-    const contentLength = Number(request.headers.get("content-length") ?? 0);
-    if (contentLength > MAX_FEEDBACK_BODY_BYTES) {
+    const bytes = await readBoundedRequestBody(request, MAX_FEEDBACK_BODY_BYTES);
+    if (bytes === null) {
       return Response.json({ error: "Feedback payload is too large." }, { status: 413, headers });
     }
-    const body = await request.text();
-    if (Buffer.byteLength(body, "utf8") > MAX_FEEDBACK_BODY_BYTES) {
-      return Response.json({ error: "Feedback payload is too large." }, { status: 413, headers });
-    }
+    const body = new TextDecoder().decode(bytes);
     const validation = validateFeedbackReport(JSON.parse(body));
     if (!validation.ok) {
       return Response.json({ error: validation.error }, { status: 400, headers });

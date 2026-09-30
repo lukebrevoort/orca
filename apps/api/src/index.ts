@@ -11,7 +11,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
-import { bodyLimit } from "hono/body-limit";
+import { bodyLimit, ordinaryJsonBodyBytes, readBoundedRequestBody } from "./request-body.ts";
 import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
@@ -916,7 +916,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
     let body: unknown;
     try {
-      body = await c.req.json();
+      const bytes = await readBoundedRequestBody(c.req.raw, ordinaryJsonBodyBytes);
+      if (bytes === null) return c.json({ error: { code: "payload_limit", message: "Gmail push notification is too large" } }, 413);
+      body = JSON.parse(new TextDecoder().decode(bytes));
     } catch {
       return c.json({ error: { code: "invalid_notification", message: "Gmail push notification was not valid JSON" } }, 400);
     }
@@ -1061,8 +1063,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/agent-events/:id/lifecycle",
-    validator("json", (value, c) => validateJson(c, updateAgentEventLifecycleSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, updateAgentEventLifecycleSchema, value)),
     async (c) => {
       const ownerUserId = c.get("auth").userId;
       const accountId = c.req.query("accountId")?.trim();
@@ -1188,7 +1191,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.patch("/v1/preferences",
+    requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)),
+    validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)),
+    (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const input = c.req.valid("json");
@@ -1254,8 +1262,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/attention/rules/batch",
-    validator("json", (value, c) => validateJson(c, batchSenderAttentionChangeSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, batchSenderAttentionChangeSchema, value)),
     async (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1301,8 +1310,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/attention/rules",
-    validator("json", (value, c) => validateJson(c, createSenderAttentionRuleSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, createSenderAttentionRuleSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1324,8 +1334,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/attention/rules/:id",
-    validator("json", (value, c) => validateJson(c, updateSenderAttentionRuleSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, updateSenderAttentionRuleSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1401,8 +1412,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/classification/overrides",
-    validator("json", (value, c) => validateJson(c, createHumanClassificationOverrideSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, createHumanClassificationOverrideSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1435,9 +1447,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/classification/overrides/:id",
+    requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
     validator("query", (value, c) => validateJson(c, deleteHumanClassificationOverrideSchema, value)),
     validator("json", (value, c) => validateJson(c, updateHumanClassificationOverrideSchema, value)),
-    requireAuth({ dbFactory }),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1512,8 +1525,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/attention/view-settings/:behavior",
-    validator("json", (value, c) => validateJson(c, updateAttentionViewSettingSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, updateAttentionViewSettingSchema, value)),
     (c) => {
       const behavior = attentionBehaviorSchema.safeParse(c.req.param("behavior"));
       if (!behavior.success) return c.json({ error: { code: "validation_error", message: "Unknown attention behavior" } }, 400);
@@ -1574,8 +1588,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/gmail-label-migration/import",
-    validator("json", (value, c) => validateJson(c, importGmailLabelsSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, importGmailLabelsSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1643,8 +1658,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/collections",
-    validator("json", (value, c) => validateJson(c, createCollectionSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, createCollectionSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1676,8 +1692,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/collections/:id",
-    validator("json", (value, c) => validateJson(c, updateCollectionSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, updateCollectionSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1797,8 +1814,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/pins",
-    validator("json", (value, c) => validateJson(c, createPinSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, createPinSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1846,8 +1864,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/pins/:id",
-    validator("json", (value, c) => validateJson(c, updatePinSchema, value)),
     requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, updatePinSchema, value)),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
@@ -1906,7 +1925,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/reminders/view-settings", validator("json", (value, c) => validateJson(c, reminderViewSettingsSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.patch("/v1/reminders/view-settings",
+    requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, reminderViewSettingsSchema, value)),
+    (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
@@ -1929,7 +1952,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/reminders", validator("json", (value, c) => validateJson(c, createReminderSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.post("/v1/reminders",
+    requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, createReminderSchema, value)),
+    (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
@@ -1947,7 +1974,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/reminders/:id", validator("json", (value, c) => validateJson(c, updateReminderSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.patch("/v1/reminders/:id",
+    requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
+    validator("json", (value, c) => validateJson(c, updateReminderSchema, value)),
+    (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
@@ -2335,6 +2366,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post(
     "/v1/threads/:threadId/reply-brief",
+    requireAuth({ dbFactory }),
+    bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
     validator("query", (value, c) => {
       const result = threadQuerySchema.safeParse(value);
       if (!result.success) return c.json({ error: { code: "validation_error", message: "An accountId is required to request reply guidance" } }, 400);
@@ -2345,7 +2378,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!result.success) return c.json({ error: { code: "validation_error", message: "Reply guidance requires an explicit, scoped user request" } }, 400);
       return result.data;
     }),
-    requireAuth({ dbFactory }),
     async (c) => {
       const request = c.req.valid("json");
       const accountId = c.req.valid("query").accountId;

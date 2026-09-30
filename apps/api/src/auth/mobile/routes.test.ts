@@ -298,10 +298,10 @@ describe("mobile native authentication", () => {
     });
     expect(oversized.status).toBe(413);
 
-    for (const route of ["grant", "exchange"]) {
+    for (const route of ["grant", "cancel", "restart", "exchange"]) {
       const response = await fixture.app.request(`/v1/mobile/auth/${route}`, {
         method: "POST",
-        headers: { "content-type": "application/json", "content-length": "5000" },
+        headers: { "content-type": "application/json", "content-length": "5000", cookie: fixture.user1Cookie },
         body: "x".repeat(5000),
       });
       expect(response.status).toBe(413);

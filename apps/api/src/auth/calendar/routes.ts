@@ -1,3 +1,4 @@
+import { bodyLimit, ordinaryJsonBodyBytes } from "../../request-body.ts";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
@@ -74,10 +75,10 @@ export function createCalendarApp(options: Options = {}) {
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/calendar/preferences", validator("json", (value, c) => {
+  app.patch("/v1/calendar/preferences", auth, bodyLimit({ maxSize: ordinaryJsonBodyBytes }), validator("json", (value, c) => {
     const parsed = updateCalendarPreferencesSchema.safeParse(value);
     return parsed.success ? parsed.data : c.json({ error: { code: "invalid_request", message: "Invalid calendar preferences" } }, 400);
-  }), auth, (c) => {
+  }), (c) => {
     const input = c.req.valid("json");
     const { db, sqlite } = dbFactory();
     try {
@@ -146,10 +147,10 @@ export function createCalendarApp(options: Options = {}) {
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/calendar/calendars/selection", validator("json", (value, c) => {
+  app.patch("/v1/calendar/calendars/selection", auth, bodyLimit({ maxSize: ordinaryJsonBodyBytes }), validator("json", (value, c) => {
     const parsed = updateCalendarSelectionSchema.safeParse(value);
     return parsed.success ? parsed.data : c.json({ error: { code: "invalid_request", message: "Invalid calendar selection" } }, 400);
-  }), auth, (c) => {
+  }), (c) => {
     const input = c.req.valid("json");
     const { db, sqlite } = dbFactory();
     try {
@@ -166,10 +167,10 @@ export function createCalendarApp(options: Options = {}) {
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/calendar/availability", validator("json", (value, c) => {
+  app.post("/v1/calendar/availability", auth, bodyLimit({ maxSize: ordinaryJsonBodyBytes }), validator("json", (value, c) => {
     const parsed = calendarAvailabilityRequestSchema.safeParse(value);
     return parsed.success ? parsed.data : c.json({ error: { code: "invalid_request", message: "Invalid availability request" } }, 400);
-  }), auth, async (c) => {
+  }), async (c) => {
     return c.json(await resolver.resolve({ userId: c.get("auth").userId, request: c.req.valid("json") }));
   });
 

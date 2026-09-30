@@ -1,3 +1,4 @@
+import { bodyLimit, ordinaryJsonBodyBytes } from "../request-body.ts";
 import type { Hono } from "hono";
 import { ZodError } from "zod";
 import { attentionRoutingQuerySchema, attentionSenderLookupQuerySchema, attentionSenderLookupResultSchema } from "@orca/shared";
@@ -32,7 +33,7 @@ export function registerAttentionRoutingRoutes(app: Hono<{ Variables: AuthVariab
       throw error;
     } finally { client.sqlite.close(); }
   });
-  for (const method of ["get", "put"] as const) app[method]("/v1/attention/routing", requireAuth({ dbFactory }), async c => {
+  for (const method of ["get", "put"] as const) app[method]("/v1/attention/routing", requireAuth({ dbFactory }), bodyLimit({ maxSize: ordinaryJsonBodyBytes }), async c => {
     const client = dbFactory();
     try {
       const query = attentionRoutingQuerySchema.parse(c.req.query());
