@@ -1,3 +1,4 @@
+import { InMemoryMailOAuthTransactionStore } from "../mail-oauth-transactions.ts";
 import { createHmac } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,7 +12,7 @@ import type { AuthVariables } from "../middleware.ts";
 import type { GmailOAuthConfig } from "./config.ts";
 import { decryptSecret, encryptSecret } from "./crypto.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { oauthAccounts, users } from "../../db/schema.ts";
+import { oauthAccounts, sessions, users } from "../../db/schema.ts";
 import { DatabaseOAuthAccountStore, InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
 import { createGmailOAuthService } from "./oauth.ts";
 import { createGmailAuthApp, redirectReturningUserToWorkspace } from "./routes.ts";
@@ -45,10 +46,10 @@ const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = async (c
 
 describe("Gmail auth routes", () => {
   test("publishes a safe sign-in availability contract without configuration identifiers", async () => {
-    const ready = await createGmailAuthApp({ authMiddleware, config, store: new InMemoryOAuthAccountStore() }).request("/status");
+    const ready = await createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(), authMiddleware, config, store: new InMemoryOAuthAccountStore() }).request("/status");
     expect(await ready.json()).toEqual({ provider: "gmail", available: true, reason: null });
 
-    const unavailableApp = createGmailAuthApp({
+    const unavailableApp = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config: { ...config, clientId: "", clientSecret: "", stateSecret: "" },
       store: new InMemoryOAuthAccountStore(),
@@ -70,7 +71,7 @@ describe("Gmail auth routes", () => {
   });
 
   test("sanitizes callback failures when no browser redirect is configured", async () => {
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config: { ...config, errorRedirectUrl: null },
       store: new InMemoryOAuthAccountStore(),
@@ -101,7 +102,7 @@ describe("Gmail auth routes", () => {
   });
 
   test("connect returns a Google authorization URL", async () => {
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config,
       store: new InMemoryOAuthAccountStore(),
@@ -135,12 +136,13 @@ describe("Gmail auth routes", () => {
     const initialClient = createDatabaseClient(dbPath);
     migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
     initialClient.db.insert(users).values({ id: "user_1", email: "owner@example.com" }).run();
+    initialClient.db.insert(sessions).values({ id: "session_1", userId: "user_1", expiresAt: new Date(Date.now() + 3600_000) }).run();
     initialClient.sqlite.close();
 
     let identity = 0;
     try {
       const dbFactory = () => createDatabaseClient(dbPath);
-      const app = createGmailAuthApp({
+      const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
         authMiddleware,
         config,
         dbFactory,
@@ -179,7 +181,7 @@ describe("Gmail auth routes", () => {
       userId: "user_1", provider: "gmail", providerAccountId: "google-user-2", providerEmail: "work@gmail.com",
       grantedScopes: config.scopes, encryptedAccessToken: "work-access", encryptedRefreshToken: "work-refresh", expiresAt: null,
     });
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config,
       store,
@@ -211,7 +213,7 @@ describe("Gmail auth routes", () => {
 
     try {
       const dbFactory = () => createDatabaseClient(dbPath);
-      const app = createGmailAuthApp({
+      const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
         config,
         dbFactory,
         fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
@@ -259,31 +261,13 @@ describe("Gmail auth routes", () => {
     }
   });
 
-  test("accepts a pre-marker OAuth state during a rolling deployment", async () => {
+  test("rejects legacy signed state even with a valid server signature", async () => {
     const store = new InMemoryOAuthAccountStore();
-    const service = createGmailOAuthService({
-      config,
-      store,
-      fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
-        ? Response.json({ access_token: "legacy-access-token", scope: config.scopes.join(" ") })
-        : Response.json({ id: "legacy-google-user", email: "legacy@example.com" }),
-    });
-    const currentState = service.getAuthorizationUrl("http://localhost:5173/onboarding", "connect", null, true).state;
-    const encodedPayload = currentState.split(".")[0]!;
-    const legacyPayload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as Record<string, unknown>;
-    delete legacyPayload.initialLogin;
-    const legacyState = signTestState(legacyPayload, config.stateSecret);
-
-    const result = await service.handleCallback(
-      new URLSearchParams({ code: "legacy-code", state: legacyState }),
-      "user_1",
-    );
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.initialLogin).toBe(true);
-      expect(result.redirectUrl).toContain("/onboarding");
-    }
+    const service = createGmailOAuthService({ config, store, transactions: new InMemoryMailOAuthTransactionStore(), fetch: async () => { throw new Error("must not fetch"); } });
+    const legacyState = signTestState({ nonce: "legacy", issuedAt: new Date().toISOString(), returnTo: "http://localhost:5173/onboarding", intent: "connect", accountId: null }, config.stateSecret);
+    const result = await service.handleCallback(new URLSearchParams({ code: "legacy-code", state: legacyState }), { userId: "user_1", sessionId: "session_1" });
+    expect(result).toMatchObject({ ok: false, code: "invalid_state" });
+    expect(store.getAll()).toHaveLength(0);
   });
 
   test("merges returning users onto the existing account and rotates a usable session", async () => {
@@ -314,7 +298,7 @@ describe("Gmail auth routes", () => {
 
     try {
       const dbFactory = () => createDatabaseClient(dbPath);
-      const authApp = createGmailAuthApp({
+      const authApp = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
         config,
         dbFactory,
         fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
@@ -383,7 +367,7 @@ describe("Gmail auth routes", () => {
 
   test("callback exchanges code, encrypts tokens, and upserts an oauth account record", async () => {
     const store = new InMemoryOAuthAccountStore();
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config,
       store,
@@ -451,7 +435,7 @@ describe("Gmail auth routes", () => {
   });
 
   test("callback ignores cross-origin returnTo values and falls back to the configured redirect", async () => {
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config,
       store: new InMemoryOAuthAccountStore(),
@@ -494,7 +478,7 @@ describe("Gmail auth routes", () => {
   });
 
   test("callback redirects with a clear error state when Google denies access", async () => {
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware,
       config,
       store: new InMemoryOAuthAccountStore(),
@@ -519,7 +503,7 @@ describe("Gmail auth routes", () => {
   test("upgrade requests only gmail.compose and identifies the existing account", async () => {
     const store = new InMemoryOAuthAccountStore();
     const existing = await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({ authMiddleware, config, store });
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(), authMiddleware, config, store });
 
     const response = await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2F%3Fcompose%3D1");
     expect(response.status).toBe(200);
@@ -534,7 +518,7 @@ describe("Gmail auth routes", () => {
   test("denied upgrade leaves the existing read-only grant untouched", async () => {
     const store = new InMemoryOAuthAccountStore();
     const existing = await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({ authMiddleware, config, store });
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(), authMiddleware, config, store });
     const connect = await (await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2F%3Fcompose%3D1")).json() as { state: string };
     const response = await app.request(`/callback?error=access_denied&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
 
@@ -545,7 +529,7 @@ describe("Gmail auth routes", () => {
   test("upgrade rejects a different Google account without creating or replacing a connection", async () => {
     const store = new InMemoryOAuthAccountStore();
     const existing = await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware, config, store,
       fetch: async (input) => input.toString().includes("token")
         ? Response.json({ access_token: "compose-access", scope: config.composeScopes.join(" ") })
@@ -561,7 +545,7 @@ describe("Gmail auth routes", () => {
   test("successful upgrade merges capabilities and preserves the refresh grant", async () => {
     const store = new InMemoryOAuthAccountStore();
     const existing = await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware, config, store,
       fetch: async (input) => input.toString().includes("token")
         ? Response.json({ access_token: "compose-access", scope: [...config.scopes, ...config.composeScopes].join(" ") })
@@ -582,7 +566,7 @@ describe("Gmail auth routes", () => {
   test("treats granular consent without gmail.compose as a recoverable denial", async () => {
     const store = new InMemoryOAuthAccountStore();
     const existing = await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware, config, store,
       fetch: async (input) => input.toString().includes("token")
         ? Response.json({ access_token: "read-access", scope: config.scopes.join(" ") })
@@ -599,7 +583,7 @@ describe("Gmail auth routes", () => {
   test("trusts Google's returned scope set when an upgrade changes the current grant", async () => {
     const store = new InMemoryOAuthAccountStore();
     await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware, config, store,
       fetch: async (input) => input.toString().includes("token")
         ? Response.json({ access_token: "compose-only-access", scope: config.composeScopes.join(" ") })
@@ -614,7 +598,7 @@ describe("Gmail auth routes", () => {
   test("falls back to existing plus requested scopes when Google omits scope", async () => {
     const store = new InMemoryOAuthAccountStore();
     await seedReadOnlyAccount(store);
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware, config, store,
       fetch: async (input) => input.toString().includes("token")
         ? Response.json({ access_token: "scope-omitted-access" })
@@ -634,7 +618,7 @@ describe("Gmail auth routes", () => {
       userId: "user_1", provider: "gmail", providerAccountId: "google-user-2", providerEmail: "work@gmail.com",
       grantedScopes: config.scopes, encryptedAccessToken: "work-access", encryptedRefreshToken: "work-refresh", expiresAt: null,
     });
-    const app = createGmailAuthApp({ authMiddleware, config, store });
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(), authMiddleware, config, store });
     const response = await app.request(`/upgrade?accountId=${encodeURIComponent(second.id)}`);
     const body = await response.json() as { accountId: string };
 
@@ -642,11 +626,11 @@ describe("Gmail auth routes", () => {
     expect((await app.request("/upgrade?accountId=someone-elses-account")).status).toBe(404);
   });
 
-  test("a replayed callback cannot mutate the account after Google rejects the used code", async () => {
+  test("a replayed callback is rejected before another token exchange", async () => {
     const store = new InMemoryOAuthAccountStore();
     await seedReadOnlyAccount(store);
     let tokenCalls = 0;
-    const app = createGmailAuthApp({
+    const app = createGmailAuthApp({ transactions: new InMemoryMailOAuthTransactionStore(),
       authMiddleware, config, store,
       fetch: async (input) => {
         if (input.toString().includes("token")) {
@@ -662,7 +646,8 @@ describe("Gmail auth routes", () => {
     const callback = `/callback?code=one-time-code&state=${encodeURIComponent(connect.state)}`;
     expect((await app.request(callback, { redirect: "manual" })).headers.get("location")).toContain("status=success");
     const afterSuccess = store.getAll()[0];
-    expect((await app.request(callback, { redirect: "manual" })).headers.get("location")).toContain("reason=token_exchange_failed");
+    expect((await app.request(callback, { redirect: "manual" })).headers.get("location")).toContain("reason=invalid_state");
+    expect(tokenCalls).toBe(1);
     expect(store.getAll()[0]).toEqual(afterSuccess);
   });
 });

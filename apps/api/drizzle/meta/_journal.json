@@ -351,6 +351,13 @@
       "when": 1790121600000,
       "tag": "0049_mobile_push_destinations",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790208000000,
+      "tag": "0050_mail_oauth_transactions",
+      "breakpoints": true
     }
   ]
 }
