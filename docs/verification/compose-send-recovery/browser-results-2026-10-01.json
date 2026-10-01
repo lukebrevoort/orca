@@ -1,0 +1,812 @@
+{
+  "startedAt": "2026-10-01T14:47:59.695Z",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "syntheticOnly": true,
+  "browserVersion": "151.0.7922.34",
+  "fixtureOrigin": "http://127.0.0.1:54434",
+  "scenarios": [
+    {
+      "theme": "light",
+      "name": "new-compose-reload-recipients-attachment-removal-double-send",
+      "status": "passed",
+      "account": "first",
+      "draftId": "7c09a91e-9d7d-461f-b720-5082f39d7f65"
+    },
+    {
+      "theme": "light",
+      "name": "second-account-reply-double-send",
+      "status": "passed",
+      "account": "second",
+      "draftId": "10856ef3-57b0-49f2-941e-ff6e1673f197"
+    },
+    {
+      "theme": "light",
+      "name": "invalid-pending-recipient-no-dispatch",
+      "status": "passed"
+    },
+    {
+      "theme": "light",
+      "name": "conflict-copy-latest-writing-removed-attachment-original-preserved",
+      "status": "passed",
+      "originalId": "cad10021-5bf5-4ce2-b56c-fbb57e1aa17c",
+      "copyId": "c0137ade-25c9-4a5c-9337-8efb3f5b8b04"
+    },
+    {
+      "theme": "light",
+      "name": "uncertain-delivery-retains-content-replay-no-provider-repeat",
+      "status": "passed",
+      "draftId": "81c615aa-4180-48a0-9fc5-206ab7055f7a"
+    },
+    {
+      "theme": "dark",
+      "name": "new-compose-reload-recipients-attachment-removal-double-send",
+      "status": "passed",
+      "account": "first",
+      "draftId": "39bb0895-5bc6-4f89-b1f3-9f94886782c4"
+    },
+    {
+      "theme": "dark",
+      "name": "second-account-reply-double-send",
+      "status": "passed",
+      "account": "second",
+      "draftId": "a658f091-60ce-47df-8940-d4f8d75ede4a"
+    },
+    {
+      "theme": "dark",
+      "name": "invalid-pending-recipient-no-dispatch",
+      "status": "passed"
+    },
+    {
+      "theme": "dark",
+      "name": "conflict-copy-latest-writing-removed-attachment-original-preserved",
+      "status": "passed",
+      "originalId": "992bd68c-7fe9-400e-8e9c-5faa41f20509",
+      "copyId": "cc503823-7b64-4887-a8f0-f9b263962708"
+    },
+    {
+      "theme": "dark",
+      "name": "uncertain-delivery-retains-content-replay-no-provider-repeat",
+      "status": "passed",
+      "draftId": "4550cc8e-c563-4957-b696-4e3484fe471e"
+    }
+  ],
+  "requests": [
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser light 1790866080159 new\",\"body\":{\"text\":\"First line\\n\\nSecond line with exact words.\",\"html\":null},\"context\":null,\"attachments\":[]}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts/7c09a91e-9d7d-461f-b720-5082f39d7f65",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts/7c09a91e-9d7d-461f-b720-5082f39d7f65",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/7c09a91e-9d7d-461f-b720-5082f39d7f65",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[{\"name\":null,\"email\":\"cc@example.com\"}],\"bcc\":[{\"name\":null,\"email\":\"bcc@example.com\"}],\"subject\":\"Browser light 1790866080159 new\",\"body\":{\"text\":\"First line\\n\\nSecond line with exact words.\",\"html\":null},\"context\":null,\"attachments\":[{\"id\":\"a9411185-4c79-49b0-965e-f2311d910f75\",\"filename\":\"keep.txt\",\"mimeType\":\"text/plain\",\"size\":10,\"contentBase64\":\"a2VlcCBieXRlcw==\"}]}"
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts/7c09a91e-9d7d-461f-b720-5082f39d7f65/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":1,\"idempotencyKey\":\"f9d19e81-430a-42cd-8d75-8fc49eb472cb\"}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=second",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=second",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Re: second account conversation\",\"body\":{\"text\":\"Browser light 1790866080159 second account reply\\n\\nExactly once.\",\"html\":null},\"context\":{\"kind\":\"reply\",\"threadId\":\"second-thread\",\"messageId\":\"second-message\",\"providerMessageId\":\"second-provider-message\",\"providerThreadId\":\"second-provider-thread\",\"inReplyTo\":\"<second@example.com>\",\"references\":[]},\"attachments\":[]}"
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts/10856ef3-57b0-49f2-941e-ff6e1673f197/send",
+      "query": "?accountId=second",
+      "body": "{\"revision\":0,\"idempotencyKey\":\"71475d4b-af2b-41e2-9148-048118f7e77d\"}"
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser light 1790866080159 conflict\",\"body\":{\"text\":\"Before remote conflict.\",\"html\":null},\"context\":null,\"attachments\":[]}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts/cad10021-5bf5-4ce2-b56c-fbb57e1aa17c",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/cad10021-5bf5-4ce2-b56c-fbb57e1aa17c",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser light 1790866080159 conflict\",\"body\":{\"text\":\"Editing triggers revision conflict.\",\"html\":null},\"context\":null}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts/cad10021-5bf5-4ce2-b56c-fbb57e1aa17c",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser light 1790866080159 conflict\",\"body\":{\"text\":\"Writing after conflict.\\n\\nThe latest version survives.\",\"html\":null},\"context\":null,\"attachments\":[{\"id\":\"49e54c66-ad44-4138-a336-24c758f53e49\",\"filename\":\"conflict-keep.txt\",\"mimeType\":\"text/plain\",\"size\":19,\"contentBase64\":\"a2VwdCBjb25mbGljdCBieXRlcw==\"}]}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts/c0137ade-25c9-4a5c-9337-8efb3f5b8b04",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/c0137ade-25c9-4a5c-9337-8efb3f5b8b04",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser light 1790866080159 conflict\",\"body\":{\"text\":\"Writing after conflict.\\n\\nThe latest version survives.\",\"html\":null},\"context\":null}"
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts/c0137ade-25c9-4a5c-9337-8efb3f5b8b04/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":1,\"idempotencyKey\":\"5ff2d004-3d82-490f-9671-1f6d053d7d8b\"}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser light 1790866080159 uncertain\",\"body\":{\"text\":\"Synthetic lost response.\\n\\nDo not deliver twice.\",\"html\":null},\"context\":null,\"attachments\":[]}"
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts/81c615aa-4180-48a0-9fc5-206ab7055f7a/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"idempotencyKey\":\"2727377c-6ffe-445e-aa86-348fc9c40e99\"}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts/81c615aa-4180-48a0-9fc5-206ab7055f7a",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts/81c615aa-4180-48a0-9fc5-206ab7055f7a/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"idempotencyKey\":\"2727377c-6ffe-445e-aa86-348fc9c40e99\"}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser dark 1790866085903 new\",\"body\":{\"text\":\"First line\\n\\nSecond line with exact words.\",\"html\":null},\"context\":null,\"attachments\":[]}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts/39bb0895-5bc6-4f89-b1f3-9f94886782c4",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts/39bb0895-5bc6-4f89-b1f3-9f94886782c4",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/39bb0895-5bc6-4f89-b1f3-9f94886782c4",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[{\"name\":null,\"email\":\"cc@example.com\"}],\"bcc\":[{\"name\":null,\"email\":\"bcc@example.com\"}],\"subject\":\"Browser dark 1790866085903 new\",\"body\":{\"text\":\"First line\\n\\nSecond line with exact words.\",\"html\":null},\"context\":null,\"attachments\":[{\"id\":\"2af1da17-5086-4189-8217-bb05ecfe4849\",\"filename\":\"keep.txt\",\"mimeType\":\"text/plain\",\"size\":10,\"contentBase64\":\"a2VlcCBieXRlcw==\"}]}"
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts/39bb0895-5bc6-4f89-b1f3-9f94886782c4/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":1,\"idempotencyKey\":\"612e30a0-fe3c-4891-b015-c7a25261a9aa\"}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=second",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=second",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Re: second account conversation\",\"body\":{\"text\":\"Browser dark 1790866085903 second account reply\\n\\nExactly once.\",\"html\":null},\"context\":{\"kind\":\"reply\",\"threadId\":\"second-thread\",\"messageId\":\"second-message\",\"providerMessageId\":\"second-provider-message\",\"providerThreadId\":\"second-provider-thread\",\"inReplyTo\":\"<second@example.com>\",\"references\":[]},\"attachments\":[]}"
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts/a658f091-60ce-47df-8940-d4f8d75ede4a/send",
+      "query": "?accountId=second",
+      "body": "{\"revision\":0,\"idempotencyKey\":\"d170f2d1-5f37-4b86-a6a3-d60665902207\"}"
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser dark 1790866085903 conflict\",\"body\":{\"text\":\"Before remote conflict.\",\"html\":null},\"context\":null,\"attachments\":[]}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts/992bd68c-7fe9-400e-8e9c-5faa41f20509",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/992bd68c-7fe9-400e-8e9c-5faa41f20509",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser dark 1790866085903 conflict\",\"body\":{\"text\":\"Editing triggers revision conflict.\",\"html\":null},\"context\":null}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts/992bd68c-7fe9-400e-8e9c-5faa41f20509",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser dark 1790866085903 conflict\",\"body\":{\"text\":\"Writing after conflict.\\n\\nThe latest version survives.\",\"html\":null},\"context\":null,\"attachments\":[{\"id\":\"c01745d2-b30e-4857-9cd1-5035e01622db\",\"filename\":\"conflict-keep.txt\",\"mimeType\":\"text/plain\",\"size\":19,\"contentBase64\":\"a2VwdCBjb25mbGljdCBieXRlcw==\"}]}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts/cc503823-7b64-4887-a8f0-f9b263962708",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/cc503823-7b64-4887-a8f0-f9b263962708",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser dark 1790866085903 conflict\",\"body\":{\"text\":\"Writing after conflict.\\n\\nThe latest version survives.\",\"html\":null},\"context\":null}"
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts/cc503823-7b64-4887-a8f0-f9b263962708/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":1,\"idempotencyKey\":\"1c8d2458-4962-4de9-8ae3-ea992cb3bc75\"}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": "{\"to\":[{\"name\":\"Maya\",\"email\":\"maya@example.com\"}],\"cc\":[],\"bcc\":[],\"subject\":\"Browser dark 1790866085903 uncertain\",\"body\":{\"text\":\"Synthetic lost response.\\n\\nDo not deliver twice.\",\"html\":null},\"context\":null,\"attachments\":[]}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts/4550cc8e-c563-4957-b696-4e3484fe471e/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"idempotencyKey\":\"143e0e0a-51e0-403c-8cb9-7a0f0f0fa54f\"}"
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "path": "/v1/drafts/4550cc8e-c563-4957-b696-4e3484fe471e",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "POST",
+      "path": "/v1/drafts/4550cc8e-c563-4957-b696-4e3484fe471e/send",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"idempotencyKey\":\"143e0e0a-51e0-403c-8cb9-7a0f0f0fa54f\"}"
+    }
+  ],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    {
+      "theme": "light",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    },
+    {
+      "theme": "light",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    },
+    {
+      "theme": "light",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    },
+    {
+      "theme": "dark",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    },
+    {
+      "theme": "dark",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    },
+    {
+      "theme": "dark",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    }
+  ],
+  "deliveries": [
+    {
+      "accountId": "first",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [
+          {
+            "name": null,
+            "email": "cc@example.com"
+          }
+        ],
+        "bcc": [
+          {
+            "name": null,
+            "email": "bcc@example.com"
+          }
+        ],
+        "subject": "Browser light 1790866080159 new",
+        "body": {
+          "text": "First line\n\nSecond line with exact words.",
+          "html": null
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "a9411185-4c79-49b0-965e-f2311d910f75",
+            "filename": "keep.txt",
+            "mimeType": "text/plain",
+            "size": 10,
+            "contentBase64": "a2VlcCBieXRlcw=="
+          }
+        ],
+        "id": "7c09a91e-9d7d-461f-b720-5082f39d7f65",
+        "accountId": "first",
+        "revision": 1,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-7c09a91e-9d7d-461f-b720-5082f39d7f65",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:00.000Z",
+        "updatedAt": "2026-10-01T14:48:02.251Z"
+      }
+    },
+    {
+      "accountId": "second",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [],
+        "bcc": [],
+        "subject": "Re: second account conversation",
+        "body": {
+          "text": "Browser light 1790866080159 second account reply\n\nExactly once.",
+          "html": null
+        },
+        "context": {
+          "kind": "reply",
+          "threadId": "second-thread",
+          "messageId": "second-message",
+          "providerMessageId": "second-provider-message",
+          "providerThreadId": "second-provider-thread",
+          "inReplyTo": "<second@example.com>",
+          "references": []
+        },
+        "attachments": [],
+        "id": "10856ef3-57b0-49f2-941e-ff6e1673f197",
+        "accountId": "second",
+        "revision": 0,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-10856ef3-57b0-49f2-941e-ff6e1673f197",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:02.000Z",
+        "updatedAt": "2026-10-01T14:48:02.469Z"
+      }
+    },
+    {
+      "accountId": "first",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [],
+        "bcc": [],
+        "subject": "Browser light 1790866080159 conflict",
+        "body": {
+          "text": "Writing after conflict.\n\nThe latest version survives.",
+          "html": null
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "49e54c66-ad44-4138-a336-24c758f53e49",
+            "filename": "conflict-keep.txt",
+            "mimeType": "text/plain",
+            "size": 19,
+            "contentBase64": "a2VwdCBjb25mbGljdCBieXRlcw=="
+          }
+        ],
+        "id": "c0137ade-25c9-4a5c-9337-8efb3f5b8b04",
+        "accountId": "first",
+        "revision": 1,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-c0137ade-25c9-4a5c-9337-8efb3f5b8b04",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:04.000Z",
+        "updatedAt": "2026-10-01T14:48:04.925Z"
+      }
+    },
+    {
+      "accountId": "first",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [],
+        "bcc": [],
+        "subject": "Browser light 1790866080159 uncertain",
+        "body": {
+          "text": "Synthetic lost response.\n\nDo not deliver twice.",
+          "html": null
+        },
+        "context": null,
+        "attachments": [],
+        "id": "81c615aa-4180-48a0-9fc5-206ab7055f7a",
+        "accountId": "first",
+        "revision": 0,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-81c615aa-4180-48a0-9fc5-206ab7055f7a",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:05.000Z",
+        "updatedAt": "2026-10-01T14:48:05.300Z"
+      }
+    },
+    {
+      "accountId": "first",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [
+          {
+            "name": null,
+            "email": "cc@example.com"
+          }
+        ],
+        "bcc": [
+          {
+            "name": null,
+            "email": "bcc@example.com"
+          }
+        ],
+        "subject": "Browser dark 1790866085903 new",
+        "body": {
+          "text": "First line\n\nSecond line with exact words.",
+          "html": null
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "2af1da17-5086-4189-8217-bb05ecfe4849",
+            "filename": "keep.txt",
+            "mimeType": "text/plain",
+            "size": 10,
+            "contentBase64": "a2VlcCBieXRlcw=="
+          }
+        ],
+        "id": "39bb0895-5bc6-4f89-b1f3-9f94886782c4",
+        "accountId": "first",
+        "revision": 1,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-39bb0895-5bc6-4f89-b1f3-9f94886782c4",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:06.000Z",
+        "updatedAt": "2026-10-01T14:48:08.046Z"
+      }
+    },
+    {
+      "accountId": "second",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [],
+        "bcc": [],
+        "subject": "Re: second account conversation",
+        "body": {
+          "text": "Browser dark 1790866085903 second account reply\n\nExactly once.",
+          "html": null
+        },
+        "context": {
+          "kind": "reply",
+          "threadId": "second-thread",
+          "messageId": "second-message",
+          "providerMessageId": "second-provider-message",
+          "providerThreadId": "second-provider-thread",
+          "inReplyTo": "<second@example.com>",
+          "references": []
+        },
+        "attachments": [],
+        "id": "a658f091-60ce-47df-8940-d4f8d75ede4a",
+        "accountId": "second",
+        "revision": 0,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-a658f091-60ce-47df-8940-d4f8d75ede4a",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:08.000Z",
+        "updatedAt": "2026-10-01T14:48:08.293Z"
+      }
+    },
+    {
+      "accountId": "first",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [],
+        "bcc": [],
+        "subject": "Browser dark 1790866085903 conflict",
+        "body": {
+          "text": "Writing after conflict.\n\nThe latest version survives.",
+          "html": null
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "c01745d2-b30e-4857-9cd1-5035e01622db",
+            "filename": "conflict-keep.txt",
+            "mimeType": "text/plain",
+            "size": 19,
+            "contentBase64": "a2VwdCBjb25mbGljdCBieXRlcw=="
+          }
+        ],
+        "id": "cc503823-7b64-4887-a8f0-f9b263962708",
+        "accountId": "first",
+        "revision": 1,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-cc503823-7b64-4887-a8f0-f9b263962708",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:10.000Z",
+        "updatedAt": "2026-10-01T14:48:10.745Z"
+      }
+    },
+    {
+      "accountId": "first",
+      "draft": {
+        "to": [
+          {
+            "name": "Maya",
+            "email": "maya@example.com"
+          }
+        ],
+        "cc": [],
+        "bcc": [],
+        "subject": "Browser dark 1790866085903 uncertain",
+        "body": {
+          "text": "Synthetic lost response.\n\nDo not deliver twice.",
+          "html": null
+        },
+        "context": null,
+        "attachments": [],
+        "id": "4550cc8e-c563-4957-b696-4e3484fe471e",
+        "accountId": "first",
+        "revision": 0,
+        "deliveryStatus": "sending",
+        "providerSyncStatus": "synced",
+        "providerSyncError": null,
+        "providerDraftId": "fixture-4550cc8e-c563-4957-b696-4e3484fe471e",
+        "providerMessageId": null,
+        "providerThreadId": null,
+        "createdAt": "2026-10-01T14:48:10.000Z",
+        "updatedAt": "2026-10-01T14:48:11.081Z"
+      }
+    }
+  ],
+  "expectedProviderInvocations": 8,
+  "providerInvocations": 8,
+  "finishedAt": "2026-10-01T14:48:11.341Z",
+  "productionSourceHead": "49cc4322be8e99030c1dbf36650b1aa51aa444f1",
+  "runtimeChanges": "None; added validation harness and evidence only.",
+  "realProviderDeliveryClaimed": false,
+  "limitations": [
+    "Headless Chromium on Mac only; no Safari/Firefox or physical-device claim.",
+    "Provider/OAuth/sync calls replaced by synthetic transport; no real Google consent or delivery.",
+    "Attachments tested in-session after text reload; attachment bytes are not persisted in localStorage.",
+    "Two rapid DOM click commands test duplicate guarding; not physical double-click timing.",
+    "External font CSS blocked by fixture-only network policy; screenshots use fallback fonts.",
+    "No forced interruption during an in-flight send was executed."
+  ],
+  "evidenceHashes": {
+    "evidence/browser/verified-run/results.json": "c6d5675ef03bbbbcc0c6cd5fb9594a3f058fb5d536653cae0bfab063e4088108",
+    "evidence/browser/verified-run.log": "31d08004f2e39a31285abe7d9311630f72cc98d9db59de1389965ef6b05bb7ac",
+    "evidence/browser-build.log": "14bef023fe9a282aae3b21a2581fa5347b5e4c9af8378870bf74dff8e5fff4a7",
+    "orca-native/apps/web/scripts/compose-fixture-e2e.mjs": "258684d27d573087540569d4fc321958a0f6dd6f3f78d18abe093c97acd24e53",
+    "evidence/browser/verified-run/dark-attachment-removed.png": "d5e171d669a8de3b0ff56d80be44b204c2dd6f19141831e7638b97fb1927e8e9",
+    "evidence/browser/verified-run/dark-conflict-latest-writing.png": "75795c4097c252db29f221cc52802b87fb6cfb917baaaf8ae5606ee83ea995fd",
+    "evidence/browser/verified-run/dark-draft-before-reload.png": "826302c4c7cbbf1b430782cd20979a2be56297bae34375fa53bb0f37e388dcc6",
+    "evidence/browser/verified-run/dark-invalid-recipient-retained.png": "5df85629a04fa5f595872e2f4f38a80fb8de204fc9be6afc0d8b863877edb95f",
+    "evidence/browser/verified-run/dark-second-account-reply.png": "2ae124fda06c8c40084e260deac60def08b812e50d6660d9dd2c7602caabc5b9",
+    "evidence/browser/verified-run/dark-uncertain-delivery-retained.png": "06da2463ae3cc49e277b465cc1d9c8d75046862fb67ec4c7e8406b6657b6181f",
+    "evidence/browser/verified-run/light-attachment-removed.png": "952c1e701e17e11be61367037c319e6a719f64e80c90c240832f044cf5c5efd3",
+    "evidence/browser/verified-run/light-conflict-latest-writing.png": "1fc3107db11ec74e8db3e0f7eb5c9b6d33bccfb04679799c90b950510ca3f2be",
+    "evidence/browser/verified-run/light-draft-before-reload.png": "eff4dcd1d08d7659543baccfe67c751a2708aa06b0099162269aad7646c99a30",
+    "evidence/browser/verified-run/light-invalid-recipient-retained.png": "45a520485c8cfffed8cf05f79c3f47e2b25580dd472f2d6c2aa639bd1ec32e65",
+    "evidence/browser/verified-run/light-second-account-reply.png": "a110ef99593e5799e75599b92c20586312a2d08165a606ed7d42f2b924ff78f3",
+    "evidence/browser/verified-run/light-uncertain-delivery-retained.png": "c2b920d8c62c276a7c30a59ae740088b009059b15f6aef3444027e6e2668578d"
+  },
+  "existingVisualFollowup": "Compact toolbar glyphs overlap conflict notice; relevant CSS/markup unchanged from PR base. Recovery controls remain readable and passed. Not fixed in this validation-only follow-up."
+}
