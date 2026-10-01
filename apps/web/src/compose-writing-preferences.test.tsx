@@ -36,7 +36,7 @@ beforeEach(() => {
   accountId = "account-a"; available = []; writes = []; saved = null; enabled = true; initialFields = undefined;
   preferences = { accountId, status: "ready", preferences: { signature: "Best, Alex", composeFormat: "plain", replyBehavior: "reply_all" } };
   globalThis.fetch = (async (path: string, init?: RequestInit) => {
-    if (path.endsWith("/send")) return Response.json({ draftId: saved!.id, status: "sent", providerMessageId: "fake-message", providerThreadId: null, error: null });
+    if (new URL(path, "http://localhost").pathname.endsWith("/send")) return Response.json({ draftId: saved!.id, status: "sent", providerMessageId: "fake-message", providerThreadId: null, error: null });
     if (init?.method === "POST" || init?.method === "PATCH") {
       const body = JSON.parse(String(init.body)); writes.push(body);
       saved = remote({ ...body, revision: (saved?.revision ?? 0) + 1 });

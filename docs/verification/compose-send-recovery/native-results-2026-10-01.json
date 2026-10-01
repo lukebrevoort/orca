@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-01",
+  "originalPRHead": "667faf6831a03e3b7d5634bf8799e593a2541a67",
+  "originalPRTree": "e78f6b718fd33dc0ce5b14a586658db64089b9a8",
+  "xcode": "26.4.1 (17E202)",
+  "device": {
+    "architecture": "arm64",
+    "deviceId": "AB5EF01C-5938-406E-997A-7053E7F07F99",
+    "deviceName": "Orca PR213 Native Validation",
+    "modelName": "iPhone 17 Pro",
+    "osBuildNumber": "23E254a",
+    "osVersion": "26.4.1",
+    "platform": "iOS Simulator"
+  },
+  "builds": {
+    "debugSimulator": "passed",
+    "unsignedReleaseIPhoneSDK": "passed"
+  },
+  "nativeUnitTests": {
+    "passed": 49,
+    "failed": 0,
+    "includesAllNineAddedRegressions": true
+  },
+  "lightUI": {
+    "passed": 6,
+    "failed": 0
+  },
+  "darkUI": {
+    "passed": 6,
+    "failed": 0
+  },
+  "syntheticFixture": {
+    "sendEnabled": true,
+    "accountsUnavailable": false,
+    "sendRequests": 6,
+    "deliveries": 6
+  },
+  "independentReview": "No concrete defects found in native changes or follow-up",
+  "unverified": [
+    "physical-device behavior",
+    "real Google consent/account upgrade",
+    "real Gmail delivery",
+    "forced interruption during an in-flight provider send",
+    "browser E2E"
+  ],
+  "logSHA256": {
+    "native-final-run.log": "83e25d4842320143d9f002db5fdcc764d68701692d87a861fa4b6b6818a5b1bf",
+    "native-release-build.log": "96b47a6b5773a47e818727cc6c40a2d6ede3943aefe85becb9e0a4760b7c3e26",
+    "cold-simulator-boot.log": "3f600956673abf4501b20b0216f5f76a76a87bd5659aeb9b716ad77617ddce58"
+  },
+  "coldSimulatorBoot": "passed: bootstatus -b from Shutdown, completed in 10 seconds"
+}

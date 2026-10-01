@@ -2201,17 +2201,29 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             providerSyncStatus: "synced",
             providerSyncError: null,
             updatedAt: now(),
-          }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision)))
+          }).where(and(
+            eq(messageDrafts.id, draft.id),
+            eq(messageDrafts.revision, revision),
+            eq(messageDrafts.deliveryStatus, "draft"),
+            isNull(messageDrafts.sendIdempotencyKey),
+          ))
             .returning({ id: messageDrafts.id }).get();
           if (!updated) {
             // A newer local revision arrived while the provider was creating the
             // provider draft. Carry that provider ID forward so the next job
             // updates the same provider draft instead of creating an orphan.
+            // A delivery reservation owns the provider message/thread IDs from
+            // that point on, even when this mirror was already in flight.
             db.update(messageDrafts).set({
               providerDraftId: mirrored.providerDraftId,
               providerMessageId: mirrored.providerMessageId ?? null,
               providerThreadId: mirrored.providerThreadId ?? null,
-            }).where(and(eq(messageDrafts.id, draft.id), isNull(messageDrafts.providerDraftId))).run();
+            }).where(and(
+              eq(messageDrafts.id, draft.id),
+              isNull(messageDrafts.providerDraftId),
+              eq(messageDrafts.deliveryStatus, "draft"),
+              isNull(messageDrafts.sendIdempotencyKey),
+            )).run();
           }
         } catch (error) {
           db.update(messageDrafts).set({
@@ -2220,7 +2232,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               ? error.message
               : `${providerDisplayName(account.provider)} could not mirror this draft`,
             updatedAt: now(),
-          }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision))).run();
+          }).where(and(
+            eq(messageDrafts.id, draft.id),
+            eq(messageDrafts.revision, revision),
+            eq(messageDrafts.deliveryStatus, "draft"),
+            isNull(messageDrafts.sendIdempotencyKey),
+          )).run();
         }
         const latest = db.select({
           revision: messageDrafts.revision,

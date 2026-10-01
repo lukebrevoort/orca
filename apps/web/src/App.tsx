@@ -35,7 +35,7 @@ import {
 import { demoStore, demoSessionNotice, evaluateDemoDefinition } from "./demo-store";
 import { AgentEventTimeline, type AgentEventControlAction } from "./agent-event-ui";
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
-import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
+import { collectComposeContacts, draftRequestPath, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { invalidateWritingPreferences, useWritingPreferences } from "./use-writing-preferences";
 import { resolveWritingReplyAction, type WritingPreferenceState } from "./writing-preferences";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
@@ -1764,7 +1764,7 @@ export function InboxApp({
     const controller = new AbortController();
     setDraftsStatus("loading");
     setDraftsError(null);
-    fetchJson("/v1/drafts", draftsResponseSchema, controller.signal)
+    fetchJson(draftRequestPath(account.id), draftsResponseSchema, controller.signal)
       .then((nextDrafts) => {
         if (controller.signal.aborted) return;
         setDrafts(nextDrafts.filter((draft) => draft.deliveryStatus === "draft"));

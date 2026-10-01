@@ -16,7 +16,7 @@ struct DraftsView: View {
                         if !localDrafts.isEmpty { Section { ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: localStatus(draft.deliveryState)) }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } header: { DraftSectionHeader(title: "On this device", scope: "Protected local writing") } }
                         let localServerIDs = Set(localDrafts.compactMap(\.serverID))
                         let cloud = serverDrafts.filter { !localServerIDs.contains($0.id) }
-                        if !cloud.isEmpty { Section { ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: draft.providerSyncStatus == "failed" ? "Provider copy needs attention" : "Saved · revision \(draft.revision)") }.accessibilityIdentifier("draft.\(draft.id)") } } header: { DraftSectionHeader(title: "On server", scope: "Synced with your provider") } }
+                        if !cloud.isEmpty { Section { ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: serverStatus(draft)) }.accessibilityIdentifier("draft.\(draft.id)") } } header: { DraftSectionHeader(title: "On server", scope: "Synced with your provider") } }
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -33,6 +33,12 @@ struct DraftsView: View {
         }
     }
     func localStatus(_ deliveryState: String) -> String { switch deliveryState { case "ambiguous", "sending": "Delivery uncertain — check before retrying"; case "rejected": "Delivery rejected — edit a new copy"; default: "Saved locally" } }
+    func serverStatus(_ draft: MessageDraft) -> String {
+        switch draft.deliveryStatus {
+        case "sending", "ambiguous", "rejected": return localStatus(draft.deliveryStatus)
+        default: return draft.providerSyncStatus == "failed" ? "Provider copy needs attention" : "Saved · revision \(draft.revision)"
+        }
+    }
     func load() async {
         guard let account = state.selectedAccount else { localDrafts = []; serverDrafts = []; return }
         let scope = state.ownerScope, accountID = account.id, client = state.client
