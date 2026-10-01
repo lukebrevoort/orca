@@ -56,6 +56,9 @@ with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
 PY
 
+# Appearance and app-management commands require a booted device. Wait for a
+# fresh simulator to finish booting before running either test appearance.
+xcrun simctl bootstatus "$simulator_udid" -b
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
 result_dir=$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")
 result_bundle="$result_dir/Orca.xcresult"
@@ -65,8 +68,8 @@ xcrun simctl ui "$simulator_udid" appearance light
 
 read_only=$(/usr/bin/python3 -c 'import json,sys; print("1" if json.load(open(sys.argv[1])).get("readOnly",False) else "0")' "$connection_file")
 if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
-  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch)
-  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch)
+  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == overscroll ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)

@@ -208,6 +208,8 @@ struct ComposeView: View {
             .font(OrcaTheme.ui(11, weight: .medium))
             .foregroundStyle(OrcaTheme.muted)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(status)
             .accessibilityIdentifier("compose.save-status")
     }
     private var keepBothButton: some View {
