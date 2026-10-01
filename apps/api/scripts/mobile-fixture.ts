@@ -22,7 +22,7 @@ delete process.env.APNS_KEY_ID;
 delete process.env.APNS_PRIVATE_KEY;
 
 const { createDatabaseClient } = await import("../src/db/client.ts");
-const { users, oauthAccounts, threads, emails, labels, emailLabels } = await import("../src/db/schema.ts");
+const { users, oauthAccounts, threads, emails, labels, emailLabels, messageDrafts } = await import("../src/db/schema.ts");
 const { createMobileSession } = await import("../src/auth/mobile/store.ts");
 const { createDestinations } = await import("../src/destinations/service.ts");
 const { createApp } = await import("../src/index.ts");
@@ -86,12 +86,15 @@ const credential = createMobileSession(db, userId);
 sqlite.close();
 
 const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
+let sendEnabled = !readOnly;
+let accountsUnavailable = false;
+let sendRequests = 0;
 const app = createApp({
   dbFactory: () => createDatabaseClient(),
   providerRegistry: new ProviderRegistry([{
     ...gmailProvider,
     createOAuthApp: () => new Hono<{ Variables: AuthVariables }>(),
-    detectCapabilities: () => ({ read: true, draft: !readOnly, send: !readOnly }),
+    detectCapabilities: () => ({ read: true, draft: sendEnabled, send: sendEnabled }),
     async syncPage() { return { nextCursor: null, emailCount: 0, threadCount: 0, labelCount: 0, contactCount: 0 }; },
     createTransport: () => ({
       async saveDraft(_db, _account, draft) { return { providerDraftId: `fixture-${draft.id}` }; },
@@ -117,6 +120,41 @@ type RefreshGate = {
 let refreshGate: RefreshGate | undefined;
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   const url = new URL(request.url);
+  // Authenticated controls exist only inside this disposable loopback fixture.
+  // They simulate browser consent and another device completing delivery; no
+  // Google/OAuth request, persistent grant, or provider delivery is performed.
+  if (url.pathname.startsWith("/__fixture/compose/")) {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method === "GET" && url.pathname === "/__fixture/compose/state") {
+      return Response.json({ sendEnabled, accountsUnavailable, sendRequests, deliveries: sent.length });
+    }
+    if (request.method !== "POST") return new Response(null, { status: 405 });
+    const raw = await request.text();
+    if (raw.length > 4096) return new Response(null, { status: 413 });
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(raw); if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("object required"); }
+    catch { return new Response(null, { status: 400 }); }
+    if (url.pathname === "/__fixture/compose/capabilities") {
+      if (typeof body.sendEnabled !== "boolean" || typeof body.accountsUnavailable !== "boolean") return new Response(null, { status: 400 });
+      sendEnabled = body.sendEnabled; accountsUnavailable = body.accountsUnavailable;
+      return new Response(null, { status: 204 });
+    }
+    if (url.pathname === "/__fixture/compose/delivery") {
+      if (typeof body.draftId !== "string" || !["sending", "ambiguous", "sent", "rejected"].includes(String(body.status))) return new Response(null, { status: 400 });
+      const { db, sqlite } = createDatabaseClient();
+      try {
+        const record = db.select().from(messageDrafts).where(eq(messageDrafts.id, body.draftId)).get();
+        if (!record || record.accountId !== accountId) return new Response(null, { status: 404 });
+        db.update(messageDrafts).set({ deliveryStatus: String(body.status), sendIdempotencyKey: `fixture-command-${record.id}`, updatedAt: new Date() }).where(eq(messageDrafts.id, record.id)).run();
+        return new Response(null, { status: 204 });
+      } finally { sqlite.close(); }
+    }
+    return new Response(null, { status: 404 });
+  }
+  if (url.pathname === "/v1/accounts" && accountsUnavailable) {
+    return Response.json({ error: { code: "fixture_unavailable", message: "Synthetic account refresh failure" } }, { status: 503 });
+  }
+  if (request.method === "POST" && /^\/v1\/drafts\/[^/]+\/send$/.test(url.pathname)) sendRequests += 1;
   if (url.pathname.startsWith("/__fixture/inbox-refresh/")) {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) {
       return new Response(null, { status: 401 });

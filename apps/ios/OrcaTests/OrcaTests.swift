@@ -155,10 +155,215 @@ final class OrcaTests: XCTestCase {
     func testReadOnlyCapabilityBlocksOnlyNormalSendAndShowsWebRepairPath() {
         let account = MailAccount(id: "gmail", provider: "gmail", email: "me@example.com", displayName: "Me", avatarUrl: nil, capabilities: MailCapabilities(read: true, send: false, draft: false))
         let normal = ComposeView.sendPermissionGate(account: account, deliveryState: "local")
-        XCTAssertTrue(normal.blocksNormalSend); XCTAssertEqual(normal.guidance, "This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then reconnect if prompted. Your draft remains editable.")
+        XCTAssertTrue(normal.blocksNormalSend); XCTAssertEqual(normal.guidance, "This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then return here and refresh sending access. Your draft remains editable.")
         for state in ["sending", "ambiguous", "rejected"] { XCTAssertFalse(ComposeView.sendPermissionGate(account: account, deliveryState: state).blocksNormalSend) }
         var unsupported = account; unsupported.provider = "outlook"
         XCTAssertEqual(ComposeView.sendPermissionGate(account: unsupported, deliveryState: "local").guidance, "Sending is not supported for this provider yet. Your draft remains editable in Orca.")
+    }
+    @MainActor func testCapabilityRefreshUnlocksSendingWithoutReplacingTheSelectedAccount() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { "fixture-token" }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder))
+        state.baseURLText = "https://orca.example"; state.phase = .ready
+        var account = DemoData.accounts[0]; account.capabilities.send = false; account.capabilities.draft = false
+        state.accounts = [account]; state.selectedAccountID = account.id
+        let originalScope = state.ownerScope
+        var upgraded = account; upgraded.capabilities.send = true; upgraded.capabilities.draft = true
+        struct Accounts: Encodable { var items: [MailAccount] }
+        let response = try JSONEncoder().encode(Accounts(items: [upgraded]))
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET"); XCTAssertEqual(request.url?.path, "/v1/accounts")
+            return (200, response)
+        }
+        defer { StubURLProtocol.handler = nil }
+        let refreshed = try await state.refreshAccountCapabilities()
+        XCTAssertTrue(refreshed); XCTAssertEqual(state.selectedAccountID, account.id)
+        XCTAssertEqual(state.ownerScope, originalScope); XCTAssertTrue(state.phase == .ready)
+        XCTAssertEqual(state.selectedAccount?.capabilities.send, true)
+        XCTAssertFalse(ComposeView.sendPermissionGate(account: state.selectedAccount, deliveryState: "local").blocksNormalSend)
+    }
+    @MainActor func testFailedCapabilityRefreshPreservesAccountScopeAndCachedGrants() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder))
+        state.baseURLText = "https://orca.example"; state.phase = .ready; state.accounts = DemoData.accounts
+        state.selectedAccountID = DemoData.accounts[0].id
+        let scope = state.ownerScope
+        defer { StubURLProtocol.handler = nil }
+        for code in [401, 503] {
+            StubURLProtocol.handler = { _ in (code, #"{"error":{"code":"unavailable","message":"Try again"}}"#.data(using: .utf8)!) }
+            do { _ = try await state.refreshAccountCapabilities(); XCTFail("Expected refresh failure") }
+            catch { /* The composer remains available for local writing. */ }
+            XCTAssertEqual(state.accounts, DemoData.accounts)
+            XCTAssertEqual(state.selectedAccountID, DemoData.accounts[0].id)
+            XCTAssertEqual(state.ownerScope, scope); XCTAssertTrue(state.phase == .ready)
+        }
+    }
+    func testServerOriginDeliveryRecoveryUsesOnlyGETWithoutInventingAKey() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        var local = LocalDraft(ownerScope: "origin|user", accountId: "mail-account")
+        local.serverID = "server-draft"; local.serverRevision = 4; local.deliveryState = "ambiguous"
+        let server = MessageDraft(id: "server-draft", accountId: "mail-account", to: [], cc: [], bcc: [], subject: "Safe status check", body: .init(text: "Words", html: nil), context: nil, attachments: [], revision: 4, deliveryStatus: "sent", providerSyncStatus: "synced", providerSyncError: nil, providerDraftId: nil, providerMessageId: "sent-message", providerThreadId: "sent-thread", createdAt: "2026-10-01T12:00:00Z", updatedAt: "2026-10-01T12:00:00Z")
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/drafts/server-draft")
+            XCTAssertEqual(URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first?.value, "mail-account")
+            return (200, try JSONEncoder().encode(server))
+        }
+        defer { StubURLProtocol.handler = nil }
+        let result = try await DraftDeliveryRecovery.check(local, client: client)
+        XCTAssertEqual(result.status, "sent"); XCTAssertEqual(result.providerMessageId, "sent-message")
+        XCTAssertNil(local.idempotencyKey)
+    }
+    func testLocalDeliveryRecoveryReplaysOnlyItsPersistedCommand() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
+        var local = LocalDraft(ownerScope: "origin|user", accountId: "mail-account")
+        local.serverID = "server-draft"; local.serverRevision = 4; local.deliveryState = "ambiguous"; local.idempotencyKey = "persisted-delivery-key"
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST"); XCTAssertEqual(request.url?.path, "/v1/drafts/server-draft/send")
+            let body = try JSONSerialization.jsonObject(with: requestBodyData(request)) as! [String: Any]
+            XCTAssertEqual(body["idempotencyKey"] as? String, "persisted-delivery-key"); XCTAssertEqual(body["revision"] as? Int, 4)
+            return (200, #"{"draftId":"server-draft","status":"ambiguous","providerMessageId":null,"providerThreadId":null,"error":null}"#.data(using: .utf8)!)
+        }
+        defer { StubURLProtocol.handler = nil }
+        let result = try await DraftDeliveryRecovery.check(local, client: client)
+        XCTAssertEqual(result.status, "ambiguous"); XCTAssertEqual(local.idempotencyKey, "persisted-delivery-key")
+    }
+    func testAttachmentCountMatchesServerLimitBeforeReadingFiles() {
+        XCTAssertTrue(ComposeView.acceptsAttachment(existingSize: 24, candidateSize: 1, existingCount: 24))
+        XCTAssertFalse(ComposeView.acceptsAttachment(existingSize: 25, candidateSize: 1, existingCount: 25))
+        XCTAssertFalse(ComposeView.acceptsAttachment(existingSize: 0, candidateSize: 1, existingCount: -1))
+    }
+    @MainActor func testDelayedReconciliationAndAttachmentEditsCannotRestoreEachOthersSnapshots() async throws {
+        // Exercise the production reservation used by Keep both, Edit a new
+        // copy, attachment edits and Send with a deliberately suspended write.
+        for first in [ComposeOperationReservation.Operation.reconciliation, .attachments] {
+            let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: folder) }
+            let store = DraftStore(directory: folder)
+            var local = LocalDraft(ownerScope: "origin|user", accountId: "account")
+            local.serverID = "contested-server-draft"; local.serverRevision = 1
+            local.content.attachments = [.init(id: "x", filename: "x.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")]
+            try await store.save(local)
+            var reservation = ComposeOperationReservation()
+            let started = expectation(description: "First mutation reserved before delayed work")
+            var resume: CheckedContinuation<Void, Never>?
+            let pending = Task { @MainActor in
+                XCTAssertTrue(reservation.reserve(first))
+                defer { reservation.release(first) }
+                var snapshot = local
+                await withCheckedContinuation { continuation in resume = continuation; started.fulfill() }
+                if first == .attachments { snapshot.content.attachments.removeAll() }
+                else { snapshot.serverID = nil; snapshot.serverRevision = nil }
+                try await store.save(snapshot); local = snapshot
+            }
+            await fulfillment(of: [started], timeout: 3)
+            let second: ComposeOperationReservation.Operation = first == .attachments ? .reconciliation : .attachments
+            XCTAssertTrue(reservation.isBusy)
+            XCTAssertFalse(reservation.reserve(second), "The overlapping action must not capture or save a stale draft")
+            XCTAssertFalse(reservation.reserve(.delivery), "Send cannot start while either mutation is pending")
+            XCTAssertFalse(reservation.reserve(first), "Rapid repeat taps cannot start a second mutation")
+            resume?.resume(); try await pending.value
+            XCTAssertFalse(reservation.isBusy)
+
+            // A retry after completion reads the current draft, so both removal
+            // and detachment survive regardless of which action was first.
+            XCTAssertTrue(reservation.reserve(second))
+            var latest = local
+            if second == .attachments { latest.content.attachments.removeAll() }
+            else { latest.serverID = nil; latest.serverRevision = nil }
+            try await store.save(latest); local = latest; reservation.release(second)
+            let saved = await store.all(ownerScope: "origin|user", accountId: "account")
+            XCTAssertTrue(try XCTUnwrap(saved.first).content.attachments.isEmpty)
+            XCTAssertNil(saved.first?.serverID); XCTAssertNil(saved.first?.serverRevision)
+            XCTAssertTrue(reservation.reserve(.delivery)); reservation.release(.delivery)
+        }
+    }
+    @MainActor func testCancelledAutosavesStillDrainInitializationBeforeDelivery() async {
+        var events = [String]()
+        let started = expectation(description: "Initial local write started")
+        var finishInitialWrite: CheckedContinuation<Void, Never>?
+        let initial = ComposeSaveSequencing.enqueue(after: nil, debounce: false, canSave: { true }) {
+            events.append("initial-start")
+            await withCheckedContinuation { continuation in finishInitialWrite = continuation; started.fulfill() }
+            events.append("initial-finish")
+        }
+        await fulfillment(of: [started], timeout: 3)
+        let debounce = ComposeSaveSequencing.enqueue(after: initial, debounce: true, canSave: { true }) { events.append("cancelled-debounce-write") }
+        let latest = ComposeSaveSequencing.enqueue(after: debounce, debounce: true, canSave: { true }) { events.append("cancelled-latest-write") }
+        latest.cancel()
+        var checkingForEarlyDelivery = true
+        let earlyDelivery = expectation(description: "Delivery must wait for the oldest in-flight write")
+        earlyDelivery.isInverted = true
+        let delivery = Task { @MainActor in
+            await latest.value
+            if checkingForEarlyDelivery { earlyDelivery.fulfill() }
+            events.append("delivery-can-start")
+        }
+        await fulfillment(of: [earlyDelivery], timeout: 0.1)
+        checkingForEarlyDelivery = false
+        XCTAssertEqual(events, ["initial-start"])
+        finishInitialWrite?.resume(); await delivery.value
+        XCTAssertEqual(events, ["initial-start", "initial-finish", "delivery-can-start"])
+    }
+    @MainActor func testKeepBothCheckpointsLatestWordsBeforeStalledOrFailedRemoteCheck() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = DraftStore(directory: folder)
+        var draft = LocalDraft(ownerScope: "origin|user", accountId: "account")
+        draft.serverID = "contested-server-draft"; draft.serverRevision = 1
+        draft.content.body.text = "Previously saved words"; try await store.save(draft)
+        draft.content.body.text = "Latest visible words typed before the debounce"
+        draft.content.subject = "Latest subject"
+        draft.recipientText = .init(to: "maya@example.com", cc: "unfinished", bcc: "")
+        let current = draft
+        let remoteStarted = expectation(description: "Remote check starts after durable checkpoint")
+        var finishRemote: CheckedContinuation<MessageDraft, Error>?
+        let pending = Task { @MainActor in
+            try await ComposeReconciliationCheckpoint.loadRemote(afterCheckpointing: current, store: store) {
+                try await withCheckedThrowingContinuation { continuation in finishRemote = continuation; remoteStarted.fulfill() }
+            }
+        }
+        await fulfillment(of: [remoteStarted], timeout: 3)
+        // Reopen the actual persisted file while the remote request is still
+        // stalled, modelling the data available after background termination.
+        let reopened = await DraftStore(directory: folder).all(ownerScope: "origin|user", accountId: "account")
+        XCTAssertEqual(reopened.first?.content.body.text, current.content.body.text)
+        XCTAssertEqual(reopened.first?.content.subject, current.content.subject)
+        XCTAssertEqual(reopened.first?.recipientText, current.recipientText)
+        XCTAssertEqual(reopened.first?.serverID, "contested-server-draft")
+        XCTAssertEqual(reopened.first?.serverRevision, 1, "Checkpointing must not detach the contested draft")
+        finishRemote?.resume(throwing: URLError(.timedOut))
+        do { _ = try await pending.value; XCTFail("Expected the delayed remote check to fail") }
+        catch { XCTAssertEqual((error as? URLError)?.code, .timedOut) }
+        let afterFailure = await DraftStore(directory: folder).all(ownerScope: "origin|user", accountId: "account")
+        XCTAssertEqual(afterFailure.first?.content.body.text, current.content.body.text)
+        XCTAssertEqual(afterFailure.first?.serverID, "contested-server-draft")
+        XCTAssertNil(afterFailure.first?.idempotencyKey)
+    }
+    @MainActor func testFailedKeepBothCheckpointNeverStartsRemoteVerification() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let original = Data("preserve-corrupt-file".utf8), file = folder.appending(path: "drafts.json")
+        try original.write(to: file)
+        let store = DraftStore(directory: folder)
+        var remoteWasCalled = false
+        do {
+            _ = try await ComposeReconciliationCheckpoint.loadRemote(afterCheckpointing: LocalDraft(ownerScope: "origin|user", accountId: "account"), store: store) {
+                remoteWasCalled = true; throw URLError(.timedOut)
+            }
+            XCTFail("Expected local checkpoint failure")
+        } catch is ComposeReconciliationCheckpoint.Failure { /* Fail closed before remote work. */ }
+        catch { XCTFail("Expected a classified local checkpoint failure, got \(error)") }
+        XCTAssertFalse(remoteWasCalled)
+        XCTAssertEqual(try Data(contentsOf: file), original)
     }
     func testKeepBothRequiresUnreservedLocalAndRemoteDrafts() {
         XCTAssertTrue(ComposeView.canKeepBoth(remoteDeliveryStatus: "draft", localDeliveryState: "local", hasDeliveryKey: false))

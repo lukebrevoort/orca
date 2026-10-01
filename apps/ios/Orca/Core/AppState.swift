@@ -17,6 +17,7 @@ import SwiftUI
     @Published var errorMessage: String?
     @Published var selectedTab = "inbox"
     private var connectionGeneration = UUID()
+    private var accountRefreshGeneration = UUID()
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()
     let draftStore = DraftStore()
@@ -76,6 +77,23 @@ import SwiftUI
             else { phase = .signedOut }
             errorMessage = "You’re offline. Cached mail and local drafts remain available."
         }
+    }
+    /// Refresh grants without replacing the current identity, navigation, or
+    /// cached accounts when the device is offline or its session has expired.
+    @discardableResult func refreshAccountCapabilities() async throws -> Bool {
+        guard !demoMode, phase == .ready, let client else { return false }
+        let generation = connectionGeneration, scope = ownerScope
+        accountRefreshGeneration = UUID(); let refreshGeneration = accountRefreshGeneration
+        let loaded = try await client.accounts()
+        guard !Task.isCancelled, phase == .ready, generation == connectionGeneration,
+              refreshGeneration == accountRefreshGeneration, scope == ownerScope,
+              self.client === client else { return false }
+        accounts = loaded
+        // A composer keeps its original account even if it was disconnected.
+        // Only list navigation falls back to another currently owned account.
+        if !accounts.contains(where: { $0.id == selectedAccountID }) { selectedAccountID = accounts.first?.id }
+        try? await cache.save(loaded, key: "\(scope)|accounts")
+        return true
     }
     @discardableResult func logout() async -> Bool {
         if let client {

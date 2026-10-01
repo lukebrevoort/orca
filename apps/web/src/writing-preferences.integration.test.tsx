@@ -36,7 +36,7 @@ beforeEach(() => {
       if (delayPreferences) await new Promise<void>(resolve => { releasePreferences = resolve; });
       return Response.json({ signature: "Best, Luke", composeFormat: "plain", replyBehavior: "reply_all", notifyByDefault: false });
     }
-    if (String(path) === "/v1/drafts" && !init?.method) return Response.json([]);
+    if (new URL(String(path), "http://localhost").pathname === "/v1/drafts" && !init?.method) return Response.json([]);
     if (init?.method === "POST" || init?.method === "PATCH") {
       const body = JSON.parse(String(init.body)); writes.push(body);
       return Response.json({ ...body, id: "saved", accountId: account.id, revision: 1, attachments: [], deliveryStatus: "draft", providerSyncStatus: "synced", providerSyncError: null, providerDraftId: null, providerMessageId: null, providerThreadId: null, createdAt: source.receivedAt, updatedAt: source.receivedAt });

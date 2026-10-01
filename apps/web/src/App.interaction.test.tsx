@@ -2197,7 +2197,7 @@ describe("Drafts mailbox", () => {
       await act(async () => {
         await new Promise<void>((resolve) => setTimeout(resolve, 500));
       });
-      expect(pendingRequests.map((request) => request.url)).toEqual(["/v1/drafts/draft-a"]);
+      expect(pendingRequests.map((request) => request.url)).toEqual(["/v1/drafts/draft-a?accountId=scope-test"]);
 
       await act(async () => {
         root!.render(<DraftScopeHarness availableDrafts={availableDrafts} demoMode={false} scope="draft:draft-b" />);
@@ -2206,7 +2206,7 @@ describe("Drafts mailbox", () => {
       const oldSave = pendingRequests[0]!;
       oldSave.resolve(new Response(JSON.stringify({ ...draftA, subject: "Draft A edited", revision: 2 }), { status: 200, headers: { "content-type": "application/json" } }));
       await act(async () => { await Promise.resolve(); });
-      expect(pendingRequests.map((request) => request.url)).toEqual(["/v1/drafts/draft-a"]);
+      expect(pendingRequests.map((request) => request.url)).toEqual(["/v1/drafts/draft-a?accountId=scope-test"]);
       expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("Draft B");
     } finally {
       globalThis.fetch = originalFetch;

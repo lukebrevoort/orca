@@ -102,6 +102,11 @@ export const MAX_COMPOSE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 export const COMPOSE_AUTOSAVE_DELAY_MS = 420;
 const PROVIDER_POLL_DELAY_MS = 500;
 
+export function draftRequestPath(accountId: string, draftId?: string, action?: "send") {
+  const path = `/v1/drafts${draftId ? `/${encodeURIComponent(draftId)}` : ""}${action ? `/${action}` : ""}`;
+  return `${path}?${new URLSearchParams({ accountId })}`;
+}
+
 function draftStorageKey(accountId: string, scope = "new") {
   return `orca-compose-draft:${accountId}:${scope}`;
 }
@@ -541,7 +546,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     if (availableDrafts === null) return;
     let cancelled = false;
     const loadDrafts = availableDrafts === undefined
-      ? requestDraft("/v1/drafts", messageDraftListSchema)
+      ? requestDraft(draftRequestPath(accountId), messageDraftListSchema)
       : Promise.resolve(availableDrafts);
     void loadDrafts.then((drafts) => {
       if (cancelled) return;
@@ -621,7 +626,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const pollProviderStatus = useCallback((draftId: string) => {
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
     pollTimerRef.current = window.setTimeout(() => {
-      void requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}`, messageDraftSchema).then((latest) => {
+      void requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema).then((latest) => {
         if (serverIdRef.current !== latest.id || serverRevisionRef.current !== latest.revision) return;
         setDraft((current) => ({ ...current, providerSyncStatus: latest.providerSyncStatus, providerSyncError: latest.providerSyncError }));
         setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
@@ -632,7 +637,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         setSaveMessage("Saved on this device · provider status is unavailable");
       });
     }, PROVIDER_POLL_DELAY_MS);
-  }, []);
+  }, [accountId]);
 
   const persistRemote = useCallback(async (snapshot: ComposeDraft, force = false, expectedScopeKey = scopeKey) => {
     if (storageScopeRef.current !== expectedScopeKey || saveScopeRef.current !== expectedScopeKey) return;
@@ -647,12 +652,12 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const content = buildDraftContent(snapshot, mergeDraftAttachments(serverAttachmentsRef.current, attachments), attachmentsDirtyRef.current || serverId === null);
     try {
       const saved = serverId !== null && revision !== null
-        ? await requestDraft(`/v1/drafts/${encodeURIComponent(serverId)}`, messageDraftSchema, {
+        ? await requestDraft(draftRequestPath(accountId, serverId), messageDraftSchema, {
             method: "PATCH",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ revision, ...content }),
           })
-        : await requestDraft("/v1/drafts", messageDraftSchema, {
+        : await requestDraft(draftRequestPath(accountId), messageDraftSchema, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(content),
@@ -670,7 +675,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       if (storageScopeRef.current !== expectedScopeKey) return;
       if (error instanceof DraftRequestError && error.code === "stale_draft" && serverId) {
         try {
-          const server = await requestDraft(`/v1/drafts/${encodeURIComponent(serverId)}`, messageDraftSchema);
+          const server = await requestDraft(draftRequestPath(accountId, serverId), messageDraftSchema);
           if (storageScopeRef.current !== expectedScopeKey) return;
           setConflict({ server, local: snapshot });
           setSaveMessage("Another version was saved — choose which one to keep");
@@ -682,7 +687,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       }
       setSaveStatus("failed");
     }
-  }, [conflict, pollProviderStatus, scopeKey]);
+  }, [accountId, conflict, pollProviderStatus, scopeKey]);
 
   useEffect(() => {
     if (hydratedScope !== scopeKey) return;
@@ -782,7 +787,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   async function discardDraft() {
     try {
       if (serverIdRef.current) {
-        await requestDraft(`/v1/drafts/${encodeURIComponent(serverIdRef.current)}`, { parse: () => null }, { method: "DELETE" });
+        await requestDraft(draftRequestPath(accountId, serverIdRef.current), { parse: () => null }, { method: "DELETE" });
       }
     } catch (error) {
       setSaveStatus("failed");
@@ -830,7 +835,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       const content = buildDraftContent(local, mergeDraftAttachments(inheritedAttachments, localAttachments), true);
       // Both choices preserve the local original in Drafts before switching away.
       // POST never patches the contested original or replays a send.
-      const recovered = await requestDraft("/v1/drafts", messageDraftSchema, {
+      const recovered = await requestDraft(draftRequestPath(accountId), messageDraftSchema, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(content),
@@ -945,9 +950,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         content,
         idempotencyKeyFor,
       }, {
-        inspect: (draftId) => requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}`, messageDraftSchema),
+        inspect: (draftId) => requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema),
         create: async (nextContent) => {
-          const saved = await requestDraft("/v1/drafts", messageDraftSchema, {
+          const saved = await requestDraft(draftRequestPath(accountId), messageDraftSchema, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(nextContent),
@@ -958,7 +963,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
           return saved;
         },
         update: async (draftId, revision, nextContent) => {
-          const saved = await requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}`, messageDraftSchema, {
+          const saved = await requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema, {
             method: "PATCH",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ revision, ...nextContent }),
@@ -968,7 +973,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
           serverAttachmentsRef.current = saved.attachments;
           return saved;
         },
-        send: (draftId, revision, idempotencyKey) => requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}/send`, deliveryResultSchema, {
+        send: (draftId, revision, idempotencyKey) => requestDraft(draftRequestPath(accountId, draftId, "send"), deliveryResultSchema, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ revision, idempotencyKey }),

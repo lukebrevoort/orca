@@ -70,7 +70,7 @@ for (const choice of ["local", "server"] as const) test(`${choice}: saves latest
   expect(controller.conflict).toBeNull();
   expect(controller.draft.id).toBe(choice === "local" ? "copy-1" : "original");
   expect(controller.draft.body).toBe(choice === "local" ? "Typed AFTER conflict" : "Server words");
-  expect(mutations).toEqual(["PATCH /v1/drafts/original", "POST /v1/drafts"]);
+  expect(mutations).toEqual(["PATCH /v1/drafts/original?accountId=account-test", "POST /v1/drafts?accountId=account-test"]);
 });
 for (const choice of ["local", "server"] as const) test(`${choice}: storage failure retains conflict and current editor`, async () => {
   await edit();
@@ -148,5 +148,5 @@ for (const choice of ["local", "server"] as const) test(`${choice}: recovery kee
   ]);
   expect(controller.conflict?.server.revision).toBe(3);
   expect(controller.draft.body).toBe("Before conflict");
-  expect(mutations).toEqual(["PATCH /v1/drafts/original", "POST /v1/drafts"]);
+  expect(mutations).toEqual(["PATCH /v1/drafts/original?accountId=account-test", "POST /v1/drafts?accountId=account-test"]);
 });

@@ -47,6 +47,6 @@ struct MainView: View {
         }
         .environmentObject(mailboxes)
         .task(id: state.ownerScope) { await mailboxes.load(state: state) }
-        .onChange(of: scenePhase) { if scenePhase == .active { Task { await mailboxes.load(state: state) } } }
+        .onChange(of: scenePhase) { if scenePhase == .active { Task { try? await state.refreshAccountCapabilities(); await mailboxes.load(state: state) } } }
     }
 }

@@ -14,6 +14,23 @@ enum DraftDeliveryTransition: Equatable {
     case confirmedPreReservation(serverRevision: Int?)
 }
 
+enum DraftDeliveryRecovery {
+    enum RecoveryError: LocalizedError {
+        case missingServerDraft
+        var errorDescription: String? { "This draft has no server record to check. No delivery was started." }
+    }
+    /// A server draft opened on a different device has no local delivery key.
+    /// Inspect it with GET; never invent a replacement command to check status.
+    static func check(_ draft: LocalDraft, client: APIClient) async throws -> DeliveryResult {
+        guard let id = draft.serverID else { throw RecoveryError.missingServerDraft }
+        if let revision = draft.serverRevision, let key = draft.idempotencyKey {
+            return try await client.sendDraft(id, accountId: draft.accountId, revision: revision, idempotencyKey: key)
+        }
+        let remote = try await client.draft(id, accountId: draft.accountId)
+        return DeliveryResult(draftId: remote.id, status: remote.deliveryStatus, providerMessageId: remote.providerMessageId, providerThreadId: remote.providerThreadId, error: nil)
+    }
+}
+
 actor DraftStore {
     enum StoreError: LocalizedError { case recoveryRequired; var errorDescription: String? { "Local drafts could not be read. The original file was preserved; export or recover it before saving." } }
     private var drafts = [LocalDraft](); private let fileURL: URL; private var recoveryError: Error?

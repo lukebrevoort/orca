@@ -66,10 +66,21 @@ export function createGmailTransport(gmailClient: GmailThreadingClient = createG
       catch (error) { throw normalizeTransportError(error); }
     },
     async send(db, accountId, draft) {
+      let input: Parameters<GmailTransportClient["sendMessage"]>[0];
       try {
         const accessToken = await token(db, accountId);
         const threadedDraft = await withThreadingHeaders(draft, accessToken);
-        const response = await gmailClient.sendMessage({ accessToken, raw: encodeGmailMessage(threadedDraft), threadId: threadId(threadedDraft) });
+        input = { accessToken, raw: encodeGmailMessage(threadedDraft), threadId: threadId(threadedDraft) };
+      } catch (error) {
+        // Token refresh, source metadata reads, and MIME encoding cannot deliver
+        // mail. Keep these confirmed-unsent failures separate from a failure
+        // after entering sendMessage, whose outcome may be unknown.
+        const preparationError = normalizeTransportError(error);
+        if (preparationError.kind === "auth") throw preparationError;
+        throw new GmailTransportError("Gmail could not prepare this message. No delivery was attempted.", "rejected", false);
+      }
+      try {
+        const response = await gmailClient.sendMessage(input);
         return { providerMessageId: response.id, providerThreadId: response.threadId };
       } catch (error) { throw normalizeTransportError(error); }
     },
