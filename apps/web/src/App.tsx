@@ -5184,8 +5184,8 @@ function InboxView({
           </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
-        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
-        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label></div> : null}
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-label={selectionMode ? "Done selecting" : "Select"} aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-label={selectionMode ? "Done selecting" : "Select"} aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -5317,13 +5317,13 @@ function InboxView({
           </nav>
         ) : null}
 
-        {selectionMode || status === "ready" && displayMessages.length > 0 ? (
+        {selectionMode ? (
           <section aria-busy={bulkAttentionStatus === "saving" || bulkSpaceBusy} aria-label="Organize conversations" className={`mail-selection${selectionMode ? " bulk-action-bar" : ""}`}>
             <strong className="visually-hidden" aria-live="polite">{conversationTargets.length ? `${conversationTargets.length} ${conversationTargets.length === 1 ? "conversation" : "conversations"} selected` : "Select messages"}</strong>
             <BulkSpaceMove key={bulkQuery} resetKey={selectionReset} scope={<button
               aria-label={!selectionMode ? "Select" : selectedVisibleRowCount === visibleRowKeys.size && visibleRowKeys.size > 0 ? "Clear visible" : "Select all visible"}
               aria-pressed={visibleRowKeys.size > 0 && selectedVisibleRowCount === visibleRowKeys.size}
-              className="selection-mode-toggle bulk-select-all selection-scope"
+              className="bulk-select-all selection-scope"
               disabled={bulkAttentionStatus === "saving" || bulkSpaceBusy || displayMessages.length === 0}
               title={!selectionMode ? "Choose conversations by their initials" : "Select or clear all visible conversations"}
               onClick={() => {

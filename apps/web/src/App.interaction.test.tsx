@@ -2347,9 +2347,9 @@ describe("Pin navigation and bulk sender actions", () => {
     expect([...browserWindow.document.querySelectorAll("button.message-row")].every((row) => row.getAttribute("aria-pressed") === "false")).toBe(true);
   });
 
-  test("sender initials start the sentence directly and Start over resets its destination", async () => {
+  test("sentence stays hidden until selection and Start over hides it and resets its destination", async () => {
     await renderApp();
-    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(browserWindow.document.querySelector(".mail-selection")).toBeNull();
     await act(async () => buttonByName("Select conversation from Mom: Dinner on Sunday?").click());
     expect(browserWindow.document.querySelector(".selection-scope")?.textContent).toBe("this conversation");
     expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
@@ -2358,8 +2358,9 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { destination.value = [...destination.options].find(option => option.textContent === "Quiet")!.value; destination.dispatchEvent(new browserWindow.Event("change", { bubbles: true }) as unknown as Event); });
     expect(destination.value).not.toBe("");
     await act(async () => buttonByName("Clear selection and exit").click());
-    expect(destination.value).toBe("");
-    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(browserWindow.document.querySelector(".mail-selection")).toBeNull();
+    await act(async () => buttonByName("Select").click());
+    expect((browserWindow.document.querySelector('[aria-label="Destination space"]') as unknown as HTMLSelectElement).value).toBe("");
     expect(browserWindow.document.querySelector(".selection-scope")?.textContent).toBe("a few conversations");
   });
 
