@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 const desktopStyles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
 const organizationLaneStyles = await Bun.file(new URL("./organization-lanes.css", import.meta.url)).text();
 const organizationStyles = await Bun.file(new URL("./organization-views.css", import.meta.url)).text();
+const selectionStyles = await Bun.file(new URL("./mail-selection.css", import.meta.url)).text();
 const styles = await Bun.file(new URL("./styles.css", import.meta.url)).text();
 
 function cssRule(source: string, selector: string) {
@@ -107,17 +108,15 @@ describe("theme-safe semantic control states", () => {
     expect(rule).not.toContain("color: #fff");
   });
 
-  test("keeps the bulk selection control readable when pressed or busy", () => {
-    const selected = cssRule(styles, '.bulk-action-bar .bulk-select-all[aria-pressed="true"]');
-    expect(selected).toContain("background: var(--orca-control-selected-background)");
-    expect(selected).toContain("color: var(--orca-control-selected-ink)");
-    expect(selected).toContain("box-shadow: inset 0 -2px var(--orca-control-selected-indicator)");
-    const disabled = cssRule(styles, ".bulk-action-bar button:disabled");
+  test("keeps the sentence controls readable when selected, focused, or busy", () => {
+    const selected = cssRule(selectionStyles, '.mail-selection .selection-sentence .selection-scope[aria-pressed="true"]');
+    expect(selected).toContain("background: var(--orca-surface-hover)");
+    expect(selected).toContain("color: var(--orca-ink)");
+    const disabled = cssRule(selectionStyles, ".mail-selection .selection-sentence button:disabled");
     expect(disabled).toContain("color: var(--orca-control-disabled-ink)");
     expect(disabled).toContain("opacity: 1");
-    expect(cssRule(styles, ".bulk-action-bar button:focus-visible")).toContain("outline: 2px solid var(--orca-control-selected-indicator)");
-    expect(cssRule(styles, ".message-row-wrap-selected .message-row")).toContain("box-shadow: inset 3px 0 var(--orca-control-selected-indicator)");
-    expect(cssRule(styles, '.message-row[aria-pressed="true"] .message-select-indicator')).toContain("box-shadow: 0 0 0 2px var(--orca-control-selected-indicator)");
+    expect(cssRule(selectionStyles, ".mail-selection button:focus-visible")).toContain("outline: 2px solid var(--orca-control-selected-indicator)");
+    expect(cssRule(selectionStyles, ":root .desktop-shell .inbox-view .message-row-wrap-selected .message-row")).toContain("var(--orca-control-selected-indicator)");
   });
 
   test("keeps text at AA and visible state indicators above three-to-one in both themes", () => {

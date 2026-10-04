@@ -1,0 +1,54 @@
+.bulk-more { position: relative; }
+.bulk-more > summary { align-items: center; border: 1px solid transparent; border-radius: 7px; color: var(--orca-ink); cursor: pointer; display: flex; font-size: 11px; font-weight: 600; gap: 8px; list-style: none; min-height: 32px; padding: 0 10px; }
+.bulk-more > summary::-webkit-details-marker { display: none; }
+.bulk-more > summary:hover, .bulk-more[open] > summary { background: var(--orca-surface-hover); border-color: var(--orca-border); }
+.bulk-more summary:focus-visible { outline: 2px solid var(--orca-control-selected-indicator); outline-offset: 2px; }
+.bulk-more-panel { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 12px; box-shadow: 0 12px 32px rgb(0 0 0 / 12%); padding: 12px; position: absolute; right: 0; top: calc(100% + 8px); width: min(290px, calc(100vw - 64px)); z-index: 30; }
+.bulk-more-panel .bulk-more-context { color: var(--orca-muted); font-size: 10px; margin: 0 0 10px; }
+.bulk-more-panel .bulk-view-action { align-items: stretch; justify-items: stretch; }
+.bulk-more-panel .bulk-view-action > button { background: transparent; border-color: transparent; min-height: 36px; text-align: left; }
+.bulk-more-panel .bulk-view-action > button:disabled { background: var(--orca-control-disabled-background); border-color: var(--orca-control-disabled-border); color: var(--orca-control-disabled-ink); }
+.bulk-more-panel .bulk-view-action > span { max-width: none; padding: 4px 10px; }
+.bulk-sender-preferences { border-top: 1px solid var(--orca-border); margin-top: 8px; padding-top: 8px; }
+.bulk-sender-preferences > summary { border-radius: 6px; color: var(--orca-ink); cursor: pointer; font-size: 11px; padding: 8px 10px; }
+.bulk-sender-preferences > summary:hover { background: var(--orca-surface-hover); }
+.bulk-sender-preferences p { color: var(--orca-muted); font-size: 11px; line-height: 1.5; margin: 8px 10px 12px; }
+.bulk-sender-preferences [role="group"] { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* The selection scope and destination form one sentence, directly above the mail. */
+.desktop-shell .mail-selection { display: block; position: relative; margin: 12px 34px 26px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.mail-selection .selection-sentence { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 9px; color: var(--orca-ink); font: 500 32px/1.6 var(--desktop-serif, Georgia, serif); letter-spacing: -.7px; }
+.mail-selection .selection-sentence .selection-scope,
+.mail-selection .selection-destination select { appearance: auto; width: auto; max-width: 100%; min-height: 44px; margin: 0; padding: 0 2px 2px; border: 0; border-bottom: 1px solid var(--orca-muted); border-radius: 0; background: transparent; box-shadow: none; color: var(--orca-ink); font: inherit; letter-spacing: inherit; cursor: pointer; }
+.mail-selection .selection-sentence .selection-scope[aria-pressed="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: none; color: var(--orca-ink); }
+.mail-selection .selection-sentence .selection-scope:hover:not(:disabled),
+.mail-selection .selection-destination select:hover:not(:disabled) { background: var(--orca-surface-hover); color: var(--orca-ink); }
+.mail-selection .selection-destination { display: inline-flex; min-width: 0; max-width: min(330px, 100%); }
+.mail-selection .selection-destination option { background: var(--orca-surface); color: var(--orca-ink); font: 16px system-ui,sans-serif; }
+.mail-selection .selection-sentence .selection-commit { flex: 0 0 40px; width: 40px; height: 40px; min-height: 40px; padding: 0; margin-left: 5px; align-self: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 50%; color: var(--orca-ink); font: 24px/1 system-ui,sans-serif; cursor: pointer; }
+.mail-selection button:focus-visible, .mail-selection select:focus-visible, .message-initial-select:focus-visible { outline: 2px solid var(--orca-control-selected-indicator); outline-offset: 3px; }
+.mail-selection .selection-sentence button:disabled, .mail-selection .selection-destination select:disabled { background: var(--orca-control-disabled-background); border-color: var(--orca-control-disabled-border); color: var(--orca-control-disabled-ink); cursor: not-allowed; opacity: 1; }
+.selection-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 12px; }
+.selection-context > p { flex: 1; margin: 0; color: var(--orca-muted); font-size: 11px; line-height: 1.6; }
+.mail-selection .selection-context .bulk-selection-exit { width: auto; min-height: 32px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--orca-border); border-radius: 0; background: transparent; color: var(--orca-ink); font: 11px/1.4 var(--orca-font-body); }
+.mail-selection .selection-context .bulk-selection-exit:disabled { color: var(--orca-control-disabled-ink); }
+.mail-selection .selection-context .bulk-more { margin-left: 0; }
+.selection-move-status:empty { display: none; }
+.selection-move-status p { color: var(--orca-muted); font-size: 11px; line-height: 1.6; margin: 8px 0; }
+.selection-move-status [role="alert"] { color: var(--orca-danger); }
+.selection-move-status button { background: var(--orca-surface-hover); color: var(--orca-ink); border: 1px solid var(--orca-border); border-radius: 6px; padding: 8px 12px; font: inherit; font-size: 11px; cursor: pointer; }
+.message-initial-select { position: absolute; z-index: 4; left: 13px; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border: 1px solid transparent; border-radius: 10px; background: transparent; cursor: pointer; color: var(--orca-ink); }
+.message-initial-select > span { position: absolute; bottom: -2px; right: -2px; display: grid; place-items: center; width: 17px; height: 17px; border: 1px solid var(--orca-border); border-radius: 50%; background: var(--orca-surface); color: var(--orca-ink); font-size: 11px; opacity: 0; }
+.message-initial-select:hover, .message-initial-select:focus-visible, .message-initial-select[aria-pressed="true"] { border-color: var(--orca-control-selected-indicator); }
+.message-initial-select:hover > span, .message-initial-select:focus-visible > span, .message-initial-select[aria-pressed="true"] > span { opacity: 1; }
+.message-initial-select:disabled { cursor: not-allowed; }
+:root .desktop-shell .inbox-view .message-row-wrap-selecting .message-row { padding-left: 16px; padding-right: 96px; }
+:root .desktop-shell .inbox-view .message-row-wrap-selected .message-row { box-shadow: inset 2px 0 var(--orca-control-selected-indicator); background: var(--orca-surface-hover); }
+@media(max-width:760px) {
+  .desktop-shell .mail-selection { margin: 12px 10px 24px; }
+  .mail-selection .selection-sentence { font-size: 27px; gap: 2px 7px; }
+  .selection-context > p { flex-basis: 100%; }
+  .selection-context .bulk-more-panel { right: auto; left: 0; }
+  .message-initial-select { top: 9px; left: 9px; transform: none; }
+  :root .desktop-shell .inbox-view .message-row-wrap-selecting .message-row { padding: 12px; }
+}

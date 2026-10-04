@@ -259,7 +259,7 @@ function button(text: string) {
   const found = Array.from(document.querySelectorAll("button")).find((b) =>
     text === "Tune"
       ? b.classList.contains("sender-attention-trigger")
-      : b.textContent === text,
+      : b.textContent === text || b.getAttribute("aria-label") === text,
   );
   expect(found, `Missing button ${text}. Page: ${document.body.textContent}`).toBeDefined();
   return found!;
@@ -1110,11 +1110,16 @@ test("rejected mark-read restores canonical destination unread state without cha
   expect(findRow("Mail b").classList.contains("message-row-unread")).toBe(true);
 });
 
+async function chooseBulkDestination(name: string) {
+  const control = await editableSelect("Destination space");
+  const option = [...control.options].find(option => option.textContent === name)!;
+  await act(async () => { control.value = option.value; control.dispatchEvent(new Event("change", { bubbles: true })); });
+}
+
 async function openBulkMove() {
   await click("Select");
   await click("Select all visible");
-  await click("Move to space");
-  await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".bulk-space-dialog .routing-destinations button")].find(b => b.textContent === "Quiet")!.click());
+  await chooseBulkDestination("Quiet");
 }
 
 test("App bulk move dedupes selected messages across accounts, refreshes counts/pages and retains root Undo", async () => {
@@ -1125,7 +1130,7 @@ test("App bulk move dedupes selected messages across accounts, refreshes counts/
   await renderMailbox();
   await openBulkMove();
   expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("2 conversations selected");
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("2 selected conversations across 2 accounts");
+  expect(document.querySelectorAll(".selection-destination")).toHaveLength(1);
   expect(button("Create sender View").disabled).toBe(true);
   const gate = deferred();
   intercept = async (path, init) => { if (path.endsWith("/routing/batch") && init?.method === "PUT") await gate.promise; return syncNoop(path); };
@@ -1172,17 +1177,17 @@ test("App pending batch preserves attempted scope when refreshed rows prune ever
     await act(async () => window.dispatchEvent(new Event("focus")));
     for (let i = 0; i < 50 && document.querySelectorAll(".message-row").length; i++) await settle();
     expect(document.querySelectorAll(".message-row")).toHaveLength(0);
-    const dialog = document.querySelector(".bulk-space-dialog")!;
-    expect(dialog.textContent).toContain("2 selected conversations across 2 accounts");
+    const dialog = document.querySelector(".bulk-space-sentence")!;
+    expect(dialog.textContent).toContain("Moving 2 conversations across 2 accounts");
     expect(dialog.textContent).not.toContain("No selected conversations remain");
     expect(dialog.getAttribute("aria-busy")).toBe("true");
     expect(button("Moving…").disabled).toBe(true);
-    expect(button("Cancel").disabled).toBe(true);
+    expect(button("Clear selection and exit").disabled).toBe(true);
     expect(puts.filter(p => p.path.endsWith("/routing/batch"))).toHaveLength(1);
   } finally {
     await act(async () => responseGate.release()); await settle(); await settle();
   }
-  expect(document.querySelector(".bulk-space-dialog")).toBeNull();
+  expect(document.querySelector(".bulk-space-sentence")?.getAttribute("aria-busy")).not.toBe("true");
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("2 conversations moved to Quiet.");
   await click("Undo");
   expect(document.querySelectorAll(".message-row")).toHaveLength(2);
@@ -1201,8 +1206,8 @@ for (const failure of ["rejected", "unconfirmed"] as const) test(`App bulk ${fai
     return syncNoop(path);
   };
   await click("Move conversations");
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain(failure === "rejected" ? "No conversations were moved" : "Move could not be confirmed");
-  expect(document.querySelector('.bulk-space-dialog [aria-pressed="true"]')?.textContent).toBe("Quiet");
+  expect(document.querySelector(".bulk-space-sentence")?.textContent).toContain(failure === "rejected" ? "No conversations were moved" : "Move could not be confirmed");
+  expect(document.querySelector<HTMLSelectElement>('[aria-label="Destination space"]')?.selectedOptions[0]?.textContent).toBe("Quiet");
   expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("2 conversations selected");
   expect(button("Move conversations").disabled).toBe(true);
   expect([...document.querySelectorAll("button")].some(b => b.textContent === "Undo")).toBe(false);
@@ -1216,11 +1221,11 @@ for (const failure of ["rejected", "unconfirmed"] as const) test(`App bulk ${fai
 test("App bulk selection over 50 conversations is explicit and never silently truncated", async () => {
   seedPages(); intercept = async path => syncNoop(path);
   await renderMailbox(); await click("Select"); await click("Select all visible");
-  expect(button("Move to space").disabled).toBe(true);
+  expect(button("Move conversations").disabled).toBe(true);
   expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("Select up to 50 conversations per move");
   expect(puts).toHaveLength(0);
   await click("Clear visible");
-  expect(button("Move to space").disabled).toBe(true);
+  expect(button("Move conversations").disabled).toBe(true);
 });
 
 test("App late batch completion does not clear another view's selection or overwrite its newer receipt", async () => {
@@ -1236,8 +1241,7 @@ test("App late batch completion does not clear another view's selection or overw
   // Navigation can occur while a request is in flight; the new view owns new selection.
   await nav("All Mail"); await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
-  await click("Move to space");
-  await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".bulk-space-dialog .routing-destinations button")].find(b => b.textContent === "Inbox")!.click());
+  await chooseBulkDestination("Inbox");
   await click("Move conversations");
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
   await act(async () => gate.release()); await settle(); await settle();
@@ -1255,8 +1259,8 @@ test("App committed-but-unconfirmed batch reloads canonical mail, prunes stale s
     return syncNoop(path);
   };
   await click("Move conversations");
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("Move could not be confirmed");
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("No selected conversations remain");
+  expect(document.querySelector(".bulk-space-sentence")?.textContent).toContain("Move could not be confirmed");
+  expect(document.querySelector(".bulk-space-sentence")?.textContent).toContain("No selected conversations remain");
   expect(document.querySelectorAll(".message-row")).toHaveLength(0);
   expect(button("Move conversations").disabled).toBe(true);
   expect([...document.querySelectorAll("button")].some(b => b.textContent === "Undo")).toBe(false);
@@ -1264,7 +1268,7 @@ test("App committed-but-unconfirmed batch reloads canonical mail, prunes stale s
   await click("Reload spaces and mail");
   expect(button("Move conversations").disabled).toBe(true);
   expect(puts).toHaveLength(1);
-  await click("Cancel"); await nav("Quiet");
+  await click("Clear selection and exit"); await nav("Quiet");
   expect(document.querySelectorAll(".message-row")).toHaveLength(2);
 });
 
@@ -1304,15 +1308,14 @@ test("App query replacement releases old bulk refresh busy state without unlocki
   };
   await act(async () => button("Move conversations").click()); await settle();
   expect(heldRead).toBe(true);
-  expect(document.querySelector(".bulk-space-dialog")).toBeNull();
+  expect(document.querySelector(".bulk-space-sentence")?.getAttribute("aria-busy")).toBe("true");
   await act(async () => {
     window.history.pushState(null, "", "/?destination=all&q=Mail");
     window.dispatchEvent(new Event("popstate"));
   }); await settle();
   expect(button("Select").disabled).toBe(false);
   await click("Select"); await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
-  await click("Move to space");
-  await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".bulk-space-dialog .routing-destinations button")].find(b => b.textContent === "Inbox")!.click());
+  await chooseBulkDestination("Inbox");
   await act(async () => button("Move conversations").click()); await settle();
   expect(heldWrite).toBe(true);
   await act(async () => oldRefresh.release()); await settle();
@@ -1333,19 +1336,19 @@ test("App uncertain batch recovery survives Cancel and selection teardown until 
     return syncNoop(path);
   };
   await click("Move conversations");
-  await click("Cancel"); await click("Done selecting");
+  await click("Clear selection and exit");
   await openBulkMove();
   expect(button("Move conversations").disabled).toBe(true);
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("A previous move needs recovery");
+  expect(document.querySelector(".bulk-space-sentence")?.textContent).toContain("A previous move needs recovery");
   await click("Reload spaces and mail");
   expect(button("Move conversations").disabled).toBe(true);
   expect(puts).toHaveLength(1);
   intercept = async path => syncNoop(path);
   await click("Reload spaces and mail");
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).not.toContain("A previous move needs recovery");
+  expect(document.querySelector(".bulk-space-sentence")?.textContent).not.toContain("A previous move needs recovery");
   expect(document.querySelectorAll(".message-row")).toHaveLength(0);
   expect(puts).toHaveLength(1);
-  await click("Cancel"); await nav("Quiet"); await openBulkMove();
+  await click("Clear selection and exit"); await nav("Quiet"); await openBulkMove();
   expect(button("Move conversations").disabled).toBe(false);
 });
 
@@ -1358,7 +1361,7 @@ test("App repeated global recovery clicks share one attempt and failed recovery 
     if (committed && path.startsWith("/v1/inbox?")) return Response.json({ error: { message: "Mail unavailable" } }, { status: 503 });
     return syncNoop(path);
   };
-  await click("Move conversations"); await click("Cancel"); await click("Done selecting");
+  await click("Move conversations"); await click("Clear selection and exit");
   const gate = deferred(); let reads = 0;
   intercept = async path => {
     if (path === "/v1/inbox?view=all&classification=all&limit=100") { reads++; await gate.promise; return Response.json({ error: { message: "Still unavailable" } }, { status: 503 }); }
@@ -1376,7 +1379,7 @@ test("App repeated global recovery clicks share one attempt and failed recovery 
   expect(puts).toHaveLength(1);
   intercept = async path => syncNoop(path);
   await click("Reload spaces and mail");
-  expect(document.querySelector(".bulk-space-dialog")?.textContent).not.toContain("A previous move needs recovery");
+  expect(document.querySelector(".bulk-space-sentence")?.textContent).not.toContain("A previous move needs recovery");
   expect(document.querySelectorAll(".message-row")).toHaveLength(0);
 });
 
