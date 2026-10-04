@@ -1,0 +1,20 @@
+Calmer selection — validation, 2026-10-04
+
+bun run typecheck: PASS
+bun run build: PASS
+bun run lint: PASS
+Shared tests: 95 pass, 0 fail
+API tests: 707 pass, 0 fail
+Frontend final run: 549 pass, 0 fail
+Total across workspaces: 1351 pass
+
+git diff --check: PASS
+Headless browser: both themes at 1440, 1024, and 390 pixels; no horizontal overflow.
+Checked select-all / clear, disclosure open/close, outside click, Escape,
+keyboard focus, disabled actions, sender preferences, and View creation/cancel.
+Browser closed after verification; dev preview remains at http://localhost:5178/dev/inbox.
+
+One intermediate frontend run failed an Undo assertion after a fixed 20 ms settle.
+The isolated rerun and final complete frontend suite passed without changing that test.
+Demo visual evidence does not mutate any connected account. Existing API-backed
+interaction tests cover bulk move, recovery, and Undo.

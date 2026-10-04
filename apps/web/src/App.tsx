@@ -5,6 +5,8 @@ import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
 import { AttentionPage } from "./attention-page";
 import {
+  lazy,
+  Suspense,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -65,6 +67,8 @@ import {
 } from "./surface-history";
 
 export { readInitialThreadSelection } from "./surface-history";
+
+const SelectionPrototype = import.meta.env.DEV ? lazy(() => import("./selection.prototype")) : () => null;
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -4885,6 +4889,7 @@ function InboxView({
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("addSendersTo"));
+  const selectionMoreRef = useRef<HTMLDetailsElement>(null);
   const [senderGrowth, setSenderGrowth] = useState(false);
   const SenderAuthoringWorkspace = senderGrowth ? OrganizationViewGrowthWorkspace : OrganizationViewAuthoringWorkspace;
   const guidanceSelectionRequest = useViewGuidanceSelectionRequest(viewMode);
@@ -5059,12 +5064,39 @@ function InboxView({
   function closeSelectionMode() {
     if ((bulkAttentionStatus === "saving" || bulkSpaceBusy)) return;
     setSelectionMode(false);
+    document.querySelector<HTMLButtonElement>(".selection-mode-toggle")?.focus({ preventScroll: true });
     setSelectedRows(new Map());
     setSelectedTargets(new Map());
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
     setBulkRetry(null);
   }
+
+  useEffect(() => {
+    if (!selectionMode || topLayerActive) return;
+    const dismissMore = (event: PointerEvent) => {
+      const disclosure = selectionMoreRef.current;
+      if (disclosure?.open && !disclosure.contains(event.target as Node)) disclosure.open = false;
+    };
+    const dismissSelection = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || bulkAttentionStatus === "saving" || bulkSpaceBusy) return;
+      const disclosure = selectionMoreRef.current;
+      if (disclosure?.open) {
+        event.preventDefault();
+        disclosure.open = false;
+        disclosure.querySelector("summary")?.focus();
+      } else if (!(event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable=true]"))) {
+        event.preventDefault();
+        closeSelectionMode();
+      }
+    };
+    document.addEventListener("pointerdown", dismissMore);
+    window.addEventListener("keydown", dismissSelection);
+    return () => {
+      document.removeEventListener("pointerdown", dismissMore);
+      window.removeEventListener("keydown", dismissSelection);
+    };
+  }, [selectionMode, topLayerActive, bulkAttentionStatus, bulkSpaceBusy]);
 
   const bulkQuery = `${account?.id ?? ""}:${collection?.id ?? ""}:${classificationView}:${inboxFilter}:${personFilter ?? ""}:${searchQuery}:${viewMode}`;
   const bulkQueryRef = useRef({ key: bulkQuery, generation: 0 });
@@ -5136,6 +5168,9 @@ function InboxView({
         : searchQuery.trim()
           ? `${displayMessages.length} ${displayMessages.length === 1 ? "result" : "results"} for ${searchQuery.trim()}.`
           : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} in ${inboxTitle}.`;
+  if (import.meta.env.DEV && demoMode && new URLSearchParams(window.location.search).has("selection-prototype")) {
+    return <Suspense fallback={<p className="view-state">Opening interaction study…</p>}><SelectionPrototype messages={displayMessages}/></Suspense>;
+  }
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
       {!destinationName && (viewMode === "inbox" || viewMode === "all") && status === "ready" && !classificationError && inboxFilter === "all" && classificationView === "all" && !isCollectionView && activePin?.kind !== "filter" && !searchQuery && !personFilter && !selectionMode ? <FirstViewInvitation/> : null}
@@ -5153,7 +5188,7 @@ function InboxView({
           </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
-        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
@@ -5288,9 +5323,9 @@ function InboxView({
 
         {selectionMode ? (
           <section aria-busy={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} aria-label="Selected message actions" className="bulk-action-bar">
-            <div>
+            <div className="bulk-selection-summary" aria-live="polite" aria-atomic="true">
               <strong>{visibleSelectedRows.length ? `${conversationTargets.length} ${conversationTargets.length === 1 ? "conversation" : "conversations"} selected` : "Select messages"}</strong>
-              <span>{visibleSelectedRows.length} visible {visibleSelectedRows.length === 1 ? "message" : "messages"} · {selectedSenderCount} {selectedSenderCount === 1 ? "sender" : "senders"}</span>
+              {!visibleSelectedRows.length ? <span>Choose conversations below</span> : null}
             </div>
             <button
               aria-pressed={visibleRowKeys.size > 0 && selectedVisibleRowCount === visibleRowKeys.size}
@@ -5317,16 +5352,23 @@ function InboxView({
                 return next;
               });
             }} />
-            <div className="bulk-view-action">
-              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => openSelectedSenderAuthoring()} ref={useSelectedSendersRef} type="button">Create sender View</button>
-              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => openSelectedSenderAuthoring(true)} type="button">Add senders to existing View</button>
-              {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
-            </div>
-            <details><summary>Sender preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
-              <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
-              <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
-              <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
-            </div></details>
+            <details className="bulk-more" ref={selectionMoreRef}>
+              <summary>More <span aria-hidden="true">⌄</span></summary>
+              <div className="bulk-more-panel">
+                <p className="bulk-more-context">{selectedSenderCount} {selectedSenderCount === 1 ? "sender" : "senders"} in your selection</p>
+                <div className="bulk-view-action">
+                  <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => openSelectedSenderAuthoring()} ref={useSelectedSendersRef} type="button">Create sender View</button>
+                  <button disabled={!selectedRows.size || selectedAccountCount !== 1 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => openSelectedSenderAuthoring(true)} type="button">Add senders to existing View</button>
+                  {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
+                </div>
+                <details className="bulk-sender-preferences"><summary>Sender preferences</summary><p>Apply to existing and future mail from these senders.</p><div aria-label="Legacy sender preferences" role="group">
+                  <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
+                  <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
+                  <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
+                </div></details>
+              </div>
+            </details>
+            <button aria-label="Clear selection and exit" className="bulk-selection-exit" disabled={bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={closeSelectionMode} title="Done selecting (Esc)" type="button"><span aria-hidden="true">×</span></button>
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}

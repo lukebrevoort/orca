@@ -2347,6 +2347,42 @@ describe("Pin navigation and bulk sender actions", () => {
     expect([...browserWindow.document.querySelectorAll("button.message-row")].every((row) => row.getAttribute("aria-pressed") === "false")).toBe(true);
   });
 
+  test("selection disclosure dismisses before Escape exits selection and restores focus", async () => {
+    await renderApp();
+    const selectMode = browserWindow.document.querySelector(".selection-mode-toggle") as unknown as HTMLButtonElement;
+    await act(async () => selectMode.click());
+    await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
+    const more = browserWindow.document.querySelector(".bulk-more") as unknown as HTMLDetailsElement;
+    const summary = more.querySelector("summary")!;
+    expect(more.open).toBe(false);
+    await act(async () => summary.click());
+    expect(more.open).toBe(true);
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", cancelable: true })));
+    expect(more.open).toBe(false);
+    expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(true);
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", cancelable: true })));
+    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, selectMode)).toBe(true);
+    await act(async () => selectMode.click());
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(0);
+  });
+
+  test("clicking outside More preserves selected mail and the local exit clears it", async () => {
+    await renderApp();
+    const selectMode = browserWindow.document.querySelector(".selection-mode-toggle") as unknown as HTMLButtonElement;
+    await act(async () => selectMode.click());
+    await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
+    const more = browserWindow.document.querySelector(".bulk-more") as unknown as HTMLDetailsElement;
+    await act(async () => more.querySelector("summary")!.click());
+    await act(async () => browserWindow.document.body.dispatchEvent(new browserWindow.PointerEvent("pointerdown", { bubbles: true })));
+    expect(more.open).toBe(false);
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
+    await act(async () => buttonByName("Clear selection and exit").click());
+    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, selectMode)).toBe(true);
+  });
+
   test("hands the server only exact selected row identities for sender preparation", () => {
     const input = selectedSenderPreparation([
       { id: "message-one", accountId: "account-a", threadId: "thread-one" },
@@ -2386,6 +2422,9 @@ describe("Pin navigation and bulk sender actions", () => {
     await renderApp();
     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
+    const more = browserWindow.document.querySelector(".bulk-more") as unknown as HTMLDetailsElement;
+    await act(async () => more.querySelector("summary")!.click());
+    expect(more.open).toBe(true);
     const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Create sender View") as unknown as HTMLButtonElement;
     const focusCalls = trackFocus(useSenders);
     setScroll({ x: 12, y: 380 });
@@ -2408,6 +2447,7 @@ describe("Pin navigation and bulk sender actions", () => {
     flushAnimationFrames();
     expect(scrollPosition).toEqual({ x: 12, y: 380 });
     expect(focusCalls.at(-1)).toEqual({ preventScroll: true });
+    expect(more.open).toBe(true);
     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
   });
 
