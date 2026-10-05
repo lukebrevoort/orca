@@ -160,8 +160,14 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         for (const id of windows) if ((await run('xdotool', ['getwindowname', id])).stdout.trim().includes(title)) matches.push(id);
         assert.equal(matches.length, 1, 'Native input requires exactly one owned Chromium window for this synthetic page');
         await run('xdotool', ['windowfocus', '--sync', matches[0]]);
+        // X11 focus is acknowledged before Chromium necessarily processes it.
+        // Do not type until the browser Find field has taken focus away from
+        // the document; otherwise query letters could activate app shortcuts.
+        await page.waitForFunction(() => document.hasFocus());
         await run('xdotool', ['key', '--clearmodifiers', 'ctrl+f']);
         try {
+          await page.waitForFunction(() => !document.hasFocus(), null, { timeout: 10000 });
+          await run('xdotool', ['key', '--clearmodifiers', 'ctrl+a']);
           await run('xdotool', ['type', '--clearmodifiers', '--delay', '1', 'End of review 37']);
           await page.waitForFunction(() => {
             const target = document.querySelectorAll('.reader-body-html')[36]?.lastElementChild;
