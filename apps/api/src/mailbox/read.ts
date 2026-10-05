@@ -284,6 +284,12 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       let accountPageQueries = 0;
       for (const behavior of behaviorsForView(input.query.destinationId ? "all" : input.query.view)) {
         if (pageRows.length >= requestedRows) break;
+        // Counts cover these filters and every authorized account in this snapshot.
+        // A zero aggregate safely rules out the group, even before classification/keyset filtering.
+        const behaviorCount = behavior === "notify" || behavior === "focus"
+          ? counts.focus_count
+          : counts[`${behavior}_count`];
+        if (numberCount(behaviorCount) === 0) continue;
         const rank = attentionRank[behavior];
         if (cursor && rank < cursor.attentionRank) continue;
         const remaining = requestedRows - pageRows.length;
