@@ -699,3 +699,189 @@ extension OrcaTests {
         SavedViewThread(accountId: accountId, accountEmail: "work@example.com", provider: "gmail", threadId: "thread", subject: "Hub update", latestReceivedAt: "2026-09-25T10:00:00Z", messageCount: 2, readState: "unread", sender: .init(name: "Jordan", email: "jordan@example.com"))
     }
 }
+
+// The baseline is intentionally the pre-optimization implementation, including
+// its fractional-first fallback and option mutation. Keep it independent of the
+// production parser so these tests detect future parsing-contract changes.
+private enum MailDateTestSupport {
+    static func baselineParse(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
+
+    static let edgeCases = [
+        "1970-01-01T00:00:00Z", "1969-12-31T23:59:59Z",
+        "2024-02-29T23:59:59.123Z", "2026-10-05T01:26:17.1Z",
+        "2026-10-05T01:26:17.123456789Z", "2026-10-05T01:26:17+05:30",
+        "2026-10-05T01:26:17.123-07:00", "2026-10-05T01:26:17+00:00",
+        "2026-03-08T01:59:59-08:00", "2026-03-08T03:00:00-07:00",
+        "2026-11-01T01:30:00-07:00", "2026-11-01T01:30:00-08:00",
+        "2000-02-29T12:00:00Z", "1900-02-29T12:00:00Z",
+        "2026-02-30T12:00:00Z", "2026-13-01T12:00:00Z",
+        "2026-00-01T12:00:00Z", "2026-01-00T12:00:00Z",
+        "2016-12-31T23:59:60Z", "2026-01-01T24:00:00Z",
+        "2026-10-05", "2026-10-05T01:26:17", "20261005T012617Z",
+        "2026-10-05t01:26:17z", "2026-10-05 01:26:17Z",
+        "2026-10-05T01:26:17.Z", "2026-10-05T01:26:17,123Z",
+        "2026-10-05T01:26:17+0530", "2026-10-05T01:26:17+25:00",
+        " 2026-10-05T01:26:17Z", "2026-10-05T01:26:17Z ",
+        "2026-10-05T01:26:17Zsuffix", "2026-10-05T01:26:17Z\n",
+        "", "not-a-date", "0000-00-00", "☃️", String(repeating: "x", count: 1_024),
+    ]
+
+    // Generate all strings before measuring. Distinct dates avoid benchmarking
+    // repeated-input memoization, and fixed arithmetic makes runs reproducible.
+    static func timestamps(count: Int, fractional: Bool) -> [String] {
+        (0..<count).map { index in
+            let date = String(format: "%04d-%02d-%02dT%02d:%02d:%02d",
+                              2020 + index / 336, 1 + (index / 28) % 12,
+                              1 + index % 28, index % 24, (index * 7) % 60, (index * 13) % 60)
+            let fraction = fractional ? String(format: ".%03d", (index * 37) % 1_000) : ""
+            let zone = ["Z", "+05:30", "-07:00"][index % 3]
+            return date + fraction + zone
+        }
+    }
+
+    struct Totals: Equatable, Sendable {
+        var valid = 0
+        var checksum: TimeInterval = 0
+    }
+
+    // The Sendable assertion is bounded by the lock, including snapshots; neither
+    // mutable storage nor formatter objects escape into the concurrent closures.
+    final class Results: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [Int: Totals] = [:]
+        func put(_ value: Totals, at index: Int) {
+            lock.lock(); defer { lock.unlock() }
+            values[index] = value
+        }
+        func snapshot() -> [Int: Totals] {
+            lock.lock(); defer { lock.unlock() }
+            return values
+        }
+    }
+
+    static func run(_ inputs: [String], workers: Int,
+                    parse: @escaping @Sendable (String) -> Date?) -> [Totals] {
+        let parseChunk: @Sendable (Int) -> Totals = { worker in
+            autoreleasepool {
+                var totals = Totals()
+                for index in stride(from: worker, to: inputs.count, by: workers) {
+                    if let date = parse(inputs[index]) {
+                        totals.valid += 1
+                        totals.checksum += date.timeIntervalSinceReferenceDate
+                    }
+                }
+                return totals
+            }
+        }
+        if workers == 1 { return [parseChunk(0)] }
+        let results = Results()
+        DispatchQueue.concurrentPerform(iterations: workers) { worker in
+            results.put(parseChunk(worker), at: worker)
+        }
+        let values = results.snapshot()
+        return (0..<workers).map { values[$0]! }
+    }
+}
+
+final class MailDateTests: XCTestCase {
+    func testParsingMatchesOriginalAcrossDistinctDatesAndEdgeCases() {
+        let inputs = MailDateTestSupport.edgeCases
+            + MailDateTestSupport.timestamps(count: 1_024, fractional: true)
+            + MailDateTestSupport.timestamps(count: 1_024, fractional: false)
+        for input in inputs {
+            XCTAssertEqual(MailDate.parse(input), MailDateTestSupport.baselineParse(input), input)
+        }
+    }
+
+    func testParsingPreservesAbsoluteInstantsAndDisplayFallbacks() throws {
+        for input in ["1970-01-01T00:00:00Z", "1970-01-01T05:30:00+05:30", "1969-12-31T17:00:00-07:00"] {
+            XCTAssertEqual(try XCTUnwrap(MailDate.parse(input)).timeIntervalSince1970, 0)
+        }
+        XCTAssertEqual(try XCTUnwrap(MailDate.parse("1970-01-01T00:00:00.125Z")).timeIntervalSince1970, 0.125, accuracy: 0.000_001)
+        for input in ["", "not-a-date"] {
+            XCTAssertNil(MailDate.parse(input))
+            XCTAssertEqual(MailDate.compact(input), "")
+            XCTAssertEqual(MailDate.full(input), input)
+        }
+        let input = "2024-02-29T23:59:59.123Z"
+        let date = try XCTUnwrap(MailDateTestSupport.baselineParse(input))
+        let expectedCompact = Calendar.current.isDateInToday(date)
+            ? date.formatted(date: .omitted, time: .shortened)
+            : date.formatted(.dateTime.month(.abbreviated).day())
+        XCTAssertEqual(MailDate.compact(input), expectedCompact)
+        XCTAssertEqual(MailDate.full(input), date.formatted(date: .abbreviated, time: .shortened))
+    }
+
+    func testConcurrentParsingMatchesOriginalForEveryInput() {
+        let inputs = MailDateTestSupport.edgeCases
+            + MailDateTestSupport.timestamps(count: 256, fractional: true)
+            + MailDateTestSupport.timestamps(count: 256, fractional: false)
+        let expected = inputs.map { MailDateTestSupport.baselineParse($0) }
+        let mismatches = MailDateTestSupport.Results()
+        DispatchQueue.concurrentPerform(iterations: 8) { worker in
+            var result = MailDateTestSupport.Totals()
+            for offset in 0..<(inputs.count * 4) {
+                let index = (offset + worker * 17) % inputs.count
+                if MailDate.parse(inputs[index]) != expected[index] { result.valid += 1 }
+            }
+            mismatches.put(result, at: worker)
+        }
+        let results = mismatches.snapshot()
+        XCTAssertEqual(results.count, 8)
+        XCTAssertTrue(results.values.allSatisfy { $0.valid == 0 }, "Concurrent parser results diverged: \(results)")
+    }
+
+    func testAlternatingWarmParserBenchmark() throws {
+        // Diagnostic, not a wall-clock CI assertion. The hosted harness waits for
+        // bootstatus before XCTest runs; warm both implementations again here.
+        // Results describe this simulator/Debug workload, not physical devices.
+        let fractional = MailDateTestSupport.timestamps(count: 2_048, fractional: true)
+        let whole = MailDateTestSupport.timestamps(count: 2_048, fractional: false)
+        let mixed = fractional.indices.map { index in
+            index % 10 == 0 ? "invalid-\(index)" : (index % 2 == 0 ? fractional[index] : whole[index])
+        }
+        let workloads: [(String, [String], Int)] = [
+            ("fractional", fractional, 1), ("whole", whole, 1),
+            ("mixed", mixed, 1), ("mixed-four-workers", mixed, 4),
+        ]
+        for (name, inputs, workers) in workloads {
+            _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers, parse: { MailDateTestSupport.baselineParse($0) })
+            _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers) { MailDate.parse($0) }
+            var baselineSamples = [Double](), cachedSamples = [Double]()
+            var expected: [MailDateTestSupport.Totals]?
+            for sample in 0..<6 {
+                // AB/BA alternation reduces order/thermal/scheduler bias.
+                for cached in (sample.isMultiple(of: 2) ? [false, true] : [true, false]) {
+                    let start = DispatchTime.now().uptimeNanoseconds
+                    let totals = cached
+                        ? MailDateTestSupport.run(inputs, workers: workers) { MailDate.parse($0) }
+                        : MailDateTestSupport.run(inputs, workers: workers, parse: { MailDateTestSupport.baselineParse($0) })
+                    let elapsed = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+                    if let expected { XCTAssertEqual(totals, expected, "\(name): parse results changed") }
+                    else { expected = totals }
+                    if cached { cachedSamples.append(elapsed) } else { baselineSamples.append(elapsed) }
+                }
+            }
+            let median: ([Double]) -> Double = { samples in
+                let sorted = samples.sorted()
+                return (sorted[2] + sorted[3]) / 2
+            }
+            let report: [String: Any] = [
+                "workload": name, "inputsPerSample": inputs.count, "workers": workers,
+                "baselineMilliseconds": baselineSamples, "cachedMilliseconds": cachedSamples,
+                "baselineMedianMilliseconds": median(baselineSamples),
+                "cachedMedianMilliseconds": median(cachedSamples),
+                "medianSpeedup": median(baselineSamples) / median(cachedSamples),
+                "timingIsDiagnosticOnly": true,
+            ]
+            let json = try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
+            print("MAIL_DATE_BENCHMARK \(String(decoding: json, as: UTF8.self))")
+        }
+    }
+}
