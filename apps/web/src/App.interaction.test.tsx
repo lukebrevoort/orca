@@ -1214,6 +1214,21 @@ describe("Write shortcut", () => {
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
   });
 
+  test("leaves native destination type-ahead and editable keys alone, including Zen preference", async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true });
+    await act(async () => (browserWindow.document.querySelector(".message-initial-select") as unknown as HTMLButtonElement).click());
+    const select = browserWindow.document.querySelector('[aria-label="Destination space"]')!;
+    const search = browserWindow.document.querySelector('input[aria-label="Search mail"]')!;
+    for (const target of [select, search]) {
+      const event = new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true });
+      await act(async () => { target.dispatchEvent(event); });
+      expect(event.defaultPrevented).toBe(false);
+      expect(browserWindow.document.querySelector('.compose-workspace, .zen-canvas')).toBeNull();
+    }
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true })));
+    expect(browserWindow.document.querySelector(".zen-canvas")).not.toBeNull();
+  });
+
   test("starts writing in Zen mode when the preference is enabled", async () => {
     await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true });
 
@@ -2333,7 +2348,7 @@ describe("Pin navigation and bulk sender actions", () => {
 
   test("exposes the visible bulk-selection state as pressed", async () => {
     await renderApp();
-    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement;
+    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement;
     await act(async () => { selectMode.click(); });
     const selectAll = browserWindow.document.querySelector(".bulk-select-all") as unknown as HTMLButtonElement;
 
@@ -2345,6 +2360,59 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { selectAll.click(); });
     expect(selectAll.getAttribute("aria-pressed")).toBe("false");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].every((row) => row.getAttribute("aria-pressed") === "false")).toBe(true);
+  });
+
+  test("sentence stays hidden until selection and Start over hides it and resets its destination", async () => {
+    await renderApp();
+    expect(browserWindow.document.querySelector(".mail-selection")).toBeNull();
+    await act(async () => buttonByName("Select conversation from Mom: Dinner on Sunday?").click());
+    expect(browserWindow.document.querySelector(".selection-scope")?.textContent).toBe("this conversation");
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
+    const destination = browserWindow.document.querySelector('[aria-label="Destination space"]') as unknown as HTMLSelectElement;
+    expect(destination.disabled).toBe(false);
+    await act(async () => { destination.value = [...destination.options].find(option => option.textContent === "Quiet")!.value; destination.dispatchEvent(new browserWindow.Event("change", { bubbles: true }) as unknown as Event); });
+    expect(destination.value).not.toBe("");
+    await act(async () => buttonByName("Clear selection and exit").click());
+    expect(browserWindow.document.querySelector(".mail-selection")).toBeNull();
+    await act(async () => buttonByName("Select").click());
+    expect((browserWindow.document.querySelector('[aria-label="Destination space"]') as unknown as HTMLSelectElement).value).toBe("");
+    expect(browserWindow.document.querySelector(".selection-scope")?.textContent).toBe("a few conversations");
+  });
+
+  test("selection disclosure dismisses before Escape exits selection and restores focus", async () => {
+    await renderApp();
+    const selectMode = browserWindow.document.querySelector(".selection-mode-toggle") as unknown as HTMLButtonElement;
+    await act(async () => selectMode.click());
+    await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
+    const more = browserWindow.document.querySelector(".bulk-more") as unknown as HTMLDetailsElement;
+    const summary = more.querySelector("summary")!;
+    expect(more.open).toBe(false);
+    await act(async () => summary.click());
+    expect(more.open).toBe(true);
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", cancelable: true })));
+    expect(more.open).toBe(false);
+    expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(true);
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", cancelable: true })));
+    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, selectMode)).toBe(true);
+    await act(async () => selectMode.click());
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(0);
+  });
+
+  test("clicking outside More preserves selected mail and the local exit clears it", async () => {
+    await renderApp();
+    const selectMode = browserWindow.document.querySelector(".selection-mode-toggle") as unknown as HTMLButtonElement;
+    await act(async () => selectMode.click());
+    await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
+    const more = browserWindow.document.querySelector(".bulk-more") as unknown as HTMLDetailsElement;
+    await act(async () => more.querySelector("summary")!.click());
+    await act(async () => browserWindow.document.body.dispatchEvent(new browserWindow.PointerEvent("pointerdown", { bubbles: true })));
+    expect(more.open).toBe(false);
+    expect(browserWindow.document.querySelectorAll('.message-row[aria-pressed="true"]')).toHaveLength(1);
+    await act(async () => buttonByName("Clear selection and exit").click());
+    expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, selectMode)).toBe(true);
   });
 
   test("hands the server only exact selected row identities for sender preparation", () => {
@@ -2371,7 +2439,7 @@ describe("Pin navigation and bulk sender actions", () => {
       { ...source, id: "message-b", accountId: "account-b", threadId: "thread-b", from: { name: "Ari", email: "ari@example.com" }, subject: "Account B", receivedAt: "2026-07-02T11:00:00.000Z" },
     ];
     await renderApp(defaultReaderPreferences, false, { theme: "light", initialDemoMessages: messages });
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => {
       buttonByName("Select Maya: Account A").click();
       buttonByName("Select Ari: Account B").click();
@@ -2384,8 +2452,11 @@ describe("Pin navigation and bulk sender actions", () => {
 
   test("cancel returns to the selected rows, scroll position, and authoring trigger", async () => {
     await renderApp();
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
+    const more = browserWindow.document.querySelector(".bulk-more") as unknown as HTMLDetailsElement;
+    await act(async () => more.querySelector("summary")!.click());
+    expect(more.open).toBe(true);
     const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Create sender View") as unknown as HTMLButtonElement;
     const focusCalls = trackFocus(useSenders);
     setScroll({ x: 12, y: 380 });
@@ -2408,12 +2479,13 @@ describe("Pin navigation and bulk sender actions", () => {
     flushAnimationFrames();
     expect(scrollPosition).toEqual({ x: 12, y: 380 });
     expect(focusCalls.at(-1)).toEqual({ preventScroll: true });
+    expect(more.open).toBe(true);
     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
   });
 
   test("sender authoring tucks extra fields into Tune and guards dirty Escape before returning selection", async () => {
     await renderApp();
-    const byText = (text: string) => [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === text) as unknown as HTMLButtonElement;
+    const byText = (text: string) => [...browserWindow.document.querySelectorAll("button")].find(button => (button.getAttribute("aria-label") === text || button.textContent === text)) as unknown as HTMLButtonElement;
     await act(async () => byText("Select").click());
     await act(async () => buttonByName("Select Mom: Dinner on Sunday?").click());
     await act(async () => { byText("Create sender View").click(); await Promise.resolve(); });
@@ -2444,12 +2516,12 @@ describe("Pin navigation and bulk sender actions", () => {
 
   test("moves multiple selected senders to Quiet in one action", async () => {
     await renderApp();
-    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
+    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement;
     await act(async () => {
       selectMode.click();
     });
     expect(browserWindow.document.querySelector("button.message-select-button")).toBeNull();
-    expect(browserWindow.document.querySelector(".message-row-wrap-selecting .message-select-indicator")).not.toBeNull();
+    expect(browserWindow.document.querySelector(".message-row-wrap-selecting .message-initial-select")).not.toBeNull();
     await act(async () => {
       buttonByName("Select Mom: Dinner on Sunday?").click();
       buttonByName("Select Jordan Bell: Re: Team offsite planning").click();
@@ -2462,12 +2534,12 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("2 senders moved to Quiet.");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Jordan Bell"))).toBe(false);
-    expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
+    expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.getAttribute("aria-label") === "Clear selection and exit")).toBe(false);
   });
 
   test("changing search clears selection before selecting newly visible conversations", async () => {
     await renderApp();
-    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
+    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement;
     await act(async () => { selectMode.click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
 
@@ -2477,7 +2549,7 @@ describe("Pin navigation and bulk sender actions", () => {
     });
 
     expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find(button => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     expect(buttonByName("Select Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("false");
     await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
     expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 conversation selected");
@@ -2495,7 +2567,7 @@ describe("Pin navigation and bulk sender actions", () => {
       };
     };
     await renderApp(defaultReaderPreferences, false, { theme: "dark", bulkAttentionClient });
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => {
       buttonByName("Select Mom: Dinner on Sunday?").click();
       buttonByName("Select Jordan Bell: Re: Team offsite planning").click();
@@ -2512,7 +2584,7 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { retry.click(); await Promise.resolve(); });
     expect(requestCount).toBe(2);
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("1 sender moved to Quiet.");
-    expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
+    expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.getAttribute("aria-label") === "Clear selection and exit")).toBe(false);
   });
 
   test("retries a retryable exact sender target after its canonical state removes the row", async () => {
@@ -2536,7 +2608,7 @@ describe("Pin navigation and bulk sender actions", () => {
         };
     };
     await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
     const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button').values()].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
     await act(async () => { quiet.click(); await Promise.resolve(); });
@@ -2629,7 +2701,7 @@ describe("Pin navigation and bulk sender actions", () => {
       await act(async () => flushAnimationFrames());
       expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(outlookOrigin);
 
-      await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+      await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
       await act(async () => {
         buttonByName("Select Shared Gmail: Gmail copy refreshed").click();
         buttonByName("Select Shared Outlook: Outlook copy").click();
@@ -2668,7 +2740,7 @@ describe("Pin navigation and bulk sender actions", () => {
       });
     };
     await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
     const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
     await act(async () => { quiet.click(); await Promise.resolve(); });
@@ -4047,13 +4119,13 @@ describe("BRE-386 guidance navigation", () => {
     await waitFor(0);
     await act(async () => flushAnimationFrames());
     expect(browserWindow.location.search).toContain("destination=all");
-    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("true");
+    expect(browserWindow.document.querySelector(".mail-selection.bulk-action-bar")).not.toBeNull();
     expect(browserWindow.document.activeElement?.classList.contains("selection-mode-toggle")).toBe(true);
     for (const destination of ["organization-studio", "all"]) {
       await act(async () => { browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`); browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate")); });
       await waitFor(0);
     }
-    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("false");
+    expect(browserWindow.document.querySelector(".mail-selection.bulk-action-bar")).toBeNull();
   });
 });
 
@@ -4063,7 +4135,7 @@ describe("BRE-413 saved-view growth entry", () => {
   test("survives the mailbox selection reset", async () => {
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all&addSendersTo=view_weekly_production");
     await renderApp();
-    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.textContent).toContain("Done selecting");
+    expect(browserWindow.document.querySelector(".mail-selection.bulk-action-bar")).not.toBeNull();
     expect(browserWindow.document.body.textContent).toContain("Add senders to existing View");
   });
 });
