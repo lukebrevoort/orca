@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { test } from "bun:test";
+import { spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { SQLQueryBindings } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { threadDetailSchema } from "@orca/shared";
+import { threadDetailSchema, type ThreadDetail } from "@orca/shared";
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import * as schema from "./db/schema.ts";
@@ -24,6 +24,13 @@ test("thread detail loads bodies once while preserving multi-message labels, att
   const dbPath = join(directory, "test.sqlite");
   const { db, sqlite } = createDatabaseClient(dbPath);
   const observed: Array<{ query: string; params: unknown[] }> = [];
+  const parse = threadDetailSchema.parse;
+  const validatedResponses: ThreadDetail[] = [];
+  const parseSpy = spyOn(threadDetailSchema, "parse").mockImplementation((value, options) => {
+    const detail = parse(value, options);
+    validatedResponses.push(detail);
+    return detail;
+  });
   try {
     migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
     db.insert(schema.users).values([
@@ -71,7 +78,12 @@ test("thread detail loads bodies once while preserving multi-message labels, att
       false,
       "opening one thread must not enumerate the account's Organization lane snapshot",
     );
-    const detail = threadDetailSchema.parse(await response.json());
+    assert.equal(parseSpy.mock.calls.length, 1, "the HTTP route must retain one full validation without reparsing its validated result");
+    const serialized = await response.text();
+    // Reproduce the old route's second parse and compare the complete response,
+    // including object-key ordering, defaults and any schema transformations.
+    assert.equal(serialized, JSON.stringify(parse(validatedResponses[0])));
+    const detail = parse(JSON.parse(serialized));
     assert.deepEqual(detail.messages.map((message) => message.id), ["a", "b", "c", "d"]);
     assert.deepEqual(detail.messages.map((message) => [...message.labels].sort()), [["Inbox", "Work"], ["Work"], [], []]);
     assert.deepEqual([...detail.thread.labels].sort(), ["Inbox", "Work"]);
@@ -97,9 +109,56 @@ test("thread detail loads bodies once while preserving multi-message labels, att
       }
     }
     assert.equal(returnedBodyBytes, 4 * (Buffer.byteLength(bodyText) + Buffer.byteLength(bodyHtml)), "SQL must return each body once regardless of label/attachment fan-out");
-    assert.equal((await app.request("/v1/threads/private?accountId=a", { headers })).status, 404);
-    assert.equal((await app.request("/v1/threads/private?accountId=b", { headers })).status, 404);
+    for (const [path, status, authenticated] of [
+      ["/v1/threads/private?accountId=a", 404, true],
+      ["/v1/threads/private?accountId=b", 404, true],
+      ["/v1/threads/absent?accountId=a", 404, true],
+      ["/v1/threads/thread", 400, true],
+      ["/v1/threads/thread?accountId=a", 401, false],
+    ] as const) {
+      parseSpy.mockClear();
+      assert.equal((await app.request(path, authenticated ? { headers } : {})).status, status);
+      assert.equal(parseSpy.mock.calls.length, 0, "denied or missing threads must never reach response validation");
+    }
+
+    // Malformed persisted values must still fail at the reader's schema boundary.
+    // Contact extras are intentionally rejected by the strict schema, not dropped.
+    const invalidCases = [
+      ["update threads set message_count = -1 where id = 'thread'", "update threads set message_count = 4 where id = 'thread'"],
+      ["update email_attachments set size = -1 where id = 'a1'", "update email_attachments set size = 42 where id = 'a1'"],
+      [`update emails set "references" = '[42]' where id = 'a'`, `update emails set "references" = '[]' where id = 'a'`],
+      [`update emails set to_recipients = '[{"name":null,"email":"owner@example.com","extra":true}]' where id = 'a'`, `update emails set to_recipients = '[]' where id = 'a'`],
+    ];
+    for (const [update, restore] of invalidCases) {
+      sqlite.run(update!);
+      parseSpy.mockClear();
+      const invalid = await app.request("/v1/threads/thread?accountId=a", { headers });
+      assert.equal(invalid.status, 500);
+      assert.equal(await invalid.text(), "Internal Server Error");
+      assert.equal(parseSpy.mock.calls.length, 1, "invalid persisted output must be parsed and rejected");
+      sqlite.run(restore!);
+    }
+
+    // Guard the idempotent defaults/transforms that make the removed parse redundant.
+    const message = detail.messages[0]!;
+    const raw = {
+      ...detail,
+      messages: [
+        { ...message, humanClassification: undefined },
+        { ...message, humanClassification: {
+          ...message.humanClassification!, userOverride: undefined,
+          effective: { ...message.humanClassification!.effective, userOverride: undefined, classifierVersion: " fixture-v1 " },
+        }, destination: { destinationId: " inbox ", source: "fallback", locked: false, reason: "fixture" } },
+      ],
+    };
+    const once = parse(raw);
+    assert.equal(once.messages[0]!.humanClassification, null);
+    assert.equal(once.messages[1]!.humanClassification!.effective.classifierVersion, "fixture-v1");
+    assert.equal(once.messages[1]!.humanClassification!.effective.userOverride, null);
+    assert.equal(once.messages[1]!.destination!.destinationId, "inbox");
+    assert.equal(JSON.stringify(parse(once)), JSON.stringify(once));
   } finally {
+    parseSpy.mockRestore();
     sqlite.close();
     rmSync(directory, { recursive: true, force: true });
     if (priorEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;

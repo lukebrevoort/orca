@@ -85,12 +85,31 @@ struct PushRegistration: Codable { struct Configuration: Codable { var configure
 
 
 enum MailDate {
+    // ISO8601DateFormatter is mutable and not Sendable. Keep both fixed-option
+    // instances private and protect every use; no formatter escapes this owner.
+    private final class Parser: @unchecked Sendable {
+        private let lock = NSLock()
+        private let fractional: ISO8601DateFormatter
+        private let wholeSeconds: ISO8601DateFormatter
+
+        init() {
+            fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            wholeSeconds = ISO8601DateFormatter()
+            wholeSeconds.formatOptions = [.withInternetDateTime]
+        }
+
+        func parse(_ value: String) -> Date? {
+            lock.lock()
+            defer { lock.unlock() }
+            return fractional.date(from: value) ?? wholeSeconds.date(from: value)
+        }
+    }
+
+    private static let parser = Parser()
+
     static func parse(_ value: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: value) { return date }
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter.date(from: value)
+        parser.parse(value)
     }
     static func compact(_ value: String) -> String {
         guard let date = parse(value) else { return "" }

@@ -1,0 +1,44 @@
+/* Scoped to the message: keep inbox, composer, and HTML safety policy unchanged. */
+.reader-content { min-width: 0; }
+.reader-display-controls { align-items: center; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 18px; }
+.reader-display-controls button {
+  background: transparent; border: 1px solid transparent; border-radius: 8px;
+  color: var(--orca-muted); cursor: pointer; font: 500 12px/1.4 var(--orca-font-body);
+  min-height: 36px; padding: 7px 12px;
+}
+.reader-display-controls button:hover,
+.reader-display-controls button[aria-pressed="true"] {
+  background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink);
+}
+.reader-display-controls button:focus-visible,
+.reader-formatted-region:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.reader-display-note { color: var(--orca-muted); font: 400 12px/1.5 var(--orca-font-body); margin: 0 0 16px; }
+/* Oversized sender layouts stay in a keyboard-scrollable region. Do not crop,
+   scale down, or flatten their tables to fit the app. */
+.reader-formatted-region { max-width: 100%; min-width: 0; overflow-x: auto; padding: 3px; margin: -3px; }
+.reader-formatted-region .reader-body-html { max-width: 100%; min-width: 0; }
+.reader-body-html pre { font-size: max(14px, .875em); line-height: 1.6; max-width: 100%; overflow-x: auto; tab-size: 4; }
+/* A nested code element inherits the block size rather than shrinking twice. */
+.reader-body-html pre code { font-size: inherit; line-height: inherit; white-space: inherit; }
+.reader-body-html a { overflow-wrap: anywhere; }
+/* Do not compound Orca margins inside nested tables. Preserve all cell spacing:
+   the API does not retain reliable layout-table semantics. */
+.reader-body-html table table { margin: 0; }
+.reader-sender-address { display: block; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.reader-sender details summary { white-space: normal; }
+.reader-sender details summary > span:last-child { display: inline-block; margin-top: 3px; }
+.reader-sender { grid-template-columns: 36px minmax(0, 1fr) auto auto; align-items: start; }
+.reader-sender .message-mark { grid-column: 1; grid-row: 1; }
+.reader-sender-copy { min-width: 0; grid-column: 2; grid-row: 1; }
+.reader-sent-time { grid-column: 3; grid-row: 1; }
+.reader-sender .classification-correction { grid-column: 2 / span 2; grid-row: 2; justify-self: start; margin-left: 0; }
+.reader-sender .sender-attention-control { grid-column: 4; grid-row: 1 / span 2; }
+.reader-heading h1, .reader-participants, .reader-sender h3 { overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .reader-display-controls button { min-height: 44px; }
+  .reader-sender { grid-template-columns: 36px minmax(0, 1fr) auto; }
+  .reader-sender-copy { grid-column: 2 / span 2; }
+  .reader-sent-time { grid-column: 2 / span 2; grid-row: 2; white-space: normal; }
+  .reader-sender .classification-correction { grid-column: 2; grid-row: 3; }
+  .reader-sender .sender-attention-control { grid-column: 3; grid-row: 3; }
+}

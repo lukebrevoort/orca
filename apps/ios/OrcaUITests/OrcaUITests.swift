@@ -803,8 +803,23 @@ final class OrcaUITests: XCTestCase {
         }
         let row = app.descendants(matching: .any)[identifier]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
+        let tapStarted = ProcessInfo.processInfo.systemUptime
         row.tap()
-        XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+        let tapFinished = ProcessInfo.processInfo.systemUptime
+        let conversationOpened = app.navigationBars["Conversation"].waitForExistence(timeout: 10)
+        let waitFinished = ProcessInfo.processInfo.systemUptime
+        print("INBOX_NAVIGATION_TIMING row=\(identifier) tapSeconds=\(tapFinished - tapStarted) navigationWaitSeconds=\(waitFinished - tapFinished) opened=\(conversationOpened)")
+        if !conversationOpened {
+            attachScreenshot(named: "inbox-navigation-failure-after-tap")
+            // App-only synthetic fixture state. Never log the launch arguments or
+            // process environment. checks.log is also redacted by the CI exporter.
+            var hierarchy = app.debugDescription
+            if let token = ProcessInfo.processInfo.environment["ORCA_FIXTURE_ACCESS_TOKEN"], !token.isEmpty {
+                hierarchy = hierarchy.replacingOccurrences(of: token, with: "[REDACTED]")
+            }
+            print("INBOX_NAVIGATION_FAILURE_HIERARCHY_BEGIN\n\(hierarchy)\nINBOX_NAVIGATION_FAILURE_HIERARCHY_END")
+        }
+        XCTAssertTrue(conversationOpened)
         XCTAssertTrue(app.staticTexts[subject].waitForExistence(timeout: 10))
     }
 
