@@ -3,7 +3,11 @@ name: Native Reader Checks
 on:
   pull_request:
     paths:
-      - 'apps/ios/**'
+      - 'apps/ios/Orca/Mail/SafeHTMLView.swift'
+      - 'apps/ios/Orca/Mail/ThreadView.swift'
+      - 'apps/ios/OrcaTests/SafeHTMLViewTests.swift'
+      - 'apps/ios/OrcaUITests/**'
+      - 'apps/ios/Orca.xcodeproj/**'
       - 'scripts/ci/**'
       - '.github/workflows/native-reader.yml'
   workflow_dispatch:

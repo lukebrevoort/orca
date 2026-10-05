@@ -44,6 +44,26 @@ final class SafeHTMLViewTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(view.documents.last).contains("Second account message"))
     }
 
+    func testEquivalentFreshStringsAndIndependentReaders() {
+        let first = LoadingSpy()
+        let firstCoordinator = SafeHTMLView.Coordinator()
+        let html = String(repeating: "<p>Conversation</p>", count: 500)
+        firstCoordinator.update(first, html: html, colorScheme: .light, size: 22)
+        for _ in 0..<10 {
+            let fresh = String(decoding: Array(html.utf8), as: UTF8.self)
+            firstCoordinator.update(first, html: fresh, colorScheme: .light, size: 22)
+        }
+        XCTAssertEqual(first.documents.count, 1)
+        let second = LoadingSpy()
+        let secondCoordinator = SafeHTMLView.Coordinator()
+        secondCoordinator.update(second, html: html, colorScheme: .light, size: 22)
+        XCTAssertEqual(second.documents.count, 1, "Identical content in a new reader must still load")
+        firstCoordinator.update(first, html: html + "<p>Newest reply</p>", colorScheme: .light, size: 22)
+        XCTAssertEqual(first.documents.count, 2)
+        XCTAssertEqual(second.documents.count, 1)
+        XCTAssertFalse(second.documents[0].contains("Newest reply"))
+    }
+
     func testReaderShellKeepsSecurityAndTypographyContract() throws {
         let view = LoadingSpy()
         SafeHTMLView.Coordinator().update(view, html: "<p>Message</p>", colorScheme: .light, size: 22)

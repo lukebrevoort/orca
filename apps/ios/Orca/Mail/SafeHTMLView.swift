@@ -13,11 +13,24 @@ struct SafeHTMLView: UIViewRepresentable {
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     final class Coordinator: NSObject, WKNavigationDelegate {
-        private var renderedHTML: String?
+        private struct RenderInputs: Equatable {
+            let html: String
+            let colorScheme: ColorScheme
+            let size: CGFloat
+        }
+        // Retain only this reader's current inputs, not another copy of the
+        // complete document (which also embeds the ~600 KB base64 font).
+        private var renderedInputs: RenderInputs?
 
         // Keep preparation in the coordinator so repeated update work can be
         // measured independently of asynchronous WebKit navigation/layout.
         func update(_ view: WKWebView, html: String, colorScheme: ColorScheme, size: CGFloat) {
+            let inputs = RenderInputs(html: html, colorScheme: colorScheme, size: size)
+            // SwiftUI may update the representable without changing its body.
+            // Check before interpolation so a no-op does not rebuild the font
+            // payload or disturb the existing WebKit document/selection.
+            guard renderedInputs != inputs else { return }
+            renderedInputs = inputs
             let ink = colorScheme == .dark ? "#f4f3ef" : "#102522"
             let shell = """
             <meta name='viewport' content='width=device-width'>
@@ -30,7 +43,7 @@ struct SafeHTMLView: UIViewRepresentable {
             blockquote{border-left:2px solid #65746d;margin:1em 0;padding-left:1em}
             </style>
             """ + html
-            if renderedHTML != shell { renderedHTML = shell; view.loadHTMLString(shell, baseURL: nil) }
+            view.loadHTMLString(shell, baseURL: nil)
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
