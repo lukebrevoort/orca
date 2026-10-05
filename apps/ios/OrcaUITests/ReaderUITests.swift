@@ -34,14 +34,39 @@ final class ReaderUITests: XCTestCase {
         openHTML(in: app)
         let first = app.staticTexts["Explicit dark foreground stays readable."]
         XCTAssertTrue(first.waitForExistence(timeout: 10))
-        for _ in 0..<6 {
-            if isVisible(first, in: app) { break }
-            app.swipeUp()
-        }
+        reveal(first, in: app)
         screenshot("reader-accessibility-visibility-check")
         XCTAssertTrue(isVisible(first, in: app))
-        XCTAssertTrue(app.buttons["Reply"].isHittable)
-        screenshot("reader-accessibility-type")
+        let labels = ["Reply", "Reply all", "Forward"]
+        let actions = labels.map { app.buttons[$0] }
+        for (label, button) in zip(labels, actions) {
+            XCTAssertEqual(button.label, label)
+            XCTAssertTrue(button.isHittable)
+            XCTAssertGreaterThanOrEqual(button.frame.height, 44)
+            XCTAssertGreaterThan(button.frame.width, app.frame.width * 0.7)
+            XCTAssertTrue(app.frame.contains(button.frame))
+        }
+        XCTAssertLessThan(actions[0].frame.maxY, actions[1].frame.minY)
+        XCTAssertLessThan(actions[1].frame.maxY, actions[2].frame.minY)
+        let accessibilityOrder = app.buttons.matching(NSPredicate(format: "label IN %@", labels))
+            .allElementsBoundByIndex.map { $0.label }
+        XCTAssertEqual(accessibilityOrder, labels, "Accessible actions should follow their visual top-to-bottom order")
+        XCTAssertLessThan(actions[0].frame.height, actions[0].frame.width / 2, "Reply must not wrap into a narrow vertical label")
+        screenshot("reader-accessibility-stacked-actions")
+        // Open and return from every action without editing or sending. This
+        // checks each destination and that the reader remains usable afterward.
+        for (label, title) in [("Reply", "Reply"), ("Reply all", "Reply All"), ("Forward", "Forward")] {
+            app.buttons[label].tap()
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10))
+            if label != "Forward" {
+                let recipient = app.textFields["compose.to"]
+                XCTAssertTrue(recipient.waitForExistence(timeout: 10))
+                XCTAssertTrue(String(describing: recipient.value).contains("sofia@example.com"))
+            }
+            app.navigationBars.buttons.firstMatch.tap()
+            XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+            XCTAssertTrue(app.buttons[label].isHittable)
+        }
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
     }
@@ -75,6 +100,24 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(row.exists && row.isHittable)
         row.tap()
         XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+    }
+
+    private func reveal(_ text: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<16 {
+            if isVisible(text, in: app) { return }
+            let top = app.navigationBars["Conversation"].frame.maxY
+            let bottom = app.buttons["Reply"].frame.minY - 12
+            let frame = text.frame
+            let step = max(40, (bottom - top) * 0.5)
+            let distance = frame.minY < top
+                ? -min(top - frame.minY + 8, step)
+                : min(max(frame.maxY - bottom + 8, 30), step)
+            let startY = distance > 0 ? bottom - 20 : top + 20
+            let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            let start = origin.withOffset(CGVector(dx: app.frame.width / 2, dy: startY))
+            let end = origin.withOffset(CGVector(dx: app.frame.width / 2, dy: startY - distance))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.1)
+        }
     }
 
     private func isVisible(_ text: XCUIElement, in app: XCUIApplication) -> Bool {
