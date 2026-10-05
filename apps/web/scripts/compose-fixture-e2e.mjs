@@ -249,9 +249,18 @@ try {
   // Delete only this test's synthetic preserved original so the next new
   // composer does not intentionally resume it. Never a user-owned draft.
   await api(context,`/v1/drafts/${original.id}?accountId=first`,'DELETE');
-  // Reset only this isolated synthetic profile's recovered draft checkpoint.
-  await page.evaluate(()=>localStorage.clear());
-  await page.reload();
+  // This phase owns only the preserved synthetic original. Verify deletion
+  // before starting the independent ambiguous-delivery scenario.
+  assert(!(await drafts(context, 'first')).some(draft=>draft.id===original.id), 'Preserved fixture draft must be deleted');
+  // A still-mounted composer can checkpoint the preserved original after an
+  // evaluate(clear) call but before navigation. Clear at the next document's
+  // initialization, after the old document has gone and before app hydration.
+  // This affects only the test-owned browser profile, never an existing one.
+  await page.addInitScript(theme=>{
+   localStorage.clear();
+   localStorage.setItem('orca-reader-preferences',JSON.stringify({theme,motion:'reduced'}));
+  },theme);
+  await page.reload({waitUntil:'networkidle'});
   // The Compose shell exists before the authenticated account replaces preview.
   // The restored reader can hide the inbox, so require loaded data, not visibility.
   await page.locator('button.message-row').filter({hasText:'second account conversation'}).waitFor({state:'attached'});
