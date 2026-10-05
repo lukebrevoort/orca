@@ -5,7 +5,8 @@
 @media (max-width: 760px) {
   .mobile-mail-shell { --desktop-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   .mobile-mail-shell .desktop-workspace-header {
-    position: relative;
+    position: sticky;
+    top: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
@@ -36,39 +37,39 @@
   .desktop-mobile-menu-item { font-size: 14px; }
   .desktop-mobile-menu-label { font-size: 10px; }
 
-  :root .mobile-mail-shell .inbox-view-inbox .pane-header { padding: 22px 20px 18px; gap: 14px; }
-  :root .mobile-mail-shell .inbox-view-inbox .stream-date { font-size: 10px; line-height: 1.5; font-weight: 500; letter-spacing: 1.2px; }
-  :root .mobile-mail-shell .inbox-view-inbox .stream-title-line { align-items: flex-start; gap: 10px; }
-  :root .mobile-mail-shell .inbox-view-inbox .stream-title-line h1 { font-size: clamp(30px, 8.5vw, 36px); line-height: 1.12; letter-spacing: -.8px; }
-  :root .mobile-mail-shell .inbox-view-inbox .stream-title-line > span,
-  :root .mobile-mail-shell .inbox-view-inbox .stream-context { font-size: 12px; line-height: 1.5; }
-  :root .mobile-mail-shell .inbox-view-inbox .selection-mode-toggle,
-  :root .mobile-mail-shell .inbox-view-inbox .refresh-button,
-  :root .mobile-mail-shell .inbox-view-inbox .inbox-filter-bar button { min-height: 44px; font-size: 12px; }
-  :root .mobile-mail-shell .inbox-view-inbox .inbox-filter-bar { margin: 0 16px 16px; padding: 4px; gap: 4px; flex-wrap: wrap; }
-  :root .mobile-mail-shell .inbox-view-inbox .inbox-body { padding: 0 0 calc(92px + env(safe-area-inset-bottom)); }
-  :root .mobile-mail-shell .inbox-view-inbox .message-list { border-inline: 0; border-radius: 0; box-shadow: none; }
-  :root .mobile-mail-shell .inbox-view-inbox .stream-section-label { padding: 12px 20px 8px; font-size: 10px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-row,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .pane-header { padding: 22px 20px 18px; gap: 14px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-date { font-size: 10px; line-height: 1.5; font-weight: 500; letter-spacing: 1.2px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-title-line { align-items: flex-start; gap: 10px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-title-line h1 { font-size: clamp(30px, 8.5vw, 36px); line-height: 1.12; letter-spacing: -.8px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-title-line > span,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-context { font-size: 12px; line-height: 1.5; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .selection-mode-toggle,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .refresh-button,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .inbox-filter-bar button { min-height: 44px; font-size: 12px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .inbox-filter-bar { margin: 0 16px 16px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .inbox-body { padding: 0 0 calc(92px + env(safe-area-inset-bottom)); }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-list { border-inline: 0; border-radius: 0; box-shadow: none; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-section-label { padding: 12px 20px 8px; font-size: 10px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row,
   :root[data-reader-density="compact"] .mobile-mail-shell .inbox-view-inbox .message-row { grid-template-columns: 36px minmax(0, 1fr); align-items: start; gap: 12px; min-height: 154px; padding: 16px 20px 58px; }
-  :root .mobile-mail-shell .inbox-view-inbox .stream-avatar { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; font-size: 12px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-copy { gap: 5px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-meta strong { font: 400 14px/1.4 var(--desktop-sans); }
-  :root .mobile-mail-shell .inbox-view-inbox .message-meta > span:last-child { font-size: 10px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-subject-row h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: anywhere; font: 400 16px/1.35 var(--desktop-sans); }
-  :root .mobile-mail-shell .inbox-view-inbox .message-row-unread .message-meta strong,
-  :root .mobile-mail-shell .inbox-view-inbox .message-row-unread .message-subject-row h2 { font-weight: 650; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-copy > p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; font: 400 14px/1.5 var(--desktop-sans); }
-  :root .mobile-mail-shell .inbox-view-inbox .message-initial-select { width: 44px; height: 44px; left: 16px; top: 12px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-initial-select > span { opacity: 1; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-evidence-button { left: 62px; right: 116px; bottom: 6px; padding: 0 6px; min-height: 44px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-evidence-button span,
-  :root .mobile-mail-shell .inbox-view-inbox .message-evidence-button strong { font-size: 10px; text-transform: none; letter-spacing: 0; }
-  :root .mobile-mail-shell .inbox-view-inbox .keep-thread-button,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .stream-avatar { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; font-size: 12px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-copy { gap: 5px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-meta strong { font: 400 14px/1.4 var(--desktop-sans); }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-meta > span:last-child { font-size: 10px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-subject-row h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: anywhere; font: 400 16px/1.35 var(--desktop-sans); }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-unread .message-meta strong,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-unread .message-subject-row h2 { font-weight: 650; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-copy > p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; font: 400 14px/1.5 var(--desktop-sans); }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-initial-select { width: 44px; height: 44px; left: 16px; top: 12px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-initial-select > span { opacity: 1; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-evidence-button { left: 62px; right: 116px; bottom: 6px; padding: 0 6px; min-height: 44px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-evidence-button span,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-evidence-button strong { font-size: 10px; text-transform: none; letter-spacing: 0; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .keep-thread-button,
   :root[data-reader-density="compact"] .mobile-mail-shell .inbox-view-inbox .keep-thread-button { right: 16px; bottom: 6px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-row-wrap > .sender-attention-control,
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-wrap > .sender-attention-control,
   :root[data-reader-density="compact"] .mobile-mail-shell .inbox-view-inbox .message-row-wrap > .sender-attention-control { right: 64px; bottom: 6px; }
-  :root .mobile-mail-shell .inbox-view-inbox .message-row-wrap-selecting .message-row { padding: 16px 20px; min-height: 112px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-wrap-selecting .message-row { padding: 16px 20px; min-height: 112px; }
   .mobile-mail-shell .mail-selection { margin-inline: 20px; }
   .mobile-mail-shell .selection-context .bulk-selection-exit,
   .mobile-mail-shell .selection-context .bulk-more > summary { min-height: 44px; }

@@ -6,6 +6,7 @@ import { WorkspaceHeader } from "./desktop-switch";
 import { TopLayerProvider } from "./top-layer";
 
 const styles = await Bun.file(new URL("./mobile-mail.css", import.meta.url)).text();
+const baseStyles = (await Promise.all(["styles.css", "desktop-switch.css", "mail-selection.css"].map(file => Bun.file(new URL(file, import.meta.url)).text()))).join("\n");
 const names = ["window", "document", "navigator", "HTMLElement", "Element", "Node", "Event", "MouseEvent", "KeyboardEvent"] as const;
 const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 let browser: Window;
@@ -59,6 +60,29 @@ describe("native-inspired mobile mail", () => {
     expect(desktop.getComputedStyle(desktop.document.querySelector('.mobile-mail-header')!).display).toBe("none");
     expect(desktop.getComputedStyle(desktop.document.querySelector('.mobile-mail-compose')!).height).not.toBe("44px");
     desktop.close();
+  });
+
+  test("full cascade keeps normal and compact Inbox spacing and long-snippet clamps", () => {
+    for (const density of ["comfortable", "compact"]) {
+      const phone = new Window({ width: 390, height: 844 });
+      phone.document.documentElement.dataset.readerDensity = density;
+      const sheet = phone.document.createElement("style");
+      sheet.textContent = baseStyles + styles;
+      phone.document.head.append(sheet);
+      phone.document.body.innerHTML = '<main class="desktop-shell mobile-mail-shell"><header class="desktop-workspace-header"></header><div class="inbox-view inbox-view-inbox"><div class="message-row-wrap"><button class="message-row"><div class="message-copy"><p>A long snippet</p></div></button><button class="keep-thread-button"></button></div></div></main>';
+      const row = phone.getComputedStyle(phone.document.querySelector('.message-row')!);
+      const snippet = phone.getComputedStyle(phone.document.querySelector('.message-copy > p')!);
+      expect(row.paddingTop).toBe("16px");
+      expect(row.paddingRight).toBe("20px");
+      expect(row.paddingBottom).toBe("58px");
+      // Happy DOM drops vendor display values; assert the authored clamp here,
+      // and verify its actual two-line geometry in browser review.
+      expect(styles).toContain(':root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-copy > p { display: -webkit-box;');
+      expect(snippet.getPropertyValue("-webkit-line-clamp")).toBe("2");
+      expect(phone.getComputedStyle(phone.document.querySelector('.keep-thread-button')!).right).toBe("16px");
+      expect(phone.getComputedStyle(phone.document.querySelector('.desktop-workspace-header')!).position).toBe("sticky");
+      phone.close();
+    }
   });
 
   test("small viewports keep the delivery controls in scroll flow with safe-area support", () => {
