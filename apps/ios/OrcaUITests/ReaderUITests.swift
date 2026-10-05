@@ -9,14 +9,19 @@ final class ReaderUITests: XCTestCase {
             openHTML(in: app)
             let first = app.staticTexts["Explicit dark foreground stays readable."]
             XCTAssertTrue(first.waitForExistence(timeout: 10))
-            XCTAssertTrue(first.isHittable, "Every open should begin at the top of this HTML message")
+            XCTAssertTrue(isVisible(first, in: app), "Every open should begin at the top of this HTML message")
             screenshot("reader-open-\(pass)")
             let end = app.staticTexts["End of the long reading fixture."]
+            XCTAssertFalse(isVisible(end, in: app), "The long fixture must start with its end outside the viewport")
+            var scrolls = 0
             for _ in 0..<20 {
-                if end.exists && end.isHittable { break }
+                if isVisible(end, in: app) { break }
                 app.swipeUp(velocity: .fast)
+                scrolls += 1
             }
-            XCTAssertTrue(end.isHittable, "The complete HTML body must remain reachable")
+            XCTAssertGreaterThan(scrolls, 0, "The long fixture must exercise actual scrolling")
+            screenshot("reader-end-check-\(pass)")
+            XCTAssertTrue(isVisible(end, in: app), "The complete HTML body must remain visible in the reader viewport")
             XCTAssertTrue(app.buttons["Reply"].isHittable)
             screenshot("reader-bottom-\(pass)")
             app.navigationBars.buttons.firstMatch.tap()
@@ -30,10 +35,11 @@ final class ReaderUITests: XCTestCase {
         let first = app.staticTexts["Explicit dark foreground stays readable."]
         XCTAssertTrue(first.waitForExistence(timeout: 10))
         for _ in 0..<6 {
-            if first.isHittable { break }
+            if isVisible(first, in: app) { break }
             app.swipeUp()
         }
-        XCTAssertTrue(first.isHittable)
+        screenshot("reader-accessibility-visibility-check")
+        XCTAssertTrue(isVisible(first, in: app))
         XCTAssertTrue(app.buttons["Reply"].isHittable)
         screenshot("reader-accessibility-type")
         app.navigationBars.buttons.firstMatch.tap()
@@ -57,14 +63,30 @@ final class ReaderUITests: XCTestCase {
 
     private func openHTML(in app: XCUIApplication) {
         let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-3"]
-        XCTAssertTrue(row.waitForExistence(timeout: 10))
-        for _ in 0..<5 {
-            if row.isHittable { break }
-            app.swipeUp()
+        let list = app.descendants(matching: .any)["inbox.list"]
+        XCTAssertTrue(list.waitForExistence(timeout: 10))
+        // At large text sizes SwiftUI virtualizes this row until it scrolls
+        // into the list. Waiting for its existence first can never reveal it.
+        for _ in 0..<12 {
+            if row.exists && row.isHittable { break }
+            list.swipeUp()
         }
-        XCTAssertTrue(row.isHittable)
+        screenshot("reader-inbox-before-open")
+        XCTAssertTrue(row.exists && row.isHittable)
         row.tap()
         XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+    }
+
+    private func isVisible(_ text: XCUIElement, in app: XCUIApplication) -> Bool {
+        guard text.exists else { return false }
+        // WebKit can mark offscreen accessibility text as hittable. Require
+        // its actual frame to be within the unobscured scroll viewport too.
+        let top = app.navigationBars["Conversation"].frame.maxY
+        let bottom = app.buttons["Reply"].frame.minY - 12
+        let frame = text.frame
+        let visible = frame.width > 0 && frame.height > 0 && frame.minY >= top && frame.maxY <= bottom
+        print("READER_VISIBILITY frame=\(frame) top=\(top) bottom=\(bottom) visible=\(visible)")
+        return visible && text.isHittable
     }
 
     private func screenshot(_ name: String) {
