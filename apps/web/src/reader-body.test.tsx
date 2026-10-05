@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Window } from "happy-dom";
-import { ReaderBody } from "./reader-body";
+import { ReaderBody, ReaderMessageList } from "./reader-body";
 import { messageIdentityKey } from "./App";
 
 const globals = ["window", "document", "navigator", "HTMLElement", "Element", "Node", "Event", "MouseEvent"] as const;
@@ -114,5 +114,33 @@ describe("message body alternatives", () => {
     await render("one", null, '<img src=x onerror=alert(1)>\n<script>alert(2)</script>');
     expect(container.querySelector("img,script")).toBeNull();
     expect(container.textContent).toContain("<script>alert(2)</script>");
+  });
+});
+
+
+describe("reader content focus layout", () => {
+  test("keeps pointer display controls fast, then retains exact geometry through keyboard exit", async () => {
+    await act(async () => root.render(<ReaderMessageList><ReaderBody html={html} text={text} /></ReaderMessageList>));
+    const list = container.querySelector(".reader-message-list") as HTMLElement;
+    const plain = container.querySelectorAll("button")[1] as HTMLButtonElement;
+    await act(async () => plain.focus());
+    expect(list.dataset.fullBodyLayout).toBeUndefined();
+    const originalLink = container.querySelector(".reader-body-html a") as HTMLAnchorElement;
+    await act(async () => {
+      originalLink.focus();
+      // Focus scrolling happens before the next frame: state must be committed
+      // before focus() returns, rather than waiting for an effect.
+      expect(list.dataset.fullBodyLayout).toBe("true");
+    });
+    await act(async () => plain.focus());
+    expect(list.dataset.fullBodyLayout).toBe("true");
+    expect(container.querySelector(".reader-body-html a")).toBe(originalLink);
+  });
+  test("covers quoted-history focus and resets for a new thread identity", async () => {
+    await act(async () => root.render(<ReaderMessageList key="one"><ReaderBody html={null} text={text} /></ReaderMessageList>));
+    await act(async () => (container.querySelector("summary") as HTMLElement).focus());
+    expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBe("true");
+    await act(async () => root.render(<ReaderMessageList key="two"><ReaderBody html={null} text={text} /></ReaderMessageList>));
+    expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBeUndefined();
   });
 });

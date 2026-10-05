@@ -40,7 +40,7 @@ import { invalidateWritingPreferences, useWritingPreferences } from "./use-writi
 import { resolveWritingReplyAction, type WritingPreferenceState } from "./writing-preferences";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
-import { ReaderBody } from "./reader-body";
+import { ReaderBody, ReaderMessageList } from "./reader-body";
 export { splitQuotedContent } from "./reader-body";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
@@ -5782,7 +5782,7 @@ export function MessageReader({
             </button>
           ) : null}
 
-          <div className="reader-message-list" aria-label="Messages in conversation" role="region">
+          <ReaderMessageList key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
             {messageGroups.map((group) => (
               <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
@@ -5842,7 +5842,7 @@ export function MessageReader({
                 </ol>
               </section>
             ))}
-          </div>
+          </ReaderMessageList>
           <ReplyBriefPanel demoMode={demoMode} detail={detail} />
           <ThreadReplyComposer
             account={detail.account}
