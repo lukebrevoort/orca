@@ -2,11 +2,11 @@ import { inboxDestinationId, inboxVisibilityPredicate } from "../organization/vi
 import { createHash } from "node:crypto";
 
 import type { Database } from "bun:sqlite";
+import type { DestinationResolution } from "@orca/shared";
 import {
   humanClassificationAssessmentSchema,
   humanClassificationOverrideSchema,
   humanClassificationSchema,
-  type DestinationResolution,
   type AttentionBehavior,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
@@ -16,10 +16,11 @@ import {
   type MailAccount,
   type MailCapabilities,
   type MailProvider,
-} from "@orca/shared";
+} from "@orca/shared/schemas";
 
 import { detectGmailCapabilities } from "../auth/gmail/capabilities.ts";
 import { detectOutlookCapabilities } from "../auth/outlook/capabilities.ts";
+import { prepareMailSearch, type MailSearchRelation } from "./search-index.ts";
 
 export const mailboxReadTargets = Object.freeze({
   // Ticket evidence measured 1.8s at 1k and 6.8–8.8s at 5k. These gates
@@ -97,6 +98,9 @@ export class MailboxScopeError extends Error {
 }
 
 type MailboxReaderOptions = {
+  // Server-selected authority, never copied from a client query. MCP search is
+  // metadata-only; authenticated first-party mail may also match stored text.
+  searchBodyText?: boolean;
   clock?: () => number;
   capabilitiesFor?: (provider: MailProvider, scopes: string | null) => MailCapabilities;
   observe?: (metric: MailboxReadMetric) => void;
@@ -245,17 +249,22 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       if (input.query.destinationId && !queryAll(sqlite, `select id from organization_lanes where workspace_id=? and id=?`, [input.authorization.userId,input.query.destinationId]).length) throw new MailboxScopeError("Destination not found");
       const classification = input.query.classification ?? "all";
       const view = input.query.view ?? "default";
-      const scope = cursorScope(input.query);
+      const scope = cursorScope(input.query, options.searchBodyText === true);
       const revision = mailboxRevision(sqlite, accountIds);
       const cursor = decodeCursor(input.query.cursor);
       validateCursor(cursor, { accountIds, classification, revision, scope, view });
+      const search = input.query.query?.trim() ? prepareMailSearch(sqlite, {
+        query: input.query.query,
+        authorization: { userId: input.authorization.userId, accountIds },
+        searchBodyText: options.searchBodyText === true,
+      }) : null;
 
       const applyInboxPolicy = input.query.destinationId
         ? input.query.destinationId === inboxDestinationId(sqlite, input.authorization.userId)
         : input.query.view === "normal" || input.query.view === undefined;
       const inboxPolicy = applyInboxPolicy ? inboxVisibilityPredicate(sqlite, input.authorization.userId) : { sql: "1", params: [] };
       const withInboxPolicy = (base: { sql: string; params: Array<string | number | null> }) => ({ sql: `${base.sql} AND ${inboxPolicy.sql}`, params: [...base.params, ...inboxPolicy.params] });
-      const base = withInboxPolicy(buildBaseWhere(accountIds, input.query));
+      const base = withInboxPolicy(buildBaseWhere(accountIds, input.query, search));
       const countStartedAt = clock();
       const countRows = queryAll<RawCountRow>(sqlite, `
         select
@@ -296,7 +305,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         const classificationPredicate = classificationWhere(classification);
         const accountRowsForBehavior: RawMailboxMessage[][] = [];
         for (const accountId of accountIds) {
-          const accountBase = withInboxPolicy(buildAccountBaseWhere(accountId, input.query));
+          const accountBase = withInboxPolicy(buildAccountBaseWhere(accountId, input.query, search));
           const keyset = pageKeyset(cursor, rank, accountId);
           const pageSql = `
             select
@@ -522,17 +531,17 @@ function compareMailboxRows(left: RawMailboxMessage, right: RawMailboxMessage) {
   return left.id < right.id ? -1 : 1;
 }
 
-function buildBaseWhere(accountIds: string[], query: MailboxReadQuery) {
+function buildBaseWhere(accountIds: string[], query: MailboxReadQuery, search: MailSearchRelation | null) {
   const clauses = [`e.account_id in (${placeholders(accountIds.length)})`];
   const params: Array<string | number | null> = [...accountIds];
-  addMailboxFilters(clauses, params, query);
+  addMailboxFilters(clauses, params, query, search);
   return { sql: clauses.join(" and "), params };
 }
 
-function buildAccountBaseWhere(accountId: string, query: MailboxReadQuery) {
+function buildAccountBaseWhere(accountId: string, query: MailboxReadQuery, search: MailSearchRelation | null) {
   const clauses = ["e.account_id = ?"];
   const params: Array<string | number | null> = [accountId];
-  addMailboxFilters(clauses, params, query);
+  addMailboxFilters(clauses, params, query, search);
   return { sql: clauses.join(" and "), params };
 }
 
@@ -540,6 +549,7 @@ function addMailboxFilters(
   clauses: string[],
   params: Array<string | number | null>,
   query: MailboxReadQuery,
+  search: MailSearchRelation | null,
 ) {
   if (query.destinationId) { clauses.push("destination.destination_id = ?"); params.push(query.destinationId); }
   if (query.collectionId) {
@@ -553,9 +563,9 @@ function addMailboxFilters(
     )`);
     params.push(query.collectionId);
   }
-  if (query.query?.trim()) {
-    clauses.push(`lower(coalesce(e.from_name, '') || char(10) || coalesce(e.from_address, '') || char(10) || coalesce(e.subject, '') || char(10) || coalesce(e.snippet, '')) like ? escape '\\'`);
-    params.push(`%${escapeLike(query.query.trim().toLocaleLowerCase())}%`);
+  if (search) {
+    clauses.push(`e.id in (${search.sql})`);
+    params.push(...search.params);
   }
   if (query.sender?.trim()) {
     clauses.push(`lower(coalesce(e.from_name, '') || char(10) || coalesce(e.from_address, '')) like ? escape '\\'`);
@@ -606,10 +616,11 @@ function mailboxFreshAt(accounts: RawMailboxAccount[]) {
   return new Date(oldest).toISOString();
 }
 
-function cursorScope(query: MailboxReadQuery) {
+function cursorScope(query: MailboxReadQuery, searchBodyText: boolean) {
   return query.destinationId || query.query || query.sender || query.collectionId || query.receivedAfter || query.receivedBefore
     ? JSON.stringify({
         query: query.query?.trim() ?? null,
+        ...(query.query?.trim() ? { searchSyntax: "indexed-terms-v1", searchBodyText } : {}),
         sender: query.sender?.trim().toLocaleLowerCase() ?? null,
         collectionId: query.collectionId ?? null,
         destinationId: query.destinationId ?? null,

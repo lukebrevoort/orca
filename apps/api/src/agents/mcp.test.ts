@@ -23,6 +23,7 @@ import {
 } from "@orca/shared";
 
 import { createDatabaseClient } from "../db/client.ts";
+import { setMailSearchEnabled } from "../db/mail-search-index.ts";
 import { emailAttachments, emailLabels, labels, emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, mcpOrganizationApprovals, oauthAccounts, organizationChangeSets, organizationLanePolicies, organizationLanes, organizationMutationAttempts, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createSession } from "../auth/session-store.ts";
 import { createApp } from "../index.ts";
@@ -248,6 +249,7 @@ function createFixture(options: {
   const dbPath = join(directory, "mcp.sqlite");
   const { db, sqlite } = createDatabaseClient(dbPath);
   migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+  setMailSearchEnabled(sqlite, true); // Synthetic fixture only; production activation is manual.
 
   db.insert(users).values([
     { id: "user_a", email: "a@example.com", displayName: "User A" },
@@ -400,6 +402,76 @@ afterEach(() => {
 });
 
 describe("Orca scoped MCP server", () => {
+  test("session search matches stored body while metadata-only MCP cannot infer it", async () => {
+    const { app, db, sqlite } = createFixture();
+    const previousSecret = process.env.SESSION_SECRET;
+    const previousKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "synthetic-search-session-secret-at-least-32-characters";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 43).toString("base64");
+    try {
+      db.update(emails).set({ subject: "Harbor reference", bodyText: "Your appointment is confirmed. quartz-body-only-marker" }).run();
+      const token = await signToken({ scopes: ["orca:mail.metadata:read"] });
+      const search = async (query: string, cursor?: string) => rpcBody(await callMcp(app, token, "tools/call", {
+        name: "search_mail", arguments: { query, attention: "all", classification: "all", limit: 1, ...(cursor ? { cursor } : {}) },
+      }));
+      const hidden = await search("quartz-body-only-marker");
+      assert.deepEqual(hidden.result.structuredContent.messages, []);
+      assert.equal(hidden.result.structuredContent.counts.attention.all, 0);
+      assert.equal(hidden.result.structuredContent.nextCursor, null);
+      const metadata = await search("reference harbor");
+      assert.equal(metadata.result.structuredContent.messages.length, 1);
+      assert.equal(metadata.result.structuredContent.counts.attention.all, 2);
+
+      const query = new URLSearchParams({ view: "all", classification: "all", query: "harbor confirmed", limit: "1" });
+      assert.equal((await app.request(`/v1/inbox?${query}`)).status, 401);
+      const session = await createSession(db, "user_a");
+      const headers = { cookie: `orca_session=${session.token}` };
+      const response = await app.request(`/v1/inbox?${query}`, { headers });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.counts.attention.all, 2);
+      assert.equal(body.messages.length, 1);
+      assert.equal(body.messages[0].accountId, "account_a");
+      assert.doesNotMatch(JSON.stringify(body), /quartz-body-only-marker|account_b/);
+      assert.ok(body.nextCursor);
+      assert.equal((await search("harbor confirmed")).result.structuredContent.counts.attention.all, 0);
+      const replay = await search("harbor confirmed", body.nextCursor);
+      assert.equal(replay.result.isError, true);
+      assert.equal(JSON.parse(replay.result.content[0].text).error.code, "invalid_cursor");
+      query.set("query", "reference harbor"); query.set("cursor", metadata.result.structuredContent.nextCursor);
+      assert.equal((await app.request(`/v1/inbox?${query}`, { headers })).status, 400);
+      query.delete("cursor"); query.set("query", "x".repeat(201));
+      assert.equal((await app.request(`/v1/inbox?${query}`, { headers })).status, 400);
+      const excessive = Array.from({ length: 17 }, (_, index) => `word${index}`).join(" ");
+      query.set("query", excessive);
+      assert.equal((await app.request(`/v1/inbox?${query}`, { headers })).status, 400);
+      const rejected = await search(excessive);
+      assert.ok(rejected.error || rejected.result?.isError, JSON.stringify(rejected));
+      db.update(emails).set({ bodyText: "a".repeat(400 * 1024) }).where(eq(emails.id, "message_a_1")).run();
+      query.set("query", "a".repeat(200));
+      const expensive = await app.request(`/v1/inbox?${query}`, { headers });
+      assert.equal(expensive.status, 400);
+      const expensiveBody = await expensive.json();
+      assert.equal(expensiveBody.error.code, "search_query_too_broad");
+      assert.equal("messages" in expensiveBody, false);
+      assert.equal((await search("a".repeat(200))).result.structuredContent.counts.attention.all, 0);
+      setMailSearchEnabled(sqlite, false);
+      query.set("query", "harbor");
+      const unavailable = await app.request(`/v1/inbox?${query}`, { headers });
+      assert.equal(unavailable.status, 503);
+      assert.equal((await unavailable.json()).error.code, "search_index_not_ready");
+      assert.equal((await app.request("/v1/inbox?view=all", { headers })).status, 200);
+      const unavailableMcp = await search("harbor");
+      assert.equal(JSON.parse(unavailableMcp.result.content[0].text).error.code, "search_index_not_ready");
+    } finally {
+      sqlite.close();
+      if (previousSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSecret;
+      if (previousKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousKey;
+    }
+  }, 15_000);
+
   test("get_thread preserves multiple messages with label and attachment fan-out", async () => {
     const { app, db, sqlite } = createFixture();
     try {

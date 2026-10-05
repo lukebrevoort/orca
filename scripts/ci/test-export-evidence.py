@@ -57,6 +57,21 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 evidence.export(root / 'private', root / 'public', str(root / 'connection.json'), 0)
 
+    def test_search_evidence_is_redacted_and_namespaced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir(); (work / 'search').mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'token': 'synthetic-search-token'}))
+            (work / 'search' / 'results.json').write_text('{"token":"synthetic-search-token"}')
+            (work / 'search' / 'failure-dom.txt').write_text('Bearer synthetic-search-token')
+            (work / 'search' / 'light.png').write_bytes(b'synthetic search screenshot')
+            (work / 'search' / 'mail.sqlite').write_text('must not upload')
+            evidence.export(work, out, str(connection), 0)
+            self.assertEqual({p.name for p in out.iterdir()}, {'outcome.json', 'search-results.json', 'search-failure-dom.txt', 'screenshots'})
+            self.assertNotIn('synthetic-search-token', (out / 'search-results.json').read_text())
+            self.assertEqual({p.name for p in (out / 'screenshots').iterdir()}, {'search-light.png'})
+
 
 if __name__ == '__main__':
     unittest.main()

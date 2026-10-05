@@ -138,6 +138,7 @@ export type OrcaMcpDataSource = {
     userId: string;
     allowedAccountIds: readonly string[];
     query: McpSearchMailInput;
+    signal?: AbortSignal;
   }): Promise<McpInboxRead> | McpInboxRead;
   getThread(input: {
     userId: string;
@@ -159,7 +160,7 @@ export type OrcaMcpDataSource = {
 
 export class McpReadError extends Error {
   constructor(
-    readonly code: Extract<McpToolErrorCode, "account_denied" | "invalid_cursor" | "not_found">,
+    readonly code: Extract<McpToolErrorCode, "account_denied" | "invalid_cursor" | "not_found" | "search_index_not_ready" | "search_query_too_broad" | "search_busy" | "search_aborted" | "search_invalid_request" | "search_database_unavailable" | "search_failed">,
     message: string,
   ) {
     super(message);
@@ -485,7 +486,7 @@ function createServer(
       outputSchema: mcpSearchMailOutputSchema,
       annotations: toolConfig("search_mail").annotations,
     },
-    async (query) => {
+    async (query, context) => {
       const decision = await authorize("search_mail", query.accountId);
       if (!("allowedAccountIds" in decision)) return decision;
       try {
@@ -493,6 +494,7 @@ function createServer(
           userId: getOrcaAuthorization(authInfo).authorization.userId,
           allowedAccountIds: decision.allowedAccountIds,
           query,
+          signal: context.mcpReq.signal,
         });
         const output = mcpSearchMailOutputSchema.parse({
           messages: page.messages.map((message) => mcpMailMessageSchema.parse({

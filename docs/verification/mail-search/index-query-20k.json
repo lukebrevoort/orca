@@ -1,0 +1,112 @@
+{
+  "syntheticOnly": true,
+  "note": "Local warm-cache timings, not a production SLA. Fresh SQLite connection retains the OS page cache. Seed timing includes canonical mail and transactional index maintenance.",
+  "datasets": [
+    {
+      "messages": 20000,
+      "bodyBytes": 8580,
+      "largeBodyEvery": 100,
+      "largeBodyBytes": 307200,
+      "seedWithIndexMs": 15752.34,
+      "storage": {
+        "totalDatabaseBytes": 268251136,
+        "indexedSourceOctets": 235667800,
+        "metadataPostingBlockBytes": 1487144,
+        "fullPostingBlockBytes": 4485960
+      },
+      "freshSQLiteConnectionMaximumTermsMs": 6.8,
+      "samples": 5,
+      "warmups": 2,
+      "results": [
+        {
+          "scenario": "unfiltered",
+          "version": "after",
+          "count": 20000,
+          "admissionCode": null,
+          "p50Ms": 192.35,
+          "p95Ms": 237.64,
+          "maximumTimerDelayMs": 247.92,
+          "maxRowsProjected": 52,
+          "maxRowsBound": 52
+        },
+        {
+          "scenario": "sender-subject",
+          "version": "after",
+          "count": 200,
+          "admissionCode": null,
+          "p50Ms": 19.05,
+          "p95Ms": 21.03,
+          "maximumTimerDelayMs": 21.05,
+          "maxRowsProjected": 26,
+          "maxRowsBound": 52
+        },
+        {
+          "scenario": "body-only",
+          "version": "after",
+          "count": 200,
+          "admissionCode": null,
+          "p50Ms": 21.45,
+          "p95Ms": 30.2,
+          "maximumTimerDelayMs": 30.22,
+          "maxRowsProjected": 26,
+          "maxRowsBound": 52
+        },
+        {
+          "scenario": "sender-and-body",
+          "version": "after",
+          "count": 200,
+          "admissionCode": null,
+          "p50Ms": 16.92,
+          "p95Ms": 21.78,
+          "maximumTimerDelayMs": 21.8,
+          "maxRowsProjected": 26,
+          "maxRowsBound": 52
+        },
+        {
+          "scenario": "no-match",
+          "version": "after",
+          "count": 0,
+          "admissionCode": null,
+          "p50Ms": 2.58,
+          "p95Ms": 4.66,
+          "maximumTimerDelayMs": 4.71,
+          "maxRowsProjected": 0,
+          "maxRowsBound": 52
+        },
+        {
+          "scenario": "four-terms-at-end",
+          "version": "after",
+          "count": null,
+          "admissionCode": "search_query_too_broad",
+          "p50Ms": 1.6,
+          "p95Ms": 1.74,
+          "maximumTimerDelayMs": 1.75,
+          "maxRowsProjected": 0,
+          "maxRowsBound": 0
+        },
+        {
+          "scenario": "eight-terms-at-end",
+          "version": "after",
+          "count": null,
+          "admissionCode": "search_query_too_broad",
+          "p50Ms": 1.69,
+          "p95Ms": 2,
+          "maximumTimerDelayMs": 2.01,
+          "maxRowsProjected": 0,
+          "maxRowsBound": 0
+        },
+        {
+          "scenario": "maximum-terms",
+          "version": "after",
+          "count": null,
+          "admissionCode": "search_query_too_broad",
+          "p50Ms": 2.03,
+          "p95Ms": 3.86,
+          "maximumTimerDelayMs": 3.87,
+          "maxRowsProjected": 0,
+          "maxRowsBound": 0
+        }
+      ]
+    }
+  ]
+}

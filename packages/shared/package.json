@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas.ts",
+    "./mail-search": "./src/mail-search.ts",
+    "./organization-views": "./src/organization-views.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

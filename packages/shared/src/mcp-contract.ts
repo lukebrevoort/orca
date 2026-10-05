@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isBoundedMailSearchQuery } from "./mail-search.ts";
 
 import {
   attentionBehaviorSchema,
@@ -219,7 +220,7 @@ export const mcpContentSafetySchema = z.object({
 }).strict();
 
 export const mcpSearchMailInputSchema = z.object({
-  query: z.string().trim().max(200).optional(),
+  query: z.string().trim().max(200).refine(isBoundedMailSearchQuery, "Use at most 16 distinct search terms or quoted phrases").optional(),
   accountId: nonEmptyStringSchema.optional(),
   sender: z.string().trim().max(320).optional(),
   receivedAfter: isoDateTimeStringSchema.optional(),
@@ -388,6 +389,13 @@ export const mcpToolErrorCodeSchema = z.enum([
   "rate_limit",
   "revision_conflict",
   "simulation_mismatch",
+  "search_index_not_ready",
+  "search_query_too_broad",
+  "search_busy",
+  "search_aborted",
+  "search_invalid_request",
+  "search_database_unavailable",
+  "search_failed",
   "internal_error",
 ]);
 export type McpToolErrorCode = z.infer<typeof mcpToolErrorCodeSchema>;

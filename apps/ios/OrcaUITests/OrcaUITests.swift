@@ -477,8 +477,18 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "02-light-conversation")
 
         navigateBack(in: app)
-        search(for: "Jordan", in: app)
-        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"].waitForExistence(timeout: 10))
+        // "confirmed" exists only beyond the snippet in the synthetic body.
+        search(for: "Jordan confirmed", in: app)
+        let foundSearchResult = app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"].waitForExistence(timeout: 10)
+        if !foundSearchResult {
+            attachScreenshot(named: "03-light-search-failure")
+            var hierarchy = app.debugDescription
+            if let token = ProcessInfo.processInfo.environment["ORCA_FIXTURE_ACCESS_TOKEN"], !token.isEmpty {
+                hierarchy = hierarchy.replacingOccurrences(of: token, with: "[REDACTED]")
+            }
+            print("SYNTHETIC_SEARCH_FAILURE_HIERARCHY \(hierarchy)")
+        }
+        XCTAssertTrue(foundSearchResult)
         XCTAssertFalse(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists)
         attachScreenshot(named: "03-light-search")
 
@@ -829,6 +839,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         search.tap()
         search.typeText(query)
+        XCTAssertEqual(search.value as? String, query)
         app.keyboards.buttons["Search"].tap()
     }
 

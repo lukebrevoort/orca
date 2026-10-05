@@ -24,6 +24,8 @@ const { gmailProvider } = await import("../src/providers/gmail/provider.ts");
 const { GmailTransportError } = await import("../src/providers/gmail/transport.ts");
 const { db, sqlite } = createDatabaseClient();
 migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+const { setMailSearchEnabled } = await import("../src/db/mail-search-index.ts");
+setMailSearchEnabled(sqlite, true); // Only this disposable synthetic database.
 const now = new Date();
 const userId = "compose-fixture-user";
 db.insert(users).values({ id: userId, email: "first@example.com", authenticatedAt: now, onboardingCompletedAt: now }).run();
@@ -31,7 +33,7 @@ for (const [index, accountId] of ["first", "second"].entries()) {
   db.insert(oauthAccounts).values({ id: accountId, userId, provider: "gmail", providerId: accountId, providerEmail: `${accountId}@example.com`, scope: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose", createdAt: new Date(index + 1), lastSyncedAt: now }).run();
   db.insert(labels).values({ id: `${accountId}-inbox`, accountId, providerLabelId: "INBOX", name: "INBOX", type: "system" }).run();
   db.insert(threads).values({ id: `${accountId}-thread`, accountId, providerThreadId: `${accountId}-provider-thread`, subject: `${accountId} account conversation`, latestReceivedAt: now, messageCount: 1, isRead: true }).run();
-  db.insert(emails).values({ id: `${accountId}-message`, accountId, threadId: `${accountId}-thread`, providerMessageId: `${accountId}-provider-message`, fromName: "Maya", fromAddress: "maya@example.com", subject: `${accountId} account conversation`, snippet: "Could you send me your latest writing notes?", bodyText: "Could you send me your latest writing notes?", toRecipients: JSON.stringify([{ name: null, email: `${accountId}@example.com` }]), ccRecipients: "[]", bccRecipients: "[]", references: "[]", internetMessageId: `<${accountId}@example.com>`, receivedAt: now, internalDate: now, isRead: true, humanSignal: 9, humanClassification: "likely_human", humanClassificationReasons: "[]" }).run();
+  db.insert(emails).values({ id: `${accountId}-message`, accountId, threadId: `${accountId}-thread`, providerMessageId: `${accountId}-provider-message`, fromName: "Maya", fromAddress: "maya@example.com", subject: `${accountId} account conversation`, snippet: "Could you send me your latest writing notes?", bodyText: "Could you send me your latest writing notes?\n\nYour synthetic appointment is CONFIRMED with Morgan. Booking code BK_42.", toRecipients: JSON.stringify([{ name: null, email: `${accountId}@example.com` }]), ccRecipients: "[]", bccRecipients: "[]", references: "[]", internetMessageId: `<${accountId}@example.com>`, receivedAt: now, internalDate: now, isRead: true, humanSignal: 9, humanClassification: "likely_human", humanClassificationReasons: "[]" }).run();
   db.insert(emailLabels).values({ id: `${accountId}-label`, emailId: `${accountId}-message`, labelId: `${accountId}-inbox` }).run();
 }
 const session = await createSession(db, userId);
