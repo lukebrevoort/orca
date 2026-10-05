@@ -36,8 +36,14 @@ jobs:
       - run: bun run build
       - run: bun run test:smoke
       - run: bunx --no-install playwright install --with-deps chromium
+      - name: Install hosted browser Find controls
+        run: sudo apt-get install --no-install-recommends -y xvfb xdotool
       - name: Exercise production browser against isolated API/SQLite
-        run: bash scripts/ci/fixture-check.sh browser
+        env:
+          ORCA_READER_NATIVE_FIND: '1'
+        # A new private display is owned by this disposable job. Never attach to
+        # a developer's display/browser; X11 TCP listening remains disabled.
+        run: xvfb-run --auto-servernum --server-args='-screen 0 1600x1200x24 -nolisten tcp' bash scripts/ci/fixture-check.sh browser
       - name: Upload sanitized synthetic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

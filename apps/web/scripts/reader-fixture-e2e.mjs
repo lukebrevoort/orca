@@ -236,7 +236,7 @@ async function checkFormatted(page, body, entry, scenario) {
 try {
   const moduleName = process.env.ORCA_PLAYWRIGHT_MODULE;
   const { chromium } = await import(moduleName?.startsWith('/') ? pathToFileURL(moduleName).href : moduleName ?? 'playwright');
-  browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
+  browser = await chromium.launch({ headless: process.env.ORCA_READER_NATIVE_FIND !== '1', executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
   results.browserVersion = browser.version();
   try { results.interactionProfile = await profileReaderInteractions({ browser, origin, out, screenshots: results.screenshots, assertFocusPaint }); }
   catch (error) { results.interactionProfile = error.readerProfile; throw error; }

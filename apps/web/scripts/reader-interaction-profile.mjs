@@ -6,6 +6,9 @@
  */
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(execFile);
 
 const sampleCount = 5;
 const metricNames = ['TaskDuration', 'ScriptDuration', 'LayoutDuration', 'RecalcStyleDuration'];
@@ -26,7 +29,8 @@ function presentation(count) {
 
 export async function profileReaderInteractions({ browser, origin, out, screenshots, assertFocusPaint }) {
   assert(process.env.GITHUB_ACTIONS === 'true', 'Interaction profiling is hosted GitHub Actions only');
-  const result = { syntheticOnly: true, sampleCount, cpuSlowdown: 4, scenarios: [], pageErrors: [], blockedWrites: [] };
+  assert(process.env.ORCA_READER_NATIVE_FIND === '1' && process.env.DISPLAY, 'Native Find requires this hosted job’s private Xvfb display');
+  const result = { findCoverage: 'window.find selection diagnostics plus real Chromium Ctrl+F via owned hosted display', syntheticOnly: true, sampleCount, cpuSlowdown: 4, scenarios: [], pageErrors: [], blockedWrites: [] };
   for (const count of [1, 60]) for (const theme of ['light', 'dark']) for (const rendering of theme === 'light' ? ['browser-managed', 'force-visible-control'] : ['force-visible-control', 'browser-managed']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block' });
     const scenario = { messages: count, theme, rendering, samples: [], summary: {}, status: 'running' };
@@ -74,7 +78,8 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       await page.goto(origin.origin, { waitUntil: 'networkidle' });
       const row = () => page.locator('button.message-row').filter({ hasText: 'first account conversation' });
       await row().waitFor();
-      if (rendering === 'force-visible-control') await page.addStyleTag({ content: '.reader-content { content-visibility: visible !important; contain-intrinsic-block-size: none !important; }' });
+      const applyRenderingOverride = () => rendering === 'force-visible-control' ? page.addStyleTag({ content: '.reader-content { content-visibility: visible !important; contain-intrinsic-block-size: none !important; }' }) : Promise.resolve();
+      await applyRenderingOverride();
       await page.evaluate(() => document.fonts.ready);
       const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(performance.now())))));
       async function measure(name, action, ready, clicked = true) {
@@ -134,7 +139,36 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         });
         scenario.findSelection = selection;
         assert.equal(selection.text, 'End of review 37');
-        assert(selection.bottom > 0 && selection.top < selection.height, 'Find must scroll matched content into view');
+        // The JS API selects offscreen text but does not scroll this nested
+        // reader in either rendering mode (paired diagnostic run 37359232945).
+        // Native Ctrl+F uses Chromium TextFinder's separate activation path;
+        // verify that real capability with OS keys on our isolated CI display.
+        scenario.findSelection.revealed = selection.bottom > 0 && selection.top < selection.height;
+        await page.evaluate(() => window.getSelection()?.removeAllRanges());
+        await page.bringToFront();
+        const windows = (await run('xdotool', ['search', '--onlyvisible', '--class', '[Cc]hrom'])).stdout.trim().split(/\s+/);
+        const title = await page.title(); const matches = [];
+        for (const id of windows) if ((await run('xdotool', ['getwindowname', id])).stdout.trim().includes(title)) matches.push(id);
+        assert.equal(matches.length, 1, 'Native input requires exactly one owned Chromium window for this synthetic page');
+        await run('xdotool', ['windowfocus', '--sync', matches[0]]);
+        await run('xdotool', ['key', '--clearmodifiers', 'ctrl+f']);
+        try {
+          await run('xdotool', ['type', '--clearmodifiers', '--delay', '1', 'End of review 37']);
+          await page.waitForFunction(() => {
+            const target = document.querySelectorAll('.reader-body-html')[36]?.lastElementChild;
+            if (!target) return false;
+            const rect = target.getBoundingClientRect();
+            const workspace = document.querySelector('.desktop-workspace');
+            return rect.bottom > (workspace?.getBoundingClientRect().top ?? 0) && rect.top < innerHeight && workspace.scrollTop > 0;
+          }, null, { timeout: 10000 });
+          scenario.nativeFind = await page.locator('.reader-body-html').nth(36).evaluate(element => {
+            const target = element.lastElementChild; const rect = target.getBoundingClientRect();
+            return { method: 'Chromium Ctrl+F through private hosted X11 display', text: target.textContent, top: rect.top, bottom: rect.bottom, height: innerHeight, workspaceScrollTop: document.querySelector('.desktop-workspace').scrollTop };
+          });
+          const name = `profile-${count}-${theme}-${rendering}-native-find.png`;
+          await page.screenshot({ path: join(out, name) }); screenshots.push(name);
+        } finally { await run('xdotool', ['key', '--clearmodifiers', 'Escape']); }
+
         const link = page.locator('.reader-message').nth(48).locator('.reader-body-html a').first();
         await link.focus(); await settle();
         assert(await link.evaluate(element => document.activeElement === element), 'An offscreen body link must accept keyboard focus');
@@ -184,6 +218,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       if (count === 1) {
         htmlOnly = true;
         await page.goto(`${origin.origin}/?thread=first-thread&accountId=first`, { waitUntil: 'networkidle' });
+        await applyRenderingOverride();
         const region = page.locator('.reader-formatted-region'); await region.waitFor();
         assert.equal(await page.locator('.reader-display-controls').count(), 0);
         await region.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
