@@ -15,9 +15,17 @@ import SwiftUI
         isLoading = true
         defer { if generation == requestGeneration { isLoading = false } }
         do {
-            // Native Focus/Inbox must follow destination routing, not the old attention flag.
-            let catalog: MailActionJSON = try await client.request("v1/destinations")
-            let destinationID = requestedView.hasPrefix("destination:") ? String(requestedView.dropFirst(12)) : catalog["legacyDestinationIds"][requestedView].text
+            let destinationID: String?
+            if requestedView == "all" {
+                destinationID = nil
+            } else if requestedView.hasPrefix("destination:") {
+                destinationID = String(requestedView.dropFirst(12))
+            } else {
+                // Legacy Focus/Inbox must resolve fresh destination routing, not
+                // the old attention flag. All Mail and explicit IDs need no lookup.
+                let catalog: MailActionJSON = try await client.request("v1/destinations")
+                destinationID = catalog["legacyDestinationIds"][requestedView].text
+            }
             let page = try await client.inbox(accountId: account.id, view: requestedView.hasPrefix("destination:") ? "all" : requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: reset ? nil : nextCursor, destinationId: requestedView == "all" ? nil : destinationID)
             guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
             messages = reset ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
