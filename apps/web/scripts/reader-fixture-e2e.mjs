@@ -140,7 +140,10 @@ async function checkQuotes(page, body, entry, name) {
     await summary.focus();
     await page.keyboard.press('Enter');
     await poll(() => quote.evaluate(node => node.open), 'Keyboard did not reveal quoted history');
-    assert(await quote.locator('div').isVisible(), 'Expanded quote must be visible');
+    // The open attribute changes before ::details-content finishes revealing.
+    // Wait for rendered visibility and opacity, not just the disclosure state.
+    await quote.locator('div').waitFor({ state: 'visible' });
+    await poll(() => quote.evaluate(node => Number(getComputedStyle(node, '::details-content').opacity) >= .99), 'Expanded quote must finish revealing');
     assert((await quote.locator('div').innerText()).includes(entry.quoteMarker), 'Quoted text was lost');
     assert((await quote.locator('div').innerText()).includes(entry.endMarker), 'End of quoted history was lost');
     assert.equal(normalize(`${await current.textContent()}\n${await quote.locator('div').textContent()}`), normalize(entry.bodyText), 'Complete plain text must survive quote splitting');
