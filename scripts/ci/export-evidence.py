@@ -34,7 +34,7 @@ def export(work, evidence, connection, status):
           'rawXcresultUploaded': False}, indent=2) + '\n')
     # The browser harness uses a new profile and blocks every external origin.
     screenshots = evidence / 'screenshots'
-    for suite in ('browser', 'reader'):
+    for suite in ('browser', 'reader', 'search'):
         source_directory = work / suite
         if (source_directory / 'results.json').is_file():
             write(f'{suite}-results.json', (source_directory / 'results.json').read_text())
@@ -44,7 +44,7 @@ def export(work, evidence, connection, status):
             if source.is_symlink():
                 raise ValueError('Screenshot symlinks are not allowed')
             screenshots.mkdir(exist_ok=True)
-            name = source.name if suite == 'browser' else f'reader-{source.name}'
+            name = source.name if suite == 'browser' else f'{suite}-{source.name}'
             shutil.copyfile(source, screenshots / name)
     # Raw bundles can contain XCTest launch arguments (a fixture bearer).
     # Export readable summaries and image attachments only, then redact text.

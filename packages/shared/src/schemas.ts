@@ -1,5 +1,6 @@
 import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
+import { isBoundedMailSearchQuery } from "./mail-search.ts";
 
 const nonEmptyStringSchema = z.string().min(1);
 
@@ -591,7 +592,7 @@ export const inboxQuerySchema = z
     // message belongs in a person's workflow, while classification answers how
     // Orca currently estimates the message was produced.
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
-    query: z.string().trim().min(1).max(200).optional(),
+    query: z.string().trim().min(1).max(200).refine(isBoundedMailSearchQuery, "Use at most 16 distinct search terms or quoted phrases").optional(),
     sender: z.string().trim().min(1).max(320).optional(),
     accountId: nonEmptyStringSchema.optional(),
     collectionId: nonEmptyStringSchema.optional(),

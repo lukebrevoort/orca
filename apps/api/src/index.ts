@@ -154,6 +154,8 @@ import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { registerOrganizationRuleRoutes } from "./organization/rules/routes.ts";
 import { OrganizationLaneValidationError, OrganizationSafetyLockError } from "./organization/lanes/module.ts";
 import { createMailboxReader, MailboxCursorError, MailboxScopeError, type MailboxReadMetric } from "./mailbox/read.ts";
+import { MailSearchAdmissionError, MailSearchUnavailableError } from "./mailbox/search-index.ts";
+import { executeMailboxSearch, MailSearchExecutionError, shutdownMailboxSearch } from "./mailbox/search-executor.ts";
 import { createOrganizationViews } from "./organization/views/module.ts";
 import { createSqliteOrganizationViewsRepository } from "./organization/views/sqlite-repository.ts";
 import { createRuleRevisionService } from "./organization/rules/service.ts";
@@ -579,14 +581,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         throw error;
       } finally { sqlite.close(); }
     },
-    searchMail({ userId, allowedAccountIds, query }) {
+    async searchMail({ userId, allowedAccountIds, query, signal }) {
       const { sqlite } = dbFactory();
       try {
         try {
-          return createMailboxReader(sqlite, {
-            capabilitiesFor: mailboxCapabilitiesFor,
-            observe: options.mailboxReadObserver,
-          }).read({
+          const input = {
             authorization: { userId, accountIds: allowedAccountIds },
             query: {
               cursor: query.cursor,
@@ -598,10 +597,22 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               receivedAfter: query.receivedAfter,
               receivedBefore: query.receivedBefore,
             },
-          }).response;
+          };
+          if (query.query?.trim()) {
+            const result = await executeMailboxSearch({ ...input, databasePath: sqlite.filename, searchBodyText: false }, {
+              signal, capabilitiesFor: mailboxCapabilitiesFor,
+            });
+            options.mailboxReadObserver?.(result.metric);
+            return result.response;
+          }
+          return createMailboxReader(sqlite, {
+            searchBodyText: false, capabilitiesFor: mailboxCapabilitiesFor, observe: options.mailboxReadObserver,
+          }).read(input).response;
         } catch (error) {
           if (error instanceof MailboxCursorError) throw new McpReadError("invalid_cursor", error.message);
           if (error instanceof MailboxScopeError) throw new McpReadError("account_denied", error.message);
+          if (error instanceof MailSearchAdmissionError || error instanceof MailSearchUnavailableError) throw new McpReadError(error.code, error.message);
+          if (error instanceof MailSearchExecutionError) throw new McpReadError(error.code, error.message);
           throw error;
         }
       } finally {
@@ -2301,7 +2312,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           {
             error: {
               code: "validation_error",
-              message: "Invalid inbox query parameters",
+              message: result.error.issues.find((issue) => issue.path[0] === "query")?.message ?? "Invalid inbox query parameters",
               issues: result.error.issues.map((issue) => ({
                 path: issue.path.join(".") || "query",
                 message: issue.message,
@@ -2315,20 +2326,25 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       return result.data;
     }),
     requireAuth({ dbFactory }),
-    (c) => {
+    async (c) => {
       const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId, destinationId } = c.req.valid("query");
       const useClassificationResponse = classification !== undefined;
       const { sqlite } = dbFactory();
       try {
         try {
-          const { response: result, metric } = createMailboxReader(sqlite, {
-            capabilitiesFor: mailboxCapabilitiesFor,
-            observe: options.mailboxReadObserver,
-          }).read({
+          const input = {
             authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
             query: { cursor, limit, view, classification, query, sender, collectionId, destinationId },
-          });
-          c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
+          };
+          let processDuration: number | undefined;
+          const { response: result, metric } = query?.trim()
+            ? await executeMailboxSearch({ ...input, databasePath: sqlite.filename, searchBodyText: true }, {
+              signal: c.req.raw.signal, capabilitiesFor: mailboxCapabilitiesFor,
+              observe: value => { processDuration = value.queueWaitMs + value.processDurationMs; },
+            })
+            : createMailboxReader(sqlite, { capabilitiesFor: mailboxCapabilitiesFor, observe: options.mailboxReadObserver }).read(input);
+          if (query?.trim()) options.mailboxReadObserver?.(metric);
+          c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}${processDuration === undefined ? "" : `, orca-search-process;dur=${processDuration.toFixed(2)}`}`);
           c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
           return jsonWithSchema(c, inboxResponseSchema, {
             ...result,
@@ -2340,6 +2356,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           }
           if (error instanceof MailboxScopeError) {
             return c.json({ error: { code: "not_found", message: error.message } }, 404);
+          }
+          if (error instanceof MailSearchAdmissionError) {
+            return c.json({ error: { code: error.code, message: error.message } }, 400);
+          }
+          if (error instanceof MailSearchUnavailableError) {
+            return c.json({ error: { code: error.code, message: error.message } }, 503);
+          }
+          if (error instanceof MailSearchExecutionError) {
+            if (error.code === "search_busy") c.header("Retry-After", "1");
+            const status = error.code === "search_aborted" ? 408 : error.code === "search_invalid_request" ? 400 : 503;
+            return c.json({ error: { code: error.code, message: error.message } }, status);
           }
           throw error;
         }
@@ -3831,11 +3858,17 @@ if (import.meta.main) {
 
   console.log(`Orca API listening on http://localhost:${port}`);
 
+  let shuttingDown = false;
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.on(signal, () => {
+      if (shuttingDown) return;
+      shuttingDown = true;
       console.log(`${signal} received, shutting down gracefully`);
       mobilePush.stop();
-      server.close(() => process.exit(0));
+      void Promise.all([
+        new Promise<void>(resolve => server.close(() => resolve())),
+        shutdownMailboxSearch(),
+      ]).then(() => process.exit(0));
     });
   }
   startGmailSyncScheduler();

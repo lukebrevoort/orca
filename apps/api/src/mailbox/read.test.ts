@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createDatabaseClient } from "../db/client.ts";
+import { setMailSearchEnabled } from "../db/mail-search-index.ts";
 import { emailLabels, emails, humanClassificationOverrides, labels, mailboxRevisions, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createMailboxReader, MailboxCursorError, MailboxScopeError, type MailboxPageQueryPlan, type MailboxReadMetric, type MailboxReadQuery } from "./read.ts";
 
@@ -21,6 +22,7 @@ function createFixture(messageCount = 240) {
   const dbPath = join(directory, "mailbox.sqlite");
   const client = createDatabaseClient(dbPath);
   migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+  setMailSearchEnabled(client.sqlite, true); // Explicit activation of this empty synthetic database.
   const baseTime = Date.parse("2026-09-02T12:00:00.000Z");
   client.db.insert(users).values({ id: "user", email: "reader@example.com", displayName: "Reader" }).run();
   client.db.insert(oauthAccounts).values({

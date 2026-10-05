@@ -935,6 +935,26 @@ private enum InboxLoadingTestSupport {
 }
 
 final class InboxLoadingTests: XCTestCase {
+    @MainActor func testSearchReadinessAndAdmissionErrorsNeverSubstituteCachedResults() async throws {
+        for code in ["search_query_too_broad", "search_index_not_ready", "search_busy", "search_failed", "validation_error"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            var rejected = false
+            StubURLProtocol.handler = { _ in
+                if rejected { return (503, Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"Please refine or retry this search\"}}".utf8)) }
+                return (200, try InboxLoadingTestSupport.page("cached-match", cursor: "cursor"))
+            }
+            let model = InboxViewModel(); model.view = "all"; model.search = "harbor confirmed"
+            await model.load(state: fixture.state)
+            XCTAssertEqual(model.messages.map(\.id), ["cached-match"])
+            rejected = true
+            await model.load(state: fixture.state)
+            XCTAssertTrue(model.messages.isEmpty); XCTAssertNil(model.nextCursor)
+            XCTAssertEqual(model.search, "harbor confirmed")
+            XCTAssertEqual(model.error, "Please refine or retry this search")
+            XCTAssertFalse(model.isLoading)
+        }
+    }
+
     @MainActor func testRequestPathsAndQueryPreserveAllDestinationAndLegacyViews() async throws {
         let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
         let response = try InboxLoadingTestSupport.page()

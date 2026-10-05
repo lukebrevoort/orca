@@ -212,6 +212,24 @@ describe("global mail search location contract", () => {
 });
 
 describe("GlobalMailSearch interaction", () => {
+  test("rejects excessive terms before loading without crashing or sending a mail request", async () => {
+    const requests: string[] = [];
+    globalThis.fetch = (async (input) => {
+      const path = String(input); requests.push(path);
+      if (path === "/v1/accounts") return Response.json({ items: [demoAccount], nextCursor: null });
+      if (path === "/v1/organization/collections-pins/query") return Response.json({ workspaceId: "workspace_demo", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] });
+      throw new Error(`Unexpected request: ${path}`);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&demo=1");
+    openMailSearch(Array.from({ length: 17 }, (_, index) => `word${index}`).join(" "));
+    const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush();
+    expect(browserWindow.document.querySelector('[role="alert"]')?.textContent).toContain("at most 16 distinct search terms");
+    expect(browserWindow.document.querySelector('input[aria-label="Search stored mail"]')).not.toBeNull();
+    expect(requests.some(path => path.startsWith("/v1/inbox"))).toBe(false);
+  });
+
   test("hands Search to the common View authoring surface without writing a pin and restores context on cancel", async () => {
     const writes = installViewSearchApi();
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&demo=1");

@@ -31,6 +31,14 @@ import SwiftUI
             messages = reset ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
             if reset { try? await state.cache.save(page, key: key) }
         } catch {
+            // An indexed-search admission/readiness error is an online result,
+            // not permission to substitute an older cached search as offline mail.
+            if case let APIClient.ClientError.http(_, body) = error,
+               body?.code.hasPrefix("search_") == true || (!requestedSearch.isEmpty && body?.code == "validation_error") {
+                guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+                messages = []; nextCursor = nil; self.error = error.localizedDescription
+                return
+            }
             let cached: InboxPage? = reset ? await state.cache.load(InboxPage.self, key: key) : nil
             guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
             if let cached { messages = cached.messages; nextCursor = nil; self.error = "Offline — showing saved mail" }
@@ -64,7 +72,7 @@ struct InboxView: View {
                         Button("Try again") { Task { await model.load(state: state) } }
                     }
                 }
-                else if model.messages.isEmpty { ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here.")) }
+                else if model.messages.isEmpty { ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No matches in this mailbox. Your search is still here.")) }
                 else {
                     List {
                         // Keep the introduction in the scrolling content. Plain List section

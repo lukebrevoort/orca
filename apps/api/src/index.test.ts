@@ -16,6 +16,7 @@ import {
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
+import { setMailSearchEnabled } from "./db/mail-search-index.ts";
 import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, organizationChangeSets, organizationCollectionPinAudits, organizationWorkspaceStates, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
 import { GmailSyncError, withGmailSyncLock } from "./providers/gmail/sync.ts";
@@ -922,6 +923,7 @@ describe("Orca API", () => {
     const dbPath = join(tempDir, "unified-inbox.sqlite");
     const { db, sqlite } = createDatabaseClient(dbPath);
     migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    setMailSearchEnabled(sqlite, true);
     try {
       db.insert(users).values([
         { id: "user_1", email: "luke@example.com", displayName: "Luke" },

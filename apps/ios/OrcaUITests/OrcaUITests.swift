@@ -477,7 +477,8 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "02-light-conversation")
 
         navigateBack(in: app)
-        search(for: "Jordan", in: app)
+        // "confirmed" exists only beyond the snippet in the synthetic body.
+        search(for: "Jordan confirmed", in: app)
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists)
         attachScreenshot(named: "03-light-search")
