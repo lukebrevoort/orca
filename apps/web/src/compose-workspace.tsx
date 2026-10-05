@@ -693,12 +693,12 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     if (hydratedScope !== scopeKey) return;
     if (sendingRef.current) return;
     const serialized = JSON.stringify(persistableDraft(draft));
-    if (serialized === persistedDraftRef.current && retryToken === processedRetryTokenRef.current) return;
     const needsRemoteSave = !demoMode && hasComposeContent(draft) && (
       !serverIdRef.current
       || remoteContentSignature(draft) !== lastRemoteSignatureRef.current
       || retryToken !== processedRetryTokenRef.current
     );
+    if (serialized === persistedDraftRef.current && !needsRemoteSave && retryToken === processedRetryTokenRef.current) return;
     const forceRemoteSave = retryToken !== processedRetryTokenRef.current;
     pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
     if (needsRemoteSave && !conflict) {

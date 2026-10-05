@@ -8,6 +8,7 @@ import "./reader-body.css";
 import "./mail-selection.css";
 import "./organization-lanes.css";
 import "./organization-views.css";
+import "./mobile-mail.css";
 
 // Vite removes this entire import (including widget CSS) in production.
 const DevelopmentFeedback = import.meta.env.DEV
