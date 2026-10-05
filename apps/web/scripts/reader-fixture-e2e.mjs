@@ -240,6 +240,12 @@ try {
   results.browserVersion = browser.version();
   try { results.interactionProfile = await profileReaderInteractions({ browser, origin, out, screenshots: results.screenshots, assertFocusPaint }); }
   catch (error) { results.interactionProfile = error.readerProfile; throw error; }
+  // Native Find needs a real browser window. The pre-existing responsive
+  // matrix uses headless Chromium's overlay-scrollbar viewport contract:
+  // a 320px mobile viewport must not become a 305px desktop scrollport.
+  await browser.close();
+  browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
+  results.responsiveMatrixBrowser = { mode: 'headless', version: browser.version() };
   for (const { width, theme, textSize, entry, smoke } of matrix) {
     const name = `${entry.id}-${width}-${theme}-${textSize}${smoke ? '-smoke' : ''}`;
     const scenario = { name, case: entry.id, viewport: { width, height: width <= 760 ? 844 : 1000 }, theme, textSize, smoke, status: 'running', substitutedResponses: 0, containment: [], controls: [] };

@@ -1,4 +1,21 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+
+/** Keep exact geometry after focus enters message content. This is synchronous
+ * so the browser's default focus scroll sees rendered heights. Retain it until
+ * this thread unmounts: changing back during Tab/Shift+Tab can move the target.
+ * Display controls do not opt in, so ordinary view toggles keep the fast path. */
+export function ReaderMessageList({ children }: { children: ReactNode }) {
+  const [fullBodyLayout, setFullBodyLayout] = useState(false);
+  return <div className="reader-message-list" aria-label="Messages in conversation" role="region"
+    data-full-body-layout={fullBodyLayout ? "true" : undefined}
+    onFocusCapture={(event) => {
+      const target = event.target;
+      if (fullBodyLayout || !(target instanceof HTMLElement)
+        || !target.closest(".reader-content") || target.closest(".reader-display-controls")) return;
+      flushSync(() => setFullBodyLayout(true));
+    }}>{children}</div>;
+}
 
 export function splitQuotedContent(body: string) {
   const lines = body.replace(/\r\n/g, "\n").split("\n");

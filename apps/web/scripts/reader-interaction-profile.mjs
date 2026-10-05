@@ -1,7 +1,7 @@
 /** Hosted-only measurements on synthetic production-reader data.
  * Uses the existing authenticated, loopback-only fixture. No send, provider,
  * real account, profile, or production data is involved. CDP durations are
- * cumulative main-thread seconds; interaction samples use in-page click to
+ * cumulative main-thread seconds; interaction samples use in-page pointer/keyboard input to
  * settled animation frames rather than Playwright command round trips.
  */
 import assert from 'node:assert/strict';
@@ -43,7 +43,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         localStorage.setItem('orca-reader-preferences', JSON.stringify({ theme, motion: 'reduced' }));
         window.__readerProfile = { start: 0, longTasks: [] };
         new PerformanceObserver(list => window.__readerProfile.longTasks.push(...list.getEntries().map(entry => ({ start: entry.startTime, duration: entry.duration })))).observe({ type: 'longtask', buffered: true });
-        document.addEventListener('click', () => { window.__readerProfile.start = performance.now(); }, true);
+        for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, () => { window.__readerProfile.start = performance.now(); }, true);
       }, theme);
       await context.route('**/*', route => {
         const request = route.request(); const url = new URL(request.url());
@@ -89,7 +89,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         await settle();
         const timing = await page.evaluate(() => ({ elapsedMs: performance.now() - window.__readerProfile.start, longTasks: window.__readerProfile.longTasks }));
         const after = await getMetrics(cdp);
-        scenario.samples.push({ name, clock: clicked ? 'captured-click-to-settled-frames' : 'command-start-to-settled-frames', ...timing,
+        scenario.samples.push({ name, clock: clicked ? 'captured-pointer-or-keydown-to-settled-frames' : 'command-start-to-settled-frames', ...timing,
           ...Object.fromEntries(metricNames.map(key => [`${key}Ms`, (after[key] - before[key]) * 1000])) });
       }
       for (let sample = 0; sample < sampleCount; sample++) {
@@ -193,6 +193,23 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         assert(await link.evaluate(element => document.activeElement === element), 'Shift+Tab must return to the same link');
         const focusedName = `profile-${count}-${theme}-${rendering}-offscreen-link-focus.png`;
         await page.screenshot({ path: join(out, focusedName) }); screenshots.push(focusedName);
+        // Cross the boundary out of HTML focus as well as within the body.
+        for (const target of ['region', 'plain-control']) {
+          await page.keyboard.press('Shift+Tab'); await settle();
+          const boundaryFocus = await page.evaluate(() => {
+            const element = document.activeElement; const rect = element.getBoundingClientRect();
+            return { className: element.className, text: element.textContent, top: rect.top, bottom: rect.bottom, height: innerHeight };
+          });
+          assert(target === 'region' ? boundaryFocus.className === 'reader-formatted-region' : boundaryFocus.text === 'Plain text', `Unexpected ${target} keyboard order`);
+          assert(boundaryFocus.bottom > 68 && boundaryFocus.top < boundaryFocus.height, `${target} focus must remain visible after containment changes`);
+          const name = `profile-${count}-${theme}-${rendering}-${target}-focus.png`;
+          await page.screenshot({ path: join(out, name) }); screenshots.push(name);
+        }
+        // Content focus intentionally retains exact geometry until close.
+        // Start a fresh reader before testing optimized dynamic body sizing.
+        await page.locator('.reader-back').click(); await row().waitFor();
+        await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
+        assert.equal(await page.locator('.reader-message-list').getAttribute('data-full-body-layout'), null);
         // The remembered size must adapt after an image decodes and reader text
         // grows. This adds a synthetic in-memory image to the mounted HTML DOM;
         // it never loads external pixels or rewrites the production sanitizer.
@@ -230,7 +247,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       await measure('select-conversation', () => select.click(), () => page.locator('.bulk-selection-exit').waitFor());
       await measure('clear-selection', () => page.getByRole('button', { name: 'Clear selection and exit' }).click(), () => page.locator('.bulk-selection-exit').waitFor({ state: 'hidden' }));
       await measure('open-compose', () => page.getByRole('button', { name: /^Compose(?:\s+C)?$/ }).first().click(), () => page.locator('.compose-workspace-panel').waitFor());
-      await measure('close-compose', () => page.keyboard.press('Escape'), () => page.locator('.compose-workspace-panel').waitFor({ state: 'hidden' }), false);
+      await measure('close-compose', () => page.keyboard.press('Escape'), () => page.locator('.compose-workspace-panel').waitFor({ state: 'hidden' }));
       if (count === 1) {
         htmlOnly = true;
         await page.goto(`${origin.origin}/?thread=first-thread&accountId=first`, { waitUntil: 'networkidle' });

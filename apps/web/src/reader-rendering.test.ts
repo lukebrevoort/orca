@@ -5,14 +5,14 @@ const css = readFileSync(new URL("./reader-body.css", import.meta.url), "utf8");
 
 describe("reader body rendering boundary", () => {
   test("lets the browser skip offscreen layout without removing content", () => {
-    expect(css).toMatch(/@supports\s*\(content-visibility:\s*auto\)\s*and\s*\(contain-intrinsic-block-size:\s*auto 1000px\)\s*and\s*\(overflow-clip-margin:\s*10px\)\s*and\s*selector\(\.reader-message-list:has\(:focus\)\)\s*\{\s*\.reader-content\s*\{\s*content-visibility:\s*auto;\s*contain-intrinsic-block-size:\s*auto\s+1000px;/);
+    expect(css).toMatch(/@supports\s*\(content-visibility:\s*auto\)\s*and\s*\(contain-intrinsic-block-size:\s*auto 1000px\)\s*and\s*\(overflow-clip-margin:\s*10px\)\s*\{\s*\.reader-content\s*\{\s*content-visibility:\s*auto;\s*contain-intrinsic-block-size:\s*auto\s+1000px;/);
     expect(css).toMatch(/overflow-clip-margin: 10px;/);
     // Never place sender menus or the entire reader under paint containment.
     expect(css).not.toMatch(/\.(?:reader-message|reader-document|reader-sender)\s*\{[^}]*content-visibility/);
   });
-  test("uses full geometry for direct HTML focus without disabling pointer display controls", () => {
-    expect(css).toContain(".reader-message-list:has(.reader-body-html :focus, .reader-formatted-region:focus) .reader-content");
-    expect(css).toMatch(/:has\(\.reader-body-html :focus, \.reader-formatted-region:focus\) \.reader-content\s*\{\s*content-visibility: visible;/);
+  test("uses explicit full geometry after content takes focus", () => {
+    expect(css).toMatch(/\.reader-message-list\[data-full-body-layout="true"\] \.reader-content\s*\{\s*content-visibility: visible;/);
+    expect(css).not.toMatch(/:has\([^)]*:focus[^)]*\) \.reader-content/);
   });
   test("prints all message bodies without estimated heights", () => {
     expect(css).toMatch(/@media\s+print\s*\{\s*\.reader-content\s*\{\s*content-visibility:\s*visible;\s*contain-intrinsic-block-size:\s*none;/);

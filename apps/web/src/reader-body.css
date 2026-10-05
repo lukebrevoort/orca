@@ -47,17 +47,16 @@
    image identity, but let the browser skip layout/paint of offscreen bodies.
    Remember measured heights when revisiting; only unseen bodies use the
    estimate. Sender actions stay outside containment so menus are not clipped. */
-@supports (content-visibility: auto) and (contain-intrinsic-block-size: auto 1000px) and (overflow-clip-margin: 10px) and selector(.reader-message-list:has(:focus)) {
+@supports (content-visibility: auto) and (contain-intrinsic-block-size: auto 1000px) and (overflow-clip-margin: 10px) {
   .reader-content {
     content-visibility: auto;
     contain-intrinsic-block-size: auto 1000px;
     /* Include the region’s -3px margin and its 5px outside focus ring. */
     overflow-clip-margin: 10px;
   }
-  /* Direct focus into skipped HTML can otherwise scroll to an estimated
-     position before neighboring bodies expand. Use full geometry while a
-     body link or scroll region owns focus; app display buttons stay fast. */
-  .reader-message-list:has(.reader-body-html :focus, .reader-formatted-region:focus) .reader-content {
+  /* Retain exact geometry after content takes focus. An explicit state avoids
+     a broad :has(:focus) selector re-styling the thread on every interaction. */
+  .reader-message-list[data-full-body-layout="true"] .reader-content {
     content-visibility: visible;
   }
 }
