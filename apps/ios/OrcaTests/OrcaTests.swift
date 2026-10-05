@@ -898,8 +898,9 @@ private enum InboxLoadingTestSupport {
     static func query(_ request: URLRequest) -> [String: String] {
         Dictionary(uniqueKeysWithValues: (URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") })
     }
-    // Baseline expectation is deliberately captured before production changes.
-    static func paths(for view: String) -> [String] { ["/v1/destinations", "/v1/inbox"] }
+    static func paths(for view: String) -> [String] {
+        view == "all" || view.hasPrefix("destination:") ? ["/v1/inbox"] : ["/v1/destinations", "/v1/inbox"]
+    }
 
     @MainActor struct Fixture {
         let state: AppState
@@ -955,7 +956,29 @@ final class InboxLoadingTests: XCTestCase {
             expected["destinationId"] = destination
             XCTAssertEqual(InboxLoadingTestSupport.query(request), expected, view)
             XCTAssertTrue(requests.allSatisfy { $0.httpMethod == "GET" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-token" })
-            XCTAssertEqual(model.messages.map(\.id), ["page"]); XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+            XCTAssertEqual(model.messages, try JSONDecoder().decode(InboxPage.self, from: response).messages)
+            XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+        }
+    }
+
+    @MainActor func testDirectInboxLoadsDoNotDependOnCatalogAvailability() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.page()
+        var paths = [String]()
+        StubURLProtocol.handler = { request in
+            paths.append(request.url!.path)
+            if request.url?.path == "/v1/destinations" {
+                return (503, Data(#"{"error":{"code":"unavailable","message":"Catalog unavailable"}}"#.utf8))
+            }
+            return (200, response)
+        }
+        for view in ["all", "destination:projects"] {
+            paths = []
+            let model = InboxViewModel(); model.view = view
+            await model.load(state: fixture.state)
+            XCTAssertEqual(paths, ["/v1/inbox"])
+            XCTAssertEqual(model.messages, try JSONDecoder().decode(InboxPage.self, from: response).messages)
+            XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
         }
     }
 
