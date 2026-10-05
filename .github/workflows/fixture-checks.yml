@@ -6,6 +6,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  ORCA_CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 permissions:
   contents: read
 
@@ -29,6 +32,7 @@ jobs:
         with:
           node-version: '24'
       - run: bun install --frozen-lockfile
+      - run: python3 scripts/ci/test-export-evidence.py
       - run: bun run build
       - run: bun run test:smoke
       - run: bunx --no-install playwright install --with-deps chromium
