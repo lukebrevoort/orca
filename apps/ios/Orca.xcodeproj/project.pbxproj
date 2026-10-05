@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AADDEE020000000000000001 /* ReaderUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDEE020000000000000002 /* ReaderUITests.swift */; };
+		AADDEE010000000000000001 /* SafeHTMLViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDEE010000000000000002 /* SafeHTMLViewTests.swift */; };
         AABB00112233445566778801 /* MailActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB00112233445566778802 /* MailActions.swift */; };
 		015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57E40AE57BF8791404307E4 /* Security.swift */; };
 		06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22789472C398207011CE37F6 /* OrcaUITests.swift */; };
@@ -54,6 +56,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AADDEE020000000000000002 /* ReaderUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderUITests.swift; sourceTree = "<group>"; };
+		AADDEE010000000000000002 /* SafeHTMLViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLViewTests.swift; sourceTree = "<group>"; };
         AABB00112233445566778802 /* MailActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailActions.swift; sourceTree = "<group>"; };
 		186C21621603B2A5EE639EDC /* DraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStore.swift; sourceTree = "<group>"; };
 		22789472C398207011CE37F6 /* OrcaUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaUITests.swift; sourceTree = "<group>"; };
@@ -94,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				6D108A85307BC09FDB5E904C /* OrcaTests.swift */,
+				AADDEE010000000000000002 /* SafeHTMLViewTests.swift */,
 			);
 			path = OrcaTests;
 			sourceTree = "<group>";
@@ -190,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				22789472C398207011CE37F6 /* OrcaUITests.swift */,
+				AADDEE020000000000000002 /* ReaderUITests.swift */,
 				D55D7D1A9F41B9B7A8D1CC6D /* run-fixture-tests.sh */,
 			);
 			path = OrcaUITests;
@@ -339,6 +345,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */,
+				AADDEE020000000000000001 /* ReaderUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -372,6 +379,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				36DA95542453553EC1EB82AF /* OrcaTests.swift in Sources */,
+				AADDEE010000000000000001 /* SafeHTMLViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -659,3 +667,4 @@
 	};
 	rootObject = 177056152CBB36F12F7B7771 /* Project object */;
 }
+

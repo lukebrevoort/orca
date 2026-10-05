@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ThreadView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; let accountId: String; let threadId: String; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
     init(message: InboxMessage) { accountId = message.accountId; threadId = message.threadId }
     init(accountId: String, threadId: String) { self.accountId = accountId; self.threadId = threadId }
@@ -45,17 +46,47 @@ struct ThreadView: View {
         .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom) {
             if let detail {
-                HStack(spacing: 12) {
-                    NavigationLink(destination: ComposeView(context: detail, kind: "reply")) { Label("Reply", systemImage: "arrowshape.turn.up.left") }.buttonStyle(OrcaPrimaryButtonStyle())
-                    Spacer(minLength: 0)
-                    NavigationLink(destination: ComposeView(context: detail, kind: "reply_all")) { Text("Reply all").frame(minHeight: 44).contentShape(Rectangle()) }.accessibilityLabel("Reply all")
-                    NavigationLink(destination: ComposeView(context: detail, kind: "forward")) { Image(systemName: "arrowshape.turn.up.right").frame(width: 44, height: 44) }.accessibilityLabel("Forward")
-                }.font(OrcaTheme.ui(12)).padding(.horizontal, 20).padding(.vertical, 12).background(OrcaTheme.paper)
+                replyActions(detail).font(OrcaTheme.ui(12)).padding(.horizontal, 20).padding(.vertical, 12).background(OrcaTheme.paper)
                     .overlay(alignment: .top) { Rectangle().fill(OrcaTheme.border).frame(height: 1) }
             }
         }
         .task { await load() }.sheet(isPresented: .constant(shareURL != nil), onDismiss: { if let shareURL { try? FileManager.default.removeItem(at: shareURL.deletingLastPathComponent()) }; shareURL = nil }) { if let shareURL { ShareSheet(items: [shareURL]) } }
     }
+    @ViewBuilder
+    private func replyActions(_ detail: ThreadDetail) -> some View {
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        // Keep the same links alive as text size changes, including while a
+        // composer is open. Only their layout and labels adapt.
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 12))
+        layout {
+            NavigationLink(destination: ComposeView(context: detail, kind: "reply")) {
+                Label("Reply", systemImage: "arrowshape.turn.up.left")
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: stacked ? .infinity : nil)
+            }.buttonStyle(OrcaPrimaryButtonStyle()).accessibilityLabel("Reply")
+            Spacer(minLength: 0)
+                .frame(width: stacked ? 0 : nil, height: stacked ? 0 : nil)
+                .accessibilityHidden(true)
+            NavigationLink(destination: ComposeView(context: detail, kind: "reply_all")) {
+                Text("Reply all")
+                    .frame(maxWidth: stacked ? .infinity : nil, minHeight: 44,
+                           alignment: stacked ? .leading : .center)
+                    .padding(.horizontal, stacked ? 16 : 0).contentShape(Rectangle())
+            }.accessibilityLabel("Reply all")
+            NavigationLink(destination: ComposeView(context: detail, kind: "forward")) {
+                if stacked {
+                    Label("Forward", systemImage: "arrowshape.turn.up.right")
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.horizontal, 16).contentShape(Rectangle())
+                } else {
+                    Image(systemName: "arrowshape.turn.up.right").frame(width: 44, height: 44)
+                }
+            }.accessibilityLabel("Forward")
+        }
+    }
+
     func load() async {
         guard !state.demoMode else { error = "Demo conversations are list-only."; return }
         guard let client = state.client, state.selectedAccount?.id == accountId else { return }
@@ -92,3 +123,4 @@ struct ThreadView: View {
     }
 }
 struct ShareSheet: UIViewControllerRepresentable { let items: [Any]; func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }; func updateUIViewController(_ controller: UIActivityViewController, context: Context) {} }
+
