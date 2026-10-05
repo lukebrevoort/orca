@@ -98,6 +98,29 @@ if [[ "$mode" == browser ]]; then
   node apps/web/scripts/reader-fixture-e2e.mjs "$connection" "$work/reader" >> "$work/checks.log" 2>&1
   node apps/web/scripts/search-fixture-e2e.mjs "$connection" "$work/search" >> "$work/checks.log" 2>&1
 else
+  # Separate host-runtime/search failures from native typing/submission failures.
+  # The ephemeral bearer stays in memory; only sanitized scalar evidence prints.
+  node --input-type=module - "$connection" > "$work/checks.log" 2>&1 <<'JS'
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const fixture = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+const origin = new URL(fixture.apiURL);
+assert.ok(origin.protocol === 'http:' && origin.hostname === '127.0.0.1' && origin.port && origin.href === `${origin.origin}/`);
+const headers = { Authorization: `Bearer ${fixture.accessToken}` };
+const options = () => ({ headers, redirect: 'error', signal: AbortSignal.timeout(10_000) });
+const catalogResponse = await fetch(new URL('/v1/destinations', origin), options());
+assert.equal(catalogResponse.status, 200);
+const catalog = await catalogResponse.json();
+const url = new URL('/v1/inbox', origin);
+url.search = new URLSearchParams({ accountId: fixture.accountId, view: 'normal', query: 'Jordan confirmed', limit: '30' });
+if (catalog.legacyDestinationIds.normal) url.searchParams.set('destinationId', catalog.legacyDestinationIds.normal);
+const response = await fetch(url, options());
+const result = await response.json();
+console.log(JSON.stringify({ syntheticSearchPreflight: true, status: response.status, errorCode: result.error?.code, ids: result.messages?.map(message => message.id), serverTiming: response.headers.get('server-timing') }));
+assert.equal(response.status, 200);
+assert.deepEqual(result.messages.map(message => message.id), ['ios-fixture-message-2']);
+assert.match(response.headers.get('server-timing') ?? '', /orca-search-process;dur=/);
+JS
   ORCA_UI_TEST_SCOPE=compose ORCA_UI_RESULT_DIRECTORY="$work/results" \
-    zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" > "$work/checks.log" 2>&1
+    zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" >> "$work/checks.log" 2>&1
 fi
