@@ -30,7 +30,16 @@ final class ReaderUITests: XCTestCase {
             XCTAssertTrue(app.buttons["Reply"].isHittable)
             screenshot("reader-bottom-\(pass)")
             app.navigationBars.buttons.firstMatch.tap()
-            XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+            let returnedToInbox = app.navigationBars["Inbox"].waitForExistence(timeout: 10)
+            if !returnedToInbox {
+                screenshot("reader-back-navigation-failure")
+                var hierarchy = app.debugDescription
+                if let token = ProcessInfo.processInfo.environment["ORCA_FIXTURE_ACCESS_TOKEN"], !token.isEmpty {
+                    hierarchy = hierarchy.replacingOccurrences(of: token, with: "[REDACTED]")
+                }
+                print("READER_BACK_FAILURE_HIERARCHY_BEGIN\n\(hierarchy)\nREADER_BACK_FAILURE_HIERARCHY_END")
+            }
+            XCTAssertTrue(returnedToInbox, "One Back tap must return from the reader to Inbox")
         }
     }
 
