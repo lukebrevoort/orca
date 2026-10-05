@@ -256,7 +256,10 @@ try {
   // evaluate(clear) call but before navigation. Clear at the next document's
   // initialization, after the old document has gone and before app hydration.
   // This affects only the test-owned browser profile, never an existing one.
+  await page.evaluate(()=>sessionStorage.setItem('orca-fixture-reset-next-document','1'));
   await page.addInitScript(theme=>{
+   if(sessionStorage.getItem('orca-fixture-reset-next-document')!=='1') return;
+   sessionStorage.removeItem('orca-fixture-reset-next-document');
    localStorage.clear();
    localStorage.setItem('orca-reader-preferences',JSON.stringify({theme,motion:'reduced'}));
   },theme);

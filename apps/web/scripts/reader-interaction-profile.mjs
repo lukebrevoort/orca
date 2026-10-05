@@ -144,7 +144,16 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         // Native Ctrl+F uses Chromium TextFinder's separate activation path;
         // verify that real capability with OS keys on our isolated CI display.
         scenario.findSelection.revealed = selection.bottom > 0 && selection.top < selection.height;
-        await page.evaluate(() => window.getSelection()?.removeAllRanges());
+        await page.evaluate(() => {
+          window.getSelection()?.removeAllRanges();
+          document.querySelector('.desktop-workspace').scrollTop = 0;
+        });
+        await settle();
+        scenario.nativeFindBefore = await page.locator('.reader-message').nth(36).evaluate(element => ({
+          top: element.getBoundingClientRect().top, height: innerHeight,
+          workspaceScrollTop: document.querySelector('.desktop-workspace').scrollTop,
+        }));
+        assert(scenario.nativeFindBefore.top > scenario.nativeFindBefore.height && scenario.nativeFindBefore.workspaceScrollTop === 0, 'Native Find must start with its target offscreen');
         await page.bringToFront();
         const windows = (await run('xdotool', ['search', '--onlyvisible', '--class', '[Cc]hrom'])).stdout.trim().split(/\s+/);
         const title = await page.title(); const matches = [];
@@ -176,7 +185,14 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         const focusedLink = await link.evaluate(element => {
           const rect = element.getBoundingClientRect(); return { top: rect.top, bottom: rect.bottom, height: innerHeight };
         });
+        scenario.focusedLink = focusedLink;
         assert(focusedLink.bottom > 0 && focusedLink.top < focusedLink.height, 'Focused offscreen link must scroll into view');
+        await page.keyboard.press('Tab'); await settle();
+        assert(await link.evaluate(element => document.activeElement === element.closest('.reader-body-html').querySelectorAll('a')[1]), 'Tab must continue in message order');
+        await page.keyboard.press('Shift+Tab'); await settle();
+        assert(await link.evaluate(element => document.activeElement === element), 'Shift+Tab must return to the same link');
+        const focusedName = `profile-${count}-${theme}-${rendering}-offscreen-link-focus.png`;
+        await page.screenshot({ path: join(out, focusedName) }); screenshots.push(focusedName);
         // The remembered size must adapt after an image decodes and reader text
         // grows. This adds a synthetic in-memory image to the mounted HTML DOM;
         // it never loads external pixels or rewrites the production sanitizer.
