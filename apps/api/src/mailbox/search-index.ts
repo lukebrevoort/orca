@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { mailSearchTerms } from "@orca/shared";
+import { mailSearchTerms } from "@orca/shared/mail-search";
 
 import { mailSearchIndexVersion } from "../db/mail-search-index.ts";
 export const mailSearchResidualLimits = Object.freeze({

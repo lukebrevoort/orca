@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
 import { isAbsolute } from "node:path";
 import { z } from "zod";
-import { inboxClassificationResponseSchema, inboxQuerySchema, mailProviderSchema } from "@orca/shared";
+import { inboxClassificationResponseSchema, inboxQuerySchema, mailProviderSchema } from "@orca/shared/schemas";
 
 import { createMailboxReader, MailboxCursorError, MailboxScopeError } from "./read.ts";
 import { MailSearchAdmissionError, MailSearchUnavailableError } from "./search-index.ts";

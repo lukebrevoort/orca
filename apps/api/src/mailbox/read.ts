@@ -2,11 +2,11 @@ import { inboxDestinationId, inboxVisibilityPredicate } from "../organization/vi
 import { createHash } from "node:crypto";
 
 import type { Database } from "bun:sqlite";
+import type { DestinationResolution } from "@orca/shared";
 import {
   humanClassificationAssessmentSchema,
   humanClassificationOverrideSchema,
   humanClassificationSchema,
-  type DestinationResolution,
   type AttentionBehavior,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
@@ -16,7 +16,7 @@ import {
   type MailAccount,
   type MailCapabilities,
   type MailProvider,
-} from "@orca/shared";
+} from "@orca/shared/schemas";
 
 import { detectGmailCapabilities } from "../auth/gmail/capabilities.ts";
 import { detectOutlookCapabilities } from "../auth/outlook/capabilities.ts";
