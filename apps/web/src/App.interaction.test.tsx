@@ -1214,6 +1214,21 @@ describe("Write shortcut", () => {
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
   });
 
+  test("leaves native destination type-ahead and editable keys alone, including Zen preference", async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true });
+    await act(async () => (browserWindow.document.querySelector(".message-initial-select") as unknown as HTMLButtonElement).click());
+    const select = browserWindow.document.querySelector('[aria-label="Destination space"]')!;
+    const search = browserWindow.document.querySelector('input[aria-label="Search mail"]')!;
+    for (const target of [select, search]) {
+      const event = new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true });
+      await act(async () => { target.dispatchEvent(event); });
+      expect(event.defaultPrevented).toBe(false);
+      expect(browserWindow.document.querySelector('.compose-workspace, .zen-canvas')).toBeNull();
+    }
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true })));
+    expect(browserWindow.document.querySelector(".zen-canvas")).not.toBeNull();
+  });
+
   test("starts writing in Zen mode when the preference is enabled", async () => {
     await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true });
 

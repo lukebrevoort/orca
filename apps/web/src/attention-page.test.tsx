@@ -21,6 +21,7 @@ import { InboxApp, defaultReaderPreferences } from "./App";
 import { TopLayerProvider } from "./top-layer";
 import { AttentionPage } from "./attention-page";
 import { AttentionRoutingProvider, useRoutingUpdates } from "./attention-routing";
+import { BulkSpaceMove } from "./bulk-space-move";
 import { RoutingChooser } from "./routing-chooser";
 import { destinationRoutingStateSchema } from "@orca/shared";
 const globals = [
@@ -1393,4 +1394,97 @@ test("superseded mail snapshot cannot satisfy explicit recovery", async () => {
   expect(recovered).toBe(false);
   expect(updates.recoveryRequired).toBe(true);
   expect(updates.recovering).toBe(false);
+});
+
+
+test("bulk recovery releases its parent busy lease on unmount before the catalog completes", async () => {
+  const gate = deferred();
+  let busy = false;
+  const transitions: boolean[] = [];
+  function Capture({ show }: { show: boolean }) {
+    return <AttentionRoutingProvider onRefresh={async () => {}}>{show && <BulkSpaceMove
+      targets={[{ accountId: "a", threadId: "thread-a" }]} disabled={false} preview={false}
+      queryOwner={0} scope={<span>this conversation</span>} resetKey={0} onMoved={() => {}}
+      onBusy={value => { busy = value; transitions.push(value); }}
+    />}</AttentionRoutingProvider>;
+  }
+  // A catalog read failure exposes the same recovery action without a write.
+  intercept = async path => path === "/v1/destinations" ? Response.json({ error: { message: "Catalog unavailable" } }, { status: 503 }) : syncNoop(path);
+  await act(async () => root.render(<Capture show />)); await settle();
+  intercept = async path => { if (path === "/v1/destinations") await gate.promise; return syncNoop(path); };
+  try {
+    await act(async () => button("Reload spaces and mail").click()); await settle();
+    expect(busy).toBe(true);
+    await act(async () => root.render(<Capture show={false} />));
+    expect(busy).toBe(false);
+    expect(transitions).toEqual([true, false]);
+  } finally { await act(async () => gate.release()); await settle(); }
+  // Completing the detached operation must not release a second time.
+  expect(transitions).toEqual([true, false]);
+});
+
+test("detached recovery completion cannot unlock a new move after a same-query remount", async () => {
+  const oldRefresh = deferred(), newWrite = deferred();
+  let busy = false;
+  const transitions: boolean[] = [];
+  function Capture({ generation }: { generation: number }) {
+    return <AttentionRoutingProvider key={generation} onRefresh={async () => { if (generation === 0) await oldRefresh.promise; }}><BulkSpaceMove
+      targets={[{ accountId: "a", threadId: "thread-a" }]} disabled={false} preview={false}
+      queryOwner={0} scope={<span>this conversation</span>} resetKey={0} onMoved={() => {}}
+      onBusy={value => { busy = value; transitions.push(value); }}
+    /></AttentionRoutingProvider>;
+  }
+  intercept = async path => path === "/v1/destinations" ? Response.json({ error: { message: "Catalog unavailable" } }, { status: 503 }) : syncNoop(path);
+  await act(async () => root.render(<Capture generation={0} />)); await settle();
+  intercept = async (path, init) => { if (path.endsWith("/routing/batch") && init?.method === "PUT") await newWrite.promise; return syncNoop(path); };
+  try {
+    await act(async () => button("Reload spaces and mail").click()); await settle();
+    expect(busy).toBe(true);
+    await act(async () => root.render(<Capture generation={1} />)); await settle();
+    expect(busy).toBe(false);
+    await chooseBulkDestination("Quiet");
+    await act(async () => button("Move conversations").click()); await settle();
+    expect(busy).toBe(true);
+    await act(async () => oldRefresh.release()); await settle();
+    expect(busy).toBe(true);
+    expect(transitions).toEqual([true, false, true]);
+    expect(button("Moving…").disabled).toBe(true);
+  } finally {
+    await act(async () => { oldRefresh.release(); newWrite.release(); }); await settle(); await settle();
+  }
+  expect(busy).toBe(false);
+  expect(transitions).toEqual([true, false, true, false]);
+});
+
+test("App Start over removes recovery and empty reselected recovery clears busy before rows return", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  intercept = async (path, init) => path.endsWith("/routing/batch") && init?.method === "PUT"
+    ? Response.json({ error: { message: "Unconfirmed move" } }, { status: 503 }) : syncNoop(path);
+  await click("Move conversations");
+  await click("Clear selection and exit");
+  expect(document.querySelector(".bulk-space-sentence")).toBeNull();
+  expect([...document.querySelectorAll("button")].some(b => b.textContent === "Reload spaces and mail")).toBe(false);
+  await click("Select");
+  const catalog = deferred();
+  intercept = async (path, init) => {
+    if (path === "/v1/destinations") await catalog.promise;
+    if (path.startsWith("/v1/inbox?")) {
+      const body = await (await request(path, init)).json();
+      return Response.json({ ...body, messages: [], nextCursor: null });
+    }
+    return syncNoop(path);
+  };
+  try {
+    await act(async () => button("Reload spaces and mail").click());
+    for (let i = 0; i < 30 && document.querySelectorAll(".message-row").length; i++) await settle();
+    expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+    expect(document.querySelector(".bulk-action-bar")?.getAttribute("aria-busy")).toBe("true");
+  } finally { await act(async () => catalog.release()); await settle(); }
+  expect(document.querySelector(".bulk-action-bar")?.getAttribute("aria-busy")).toBe("false");
+  intercept = async path => syncNoop(path);
+  await act(async () => window.dispatchEvent(new Event("orca:destination-authority-changed")));
+  for (let i = 0; i < 30 && !document.querySelectorAll(".message-row").length; i++) await settle();
+  expect(document.querySelectorAll(".message-row")).toHaveLength(2);
+  expect([...document.querySelectorAll<HTMLButtonElement>(".message-initial-select")].every(button => !button.disabled)).toBe(true);
 });

@@ -12,7 +12,7 @@ export function selectedConversations(messages: readonly DestinationConversation
 export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved, onBusy, scope, resetKey }: {
   scope: ReactNode; resetKey: number;
   targets: DestinationConversation[]; disabled: boolean; preview: boolean; queryOwner: number;
-  onMoved: (targets: DestinationConversation[], owner: number) => void; onBusy: (busy: boolean) => void;
+  onMoved: (targets: DestinationConversation[], owner: number) => void; onBusy: (busy: boolean, owner: number, operation: symbol) => void;
 }) {
   const catalog = useDestinations(preview);
   const updates = useRoutingUpdates();
@@ -23,9 +23,29 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
   const [recovery, setRecovery] = useState(false);
   const lock = useRef(false);
   const mounted = useRef(true);
+  const releaseBusy = useRef<(() => void) | null>(null);
   const currentOwner = useRef(queryOwner);
   currentOwner.current = queryOwner;
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { mounted.current = true; return () => {
+    mounted.current = false;
+    releaseBusy.current?.();
+  }; }, []);
+  function beginBusy() {
+    const operation = Symbol("bulk-space-operation");
+    const owner = queryOwner;
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      if (releaseBusy.current === release) releaseBusy.current = null;
+      // Parent ownership checks prevent an old query or detached operation from
+      // unlocking a newer request, including a remount within the same query.
+      onBusy(false, owner, operation);
+    };
+    releaseBusy.current = release;
+    onBusy(true, owner, operation);
+    return release;
+  }
   useEffect(() => { setChoice(""); setError(""); setRecovery(false); }, [queryOwner, resetKey]);
   useEffect(() => { if (!targets.length && !busy) setChoice(""); }, [targets.length, busy]);
   const overLimit = targets.length > destinationBatchLimit;
@@ -39,7 +59,8 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
     const attempted = targets.map(target => ({ ...target }));
     const owner = queryOwner;
     const receiptOwner = updates.begin();
-    lock.current = true; setPendingTargets(attempted); setBusy(true); onBusy(true); setError("");
+    lock.current = true; setPendingTargets(attempted); setBusy(true); setError("");
+    const finishBusy = beginBusy();
     try {
       const result = destinationBatchResultSchema.parse(await attentionRequest("/v1/destinations/routing/batch", {
         method: "PUT", headers: { "content-type": "application/json" },
@@ -60,15 +81,17 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
       await updates.changed(undefined, receiptOwner);
     } finally {
       lock.current = false;
-      if (mounted.current) { setPendingTargets(null); setBusy(false); onBusy(false); }
+      finishBusy();
+      if (mounted.current) { setPendingTargets(null); setBusy(false); }
     }
   }
   async function reload() {
     if (lock.current) return;
-    lock.current = true; setBusy(true); onBusy(true);
+    lock.current = true; setBusy(true);
+    const finishBusy = beginBusy();
     try { if (!await updates.recover()) throw new Error("Mail reload failed"); if (mounted.current) { setRecovery(false); setError("Current mail reloaded. Review the selected conversations and space before moving again."); } }
     catch { if (mounted.current) setError("Spaces could not reload. Your choice is preserved; try reloading again."); }
-    finally { lock.current = false; if (mounted.current) { setBusy(false); onBusy(false); } }
+    finally { lock.current = false; finishBusy(); if (mounted.current) setBusy(false); }
   }
   return <div className="bulk-space-sentence" aria-busy={busy}>
     <div className="selection-sentence">

@@ -2152,7 +2152,7 @@ export function InboxApp({
         topLayerActive ||
         panelMode ||
         panelClosing ||
-        (target instanceof HTMLElement && target.matches("input, textarea, [contenteditable=true]"))
+        (target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable=true]"))
       ) {
         return;
       }
@@ -4893,6 +4893,7 @@ function InboxView({
   const handledGuidanceSelection = useRef(0);
   const pendingGuidanceFocus = useRef(false);
   const [bulkSpaceBusy, setBulkSpaceBusy] = useState(false);
+  const bulkSpaceOperation = useRef<symbol | null>(null);
   const [selectedRows, setSelectedRows] = useState<Map<string, InboxMessage>>(() => new Map());
   const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
   const selectedViewDismissRef = useRef<(() => void) | null>(null);
@@ -4978,6 +4979,7 @@ function InboxView({
 
   useEffect(() => {
     setSelectionMode(viewMode === "all" && new URLSearchParams(window.location.search).has("addSendersTo"));
+    bulkSpaceOperation.current = null;
     setBulkSpaceBusy(false);
     setSelectedRows(new Map());
     setSelectedTargets(new Map());
@@ -5335,7 +5337,16 @@ function InboxView({
                   setSelectedTargets(attentionTargetsForRows(next));
                   return next;
                 });
-              }} type="button">{conversationTargets.length ? conversationTargets.length === 1 ? "this conversation" : `these ${conversationTargets.length} conversations` : "a few conversations"}</button>} targets={conversationTargets} disabled={bulkAttentionStatus === "saving"} preview={demoMode} queryOwner={bulkQueryRef.current.generation} onBusy={setBulkSpaceBusy} onMoved={(targets, owner) => {
+              }} type="button">{conversationTargets.length ? conversationTargets.length === 1 ? "this conversation" : `these ${conversationTargets.length} conversations` : "a few conversations"}</button>} targets={conversationTargets} disabled={bulkAttentionStatus === "saving"} preview={demoMode} queryOwner={bulkQueryRef.current.generation} onBusy={(busy, owner, operation) => {
+                if (owner !== bulkQueryRef.current.generation) return;
+                if (busy) {
+                  bulkSpaceOperation.current = operation;
+                  setBulkSpaceBusy(true);
+                } else if (bulkSpaceOperation.current === operation) {
+                  bulkSpaceOperation.current = null;
+                  setBulkSpaceBusy(false);
+                }
+              }} onMoved={(targets, owner) => {
               if (owner !== bulkQueryRef.current.generation) return;
               const moved = new Set(targets.map(conversationKey));
               setBulkRetry(null); setBulkAttentionMessage("");
