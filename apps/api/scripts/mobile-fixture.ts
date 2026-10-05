@@ -206,12 +206,13 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) 
     writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
     return response;
   }
+  const startedAt = performance.now();
   const response = await app.fetch(request);
   if (request.method === "GET" && url.pathname === "/v1/inbox" && url.searchParams.has("query")) {
     // This server contains only invented fixtures. Keep diagnostic output to
     // query equality, status, IDs, and a code; never log credentials or mail.
     const result = await response.clone().json().catch(() => null) as { messages?: Array<{ id: string }>; error?: { code?: string } } | null;
-    console.log(JSON.stringify({ syntheticSearch: true, exactExpectedQuery: url.searchParams.get("query") === "Jordan confirmed", status: response.status, ids: result?.messages?.map(message => message.id), errorCode: result?.error?.code }));
+    console.log(JSON.stringify({ syntheticSearch: true, exactExpectedQuery: url.searchParams.get("query") === "Jordan confirmed", elapsedMs: Math.round(performance.now() - startedAt), status: response.status, ids: result?.messages?.map(message => message.id), errorCode: result?.error?.code }));
   }
   return response;
 } });
