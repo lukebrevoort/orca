@@ -22,7 +22,8 @@ xcodebuild build-for-testing \
   -project "$ios_dir/Orca.xcodeproj" \
   -scheme Orca \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
-  -derivedDataPath "$derived_data"
+  -derivedDataPath "$derived_data" \
+  CODE_SIGNING_ALLOWED=NO
 
 products_dir="$derived_data/Build/Products"
 base_xctestrun=($products_dir/Orca_iphonesimulator*.xctestrun(N[1]))
@@ -60,7 +61,8 @@ PY
 # fresh simulator to finish booting before running either test appearance.
 xcrun simctl bootstatus "$simulator_udid" -b
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
-result_dir=$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")
+result_dir=${ORCA_UI_RESULT_DIRECTORY:-$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")}
+mkdir -p "$result_dir"
 result_bundle="$result_dir/Orca.xcresult"
 # AppleInterfaceStyle launch defaults do not reliably change simulator appearance.
 trap 'xcrun simctl ui "$simulator_udid" appearance light >/dev/null 2>&1 || true' EXIT
@@ -96,6 +98,7 @@ fi
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
+  -parallel-testing-enabled NO \
   -resultBundlePath "$result_bundle" \
   "${light_tests[@]}"
 
@@ -103,6 +106,7 @@ xcrun simctl ui "$simulator_udid" appearance dark
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
+  -parallel-testing-enabled NO \
   -resultBundlePath "$result_dir/OrcaDark.xcresult" \
   "${dark_tests[@]}"
 

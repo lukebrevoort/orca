@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { emailLabels, emails, humanClassificationOverrides, labels, mailboxRevisions, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
-import { createMailboxReader, MailboxCursorError, MailboxScopeError, type MailboxPageQueryPlan, type MailboxReadMetric } from "./read.ts";
+import { createMailboxReader, MailboxCursorError, MailboxScopeError, type MailboxPageQueryPlan, type MailboxReadMetric, type MailboxReadQuery } from "./read.ts";
 
 const tempDirectories: string[] = [];
 
@@ -355,5 +355,205 @@ describe("bounded mailbox reader", () => {
     expect(result.response.messages.every((message) => message.labels.length === 3)).toBe(true);
     expect(result.response.messages.every((message) => message.humanClassification?.userOverride?.target.scope === "message")).toBe(true);
     fixture.sqlite.close();
+  });
+});
+
+
+describe("empty attention page pruning", () => {
+  test("uses zero snapshot aggregates to skip scans across two authorized accounts", () => {
+    const fixture = createFixture(45);
+    const authorization = addSecondAccount(fixture, 35);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    const plans: MailboxPageQueryPlan[] = [];
+    const reader = createMailboxReader(fixture.sqlite, { observePageQueryPlan: (plan) => plans.push(plan) });
+    try {
+      const normal = reader.read({ authorization, query: { limit: 7 } });
+      expect(normal.metric.accountPageQueries).toBe(2);
+      expect(plans.map((plan) => plan.behavior)).toEqual(["normal", "normal"]);
+      expect(normal.response.counts.attention).toEqual({ focus: 0, normal: 80, quiet: 0, hidden: 0, all: 80 });
+      expect(normal.response.messages).toHaveLength(7);
+      expect(normal.response.nextCursor).toBeString();
+      const focus = reader.read({ authorization, query: { view: "focus", limit: 7 } });
+      expect(focus.metric.accountPageQueries).toBe(0);
+      expect(focus.response.messages).toEqual([]);
+      expect(focus.response.nextCursor).toBeNull();
+      expect(focus.response.counts).toEqual(normal.response.counts);
+      expect(focus.response.freshness).toEqual(normal.response.freshness);
+      for (const query of [
+        { query: "no synthetic row matches this" },
+        { sender: "absent@example.com" },
+        { receivedAfter: new Date(fixture.baseTime + 1).toISOString() },
+        { receivedBefore: new Date(fixture.baseTime - 100_000).toISOString() },
+      ]) {
+        const empty = reader.read({ authorization, query: { ...query, view: "all", limit: 7 } });
+        expect(empty.metric.accountPageQueries).toBe(0);
+        expect(empty.response.messages).toEqual([]);
+        expect(empty.response.nextCursor).toBeNull();
+        expect(empty.response.counts.attention.all).toBe(0);
+      }
+      // Classification is deliberately absent from the aggregate filter. A nonzero
+      // attention count must not be treated as proof that a classification matches.
+      const classified = reader.read({ authorization, query: { view: "all", classification: "uncertain", limit: 7 } });
+      expect(classified.response.messages).toEqual([]);
+      expect(classified.response.counts.attention.normal).toBe(80);
+      expect(classified.metric.accountPageQueries).toBe(2);
+    } finally { fixture.sqlite.close(); }
+  });
+
+  test.each(["notify", "focus", "normal", "quiet", "hidden"] as const)("keeps %s rows, including combined notify/focus counts", (behavior) => {
+    const fixture = createFixture(8);
+    fixture.sqlite.run("update sender_attention_rules set behavior = ?", [behavior]);
+    const reader = createMailboxReader(fixture.sqlite);
+    try {
+      const result = reader.read({ authorization: fixture.authorization, query: { view: "all", limit: 20 } });
+      expect(result.response.messages).toHaveLength(8);
+      expect(result.response.messages.every((message) => message.attentionBehavior === behavior)).toBe(true);
+      expect(result.metric.accountPageQueries).toBe(behavior === "notify" || behavior === "focus" ? 2 : 1);
+      expect(result.response.nextCursor).toBeNull();
+    } finally { fixture.sqlite.close(); }
+  });
+
+  test("keeps a nonempty group in either account and honors effective attention precedence", () => {
+    const fixture = createFixture(5);
+    const authorization = addSecondAccount(fixture, 3);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    fixture.sqlite.run("insert into account_attention_routing (account_id, default_behavior) values ('account-two', 'quiet')");
+    fixture.sqlite.run("insert into sender_attention_rules (id, account_id, scope, value, behavior, source) values ('address-focus', 'account-two', 'address', 'second-0@unruled.example', 'focus', 'user_choice')");
+    fixture.sqlite.run("insert into thread_attention_overrides (account_id, thread_id, behavior) values ('account-two', 'thread-two-00001', 'normal')");
+    try {
+      const result = createMailboxReader(fixture.sqlite).read({ authorization, query: { view: "all", limit: 20 } });
+      expect(result.response.messages.map((message) => message.attentionBehavior)).toEqual(["focus", ...Array(6).fill("normal"), "quiet"]);
+      expect(result.response.counts.attention).toEqual({ focus: 1, normal: 6, quiet: 1, hidden: 0, all: 8 });
+      expect(result.metric.accountPageQueries).toBe(8);
+    } finally { fixture.sqlite.close(); }
+  });
+
+  test("preserves timestamp and ID ties across accounts and empty ranks on later pages", () => {
+    const fixture = createFixture(13);
+    const authorization = addSecondAccount(fixture, 11);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    fixture.sqlite.run("update emails set received_at = ?", [fixture.baseTime]);
+    fixture.sqlite.run("insert into thread_attention_overrides (account_id, thread_id, behavior) values ('account-two', 'thread-two-00010', 'quiet')");
+    const reader = createMailboxReader(fixture.sqlite);
+    try {
+      const expected = fixture.sqlite.query<{ id: string }, []>(`
+        select e.id from emails e left join thread_attention_overrides a on a.account_id=e.account_id and a.thread_id=e.thread_id
+        order by case when a.behavior='quiet' then 1 else 0 end, e.account_id, e.id`).all().map((row) => row.id);
+      const actual: string[] = [];
+      let cursor: string | undefined;
+      do {
+        const result = reader.read({ authorization, query: { view: "all", limit: 3, cursor } });
+        actual.push(...result.response.messages.map((message) => message.id));
+        expect(result.metric.accountPageQueries).toBeLessThanOrEqual(4);
+        cursor = result.response.nextCursor ?? undefined;
+      } while (cursor);
+      expect(actual).toEqual(expected);
+      expect(new Set(actual).size).toBe(24);
+    } finally { fixture.sqlite.close(); }
+  });
+
+  test("retains collection, destination, and account scope checks even for empty filters", () => {
+    const fixture = createFixture(10);
+    addSecondAccount(fixture, 5);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    fixture.sqlite.run("insert into collections (id, account_id, name, position) values ('empty', 'account', 'Empty', 0), ('foreign', 'account-two', 'Foreign', 0)");
+    fixture.sqlite.run("insert into collections (id, account_id, name, position) values ('some', 'account', 'Some', 1)");
+    fixture.sqlite.run("insert into collection_threads (id, collection_id, thread_id) values ('membership', 'some', 'thread-00002')");
+    const reader = createMailboxReader(fixture.sqlite);
+    try {
+      const authorization = fixture.authorization;
+      const empty = reader.read({ authorization, query: { collectionId: "empty", view: "all", limit: 5 } });
+      expect(empty.response.messages).toEqual([]);
+      expect(empty.metric.accountPageQueries).toBe(0);
+      const some = reader.read({ authorization, query: { collectionId: "some", view: "all", limit: 5 } });
+      expect(some.response.messages.map((message) => message.id)).toEqual(["message-00002"]);
+      expect(some.metric.accountPageQueries).toBe(1);
+      const destinationId = some.response.messages[0]!.destination!.destinationId;
+      const destination = reader.read({ authorization, query: { destinationId, query: "no rows", limit: 5 } });
+      expect(destination.metric.accountPageQueries).toBe(0);
+      for (const query of [{ collectionId: "foreign" }, { collectionId: "missing" }, { destinationId: "missing" }]) {
+        expect(() => reader.read({ authorization, query: { ...query, query: "no rows", limit: 5 } })).toThrow(MailboxScopeError);
+      }
+      expect(() => reader.read({ authorization: { userId: "user", accountIds: [] }, query: { query: "no rows", limit: 5 } })).toThrow(MailboxScopeError);
+      fixture.sqlite.run("insert into users (id, email) values ('foreign-user', 'foreign@example.com')");
+      fixture.sqlite.run("insert into oauth_accounts (id, user_id, provider, provider_id, provider_email) values ('foreign-account', 'foreign-user', 'gmail', 'foreign', 'foreign@example.com')");
+      const mixed = reader.read({ authorization: { userId: "user", accountIds: ["account", "foreign-account"] }, query: { view: "focus", limit: 5 } });
+      expect(mixed.response.accounts.map((account) => account.id)).toEqual(["account"]);
+      expect(mixed.metric.accountPageQueries).toBe(0);
+      expect(() => reader.read({ authorization: { userId: "user", accountIds: ["foreign-account"] }, query: { limit: 5 } })).toThrow(MailboxScopeError);
+    } finally { fixture.sqlite.close(); }
+  });
+
+  test("applies Inbox skip rules to both the aggregate proof and page predicates", () => {
+    const fixture = createFixture(6);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    fixture.sqlite.run(`insert into organization_views (workspace_id, id, name, color, position, definition, skip_inbox)
+      values ('user', 'skip-owned', 'Skip owned', '#70867d', 100, '{"revision":1,"accountIds":["account"]}', 1)`);
+    const reader = createMailboxReader(fixture.sqlite);
+    try {
+      const inbox = reader.read({ authorization: fixture.authorization, query: { limit: 5 } });
+      expect(inbox.response.messages).toEqual([]);
+      expect(inbox.response.counts.attention.all).toBe(0);
+      expect(inbox.metric.accountPageQueries).toBe(0);
+      const all = reader.read({ authorization: fixture.authorization, query: { view: "all", limit: 10 } });
+      expect(all.response.messages).toHaveLength(6);
+      expect(all.metric.accountPageQueries).toBe(1);
+      const destinationId = all.response.messages[0]!.destination!.destinationId;
+      const destination = reader.read({ authorization: fixture.authorization, query: { destinationId, limit: 10 } });
+      expect(destination.response.messages).toEqual([]);
+      expect(destination.metric.accountPageQueries).toBe(0);
+    } finally { fixture.sqlite.close(); }
+  });
+
+  test("holds the zero-count proof and rows in the same snapshot across a concurrent attention change", () => {
+    const fixture = createFixture(6);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    const concurrent = createDatabaseClient(fixture.dbPath);
+    let clockCalls = 0;
+    const reader = createMailboxReader(fixture.sqlite, {
+      clock: () => {
+        clockCalls += 1;
+        // The third clock observation closes count timing, after the aggregate.
+        if (clockCalls === 3) concurrent.sqlite.run("insert into sender_attention_rules (id, account_id, scope, value, behavior, source) values ('concurrent-focus', 'account', 'domain', 'group-0.example', 'focus', 'user_choice')");
+        return clockCalls;
+      },
+    });
+    try {
+      const before = createMailboxReader(fixture.sqlite).read({ authorization: fixture.authorization, query: { view: "all", limit: 10 } });
+      const during = reader.read({ authorization: fixture.authorization, query: { view: "all", limit: 10 } });
+      expect(during.response).toEqual(before.response);
+      expect(during.metric.accountPageQueries).toBe(1);
+      const after = reader.read({ authorization: fixture.authorization, query: { view: "all", limit: 10 } });
+      expect(after.response.counts.attention.focus).toBe(2);
+      expect(after.response.messages.slice(0, 2).every((message) => message.attentionBehavior === "focus")).toBe(true);
+      expect(after.response.freshness.revision).not.toBe(before.response.freshness.revision);
+    } finally { concurrent.sqlite.close(); fixture.sqlite.close(); }
+  });
+
+  test("validates malformed, stale, and scope-mismatched cursors before pruning an empty result", () => {
+    const fixture = createFixture(10);
+    const authorization = addSecondAccount(fixture, 5);
+    fixture.sqlite.run("delete from sender_attention_rules");
+    const reader = createMailboxReader(fixture.sqlite);
+    try {
+      const first = reader.read({ authorization, query: { view: "all", limit: 2 } });
+      const cursor = first.response.nextCursor!;
+      const emptyQueries: MailboxReadQuery[] = [
+        { view: "focus", limit: 2 },
+        { view: "all", query: "absent", limit: 2 },
+        { view: "all", classification: "uncertain", limit: 2 },
+      ];
+      for (const query of emptyQueries) {
+        expect(() => reader.read({ authorization, query: { ...query, cursor } })).toThrow(MailboxCursorError);
+      }
+      expect(() => reader.read({ authorization: fixture.authorization, query: { view: "all", limit: 2, cursor } })).toThrow(MailboxCursorError);
+      expect(() => reader.read({ authorization, query: { view: "focus", limit: 2, cursor: "bad cursor" } })).toThrow(MailboxCursorError);
+      fixture.sqlite.run("delete from emails");
+      expect(() => reader.read({ authorization, query: { view: "all", limit: 2, cursor } })).toThrow(MailboxCursorError);
+      const empty = reader.read({ authorization, query: { view: "all", limit: 2 } });
+      expect(empty.metric.accountPageQueries).toBe(0);
+      expect(empty.response.counts.attention).toEqual({ focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 });
+      expect(empty.response.nextCursor).toBeNull();
+    } finally { fixture.sqlite.close(); }
   });
 });

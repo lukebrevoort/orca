@@ -1,12 +1,25 @@
 /** Loopback-only browser + real API/SQLite writing fixture. No provider network calls.
- * Build web first, then: bun apps/api/scripts/compose-fixture.ts
+ * Invoked only by the isolated PR217 hosted diagnostic workflow.
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Hono } from "hono";
 import type { MessageDraft } from "@orca/shared";
+
+assert.equal(process.env.GITHUB_ACTIONS, "true", "Hosted diagnostic fixture only");
+assert.equal(process.env.RUNNER_ENVIRONMENT, "github-hosted", "Disposable hosted runner required");
+const variant = process.env.MOBILE217_WEB_VARIANT;
+assert(variant === "candidate" || variant === "baseline", "Expected an explicit diagnostic web variant");
+assert(process.env.RUNNER_TEMP, "Hosted runner temporary directory is required");
+const runnerRoot = realpathSync(process.env.RUNNER_TEMP);
+const expectedWebRoot = variant === "candidate"
+  ? resolve(import.meta.dir, "../../web/dist")
+  : join(runnerRoot, "mobile217-baseline-source/apps/web/dist");
+const webRoot = realpathSync(expectedWebRoot);
+assert.equal(webRoot, expectedWebRoot, "Web root must be the task-owned build path, without symlinks");
 
 const directory = mkdtempSync(join(tmpdir(), "orca-compose-fixture-"));
 process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
@@ -16,7 +29,7 @@ process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 27).toString("base64");
 delete process.env.APNS_KEY_ID;
 delete process.env.APNS_PRIVATE_KEY;
 // Enforce the synthetic fixture boundary even if a route starts using fetch later.
-globalThis.fetch = (() => { throw new Error("Network fetch disabled in synthetic screenshot fixture"); }) as typeof fetch;
+globalThis.fetch = (() => { throw new Error("Network fetch disabled in synthetic screenshot fixture"); }) as unknown as typeof fetch;
 const { createDatabaseClient } = await import("../src/db/client.ts");
 const { users, oauthAccounts, threads, emails, labels, emailLabels } = await import("../src/db/schema.ts");
 const { createSession } = await import("../src/auth/session-store.ts");
@@ -26,7 +39,8 @@ const { gmailProvider } = await import("../src/providers/gmail/provider.ts");
 const { GmailTransportError } = await import("../src/providers/gmail/transport.ts");
 const { db, sqlite } = createDatabaseClient();
 migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
-const now = new Date();
+// Same mail timestamps for both production bundles and every browser case.
+const now = new Date("2026-10-05T12:00:00.000Z");
 const userId = "compose-fixture-user";
 db.insert(users).values({ id: userId, email: "first@example.com", authenticatedAt: now, onboardingCompletedAt: now }).run();
 for (const [index, accountId] of ["first", "second"].entries()) {
@@ -74,7 +88,6 @@ const app = createApp({ dbFactory: () => createDatabaseClient(), providerRegistr
     },
   }),
 }]) });
-const webRoot = resolve(import.meta.dir, "../../web/dist");
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   const url = new URL(request.url);
   // Synthetic fixture login only; this server binds loopback and contains no real data.

@@ -4,6 +4,7 @@ import { App } from "./App";
 import { TopLayerProvider } from "./top-layer";
 import "./styles.css";
 import "./desktop-switch.css";
+import "./reader-body.css";
 import "./mail-selection.css";
 import "./organization-lanes.css";
 import "./organization-views.css";

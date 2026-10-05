@@ -15,7 +15,10 @@ jobs:
   screenshots:
     name: Synthetic mobile-web screenshots
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
+    env:
+      PR217_PRODUCT_SHA: d9a70ed6131c170cb2c746cc9af97a9b3bb62987
+      PR217_BASELINE_SHA: 24c0de70a9371191485210f7acd4ce8bc7ab54d8
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -28,14 +31,25 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
-      - name: Verify original PR217 product source
+      - name: Verify integrated PR217 product source
         run: |
-          git diff --exit-code d6e63ffcebd66a6ddec4e705a701d62ab71217c1 HEAD -- apps/web/src apps/web/public apps/web/index.html apps/web/vite.config.ts apps/web/package.json apps/api/src apps/api/drizzle packages bun.lock package.json
+          [[ "$PR217_PRODUCT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$PR217_BASELINE_SHA" "$PR217_PRODUCT_SHA"
+          git diff --exit-code "$PR217_PRODUCT_SHA" HEAD -- . ":(exclude).github/workflows/mobile-web-217-screenshots.yml" ":(exclude)apps/api/scripts/mobile-web-217-fixture.ts" ":(exclude)apps/web/scripts/mobile-web-217-screenshots.mjs"
           test -z "$(find . -name node_modules -prune -o -name '.env*' ! -name '.env.example' -type f -print)"
       - run: bun install --frozen-lockfile
-      - run: bun run build
+      - name: Build candidate production web
+        run: bun run --cwd apps/web build
+      - name: Build pinned main production web baseline
+        run: |
+          baseline="$RUNNER_TEMP/mobile217-baseline-source"
+          test ! -e "$baseline"
+          git worktree add --detach "$baseline" "$PR217_BASELINE_SHA"
+          test "$(git -C "$baseline" rev-parse HEAD)" = "$PR217_BASELINE_SHA"
+          test -z "$(find "$baseline" -name node_modules -prune -o -name '.env*' ! -name '.env.example' -type f -print)"
+          (cd "$baseline" && bun install --frozen-lockfile && bun run --cwd apps/web build)
       - run: bunx --no-install playwright install --with-deps chromium
-      - name: Capture exact-head synthetic app
+      - name: Capture mobile gates and compare desktop baseline
         run: node apps/web/scripts/mobile-web-217-screenshots.mjs "${{ runner.temp }}/mobile-web-217-evidence"
       - name: Upload synthetic screenshots only
         if: always()

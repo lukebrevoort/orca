@@ -1,0 +1,74 @@
+[
+  {
+    "id": "github-notification",
+    "description": "Synthetic post-sanitization notification markup, not a real GitHub email or sanitizer test",
+    "subject": "[example/reader] Preserve the complete review (#42)",
+    "from": {
+      "name": "Sam via GitHub-shaped fixture",
+      "email": "notifications@example.com"
+    },
+    "bodyHtml": "<table width=\"760\" style=\"width:760px;max-width:100%;border-collapse:collapse\"><tbody><tr><td><table width=\"100%\" style=\"width:100%;border-collapse:collapse\"><tbody><tr><td><h2>Sam requested your review</h2><p>Review <a href=\"https://example.invalid/example/reader/pull/42\" target=\"_blank\" rel=\"noopener noreferrer\">Preserve the complete review #42</a>.</p><p>The reader must keep every comment, code sample, changed line, and destination.</p><ul><li>Keep prose readable.</li><li>Keep nested layouts contained.</li></ul><pre><code>const review = { status: \"ready\", preserveEveryCharacter: true };\nconst destination = \"https://example.invalid/example/reader/pull/42/files#diff-synthetic-long-code-line-with-important-trailing-content\";\nreturn review;</code></pre><p><del>const fontSize = 10;</del><br /><ins>const fontSize = 16;</ins></p><blockquote><p>Earlier review: please keep the original context.</p></blockquote><p>Full destination: <a href=\"https://example.invalid/example/reader/pull/42/files#diff-a-very-long-unbroken-synthetic-reference-that-must-remain-complete-in-the-reader\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.invalid/example/reader/pull/42/files#diff-a-very-long-unbroken-synthetic-reference-that-must-remain-complete-in-the-reader</a></p><hr /><img src=\"https://example.invalid/synthetic-reader-pixel.png\" alt=\"Synthetic blocked image\" width=\"1\" height=\"1\" /><p><small>You are receiving this synthetic notification because you requested a review. <a href=\"https://example.invalid/notifications/settings\" target=\"_blank\" rel=\"noopener noreferrer\">Notification settings</a>. End of the complete notification.</small></p></td></tr></tbody></table></td></tr></tbody></table>",
+    "bodyText": "Sam requested your review\n\nReview Preserve the complete review #42: https://example.invalid/example/reader/pull/42\n\nThe reader must keep every comment, code sample, changed line, and destination.\n- Keep prose readable.\n- Keep nested layouts contained.\n\nconst review = { status: \"ready\", preserveEveryCharacter: true };\nconst destination = \"https://example.invalid/example/reader/pull/42/files#diff-synthetic-long-code-line-with-important-trailing-content\";\nreturn review;\n\nRemoved: const fontSize = 10;\nAdded: const fontSize = 16;\nFull destination: https://example.invalid/example/reader/pull/42/files#diff-a-very-long-unbroken-synthetic-reference-that-must-remain-complete-in-the-reader\n\nOn Monday, Sam wrote:\n> Earlier review: please keep the original context.\n\nYou are receiving this synthetic notification because you requested a review. Notification settings: https://example.invalid/notifications/settings. End of the complete notification.",
+    "formattedMarkers": [
+      "Sam requested your review",
+      "return review;",
+      "const fontSize = 10;",
+      "const fontSize = 16;",
+      "End of the complete notification."
+    ],
+    "plainCurrentMarker": "Sam requested your review",
+    "quoteMarker": "Earlier review: please keep the original context.",
+    "endMarker": "End of the complete notification.",
+    "expectedCodeBlocks": 1,
+    "expectedDeletedText": "const fontSize = 10;",
+    "expectedInsertedText": "const fontSize = 16;",
+    "expectedReceiptTotal": null,
+    "remoteImagePath": "/synthetic-reader-pixel.png"
+  },
+  {
+    "id": "semantic-receipt",
+    "description": "Synthetic receipt with semantic caption, headers, line items, and total",
+    "subject": "Your synthetic stationery receipt R-2048",
+    "from": {
+      "name": "Example Stationery",
+      "email": "receipts@example.com"
+    },
+    "bodyHtml": "<h2>Receipt R-2048</h2><p>Thank you for your synthetic order. Every line item and total must remain readable.</p><table><caption>Order details in USD</caption><thead><tr><th>Item</th><th>Quantity</th><th>Amount</th></tr></thead><tbody><tr><td>Notebook</td><td>2</td><td>$24.00</td></tr><tr><td>Pencil set</td><td>1</td><td>$8.00</td></tr><tr><td>Shipping</td><td>1</td><td>$4.00</td></tr><tr><td>Tax</td><td>1</td><td>$2.88</td></tr></tbody><tfoot><tr><th>Total paid</th><td>USD</td><td><strong>$38.88</strong></td></tr></tfoot></table><p>Questions? <a href=\"mailto:support@example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Contact synthetic support</a>.</p><p>End of the complete receipt.</p>",
+    "bodyText": "Receipt R-2048\n\nThank you for your synthetic order. Every line item and total must remain readable.\n\nOrder details in USD\nItem | Quantity | Amount\nNotebook | 2 | $24.00\nPencil set | 1 | $8.00\nShipping | 1 | $4.00\nTax | 1 | $2.88\nTotal paid | USD | $38.88\n\nQuestions? Contact synthetic support: support@example.com\n\nEnd of the complete receipt.",
+    "formattedMarkers": [
+      "Receipt R-2048",
+      "Notebook",
+      "Pencil set",
+      "Tax",
+      "Total paid",
+      "$38.88",
+      "End of the complete receipt."
+    ],
+    "plainCurrentMarker": "Receipt R-2048",
+    "quoteMarker": null,
+    "endMarker": "End of the complete receipt.",
+    "expectedCodeBlocks": 0,
+    "expectedDeletedText": null,
+    "expectedInsertedText": null,
+    "expectedReceiptTotal": "$38.88"
+  },
+  {
+    "id": "quoted-plain-reply",
+    "description": "Synthetic text-only reply whose complete quoted history stays recoverable",
+    "subject": "Re: A calm reading surface",
+    "from": {
+      "name": "Maya Example",
+      "email": "maya@example.com"
+    },
+    "bodyHtml": null,
+    "bodyText": "Thanks, this is the exact current reply.\n\nKeep these two paragraphs and the quoted discussion separate without losing either.\n\nOn Monday, Sam wrote:\n> Can we preserve the complete conversation?\n> The original destination is https://example.invalid/discussion/42.\n> End of the complete quoted reply.",
+    "formattedMarkers": [],
+    "plainCurrentMarker": "Thanks, this is the exact current reply.",
+    "quoteMarker": "Can we preserve the complete conversation?",
+    "endMarker": "End of the complete quoted reply.",
+    "expectedCodeBlocks": 0,
+    "expectedDeletedText": null,
+    "expectedInsertedText": null,
+    "expectedReceiptTotal": null
+  }
+]

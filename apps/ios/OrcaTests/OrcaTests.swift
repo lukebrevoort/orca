@@ -699,3 +699,443 @@ extension OrcaTests {
         SavedViewThread(accountId: accountId, accountEmail: "work@example.com", provider: "gmail", threadId: "thread", subject: "Hub update", latestReceivedAt: "2026-09-25T10:00:00Z", messageCount: 2, readState: "unread", sender: .init(name: "Jordan", email: "jordan@example.com"))
     }
 }
+
+// The baseline is intentionally the pre-optimization implementation, including
+// its fractional-first fallback and option mutation. Keep it independent of the
+// production parser so these tests detect future parsing-contract changes.
+private enum MailDateTestSupport {
+    static func baselineParse(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
+
+    static let edgeCases = [
+        "1970-01-01T00:00:00Z", "1969-12-31T23:59:59Z",
+        "2024-02-29T23:59:59.123Z", "2026-10-05T01:26:17.1Z",
+        "2026-10-05T01:26:17.123456789Z", "2026-10-05T01:26:17+05:30",
+        "2026-10-05T01:26:17.123-07:00", "2026-10-05T01:26:17+00:00",
+        "2026-03-08T01:59:59-08:00", "2026-03-08T03:00:00-07:00",
+        "2026-11-01T01:30:00-07:00", "2026-11-01T01:30:00-08:00",
+        "2000-02-29T12:00:00Z", "1900-02-29T12:00:00Z",
+        "2026-02-30T12:00:00Z", "2026-13-01T12:00:00Z",
+        "2026-00-01T12:00:00Z", "2026-01-00T12:00:00Z",
+        "2016-12-31T23:59:60Z", "2026-01-01T24:00:00Z",
+        "2026-10-05", "2026-10-05T01:26:17", "20261005T012617Z",
+        "2026-10-05t01:26:17z", "2026-10-05 01:26:17Z",
+        "2026-10-05T01:26:17.Z", "2026-10-05T01:26:17,123Z",
+        "2026-10-05T01:26:17+0530", "2026-10-05T01:26:17+25:00",
+        " 2026-10-05T01:26:17Z", "2026-10-05T01:26:17Z ",
+        "2026-10-05T01:26:17Zsuffix", "2026-10-05T01:26:17Z\n",
+        "", "not-a-date", "0000-00-00", "☃️", String(repeating: "x", count: 1_024),
+    ]
+
+    // Generate all strings before measuring. Distinct dates avoid benchmarking
+    // repeated-input memoization, and fixed arithmetic makes runs reproducible.
+    static func timestamps(count: Int, fractional: Bool) -> [String] {
+        (0..<count).map { index in
+            let date = String(format: "%04d-%02d-%02dT%02d:%02d:%02d",
+                              2020 + index / 336, 1 + (index / 28) % 12,
+                              1 + index % 28, index % 24, (index * 7) % 60, (index * 13) % 60)
+            let fraction = fractional ? String(format: ".%03d", (index * 37) % 1_000) : ""
+            let zone = ["Z", "+05:30", "-07:00"][index % 3]
+            return date + fraction + zone
+        }
+    }
+
+    struct Totals: Equatable, Sendable {
+        var valid = 0
+        var checksum: TimeInterval = 0
+    }
+
+    // The Sendable assertion is bounded by the lock, including snapshots; neither
+    // mutable storage nor formatter objects escape into the concurrent closures.
+    final class Results: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [Int: Totals] = [:]
+        func put(_ value: Totals, at index: Int) {
+            lock.lock(); defer { lock.unlock() }
+            values[index] = value
+        }
+        func snapshot() -> [Int: Totals] {
+            lock.lock(); defer { lock.unlock() }
+            return values
+        }
+    }
+
+    static func run(_ inputs: [String], workers: Int,
+                    parse: @escaping @Sendable (String) -> Date?) -> [Totals] {
+        let parseChunk: @Sendable (Int) -> Totals = { worker in
+            autoreleasepool {
+                var totals = Totals()
+                for index in stride(from: worker, to: inputs.count, by: workers) {
+                    if let date = parse(inputs[index]) {
+                        totals.valid += 1
+                        totals.checksum += date.timeIntervalSinceReferenceDate
+                    }
+                }
+                return totals
+            }
+        }
+        if workers == 1 { return [parseChunk(0)] }
+        let results = Results()
+        DispatchQueue.concurrentPerform(iterations: workers) { worker in
+            results.put(parseChunk(worker), at: worker)
+        }
+        let values = results.snapshot()
+        return (0..<workers).map { values[$0]! }
+    }
+}
+
+final class MailDateTests: XCTestCase {
+    func testParsingMatchesOriginalAcrossDistinctDatesAndEdgeCases() {
+        let inputs = MailDateTestSupport.edgeCases
+            + MailDateTestSupport.timestamps(count: 1_024, fractional: true)
+            + MailDateTestSupport.timestamps(count: 1_024, fractional: false)
+        for input in inputs {
+            XCTAssertEqual(MailDate.parse(input), MailDateTestSupport.baselineParse(input), input)
+        }
+    }
+
+    func testParsingPreservesAbsoluteInstantsAndDisplayFallbacks() throws {
+        for input in ["1970-01-01T00:00:00Z", "1970-01-01T05:30:00+05:30", "1969-12-31T17:00:00-07:00"] {
+            XCTAssertEqual(try XCTUnwrap(MailDate.parse(input)).timeIntervalSince1970, 0)
+        }
+        XCTAssertEqual(try XCTUnwrap(MailDate.parse("1970-01-01T00:00:00.125Z")).timeIntervalSince1970, 0.125, accuracy: 0.000_001)
+        for input in ["", "not-a-date"] {
+            XCTAssertNil(MailDate.parse(input))
+            XCTAssertEqual(MailDate.compact(input), "")
+            XCTAssertEqual(MailDate.full(input), input)
+        }
+        let input = "2024-02-29T23:59:59.123Z"
+        let date = try XCTUnwrap(MailDateTestSupport.baselineParse(input))
+        let expectedCompact = Calendar.current.isDateInToday(date)
+            ? date.formatted(date: .omitted, time: .shortened)
+            : date.formatted(.dateTime.month(.abbreviated).day())
+        XCTAssertEqual(MailDate.compact(input), expectedCompact)
+        XCTAssertEqual(MailDate.full(input), date.formatted(date: .abbreviated, time: .shortened))
+    }
+
+    func testConcurrentParsingMatchesOriginalForEveryInput() {
+        let inputs = MailDateTestSupport.edgeCases
+            + MailDateTestSupport.timestamps(count: 256, fractional: true)
+            + MailDateTestSupport.timestamps(count: 256, fractional: false)
+        let expected = inputs.map { MailDateTestSupport.baselineParse($0) }
+        let mismatches = MailDateTestSupport.Results()
+        DispatchQueue.concurrentPerform(iterations: 8) { worker in
+            var result = MailDateTestSupport.Totals()
+            for offset in 0..<(inputs.count * 4) {
+                let index = (offset + worker * 17) % inputs.count
+                if MailDate.parse(inputs[index]) != expected[index] { result.valid += 1 }
+            }
+            mismatches.put(result, at: worker)
+        }
+        let results = mismatches.snapshot()
+        XCTAssertEqual(results.count, 8)
+        XCTAssertTrue(results.values.allSatisfy { $0.valid == 0 }, "Concurrent parser results diverged: \(results)")
+    }
+
+    func testAlternatingWarmParserBenchmark() throws {
+        // Diagnostic, not a wall-clock CI assertion. The hosted harness waits for
+        // bootstatus before XCTest runs; warm both implementations again here.
+        // Results describe this simulator/Debug workload, not physical devices.
+        let fractional = MailDateTestSupport.timestamps(count: 2_048, fractional: true)
+        let whole = MailDateTestSupport.timestamps(count: 2_048, fractional: false)
+        let mixed = fractional.indices.map { index in
+            index % 10 == 0 ? "invalid-\(index)" : (index % 2 == 0 ? fractional[index] : whole[index])
+        }
+        let workloads: [(String, [String], Int)] = [
+            ("fractional", fractional, 1), ("whole", whole, 1),
+            ("mixed", mixed, 1), ("mixed-four-workers", mixed, 4),
+        ]
+        for (name, inputs, workers) in workloads {
+            _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers, parse: { MailDateTestSupport.baselineParse($0) })
+            _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers) { MailDate.parse($0) }
+            var baselineSamples = [Double](), cachedSamples = [Double]()
+            var expected: [MailDateTestSupport.Totals]?
+            for sample in 0..<6 {
+                // AB/BA alternation reduces order/thermal/scheduler bias.
+                for cached in (sample.isMultiple(of: 2) ? [false, true] : [true, false]) {
+                    let start = DispatchTime.now().uptimeNanoseconds
+                    let totals = cached
+                        ? MailDateTestSupport.run(inputs, workers: workers) { MailDate.parse($0) }
+                        : MailDateTestSupport.run(inputs, workers: workers, parse: { MailDateTestSupport.baselineParse($0) })
+                    let elapsed = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+                    if let expected { XCTAssertEqual(totals, expected, "\(name): parse results changed") }
+                    else { expected = totals }
+                    if cached { cachedSamples.append(elapsed) } else { baselineSamples.append(elapsed) }
+                }
+            }
+            let median: ([Double]) -> Double = { samples in
+                let sorted = samples.sorted()
+                return (sorted[2] + sorted[3]) / 2
+            }
+            let report: [String: Any] = [
+                "workload": name, "inputsPerSample": inputs.count, "workers": workers,
+                "baselineMilliseconds": baselineSamples, "cachedMilliseconds": cachedSamples,
+                "baselineMedianMilliseconds": median(baselineSamples),
+                "cachedMedianMilliseconds": median(cachedSamples),
+                "medianSpeedup": median(baselineSamples) / median(cachedSamples),
+                "timingIsDiagnosticOnly": true,
+            ]
+            let json = try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
+            print("MAIL_DATE_BENCHMARK \(String(decoding: json, as: UTF8.self))")
+        }
+    }
+}
+
+// Request sequencing is measured at the URLSession boundary using synthetic
+// responses. The fixed delay below models a network dependency, not device speed.
+private enum InboxLoadingTestSupport {
+    static let catalog = Data(#"{"legacyDestinationIds":{"normal":"inbox-lane","focus":"focus-lane","quiet":"quiet-lane","hidden":"hidden-lane"}}"#.utf8)
+    static func page(_ id: String = "page", cursor: String? = nil) throws -> Data {
+        var message = DemoData.messages[0]; message.id = id
+        return try JSONEncoder().encode(InboxPage(accounts: DemoData.accounts, messages: [message], nextCursor: cursor,
+            counts: InboxCounts(focus: 1, normal: 0, quiet: 0, hidden: 0, all: 1)))
+    }
+    static func query(_ request: URLRequest) -> [String: String] {
+        Dictionary(uniqueKeysWithValues: (URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+    }
+    static func paths(for view: String) -> [String] {
+        view == "all" || view.hasPrefix("destination:") ? ["/v1/inbox"] : ["/v1/destinations", "/v1/inbox"]
+    }
+
+    @MainActor struct Fixture {
+        let state: AppState
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        private let previousAccountID = UserDefaults.standard.string(forKey: "selectedAccountID")
+        init(token: @escaping @Sendable () async -> String? = { "fixture-token" }) {
+            let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+            let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config), token: token)
+            state = AppState(client: client, cache: CacheStore(directory: folder))
+            state.baseURLText = "https://orca.example"; state.phase = .ready
+            state.accounts = DemoData.accounts; state.selectedAccountID = DemoData.accounts[0].id
+        }
+        func cleanup() {
+            StubURLProtocol.handler = nil
+            UserDefaults.standard.set(previousAccountID, forKey: "selectedAccountID")
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+    actor FirstRequestGate {
+        let started: XCTestExpectation
+        private var first = true
+        private var continuation: CheckedContinuation<Void, Never>?
+        init(started: XCTestExpectation) { self.started = started }
+        func wait() async {
+            guard first else { return }; first = false
+            await withCheckedContinuation { continuation in
+                self.continuation = continuation; started.fulfill()
+            }
+        }
+        func release() { continuation?.resume(); continuation = nil }
+    }
+}
+
+final class InboxLoadingTests: XCTestCase {
+    @MainActor func testRequestPathsAndQueryPreserveAllDestinationAndLegacyViews() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.page()
+        var requests = [URLRequest]()
+        StubURLProtocol.handler = { request in
+            requests.append(request)
+            return (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response)
+        }
+        for (view, destination) in [("all", nil), ("destination:custom /&?", "custom /&?"),
+                                    ("normal", "inbox-lane"), ("focus", "focus-lane"),
+                                    ("quiet", "quiet-lane"), ("hidden", "hidden-lane"), ("unknown", nil)] as [(String, String?)] {
+            requests = []
+            let model = InboxViewModel(); model.view = view; model.search = "two words & more"
+            await model.load(state: fixture.state)
+            XCTAssertEqual(requests.compactMap { $0.url?.path }, InboxLoadingTestSupport.paths(for: view), view)
+            let request = try XCTUnwrap(requests.last)
+            var expected = ["accountId": "demo-account", "view": view.hasPrefix("destination:") ? "all" : view,
+                            "limit": "30", "query": "two words & more"]
+            expected["destinationId"] = destination
+            XCTAssertEqual(InboxLoadingTestSupport.query(request), expected, view)
+            XCTAssertTrue(requests.allSatisfy { $0.httpMethod == "GET" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-token" })
+            XCTAssertEqual(model.messages, try JSONDecoder().decode(InboxPage.self, from: response).messages)
+            XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+        }
+    }
+
+    @MainActor func testDirectInboxLoadsDoNotDependOnCatalogAvailability() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.page()
+        var paths = [String]()
+        StubURLProtocol.handler = { request in
+            paths.append(request.url!.path)
+            if request.url?.path == "/v1/destinations" {
+                return (503, Data(#"{"error":{"code":"unavailable","message":"Catalog unavailable"}}"#.utf8))
+            }
+            return (200, response)
+        }
+        for view in ["all", "destination:projects"] {
+            paths = []
+            let model = InboxViewModel(); model.view = view
+            await model.load(state: fixture.state)
+            XCTAssertEqual(paths, ["/v1/inbox"])
+            XCTAssertEqual(model.messages, try JSONDecoder().decode(InboxPage.self, from: response).messages)
+            XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+        }
+    }
+
+    @MainActor func testRefreshAndPaginationKeepCursorSearchAndFreshLegacyMappings() async throws {
+        for view in ["all", "destination:projects", "normal", "focus"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let first = try InboxLoadingTestSupport.page("first", cursor: "opaque + / cursor")
+            let next = try InboxLoadingTestSupport.page("second")
+            let refreshed = try InboxLoadingTestSupport.page("refreshed")
+            var requests = [URLRequest](), pageCount = 0, catalogCount = 0
+            StubURLProtocol.handler = { request in
+                requests.append(request)
+                if request.url?.path == "/v1/destinations" {
+                    catalogCount += 1
+                    return (200, Data("{\"legacyDestinationIds\":{\"normal\":\"inbox-\(catalogCount)\",\"focus\":\"focus-\(catalogCount)\"}}".utf8))
+                }
+                pageCount += 1
+                return (200, pageCount == 1 ? first : pageCount == 2 ? next : refreshed)
+            }
+            let model = InboxViewModel(); model.view = view; model.search = "subject"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(model.messages.map(\.id), ["first", "second"]); XCTAssertNil(model.nextCursor)
+            await model.load(state: fixture.state)
+            XCTAssertEqual(model.messages.map(\.id), ["refreshed"])
+            XCTAssertEqual(requests.compactMap { $0.url?.path }, Array(repeating: InboxLoadingTestSupport.paths(for: view), count: 3).flatMap { $0 })
+            let queries = requests.filter { $0.url?.path == "/v1/inbox" }.map(InboxLoadingTestSupport.query)
+            XCTAssertEqual(queries.map { $0["cursor"] }, [nil, "opaque + / cursor", nil])
+            XCTAssertEqual(queries.map { $0["query"] }, ["subject", "subject", "subject"])
+            if view == "normal" || view == "focus" {
+                let prefix = view == "normal" ? "inbox" : "focus"
+                XCTAssertEqual(queries.map { $0["destinationId"] }, ["\(prefix)-1", "\(prefix)-2", "\(prefix)-3"])
+            }
+        }
+    }
+
+    @MainActor func testLegacyCatalogFailureStillStopsInboxAndMissingMappingKeepsFallback() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var paths = [String]()
+        StubURLProtocol.handler = { request in
+            paths.append(request.url!.path)
+            return (503, Data(#"{"error":{"code":"unavailable","message":"Catalog unavailable"}}"#.utf8))
+        }
+        let model = InboxViewModel(); model.view = "focus"
+        await model.load(state: fixture.state)
+        XCTAssertEqual(paths, ["/v1/destinations"]); XCTAssertTrue(model.messages.isEmpty)
+        XCTAssertEqual(model.error, "Catalog unavailable"); XCTAssertFalse(model.isLoading)
+        let response = try InboxLoadingTestSupport.page()
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/destinations" { return (200, Data("{}".utf8)) }
+            XCTAssertNil(InboxLoadingTestSupport.query(request)["destinationId"])
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["view"], "focus")
+            return (200, response)
+        }
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["page"]); XCTAssertNil(model.error)
+    }
+
+    @MainActor func testInboxErrorAndOfflineCacheRemainScoped() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.page(cursor: "must-not-reuse-offline")
+        StubURLProtocol.handler = { request in (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response) }
+        let model = InboxViewModel(); model.view = "all"
+        await model.load(state: fixture.state)
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+            throw URLError(.notConnectedToInternet)
+        }
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["page"]); XCTAssertNil(model.nextCursor)
+        XCTAssertEqual(model.error, "Offline — showing saved mail")
+        fixture.state.baseURLText = "https://other.example"
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+            return (404, Data(#"{"error":{"code":"not_found","message":"Destination not found"}}"#.utf8))
+        }
+        await model.load(state: fixture.state)
+        XCTAssertTrue(model.messages.isEmpty); XCTAssertNil(model.nextCursor)
+        XCTAssertEqual(model.error, "Destination not found"); XCTAssertFalse(model.isLoading)
+    }
+
+    @MainActor func testCancelledOrChangedIdentityResponseCannotPublishOrCache() async throws {
+        for interruption in ["cancel", "account", "scope"] {
+            let gate = InboxLoadingTestSupport.FirstRequestGate(started: expectation(description: "request suspended"))
+            let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" })
+            defer { fixture.cleanup() }
+            let response = try InboxLoadingTestSupport.page()
+            StubURLProtocol.handler = { request in (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response) }
+            let model = InboxViewModel(); model.view = "all"
+            let oldKey = "\(fixture.state.ownerScope)|demo-account|inbox|all|"
+            let task = Task { await model.load(state: fixture.state) }
+            await fulfillment(of: [gate.started], timeout: 3)
+            switch interruption {
+            case "cancel": task.cancel()
+            case "account":
+                var other = DemoData.accounts[0]; other.id = "other-account"
+                fixture.state.accounts.append(other); fixture.state.selectedAccountID = other.id
+            default: fixture.state.baseURLText = "https://other.example"
+            }
+            await gate.release(); await task.value
+            XCTAssertTrue(model.messages.isEmpty, interruption); XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+            let cached = await fixture.state.cache.load(InboxPage.self, key: oldKey)
+            XCTAssertNil(cached, interruption)
+        }
+    }
+
+    @MainActor func testNewerSearchWinsAndDuplicatePaginationDoesNotStart() async throws {
+        let gate = InboxLoadingTestSupport.FirstRequestGate(started: expectation(description: "old request suspended"))
+        let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" })
+        defer { fixture.cleanup() }
+        var requests = [URLRequest]()
+        StubURLProtocol.handler = { request in
+            requests.append(request)
+            if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+            return (200, try InboxLoadingTestSupport.page(InboxLoadingTestSupport.query(request)["query"] ?? "old"))
+        }
+        let model = InboxViewModel(); model.view = "all"
+        let old = Task { await model.load(state: fixture.state) }
+        await fulfillment(of: [gate.started], timeout: 3)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertTrue(requests.isEmpty, "Pagination must not overlap an in-flight load")
+        model.search = "new"
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["new"])
+        await gate.release(); await old.value
+        XCTAssertEqual(model.messages.map(\.id), ["new"]); XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+    }
+
+    @MainActor func testDelayedSyntheticRequestSequencingMeasurement() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.page()
+        let delay = 0.08
+        var requests = [URLRequest]()
+        StubURLProtocol.handler = { request in
+            requests.append(request); Thread.sleep(forTimeInterval: delay)
+            return (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response)
+        }
+        var samples = [String: [Double]]()
+        for sample in 0..<6 {
+            for view in (sample.isMultiple(of: 2) ? ["all", "destination:projects", "focus"] : ["focus", "destination:projects", "all"]) {
+                requests = []
+                let model = InboxViewModel(); model.view = view
+                let start = DispatchTime.now().uptimeNanoseconds
+                await model.load(state: fixture.state)
+                let milliseconds = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+                XCTAssertEqual(requests.compactMap { $0.url?.path }, InboxLoadingTestSupport.paths(for: view))
+                XCTAssertEqual(model.messages.map(\.id), ["page"]); XCTAssertNil(model.error)
+                samples[view, default: []].append(milliseconds)
+            }
+        }
+        for view in samples.keys.sorted() {
+            let values = samples[view]!.sorted()
+            let report: [String: Any] = ["view": view, "requestCount": InboxLoadingTestSupport.paths(for: view).count,
+                "delayPerRequestMilliseconds": delay * 1_000, "samplesMilliseconds": samples[view]!,
+                "medianMilliseconds": (values[2] + values[3]) / 2, "timingIsDiagnosticOnly": true]
+            let json = try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
+            print("INBOX_LOADING_BENCHMARK \(String(decoding: json, as: UTF8.self))")
+        }
+    }
+}

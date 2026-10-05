@@ -29,6 +29,12 @@ afterEach(async () => {
 });
 
 describe("native-inspired mobile mail", () => {
+  test("keeps the safe browser viewport for routes without edge-to-edge insets", async () => {
+    const html = await Bun.file(new URL("../index.html", import.meta.url)).text();
+    expect(html).toContain('name="viewport" content="width=device-width, initial-scale=1.0"');
+    expect(html).not.toContain("viewport-fit=cover");
+  });
+
   test("new compose entry passes the real trigger for focus restoration and stays repeatable", async () => {
     const container = browser.document.createElement("div");
     browser.document.body.append(container);
@@ -63,7 +69,7 @@ describe("native-inspired mobile mail", () => {
   });
 
   test("full cascade keeps normal and compact Inbox spacing and long-snippet clamps", () => {
-    for (const density of ["comfortable", "compact"]) {
+    for (const density of ["calm", "compact"]) {
       const phone = new Window({ width: 390, height: 844 });
       phone.document.documentElement.dataset.readerDensity = density;
       const sheet = phone.document.createElement("style");

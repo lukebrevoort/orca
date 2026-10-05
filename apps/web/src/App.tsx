@@ -40,6 +40,8 @@ import { invalidateWritingPreferences, useWritingPreferences } from "./use-writi
 import { resolveWritingReplyAction, type WritingPreferenceState } from "./writing-preferences";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
+import { ReaderBody } from "./reader-body";
+export { splitQuotedContent } from "./reader-body";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
@@ -51,6 +53,7 @@ import { TopLayer, useTopLayerActive } from "./top-layer";
 import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
 import { isMailSearchResultReader, openMailSearch, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import { createReceivedAtFormatter, formatReceivedAt } from "./received-at";
 import { recentThreadReferences, scheduleThreadDetailRefresh, threadMailboxVersion, ThreadDetailCache } from "./thread-detail-cache";
 import {
   SurfaceHistory,
@@ -4971,6 +4974,7 @@ function InboxView({
     const now = new Date();
     return displayMessages.map((message) => getStreamSectionLabel(message.receivedAt, now));
   }, [displayMessages]);
+  const formatInboxReceivedAt = createReceivedAtFormatter();
   const unreadCount = displayMessages.filter((message) => message.unread).length;
   const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
   useEffect(() => {
@@ -5492,7 +5496,7 @@ function InboxView({
                           <span className={`attention-badge attention-badge-${message.attentionBehavior}`} title={`Attention treatment: ${message.attentionBehavior}. Human signal (${message.humanSignal ?? "unknown"}) is a separate estimate, not a routing rule.`}>
                             {message.attentionBehavior === "notify" ? "Notify me" : message.attentionBehavior === "focus" ? "Keep in focus" : message.attentionBehavior}
                           </span>
-                          <span>{formatReceivedAt(message.receivedAt)}</span>
+                          <span>{formatInboxReceivedAt(message.receivedAt)}</span>
                         </div>
                         <MessageSubject subject={message.subject} unread={message.unread} />
                         <p>{message.snippet}</p>
@@ -5524,7 +5528,7 @@ function InboxView({
                     {!selectionMode && viewMode === "later" ? (() => {
                       const activeReminder = reminders.find((item) => item.threadId === message.threadId && (item.status === "scheduled" || item.status === "resurfaced"));
                       const snoozing = snoozingThreadId === message.threadId;
-                      return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
+                      return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatInboxReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
                     {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
                   </div>
@@ -5647,18 +5651,6 @@ export function groupThreadMessages(messages: ThreadDetailMessage[]) {
     });
     return groups;
   }, []);
-}
-
-export function splitQuotedContent(body: string) {
-  const lines = body.replace(/\r\n/g, "\n").split("\n");
-  const quoteStart = lines.findIndex((line, index) =>
-    index > 0 && (/^\s*>/.test(line) || /^\s*On .+wrote:\s*$/i.test(line) || /^\s*-{2,}\s*Forwarded message\s*-{2,}\s*$/i.test(line)),
-  );
-  if (quoteStart < 0) return { current: body.trim(), quoted: null };
-  return {
-    current: lines.slice(0, quoteStart).join("\n").trim(),
-    quoted: lines.slice(quoteStart).join("\n").trim(),
-  };
 }
 
 export function shouldShowReaderJumpToTop(scrollY: number, viewportHeight: number) {
@@ -5797,7 +5789,6 @@ export function MessageReader({
                 <ol>
                   {group.messages.map((message, index) => {
                     const signature = getContactSignature(message.from);
-                    const plainBody = !message.bodyHtml && message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
                     const messageKey = messageIdentityKey(message);
                     const isNewest = newestMessage ? messageKey === messageIdentityKey(newestMessage) : false;
                     const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
@@ -5822,7 +5813,7 @@ export function MessageReader({
                           {isNewest ? <span className="reader-status-label">Newest</span> : null}
                         </div>
                         <details>
-                          <summary>Message details</summary>
+                          <summary><span className="reader-sender-address">{message.from.email}</span><span>Message details</span></summary>
                           <dl>
                             <div><dt>Sent</dt><dd><time dateTime={message.receivedAt}>{formatFullReceivedAt(message.receivedAt)}</time></dd></div>
                             <div><dt>From</dt><dd>{message.from.email}</dd></div>
@@ -5836,21 +5827,7 @@ export function MessageReader({
                       <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                       <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
-                    {message.bodyHtml ? (
-                      <div className="reader-body reader-body-html" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
-                    ) : plainBody ? (
-                      <>
-                        <div className="reader-body reader-body-plain">{plainBody.current}</div>
-                        {plainBody.quoted ? (
-                          <details className="reader-quoted">
-                            <summary>Show quoted history</summary>
-                            <div>{plainBody.quoted}</div>
-                          </details>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="reader-no-body"><strong>Readable body unavailable.</strong><span>Orca synced this message’s details, but no readable text body was available. The rest of this conversation is still here.</span></p>
-                    )}
+                    <ReaderBody html={message.bodyHtml} text={message.bodyText} />
                     {message.attachments.length ? (
                       <section className="reader-attachments" aria-describedby={`reader-attachments-note-${message.id}`} aria-labelledby={`reader-attachments-title-${message.id}`}>
                         <h3 id={`reader-attachments-title-${message.id}`}>Attachments</h3>
@@ -7049,22 +7026,6 @@ function getSystemTheme(): Theme {
 
 function formatProvider(provider: MailAccount["provider"]) {
   return provider.charAt(0).toUpperCase() + provider.slice(1);
-}
-
-function formatReceivedAt(receivedAt: string) {
-  const date = new Date(receivedAt);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const now = new Date();
-  const options: Intl.DateTimeFormatOptions =
-    date.toDateString() === now.toDateString()
-      ? { hour: "numeric", minute: "2-digit" }
-      : { month: "short", day: "numeric" };
-
-  return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
 function formatFullReceivedAt(receivedAt: string) {
