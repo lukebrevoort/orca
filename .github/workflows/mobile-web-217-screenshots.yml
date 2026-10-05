@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      PR217_PRODUCT_SHA: d9a70ed6131c170cb2c746cc9af97a9b3bb62987
+      PR217_PRODUCT_SHA: f681315db7a6a5aef473d12ea5929ef34f162d7c
       PR217_BASELINE_SHA: 24c0de70a9371191485210f7acd4ce8bc7ab54d8
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

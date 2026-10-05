@@ -9,7 +9,7 @@ import { chromium } from 'playwright';
 
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Run only in the authorized isolated hosted workflow');
 assert.equal(process.env.RUNNER_ENVIRONMENT, 'github-hosted', 'Use a disposable GitHub-hosted runner');
-const sourceSha = 'd9a70ed6131c170cb2c746cc9af97a9b3bb62987';
+const sourceSha = 'f681315db7a6a5aef473d12ea5929ef34f162d7c';
 assert.equal(process.env.PR217_PRODUCT_SHA, sourceSha, 'Workflow and diagnostic product pins must match');
 const baselineSha = '24c0de70a9371191485210f7acd4ce8bc7ab54d8';
 assert.match(sourceSha ?? '', /^[0-9a-f]{40}$/, 'An exact integrated product SHA is required');
@@ -36,25 +36,41 @@ const initialDraft = {
 const longCc = 'design-review-team-with-a-long-address@example.com';
 const longBcc = 'independent-accessibility-review-group@example.com';
 const desktopStages = ['inbox', 'compose', 'compose-long-recipients', 'zen', 'settings'];
+const baselineInterruptionFailure = {
+  status: 'known-failing-not-retested',
+  run: 'https://github.com/lukebrevoort/orca/actions/runs/37377227288',
+  summary: 'Pinned main has a pre-existing interrupted-edit/local-checkpoint versus remote-save guard failure: local text can remain while the API draft is stale despite a saved label.',
+  scope: 'The baseline is used only for the five desktop reference screenshots. Its interrupted/repeated draft-save loop is intentionally not rerun or reported as passed.',
+};
 const results = {
   sourceSha, baselineSha,
   diagnosticSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   syntheticOnly: true, platform: 'Chromium mobile web; not native iOS',
   startedAt: new Date().toISOString(), fixedContentTime: fixedTime,
   cases: [], desktopComparisons: [], pageErrors: [], blockedOrigins: [],
+  successScope: 'All candidate gates plus desktop pixel/geometry comparisons against captured references; excludes the known baseline interruption failure',
+  baselineInterruptionFailure,
   baselineMethod: 'Separate pinned-main and integrated-PR production web builds; identical candidate synthetic API fixture, mail, date origin, locale, viewport and fallback fonts',
   clockMethod: 'Date-only offset from a common synthetic epoch; Date advances normally and all native timer, performance, animation-frame and AbortSignal APIs are untouched',
   desktopDiffPolicy: { maximumChannelDelta: 16, maximumChangedPixelRatio: 0.003, geometricToleranceCssPx: 1 },
   limitations: [
     'All external browser requests, including Google Fonts, are blocked. Screenshots use installed fallback fonts; production webfont appearance is not verified.',
     'The 400px viewport checks available layout height, not a real software keyboard, Safari, native iOS, device safe areas or hardware.',
-    'The desktop baseline compares web bundles against the same synthetic API; it is not an independent baseline backend regression test.',
+    'The desktop baseline compares web bundles against the same synthetic API; it is reference-only and is not an independent baseline backend regression test.',
+    'The pinned baseline has a known pre-existing interrupted-save failure from run37377227288. Capturing reference screenshots does not establish that this bug passed or was fixed.',
+    'Independent inbox/Settings gates may run after a failed candidate draft gate by reloading the same synthetic inbox. Such recovery never clears or converts the original failure.',
     'Pixel/geometry gates cover five selected desktop surfaces. They do not establish full release, accessibility or cross-browser sign-off.',
     'No real mail, deployment, sending, credentials, browser traces, database files or storage exports are included.',
   ],
 };
 const fixtures = [];
 let browser;
+async function bounded(promise, message, milliseconds = 5000) {
+  let timer;
+  try {
+    return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })]);
+  } finally { clearTimeout(timer); }
+}
 async function poll(fn, message, timeout = 20000) {
   const end = Date.now() + timeout;
   while (Date.now() < end) {
@@ -317,9 +333,47 @@ async function settingsGates(page, result, mobile) {
   await page.locator('.message-row').filter({ hasText: 'A quieter place to write' }).waitFor();
   result.checks.push(mobile ? 'More close button/Escape/reopen, Settings navigation and Back/Forward without a stranded menu' : 'Settings navigation and Back/Forward');
 }
+async function runGate(page, result, name, work) {
+  const gate = { name, status: 'running' }; result.gates.push(gate);
+  try { await work(); gate.status = 'passed'; return true; }
+  catch (error) {
+    gate.status = 'failed'; gate.error = safeError(error);
+    result.failures.push({ gate: name, error: gate.error });
+    await bounded(screenshot(page, result, `${name}-failure`), 'Failure capture did not finish', 10000).catch(() => {});
+    return false;
+  }
+}
+async function reloadSyntheticInbox(page, context, fixture, result, gate) {
+  assert(!page.isClosed(), 'Cannot recover a closed diagnostic page');
+  const session = await request(context, fixture, 'get', '/v1/auth/session');
+  assert.equal((await session.json()).user?.id, 'compose-fixture-user', 'Recovery must retain the synthetic fixture identity');
+  await page.setViewportSize(result.viewport);
+  await page.goto(fixture.origin + '/');
+  await page.locator('.message-row').filter({ hasText: 'A quieter place to write' }).waitFor();
+  await surfaceState(page, 'inbox');
+  await page.getByRole('dialog', { name: 'Navigation menu', exact: true }).waitFor({ state: 'hidden' });
+  await resetScroll(page);
+  result.recoveries.push({ beforeGate: gate, method: 'Reloaded the same synthetic inbox; no failure was cleared', afterFailedGate: result.failures.length > 0 });
+}
+function caseStatus(result) {
+  const required = ['initialization', result.variant === 'baseline' ? 'reference-capture' : 'compose-durability', 'settings-navigation', 'delivery-isolation'];
+  if (result.viewport.width < 760) required.push('selection-reader');
+  if (result.failures.length || result.gates.some(gate => gate.status !== 'passed')
+    || required.some(name => !result.gates.some(gate => gate.name === name && gate.status === 'passed'))) return 'failed';
+  return result.variant === 'baseline' ? 'reference-captured' : 'passed';
+}
+function suitePassed(report) {
+  const baseline = report.cases.filter(item => item.variant === 'baseline');
+  const candidate = report.cases.filter(item => item.variant === 'candidate');
+  return baseline.length === 4 && baseline.every(item => item.status === 'reference-captured')
+    && candidate.length === 12 && candidate.every(item => item.status === 'passed')
+    && report.desktopComparisons.length === 20 && report.desktopComparisons.every(item => item.status === 'passed')
+    && report.pageErrors.length === 0;
+}
 async function runCase(fixture, viewport, theme, density) {
   const mobile = viewport.width < 760;
-  const result = { label: `${fixture.variant}-${viewport.width}-${theme}-${density}`, variant: fixture.variant, viewport, theme, density, checks: [], screenshots: {}, draftRequests: [], draftResponses: [] };
+  const result = { label: `${fixture.variant}-${viewport.width}-${theme}-${density}`, variant: fixture.variant, viewport, theme, density, purpose: fixture.variant === 'baseline' ? 'desktop-reference-only' : 'candidate-regression-gates', checks: [], screenshots: {}, draftRequests: [], draftResponses: [], gates: [], failures: [], recoveries: [] };
+  if (fixture.variant === 'baseline') result.interruptedDraftGate = baselineInterruptionFailure;
   results.cases.push(result);
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block', locale: 'en-US', timezoneId: 'UTC' });
   await context.addInitScript(({ theme, density }) => localStorage.setItem('orca-reader-preferences', JSON.stringify({ theme, density, motion: 'reduced', composeZenByDefault: false })), { theme, density });
@@ -340,74 +394,97 @@ async function runCase(fixture, viewport, theme, density) {
   page.on('response', response => { const kind = draftKind(response.url()); if (kind) result.draftResponses.push({ kind, method: response.request().method(), status: response.status() }); });
   page.on('pageerror', error => results.pageErrors.push({ label: result.label, message: safeError(error) }));
   try {
-    await prepare(context, fixture); await page.goto(fixture.origin + '/');
-    await page.locator('.message-row').filter({ hasText: 'A quieter place to write' }).waitFor();
-    await page.waitForLoadState('networkidle');
-    assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
-    assert.equal(await page.locator('html').getAttribute('data-reader-density'), density);
-    result.inbox = await noOverflow(page, 'Inbox'); await screenshot(page, result, 'inbox');
-    result.fonts = await page.evaluate(() => [...document.fonts].map(font => ({ family: font.family, status: font.status })));
-    result.checks.push('Requested theme/density; inbox has no horizontal overflow');
-    result.timingProbe = await page.evaluate(() => new Promise(resolve => {
-      const started = Date.now(); const performanceStarted = performance.now();
-      setTimeout(() => resolve({ dateElapsedMs: Date.now() - started, performanceElapsedMs: performance.now() - performanceStarted }), 100);
-    }));
-    assert(result.timingProbe.dateElapsedMs >= 80 && result.timingProbe.performanceElapsedMs >= 80, 'Native timer and advancing Date probe failed');
-    const compose = mobile ? page.locator('.mobile-mail-compose') : page.locator('.desktop-compose');
-    await compose.click(); await surfaceState(page, 'compose');
-    const panel = page.locator('.compose-workspace-panel');
-    const expected = structuredClone(initialDraft);
-    await panel.getByRole('combobox', { name: 'Message format' }).selectOption('plain');
-    await addRecipient(panel, 'To', initialDraft.to[0]);
-    await panel.getByRole('textbox', { name: 'Subject', exact: true }).fill(expected.subject);
-    await panel.getByRole('textbox', { name: 'Message body', exact: true }).fill(expected.body);
-    await waitSaved(panel); await assertDurableDraft(context, fixture, expected);
-    await page.getByRole('heading', { name: 'New message', exact: true }).click(); await resetScroll(page);
-    result.compose = await noOverflow(page, 'Compose'); await screenshot(page, result, 'compose');
-    await panel.getByRole('button', { name: 'Add Cc or Bcc', exact: true }).click();
-    await addRecipient(panel, 'Cc', longCc); await addRecipient(panel, 'Bcc', longBcc);
-    expected.cc.push(longCc); expected.bcc.push(longBcc);
-    await waitSaved(panel); await assertDurableDraft(context, fixture, expected);
-    expected.recipientLabels = {};
-    for (const [kind, label] of [['to', 'To'], ['cc', 'Cc'], ['bcc', 'Bcc']]) {
-      expected.recipientLabels[kind] = await panel.getByRole('combobox', { name: `Add ${label} recipient`, exact: true }).locator('..').locator('.compose-recipient-chip > span').allTextContents();
-      assert.equal(expected.recipientLabels[kind].length, expected[kind].length);
+    const initialized = await runGate(page, result, 'initialization', async () => {
+      await prepare(context, fixture); await page.goto(fixture.origin + '/');
+      await page.locator('.message-row').filter({ hasText: 'A quieter place to write' }).waitFor();
+      await page.waitForLoadState('networkidle');
+      assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
+      assert.equal(await page.locator('html').getAttribute('data-reader-density'), density);
+      result.inbox = await noOverflow(page, 'Inbox'); await screenshot(page, result, 'inbox');
+      result.fonts = await page.evaluate(() => [...document.fonts].map(font => ({ family: font.family, status: font.status })));
+      result.checks.push('Requested theme/density; inbox has no horizontal overflow');
+      result.timingProbe = await bounded(page.evaluate(() => new Promise(resolve => {
+        const started = Date.now(); const performanceStarted = performance.now();
+        setTimeout(() => resolve({ dateElapsedMs: Date.now() - started, performanceElapsedMs: performance.now() - performanceStarted }), 100);
+      })), 'Native timing probe did not finish within five seconds');
+      assert(result.timingProbe.dateElapsedMs >= 80 && result.timingProbe.performanceElapsedMs >= 80, 'Native timer and advancing Date probe failed');
+    });
+    if (!initialized) {
+      result.skipped = ['compose/reference capture', 'selection/reader', 'Settings'];
+      return;
     }
-    await page.getByRole('heading', { name: 'New message', exact: true }).click(); await resetScroll(page);
-    await noOverflow(page, 'Long recipients'); await screenshot(page, result, 'compose-long-recipients');
-    await page.getByRole('button', { name: 'Open in Zen', exact: true }).click(); await surfaceState(page, 'zen');
-    const zen = page.getByRole('dialog', { name: 'Zen writing mode', exact: true });
-    await assertDraft(zen, expected); await resetScroll(page); await noOverflow(page, 'Zen'); await screenshot(page, result, 'zen');
-    await zen.getByRole('button', { name: 'Save & close', exact: true }).click(); await surfaceState(page, 'compose');
-    await assertDraft(panel, expected);
-    await page.getByRole('button', { name: 'Close panel', exact: true }).click(); await surfaceState(page, 'inbox');
-    await compose.click(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
-    if (mobile) await shortViewport(page, result, expected, viewport);
-    // Interrupt an edit before waiting for autosave, then traverse the real browser history.
-    expected.body += '\n\nThis interrupted edit must survive navigation.';
-    await panel.getByRole('textbox', { name: 'Message body', exact: true }).fill(expected.body);
-    await page.goBack(); await surfaceState(page, 'inbox');
-    await page.goForward(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
-    for (let repeat = 0; repeat < 2; repeat += 1) {
+    await runGate(page, result, fixture.variant === 'baseline' ? 'reference-capture' : 'compose-durability', async () => {
+      const compose = mobile ? page.locator('.mobile-mail-compose') : page.locator('.desktop-compose');
+      await compose.click(); await surfaceState(page, 'compose');
+      const panel = page.locator('.compose-workspace-panel');
+      const expected = structuredClone(initialDraft);
+      await panel.getByRole('combobox', { name: 'Message format' }).selectOption('plain');
+      await addRecipient(panel, 'To', initialDraft.to[0]);
+      await panel.getByRole('textbox', { name: 'Subject', exact: true }).fill(expected.subject);
+      await panel.getByRole('textbox', { name: 'Message body', exact: true }).fill(expected.body);
+      await waitSaved(panel); await assertDurableDraft(context, fixture, expected);
+      await page.getByRole('heading', { name: 'New message', exact: true }).click(); await resetScroll(page);
+      result.compose = await noOverflow(page, 'Compose'); await screenshot(page, result, 'compose');
+      await panel.getByRole('button', { name: 'Add Cc or Bcc', exact: true }).click();
+      await addRecipient(panel, 'Cc', longCc); await addRecipient(panel, 'Bcc', longBcc);
+      expected.cc.push(longCc); expected.bcc.push(longBcc);
+      await waitSaved(panel); await assertDurableDraft(context, fixture, expected);
+      expected.recipientLabels = {};
+      for (const [kind, label] of [['to', 'To'], ['cc', 'Cc'], ['bcc', 'Bcc']]) {
+        expected.recipientLabels[kind] = await panel.getByRole('combobox', { name: `Add ${label} recipient`, exact: true }).locator('..').locator('.compose-recipient-chip > span').allTextContents();
+        assert.equal(expected.recipientLabels[kind].length, expected[kind].length);
+      }
+      await page.getByRole('heading', { name: 'New message', exact: true }).click(); await resetScroll(page);
+      await noOverflow(page, 'Long recipients'); await screenshot(page, result, 'compose-long-recipients');
       await page.getByRole('button', { name: 'Open in Zen', exact: true }).click(); await surfaceState(page, 'zen');
-      await page.goBack(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
-      await page.goForward(); await surfaceState(page, 'zen'); await assertDraft(zen, expected);
+      const zen = page.getByRole('dialog', { name: 'Zen writing mode', exact: true });
+      await assertDraft(zen, expected); await resetScroll(page); await noOverflow(page, 'Zen'); await screenshot(page, result, 'zen');
       await zen.getByRole('button', { name: 'Save & close', exact: true }).click(); await surfaceState(page, 'compose');
+      await assertDraft(panel, expected);
       await page.getByRole('button', { name: 'Close panel', exact: true }).click(); await surfaceState(page, 'inbox');
-      await compose.click(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
-    }
-    await waitSaved(panel); await assertDurableDraft(context, fixture, expected);
-    await page.reload(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
-    await screenshot(page, result, 'draft-restored');
-    await page.getByRole('button', { name: 'Close panel', exact: true }).click(); await surfaceState(page, 'inbox');
-    result.checks.push('Complete To/Cc/Bcc/subject/body retained through Compose > Zen > Close, immediate interrupted-edit Back/Forward, two repeated history cycles and reload; API content verified');
-    if (mobile) await mobileInboxGates(page, result);
-    await settingsGates(page, result, mobile);
-    const deliveries = await request(context, fixture, 'get', '/__fixture/deliveries'); assert.deepEqual(await deliveries.json(), [], 'No send was requested');
-    result.status = 'passed';
-  } catch (error) {
-    result.status = 'failed'; result.error = safeError(error); await screenshot(page, result, 'failure').catch(() => {});
-  } finally { await context.close(); }
+      if (fixture.variant === 'candidate') {
+        await compose.click(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
+        if (mobile) await shortViewport(page, result, expected, viewport);
+        // Interrupt an edit before waiting for autosave, then traverse the real browser history.
+        expected.body += '\n\nThis interrupted edit must survive navigation.';
+        await panel.getByRole('textbox', { name: 'Message body', exact: true }).fill(expected.body);
+        await page.goBack(); await surfaceState(page, 'inbox');
+        await page.goForward(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
+        for (let repeat = 0; repeat < 2; repeat += 1) {
+          await page.getByRole('button', { name: 'Open in Zen', exact: true }).click(); await surfaceState(page, 'zen');
+          await page.goBack(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
+          await page.goForward(); await surfaceState(page, 'zen'); await assertDraft(zen, expected);
+          await zen.getByRole('button', { name: 'Save & close', exact: true }).click(); await surfaceState(page, 'compose');
+          await page.getByRole('button', { name: 'Close panel', exact: true }).click(); await surfaceState(page, 'inbox');
+          await compose.click(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
+        }
+        await waitSaved(panel); await assertDurableDraft(context, fixture, expected);
+        await page.reload(); await surfaceState(page, 'compose'); await assertDraft(panel, expected);
+        await screenshot(page, result, 'draft-restored');
+        await page.getByRole('button', { name: 'Close panel', exact: true }).click(); await surfaceState(page, 'inbox');
+        result.checks.push('Complete To/Cc/Bcc/subject/body retained through Compose > Zen > Close, immediate interrupted-edit Back/Forward, two repeated history cycles and reload; API content verified');
+      } else {
+        result.checks.push('Ordinary saved draft used for desktop Compose/long-recipient/Zen reference screenshots; known interrupted-save failure was not retested');
+      }
+    });
+    // Independent read/navigation evidence can continue after a draft failure.
+    // Reload only the same synthetic origin; retain every failed gate and screenshot.
+    if (mobile) await runGate(page, result, 'selection-reader', async () => {
+      await reloadSyntheticInbox(page, context, fixture, result, 'selection-reader');
+      await mobileInboxGates(page, result);
+    });
+    await runGate(page, result, 'settings-navigation', async () => {
+      await reloadSyntheticInbox(page, context, fixture, result, 'settings-navigation');
+      await settingsGates(page, result, mobile);
+    });
+    await runGate(page, result, 'delivery-isolation', async () => {
+      const deliveries = await request(context, fixture, 'get', '/__fixture/deliveries'); assert.deepEqual(await deliveries.json(), [], 'No send was requested');
+    });
+  } finally {
+    result.status = caseStatus(result);
+    if (result.failures.length) result.error = result.failures.map(item => `${item.gate}: ${item.error}`).join(' | ');
+    await context.close();
+  }
 }
 async function compareDesktop() {
   const context = await browser.newContext({ serviceWorkers: 'block' });
@@ -462,7 +539,7 @@ try {
     for (const viewport of sizes) for (const theme of ['light', 'dark']) for (const density of ['calm', 'compact']) await runCase(fixture, viewport, theme, density);
   }
   await compareDesktop();
-  results.status = results.cases.length === 16 && results.cases.every(item => item.status === 'passed') && results.desktopComparisons.length === 20 && results.desktopComparisons.every(item => item.status === 'passed') && results.pageErrors.length === 0 ? 'passed' : 'failed';
+  results.status = suitePassed(results) ? 'passed' : 'failed';
 } catch (error) { results.status = 'failed'; results.error = safeError(error); }
 finally {
   if (browser) await browser.close();
@@ -484,5 +561,5 @@ finally {
     }
   }
 }
-console.log(JSON.stringify({ status: results.status, sourceSha, baselineSha, cases: results.cases.map(({ label, status, error }) => ({ label, status, error })), desktopComparisons: results.desktopComparisons.map(({ theme, density, stage, status, error }) => ({ theme, density, stage, status, error })) }, null, 2));
+console.log(JSON.stringify({ status: results.status, successScope: results.successScope, sourceSha, baselineSha, baselineInterruptionFailure, cases: results.cases.map(({ label, purpose, status, error, gates }) => ({ label, purpose, status, error, gates })), desktopComparisons: results.desktopComparisons.map(({ theme, density, stage, status, error }) => ({ theme, density, stage, status, error })) }, null, 2));
 if (results.status !== 'passed') process.exitCode = 1;
