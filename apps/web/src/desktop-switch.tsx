@@ -184,11 +184,12 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
   </div>;
 }
 
-export function WorkspaceHeader({ health, query, title, theme, onQuerySubmit, onThemeChange }: {
+export function WorkspaceHeader({ health, query, title, theme, onCompose, onQuerySubmit, onThemeChange }: {
   health: SidebarAccount["health"];
   query: string;
   title: string;
   theme: "light" | "dark";
+  onCompose?: (button: HTMLButtonElement) => void;
   onQuerySubmit?: (query: string) => void;
   onThemeChange: () => void;
 }) {
@@ -204,6 +205,10 @@ export function WorkspaceHeader({ health, query, title, theme, onQuerySubmit, on
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [draft, topLayerActive]);
   return <header className="desktop-workspace-header">
+    {onCompose ? <div className="mobile-mail-header">
+      <div className="mobile-mail-brand" aria-label="Orca"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <OrcaBlackMark /> : <WaveMark />}</div>
+      <button aria-label="Compose" aria-keyshortcuts="c" className="mobile-mail-compose" onClick={(event) => onCompose(event.currentTarget)} type="button"><NavIcon name="compose" /></button>
+    </div> : null}
     <form className="desktop-global-search" onSubmit={(event) => { event.preventDefault(); onQuerySubmit?.(draft); openMailSearch(draft); }} role="search"><label><span aria-hidden="true">⌕</span><input aria-label="Search mail" maxLength={200} onChange={(event) => setDraft(event.target.value)} placeholder="Search mail" ref={inputRef} value={draft}/><kbd>⌘ K</kbd></label></form>
     <span className="desktop-header-context">{title}</span>
     <span className={`desktop-health desktop-health-${health}`}><i/>{health}</span>
