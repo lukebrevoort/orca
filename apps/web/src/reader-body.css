@@ -42,3 +42,24 @@
   .reader-sender .classification-correction { grid-column: 2; grid-row: 3; }
   .reader-sender .sender-attention-control { grid-column: 3; grid-row: 3; }
 }
+
+/* Keep complete messages mounted for find, selection, accessibility and stable
+   image identity, but let the browser skip layout/paint of offscreen bodies.
+   Remember measured heights when revisiting; only unseen bodies use the
+   estimate. Sender actions stay outside containment so menus are not clipped. */
+@supports (content-visibility: auto) and (contain-intrinsic-block-size: auto 1000px) and (overflow-clip-margin: 10px) {
+  .reader-content {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 1000px;
+    /* Include the region’s -3px margin and its 5px outside focus ring. */
+    overflow-clip-margin: 10px;
+  }
+  /* Retain exact geometry after content takes focus. An explicit state avoids
+     a broad :has(:focus) selector re-styling the thread on every interaction. */
+  .reader-message-list[data-full-body-layout="true"] .reader-content {
+    content-visibility: visible;
+  }
+}
+@media print {
+  .reader-content { content-visibility: visible; contain-intrinsic-block-size: none; }
+}
