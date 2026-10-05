@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { installNativeFindInputGuard } from './native-find-input-guard.mjs';
 const run = promisify(execFile);
 
 const sampleCount = 5;
@@ -160,15 +161,34 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         for (const id of windows) if ((await run('xdotool', ['getwindowname', id])).stdout.trim().includes(title)) matches.push(id);
         assert.equal(matches.length, 1, 'Native input requires exactly one owned Chromium window for this synthetic page');
         await run('xdotool', ['windowfocus', '--sync', matches[0]]);
-        // X11 focus is acknowledged before Chromium necessarily processes it.
-        // Do not type until the browser Find field has taken focus away from
-        // the document; otherwise query letters could activate app shortcuts.
         await page.waitForFunction(() => document.hasFocus());
-        await run('xdotool', ['key', '--clearmodifiers', 'ctrl+f']);
+        // document.hasFocus() did not provide a usable native Find readiness
+        // signal in paired hosted runs, so do not use it to authorize typing.
+        // Protect the app from misdirected OS keys instead, then validate the
+        // actual matched text/scroll. Native Find input never reaches this guard.
+        await page.evaluate(installNativeFindInputGuard);
+        scenario.nativeFindAttempts = [];
         try {
-          await page.waitForFunction(() => !document.hasFocus(), null, { timeout: 10000 });
-          await run('xdotool', ['key', '--clearmodifiers', 'ctrl+a']);
-          await run('xdotool', ['type', '--clearmodifiers', '--delay', '1', 'End of review 37']);
+          let nativeInputAccepted = false;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            await page.evaluate(() => window.__orcaNativeFindInputGuard.reset());
+            await run('xdotool', ['key', '--clearmodifiers', 'ctrl+f']);
+            await settle();
+            await run('xdotool', ['key', '--clearmodifiers', 'ctrl+a']);
+            await run('xdotool', ['type', '--clearmodifiers', '--delay', '1', 'End of review 37']);
+            await settle();
+            const input = await page.evaluate(() => window.__orcaNativeFindInputGuard.snapshot());
+            scenario.nativeFindAttempts.push(input);
+            if (input.blockedKeys === 0 && input.blockedInputs === 0) {
+              nativeInputAccepted = true;
+              break;
+            }
+            // The page remained untouched. Close/reset the browser Find field
+            // before one bounded retry of this same native focus operation.
+            await run('xdotool', ['key', '--clearmodifiers', 'Escape']);
+            await settle();
+          }
+          assert(nativeInputAccepted, 'Native Find did not acquire keyboard input; page input was blocked');
           await page.waitForFunction(() => {
             const target = document.querySelectorAll('.reader-body-html')[36]?.lastElementChild;
             if (!target) return false;
@@ -182,7 +202,13 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
           });
           const name = `profile-${count}-${theme}-${rendering}-native-find.png`;
           await page.screenshot({ path: join(out, name) }); screenshots.push(name);
-        } finally { await run('xdotool', ['key', '--clearmodifiers', 'Escape']); }
+        } finally {
+          try {
+            await run('xdotool', ['key', '--clearmodifiers', 'Escape']);
+            // Keep protection while the browser consumes asynchronous X11 input.
+            await settle();
+          } finally { await page.evaluate(() => window.__orcaNativeFindInputGuard?.dispose()); }
+        }
 
         const link = page.locator('.reader-message').nth(48).locator('.reader-body-html a').first();
         await link.focus(); await settle();
