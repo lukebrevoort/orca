@@ -24,14 +24,16 @@ function presentation(count) {
   }));
 }
 
-export async function profileReaderInteractions({ browser, origin, out, screenshots }) {
+export async function profileReaderInteractions({ browser, origin, out, screenshots, assertFocusPaint }) {
   assert(process.env.GITHUB_ACTIONS === 'true', 'Interaction profiling is hosted GitHub Actions only');
   const result = { syntheticOnly: true, sampleCount, cpuSlowdown: 4, scenarios: [], pageErrors: [], blockedWrites: [] };
-  for (const count of [1, 60]) for (const theme of ['light', 'dark']) for (const rendering of ['browser-managed', 'force-visible-control']) {
+  for (const count of [1, 60]) for (const theme of ['light', 'dark']) for (const rendering of theme === 'light' ? ['browser-managed', 'force-visible-control'] : ['force-visible-control', 'browser-managed']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block' });
     const scenario = { messages: count, theme, rendering, samples: [], summary: {}, status: 'running' };
     result.scenarios.push(scenario);
     let page;
+    let htmlOnly = false;
+    let authenticatedFixture = false;
     try {
       await context.addInitScript(theme => {
         localStorage.setItem('orca-reader-preferences', JSON.stringify({ theme, motion: 'reduced' }));
@@ -51,6 +53,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       assert.equal(login.status(), 302); assert.equal(login.headers().location, '/');
       const session = await context.request.get(`${origin.origin}/v1/auth/session`, { maxRedirects: 0 });
       assert.equal((await session.json()).user?.id, 'compose-fixture-user');
+      authenticatedFixture = true;
       page = await context.newPage();
       page.on('pageerror', error => result.pageErrors.push(error.message));
       const cdp = await context.newCDPSession(page);
@@ -61,7 +64,9 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         const detail = await response.json();
         assert.equal(detail.account.id, 'first'); assert.equal(detail.thread.id, 'first-thread'); assert.equal(detail.messages[0].id, 'first-message');
         const original = detail.messages[0];
-        detail.messages = presentation(count).map(fields => ({ ...original, ...fields }));
+        detail.messages = presentation(count).map(fields => ({ ...original, ...fields,
+          ...(htmlOnly ? { bodyText: null, bodyHtml: '<h2>HTML-only review</h2><p>Keep the whole keyboard focus ring visible.</p><pre><code>' + 'wide synthetic code '.repeat(24) + '</code></pre>' } : {}),
+        }));
         detail.thread.messageCount = count;
         detail.thread.subject = `Synthetic ${count}-message conversation`;
         await route.fulfill({ response, json: detail });
@@ -117,10 +122,17 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         });
         assert(found, 'Browser find must include offscreen content');
         await settle();
+        await page.waitForFunction(() => {
+          const selection = window.getSelection();
+          if (!selection?.rangeCount) return false;
+          const rect = selection.getRangeAt(0).getBoundingClientRect();
+          return rect.bottom > 0 && rect.top < innerHeight;
+        }, null, { timeout: 2500 }).catch(() => {});
         const selection = await page.evaluate(() => {
           const selection = window.getSelection(); const rect = selection.getRangeAt(0).getBoundingClientRect();
-          return { text: selection.toString(), top: rect.top, bottom: rect.bottom, height: innerHeight };
+          return { text: selection.toString(), top: rect.top, bottom: rect.bottom, height: innerHeight, workspaceScrollTop: document.querySelector('.desktop-workspace')?.scrollTop, windowScrollY: scrollY };
         });
+        scenario.findSelection = selection;
         assert.equal(selection.text, 'End of review 37');
         assert(selection.bottom > 0 && selection.top < selection.height, 'Find must scroll matched content into view');
         const link = page.locator('.reader-message').nth(48).locator('.reader-body-html a').first();
@@ -169,6 +181,17 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       await measure('clear-selection', () => page.getByRole('button', { name: 'Clear selection and exit' }).click(), () => page.locator('.bulk-selection-exit').waitFor({ state: 'hidden' }));
       await measure('open-compose', () => page.getByRole('button', { name: /^Compose(?:\s+C)?$/ }).first().click(), () => page.locator('.compose-workspace-panel').waitFor());
       await measure('close-compose', () => page.keyboard.press('Escape'), () => page.locator('.compose-workspace-panel').waitFor({ state: 'hidden' }), false);
+      if (count === 1) {
+        htmlOnly = true;
+        await page.goto(`${origin.origin}/?thread=first-thread&accountId=first`, { waitUntil: 'networkidle' });
+        const region = page.locator('.reader-formatted-region'); await region.waitFor();
+        assert.equal(await page.locator('.reader-display-controls').count(), 0);
+        await region.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
+        assert(await region.evaluate(element => element === document.activeElement && element.matches(':focus-visible')));
+        scenario.htmlOnlyFocusPaint = await assertFocusPaint(region);
+        const name = `profile-${count}-${theme}-${rendering}-html-only-focus.png`;
+        await page.screenshot({ path: join(out, name) }); screenshots.push(name);
+      }
       for (const name of new Set(scenario.samples.map(sample => sample.name))) {
         const samples = scenario.samples.filter(sample => sample.name === name);
         scenario.summary[name] = { samples: samples.length, ...Object.fromEntries(['elapsedMs', ...metricNames.map(key => `${key}Ms`)].map(key => [key, { p50: percentile(samples.map(sample => sample[key]), .5), p95: percentile(samples.map(sample => sample[key]), .95) }])) };
@@ -177,9 +200,10 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
     } catch (error) {
       scenario.status = 'failed'; scenario.error = error.stack;
       if (page) { const name = `profile-${count}-${theme}-${rendering}-failure.png`; await page.screenshot({ path: join(out, name) }).then(() => screenshots.push(name)).catch(() => {}); }
-      throw Object.assign(error, { readerProfile: result });
+      if (!authenticatedFixture) throw Object.assign(error, { readerProfile: result });
     } finally { await context.close(); }
   }
+  if (result.scenarios.some(scenario => scenario.status !== 'passed')) throw Object.assign(new Error('Reader profile scenarios failed; see interactionProfile.scenarios'), { readerProfile: result });
   assert.deepEqual(result.pageErrors, []); assert.deepEqual(result.blockedWrites, []);
   return result;
 }

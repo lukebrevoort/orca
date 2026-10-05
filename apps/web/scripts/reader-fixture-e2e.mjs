@@ -80,6 +80,26 @@ async function assertContained(page, stage) {
   return { stage, measurements };
 }
 
+async function assertFocusPaint(target) {
+  const boundaries = await target.evaluate(element => {
+    const style = getComputedStyle(element); const rect = element.getBoundingClientRect();
+    const reach = Math.max(0, Number.parseFloat(style.outlineWidth) + Number.parseFloat(style.outlineOffset));
+    const boundaries = [];
+    for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      const parentStyle = getComputedStyle(parent);
+      if (parentStyle.contentVisibility !== 'auto' && !parentStyle.contain.includes('paint')) continue;
+      const box = parent.getBoundingClientRect();
+      const margin = Number.parseFloat(parentStyle.overflowClipMargin) || 0;
+      boundaries.push({ className: parent.className, reach, margin,
+        contained: rect.left - reach >= box.left - margin - .5 && rect.right + reach <= box.right + margin + .5
+          && rect.top - reach >= box.top - margin - .5 && rect.bottom + reach <= box.bottom + margin + .5 });
+    }
+    return boundaries;
+  });
+  for (const boundary of boundaries) assert(boundary.contained, `Paint containment clips keyboard focus: ${JSON.stringify(boundary)}`);
+  return boundaries;
+}
+
 async function assertControl(button, { selected, focused = false }) {
   assert(await button.isVisible(), 'Display control must be visible');
   assert.equal(await button.getAttribute('aria-pressed'), String(selected));
@@ -119,6 +139,7 @@ async function assertControl(button, { selected, focused = false }) {
   assert(visual.width > 0 && visual.height >= 36 && visual.opacity >= .99 && visual.visibility === 'visible', `Hidden control label: ${JSON.stringify(visual)}`);
   assert(visual.contrast >= 4.5, `Display control needs readable text contrast: ${JSON.stringify(visual)}`);
   if (focused) assert(visual.focused && visual.focusVisible && visual.outlineStyle !== 'none' && visual.outlineWidth >= 1, `Keyboard focus must remain visible: ${JSON.stringify(visual)}`);
+  if (focused) visual.paintBoundaries = await assertFocusPaint(button);
   return visual;
 }
 
@@ -205,6 +226,7 @@ async function checkFormatted(page, body, entry, scenario) {
   if (scenario.formattedRegion.scrollWidth > scenario.formattedRegion.clientWidth + 1) {
     await region.focus();
     await page.keyboard.press('ArrowRight');
+    scenario.formattedFocusPaint = await assertFocusPaint(region);
     await poll(() => region.evaluate(node => node.scrollLeft > 0), 'Keyboard cannot reach overflowing formatted content');
     await region.evaluate(node => { node.scrollLeft = 0; });
   }
@@ -216,7 +238,7 @@ try {
   const { chromium } = await import(moduleName?.startsWith('/') ? pathToFileURL(moduleName).href : moduleName ?? 'playwright');
   browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
   results.browserVersion = browser.version();
-  try { results.interactionProfile = await profileReaderInteractions({ browser, origin, out, screenshots: results.screenshots }); }
+  try { results.interactionProfile = await profileReaderInteractions({ browser, origin, out, screenshots: results.screenshots, assertFocusPaint }); }
   catch (error) { results.interactionProfile = error.readerProfile; throw error; }
   for (const { width, theme, textSize, entry, smoke } of matrix) {
     const name = `${entry.id}-${width}-${theme}-${textSize}${smoke ? '-smoke' : ''}`;
