@@ -2363,7 +2363,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
-          return jsonWithSchema(c, threadDetailSchema, readThreadDetail(
+          // The shared reader already applies threadDetailSchema, including its defaults and transforms.
+          return c.json(readThreadDetail(
             db,
             account,
             serializeMailAccount(account),
