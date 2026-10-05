@@ -63,6 +63,7 @@ struct ThreadView: View {
         layout {
             NavigationLink(destination: ComposeView(context: detail, kind: "reply")) {
                 Label("Reply", systemImage: "arrowshape.turn.up.left")
+                    .fixedSize(horizontal: true, vertical: false)
                     .frame(maxWidth: stacked ? .infinity : nil)
             }.buttonStyle(OrcaPrimaryButtonStyle()).accessibilityLabel("Reply")
             Spacer(minLength: 0)

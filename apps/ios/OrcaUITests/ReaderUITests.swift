@@ -10,6 +10,11 @@ final class ReaderUITests: XCTestCase {
             let first = app.staticTexts["Explicit dark foreground stays readable."]
             XCTAssertTrue(first.waitForExistence(timeout: 10))
             XCTAssertTrue(isVisible(first, in: app), "Every open should begin at the top of this HTML message")
+            let reply = app.buttons["Reply"]
+            let replyTitle = reply.staticTexts["Reply"]
+            XCTAssertTrue(replyTitle.exists)
+            XCTAssertLessThan(replyTitle.frame.height, reply.frame.height * 0.6,
+                "The Reply text itself must remain on one line at ordinary size")
             screenshot("reader-open-\(pass)")
             let end = app.staticTexts["End of the long reading fixture."]
             XCTAssertFalse(isVisible(end, in: app), "The long fixture must start with its end outside the viewport")
