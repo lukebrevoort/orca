@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { profileReaderInteractions } from './reader-interaction-profile.mjs';
 
 assert(process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true', 'Reader browser checks run only in hosted CI; do not run against a local browser');
 const [connectionFile, outputDirectory] = process.argv.slice(2);
@@ -215,6 +216,8 @@ try {
   const { chromium } = await import(moduleName?.startsWith('/') ? pathToFileURL(moduleName).href : moduleName ?? 'playwright');
   browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
   results.browserVersion = browser.version();
+  try { results.interactionProfile = await profileReaderInteractions({ browser, origin, out, screenshots: results.screenshots }); }
+  catch (error) { results.interactionProfile = error.readerProfile; throw error; }
   for (const { width, theme, textSize, entry, smoke } of matrix) {
     const name = `${entry.id}-${width}-${theme}-${textSize}${smoke ? '-smoke' : ''}`;
     const scenario = { name, case: entry.id, viewport: { width, height: width <= 760 ? 844 : 1000 }, theme, textSize, smoke, status: 'running', substitutedResponses: 0, containment: [], controls: [] };
