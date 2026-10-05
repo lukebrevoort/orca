@@ -42,7 +42,8 @@ const results = {
   syntheticOnly: true, platform: 'Chromium mobile web; not native iOS',
   startedAt: new Date().toISOString(), fixedContentTime: fixedTime,
   cases: [], desktopComparisons: [], pageErrors: [], blockedOrigins: [],
-  baselineMethod: 'Separate pinned-main and integrated-PR production web builds; identical candidate synthetic API fixture, mail, browser clock, locale, viewport and fallback fonts',
+  baselineMethod: 'Separate pinned-main and integrated-PR production web builds; identical candidate synthetic API fixture, mail, date origin, locale, viewport and fallback fonts',
+  clockMethod: 'Date-only offset from a common synthetic epoch; Date advances normally and all native timer, performance, animation-frame and AbortSignal APIs are untouched',
   desktopDiffPolicy: { maximumChannelDelta: 16, maximumChangedPixelRatio: 0.003, geometricToleranceCssPx: 1 },
   limitations: [
     'All external browser requests, including Google Fonts, are blocked. Screenshots use installed fallback fonts; production webfont appearance is not verified.',
@@ -202,7 +203,28 @@ async function addRecipient(scope, kind, address) {
   const input = scope.getByRole('combobox', { name: `Add ${kind} recipient`, exact: true });
   await input.fill(address); await input.press('Enter');
 }
-async function waitSaved(scope) { await scope.getByText('Saved to Orca and Gmail', { exact: true }).waitFor(); }
+async function waitSaved(scope) {
+  try { await scope.getByText('Saved to Orca and Gmail', { exact: true }).waitFor(); }
+  catch (error) {
+    // Only synthetic visible status text; never cookies, request bodies or storage.
+    const statuses = await scope.locator('.compose-save-status').allTextContents().catch(() => []);
+    throw new Error(`Draft save did not settle; visible status: ${statuses.join(' | ') || '(none)'}. ${safeError(error)}`);
+  }
+}
+function installAdvancingDate({ epoch }) {
+  const NativeDate = globalThis.Date;
+  const nativeNow = NativeDate.now.bind(NativeDate);
+  const offset = new NativeDate(epoch).getTime() - nativeNow();
+  function DiagnosticDate(...args) {
+    if (new.target) return Reflect.construct(NativeDate, args.length ? args : [nativeNow() + offset], new.target);
+    return new NativeDate(nativeNow() + offset).toString();
+  }
+  Object.setPrototypeOf(DiagnosticDate, NativeDate);
+  DiagnosticDate.prototype = NativeDate.prototype;
+  DiagnosticDate.now = () => nativeNow() + offset;
+  globalThis.Date = DiagnosticDate;
+}
+
 async function recipientBounds(scope, description) {
   for (const chip of await scope.locator('.compose-recipient-chip').all()) {
     const metrics = await chip.evaluate(element => {
@@ -297,7 +319,7 @@ async function settingsGates(page, result, mobile) {
 }
 async function runCase(fixture, viewport, theme, density) {
   const mobile = viewport.width < 760;
-  const result = { label: `${fixture.variant}-${viewport.width}-${theme}-${density}`, variant: fixture.variant, viewport, theme, density, checks: [], screenshots: {} };
+  const result = { label: `${fixture.variant}-${viewport.width}-${theme}-${density}`, variant: fixture.variant, viewport, theme, density, checks: [], screenshots: {}, draftRequests: [], draftResponses: [] };
   results.cases.push(result);
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block', locale: 'en-US', timezoneId: 'UTC' });
   await context.addInitScript(({ theme, density }) => localStorage.setItem('orca-reader-preferences', JSON.stringify({ theme, density, motion: 'reduced', composeZenByDefault: false })), { theme, density });
@@ -307,8 +329,15 @@ async function runCase(fixture, viewport, theme, density) {
     results.blockedOrigins.push(url.origin); return route.abort();
   });
   await context.routeWebSocket('**/*', socket => { results.blockedOrigins.push(new URL(socket.url()).origin); socket.close(); });
+  await context.addInitScript(installAdvancingDate, { epoch: fixedTime });
   const page = await context.newPage(); page.setDefaultTimeout(15000);
-  await page.clock.setFixedTime(new Date(fixedTime));
+  const draftKind = value => {
+    const url = new URL(value);
+    if (url.origin !== fixture.origin || !/^\/v1\/drafts(?:\/|$)/.test(url.pathname)) return null;
+    return url.pathname === '/v1/drafts' ? 'list' : url.pathname.endsWith('/send') ? 'send' : 'item';
+  };
+  page.on('request', request => { const kind = draftKind(request.url()); if (kind) result.draftRequests.push({ kind, method: request.method() }); });
+  page.on('response', response => { const kind = draftKind(response.url()); if (kind) result.draftResponses.push({ kind, method: response.request().method(), status: response.status() }); });
   page.on('pageerror', error => results.pageErrors.push({ label: result.label, message: safeError(error) }));
   try {
     await prepare(context, fixture); await page.goto(fixture.origin + '/');
@@ -319,6 +348,11 @@ async function runCase(fixture, viewport, theme, density) {
     result.inbox = await noOverflow(page, 'Inbox'); await screenshot(page, result, 'inbox');
     result.fonts = await page.evaluate(() => [...document.fonts].map(font => ({ family: font.family, status: font.status })));
     result.checks.push('Requested theme/density; inbox has no horizontal overflow');
+    result.timingProbe = await page.evaluate(() => new Promise(resolve => {
+      const started = Date.now(); const performanceStarted = performance.now();
+      setTimeout(() => resolve({ dateElapsedMs: Date.now() - started, performanceElapsedMs: performance.now() - performanceStarted }), 100);
+    }));
+    assert(result.timingProbe.dateElapsedMs >= 80 && result.timingProbe.performanceElapsedMs >= 80, 'Native timer and advancing Date probe failed');
     const compose = mobile ? page.locator('.mobile-mail-compose') : page.locator('.desktop-compose');
     await compose.click(); await surfaceState(page, 'compose');
     const panel = page.locator('.compose-workspace-panel');
