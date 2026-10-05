@@ -95,6 +95,7 @@ done
 # Metadata is private; never print it or include it in an artifact.
 if [[ "$mode" == browser ]]; then
   node apps/web/scripts/compose-fixture-e2e.mjs "$connection" "$work/browser" > "$work/checks.log" 2>&1
+  node apps/web/scripts/reader-fixture-e2e.mjs "$connection" "$work/reader" >> "$work/checks.log" 2>&1
 else
   ORCA_UI_TEST_SCOPE=compose ORCA_UI_RESULT_DIRECTORY="$work/results" \
     zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" > "$work/checks.log" 2>&1

@@ -33,17 +33,19 @@ def export(work, evidence, connection, status):
     write('outcome.json', json.dumps({'exitCode': int(status), 'syntheticOnly': True,
           'rawXcresultUploaded': False}, indent=2) + '\n')
     # The browser harness uses a new profile and blocks every external origin.
-    browser = work / 'browser'
-    if (browser / 'results.json').is_file():
-        write('browser-results.json', (browser / 'results.json').read_text())
-    if (browser / 'failure-dom.txt').is_file():
-        write('browser-failure-dom.txt', (browser / 'failure-dom.txt').read_text())
     screenshots = evidence / 'screenshots'
-    for source in sorted(browser.glob('*.png')):
-        if source.is_symlink():
-            raise ValueError('Screenshot symlinks are not allowed')
-        screenshots.mkdir(exist_ok=True)
-        shutil.copyfile(source, screenshots / source.name)
+    for suite in ('browser', 'reader'):
+        source_directory = work / suite
+        if (source_directory / 'results.json').is_file():
+            write(f'{suite}-results.json', (source_directory / 'results.json').read_text())
+        if (source_directory / 'failure-dom.txt').is_file():
+            write(f'{suite}-failure-dom.txt', (source_directory / 'failure-dom.txt').read_text())
+        for source in sorted(source_directory.glob('*.png')):
+            if source.is_symlink():
+                raise ValueError('Screenshot symlinks are not allowed')
+            screenshots.mkdir(exist_ok=True)
+            name = source.name if suite == 'browser' else f'reader-{source.name}'
+            shutil.copyfile(source, screenshots / name)
     # Raw bundles can contain XCTest launch arguments (a fixture bearer).
     # Export readable summaries and image attachments only, then redact text.
     for bundle in sorted((work / 'results').glob('*.xcresult')):

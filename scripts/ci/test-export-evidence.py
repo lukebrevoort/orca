@@ -30,6 +30,26 @@ class EvidenceTests(unittest.TestCase):
             self.assertNotIn('private-credential', (out / 'checks.log').read_text())
             self.assertEqual(json.loads((out / 'outcome.json').read_text())['exitCode'], 1)
 
+    def test_reader_evidence_uses_same_allowlist_redaction_and_distinct_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'browser').mkdir(); (work / 'reader').mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'token': 'ephemeral-test-token'}))
+            (work / 'reader' / 'results.json').write_text(json.dumps({'text': 'ephemeral-test-token'}))
+            (work / 'reader' / 'failure-dom.txt').write_text('orca_session=ephemeral-test-token;')
+            (work / 'reader' / 'connection.json').write_text('must not upload')
+            (work / 'browser' / 'light.png').write_bytes(b'synthetic browser screenshot')
+            (work / 'reader' / 'light.png').write_bytes(b'synthetic reader screenshot')
+            evidence.export(work, out, str(connection), 0)
+            self.assertEqual({p.name for p in out.iterdir()}, {
+                'outcome.json', 'reader-results.json', 'reader-failure-dom.txt', 'screenshots'})
+            self.assertNotIn('ephemeral-test-token', (out / 'reader-results.json').read_text())
+            self.assertNotIn('ephemeral-test-token', (out / 'reader-failure-dom.txt').read_text())
+            self.assertEqual({p.name for p in (out / 'screenshots').iterdir()}, {'light.png', 'reader-light.png'})
+
     def test_rejects_connection_outside_owned_workspace(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
