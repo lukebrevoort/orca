@@ -27,9 +27,9 @@ function presentation(count) {
 export async function profileReaderInteractions({ browser, origin, out, screenshots }) {
   assert(process.env.GITHUB_ACTIONS === 'true', 'Interaction profiling is hosted GitHub Actions only');
   const result = { syntheticOnly: true, sampleCount, cpuSlowdown: 4, scenarios: [], pageErrors: [], blockedWrites: [] };
-  for (const count of [1, 60]) for (const theme of ['light', 'dark']) {
+  for (const count of [1, 60]) for (const theme of ['light', 'dark']) for (const rendering of ['browser-managed', 'force-visible-control']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block' });
-    const scenario = { messages: count, theme, samples: [], summary: {}, status: 'running' };
+    const scenario = { messages: count, theme, rendering, samples: [], summary: {}, status: 'running' };
     result.scenarios.push(scenario);
     let page;
     try {
@@ -69,6 +69,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       await page.goto(origin.origin, { waitUntil: 'networkidle' });
       const row = () => page.locator('button.message-row').filter({ hasText: 'first account conversation' });
       await row().waitFor();
+      if (rendering === 'force-visible-control') await page.addStyleTag({ content: '.reader-content { content-visibility: visible !important; contain-intrinsic-block-size: none !important; }' });
       await page.evaluate(() => document.fonts.ready);
       const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(performance.now())))));
       async function measure(name, action, ready, clicked = true) {
@@ -87,7 +88,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         assert.equal(await page.locator('#reader-title').innerText(), `Synthetic ${count}-message conversation`);
         if (sample === 0) {
           scenario.domNodes = await page.locator('*').count();
-          const name = `profile-${count}-${theme}-reader.png`;
+          const name = `profile-${count}-${theme}-${rendering}-reader.png`;
           await page.screenshot({ path: join(out, name) }); screenshots.push(name);
         }
         await measure('plain-text', () => page.getByRole('button', { name: 'Plain text', exact: true }).first().click(), () => page.locator('.reader-body-plain').first().waitFor());
@@ -102,6 +103,61 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         }
         await measure('close-reader', () => page.locator('.reader-back').click(), () => row().waitFor());
         assert.equal(new URL(page.url()).searchParams.has('thread'), false);
+      }
+      // Exercise the complete, still-mounted content in a long conversation.
+      // User-agent find and focusing a link must reveal skipped bodies. None of
+      // these checks may force every offscreen body's layout before profiling.
+      if (count > 1) {
+        await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
+        const allText = await page.locator('.reader-message-list').textContent();
+        for (let index = 1; index <= count; index++) assert(allText.includes(`End of review ${index}`));
+        const found = await page.evaluate(() => {
+          window.getSelection()?.removeAllRanges();
+          return window.find('End of review 37');
+        });
+        assert(found, 'Browser find must include offscreen content');
+        await settle();
+        const selection = await page.evaluate(() => {
+          const selection = window.getSelection(); const rect = selection.getRangeAt(0).getBoundingClientRect();
+          return { text: selection.toString(), top: rect.top, bottom: rect.bottom, height: innerHeight };
+        });
+        assert.equal(selection.text, 'End of review 37');
+        assert(selection.bottom > 0 && selection.top < selection.height, 'Find must scroll matched content into view');
+        const link = page.locator('.reader-message').nth(48).locator('.reader-body-html a').first();
+        await link.focus(); await settle();
+        assert(await link.evaluate(element => document.activeElement === element), 'An offscreen body link must accept keyboard focus');
+        assert(await link.isVisible(), 'Focusing a link must reveal its body');
+        const focusedLink = await link.evaluate(element => {
+          const rect = element.getBoundingClientRect(); return { top: rect.top, bottom: rect.bottom, height: innerHeight };
+        });
+        assert(focusedLink.bottom > 0 && focusedLink.top < focusedLink.height, 'Focused offscreen link must scroll into view');
+        // The remembered size must adapt after an image decodes and reader text
+        // grows. This adds a synthetic in-memory image to the mounted HTML DOM;
+        // it never loads external pixels or rewrites the production sanitizer.
+        await page.locator('.reader-message').first().scrollIntoViewIfNeeded();
+        const resized = await page.locator('.reader-content').first().evaluate(async element => {
+          const before = element.getBoundingClientRect().height;
+          const image = document.createElement('img'); image.alt = 'Synthetic delayed image';
+          image.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240"><rect width="640" height="240" fill="#bfdad3"/></svg>');
+          element.querySelector('.reader-body-html').append(image); await image.decode();
+          document.documentElement.dataset.readerSize = 'large';
+          await document.fonts.ready;
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          return { before, after: element.getBoundingClientRect().height, imageHeight: image.getBoundingClientRect().height };
+        });
+        assert(resized.after > resized.before && resized.imageHeight > 0, 'Late image/font-size changes must expand the measured body');
+        const imageNode = await page.locator('img[alt="Synthetic delayed image"]').elementHandle();
+        await page.getByRole('button', { name: 'Jump to newest', exact: true }).click(); await settle();
+        await page.getByRole('button', { name: 'Jump to top', exact: true }).click(); await settle();
+        assert(await imageNode.evaluate(element => element.isConnected && element.complete), 'Offscreen revisits must retain loaded image identity');
+        await page.evaluate(() => { document.documentElement.dataset.readerSize = 'standard'; });
+        await imageNode.dispose();
+        const name = `profile-${count}-${theme}-${rendering}-resized.png`;
+        await page.screenshot({ path: join(out, name) }); screenshots.push(name);
+        await page.emulateMedia({ media: 'print' });
+        assert.equal(await page.locator('.reader-content').last().evaluate(element => getComputedStyle(element).contentVisibility), 'visible', 'Print must render complete messages');
+        await page.emulateMedia({ media: 'screen' });
+        await page.locator('.reader-back').click(); await row().waitFor();
       }
       // Browser history and selection must still restore the originating list.
       await row().click(); await page.locator('.reader-body-html').first().waitFor();
@@ -120,7 +176,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       scenario.status = 'passed';
     } catch (error) {
       scenario.status = 'failed'; scenario.error = error.stack;
-      if (page) { const name = `profile-${count}-${theme}-failure.png`; await page.screenshot({ path: join(out, name) }).then(() => screenshots.push(name)).catch(() => {}); }
+      if (page) { const name = `profile-${count}-${theme}-${rendering}-failure.png`; await page.screenshot({ path: join(out, name) }).then(() => screenshots.push(name)).catch(() => {}); }
       throw Object.assign(error, { readerProfile: result });
     } finally { await context.close(); }
   }

@@ -42,3 +42,17 @@
   .reader-sender .classification-correction { grid-column: 2; grid-row: 3; }
   .reader-sender .sender-attention-control { grid-column: 3; grid-row: 3; }
 }
+
+/* Keep complete messages mounted for find, selection, accessibility and stable
+   image identity, but let the browser skip layout/paint of offscreen bodies.
+   Remember measured heights when revisiting; only unseen bodies use the
+   estimate. Sender actions stay outside containment so menus are not clipped. */
+@supports (content-visibility: auto) {
+  .reader-content {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 1000px;
+  }
+}
+@media print {
+  .reader-content { content-visibility: visible; contain-intrinsic-block-size: none; }
+}
