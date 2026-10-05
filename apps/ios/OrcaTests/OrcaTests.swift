@@ -851,7 +851,7 @@ final class MailDateTests: XCTestCase {
             ("mixed", mixed, 1), ("mixed-four-workers", mixed, 4),
         ]
         for (name, inputs, workers) in workloads {
-            _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers, parse: MailDateTestSupport.baselineParse)
+            _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers, parse: { MailDateTestSupport.baselineParse($0) })
             _ = MailDateTestSupport.run(Array(inputs.prefix(128)), workers: workers) { MailDate.parse($0) }
             var baselineSamples = [Double](), cachedSamples = [Double]()
             var expected: [MailDateTestSupport.Totals]?
@@ -861,7 +861,7 @@ final class MailDateTests: XCTestCase {
                     let start = DispatchTime.now().uptimeNanoseconds
                     let totals = cached
                         ? MailDateTestSupport.run(inputs, workers: workers) { MailDate.parse($0) }
-                        : MailDateTestSupport.run(inputs, workers: workers, parse: MailDateTestSupport.baselineParse)
+                        : MailDateTestSupport.run(inputs, workers: workers, parse: { MailDateTestSupport.baselineParse($0) })
                     let elapsed = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
                     if let expected { XCTAssertEqual(totals, expected, "\(name): parse results changed") }
                     else { expected = totals }
