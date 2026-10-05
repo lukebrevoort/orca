@@ -1468,6 +1468,14 @@ export function InboxApp({
   const agentEventSourceRefs = useRef(new Map<string, HTMLButtonElement>());
   const writingPreferences = useWritingPreferences(status === "signedout" ? null : account, demoMode);
   const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts, { preferences: writingPreferences, enabled: panelMode === "compose" });
+  // Initial inbox loading resolves the workspace owner twice (/me, then inbox).
+  // Never accept writing in the temporary preview scope or before recovery.
+  const composeReady = Boolean(account && (demoMode || loadedInboxRef.current)
+    && status !== "signedout" && composeDraft.draft.accountId === account.id && composeDraft.isHydrated);
+  const composeLoading = <div role="status">
+    {status === "error" ? <><p>Your account could not be loaded. Retry before writing.</p><button type="button" onClick={retryInbox}>Retry loading account</button></>
+      : <p>{account && (demoMode || loadedInboxRef.current) ? "Recovering your draft…" : "Loading your account before you write…"}</p>}
+  </div>;
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
     const composer = readSurfaceLocation(window.location).composer;
@@ -3387,7 +3395,7 @@ export function InboxApp({
             <header className="panel-header">
               <h2>New message</h2>
               <div className="panel-actions">
-                <button className="panel-zen" onClick={enterZen} type="button">
+                <button className="panel-zen" disabled={!composeReady} onClick={enterZen} type="button">
                   <ZenGlyph />
                   <span>Open in Zen</span>
                 </button>
@@ -3403,7 +3411,7 @@ export function InboxApp({
             </header>
 
             <div className="panel-body">
-              <ComposeWorkspace
+              {composeReady ? <ComposeWorkspace
                 autoFocusTo={panelMode === "compose"}
                 canSend={account?.capabilities.send ?? false}
                 contacts={composeContacts}
@@ -3411,11 +3419,11 @@ export function InboxApp({
                 onClose={closePanel}
                 onRequestSendAccess={() => setShowSendPermission(true)}
                 onSent={closePanel}
-              />
+              /> : composeLoading}
             </div>
           </TopLayer>
 
-          {zen ? (
+          {zen && composeReady ? (
             <ComposeWorkspace
               canSend={account?.capabilities.send ?? false}
               contacts={composeContacts}
