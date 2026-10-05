@@ -6,7 +6,7 @@
  * native iOS/WebKit, real provider email, or delivery. No send action is taken.
  */
 import assert from 'node:assert/strict';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -221,6 +221,7 @@ try {
     results.scenarios.push(scenario); activeScenario = scenario;
     const context = await browser.newContext({ viewport: scenario.viewport, deviceScaleFactor: 1, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block' });
     context.setDefaultTimeout(12000);
+    let authenticatedFixture = false;
     try {
       await context.addInitScript(preferences => localStorage.setItem('orca-reader-preferences', JSON.stringify(preferences)), { theme, textSize, motion: 'reduced' });
       await context.route('**/*', route => {
@@ -238,12 +239,13 @@ try {
       const session = await context.request.get(`${origin.origin}/v1/auth/session`, { maxRedirects: 0 });
       assert(session.ok(), 'Synthetic fixture session did not authenticate');
       assert.equal((await session.json()).user?.id, 'compose-fixture-user', 'Refusing a non-synthetic authenticated session');
+      authenticatedFixture = true;
       const page = await context.newPage(); activePage = page;
       page.on('pageerror', error => results.pageErrors.push({ scenario: name, message: error.message, stack: error.stack }));
       page.on('console', message => { if (message.type() === 'error') results.consoleErrors.push({ scenario: name, text: message.text() }); });
       page.on('request', request => {
         const url = new URL(request.url());
-        if (url.origin === origin.origin && url.pathname.startsWith('/v1/')) results.requests.push({ scenario: name, method: request.method(), path: url.pathname });
+        if (url.origin === origin.origin && url.pathname.startsWith('/v1/')) results.requests.push({ scenario: name, method: request.method(), path: url.pathname, accountId: url.searchParams.get('accountId') });
       });
       await page.route(url => url.origin === origin.origin && url.pathname === '/v1/threads/first-thread', async route => {
         try {
@@ -266,6 +268,7 @@ try {
           scenario.substitutedResponses += 1;
           await route.fulfill({ response, json: detail });
         } catch (error) {
+          scenario.boundaryFailure = true;
           results.routeErrors.push({ scenario: name, message: error.message });
           await route.abort().catch(() => {});
         }
@@ -284,6 +287,7 @@ try {
       assert.equal(await address.innerText(), entry.from.email);
       assert(await address.isVisible(), 'Sender address must be visible before opening message details');
       scenario.containment.push(await assertContained(page, 'initial'));
+      if (!smoke) await screenshot(page, `${name}-overview`, reader.locator('#reader-title'));
       if (smoke) {
         await checkFormatted(page, body, entry, scenario);
         scenario.containment.push(await assertContained(page, 'breakpoint-formatted'));
@@ -354,21 +358,30 @@ try {
       if (!smoke) await screenshot(page, `${name}-reply-available`, reply);
       assert.equal(results.routeErrors.filter(error => error.scenario === name).length, 0, 'Thread substitution failed');
       assert.equal(results.pageErrors.filter(error => error.scenario === name).length, 0, 'Browser page errors detected');
-      const writes = results.requests.filter(request => request.scenario === name && request.method !== 'GET' && !request.path.endsWith('/read'));
-      assert.deepEqual(writes, [], 'Reader verification must not create drafts, send, or change mailbox data');
+      // Opening the real app also refreshes its synthetic provider and may
+      // mark the selected fixture thread read. Its transport never calls Gmail.
+      const writes = results.requests.filter(request => request.scenario === name && request.method !== 'GET'
+        && !(request.method === 'POST' && request.path === '/v1/sync/gmail')
+        && !(request.method === 'PATCH' && request.path === '/v1/threads/first-thread/read' && request.accountId === 'first'));
+      if (writes.length) scenario.boundaryFailure = true;
+      assert.deepEqual(writes, [], 'Reader verification must not create drafts, send, or perform unrelated writes');
       scenario.status = 'passed';
     } catch (error) {
       scenario.status = 'failed'; scenario.error = error.stack;
       if (activePage) {
         await screenshot(activePage, `${name}-failure`).catch(() => {});
-        await writeFile(join(out, 'failure-dom.txt'), await activePage.locator('body').innerText()).catch(() => {});
+        await appendFile(join(out, 'failure-dom.txt'), `\n=== ${name} ===\n${await activePage.locator('body').innerText()}\n`).catch(() => {});
       }
-      throw error;
+      if (!authenticatedFixture || scenario.boundaryFailure) throw error;
+      // Cases own separate authenticated synthetic contexts. Keep collecting
+      // evidence; the aggregate gate below still fails on any scenario error.
     } finally {
       await context.close(); activePage = null;
     }
   }
   assert.equal(results.scenarios.length, results.expectedScenarios);
+  results.failedScenarios = results.scenarios.filter(scenario => scenario.status !== 'passed').map(scenario => ({ name: scenario.name, error: scenario.error }));
+  assert.equal(results.failedScenarios.length, 0, JSON.stringify(results.failedScenarios));
   assert.equal(results.pageErrors.length, 0, JSON.stringify(results.pageErrors));
   results.status = 'passed';
 } catch (error) {
