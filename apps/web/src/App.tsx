@@ -51,6 +51,7 @@ import { TopLayer, useTopLayerActive } from "./top-layer";
 import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
 import { isMailSearchResultReader, openMailSearch, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import { createReceivedAtFormatter, formatReceivedAt } from "./received-at";
 import { recentThreadReferences, scheduleThreadDetailRefresh, threadMailboxVersion, ThreadDetailCache } from "./thread-detail-cache";
 import {
   SurfaceHistory,
@@ -4970,6 +4971,7 @@ function InboxView({
     const now = new Date();
     return displayMessages.map((message) => getStreamSectionLabel(message.receivedAt, now));
   }, [displayMessages]);
+  const formatInboxReceivedAt = createReceivedAtFormatter();
   const unreadCount = displayMessages.filter((message) => message.unread).length;
   const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
   useEffect(() => {
@@ -5491,7 +5493,7 @@ function InboxView({
                           <span className={`attention-badge attention-badge-${message.attentionBehavior}`} title={`Attention treatment: ${message.attentionBehavior}. Human signal (${message.humanSignal ?? "unknown"}) is a separate estimate, not a routing rule.`}>
                             {message.attentionBehavior === "notify" ? "Notify me" : message.attentionBehavior === "focus" ? "Keep in focus" : message.attentionBehavior}
                           </span>
-                          <span>{formatReceivedAt(message.receivedAt)}</span>
+                          <span>{formatInboxReceivedAt(message.receivedAt)}</span>
                         </div>
                         <MessageSubject subject={message.subject} unread={message.unread} />
                         <p>{message.snippet}</p>
@@ -5523,7 +5525,7 @@ function InboxView({
                     {!selectionMode && viewMode === "later" ? (() => {
                       const activeReminder = reminders.find((item) => item.threadId === message.threadId && (item.status === "scheduled" || item.status === "resurfaced"));
                       const snoozing = snoozingThreadId === message.threadId;
-                      return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
+                      return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatInboxReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
                     {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
                   </div>
@@ -7048,22 +7050,6 @@ function getSystemTheme(): Theme {
 
 function formatProvider(provider: MailAccount["provider"]) {
   return provider.charAt(0).toUpperCase() + provider.slice(1);
-}
-
-function formatReceivedAt(receivedAt: string) {
-  const date = new Date(receivedAt);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const now = new Date();
-  const options: Intl.DateTimeFormatOptions =
-    date.toDateString() === now.toDateString()
-      ? { hour: "numeric", minute: "2-digit" }
-      : { month: "short", day: "numeric" };
-
-  return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
 function formatFullReceivedAt(receivedAt: string) {
