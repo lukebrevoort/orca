@@ -13,13 +13,14 @@ let root: Root;
 let controller: ComposeDraftController;
 let requests: Array<{ method: string; url: URL }>;
 let saved: MessageDraft | null;
-function Harness() { controller = useComposeDraft("second", "new", false); return null; }
+let activeAccount: string;
+function Harness() { controller = useComposeDraft(activeAccount, "new", false); return null; }
 beforeEach(async () => {
   browser = new Window({ url: "http://localhost" });
   for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : browser[name] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
   root = createRoot(browser.document.createElement("div") as unknown as Element);
-  requests = []; saved = null;
+  requests = []; saved = null; activeAccount = "second";
   globalThis.fetch = (async (path: string, init?: RequestInit) => {
     const url = new URL(path, "http://localhost"); const method = init?.method ?? "GET";
     requests.push({ method, url });
@@ -63,4 +64,44 @@ test("draft paths encode identifiers and account scope independently", () => {
   const url = new URL(draftRequestPath("account + &", "draft/id", "send"), "http://localhost");
   expect(url.pathname).toBe("/v1/drafts/draft%2Fid/send");
   expect(url.searchParams.get("accountId")).toBe("account + &");
+});
+
+test("account changes isolate writing and ignore a late previous-account hydration", async () => {
+  await act(async () => controller.updateDraft({ subject: "Second account only", body: "Private second writing", to: [{ name: null, email: "second-recipient@example.com" }] }));
+  await act(async () => controller.setRecipientQueries!({ to: "", cc: "pending-second", bcc: "" }));
+  let releaseFirst!: (response: Response) => void;
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => {
+    const url = new URL(path, "http://localhost");
+    if (url.searchParams.get("accountId") === "first" && !init?.method) return new Promise<Response>(resolve => { releaseFirst = resolve; });
+    return previousFetch(path, init);
+  }) as typeof fetch;
+  activeAccount = "first";
+  await act(async () => root.render(<Harness />));
+  expect(controller.draft.subject).toBe("");
+  expect(controller.recipientQueries).toEqual({ to: "", cc: "", bcc: "" });
+  expect(controller.isHydrated).toBe(false);
+  activeAccount = "third";
+  await act(async () => root.render(<Harness />));
+  await act(async () => releaseFirst(Response.json([])));
+  expect(controller.draft.accountId).toBe("third");
+  expect(controller.draft.body).toBe("");
+  activeAccount = "second";
+  await act(async () => root.render(<Harness />));
+  expect(controller.draft.accountId).toBe("second");
+  expect(controller.draft.subject).toBe("Second account only");
+  expect(controller.draft.body).toBe("Private second writing");
+  expect(controller.draft.to[0]?.email).toBe("second-recipient@example.com");
+});
+
+test("unmount and a new account identity never adopt the old account checkpoint", async () => {
+  await act(async () => controller.updateDraft({ subject: "Previous identity", body: "Private old writing" }));
+  await act(async () => root.unmount());
+  activeAccount = "first";
+  root = createRoot(browser.document.createElement("div") as unknown as Element);
+  await act(async () => root.render(<Harness />));
+  expect(controller.draft.accountId).toBe("first");
+  expect(controller.draft.subject).toBe("");
+  expect(controller.draft.body).toBe("");
+  expect(controller.recipientQueries).toEqual({ to: "", cc: "", bcc: "" });
 });

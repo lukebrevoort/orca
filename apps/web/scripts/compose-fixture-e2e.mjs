@@ -17,8 +17,9 @@ const out = resolve(outputDirectory); await mkdir(out, {recursive:true});
 const moduleName = process.env.ORCA_PLAYWRIGHT_MODULE;
 const {chromium} = await import(moduleName?.startsWith('/') ? pathToFileURL(moduleName).href : moduleName ?? 'playwright');
 const browser = await chromium.launch({headless:true, executablePath:process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args:['--disable-background-networking']});
-const results = {startedAt:new Date().toISOString(),viewport:{width:1440,height:1000},syntheticOnly:true,browserVersion:browser.version(),fixtureOrigin:origin.origin,scenarios:[],requests:[],pageErrors:[],externalRequestsBlocked:[]};
+const results = {startedAt:new Date().toISOString(),viewport:{width:1440,height:1000},syntheticOnly:true,browserVersion:browser.version(),fixtureOrigin:origin.origin,scenarios:[],responses:[],requests:[],pageErrors:[],externalRequestsBlocked:[]};
 let activePage;
+let activeContext;
 async function poll(check, message, timeout=12000) {
  const end=Date.now()+timeout;
  while(Date.now()<end) { const value=await check(); if(value) return value; await new Promise(r=>setTimeout(r,50)); }
@@ -58,7 +59,8 @@ async function newCompose(page) {
 }
 try {
  for(const theme of ['light','dark']) {
-  const context=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1,colorScheme:theme});
+  const context=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1,colorScheme:theme,serviceWorkers:'block'});
+  activeContext=context;
   await context.addInitScript(t=>localStorage.setItem('orca-reader-preferences',JSON.stringify({theme:t,motion:'reduced'})),theme);
   await context.route('**/*',route=> {
    const u=new URL(route.request().url());
@@ -66,13 +68,87 @@ try {
    results.externalRequestsBlocked.push({theme,origin:u.origin,path:u.pathname}); return route.abort();
   });
   const page=await context.newPage(); activePage=page;
+  page.on('response',response=> { const url=new URL(response.url()); if(url.pathname.startsWith('/v1/drafts')) results.responses.push({theme,method:response.request().method(),path:url.pathname,status:response.status()}); });
   page.on('pageerror',error=>results.pageErrors.push({theme,message:error.message}));
   page.on('request',request=> {
    const url=new URL(request.url());
    if(url.pathname.startsWith('/v1/drafts')) results.requests.push({theme,method:request.method(),path:url.pathname,query:url.search,body:request.postData()});
   });
-  await page.goto(origin.origin+'/__fixture/login');
-  await page.locator('button.message-row').filter({hasText:'second account conversation'}).waitFor();
+  // Explicit network barriers cover both account prerequisites, then inbox
+  // ownership selection, then saved-draft recovery. No timing sleeps.
+  async function holdResponse(pattern, transform) {
+   let release, started;
+   const gate=new Promise(resolve=>{release=resolve;});
+   const requested=new Promise(resolve=>{started=resolve;});
+   await page.route(pattern,async route=>{
+    started(); await gate;
+    if(transform) {const response=await route.fetch();await route.fulfill({response,json:transform(await response.json())});}
+    else await route.continue();
+   });
+   return {release,requested};
+  }
+  const meGate=await holdResponse('**/v1/me',theme==='dark'? value=>({...value,id:'second',email:'second@example.com'}):null);
+  const syncGate=await holdResponse('**/v1/sync/status');
+  const inboxGate=await holdResponse('**/v1/inbox?*');
+  const draftGate=await holdResponse('**/v1/drafts?*');
+  if(theme==='dark') {
+   const login=await context.request.get(origin.origin+'/__fixture/login'); assert(login.ok());
+   await page.goto(origin.origin+'/?compose=1&zen=1');
+  } else {
+   await page.goto(origin.origin+'/__fixture/login');
+   await page.getByRole('button',{name:/^Compose(?:\s+C)?$/}).first().click();
+  }
+  await Promise.all([meGate.requested,syncGate.requested]);
+  const earlySubject=page.getByRole('textbox',{name:'Subject',exact:true});
+  async function assertWaiting(message) {
+   await page.getByRole('status').filter({hasText:message}).waitFor();
+   assert.equal(await earlySubject.count(),0,'No temporary-account subject field');
+   assert.equal(await page.getByRole('textbox',{name:'Message body',exact:true}).count(),0);
+   assert.equal(await page.getByRole('button',{name:'Send',exact:true}).count(),0);
+   assert.equal(await page.getByRole('button',{name:'Open in Zen',exact:true}).isDisabled(),true);
+  }
+  await assertWaiting('Loading your account before you write…');
+  await screenshot(page,`${theme}-account-pending`);
+  // Closing while initialization is pending must not reopen on completion.
+  await page.getByRole('button',{name:'Close panel',exact:true}).click();
+  await page.getByRole('dialog',{name:'Compose message',exact:true}).waitFor({state:'hidden'});
+  await page.getByRole('button',{name:/^Compose(?:\s+C)?$/}).first().click();
+  await assertWaiting('Loading your account before you write…');
+  const recoveredSubject=`Saved before initialization ${theme}`;
+  const seeded=await api(context,'/v1/drafts?accountId=first','POST',{subject:recoveredSubject,to:[{name:null,email:'maya@example.com'}],cc:[],bcc:[],body:{text:'Existing saved writing.',html:null},attachments:[],context:null});
+  const firstGate=theme==='light'?meGate:syncGate;
+  const lastGate=theme==='light'?syncGate:meGate;
+  firstGate.release();
+  await assertWaiting('Loading your account before you write…');
+  lastGate.release();
+  await inboxGate.requested;
+  await assertWaiting('Loading your account before you write…');
+  inboxGate.release();
+  await draftGate.requested;
+  await assertWaiting('Recovering your draft…');
+  await screenshot(page,`${theme}-draft-recovery-pending`);
+  draftGate.release();
+  await earlySubject.waitFor();
+  assert.equal(await earlySubject.inputValue(),recoveredSubject);
+  assert.equal(await page.getByRole('textbox',{name:'Message body',exact:true}).innerText(),'Existing saved writing.');
+  assert.equal(results.requests.filter(r=>r.theme===theme && r.method!=='GET').length,0,'No browser draft mutations before recovered writing is available');
+  const afterRecovery=await api(context,`/v1/drafts/${seeded.id}?accountId=first`);
+  assert.equal(afterRecovery.revision,seeded.revision,'Recovery must not overwrite the existing server draft');
+  // Close retains writing; explicit discard deletes it and reopening is empty.
+  await page.getByRole('button',{name:'Close panel',exact:true}).click();
+  await page.locator('.compose-workspace-panel').waitFor({state:'hidden'});
+  await newCompose(page);
+  assert.equal(await earlySubject.inputValue(),recoveredSubject);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'Discard',exact:true}).click();
+  await page.locator('.compose-workspace-panel').waitFor({state:'hidden'});
+  await newCompose(page);
+  assert.equal(await earlySubject.inputValue(),'');
+  assert.equal((await drafts(context)).some(d=>d.id===seeded.id),false);
+  await page.getByRole('button',{name:'Close panel',exact:true}).click();
+  await page.locator('.compose-workspace-panel').waitFor({state:'hidden'});
+  results.scenarios.push({theme,name:'delayed-account-and-draft-recovery-close-discard',status:'passed',seededDraftId:seeded.id});
+
   assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
   if(theme==='light') assert.equal((await ledger(context)).length,0,'Start a fresh fixture for this validation run');
   const prefix=`Browser ${theme} ${Date.now()}`;
@@ -176,6 +252,9 @@ try {
   // Reset only this isolated synthetic profile's recovered draft checkpoint.
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
+  // The Compose shell exists before the authenticated account replaces preview.
+  // The restored reader can hide the inbox, so require loaded data, not visibility.
+  await page.locator('button.message-row').filter({hasText:'second account conversation'}).waitFor({state:'attached'});
   await page.getByRole('button',{name:/^Compose(?:\s+C)?$/}).first().waitFor();
   scope=await newCompose(page);
   assert.equal(await scope.getByRole('textbox',{name:'Subject',exact:true}).inputValue(),'');
@@ -204,18 +283,26 @@ try {
   results.scenarios.push({theme,name:'uncertain-delivery-retains-content-replay-no-provider-repeat',status:'passed',draftId:uncertainDraft.id});
   await api(context,'/__fixture/outcome','POST',{outcome:'sent'});
   results.deliveries=await ledger(context);
-  await context.close(); activePage=null;
+  await context.clearCookies();
+  await page.reload();
+  await page.getByRole('heading',{name:'Your inbox waits for its person.',exact:true}).waitFor();
+  assert.equal(await page.getByRole('textbox',{name:'Subject',exact:true}).count(),0);
+  assert.equal(await page.getByRole('button',{name:'Send',exact:true}).count(),0);
+  await screenshot(page,`${theme}-session-rejected`);
+  results.scenarios.push({theme,name:'session-rejection-removes-writing-surface',status:'passed'});
+  await context.close(); activePage=null; activeContext=null;
  }
  assert.equal(results.pageErrors.length,0,JSON.stringify(results.pageErrors));
  results.expectedProviderInvocations=8;
  results.providerInvocations=results.deliveries.length;
  assert.equal(results.providerInvocations,8);
  results.finishedAt=new Date().toISOString();
- assert.equal(results.scenarios.length,10);
+ assert.equal(results.scenarios.length,14);
  await writeFile(join(out,'results.json'),JSON.stringify(results,null,2)+'\n');
  console.log(JSON.stringify({browserVersion:results.browserVersion,scenarios:results.scenarios,pageErrors:results.pageErrors},null,2));
 } catch(error) {
  results.error=error.stack;
+ if(activeContext) results.deliveries=await ledger(activeContext).catch(()=>results.deliveries ?? []);
  if(activePage) {await screenshot(activePage,'failure').catch(()=>{});await writeFile(join(out,'failure-dom.txt'),await activePage.locator('body').innerText()).catch(()=>{});}
  await writeFile(join(out,'results.json'),JSON.stringify(results,null,2)+'\n');
  throw error;
