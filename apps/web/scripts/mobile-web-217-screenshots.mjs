@@ -47,7 +47,7 @@ const results = {
   diagnosticSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   syntheticOnly: true, platform: 'Chromium mobile web; not native iOS',
   startedAt: new Date().toISOString(), fixedContentTime: fixedTime,
-  cases: [], desktopComparisons: [], pageErrors: [], blockedOrigins: [],
+  cases: [], desktopComparisons: [], pageErrors: [], nativeTransitionCancellations: [], blockedOrigins: [],
   successScope: 'All candidate gates plus desktop pixel/geometry comparisons against captured references; excludes the known baseline interruption failure',
   baselineInterruptionFailure,
   baselineMethod: 'Separate pinned-main and integrated-PR production web builds; identical candidate synthetic API fixture, mail, date origin, locale, viewport and fallback fonts',
@@ -61,6 +61,7 @@ const results = {
     'Independent inbox/Settings gates may run after a failed candidate draft gate by reloading the same synthetic inbox. Such recovery never clears or converts the original failure.',
     'Pixel/geometry gates cover five selected desktop surfaces. They do not establish full release, accessibility or cross-browser sign-off.',
     'No real mail, deployment, sending, credentials, browser traces, database files or storage exports are included.',
+    'Native no-stack AbortError transition cancellations during successful Settings/history navigation are recorded separately; all other page errors fail the suite.',
   ],
 };
 const fixtures = [];
@@ -157,7 +158,7 @@ async function screenshot(page, result, stage) {
 async function resetScroll(page) {
   await page.evaluate(() => {
     window.scrollTo(0, 0);
-    for (const selector of ['.desktop-workspace', '.panel-body', '.zen-canvas']) {
+    for (const selector of ['.desktop-workspace', '.content-pane', '.panel-body', '.zen-canvas']) {
       for (const element of document.querySelectorAll(selector)) element.scrollTop = 0;
     }
   });
@@ -293,8 +294,8 @@ async function mobileInboxGates(page, result) {
   assert.equal(await page.locator('.message-initial-select[aria-pressed="true"]').count(), 0);
   const row = page.locator('.message-row').filter({ hasText: 'One more idea' });
   await row.scrollIntoViewIfNeeded();
-  const scrollBefore = await page.evaluate(() => ({ windowY: scrollY, workspaceY: document.querySelector('.desktop-workspace').scrollTop }));
-  assert(scrollBefore.windowY + scrollBefore.workspaceY > 100, 'Inbox scroll gate must actually scroll');
+  const scrollBefore = await page.evaluate(() => ({ windowY: scrollY, workspaceY: document.querySelector('.desktop-workspace').scrollTop, contentPaneY: document.querySelector('.content-pane')?.scrollTop ?? 0 }));
+  assert(scrollBefore.windowY + scrollBefore.workspaceY + scrollBefore.contentPaneY > 100, 'Inbox scroll gate must actually scroll');
   result.stickyCompose = await reachable(page.locator('.mobile-mail-compose'), 'Sticky compose after inbox scroll');
   await screenshot(page, result, 'inbox-scrolled');
   await row.click(); await page.locator('.message-reader #reader-title').filter({ hasText: 'One more idea' }).waitFor();
@@ -303,7 +304,7 @@ async function mobileInboxGates(page, result) {
   await poll(() => !new URL(page.url()).searchParams.has('thread'), 'Reader close did not clear history');
   await row.waitFor();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const scrollAfter = await page.evaluate(() => ({ windowY: scrollY, workspaceY: document.querySelector('.desktop-workspace').scrollTop }));
+  const scrollAfter = await page.evaluate(() => ({ windowY: scrollY, workspaceY: document.querySelector('.desktop-workspace').scrollTop, contentPaneY: document.querySelector('.content-pane')?.scrollTop ?? 0 }));
   result.readerReturn = { before: scrollBefore, after: scrollAfter };
   await reachable(row, 'Returned inbox message after reader close');
   await page.goForward(); await page.locator('.message-reader #reader-title').filter({ hasText: 'One more idea' }).waitFor();
@@ -312,6 +313,7 @@ async function mobileInboxGates(page, result) {
   result.checks.push('Selection mode on/off and selected/active text contrast >=4.5; actual inbox scroll; sticky compose hit-test; reader close and Back/Forward return');
 }
 async function settingsGates(page, result, mobile) {
+  result.lastNavigationGate = 'settings-navigation';
   const settings = page.locator('#settings-title');
   if (mobile) {
     const more = page.locator('.desktop-mobile-more');
@@ -362,13 +364,20 @@ function caseStatus(result) {
     || required.some(name => !result.gates.some(gate => gate.name === name && gate.status === 'passed'))) return 'failed';
   return result.variant === 'baseline' ? 'reference-captured' : 'passed';
 }
+function isNativeTransitionCancellation(error, navigationGate) {
+  // Chromium's native cross-document animation cancellation has no JS stack.
+  // Do not exempt generic Error messages, JS-originated errors, or other flows.
+  return error.name === 'AbortError' && error.message === 'Transition was skipped'
+    && !error.stack && navigationGate === 'settings-navigation';
+}
 function suitePassed(report) {
   const baseline = report.cases.filter(item => item.variant === 'baseline');
   const candidate = report.cases.filter(item => item.variant === 'candidate');
   return baseline.length === 4 && baseline.every(item => item.status === 'reference-captured')
     && candidate.length === 12 && candidate.every(item => item.status === 'passed')
     && report.desktopComparisons.length === 20 && report.desktopComparisons.every(item => item.status === 'passed')
-    && report.pageErrors.length === 0;
+    && report.pageErrors.length === 0
+    && report.nativeTransitionCancellations.every(item => item.navigationGatePassed);
 }
 async function runCase(fixture, viewport, theme, density) {
   const mobile = viewport.width < 760;
@@ -392,7 +401,11 @@ async function runCase(fixture, viewport, theme, density) {
   };
   page.on('request', request => { const kind = draftKind(request.url()); if (kind) result.draftRequests.push({ kind, method: request.method() }); });
   page.on('response', response => { const kind = draftKind(response.url()); if (kind) result.draftResponses.push({ kind, method: response.request().method(), status: response.status() }); });
-  page.on('pageerror', error => results.pageErrors.push({ label: result.label, message: safeError(error) }));
+  page.on('pageerror', error => {
+    const detail = { label: result.label, name: error.name, message: safeError(error), stack: safeError(error.stack ?? ''), path: new URL(page.url()).pathname, gate: result.gates.find(gate => gate.status === 'running')?.name ?? 'between-gates' };
+    if (isNativeTransitionCancellation(error, result.lastNavigationGate)) results.nativeTransitionCancellations.push(detail);
+    else results.pageErrors.push(detail);
+  });
   try {
     const initialized = await runGate(page, result, 'initialization', async () => {
       await prepare(context, fixture); await page.goto(fixture.origin + '/');
@@ -539,6 +552,9 @@ try {
     for (const viewport of sizes) for (const theme of ['light', 'dark']) for (const density of ['calm', 'compact']) await runCase(fixture, viewport, theme, density);
   }
   await compareDesktop();
+  for (const event of results.nativeTransitionCancellations) {
+    event.navigationGatePassed = results.cases.find(item => item.label === event.label)?.gates.some(gate => gate.name === 'settings-navigation' && gate.status === 'passed') ?? false;
+  }
   results.status = suitePassed(results) ? 'passed' : 'failed';
 } catch (error) { results.status = 'failed'; results.error = safeError(error); }
 finally {
