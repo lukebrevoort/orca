@@ -1,0 +1,1211 @@
+{
+  "generatedAt": "2026-10-05T22:55:58.296285+00:00",
+  "scope": "One frozen-source rebuild and short read/metadata exact-count pass; prior capture/supervisor/write figures were not rerun.",
+  "filesystem": "workspace overlayfs",
+  "fixtureDirectory": "<local-synthetic-artifact>",
+  "fixtureRetained": true,
+  "fixture": {
+    "messages": 20000,
+    "accounts": 1,
+    "insertMs": 1323.287038,
+    "indexPreparationMs": 12664.454625,
+    "sourceBytes": {
+      "total": 3953703,
+      "maxBodyBytes": 120
+    },
+    "postingRows": {
+      "metadataRows": 20000,
+      "fullRows": 20000
+    },
+    "queue": {
+      "jobs": 0
+    },
+    "beforeCheckpoint": {
+      "canonical": {
+        "databaseBytes": 42815488,
+        "walBytes": 42213552,
+        "shmBytes": 98304
+      },
+      "index": {
+        "databaseBytes": 39391232,
+        "walBytes": 0,
+        "shmBytes": 32768
+      }
+    },
+    "checkpointed": {
+      "canonical": {
+        "databaseBytes": 42815488,
+        "walBytes": 0,
+        "shmBytes": 98304
+      },
+      "index": {
+        "databaseBytes": 39391232,
+        "walBytes": 0,
+        "shmBytes": 32768
+      }
+    },
+    "preparationMethod": "Existing synthetic test helper: in-process apply/ack for both modes. Excludes process-per-job overhead and is NOT supervised backfill throughput."
+  },
+  "sourceHashesBefore": {
+    "apps/api/drizzle/0051_queued_mail_search.sql": "9be0ae059893d08504658e7e4955f6b8870a412a7efe1b7b2e46a20f818a45ad",
+    "apps/api/src/search/indexing/schema.ts": "f7b32f122870fba82ac49bf1198096ee216078e83cc5f338b97ce7363706e6e2",
+    "apps/api/src/search/indexing/supervisor.ts": "71673b400745ac3f123bf994d01759ecfe9c687e92470d267ec68d868e8904ab",
+    "apps/api/src/search/indexing/worker.ts": "e3a58cf973762f20b280142508e635c188d7540bf2905c281b3c5c18ab425331",
+    "apps/api/src/search/indexing/worker-core.ts": "02a0d010188d21b921fbff312f3b2a6c125dbd63534380662d57a8ca33ab6925",
+    "apps/api/src/search/read.ts": "68feb01a332ad7fc65016a59d4932253552bd3ce42c7201f1364385a4daf835a",
+    "apps/api/src/search/executor.ts": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6",
+    "apps/api/src/search/protocol.ts": "652f003a03570e48ce1dbc7883fbeb9f8920bc84fd0b20ceec64657990a6099e",
+    "apps/api/src/mailbox/read.ts": "c09833806db09d9a9e7c145a41b694d01f9f198d7e9d62d99bb7fadc27c68c23",
+    "scripts/ci/queued-search-benchmark.ts": "5b746a0cb860e5e5f2ee26d75f25123ae17ec476ba68d57fe37cec35b7283ec6"
+  },
+  "sourceHashesAfter": {
+    "apps/api/drizzle/0051_queued_mail_search.sql": "9be0ae059893d08504658e7e4955f6b8870a412a7efe1b7b2e46a20f818a45ad",
+    "apps/api/src/search/indexing/schema.ts": "f7b32f122870fba82ac49bf1198096ee216078e83cc5f338b97ce7363706e6e2",
+    "apps/api/src/search/indexing/supervisor.ts": "71673b400745ac3f123bf994d01759ecfe9c687e92470d267ec68d868e8904ab",
+    "apps/api/src/search/indexing/worker.ts": "e3a58cf973762f20b280142508e635c188d7540bf2905c281b3c5c18ab425331",
+    "apps/api/src/search/indexing/worker-core.ts": "02a0d010188d21b921fbff312f3b2a6c125dbd63534380662d57a8ca33ab6925",
+    "apps/api/src/search/read.ts": "68feb01a332ad7fc65016a59d4932253552bd3ce42c7201f1364385a4daf835a",
+    "apps/api/src/search/executor.ts": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6",
+    "apps/api/src/search/protocol.ts": "652f003a03570e48ce1dbc7883fbeb9f8920bc84fd0b20ceec64657990a6099e",
+    "apps/api/src/mailbox/read.ts": "c09833806db09d9a9e7c145a41b694d01f9f198d7e9d62d99bb7fadc27c68c23",
+    "scripts/ci/queued-search-benchmark.ts": "5b746a0cb860e5e5f2ee26d75f25123ae17ec476ba68d57fe37cec35b7283ec6"
+  },
+  "sourceHashesStable": true,
+  "reads": {
+    "queries": [
+      {
+        "name": "rareSubject",
+        "mode": "full",
+        "rawWorkers": [
+          {
+            "value": {
+              "metric": {
+                "durationMs": 13.581185000000005,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 82919424
+            },
+            "wallMs": 108.75837200000001,
+            "cpuSeconds": 0.18073,
+            "userCpuSeconds": 0.139865,
+            "systemCpuSeconds": 0.040865,
+            "peakRssBytes": 83914752,
+            "sampledRssMiBSeconds": 5.640630815003906,
+            "rssSamples": 45
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 11.952996999999996,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 83849216
+            },
+            "wallMs": 102.772043,
+            "cpuSeconds": 0.174043,
+            "userCpuSeconds": 0.127814,
+            "systemCpuSeconds": 0.046229,
+            "peakRssBytes": 84918272,
+            "sampledRssMiBSeconds": 5.437220473466798,
+            "rssSamples": 47
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.761271999999991,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 84426752
+            },
+            "wallMs": 117.22839299999998,
+            "cpuSeconds": 0.203667,
+            "userCpuSeconds": 0.170777,
+            "systemCpuSeconds": 0.03289,
+            "peakRssBytes": 85602304,
+            "sampledRssMiBSeconds": 6.45944963949805,
+            "rssSamples": 49
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.116833,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 84299776
+            },
+            "wallMs": 105.87822200000005,
+            "cpuSeconds": 0.191694,
+            "userCpuSeconds": 0.13564,
+            "systemCpuSeconds": 0.056054,
+            "peakRssBytes": 85483520,
+            "sampledRssMiBSeconds": 5.759045370447264,
+            "rssSamples": 45
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.872068999999996,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 83415040
+            },
+            "wallMs": 99.01235600000007,
+            "cpuSeconds": 0.168836,
+            "userCpuSeconds": 0.148613,
+            "systemCpuSeconds": 0.020223,
+            "peakRssBytes": 84561920,
+            "sampledRssMiBSeconds": 5.289307412191402,
+            "rssSamples": 43
+          }
+        ],
+        "executorReads": [
+          {
+            "endToEndMs": 121.895198,
+            "observation": {
+              "queueWaitMs": 0.5310980000000143,
+              "processDurationMs": 116.79048500000002,
+              "readerDurationMs": 12.054278999999994,
+              "peakRssBytes": 83447808
+            },
+            "metric": {
+              "durationMs": 12.054278999999994,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 118.61597899999998,
+            "observation": {
+              "queueWaitMs": 0.01683500000001459,
+              "processDurationMs": 118.20208699999995,
+              "readerDurationMs": 14.937142999999992,
+              "peakRssBytes": 83042304
+            },
+            "metric": {
+              "durationMs": 14.937142999999992,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 109.12917900000002,
+            "observation": {
+              "queueWaitMs": 0.014872999999965941,
+              "processDurationMs": 108.79659900000001,
+              "readerDurationMs": 12.082792000000012,
+              "peakRssBytes": 83640320
+            },
+            "metric": {
+              "durationMs": 12.082792000000012,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 126.34796699999993,
+            "observation": {
+              "queueWaitMs": 0.014662000000043918,
+              "processDurationMs": 126.06713500000001,
+              "readerDurationMs": 11.844054,
+              "peakRssBytes": 83628032
+            },
+            "metric": {
+              "durationMs": 11.844054,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 115.68482799999992,
+            "observation": {
+              "queueWaitMs": 0.014001999999891268,
+              "processDurationMs": 115.48458699999992,
+              "readerDurationMs": 12.116183000000007,
+              "peakRssBytes": 82767872
+            },
+            "metric": {
+              "durationMs": 12.116183000000007,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          }
+        ]
+      },
+      {
+        "name": "oldBodyOnly",
+        "mode": "full",
+        "rawWorkers": [
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.89682599999999,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000000"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 83353600
+            },
+            "wallMs": 105.11763399999995,
+            "cpuSeconds": 0.189097,
+            "userCpuSeconds": 0.151408,
+            "systemCpuSeconds": 0.037689,
+            "peakRssBytes": 84725760,
+            "sampledRssMiBSeconds": 5.783103586781244,
+            "rssSamples": 44
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.788684000000003,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000000"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 84271104
+            },
+            "wallMs": 104.61024099999986,
+            "cpuSeconds": 0.177464,
+            "userCpuSeconds": 0.126754,
+            "systemCpuSeconds": 0.05071,
+            "peakRssBytes": 85381120,
+            "sampledRssMiBSeconds": 5.649166461814452,
+            "rssSamples": 48
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 14.000884999999997,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000000"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 82419712
+            },
+            "wallMs": 110.95810800000004,
+            "cpuSeconds": 0.180946,
+            "userCpuSeconds": 0.126376,
+            "systemCpuSeconds": 0.05457,
+            "peakRssBytes": 83439616,
+            "sampledRssMiBSeconds": 5.858563220857418,
+            "rssSamples": 49
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 14.401647999999994,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000000"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 84348928
+            },
+            "wallMs": 120.29222400000003,
+            "cpuSeconds": 0.184928,
+            "userCpuSeconds": 0.155298,
+            "systemCpuSeconds": 0.02963,
+            "peakRssBytes": 85565440,
+            "sampledRssMiBSeconds": 6.7410149027714885,
+            "rssSamples": 52
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 14.282289000000006,
+                "candidateRows": 1,
+                "indexBatches": 5,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000000"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 82513920
+            },
+            "wallMs": 116.12760900000012,
+            "cpuSeconds": 0.197755,
+            "userCpuSeconds": 0.132469,
+            "systemCpuSeconds": 0.065286,
+            "peakRssBytes": 83738624,
+            "sampledRssMiBSeconds": 6.147461836933603,
+            "rssSamples": 44
+          }
+        ],
+        "executorReads": [
+          {
+            "endToEndMs": 109.31567299999983,
+            "observation": {
+              "queueWaitMs": 0.014681999999993423,
+              "processDurationMs": 109.06673,
+              "readerDurationMs": 12.503765000000001,
+              "peakRssBytes": 84062208
+            },
+            "metric": {
+              "durationMs": 12.503765000000001,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 110.18714900000009,
+            "observation": {
+              "queueWaitMs": 0.0154539999998633,
+              "processDurationMs": 109.90251000000012,
+              "readerDurationMs": 13.207383000000007,
+              "peakRssBytes": 84209664
+            },
+            "metric": {
+              "durationMs": 13.207383000000007,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 112.67103799999995,
+            "observation": {
+              "queueWaitMs": 0.013169000000061715,
+              "processDurationMs": 112.43419199999994,
+              "readerDurationMs": 16.763076999999996,
+              "peakRssBytes": 84209664
+            },
+            "metric": {
+              "durationMs": 16.763076999999996,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 122.18382199999996,
+            "observation": {
+              "queueWaitMs": 0.01460199999996803,
+              "processDurationMs": 121.98085700000001,
+              "readerDurationMs": 13.956479000000002,
+              "peakRssBytes": 83632128
+            },
+            "metric": {
+              "durationMs": 13.956479000000002,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 138.69116500000018,
+            "observation": {
+              "queueWaitMs": 0.01432199999999284,
+              "processDurationMs": 138.45231599999988,
+              "readerDurationMs": 13.689036000000002,
+              "peakRssBytes": 82731008
+            },
+            "metric": {
+              "durationMs": 13.689036000000002,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          }
+        ]
+      },
+      {
+        "name": "commonSubject",
+        "mode": "full",
+        "rawWorkers": [
+          {
+            "value": {
+              "metric": {
+                "durationMs": 11.722611,
+                "candidateRows": 11,
+                "indexBatches": 1,
+                "shortBodyBytes": 0,
+                "projectedMessages": 10
+              },
+              "ids": [
+                "mail-000001",
+                "mail-000002",
+                "mail-000003",
+                "mail-000004",
+                "mail-000005",
+                "mail-000006",
+                "mail-000007",
+                "mail-000008",
+                "mail-000009",
+                "mail-000010"
+              ],
+              "continuation": "matches",
+              "peakRssBytes": 84643840
+            },
+            "wallMs": 124.91885299999967,
+            "cpuSeconds": 0.212976,
+            "userCpuSeconds": 0.145944,
+            "systemCpuSeconds": 0.067032,
+            "peakRssBytes": 86380544,
+            "sampledRssMiBSeconds": 6.896295970968748,
+            "rssSamples": 49
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 11.984614000000008,
+                "candidateRows": 11,
+                "indexBatches": 1,
+                "shortBodyBytes": 0,
+                "projectedMessages": 10
+              },
+              "ids": [
+                "mail-000001",
+                "mail-000002",
+                "mail-000003",
+                "mail-000004",
+                "mail-000005",
+                "mail-000006",
+                "mail-000007",
+                "mail-000008",
+                "mail-000009",
+                "mail-000010"
+              ],
+              "continuation": "matches",
+              "peakRssBytes": 83800064
+            },
+            "wallMs": 125.66342799999984,
+            "cpuSeconds": 0.209709,
+            "userCpuSeconds": 0.164442,
+            "systemCpuSeconds": 0.045267,
+            "peakRssBytes": 85291008,
+            "sampledRssMiBSeconds": 6.8917873512871095,
+            "rssSamples": 44
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 11.051922000000005,
+                "candidateRows": 11,
+                "indexBatches": 1,
+                "shortBodyBytes": 0,
+                "projectedMessages": 10
+              },
+              "ids": [
+                "mail-000001",
+                "mail-000002",
+                "mail-000003",
+                "mail-000004",
+                "mail-000005",
+                "mail-000006",
+                "mail-000007",
+                "mail-000008",
+                "mail-000009",
+                "mail-000010"
+              ],
+              "continuation": "matches",
+              "peakRssBytes": 84254720
+            },
+            "wallMs": 113.14084899999989,
+            "cpuSeconds": 0.189915,
+            "userCpuSeconds": 0.146413,
+            "systemCpuSeconds": 0.043502,
+            "peakRssBytes": 85921792,
+            "sampledRssMiBSeconds": 6.183161643341805,
+            "rssSamples": 44
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 11.456029999999998,
+                "candidateRows": 11,
+                "indexBatches": 1,
+                "shortBodyBytes": 0,
+                "projectedMessages": 10
+              },
+              "ids": [
+                "mail-000001",
+                "mail-000002",
+                "mail-000003",
+                "mail-000004",
+                "mail-000005",
+                "mail-000006",
+                "mail-000007",
+                "mail-000008",
+                "mail-000009",
+                "mail-000010"
+              ],
+              "continuation": "matches",
+              "peakRssBytes": 83402752
+            },
+            "wallMs": 120.34995500000014,
+            "cpuSeconds": 0.186704,
+            "userCpuSeconds": 0.14876,
+            "systemCpuSeconds": 0.037944,
+            "peakRssBytes": 85180416,
+            "sampledRssMiBSeconds": 6.335570663609375,
+            "rssSamples": 48
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 10.928517,
+                "candidateRows": 11,
+                "indexBatches": 1,
+                "shortBodyBytes": 0,
+                "projectedMessages": 10
+              },
+              "ids": [
+                "mail-000001",
+                "mail-000002",
+                "mail-000003",
+                "mail-000004",
+                "mail-000005",
+                "mail-000006",
+                "mail-000007",
+                "mail-000008",
+                "mail-000009",
+                "mail-000010"
+              ],
+              "continuation": "matches",
+              "peakRssBytes": 83337216
+            },
+            "wallMs": 111.72884599999998,
+            "cpuSeconds": 0.194087,
+            "userCpuSeconds": 0.139706,
+            "systemCpuSeconds": 0.054381,
+            "peakRssBytes": 84688896,
+            "sampledRssMiBSeconds": 5.9581798585957095,
+            "rssSamples": 48
+          }
+        ],
+        "executorReads": [
+          {
+            "endToEndMs": 128.4427400000004,
+            "observation": {
+              "queueWaitMs": 0.013770999999906053,
+              "processDurationMs": 128.20864700000038,
+              "readerDurationMs": 12.395832999999996,
+              "peakRssBytes": 82460672
+            },
+            "metric": {
+              "durationMs": 12.395832999999996,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "returned": 10
+          },
+          {
+            "endToEndMs": 116.79573900000014,
+            "observation": {
+              "queueWaitMs": 0.015622999999777676,
+              "processDurationMs": 116.54850699999997,
+              "readerDurationMs": 16.62080300000001,
+              "peakRssBytes": 82403328
+            },
+            "metric": {
+              "durationMs": 16.62080300000001,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "returned": 10
+          },
+          {
+            "endToEndMs": 114.3140229999999,
+            "observation": {
+              "queueWaitMs": 0.014570999999705236,
+              "processDurationMs": 114.04083200000014,
+              "readerDurationMs": 14.888750000000002,
+              "peakRssBytes": 82776064
+            },
+            "metric": {
+              "durationMs": 14.888750000000002,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "returned": 10
+          },
+          {
+            "endToEndMs": 117.1719680000001,
+            "observation": {
+              "queueWaitMs": 0.016274000000066735,
+              "processDurationMs": 116.95312999999987,
+              "readerDurationMs": 11.552836,
+              "peakRssBytes": 84336640
+            },
+            "metric": {
+              "durationMs": 11.552836,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "returned": 10
+          },
+          {
+            "endToEndMs": 116.78944300000012,
+            "observation": {
+              "queueWaitMs": 0.015504000000419182,
+              "processDurationMs": 116.54139999999961,
+              "readerDurationMs": 13.72260700000001,
+              "peakRssBytes": 84934656
+            },
+            "metric": {
+              "durationMs": 13.72260700000001,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "returned": 10
+          }
+        ]
+      },
+      {
+        "name": "noHit",
+        "mode": "full",
+        "rawWorkers": [
+          {
+            "value": {
+              "metric": {
+                "durationMs": 10.33838999999999,
+                "candidateRows": 0,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 0
+              },
+              "ids": [],
+              "continuation": "none",
+              "peakRssBytes": 82956288
+            },
+            "wallMs": 107.04954799999996,
+            "cpuSeconds": 0.202665,
+            "userCpuSeconds": 0.155977,
+            "systemCpuSeconds": 0.046688,
+            "peakRssBytes": 83357696,
+            "sampledRssMiBSeconds": 5.730497585121091,
+            "rssSamples": 44
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 9.413600000000002,
+                "candidateRows": 0,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 0
+              },
+              "ids": [],
+              "continuation": "none",
+              "peakRssBytes": 83832832
+            },
+            "wallMs": 128.00398099999984,
+            "cpuSeconds": 0.214072,
+            "userCpuSeconds": 0.167749,
+            "systemCpuSeconds": 0.046323,
+            "peakRssBytes": 84230144,
+            "sampledRssMiBSeconds": 6.868592683277342,
+            "rssSamples": 52
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 10.140212999999989,
+                "candidateRows": 0,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 0
+              },
+              "ids": [],
+              "continuation": "none",
+              "peakRssBytes": 83443712
+            },
+            "wallMs": 122.42524000000003,
+            "cpuSeconds": 0.209196,
+            "userCpuSeconds": 0.151976,
+            "systemCpuSeconds": 0.05722,
+            "peakRssBytes": 84176896,
+            "sampledRssMiBSeconds": 6.60295896202341,
+            "rssSamples": 55
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 9.506810999999999,
+                "candidateRows": 0,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 0
+              },
+              "ids": [],
+              "continuation": "none",
+              "peakRssBytes": 81723392
+            },
+            "wallMs": 107.0035939999998,
+            "cpuSeconds": 0.18765,
+            "userCpuSeconds": 0.159576,
+            "systemCpuSeconds": 0.028074,
+            "peakRssBytes": 82575360,
+            "sampledRssMiBSeconds": 5.589136483525396,
+            "rssSamples": 46
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 9.742975000000001,
+                "candidateRows": 0,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 0
+              },
+              "ids": [],
+              "continuation": "none",
+              "peakRssBytes": 84291584
+            },
+            "wallMs": 116.28417400000035,
+            "cpuSeconds": 0.204199,
+            "userCpuSeconds": 0.155785,
+            "systemCpuSeconds": 0.048414,
+            "peakRssBytes": 84549632,
+            "sampledRssMiBSeconds": 6.235413232666032,
+            "rssSamples": 51
+          }
+        ],
+        "executorReads": [
+          {
+            "endToEndMs": 122.19800900000018,
+            "observation": {
+              "queueWaitMs": 0.01723600000013903,
+              "processDurationMs": 121.95224899999994,
+              "readerDurationMs": 13.142646,
+              "peakRssBytes": 83767296
+            },
+            "metric": {
+              "durationMs": 13.142646,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "returned": 0
+          },
+          {
+            "endToEndMs": 121.98066699999981,
+            "observation": {
+              "queueWaitMs": 0.016264000000319356,
+              "processDurationMs": 121.67765099999997,
+              "readerDurationMs": 19.47543499999999,
+              "peakRssBytes": 82767872
+            },
+            "metric": {
+              "durationMs": 19.47543499999999,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "returned": 0
+          },
+          {
+            "endToEndMs": 124.51260699999966,
+            "observation": {
+              "queueWaitMs": 0.015362999999524618,
+              "processDurationMs": 124.27622200000042,
+              "readerDurationMs": 10.18008300000001,
+              "peakRssBytes": 83333120
+            },
+            "metric": {
+              "durationMs": 10.18008300000001,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "returned": 0
+          },
+          {
+            "endToEndMs": 120.54834399999982,
+            "observation": {
+              "queueWaitMs": 0.020340000000032887,
+              "processDurationMs": 120.30436700000064,
+              "readerDurationMs": 9.988384999999994,
+              "peakRssBytes": 83030016
+            },
+            "metric": {
+              "durationMs": 9.988384999999994,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "returned": 0
+          },
+          {
+            "endToEndMs": 113.52580299999954,
+            "observation": {
+              "queueWaitMs": 0.015863999999965017,
+              "processDurationMs": 113.09022800000002,
+              "readerDurationMs": 10.105198999999999,
+              "peakRssBytes": 81666048
+            },
+            "metric": {
+              "durationMs": 10.105198999999999,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "returned": 0
+          }
+        ]
+      },
+      {
+        "name": "metadataOnly",
+        "mode": "metadata",
+        "rawWorkers": [
+          {
+            "value": {
+              "metric": {
+                "durationMs": 14.141266000000002,
+                "candidateRows": 1,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 86241280
+            },
+            "wallMs": 130.71990800000003,
+            "cpuSeconds": 0.208133,
+            "userCpuSeconds": 0.158309,
+            "systemCpuSeconds": 0.049824,
+            "peakRssBytes": 87539712,
+            "sampledRssMiBSeconds": 7.498182369183593,
+            "rssSamples": 55
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.276944999999998,
+                "candidateRows": 1,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 82563072
+            },
+            "wallMs": 117.9862519999997,
+            "cpuSeconds": 0.192982,
+            "userCpuSeconds": 0.145343,
+            "systemCpuSeconds": 0.047639,
+            "peakRssBytes": 83603456,
+            "sampledRssMiBSeconds": 6.344728246281263,
+            "rssSamples": 52
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.867332000000005,
+                "candidateRows": 1,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 84430848
+            },
+            "wallMs": 109.32988100000057,
+            "cpuSeconds": 0.18025,
+            "userCpuSeconds": 0.157356,
+            "systemCpuSeconds": 0.022894,
+            "peakRssBytes": 85377024,
+            "sampledRssMiBSeconds": 5.926132038916008,
+            "rssSamples": 49
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 12.636475000000004,
+                "candidateRows": 1,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 80547840
+            },
+            "wallMs": 119.44239599999946,
+            "cpuSeconds": 0.181373,
+            "userCpuSeconds": 0.139803,
+            "systemCpuSeconds": 0.04157,
+            "peakRssBytes": 82141184,
+            "sampledRssMiBSeconds": 6.250722059861295,
+            "rssSamples": 46
+          },
+          {
+            "value": {
+              "metric": {
+                "durationMs": 13.458200000000005,
+                "candidateRows": 1,
+                "indexBatches": 4,
+                "shortBodyBytes": 0,
+                "projectedMessages": 1
+              },
+              "ids": [
+                "mail-000012"
+              ],
+              "continuation": "none",
+              "peakRssBytes": 82137088
+            },
+            "wallMs": 125.41171899999972,
+            "cpuSeconds": 0.193971,
+            "userCpuSeconds": 0.153691,
+            "systemCpuSeconds": 0.04028,
+            "peakRssBytes": 83312640,
+            "sampledRssMiBSeconds": 6.552267880359386,
+            "rssSamples": 53
+          }
+        ],
+        "executorReads": [
+          {
+            "endToEndMs": 113.81558199999927,
+            "observation": {
+              "queueWaitMs": 0.06810200000018085,
+              "processDurationMs": 113.22377299999971,
+              "readerDurationMs": 14.091391999999999,
+              "peakRssBytes": 82149376
+            },
+            "metric": {
+              "durationMs": 14.091391999999999,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 111.86642800000027,
+            "observation": {
+              "queueWaitMs": 0.01356099999975413,
+              "processDurationMs": 111.65088399999968,
+              "readerDurationMs": 11.962851999999998,
+              "peakRssBytes": 81965056
+            },
+            "metric": {
+              "durationMs": 11.962851999999998,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 137.35364899999968,
+            "observation": {
+              "queueWaitMs": 0.01567299999987881,
+              "processDurationMs": 137.15303800000038,
+              "readerDurationMs": 15.172436999999988,
+              "peakRssBytes": 84344832
+            },
+            "metric": {
+              "durationMs": 15.172436999999988,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 124.8284620000004,
+            "observation": {
+              "queueWaitMs": 0.018788999999742373,
+              "processDurationMs": 124.59680399999979,
+              "readerDurationMs": 14.144621999999998,
+              "peakRssBytes": 82583552
+            },
+            "metric": {
+              "durationMs": 14.144621999999998,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          },
+          {
+            "endToEndMs": 118.16159599999992,
+            "observation": {
+              "queueWaitMs": 0.015833999999813386,
+              "processDurationMs": 117.93813099999988,
+              "readerDurationMs": 16.422105000000002,
+              "peakRssBytes": 82247680
+            },
+            "metric": {
+              "durationMs": 16.422105000000002,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "returned": 1
+          }
+        ]
+      }
+    ],
+    "exactCounts": {
+      "success": true,
+      "endToEndMs": 1039.2926530000004,
+      "observation": {
+        "queueWaitMs": 0.020821000000069034,
+        "processDurationMs": 1039.1120120000005,
+        "readerDurationMs": 927.029413,
+        "peakRssBytes": 108220416
+      },
+      "returned": 25,
+      "metric": {
+        "durationMs": 927.029413,
+        "candidateRows": 19499,
+        "indexBatches": 306,
+        "shortBodyBytes": 0,
+        "projectedMessages": 25
+      },
+      "counts": {
+        "attention": {
+          "focus": 0,
+          "normal": 19499,
+          "quiet": 0,
+          "hidden": 0,
+          "all": 19499
+        },
+        "classification": {
+          "likely_human": 19499,
+          "automated_or_bulk": 0,
+          "uncertain": 0,
+          "unclassified": 0,
+          "all": 19499
+        }
+      }
+    },
+    "sourceHashesBefore": {
+      "apps/api/src/search/read.ts": "68feb01a332ad7fc65016a59d4932253552bd3ce42c7201f1364385a4daf835a",
+      "apps/api/src/search/executor.ts": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6",
+      "apps/api/src/search/protocol.ts": "652f003a03570e48ce1dbc7883fbeb9f8920bc84fd0b20ceec64657990a6099e",
+      "apps/api/src/mailbox/read.ts": "c09833806db09d9a9e7c145a41b694d01f9f198d7e9d62d99bb7fadc27c68c23"
+    },
+    "sourceHashesAfter": {
+      "apps/api/src/search/read.ts": "68feb01a332ad7fc65016a59d4932253552bd3ce42c7201f1364385a4daf835a",
+      "apps/api/src/search/executor.ts": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6",
+      "apps/api/src/search/protocol.ts": "652f003a03570e48ce1dbc7883fbeb9f8920bc84fd0b20ceec64657990a6099e",
+      "apps/api/src/mailbox/read.ts": "c09833806db09d9a9e7c145a41b694d01f9f198d7e9d62d99bb7fadc27c68c23"
+    }
+  },
+  "limitations": [
+    "20,000 ordinary synthetic small messages, one account; maximum body120bytes. No large-body/stress/security validation.",
+    "5 measurements per ordinary10-result case; exactly one broad metadata exact-count execution, limit25, unchanged2s executor deadline.",
+    "Local warm-cache overlayfs timing; no Railway capacity, billing or volume durability claim.",
+    "Direct in-process fixture preparation is not process-supervised backfill throughput.",
+    "Read CPU excludes API parent; RSS-time sampled every2ms. Exact-count CPU/RAM-time were not measured, only executor duration and successful child peak RSS.",
+    "Prior blocked PR224 security validation remains incomplete.",
+    "Earlier supervisor harness memory is not additional always-on API RAM."
+  ],
+  "previousCostReport": "<local-synthetic-artifact>",
+  "complete": true,
+  "publicationNote": "Synthetic measurements only; local paths redacted. Source hashes and measured values preserved. Runtime/capability integration may evolve; compare hashes before treating this as final-head evidence."
+}

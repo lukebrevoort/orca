@@ -1,3 +1,6 @@
+import { disableSearch } from "../src/search/indexing/admin.ts";
+import { seedSearchFixture } from "./search-fixture-seed.ts";
+import { prepareSyntheticSearchIndex } from "../src/search/test-support.ts";
 /** Loopback-only browser + real API/SQLite writing fixture. No provider network calls.
  * Build web first, then: bun apps/api/scripts/compose-fixture.ts
  */
@@ -34,6 +37,8 @@ for (const [index, accountId] of ["first", "second"].entries()) {
   db.insert(emails).values({ id: `${accountId}-message`, accountId, threadId: `${accountId}-thread`, providerMessageId: `${accountId}-provider-message`, fromName: "Maya", fromAddress: "maya@example.com", subject: `${accountId} account conversation`, snippet: "Could you send me your latest writing notes?", bodyText: "Could you send me your latest writing notes?", toRecipients: JSON.stringify([{ name: null, email: `${accountId}@example.com` }]), ccRecipients: "[]", bccRecipients: "[]", references: "[]", internetMessageId: `<${accountId}@example.com>`, receivedAt: now, internalDate: now, isRead: true, humanSignal: 9, humanClassification: "likely_human", humanClassificationReasons: "[]" }).run();
   db.insert(emailLabels).values({ id: `${accountId}-label`, emailId: `${accountId}-message`, labelId: `${accountId}-inbox` }).run();
 }
+seedSearchFixture(db, "first", "browser-fixture-search", "first-inbox", 110);
+prepareSyntheticSearchIndex(sqlite);
 const session = await createSession(db, userId);
 sqlite.close();
 const deliveries: Array<{ accountId: string; draft: MessageDraft }> = [];
@@ -59,6 +64,15 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) 
   if (url.pathname === "/__fixture/login") return new Response(null, { status: 302, headers: { "set-cookie": `orca_session=${session.token}; HttpOnly; Path=/; SameSite=Lax`, location: "/" } });
   if (url.pathname.startsWith("/__fixture/")) {
     if (!request.headers.get("cookie")?.split(";").some(value => value.trim() === `orca_session=${session.token}`)) return new Response(null, { status: 401 });
+    if (url.pathname === "/__fixture/search/mode" && request.method === "POST") {
+      const raw = await request.text(); if (raw.length > 256) return new Response(null, { status: 413 });
+      let mode: unknown; try { mode = JSON.parse(raw).mode; } catch { return new Response(null, { status: 400 }); }
+      if (mode !== "legacy-metadata" && mode !== "indexed") return new Response(null, { status: 400 });
+      const { sqlite } = createDatabaseClient();
+      try { if (mode === "indexed") prepareSyntheticSearchIndex(sqlite); else disableSearch(sqlite, "Synthetic search compatibility journey"); }
+      finally { sqlite.close(); }
+      return new Response(null, { status: 204 });
+    }
     if (url.pathname === "/__fixture/deliveries" && request.method === "GET") return Response.json(deliveries);
     if (url.pathname === "/__fixture/outcome" && request.method === "POST") {
       const value = await request.json() as { outcome?: string };

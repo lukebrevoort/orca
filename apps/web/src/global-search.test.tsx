@@ -69,16 +69,16 @@ function installSearchStyles() {
   browserWindow.document.head.append(sheet);
 }
 
-function searchResponse(messages = inboxFixture) {
+function searchResponse(messages = inboxFixture, indexed = true) {
   return new Response(JSON.stringify({
     accounts: [demoAccount],
     messages,
     nextCursor: null,
-    counts: {
+    ...(indexed ? { continuation: "none", snapshot: "synthetic-snapshot", order: "field-relevance-v1", semantics: "literal-index-v3", coverage: "stored-plaintext" } : { counts: {
       attention: { focus: 0, normal: messages.length, quiet: 0, hidden: 0, all: messages.length },
       classification: { likely_human: messages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: messages.length },
-    },
-  }), { status: 200 });
+    } }),
+  }), { status: 200, headers: { "X-Orca-Search-Mode": indexed ? "indexed" : "legacy-metadata", "X-Orca-Search-Epoch": "a".repeat(64) } });
 }
 
 const liveAuthorityDescription = {
@@ -92,9 +92,11 @@ function installViewSearchApi() {
   const writes: string[] = [];
   globalThis.fetch = (async (input, init) => {
     const path = String(input);
+    if (path === "/v1/mail/search/capabilities") return Response.json({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "search-test-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
     if (path === "/v1/accounts") return Response.json({ items: [demoAccount], nextCursor: null });
     if (path === "/v1/organization/collections-pins/query") return Response.json({ workspaceId: "workspace_demo", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] });
-    if (path.startsWith("/v1/inbox?")) return searchResponse();
+    if (path.startsWith("/v1/mail/search?")) return searchResponse();
+    if (path.startsWith("/v1/inbox?")) return searchResponse(inboxFixture, false);
     if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
     if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
     if (path === "/v1/organization/views/prepare") {
@@ -207,7 +209,7 @@ describe("global mail search location contract", () => {
     });
     const state = readMailSearchState(browserWindow.location as unknown as Location);
     expect(state?.mailbox).toBe("inbox");
-    expect(mailSearchRequest(state!)).toBe("/v1/inbox?limit=100&classification=all&query=launch&accountId=acct_work");
+    expect(mailSearchRequest(state!)).toBe("/v1/mail/search?limit=10&classification=all&view=inbox&query=launch&accountId=acct_work");
   });
 });
 
@@ -263,9 +265,10 @@ describe("GlobalMailSearch interaction", () => {
   test("keeps overflowing results in the shrinkable 1024px track when filters expand", async () => {
     globalThis.fetch = (async (input) => {
       const path = String(input);
-      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/mail/search/capabilities") return Response.json({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "search-test-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
+    if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
       if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
-      if (path.startsWith("/v1/inbox?")) return searchResponse([...inboxFixture, ...inboxFixture.map((message) => ({ ...message, id: `${message.id}-second-page` }))]);
+      if (path.startsWith("/v1/mail/search?")) return searchResponse([...inboxFixture, ...inboxFixture.map((message) => ({ ...message, id: `${message.id}-second-page` }))]);
       throw new Error(`Unexpected fetch: ${path}`);
     }) as typeof fetch;
     installSearchStyles();
@@ -294,9 +297,10 @@ describe("GlobalMailSearch interaction", () => {
     const query = "x".repeat(200);
     globalThis.fetch = (async (input) => {
       const path = String(input);
-      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/mail/search/capabilities") return Response.json({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "search-test-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
+    if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
       if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
-      if (path.startsWith("/v1/inbox?")) return searchResponse([]);
+      if (path.startsWith("/v1/mail/search?")) return searchResponse([]);
       throw new Error(`Unexpected fetch: ${path}`);
     }) as typeof fetch;
     installSearchStyles();
@@ -321,9 +325,10 @@ describe("GlobalMailSearch interaction", () => {
     const previous = { ...structuredClone(inboxFixture[0]!), id: "previous-year", receivedAt: `${currentYear - 1}-07-03T12:00:00.000Z` };
     globalThis.fetch = (async (input) => {
       const path = String(input);
-      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/mail/search/capabilities") return Response.json({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "search-test-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
+    if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
       if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
-      if (path.startsWith("/v1/inbox?")) return searchResponse([current, previous]);
+      if (path.startsWith("/v1/mail/search?")) return searchResponse([current, previous]);
       throw new Error(`Unexpected fetch: ${path}`);
     }) as typeof fetch;
     openMailSearch("same day");
@@ -342,9 +347,10 @@ describe("GlobalMailSearch interaction", () => {
   test("moves from the query into results with ArrowDown and back with ArrowUp", async () => {
     globalThis.fetch = (async (input) => {
       const path = String(input);
-      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/mail/search/capabilities") return Response.json({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "search-test-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
+    if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
       if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
-      if (path.startsWith("/v1/inbox?")) return searchResponse();
+      if (path.startsWith("/v1/mail/search?")) return searchResponse();
       throw new Error(`Unexpected fetch: ${path}`);
     }) as typeof fetch;
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
@@ -396,7 +402,7 @@ describe("GlobalMailSearch interaction", () => {
     const requests: string[] = [];
     globalThis.fetch = (async (input, init) => {
       const path = String(input);
-      if (path.startsWith("/v1/inbox?")) {
+      if (path.startsWith("/v1/mail/search?")) {
         requests.push(path);
         if (new URL(path, browserWindow.location.origin).searchParams.get("query") === "alpha") {
           await new Promise<void>((resolve) => { finishOldSearch = resolve; });
@@ -512,14 +518,15 @@ describe("GlobalMailSearch interaction", () => {
     expect(browserWindow.location.pathname + browserWindow.location.search).toBe(source);
   });
 
-  test("requests a saved Inbox scope without the unsupported inbox view value", async () => {
+  test("requests an explicit indexed Inbox scope", async () => {
     const requests: string[] = [];
     globalThis.fetch = (async (input) => {
       const path = String(input);
       requests.push(path);
-      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/mail/search/capabilities") return Response.json({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "search-test-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
+    if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
       if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
-      if (path.startsWith("/v1/inbox?")) return new Response(JSON.stringify({ accounts: [demoAccount], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } }), { status: 200 });
+      if (path.startsWith("/v1/mail/search?")) return searchResponse([]);
       throw new Error(`Unexpected fetch: ${path}`);
     }) as typeof fetch;
     openMailSearchFilter({
@@ -540,15 +547,15 @@ describe("GlobalMailSearch interaction", () => {
     await flush();
     await flush();
 
-    const inboxRequest = requests.find((path) => path.startsWith("/v1/inbox?"));
-    expect(inboxRequest).toBe(`/v1/inbox?limit=100&classification=all&query=launch&accountId=${encodeURIComponent(demoAccount.id)}`);
-    expect(new URL(inboxRequest!, browserWindow.location.origin).searchParams.has("view")).toBe(false);
+    const inboxRequest = requests.find((path) => path.startsWith("/v1/mail/search?"));
+    expect(inboxRequest).toBe(`/v1/mail/search?limit=10&classification=all&view=inbox&query=launch&accountId=${encodeURIComponent(demoAccount.id)}`);
+    expect(new URL(inboxRequest!, browserWindow.location.origin).searchParams.get("view")).toBe("inbox");
   });
 
   test("a zero-result general search enters unsupported review without any persistence", async () => {
     const writes = installViewSearchApi();
     const api = globalThis.fetch;
-    globalThis.fetch = (async (input, init) => String(input).startsWith("/v1/inbox?") ? searchResponse([]) : api(input, init)) as typeof fetch;
+    globalThis.fetch = (async (input, init) => String(input).startsWith("/v1/mail/search?") ? searchResponse([]) : api(input, init)) as typeof fetch;
     openMailSearch("moonbase ledger");
     const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
@@ -558,5 +565,132 @@ describe("GlobalMailSearch interaction", () => {
     expect(browserWindow.document.body.textContent).toContain("General text search");
     expect(button("Save View").disabled).toBe(true);
     expect(writes).toEqual([]);
+  });
+});
+
+describe("indexed search continuation", () => {
+  async function renderSearch() {
+    const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush(); await flush();
+  }
+  const page = (messages: typeof inboxFixture, nextCursor: string | null, continuation: "matches" | "scan" | "none", snapshot = "snapshot-a") => Response.json({
+    accounts: [demoAccount], messages, nextCursor, continuation, snapshot, order: "field-relevance-v1", semantics: "literal-index-v3", coverage: "stored-plaintext",
+  }, { headers: { "X-Orca-Search-Mode": "indexed", "X-Orca-Search-Epoch": "a".repeat(64) } });
+  test("empty scan pages keep Load more without declaring no matches", async () => {
+    installViewSearchApi(); const api = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => String(input).startsWith("/v1/mail/search?")
+      ? new URL(String(input), "http://localhost").searchParams.has("cursor") ? page([inboxFixture[0]!], null, "none") : page([], "position-1", "scan")
+      : api(input, init)) as typeof fetch;
+    openMailSearch("appointment"); await renderSearch();
+    expect(browserWindow.document.body.textContent).not.toContain("No matches");
+    expect(browserWindow.document.body.textContent).toContain("More of the index remains");
+    await act(async () => button("Load more").click()); await flush();
+    expect(browserWindow.document.querySelectorAll('.global-mail-result-list a')).toHaveLength(1);
+    expect(browserWindow.document.body.textContent).toContain("1 shown");
+  });
+  test("a changed continuation snapshot clears old rows and offers restart", async () => {
+    installViewSearchApi(); const api = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => String(input).startsWith("/v1/mail/search?")
+      ? new URL(String(input), "http://localhost").searchParams.has("cursor") ? page([{ ...inboxFixture[0]!, id: "new-row" }], null, "none", "snapshot-b") : page([inboxFixture[0]!], "position-1", "matches")
+      : api(input, init)) as typeof fetch;
+    openMailSearch("appointment"); await renderSearch();
+    await act(async () => button("Load more").click()); await flush();
+    expect(browserWindow.document.querySelectorAll('.global-mail-result-list a')).toHaveLength(0);
+    expect(browserWindow.document.body.textContent).toContain("Stored mail changed");
+    expect((browserWindow.document.querySelector('input[aria-label="Search stored mail"]') as unknown as HTMLInputElement).value).toBe("appointment");
+    expect(button("Try again")).toBeDefined();
+  });
+  test("short-only terms explain the limit without fetching a partial fallback", async () => {
+    installViewSearchApi(); const api = globalThis.fetch; const paths: string[] = [];
+    globalThis.fetch = (async (input, init) => { paths.push(String(input)); return api(input, init); }) as typeof fetch;
+    openMailSearch("AI PR"); await renderSearch();
+    expect(browserWindow.document.body.textContent).toContain("at least 3 characters");
+    expect(paths.some(path => path.startsWith("/v1/inbox?") || path.startsWith("/v1/mail/search?"))).toBe(false);
+  });
+});
+
+test("legacy text pins preserve exact sender and attention in indexed and empty-query scopes", () => {
+  openMailSearchFilter({ mailbox: "inbox", attention: "notify", classification: "human", person: "sender@example.test", query: "appointment", accountId: "work", collectionId: "project" });
+  const state = readMailSearchState(browserWindow.location as unknown as Location)!;
+  expect(state.senderAddress).toBe("sender@example.test"); expect(state.attentionBehavior).toBe("notify");
+  expect(mailSearchRequest(state)).toContain("senderAddress=sender%40example.test");
+  expect(mailSearchRequest(state)).toContain("attentionBehavior=notify");
+  expect(mailSearchRequest({ ...state, query: "" })).toStartWith("/v1/inbox?");
+  expect(mailSearchPinFilter(state).person).toBe("sender@example.test");
+  expect(mailSearchPinFilter(state).attention).toBe("notify");
+});
+
+test("resolved destination scope survives serialization and overrides attention mailbox routing", () => {
+  openMailSearchFilter({ mailbox: "focus", attention: "all", classification: "all", person: null, query: "appointment", accountId: "work", collectionId: null }, { destinationId: "projects", destinationName: "Projects" });
+  const state = readMailSearchState(browserWindow.location as unknown as Location)!;
+  expect(state.destinationId).toBe("projects");
+  expect(state.destinationName).toBe("Projects");
+  const request = new URL(mailSearchRequest(state), "http://localhost");
+  expect(request.searchParams.get("destinationId")).toBe("projects");
+  expect(request.searchParams.get("view")).toBe("all");
+});
+
+describe("staged search modes", () => {
+  async function render() {
+    const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush(); await flush();
+  }
+  const cap = (mode: "legacy-metadata" | "indexed", epoch: string) => Response.json({ version: 1, mode, epoch, ownerId: "staged-web-owner", coverage: mode === "indexed" ? "stored-plaintext" : "stored-metadata", semantics: mode === "indexed" ? "literal-index-v3" : "legacy-substring-v1" });
+  function metadataPage(id: string, epoch: string) {
+    const response = searchResponse([{ ...inboxFixture[0]!, id, subject: `Legacy ${id}` }], false);
+    response.headers.set("X-Orca-Search-Mode", "legacy-metadata"); response.headers.set("X-Orca-Search-Epoch", epoch); return response;
+  }
+  test("before activation short text uses labeled metadata search with expected mode and epoch", async () => {
+    installViewSearchApi(); const api = globalThis.fetch; const requests: Array<{ path: string; headers: Headers }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const path = String(input);
+      if (path === "/v1/mail/search/capabilities") return cap("legacy-metadata", "b".repeat(64));
+      if (path.startsWith("/v1/inbox?")) { requests.push({ path, headers: new Headers(init?.headers) }); return metadataPage("short-ai", "b".repeat(64)); }
+      return api(input, init);
+    }) as typeof fetch;
+    openMailSearch("AI"); await render();
+    expect(requests).toHaveLength(1); expect(requests[0]!.path).toContain("limit=10");
+    expect(requests[0]!.headers.get("X-Orca-Expected-Search-Mode")).toBe("legacy-metadata");
+    expect(requests[0]!.headers.get("X-Orca-Expected-Search-Epoch")).toBe("b".repeat(64));
+    expect(browserWindow.document.body.textContent).toContain("Metadata-only search:");
+    expect(browserWindow.document.body.textContent).toContain("Body search is not enabled");
+    expect(browserWindow.document.body.textContent).not.toContain("ranked by relevance");
+  });
+  test("operator rollback during Load more clears old results and rechecks mode before explicit retry", async () => {
+    installViewSearchApi(); const api = globalThis.fetch; let mode: "indexed" | "legacy-metadata" = "indexed"; let legacyRequests = 0;
+    globalThis.fetch = (async (input, init) => {
+      const path = String(input);
+      if (path === "/v1/mail/search/capabilities") return cap(mode, (mode === "indexed" ? "a" : "c").repeat(64));
+      if (path.startsWith("/v1/mail/search?")) {
+        if (new URL(path, "http://localhost").searchParams.has("cursor")) { mode = "legacy-metadata"; return Response.json({ error: { code: "search_mode_changed", message: "Search mode changed. Restart this search." } }, { status: 409 }); }
+        const value = await searchResponse().json(); return Response.json({ ...value, nextCursor: "old-position", continuation: "matches" }, { headers: { "X-Orca-Search-Mode": "indexed", "X-Orca-Search-Epoch": "a".repeat(64) } });
+      }
+      if (path.startsWith("/v1/inbox?")) { legacyRequests++; return metadataPage("rollback-row", "c".repeat(64)); }
+      return api(input, init);
+    }) as typeof fetch;
+    openMailSearch("appointment"); await render();
+    await act(async () => button("Load more").click()); await flush(); await flush();
+    expect(browserWindow.document.querySelectorAll(".global-mail-result-list a")).toHaveLength(0);
+    expect(legacyRequests).toBe(0);
+    expect(browserWindow.document.body.textContent).toContain("Metadata-only search:");
+    await act(async () => button("Try again").click()); await flush(); await flush();
+    expect(legacyRequests).toBe(1);
+    expect(browserWindow.document.querySelector(".global-mail-result-list")?.textContent).toContain("rollback-row");
+  });
+  test("indexed lag stays an indexed error without a metadata request", async () => {
+    installViewSearchApi(); const api = globalThis.fetch; let metadataRequests = 0;
+    globalThis.fetch = (async (input, init) => {
+      const path = String(input);
+      if (path.startsWith("/v1/mail/search?")) return Response.json({ error: { code: "search_index_updating", message: "Search is catching up." } }, { status: 503 });
+      if (path.startsWith("/v1/inbox?")) metadataRequests++;
+      return api(input, init);
+    }) as typeof fetch;
+    openMailSearch("appointment"); await render();
+    expect(metadataRequests).toBe(0);
+    expect(browserWindow.document.body.textContent).toContain("Indexed search covers");
+    expect(browserWindow.document.body.textContent).toContain("Search is catching up");
+    expect(browserWindow.document.body.textContent).not.toContain("Metadata-only search:");
   });
 });

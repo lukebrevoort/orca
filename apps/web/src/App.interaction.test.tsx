@@ -7,6 +7,7 @@ import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type Compos
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
 import { demoStore } from "./demo-store";
+import { refreshDestinations } from "./mail-destinations";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
 
@@ -430,6 +431,14 @@ function createProductionInboxFetch(
     if (url.pathname === "/v1/me") return jsonResponse(accountFixture);
     if (url.pathname === "/v1/sync/status") return jsonResponse(syncStatus);
     if (url.pathname === "/v1/sync/gmail") return jsonResponse({});
+    if (url.pathname === "/v1/mail/search/capabilities") return jsonResponse({ version: 1, mode: "indexed", epoch: "a".repeat(64), ownerId: "app-search-owner", coverage: "stored-plaintext", semantics: "literal-index-v3" });
+    if (url.pathname === "/v1/accounts") return jsonResponse({ items: [accountFixture], nextCursor: null });
+    if (url.pathname === "/v1/mail/search") {
+      const query = (url.searchParams.get("query") ?? "").toLowerCase();
+      const response = jsonResponse({ accounts: [accountFixture], messages: messages.filter(message => [message.from.name, message.from.email, message.subject, message.snippet].filter(Boolean).join(" ").toLowerCase().includes(query)),
+        nextCursor: null, continuation: "none", snapshot: "synthetic-search-snapshot", order: "field-relevance-v1", semantics: "literal-index-v3", coverage: "stored-plaintext" });
+      response.headers.set("X-Orca-Search-Mode", "indexed"); response.headers.set("X-Orca-Search-Epoch", "a".repeat(64)); return response;
+    }
     if (url.pathname === "/v1/inbox") {
       const destinationId = url.searchParams.get("destinationId");
       const mapping = destinationCatalogFixture(messages).legacyDestinationIds;
@@ -2315,35 +2324,61 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector('button[aria-label="Open Dinner on Sunday? pin"]')).toBeNull();
   });
 
-  test("starts a saved search from the global no-results state", async () => {
-    browserWindow.history.replaceState({}, "", "/dev/inbox?q=moonbase%20ledger");
-    await renderApp();
-    const search = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
-    expect(search.value).toBe("moonbase ledger");
-    const save = [...browserWindow.document.querySelectorAll("button")]
-      .find((button) => button.textContent?.includes("Save this search")) as HTMLButtonElement | undefined;
-    expect(save).toBeDefined();
-    await act(async () => { save!.click(); });
-    expect((browserWindow.document.querySelector(".pin-builder-search input") as unknown as HTMLInputElement).value).toBe("moonbase ledger");
-    const initialSave = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Pin this filter") as unknown as HTMLButtonElement;
-    await act(async () => initialSave.click());
-    expect(browserWindow.document.querySelector(".pin-builder-actions")?.textContent).toContain("Confirm this zero-match scope");
-    const confirmedSave = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Pin zero-match filter") as unknown as HTMLButtonElement;
-    await act(async () => confirmedSave.click());
-    expect(browserWindow.document.querySelector('[aria-labelledby="pin-builder-title"]')).toBeNull();
+  test("moves a legacy URL query into indexed search without a loaded-row no-match claim", async () => {
+    const originalFetch = globalThis.fetch;
+    const paths: string[] = [];
+    const api = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    globalThis.fetch = (async (input, init) => { paths.push(String(input)); return api(input, init); }) as typeof fetch;
+    try {
+      browserWindow.history.replaceState({}, "", "/dev/inbox?q=moonbase%20ledger");
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && !paths.some(path => path.startsWith("/v1/mail/search?")); i++) await waitFor(1);
+      const search = browserWindow.document.querySelector('input[aria-label="Search stored mail"]') as unknown as HTMLInputElement;
+      expect(search.value).toBe("moonbase ledger");
+      expect(new URL(browserWindow.location.href).searchParams.get("q")).toBeNull();
+      expect(paths.some(path => path.startsWith("/v1/mail/search?"))).toBe(true);
+      expect(browserWindow.document.querySelector(".pin-builder-preview")).toBeNull();
+    } finally { globalThis.fetch = originalFetch; }
   });
 
-  test("announces a concise result status without making the message list live", async () => {
-    browserWindow.history.replaceState({}, "", "/dev/inbox?q=Jordan");
-    await renderApp();
-    const listRegion = browserWindow.document.querySelector(".inbox-body");
-    const resultStatus = browserWindow.document.querySelector(".inbox-results-status");
+  test("announces indexed results without making individual result rows live", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = { ...inboxFixture[0]!, from: { name: "Jordan", email: "jordan@example.test" } };
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] });
+    try {
+      browserWindow.history.replaceState({}, "", "/dev/inbox?q=Jordan");
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && !browserWindow.document.querySelector(".global-mail-result-list"); i++) await waitFor(1);
+      expect(browserWindow.document.querySelector(".global-mail-search-results")?.getAttribute("aria-live")).toBe("polite");
+      expect(browserWindow.document.querySelector(".global-mail-result-list")?.hasAttribute("aria-live")).toBe(false);
+      expect(browserWindow.document.querySelector(".global-mail-result-count")?.textContent).toContain("1 shown");
+    } finally { globalThis.fetch = originalFetch; }
+  });
 
-    expect(listRegion?.hasAttribute("aria-live")).toBe(false);
-    expect(listRegion?.hasAttribute("aria-busy")).toBe(false);
-    expect(resultStatus?.getAttribute("role")).toBe("status");
-    expect(resultStatus?.getAttribute("aria-atomic")).toBe("true");
-    expect(resultStatus?.textContent).toBe("1 result for Jordan.");
+  test("a text pin waits for its mapped destination instead of substituting attention scope", async () => {
+    const originalFetch = globalThis.fetch;
+    const api = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    const requests: string[] = [];
+    // A previous valid catalog must not authorize navigation after refresh fails.
+    globalThis.fetch = api;
+    await refreshDestinations();
+    globalThis.fetch = (async (input, init) => {
+      const url = new URL(String(input), browserWindow.location.href); requests.push(url.pathname + url.search);
+      if (url.pathname === "/v1/destinations") return jsonResponse({ error: { message: "Synthetic catalog unavailable" } }, 503);
+      if (url.pathname === "/v1/pins") return jsonResponse([{ id: "focus-search", accountId: accountFixture.id, kind: "filter", targetId: JSON.stringify({ mailbox: "focus", attention: "all", classification: "all", person: null, query: "appointment" }), label: "Focus appointments", icon: "search", color: "#70867d", position: 0, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" }]);
+      return api(input, init);
+    }) as typeof fetch;
+    try {
+      browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && !browserWindow.document.querySelector('[aria-label="Open Focus appointments pin"]'); i++) await waitFor(1);
+      const pin = browserWindow.document.querySelector('[aria-label="Open Focus appointments pin"]') as unknown as HTMLButtonElement;
+      expect(pin).not.toBeNull(); await act(async () => pin.click());
+      expect(readMailSearchState(browserWindow.location as unknown as Location)).toBeNull();
+      expect(requests.some(path => path.startsWith("/v1/mail/search?"))).toBe(false);
+      expect(browserWindow.document.body.textContent).toContain("mail space is unavailable");
+      expect(browserWindow.document.body.textContent).toContain("appointment");
+    } finally { globalThis.fetch = originalFetch; }
   });
 
   test("exposes the visible bulk-selection state as pressed", async () => {
@@ -2549,6 +2584,8 @@ describe("Pin navigation and bulk sender actions", () => {
     });
 
     expect(browserWindow.document.querySelector(".bulk-action-bar")).toBeNull();
+    expect(readMailSearchState(browserWindow.location as unknown as Location)?.query).toBe("Jordan");
+    await act(async () => { closeMailSearch(); });
     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find(button => button.getAttribute("aria-label") === "Select") as unknown as HTMLButtonElement).click(); });
     expect(buttonByName("Select Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("false");
     await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
@@ -3485,13 +3522,13 @@ describe("Inbox reader viewport restoration", () => {
   });
 
   test("keeps reader and composer in URL order across browser Back and Forward", async () => {
-    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&q=launch&flag=kept#mail");
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&flag=kept#mail");
     await renderApp();
     await openMessage("Luke Brevoort");
     let params = new URL(browserWindow.location.href).searchParams;
     expect(params.get("thread")).toBe("thread_1");
     expect(params.get("accountId")).toBe("acct_demo");
-    expect(params.get("q")).toBe("launch");
+    expect(params.get("q")).toBeNull();
     expect(params.get("flag")).toBe("kept");
 
     await act(async () => {
@@ -3524,7 +3561,7 @@ describe("Inbox reader viewport restoration", () => {
   });
 
   test("returns from a reader to the same shared custom-space destination", async () => {
-    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&q=launch&flag=kept");
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&flag=kept");
     await renderApp();
     const custom = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
       .find((button) => button.textContent?.includes("Orca launch")) as unknown as HTMLButtonElement;
@@ -3537,7 +3574,7 @@ describe("Inbox reader viewport restoration", () => {
     await act(async () => filteredResult.click());
     let params = new URL(browserWindow.location.href).searchParams;
     expect(params.get("destination")).toBe(customDestination);
-    expect(params.get("q")).toBe("launch");
+    expect(params.get("q")).toBeNull();
     expect(params.get("flag")).toBe("kept");
     expect(params.get("thread")).toBe("thread_1");
 
@@ -3592,7 +3629,8 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
     expect(params.get("thread")).toBeNull();
     expect(params.get("destination")).toBe("focus");
-    expect(params.get("q")).toBe("notes");
+    expect(params.get("q")).toBeNull();
+    expect(params.get("searchQuery")).toBe("notes");
     expect(params.get("flag")).toBe("kept");
   });
 

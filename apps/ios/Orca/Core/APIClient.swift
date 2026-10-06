@@ -19,6 +19,11 @@ actor APIClient {
     private let token: @Sendable () async -> String?
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
+    // This actor belongs to the authenticated app session, so a new query or
+    // InboxViewModel cannot forget an indexed capability already observed.
+    private var indexedSearchOwners = Set<String>()
+    private var searchCapabilityGeneration = UUID()
+    private var currentSearchSession: MailSearchSession?
 
     init(baseURL: URL, session: URLSession? = nil, token: @escaping @Sendable () async -> String?) {
         self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
@@ -29,13 +34,15 @@ actor APIClient {
         guard !data.isEmpty else { if T.self == EmptyResponse.self { return EmptyResponse() as! T }; throw ClientError.invalidResponse }
         do { return try decoder.decode(T.self, from: data) } catch { throw ClientError.decoding(error) }
     }
-    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> (Data, HTTPURLResponse) {
+    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> (Data, HTTPURLResponse) {
         let endpoint = pathSuffix.reduce(baseURL.appending(path: path)) { $0.appending(component: $1) }
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
         guard let url = components.url else { throw ClientError.invalidBaseURL }
         var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+        if path.hasPrefix("v1/mail/search") || headers["X-Orca-Expected-Search-Mode"] != nil { request.cachePolicy = .reloadIgnoringLocalCacheData }
         if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
         if let body { request.httpBody = try encoder.encode(AnyEncodable(body)); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, response) = try await session.data(for: request)
@@ -57,11 +64,72 @@ private struct AnyEncodable: Encodable { let value: any Encodable; init(_ value:
 
 extension APIClient {
     func accounts() async throws -> [MailAccount] { struct Page: Decodable { var items: [MailAccount] }; let page: Page = try await request("v1/accounts"); return page.items }
-    func inbox(accountId: String, view: String, query text: String?, cursor: String? = nil, destinationId: String? = nil) async throws -> InboxPage {
-        var q = [URLQueryItem(name: "accountId", value: accountId), .init(name: "view", value: view), .init(name: "limit", value: "30")]
+    func inbox(accountId: String, view: String, query text: String?, cursor: String? = nil, destinationId: String? = nil, limit: Int = 30, searchSession: MailSearchSession? = nil) async throws -> InboxPage {
+        var q = [URLQueryItem(name: "accountId", value: accountId), .init(name: "view", value: view), .init(name: "limit", value: String(limit))]
         if let text, !text.isEmpty { q.append(.init(name: "query", value: text)) }; if let cursor { q.append(.init(name: "cursor", value: cursor)) }
         if let destinationId { q.append(.init(name: "destinationId", value: destinationId)) }
+        if let searchSession {
+            guard searchSession.capabilities.mode == .legacyMetadata, text?.isEmpty == false else { throw ClientError.invalidResponse }
+            return try await boundSearchRequest("v1/inbox", query: q, searchSession: searchSession)
+        }
         return try await request("v1/inbox", query: q)
+    }
+    func searchCapabilities(expectedOwnerID: String? = nil) async throws -> MailSearchSession {
+        let origin = baseURL, generation = UUID()
+        searchCapabilityGeneration = generation
+        let capabilities: MailSearchCapabilities
+        let isLegacyServer: Bool
+        do {
+            capabilities = try await request("v1/mail/search/capabilities")
+            isLegacyServer = false
+        } catch let ClientError.http(status, _) where status == 404 {
+            // An old server has no capability route. Verify the existing session
+            // before interpreting that absence as an explicit compatibility mode.
+            let auth: AuthSession = try await request("v1/auth/session")
+            guard auth.isAuthenticated, let owner = auth.user, !owner.id.isEmpty else { throw ClientError.http(401, nil) }
+            guard !indexedSearchOwners.contains("\(searchOrigin(origin))|\(owner.id)") else {
+                throw ClientError.http(503, APIErrorBody(code: "search_capabilities_unavailable", message: "Search capabilities could not be verified. Try again without changing your query or mailbox.", retryable: true))
+            }
+            capabilities = MailSearchCapabilities(version: 1, mode: .legacyMetadata, epoch: "legacy-server", ownerId: owner.id, coverage: "stored-metadata", semantics: "legacy-substring-v1")
+            isLegacyServer = true
+        }
+        guard generation == searchCapabilityGeneration, origin == baseURL else { throw CancellationError() }
+        guard expectedOwnerID == nil || expectedOwnerID == capabilities.ownerId else { throw ClientError.invalidResponse }
+        if capabilities.mode == .indexed { indexedSearchOwners.insert("\(searchOrigin(origin))|\(capabilities.ownerId)") }
+        let result = MailSearchSession(capabilities: capabilities, origin: origin, isLegacyServer: isLegacyServer)
+        currentSearchSession = result
+        return result
+    }
+    private func boundSearchRequest<T: Decodable>(_ path: String, query: [URLQueryItem], searchSession: MailSearchSession) async throws -> T {
+        guard searchSession == currentSearchSession, searchSession.origin == baseURL else { throw searchModeChanged() }
+        let capability = searchSession.capabilities
+        let (data, response) = try await raw(path, query: query, headers: [
+            "X-Orca-Expected-Search-Mode": capability.mode.rawValue,
+            "X-Orca-Expected-Search-Epoch": capability.epoch,
+        ])
+        guard searchSession == currentSearchSession, searchSession.origin == baseURL else { throw searchModeChanged() }
+        let responseMode = response.value(forHTTPHeaderField: "X-Orca-Search-Mode")
+        let responseEpoch = response.value(forHTTPHeaderField: "X-Orca-Search-Epoch")
+        let oldServerWithoutHeaders = searchSession.isLegacyServer && responseMode == nil && responseEpoch == nil
+        guard oldServerWithoutHeaders || (responseMode == capability.mode.rawValue && responseEpoch == capability.epoch) else { throw searchModeChanged() }
+        do { return try decoder.decode(T.self, from: data) } catch { throw ClientError.decoding(error) }
+    }
+    private func searchModeChanged() -> ClientError {
+        .http(409, APIErrorBody(code: "search_mode_changed", message: "Search coverage changed. Restart this search to use the current mode.", retryable: true))
+    }
+    private func searchOrigin(_ url: URL) -> String {
+        var origin = URLComponents()
+        origin.scheme = url.scheme?.lowercased(); origin.host = url.host?.lowercased()
+        origin.port = url.port == (origin.scheme == "https" ? 443 : 80) ? nil : url.port
+        return origin.string ?? url.absoluteString
+    }
+    func searchMail(query text: String, accountId: String? = nil, view: MailSearchView = .all, cursor: String? = nil, destinationId: String? = nil, searchSession: MailSearchSession) async throws -> MailSearchPage {
+        guard searchSession.capabilities.mode == .indexed else { throw searchModeChanged() }
+        var query = [URLQueryItem(name: "query", value: text), .init(name: "limit", value: "10"), .init(name: "view", value: view.rawValue)]
+        if let accountId { query.append(.init(name: "accountId", value: accountId)) }
+        if let cursor { query.append(.init(name: "cursor", value: cursor)) }
+        if let destinationId { query.append(.init(name: "destinationId", value: destinationId)) }
+        return try await boundSearchRequest("v1/mail/search", query: query, searchSession: searchSession)
     }
     func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)]) }
     func markRead(_ id: String, accountId: String, isRead: Bool = true) async throws { struct Ack: Decodable { var ok: Bool }; let _: Ack = try await request("v1/threads/\(id)/read", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: ["isRead": isRead]) }

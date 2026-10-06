@@ -40,6 +40,8 @@ import {
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
 import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
+import { OrganizationViewQueryError } from "./query-error.ts";
+export { OrganizationViewQueryError } from "./query-error.ts";
 
 export class OrganizationViewAccessError extends Error {
   readonly code: "account_denied" | "resource_denied";
@@ -54,11 +56,6 @@ export class OrganizationViewNotFoundError extends Error {
 export class OrganizationViewConflictError extends Error {
   readonly code = "revision_conflict" as const;
   constructor(message = "The View changed before this request could be applied") { super(message); this.name = "OrganizationViewConflictError"; }
-}
-
-export class OrganizationViewQueryError extends Error {
-  readonly code = "invalid_cursor" as const;
-  constructor(message: string) { super(message); this.name = "OrganizationViewQueryError"; }
 }
 
 export class OrganizationViewValidationError extends Error {

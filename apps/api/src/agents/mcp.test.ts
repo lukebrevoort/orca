@@ -1,9 +1,11 @@
+import { prepareSyntheticSearchIndex } from "../search/test-support.ts";
+import { disableSearch } from "../search/indexing/admin.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { afterEach, describe, test } from "bun:test";
+import { afterEach, beforeEach, describe, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { jwtVerify, SignJWT } from "jose";
@@ -46,6 +48,12 @@ const allScopes: OrcaMcpScope[] = [
 ];
 const oauthScopes = ["mail:read", "agent_events:read", "organization:control"];
 const tempDirs: string[] = [];
+let previousSearchAuth: { session?: string; encryption?: string };
+beforeEach(() => {
+  previousSearchAuth = { session: process.env.SESSION_SECRET, encryption: process.env.TOKEN_ENCRYPTION_KEY };
+  process.env.SESSION_SECRET = "synthetic-mcp-search-session-secret-only";
+  process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 17).toString("base64");
+});
 
 async function signToken(input: {
   userId?: string;
@@ -396,6 +404,8 @@ function createFixture(options: {
 }
 
 afterEach(() => {
+  if (previousSearchAuth.session === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = previousSearchAuth.session;
+  if (previousSearchAuth.encryption === undefined) delete process.env.TOKEN_ENCRYPTION_KEY; else process.env.TOKEN_ENCRYPTION_KEY = previousSearchAuth.encryption;
   while (tempDirs.length) rmSync(tempDirs.pop()!, { recursive: true, force: true });
 });
 
@@ -717,6 +727,51 @@ describe("Orca scoped MCP server", () => {
     }
   });
 
+  test("stages literal short metadata MCP searches until explicit activation and rollback", async () => {
+    const { app, sqlite } = createFixture();
+    try {
+      const token = await signToken({ accountIds: ["account_a", "account_b"] });
+      const search = async (query: string, cursor?: string) => rpcBody(await callMcp(app, token, "tools/call", {
+        name: "search_mail", arguments: { query, cursor, attention: "all", classification: "all", limit: 1 },
+      }));
+      const first = (await search("a")).result.structuredContent;
+      assert.equal(first.counts.attention.all, 2);
+      assert.equal(first.semantics, "legacy-substring-v1");
+      assert.deepEqual(first.messages.map((message: { id: string }) => message.id), ["message_a_1"]);
+      assert.ok(first.nextCursor);
+      const second = (await search("a", first.nextCursor)).result.structuredContent;
+      assert.deepEqual(second.messages.map((message: { id: string }) => message.id), ["message_a_2"]);
+      assert.equal(second.counts.attention.all, 2);
+      for (const [literal, expected] of [["AI", 1], ['"unclosed', 0], ["50%", 0], ["code_a", 0], ["super-secret-token-value", 0]] as const) {
+        const response = (await search(literal)).result;
+        assert.equal(response.isError, undefined);
+        assert.equal(response.structuredContent.counts.attention.all, expected);
+      }
+      const denied = await rpcBody(await callMcp(app, token, "tools/call", { name: "search_mail", arguments: { query: "a", accountId: "account_b" } }));
+      assert.equal(JSON.parse(denied.result.content[0].text).error.code, "account_denied");
+      const legacyCursor = (await search("example")).result.structuredContent.nextCursor;
+      prepareSyntheticSearchIndex(sqlite);
+      assert.equal(JSON.parse((await search("a")).result.content[0].text).error.code, "search_anchor_required");
+      assert.equal(JSON.parse((await search("example", legacyCursor)).result.content[0].text).error.code, "search_invalid_cursor");
+      const indexed = (await search("example")).result.structuredContent;
+      assert.equal(indexed.counts.attention.all, 2);
+      assert.equal(indexed.semantics, "literal-index-v3");
+      sqlite.exec("UPDATE emails SET body_text='changed synthetic body' WHERE id='message_a_1'");
+      assert.equal((await search("example")).result.structuredContent.counts.attention.all, 2);
+      sqlite.exec("UPDATE emails SET subject='Updated metadata' WHERE id='message_a_1'");
+      assert.equal(JSON.parse((await search("example")).result.content[0].text).error.code, "search_index_updating");
+      disableSearch(sqlite, "Synthetic MCP compatibility rollback");
+      assert.equal((await search("a")).result.structuredContent.counts.attention.all, 2);
+      assert.equal(JSON.parse((await search("example", indexed.nextCursor)).result.content[0].text).error.code, "search_invalid_cursor");
+      sqlite.exec("ALTER TABLE mail_search_control RENAME TO unavailable_search_control");
+      try {
+        const browsing = (await search("")).result.structuredContent;
+        assert.equal(browsing.counts.attention.all, 2);
+        assert.equal(JSON.parse((await search("example")).result.content[0].text).error.code, "search_index_unavailable");
+      } finally { sqlite.exec("ALTER TABLE unavailable_search_control RENAME TO mail_search_control"); }
+    } finally { sqlite.close(); }
+  });
+
   test("keeps every tool and source link inside the live user/account intersection", async () => {
     const { app, sqlite, initialWorkspaceRevision } = createFixture();
     try {
@@ -783,6 +838,7 @@ describe("Orca scoped MCP server", () => {
       });
       assert.equal((await rpcBody(next)).result.structuredContent.messages[0].id, "message_a_2");
 
+      prepareSyntheticSearchIndex(sqlite);
       const filtered = await callMcp(app, token, "tools/call", {
         name: "search_mail",
         arguments: {
@@ -797,6 +853,10 @@ describe("Orca scoped MCP server", () => {
       const filteredBody = await rpcBody(filtered);
       assert.deepEqual(filteredBody.result.structuredContent.messages.map((message: { id: string }) => message.id), ["message_a_1"]);
       assert.equal(filteredBody.result.structuredContent.counts.attention.all, 1);
+      const bodyOnly = await rpcBody(await callMcp(app, token, "tools/call", { name: "search_mail", arguments: { query: "super-secret-token-value", attention: "all", classification: "all" } }));
+      assert.equal(bodyOnly.result.structuredContent.counts.attention.all, 0);
+      const excessiveTerms = await rpcBody(await callMcp(app, token, "tools/call", { name: "search_mail", arguments: { query: Array.from({ length: 17 }, (_, i) => `term${i}`).join(" ") } }));
+      assert.equal(JSON.parse(excessiveTerms.result.content[0].text).error.code, "search_invalid_query");
 
       const cursorReplay = await callMcp(app, token, "tools/call", {
         name: "search_mail",
@@ -878,6 +938,7 @@ describe("Orca scoped MCP server", () => {
         mcp: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true },
       });
       assert.deepEqual(described.capabilities.authority, { sendMail: false, deleteProviderMail: false });
+      prepareSyntheticSearchIndex(sqlite);
       const historicalMail = await rpcBody(await callMcp(app, token, "tools/call", {
         name: "search_mail",
         arguments: { classification: "all", attention: "all", query: "Production", limit: 20 },

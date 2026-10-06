@@ -1399,6 +1399,7 @@ export function InboxApp({
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
+  const [legacySearchNotice, setLegacySearchNotice] = useState<{ query: string; message: string } | null>(null);
   const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && readSurfaceLocation(window.location).composer ? "compose" : null);
   const [composeDraftId, setComposeDraftId] = useState<string | null>(() => typeof window === "undefined" ? null : readSurfaceLocation(window.location).composer?.draftId ?? null);
@@ -2318,10 +2319,23 @@ export function InboxApp({
     setZen(preferences.composeZenByDefault);
   }
 
-  function changeStreamQuery(query: string) {
-    setStreamQuery(query);
-    surfaceHistoryRef.current?.replaceQuery(query);
-  }
+  function changeStreamQuery(query: string) { openMailSearch(query); }
+  useEffect(() => {
+    if (!streamQuery.trim() || selectedThreadId || panelMode || organizationStudioOpen || new URLSearchParams(window.location.search).get("search") === "mail") return;
+    if (activeSavedViewId || activeMailbox === "drafts" || activeMailbox === "later") {
+      setLegacySearchNotice({ query: streamQuery, message: "Search within this view is not supported yet." });
+      setStreamQuery(""); surfaceHistoryRef.current?.replaceQuery(""); return;
+    }
+    if (destinationSurface && !requestedDestinationId) return;
+    const query = streamQuery;
+    setStreamQuery("");
+    surfaceHistoryRef.current?.replaceQuery("");
+    openMailSearchFilter({
+      mailbox: activeCollectionId ? "all" : ["inbox", "focus", "quiet", "hidden", "all"].includes(activeMailbox) ? activeMailbox as PinMailbox : "all",
+      attention: inboxFilter, classification: classificationView, person: personFilter, query,
+      accountId: activeCollection?.accountId ?? null, collectionId: activeCollectionId, dataSource: "stored_mail",
+    }, requestedDestinationId ? { destinationId: requestedDestinationId, destinationName: catalog.label(requestedDestinationId) } : undefined);
+  }, [streamQuery, requestedDestinationId, activeCollectionId, activeSavedViewId, selectedThreadId, panelMode, organizationStudioOpen]);
 
   function openOrganizer(message: InboxMessage) {
     if (organizerCloseTimerRef.current) {
@@ -2966,8 +2980,18 @@ export function InboxApp({
     if (pin.kind === "filter") {
       const filter = parsePinFilterTarget(pin.targetId);
       if (!filter) return;
-      if (filter.dataSource === "stored_mail") {
-        openMailSearchFilter(filter);
+      if (filter.dataSource === "stored_mail" || filter.query.trim()) {
+        const behavior = filter.mailbox === "inbox" ? "normal" : filter.mailbox === "all" ? null : filter.mailbox;
+        const destinationId = behavior ? catalog.data?.legacyDestinationIds[behavior] : null;
+        const destination = destinationId ? catalog.data?.destinations.find(item => item.id === destinationId) : null;
+        if (behavior && (catalog.loading || catalog.error || !destinationId || !destination || destination.retiredAt)) {
+          setLegacySearchNotice({ query: filter.query, message: catalog.loading
+            ? "Mail spaces are still loading. This saved search has not changed scope."
+            : "This saved search's mail space is unavailable. Its scope has not changed." });
+          return;
+        }
+        setLegacySearchNotice(null);
+        openMailSearchFilter(filter, destinationId ? { destinationId, destinationName: catalog.label(destinationId) } : undefined);
         return;
       }
       surfaceHistoryRef.current?.navigate(filter.mailbox);
@@ -3256,6 +3280,7 @@ export function InboxApp({
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
+          {legacySearchNotice ? <p className="view-state" role="status">{legacySearchNotice.message} Your query “{legacySearchNotice.query}” is preserved. <button onClick={() => { openMailSearch(legacySearchNotice.query); setLegacySearchNotice(null); }} type="button">Search all stored mail</button> <button onClick={() => setLegacySearchNotice(null)} type="button">Dismiss</button></p> : null}
           {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
@@ -4879,7 +4904,6 @@ function InboxView({
     { id: "focus", label: "Keep in focus" },
     { id: "normal", label: "Flow" },
   ];
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const pinMenuRef = useRef<HTMLDivElement>(null);
   const pinMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const pinBuilderInputRef = useRef<HTMLInputElement>(null);
@@ -4915,7 +4939,7 @@ function InboxView({
   const [bulkPendingBehavior, setBulkPendingBehavior] = useState<AttentionBehavior | null>(null);
   const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; targets: BulkAttentionTarget[] } | null>(null);
   const useSelectedSendersRef = useRef<HTMLButtonElement>(null);
-  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
+  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode), [messages, viewMode]);
   const visibleRowKeys = useMemo(() => new Set(displayMessages.map(messageIdentityKey)), [displayMessages]);
   const selectedVisibleRowCount = [...visibleRowKeys].filter((key) => selectedRows.has(key)).length;
   const visibleSelectedRows = [...selectedRows.values()].filter(message => visibleRowKeys.has(messageIdentityKey(message)));
@@ -4957,6 +4981,7 @@ function InboxView({
     collectionId: collection?.id ?? null,
   }), [account?.id, collection?.id, pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
   const pinPreview = useMemo(() => {
+    if (pinFilter.query) return { count: 0, messages: [] };
     let candidates = getMessagesForMailbox(allMessages, pinFilter.mailbox, attentionByAddress);
     const signalView = pinFilterClassificationView(pinFilter);
     if (signalView) candidates = candidates.filter((message) => classificationMatchesView(message, signalView));
@@ -4977,18 +5002,7 @@ function InboxView({
   const formatInboxReceivedAt = createReceivedAtFormatter();
   const unreadCount = displayMessages.filter((message) => message.unread).length;
   const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
-  useEffect(() => {
-    if (collection) return;
-    const focusSearch = (event: KeyboardEvent) => {
-      if (!topLayerActive && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
-      }
-    };
-    window.addEventListener("keydown", focusSearch);
-    return () => window.removeEventListener("keydown", focusSearch);
-  }, [collection, topLayerActive]);
+
 
   useEffect(() => {
     setSelectionMode(viewMode === "all" && new URLSearchParams(window.location.search).has("addSendersTo"));
@@ -5038,6 +5052,7 @@ function InboxView({
   function savePinFilter(event: React.FormEvent) {
     event.preventDefault();
     if (destinationFilterUnsupported) return;
+    if (pinFilter.query) { closePinBuilder(); openMailSearchFilter({ ...pinFilter, dataSource: "stored_mail" }); return; }
     if (!pinPreview.count && !pinZeroMatchConfirmed) {
       setPinZeroMatchConfirmed(true);
       return;
@@ -5200,7 +5215,7 @@ function InboxView({
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
         {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-label={selectionMode ? "Done selecting" : "Select"} aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
-        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-label={selectionMode ? "Done selecting" : "Select"} aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {!collection ? <div className="stream-header-tools"><button className="stream-search" onClick={() => openMailSearch(searchQuery)} type="button"><span aria-hidden="true">⌕</span><span>Search all stored mail</span><kbd>⌘K</kbd></button><button aria-label={selectionMode ? "Done selecting" : "Select"} aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -5296,7 +5311,7 @@ function InboxView({
                       <code>{pinFilterColor}</code>
                     </div>
                   </fieldset>
-                  <section aria-live="polite" className="pin-builder-preview">
+                  {pinFilter.query ? <p className="pin-builder-empty">Review this query against the full stored-mail index. Results are ranked by relevance.</p> : <section aria-live="polite" className="pin-builder-preview">
                     <header><div><span>Preview</span><strong>{pinPreview.count} matching {pinPreview.count === 1 ? "thread" : "threads"}</strong></div><small>{pinFilterDisplayLabel}</small></header>
                     {pinPreview.messages.length ? (
                       <ul>
@@ -5306,8 +5321,8 @@ function InboxView({
                         })}
                       </ul>
                     ) : <p className="pin-builder-empty">No messages match this exact scope. You can save it to watch for future mail, or broaden a filter.</p>}
-                  </section>
-                  <footer className="pin-builder-actions"><span>{!pinPreview.count && pinZeroMatchConfirmed ? "Confirm this zero-match scope" : <>Saved as <strong>{pinFilterDisplayLabel}</strong></>}</span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim() && !pinFilterPerson} type="submit">{!pinPreview.count && pinZeroMatchConfirmed ? "Pin zero-match filter" : "Pin this filter"}</button></footer>
+                  </section>}
+                  <footer className="pin-builder-actions"><span>{!pinPreview.count && pinZeroMatchConfirmed ? "Confirm this zero-match scope" : <>Saved as <strong>{pinFilterDisplayLabel}</strong></>}</span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim() && !pinFilterPerson} type="submit">{pinFilter.query ? "Review indexed search" : !pinPreview.count && pinZeroMatchConfirmed ? "Pin zero-match filter" : "Pin this filter"}</button></footer>
                 </form>
             </TopLayer>
           ) : null}

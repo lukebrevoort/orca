@@ -1,5 +1,6 @@
-import { organizationViewDefinitionSchema, type OrganizationViewDefinition, type FacetFilter } from "@orca/shared";
-import { OrganizationViewQueryError } from "./module.ts";
+import { organizationViewDefinitionSchema, type OrganizationViewDefinition } from "@orca/shared/organization-views";
+import type { FacetFilter } from "@orca/shared";
+import { OrganizationViewQueryError } from "./query-error.ts";
 type SqlBinding = string | number;
 function placeholders(values: readonly unknown[]) { return values.map(() => "?").join(","); }
 const ecmaScriptTrimCharacterSql = "char(9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279)";

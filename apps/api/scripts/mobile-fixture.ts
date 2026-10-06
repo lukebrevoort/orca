@@ -1,3 +1,6 @@
+import { disableSearch } from "../src/search/indexing/admin.ts";
+import { seedSearchFixture } from "./search-fixture-seed.ts";
+import { prepareSyntheticSearchIndex } from "../src/search/test-support.ts";
 /**
  * Isolated, loopback-only iOS integration server. Never reads the user's database
  * or calls a mail provider. Stop with Ctrl-C; its temporary mailbox is removed.
@@ -82,6 +85,8 @@ for (const [name, threadId] of [["Hub notifications", "ios-fixture-thread-2"], [
     name, description: "Mail you can browse without alerts", definition: { revision: 1, accountIds: [accountId], thread: threadId === "no-matching-thread" ? { subjectContains: "No fixture subject matches this" } : { ids: [threadId!] } },
   } });
 }
+seedSearchFixture(db, accountId, "ios-fixture-search", "ios-fixture-inbox", 35);
+prepareSyntheticSearchIndex(sqlite);
 const credential = createMobileSession(db, userId);
 sqlite.close();
 
@@ -123,6 +128,16 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) 
   // Authenticated controls exist only inside this disposable loopback fixture.
   // They simulate browser consent and another device completing delivery; no
   // Google/OAuth request, persistent grant, or provider delivery is performed.
+  if (url.pathname === "/__fixture/search/mode" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    const raw = await request.text(); if (raw.length > 256) return new Response(null, { status: 413 });
+    let mode: unknown; try { mode = JSON.parse(raw).mode; } catch { return new Response(null, { status: 400 }); }
+    if (mode !== "legacy-metadata" && mode !== "indexed") return new Response(null, { status: 400 });
+    const { sqlite } = createDatabaseClient();
+    try { if (mode === "indexed") prepareSyntheticSearchIndex(sqlite); else disableSearch(sqlite, "Synthetic search compatibility journey"); }
+    finally { sqlite.close(); }
+    return new Response(null, { status: 204 });
+  }
   if (url.pathname.startsWith("/__fixture/compose/")) {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     if (request.method === "GET" && url.pathname === "/__fixture/compose/state") {

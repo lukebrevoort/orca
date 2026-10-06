@@ -1,0 +1,187 @@
+{
+  "generatedAt": "2026-10-05T23:16:14.618671+00:00",
+  "scope": "Queued search architecture only; old PR224 coefficients are not used.",
+  "rates": {
+    "monthSeconds": 2592000,
+    "cpuUSDPerSecond": 7.71604938271605e-06,
+    "ramUSDPerGBSecond": 3.858024691358025e-06,
+    "volumeUSDPerGBMonth": 0.15,
+    "egressUSDPerGB": 0.05,
+    "bytesPerGB": 1000000000
+  },
+  "evidence": {
+    "readReport": "orca-search-v3-final-read-benchmark.json",
+    "writeReport": "orca-search-v3-queued-benchmark.json",
+    "pricingURL": "https://docs.railway.com/pricing/plans#resource-usage-pricing",
+    "volumeURL": "https://docs.railway.com/volumes/reference#pricing"
+  },
+  "measured": {
+    "readCPUSeconds": 0.19268168,
+    "readRAMGBSeconds": 0.006485593166919844,
+    "readSelfReportedPeakMiB": 82.24609375,
+    "readExternalSamplerPeakMiB": 83.484375,
+    "writeCPUSeconds": 0.0315786,
+    "writeRAMGBSeconds": 0.0008280771147335682,
+    "readUSDPerMillion": 1.5117629366007712,
+    "writeUSDPerMillionJobs": 0.24685677899202765
+  },
+  "assumptions": {
+    "sealChild": "Mean apply-child CPU/RAM; not independently measured",
+    "countCPUSeconds": 1.0,
+    "countRAMGBSecondsProxy": 0.11247268325340369,
+    "countRAMProxy": "Self-reported peak times entire observed elapsed time; not measured RAM integral",
+    "persistentAPIRAMDelta": "Unmeasured",
+    "schedulerAndBookkeepingCPU": "Unmeasured",
+    "scenarioStorage": "Independent average occupied-storage assumptions, not inferred from counts or tiny bodies",
+    "netSavings": "No before/after old read-path CPU comparison: no savings subtracted"
+  },
+  "scenarios": [
+    {
+      "name": "Low",
+      "ordinaryPages": 1000,
+      "exactCounts": 100,
+      "metadataChanges": 1000,
+      "bodyOnlyChanges": 1000,
+      "jobs": 3000,
+      "averageIncrementalVolumeGB": 0.1,
+      "readUSD": 0.0015117629366007712,
+      "writeUSD": [
+        0.0007869794114265841,
+        0.001481140673952166
+      ],
+      "storageUSD": 0.015,
+      "subtotalExcludingCountsAndUnmeasuredAPIUSD": [
+        0.017298742348027356,
+        0.017992903610552936
+      ],
+      "countSensitivityUSD": 0.0008149971771810971,
+      "countInclusiveIllustrationUSD": [
+        0.018113739525208453,
+        0.018807900787734033
+      ]
+    },
+    {
+      "name": "Medium",
+      "ordinaryPages": 10000,
+      "exactCounts": 1000,
+      "metadataChanges": 10000,
+      "bodyOnlyChanges": 10000,
+      "jobs": 30000,
+      "averageIncrementalVolumeGB": 1,
+      "readUSD": 0.01511762936600771,
+      "writeUSD": [
+        0.007868559830370882,
+        0.01481140673952166
+      ],
+      "storageUSD": 0.15,
+      "subtotalExcludingCountsAndUnmeasuredAPIUSD": [
+        0.1729861891963786,
+        0.17992903610552935
+      ],
+      "countSensitivityUSD": 0.00814997177181097,
+      "countInclusiveIllustrationUSD": [
+        0.18113616096818957,
+        0.18807900787734033
+      ]
+    },
+    {
+      "name": "High",
+      "ordinaryPages": 100000,
+      "exactCounts": 10000,
+      "metadataChanges": 100000,
+      "bodyOnlyChanges": 100000,
+      "jobs": 300000,
+      "averageIncrementalVolumeGB": 4,
+      "readUSD": 0.15117629366007712,
+      "writeUSD": [
+        0.07868559830370882,
+        0.1481140673952166
+      ],
+      "storageUSD": 0.6,
+      "subtotalExcludingCountsAndUnmeasuredAPIUSD": [
+        0.8298618919637859,
+        0.8992903610552937
+      ],
+      "countSensitivityUSD": 0.08149971771810971,
+      "countInclusiveIllustrationUSD": [
+        0.9113616096818956,
+        0.9807900787734034
+      ]
+    }
+  ],
+  "backfill": [
+    {
+      "messages": 20000,
+      "jobs": 40000,
+      "drains": 2500,
+      "childCPUSeconds": 1263.144,
+      "childCPUUSD": 0.009746481481481481,
+      "childActiveSeconds": 1103.773392,
+      "drainProxyActiveSeconds": 1186.06652875,
+      "schedulerIdleSeconds": 12495,
+      "pacedWallSeconds": 13681.06652875,
+      "caveat": "Extrapolation, not measured supervised backfill; excludes baseline enqueue, size effects, retries, contention and exact final seals."
+    },
+    {
+      "messages": 100000,
+      "jobs": 200000,
+      "drains": 12500,
+      "childCPUSeconds": 6315.719999999999,
+      "childCPUUSD": 0.048732407407407405,
+      "childActiveSeconds": 5518.866960000001,
+      "drainProxyActiveSeconds": 5930.332643750001,
+      "schedulerIdleSeconds": 62495,
+      "pacedWallSeconds": 68425.33264375,
+      "caveat": "Extrapolation, not measured supervised backfill; excludes baseline enqueue, size effects, retries, contention and exact final seals."
+    }
+  ],
+  "sourceVerification": {
+    "apps/api/drizzle/0051_queued_mail_search.sql": {
+      "expected": "9be0ae059893d08504658e7e4955f6b8870a412a7efe1b7b2e46a20f818a45ad",
+      "current": "9be0ae059893d08504658e7e4955f6b8870a412a7efe1b7b2e46a20f818a45ad"
+    },
+    "apps/api/src/search/indexing/schema.ts": {
+      "expected": "f7b32f122870fba82ac49bf1198096ee216078e83cc5f338b97ce7363706e6e2",
+      "current": "f7b32f122870fba82ac49bf1198096ee216078e83cc5f338b97ce7363706e6e2"
+    },
+    "apps/api/src/search/indexing/supervisor.ts": {
+      "expected": "71673b400745ac3f123bf994d01759ecfe9c687e92470d267ec68d868e8904ab",
+      "current": "71673b400745ac3f123bf994d01759ecfe9c687e92470d267ec68d868e8904ab"
+    },
+    "apps/api/src/search/indexing/worker.ts": {
+      "expected": "e3a58cf973762f20b280142508e635c188d7540bf2905c281b3c5c18ab425331",
+      "current": "e3a58cf973762f20b280142508e635c188d7540bf2905c281b3c5c18ab425331"
+    },
+    "apps/api/src/search/indexing/worker-core.ts": {
+      "expected": "02a0d010188d21b921fbff312f3b2a6c125dbd63534380662d57a8ca33ab6925",
+      "current": "02a0d010188d21b921fbff312f3b2a6c125dbd63534380662d57a8ca33ab6925"
+    },
+    "apps/api/src/search/read.ts": {
+      "expected": "68feb01a332ad7fc65016a59d4932253552bd3ce42c7201f1364385a4daf835a",
+      "current": "68feb01a332ad7fc65016a59d4932253552bd3ce42c7201f1364385a4daf835a"
+    },
+    "apps/api/src/search/executor.ts": {
+      "expected": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6",
+      "current": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6"
+    },
+    "apps/api/src/search/protocol.ts": {
+      "expected": "652f003a03570e48ce1dbc7883fbeb9f8920bc84fd0b20ceec64657990a6099e",
+      "current": "652f003a03570e48ce1dbc7883fbeb9f8920bc84fd0b20ceec64657990a6099e"
+    },
+    "apps/api/src/mailbox/read.ts": {
+      "expected": "c09833806db09d9a9e7c145a41b694d01f9f198d7e9d62d99bb7fadc27c68c23",
+      "current": "c09833806db09d9a9e7c145a41b694d01f9f198d7e9d62d99bb7fadc27c68c23"
+    },
+    "scripts/ci/queued-search-benchmark.ts": {
+      "expected": "5b746a0cb860e5e5f2ee26d75f25123ae17ec476ba68d57fe37cec35b7283ec6",
+      "current": "5b746a0cb860e5e5f2ee26d75f25123ae17ec476ba68d57fe37cec35b7283ec6"
+    }
+  },
+  "limitations": [
+    "Local warm-cache overlayfs samples, not Railway latency or billed usage",
+    "20,000 synthetic messages; maximum 120-byte body; no real-body multiplier",
+    "Exact count: one successful sample; CPU and RAM integral not measured",
+    "No production changes, new stress tests, or new security validation performed"
+  ],
+  "publicationNote": "Public synthetic benchmark coefficients and hypothetical scenarios only. Production service identifiers, real usage, capacity and billing observations are excluded."
+}

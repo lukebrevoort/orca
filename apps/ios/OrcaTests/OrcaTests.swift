@@ -3,13 +3,20 @@ import XCTest
 
 private final class StubURLProtocol: URLProtocol {
     nonisolated(unsafe) static var handler: ((URLRequest) throws -> (status: Int, data: Data))?
+    nonisolated(unsafe) static var responseHeaders: ((URLRequest) -> [String: String])?
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         do {
             guard let handler = Self.handler, let url = request.url else { throw URLError(.badServerResponse) }
             let result = try handler(request)
-            client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: result.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
+            var headers = ["Content-Type": "application/json"]
+            if let custom = Self.responseHeaders { headers.merge(custom(request)) { _, value in value } }
+            else {
+                headers["X-Orca-Search-Mode"] = request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Mode")
+                headers["X-Orca-Search-Epoch"] = request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Epoch")
+            }
+            client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: result.status, httpVersion: nil, headerFields: headers)!, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: result.data); client?.urlProtocolDidFinishLoading(self)
         } catch { client?.urlProtocol(self, didFailWithError: error) }
     }
@@ -890,10 +897,25 @@ final class MailDateTests: XCTestCase {
 // responses. The fixed delay below models a network dependency, not device speed.
 private enum InboxLoadingTestSupport {
     static let catalog = Data(#"{"legacyDestinationIds":{"normal":"inbox-lane","focus":"focus-lane","quiet":"quiet-lane","hidden":"hidden-lane"}}"#.utf8)
+    static func capabilities(mode: MailSearchMode = .indexed, epoch: String = "epoch-one", owner: String = "fixture-owner") throws -> Data {
+        try JSONEncoder().encode(MailSearchCapabilities(version: 1, mode: mode, epoch: epoch, ownerId: owner,
+            coverage: mode == .indexed ? "stored-plaintext" : "stored-metadata", semantics: mode == .indexed ? "literal-index-v3" : "legacy-substring-v1"))
+    }
+    static func indexed(_ handler: @escaping (URLRequest) throws -> (status: Int, data: Data)) -> (URLRequest) throws -> (status: Int, data: Data) {
+        { request in
+            if request.url?.path == "/v1/mail/search/capabilities" { return (200, try capabilities()) }
+            return try handler(request)
+        }
+    }
     static func page(_ id: String = "page", cursor: String? = nil) throws -> Data {
         var message = DemoData.messages[0]; message.id = id
         return try JSONEncoder().encode(InboxPage(accounts: DemoData.accounts, messages: [message], nextCursor: cursor,
             counts: InboxCounts(focus: 1, normal: 0, quiet: 0, hidden: 0, all: 1)))
+    }
+    static func searchPage(_ ids: [String] = [], cursor: String? = nil, continuation: MailSearchContinuation = .none, snapshot: String = "snapshot-one") throws -> Data {
+        let messages = ids.map { id in var message = DemoData.messages[0]; message.id = id; return message }
+        return try JSONEncoder().encode(MailSearchPage(accounts: DemoData.accounts, messages: messages, nextCursor: cursor,
+            continuation: continuation, snapshot: snapshot, order: .fieldRelevance, semantics: .literalIndex, coverage: .storedPlaintext))
     }
     static func query(_ request: URLRequest) -> [String: String] {
         Dictionary(uniqueKeysWithValues: (URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") })
@@ -915,6 +937,7 @@ private enum InboxLoadingTestSupport {
         }
         func cleanup() {
             StubURLProtocol.handler = nil
+            StubURLProtocol.responseHeaders = nil
             UserDefaults.standard.set(previousAccountID, forKey: "selectedAccountID")
             try? FileManager.default.removeItem(at: folder)
         }
@@ -922,9 +945,11 @@ private enum InboxLoadingTestSupport {
     actor FirstRequestGate {
         let started: XCTestExpectation
         private var first = true
+        private var requestsToSkip: Int
         private var continuation: CheckedContinuation<Void, Never>?
-        init(started: XCTestExpectation) { self.started = started }
+        init(started: XCTestExpectation, skipping requestsToSkip: Int = 0) { self.started = started; self.requestsToSkip = requestsToSkip }
         func wait() async {
+            if requestsToSkip > 0 { requestsToSkip -= 1; return }
             guard first else { return }; first = false
             await withCheckedContinuation { continuation in
                 self.continuation = continuation; started.fulfill()
@@ -935,7 +960,7 @@ private enum InboxLoadingTestSupport {
 }
 
 final class InboxLoadingTests: XCTestCase {
-    @MainActor func testRequestPathsAndQueryPreserveAllDestinationAndLegacyViews() async throws {
+    @MainActor func testEmptyQueryPreservesInboxDestinationAndLegacyViews() async throws {
         let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
         let response = try InboxLoadingTestSupport.page()
         var requests = [URLRequest]()
@@ -947,12 +972,12 @@ final class InboxLoadingTests: XCTestCase {
                                     ("normal", "inbox-lane"), ("focus", "focus-lane"),
                                     ("quiet", "quiet-lane"), ("hidden", "hidden-lane"), ("unknown", nil)] as [(String, String?)] {
             requests = []
-            let model = InboxViewModel(); model.view = view; model.search = "two words & more"
+            let model = InboxViewModel(); model.view = view
             await model.load(state: fixture.state)
             XCTAssertEqual(requests.compactMap { $0.url?.path }, InboxLoadingTestSupport.paths(for: view), view)
             let request = try XCTUnwrap(requests.last)
             var expected = ["accountId": "demo-account", "view": view.hasPrefix("destination:") ? "all" : view,
-                            "limit": "30", "query": "two words & more"]
+                            "limit": "30"]
             expected["destinationId"] = destination
             XCTAssertEqual(InboxLoadingTestSupport.query(request), expected, view)
             XCTAssertTrue(requests.allSatisfy { $0.httpMethod == "GET" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-token" })
@@ -982,7 +1007,7 @@ final class InboxLoadingTests: XCTestCase {
         }
     }
 
-    @MainActor func testRefreshAndPaginationKeepCursorSearchAndFreshLegacyMappings() async throws {
+    @MainActor func testInboxRefreshAndPaginationKeepCursorAndFreshLegacyMappings() async throws {
         for view in ["all", "destination:projects", "normal", "focus"] {
             let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
             let first = try InboxLoadingTestSupport.page("first", cursor: "opaque + / cursor")
@@ -998,7 +1023,7 @@ final class InboxLoadingTests: XCTestCase {
                 pageCount += 1
                 return (200, pageCount == 1 ? first : pageCount == 2 ? next : refreshed)
             }
-            let model = InboxViewModel(); model.view = view; model.search = "subject"
+            let model = InboxViewModel(); model.view = view
             await model.load(state: fixture.state)
             await model.load(state: fixture.state, reset: false)
             XCTAssertEqual(model.messages.map(\.id), ["first", "second"]); XCTAssertNil(model.nextCursor)
@@ -1007,7 +1032,7 @@ final class InboxLoadingTests: XCTestCase {
             XCTAssertEqual(requests.compactMap { $0.url?.path }, Array(repeating: InboxLoadingTestSupport.paths(for: view), count: 3).flatMap { $0 })
             let queries = requests.filter { $0.url?.path == "/v1/inbox" }.map(InboxLoadingTestSupport.query)
             XCTAssertEqual(queries.map { $0["cursor"] }, [nil, "opaque + / cursor", nil])
-            XCTAssertEqual(queries.map { $0["query"] }, ["subject", "subject", "subject"])
+            XCTAssertTrue(queries.allSatisfy { $0["query"] == nil })
             if view == "normal" || view == "focus" {
                 let prefix = view == "normal" ? "inbox" : "focus"
                 XCTAssertEqual(queries.map { $0["destinationId"] }, ["\(prefix)-1", "\(prefix)-2", "\(prefix)-3"])
@@ -1090,10 +1115,11 @@ final class InboxLoadingTests: XCTestCase {
         let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" })
         defer { fixture.cleanup() }
         var requests = [URLRequest]()
-        StubURLProtocol.handler = { request in
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
             requests.append(request)
             if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
-            return (200, try InboxLoadingTestSupport.page(InboxLoadingTestSupport.query(request)["query"] ?? "old"))
+            if request.url?.path == "/v1/mail/search" { return (200, try InboxLoadingTestSupport.searchPage(["new"])) }
+            return (200, try InboxLoadingTestSupport.page("old"))
         }
         let model = InboxViewModel(); model.view = "all"
         let old = Task { await model.load(state: fixture.state) }
@@ -1136,6 +1162,464 @@ final class InboxLoadingTests: XCTestCase {
                 "medianMilliseconds": (values[2] + values[3]) / 2, "timingIsDiagnosticOnly": true]
             let json = try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
             print("INBOX_LOADING_BENCHMARK \(String(decoding: json, as: UTF8.self))")
+        }
+    }
+}
+
+final class IndexedMailSearchTests: XCTestCase {
+    func testSearchDecodesMatchesScanAndTerminalWithoutCounts() throws {
+        for (continuation, cursor) in [(MailSearchContinuation.matches, "matches-cursor"), (.scan, "scan-cursor"), (.none, nil)] as [(MailSearchContinuation, String?)] {
+            let data = try InboxLoadingTestSupport.searchPage(cursor: cursor, continuation: continuation)
+            let page = try JSONDecoder().decode(MailSearchPage.self, from: data)
+            XCTAssertEqual(page.continuation, continuation); XCTAssertEqual(page.nextCursor, cursor)
+            XCTAssertEqual(page.snapshot, "snapshot-one"); XCTAssertEqual(page.order, .fieldRelevance)
+            XCTAssertEqual(page.semantics, .literalIndex); XCTAssertEqual(page.coverage, .storedPlaintext)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertNil(object["counts"]); XCTAssertNil(object["total"])
+        }
+    }
+
+    func testSearchRejectsMetadataFallbackAndInconsistentWireContract() throws {
+        let valid = try InboxLoadingTestSupport.searchPage()
+        for (key, value) in [("coverage", "stored-metadata"), ("order", "newest-first"), ("semantics", "literal-index-v2"),
+                             ("snapshot", ""), ("continuation", "scan"), ("nextCursor", "unexpected-cursor")] {
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: valid) as? [String: Any])
+            object[key] = value
+            XCTAssertThrowsError(try JSONDecoder().decode(MailSearchPage.self, from: JSONSerialization.data(withJSONObject: object)), key)
+        }
+        var missingCursor = try XCTUnwrap(JSONSerialization.jsonObject(with: valid) as? [String: Any])
+        missingCursor.removeValue(forKey: "nextCursor")
+        XCTAssertThrowsError(try JSONDecoder().decode(MailSearchPage.self, from: JSONSerialization.data(withJSONObject: missingCursor)))
+    }
+
+    @MainActor func testSearchUsesIndexedEndpointAndExactSelectedScope() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.searchPage(["match"])
+        var requests = [URLRequest]()
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
+            requests.append(request)
+            return (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response)
+        }
+        for (view, destination) in [("all", nil), ("destination:custom /&?", "custom /&?"),
+                                    ("normal", "inbox-lane"), ("focus", "focus-lane"),
+                                    ("quiet", "quiet-lane"), ("hidden", "hidden-lane")] as [(String, String?)] {
+            requests = []
+            let model = InboxViewModel(); model.view = view; model.search = "  AI update & \"project plans\"  "
+            await model.load(state: fixture.state)
+            let request = try XCTUnwrap(requests.last)
+            XCTAssertEqual(request.url?.path, "/v1/mail/search")
+            var expected = ["query": "AI update & \"project plans\"", "limit": "10", "accountId": "demo-account", "view": "all"]
+            expected["destinationId"] = destination
+            XCTAssertEqual(InboxLoadingTestSupport.query(request), expected, view)
+            XCTAssertFalse(requests.contains { $0.url?.path == "/v1/inbox" })
+            XCTAssertTrue(requests.allSatisfy { $0.httpMethod == "GET" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-token" })
+            XCTAssertEqual(model.messages.map(\.id), ["match"]); XCTAssertEqual(model.searchStatus, .ready)
+            XCTAssertEqual(model.view, view); XCTAssertNil(model.error)
+        }
+    }
+
+    @MainActor func testUnmappedNativeInboxUsesInboxPolicyAndDirectSearchSkipsCatalog() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let response = try InboxLoadingTestSupport.searchPage()
+        var requests = [URLRequest]()
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
+            requests.append(request)
+            return (200, request.url?.path == "/v1/destinations" ? Data("{}".utf8) : response)
+        }
+        let model = InboxViewModel(); model.search = "update"
+        await model.load(state: fixture.state)
+        XCTAssertEqual(InboxLoadingTestSupport.query(try XCTUnwrap(requests.last))["view"], "inbox")
+        for view in ["all", "destination:projects"] {
+            requests = []; model.view = view
+            await model.load(state: fixture.state)
+            XCTAssertEqual(requests.compactMap { $0.url?.path }, ["/v1/mail/search"])
+        }
+    }
+
+    @MainActor func testEmptyScanPageContinuesWithStableSnapshotAndDestinationUntilRefresh() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var requests = [URLRequest](), pages = 0, catalogs = 0
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
+            requests.append(request)
+            if request.url?.path == "/v1/destinations" {
+                catalogs += 1
+                return (200, Data("{\"legacyDestinationIds\":{\"normal\":\"inbox-\(catalogs)\"}}".utf8))
+            }
+            pages += 1
+            if pages == 1 { return (200, try InboxLoadingTestSupport.searchPage(cursor: "scan + / cursor", continuation: .scan)) }
+            if pages == 2 { return (200, try InboxLoadingTestSupport.searchPage(["first"], cursor: "match + / cursor", continuation: .matches)) }
+            if pages == 3 { return (200, try InboxLoadingTestSupport.searchPage(["first", "second"])) }
+            return (200, try InboxLoadingTestSupport.searchPage(["refreshed"], snapshot: "snapshot-two"))
+        }
+        let model = InboxViewModel(); model.search = "update"
+        await model.load(state: fixture.state)
+        XCTAssertTrue(model.messages.isEmpty); XCTAssertEqual(model.continuation, .scan)
+        XCTAssertEqual(model.nextCursor, "scan + / cursor"); XCTAssertEqual(model.searchStatus, .ready)
+        await model.load(state: fixture.state, reset: false)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(model.messages.map(\.id), ["first", "second"])
+        XCTAssertEqual(model.snapshot, "snapshot-one"); XCTAssertNil(model.nextCursor)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(pages, 3, "A terminal search must not request another page")
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["refreshed"]); XCTAssertEqual(model.snapshot, "snapshot-two")
+        let queries = requests.filter { $0.url?.path == "/v1/mail/search" }.map(InboxLoadingTestSupport.query)
+        XCTAssertEqual(queries.map { $0["cursor"] }, [nil, "scan + / cursor", "match + / cursor", nil])
+        XCTAssertEqual(queries.map { $0["destinationId"] }, ["inbox-1", "inbox-1", "inbox-1", "inbox-2"])
+        XCTAssertTrue(queries.allSatisfy { $0["query"] == "update" && $0["limit"] == "10" })
+    }
+
+    @MainActor func testSearchFailuresRemainExplicitAndNeverUseLegacyCachedMatches() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let cached = try JSONDecoder().decode(InboxPage.self, from: InboxLoadingTestSupport.page("cached-wrong-result"))
+        try await fixture.state.cache.save(cached, key: "\(fixture.state.ownerScope)|demo-account|inbox|all|AI")
+        let model = InboxViewModel(); model.view = "all"; model.search = "AI"
+        let failures: [(String, InboxViewModel.SearchStatus)] = [
+            ("search_anchor_required", .invalidQuery), ("search_invalid_query", .invalidQuery),
+            ("search_index_updating", .updating), ("search_index_blocked", .blocked),
+            ("search_index_unavailable", .unavailable), ("search_busy", .unavailable),
+            ("search_cursor_stale", .stale), ("search_invalid_cursor", .stale)
+        ]
+        for (code, expectedStatus) in failures {
+            StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
+                XCTAssertEqual(request.url?.path, "/v1/mail/search")
+                let message = code == "search_anchor_required" ? "Add a word or phrase with at least 3 characters. Short terms can accompany it, such as AI update." : "Search needs retry: \(code)"
+                return (409, try JSONEncoder().encode(ErrorEnvelope(error: APIErrorBody(code: code, message: message, retryable: true))))
+            }
+            await model.load(state: fixture.state)
+            XCTAssertEqual(model.searchStatus, expectedStatus, code)
+            XCTAssertTrue(model.messages.isEmpty, code); XCTAssertNil(model.nextCursor); XCTAssertNil(model.snapshot)
+            XCTAssertEqual(model.search, "AI"); XCTAssertEqual(model.view, "all"); XCTAssertFalse(model.isLoading)
+            XCTAssertNotNil(model.error)
+            if code == "search_anchor_required" { XCTAssertTrue(model.error?.contains("AI update") == true) }
+            if expectedStatus == .stale { XCTAssertEqual(model.retryTitle, "Restart search") }
+        }
+    }
+
+    @MainActor func testOfflineSearchCannotFallBackAndClearingQueryRestoresOfflineInbox() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
+            if request.url?.path == "/v1/inbox" { return (200, try InboxLoadingTestSupport.page("inbox")) }
+            return (200, try InboxLoadingTestSupport.searchPage(["result"], cursor: "next", continuation: .matches))
+        }
+        let model = InboxViewModel(); model.view = "all"
+        await model.load(state: fixture.state)
+        model.search = "update"
+        XCTAssertTrue(model.messages.isEmpty, "Typing must immediately hide cached or unrelated Inbox rows")
+        XCTAssertEqual(model.searchStatus, .idle)
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["result"])
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { _ in throw URLError(.notConnectedToInternet) }
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(model.searchStatus, .offline); XCTAssertTrue(model.messages.isEmpty)
+        XCTAssertNil(model.nextCursor); XCTAssertNil(model.snapshot); XCTAssertEqual(model.search, "update")
+        model.search = ""
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["inbox"])
+        XCTAssertEqual(model.error, "Offline — showing saved mail"); XCTAssertFalse(model.isSearching)
+    }
+
+    @MainActor func testSnapshotMismatchAndStaleCursorRequireExplicitRestart() async throws {
+        for failure in ["snapshot", "server", "repeated-cursor"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            var requests = [URLRequest]()
+            StubURLProtocol.handler = InboxLoadingTestSupport.indexed { request in
+                requests.append(request)
+                if requests.count == 1 { return (200, try InboxLoadingTestSupport.searchPage(["old"], cursor: "cursor-one", continuation: .matches)) }
+                if requests.count == 2 {
+                    if failure == "server" { return (409, Data(#"{"error":{"code":"search_cursor_stale","message":"Stored mail changed. Restart this search."}}"#.utf8)) }
+                    return (200, try InboxLoadingTestSupport.searchPage(["wrong"], cursor: failure == "repeated-cursor" ? "cursor-one" : nil,
+                        continuation: failure == "repeated-cursor" ? .matches : .none, snapshot: failure == "snapshot" ? "snapshot-two" : "snapshot-one"))
+                }
+                return (200, try InboxLoadingTestSupport.searchPage(["fresh"], snapshot: "snapshot-fresh"))
+            }
+            let model = InboxViewModel(); model.view = "all"; model.search = "update"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(model.searchStatus, .stale, failure); XCTAssertTrue(model.messages.isEmpty)
+            XCTAssertNil(model.nextCursor); XCTAssertNil(model.snapshot); XCTAssertEqual(model.search, "update")
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(requests.count, 2, "A failed continuation cannot be appended or retried implicitly")
+            await model.load(state: fixture.state)
+            XCTAssertNil(InboxLoadingTestSupport.query(try XCTUnwrap(requests.last))["cursor"])
+            XCTAssertEqual(model.messages.map(\.id), ["fresh"]); XCTAssertEqual(model.searchStatus, .ready)
+        }
+    }
+
+    @MainActor func testEditingOrInterruptingSearchRejectsLateResponses() async throws {
+        for interruption in ["query", "view", "account", "scope", "cancel"] {
+            let gate = InboxLoadingTestSupport.FirstRequestGate(started: expectation(description: "search suspended"))
+            let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" })
+            defer { fixture.cleanup() }
+            StubURLProtocol.handler = InboxLoadingTestSupport.indexed { _ in (200, try InboxLoadingTestSupport.searchPage(["late-result"])) }
+            let model = InboxViewModel(); model.view = "all"; model.search = "update"
+            let pending = Task { await model.load(state: fixture.state) }
+            await fulfillment(of: [gate.started], timeout: 3)
+            switch interruption {
+            case "query": model.search = "changed"
+            case "view": model.view = "destination:other"
+            case "account":
+                var other = DemoData.accounts[0]; other.id = "other-account"
+                fixture.state.accounts.append(other); fixture.state.selectedAccountID = other.id
+            case "scope": fixture.state.baseURLText = "https://other.example"
+            default: pending.cancel()
+            }
+            await gate.release(); await pending.value
+            XCTAssertTrue(model.messages.isEmpty, interruption); XCTAssertNil(model.snapshot)
+            XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+        }
+    }
+
+    @MainActor func testSearchRejectsMessagesOutsideSelectedAccount() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var page = try JSONDecoder().decode(MailSearchPage.self, from: InboxLoadingTestSupport.searchPage(["wrong-account"]))
+        page.messages[0].accountId = "another-account"
+        let data = try JSONEncoder().encode(page)
+        StubURLProtocol.handler = InboxLoadingTestSupport.indexed { _ in (200, data) }
+        let model = InboxViewModel(); model.view = "all"; model.search = "update"
+        await model.load(state: fixture.state)
+        XCTAssertTrue(model.messages.isEmpty); XCTAssertEqual(model.searchStatus, .unavailable)
+        XCTAssertNotNil(model.error); XCTAssertNil(model.nextCursor)
+    }
+}
+
+final class StagedMailSearchTests: XCTestCase {
+    func testCapabilitiesRejectMalformedOrContradictoryModes() throws {
+        let data = try InboxLoadingTestSupport.capabilities()
+        for (key, value) in [("version", 2), ("mode", "unknown"), ("epoch", ""), ("ownerId", ""),
+                             ("coverage", "stored-metadata"), ("semantics", "legacy-substring-v1")] as [(String, Any)] {
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any]); object[key] = value
+            XCTAssertThrowsError(try JSONDecoder().decode(MailSearchCapabilities.self, from: JSONSerialization.data(withJSONObject: object)), key)
+        }
+    }
+
+    @MainActor func testLegacyShortQueryUsesOriginalInboxContractAndBoundManualPagination() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var requests = [URLRequest](), pages = 0
+        StubURLProtocol.handler = { request in
+            requests.append(request)
+            if request.url?.path == "/v1/mail/search/capabilities" { return (200, try InboxLoadingTestSupport.capabilities(mode: .legacyMetadata)) }
+            if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+            pages += 1
+            return (200, try InboxLoadingTestSupport.page(pages == 1 ? "legacy-first" : "legacy-next", cursor: pages == 1 ? "legacy-cursor" : nil))
+        }
+        let model = InboxViewModel(); model.search = "AI"
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(model.messages.map(\.id), ["legacy-first", "legacy-next"])
+        XCTAssertEqual(model.searchCapabilities?.mode, .legacyMetadata)
+        XCTAssertEqual(model.searchCountLabel, "2 shown · Mailbox order")
+        XCTAssertTrue(model.searchCoverageLabel.contains("Message bodies are not searched"))
+        XCTAssertNil(model.snapshot); XCTAssertEqual(model.continuation, .none); XCTAssertNil(model.nextCursor)
+        XCTAssertFalse(requests.contains { $0.url?.path == "/v1/mail/search" })
+        XCTAssertEqual(requests.filter { $0.url?.path == "/v1/mail/search/capabilities" }.count, 1)
+        let searches = requests.filter { $0.url?.path == "/v1/inbox" }
+        XCTAssertEqual(searches.map { InboxLoadingTestSupport.query($0)["cursor"] }, [nil, "legacy-cursor"])
+        for request in searches {
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["query"], "AI")
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["limit"], "10")
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["view"], "normal")
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["destinationId"], "inbox-lane")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Mode"), "legacy-metadata")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Epoch"), "epoch-one")
+        }
+        model.search = ""
+        await model.load(state: fixture.state)
+        let browse = try XCTUnwrap(requests.last)
+        XCTAssertEqual(InboxLoadingTestSupport.query(browse)["limit"], "30")
+        XCTAssertNil(browse.value(forHTTPHeaderField: "X-Orca-Expected-Search-Mode"))
+    }
+
+    @MainActor func testModeOrEpochChangeRestartsFromFirstPageWithoutMixing() async throws {
+        for newMode in [MailSearchMode.indexed, .legacyMetadata] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            var capabilities = 0, reads = [URLRequest]()
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/mail/search/capabilities" {
+                    capabilities += 1
+                    return (200, try InboxLoadingTestSupport.capabilities(mode: capabilities == 1 ? .legacyMetadata : newMode,
+                        epoch: capabilities == 1 ? "epoch-one" : "epoch-two"))
+                }
+                reads.append(request)
+                if reads.count == 1 { return (200, try InboxLoadingTestSupport.page("old-mode", cursor: "old-cursor")) }
+                if reads.count == 2 { return (409, Data(#"{"error":{"code":"search_mode_changed","message":"Search coverage changed."}}"#.utf8)) }
+                if newMode == .indexed { return (200, try InboxLoadingTestSupport.searchPage(["new-mode"])) }
+                return (200, try InboxLoadingTestSupport.page("new-mode"))
+            }
+            let model = InboxViewModel(); model.view = "all"; model.search = "update"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(capabilities, 2); XCTAssertEqual(reads.count, 3)
+            XCTAssertEqual(model.messages.map(\.id), ["new-mode"]); XCTAssertNil(model.error)
+            XCTAssertEqual(model.searchCapabilities?.mode, newMode); XCTAssertEqual(model.searchCapabilities?.epoch, "epoch-two")
+            XCTAssertEqual(reads.last?.url?.path, newMode == .indexed ? "/v1/mail/search" : "/v1/inbox")
+            XCTAssertNil(InboxLoadingTestSupport.query(try XCTUnwrap(reads.last))["cursor"])
+            XCTAssertEqual(reads.last?.value(forHTTPHeaderField: "X-Orca-Expected-Search-Epoch"), "epoch-two")
+            XCTAssertEqual(model.search, "update"); XCTAssertEqual(model.view, "all")
+        }
+    }
+
+    @MainActor func testIndexedLagDoesNotDowngradeButAuthenticatedRollbackDoes() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var mode = MailSearchMode.indexed, code = "search_index_updating", legacyReads = 0
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/mail/search/capabilities" { return (200, try InboxLoadingTestSupport.capabilities(mode: mode, epoch: mode == .indexed ? "enabled" : "disabled")) }
+            if request.url?.path == "/v1/inbox" { legacyReads += 1; return (200, try InboxLoadingTestSupport.page("explicit-rollback")) }
+            return (503, try JSONEncoder().encode(ErrorEnvelope(error: APIErrorBody(code: code, message: "Index needs attention", retryable: true))))
+        }
+        let model = InboxViewModel(); model.view = "all"; model.search = "update"
+        for errorCode in ["search_index_updating", "search_index_blocked", "search_failed"] {
+            code = errorCode; await model.load(state: fixture.state)
+            XCTAssertEqual(model.searchCapabilities?.mode, .indexed)
+            XCTAssertEqual(legacyReads, 0); XCTAssertTrue(model.messages.isEmpty); XCTAssertNotNil(model.error)
+        }
+        mode = .legacyMetadata
+        await model.load(state: fixture.state)
+        XCTAssertEqual(legacyReads, 1); XCTAssertEqual(model.messages.map(\.id), ["explicit-rollback"])
+        XCTAssertEqual(model.searchCapabilities?.mode, .legacyMetadata)
+        XCTAssertEqual(model.searchCountLabel, "1 shown · Mailbox order")
+        XCTAssertNil(model.snapshot); XCTAssertNil(model.error)
+    }
+
+    @MainActor func testLateResponseFromPreviousEpochCannotReplaceNewModeResults() async throws {
+        let gate = InboxLoadingTestSupport.FirstRequestGate(started: expectation(description: "indexed read suspended"), skipping: 1)
+        let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" })
+        defer { fixture.cleanup() }
+        var mode = MailSearchMode.indexed
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/mail/search/capabilities" { return (200, try InboxLoadingTestSupport.capabilities(mode: mode, epoch: mode == .indexed ? "old" : "new")) }
+            if request.url?.path == "/v1/mail/search" { return (200, try InboxLoadingTestSupport.searchPage(["stale-indexed"])) }
+            return (200, try InboxLoadingTestSupport.page("current-legacy"))
+        }
+        let model = InboxViewModel(); model.view = "all"; model.search = "update"
+        let old = Task { await model.load(state: fixture.state) }
+        await fulfillment(of: [gate.started], timeout: 3)
+        mode = .legacyMetadata
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["current-legacy"])
+        await gate.release(); await old.value
+        XCTAssertEqual(model.messages.map(\.id), ["current-legacy"])
+        XCTAssertEqual(model.searchCapabilities?.epoch, "new"); XCTAssertNil(model.snapshot); XCTAssertNil(model.error)
+    }
+
+    @MainActor func testNotActivatedResponseRechecksCapabilitiesBeforeLegacyRead() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var capabilities = 0
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/mail/search/capabilities" {
+                capabilities += 1
+                return (200, try InboxLoadingTestSupport.capabilities(mode: capabilities == 1 ? .indexed : .legacyMetadata,
+                    epoch: capabilities == 1 ? "enabled" : "disabled"))
+            }
+            if request.url?.path == "/v1/mail/search" {
+                return (503, Data(#"{"error":{"code":"search_not_activated","message":"Indexed search is not activated."}}"#.utf8))
+            }
+            XCTAssertEqual(capabilities, 2, "The read error alone never authorizes legacy mode")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Epoch"), "disabled")
+            return (200, try InboxLoadingTestSupport.page("verified-legacy"))
+        }
+        let model = InboxViewModel(); model.view = "all"; model.search = "update"
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages.map(\.id), ["verified-legacy"])
+        XCTAssertEqual(model.searchCapabilities?.mode, .legacyMetadata); XCTAssertNil(model.error)
+    }
+
+    @MainActor func testOnlyInitialAuthenticatedOldServer404AllowsLegacyAcrossViewModels() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var oldServer = true, legacyReads = 0, sessionReads = 0
+        StubURLProtocol.responseHeaders = { _ in [:] }
+        StubURLProtocol.handler = { request in
+            switch request.url?.path {
+            case "/v1/mail/search/capabilities":
+                return oldServer ? (404, Data()) : (200, try InboxLoadingTestSupport.capabilities())
+            case "/v1/auth/session":
+                sessionReads += 1
+                return (200, Data(#"{"isAuthenticated":true,"user":{"id":"fixture-owner","email":"owner@example.com"}}"#.utf8))
+            case "/v1/inbox":
+                legacyReads += 1
+                XCTAssertEqual(request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Epoch"), "legacy-server")
+                return (200, try InboxLoadingTestSupport.page("old-server-result"))
+            default: return (200, try InboxLoadingTestSupport.searchPage(["indexed-result"]))
+            }
+        }
+        let first = InboxViewModel(); first.view = "all"; first.search = "AI"
+        await first.load(state: fixture.state)
+        XCTAssertEqual(first.messages.map(\.id), ["old-server-result"])
+        XCTAssertEqual(first.searchCapabilities?.mode, .legacyMetadata); XCTAssertEqual(sessionReads, 1)
+        oldServer = false; StubURLProtocol.responseHeaders = nil
+        first.search = "update"; await first.load(state: fixture.state)
+        XCTAssertEqual(first.messages.map(\.id), ["indexed-result"])
+        oldServer = true
+        let reopened = InboxViewModel(); reopened.view = "all"; reopened.search = "AI"
+        await reopened.load(state: fixture.state)
+        XCTAssertTrue(reopened.messages.isEmpty); XCTAssertNotNil(reopened.error)
+        XCTAssertEqual(legacyReads, 1, "A new view model cannot forget that this owner and origin used indexed search")
+        XCTAssertEqual(sessionReads, 2)
+    }
+
+    @MainActor func testCapabilityErrorsAndUnverifiedOldServerNeverUseLegacyReader() async throws {
+        for failure in ["401", "503", "network", "malformed", "old-server-signed-out", "old-server-session-error"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            var readRequests = 0
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/mail/search/capabilities" {
+                    switch failure {
+                    case "401": return (401, Data())
+                    case "503": return (503, Data())
+                    case "network": throw URLError(.notConnectedToInternet)
+                    case "malformed": return (200, Data(#"{"version":1,"mode":"legacy-metadata","epoch":"wrong","ownerId":"fixture-owner","coverage":"stored-plaintext","semantics":"literal-index-v3"}"#.utf8))
+                    default: return (404, Data())
+                    }
+                }
+                if request.url?.path == "/v1/auth/session" {
+                    if failure == "old-server-session-error" { return (503, Data()) }
+                    return (200, Data(#"{"isAuthenticated":false}"#.utf8))
+                }
+                readRequests += 1
+                return (200, try InboxLoadingTestSupport.page("must-not-publish"))
+            }
+            let model = InboxViewModel(); model.view = "all"; model.search = "AI"
+            await model.load(state: fixture.state)
+            XCTAssertTrue(model.messages.isEmpty, failure); XCTAssertNotNil(model.error, failure)
+            XCTAssertEqual(readRequests, 0, failure); XCTAssertEqual(model.search, "AI")
+        }
+    }
+
+    @MainActor func testCapabilitiesMustBelongToTheCurrentAuthenticatedOwner() async throws {
+        for oldServer in [false, true] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/mail/search/capabilities" {
+                    return oldServer ? (404, Data()) : (200, try InboxLoadingTestSupport.capabilities(owner: "other-owner"))
+                }
+                return (200, Data(#"{"isAuthenticated":true,"user":{"id":"other-owner","email":"other@example.com"}}"#.utf8))
+            }
+            let client = try XCTUnwrap(fixture.state.client)
+            do {
+                _ = try await client.searchCapabilities(expectedOwnerID: "current-owner")
+                XCTFail("A capability from another owner must not authorize a search")
+            } catch APIClient.ClientError.invalidResponse { }
+        }
+    }
+
+    @MainActor func testIndexedResponseRequiresMatchingModeAndEpochHeaders() async throws {
+        for headers in [[:], ["X-Orca-Search-Mode": "legacy-metadata", "X-Orca-Search-Epoch": "epoch-one"],
+                        ["X-Orca-Search-Mode": "indexed", "X-Orca-Search-Epoch": "different"]] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            var capabilities = 0, reads = 0
+            StubURLProtocol.responseHeaders = { _ in headers }
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/mail/search/capabilities" { capabilities += 1; return (200, try InboxLoadingTestSupport.capabilities()) }
+                reads += 1
+                XCTAssertEqual(request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Mode"), "indexed")
+                XCTAssertEqual(request.value(forHTTPHeaderField: "X-Orca-Expected-Search-Epoch"), "epoch-one")
+                return (200, try InboxLoadingTestSupport.searchPage(["unbound-result"]))
+            }
+            let model = InboxViewModel(); model.view = "all"; model.search = "update"
+            await model.load(state: fixture.state)
+            XCTAssertTrue(model.messages.isEmpty); XCTAssertEqual(model.searchStatus, .stale)
+            XCTAssertEqual(capabilities, 2); XCTAssertEqual(reads, 2, "Re-resolving a changing server must be bounded")
+            XCTAssertNil(model.nextCursor); XCTAssertNil(model.snapshot)
         }
     }
 }

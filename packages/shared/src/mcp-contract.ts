@@ -275,6 +275,7 @@ export const mcpSearchMailOutputSchema = z.object({
   messages: z.array(mcpMailMessageSchema),
   counts: mcpInboxCountsSchema,
   nextCursor: z.string().nullable(),
+  semantics: z.enum(["legacy-substring-v1", "literal-index-v3"]).optional(),
 }).strict();
 export type McpSearchMailOutput = z.infer<typeof mcpSearchMailOutputSchema>;
 
@@ -389,6 +390,9 @@ export const mcpToolErrorCodeSchema = z.enum([
   "revision_conflict",
   "simulation_mismatch",
   "internal_error",
+  "search_invalid_query", "search_anchor_required", "search_not_activated", "search_mode_changed", "search_index_updating", "search_index_blocked",
+  "search_index_unavailable", "search_cursor_stale", "search_invalid_cursor", "search_busy",
+  "search_aborted", "search_budget_exceeded", "search_failed",
 ]);
 export type McpToolErrorCode = z.infer<typeof mcpToolErrorCodeSchema>;
 

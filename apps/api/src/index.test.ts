@@ -1,3 +1,4 @@
+import { prepareSyntheticSearchIndex } from "./search/test-support.ts";
 import assert from "node:assert/strict";
 import { z } from "zod";
 import { guidanceUserPreferencesResponseSchema } from "@orca/shared";
@@ -1016,6 +1017,7 @@ describe("Orca API", () => {
       const quiet = await (await testApp.request("/v1/inbox?view=quiet", { headers })).json();
       assert.deepEqual(quiet.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
 
+      prepareSyntheticSearchIndex(sqlite);
       const storedSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=secondary", { headers })).json();
       assert.deepEqual(storedSearch.messages.map((message: { id: string }) => message.id), ["secondary_notify", "secondary_quiet"]);
       const defaultInboxSearchResponse = await testApp.request("/v1/inbox?classification=all&query=primary", { headers });
@@ -1036,7 +1038,7 @@ describe("Orca API", () => {
 
       const scopedPage = await (await testApp.request("/v1/inbox?view=all&classification=all&query=secondary&limit=1", { headers })).json();
       assert.equal(typeof scopedPage.nextCursor, "string");
-      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=all&query=primary&limit=1&cursor=${encodeURIComponent(scopedPage.nextCursor)}`, { headers })).status, 400);
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=all&query=primary&limit=1&cursor=${encodeURIComponent(scopedPage.nextCursor)}`, { headers })).status, 409);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

@@ -586,3 +586,6 @@ export * from "./attention-routing.ts";
 export * from "./mail-destinations.ts";
 
 export * from "./space-color.ts";
+
+export { mailSearchCapabilitiesSchema, mailSearchQuerySchema, mailSearchPageSchema, parseMailSearch, MailSearchQueryError, mailSearchLimits, mailSearchOrder, mailSearchSemantics } from "./mail-search.ts";
+export type { MailSearchCapabilities, MailSearchQuery, MailSearchPage } from "./mail-search.ts";

@@ -2,11 +2,11 @@ import { inboxDestinationId, inboxVisibilityPredicate } from "../organization/vi
 import { createHash } from "node:crypto";
 
 import type { Database } from "bun:sqlite";
+import type { DestinationResolution } from "@orca/shared";
 import {
   humanClassificationAssessmentSchema,
   humanClassificationOverrideSchema,
   humanClassificationSchema,
-  type DestinationResolution,
   type AttentionBehavior,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
@@ -16,7 +16,7 @@ import {
   type MailAccount,
   type MailCapabilities,
   type MailProvider,
-} from "@orca/shared";
+} from "@orca/shared/schemas";
 
 import { detectGmailCapabilities } from "../auth/gmail/capabilities.ts";
 import { detectOutlookCapabilities } from "../auth/outlook/capabilities.ts";
@@ -41,6 +41,8 @@ export type MailboxReadQuery = {
   classification?: "human" | "tideline" | "uncertain" | "all";
   query?: string;
   sender?: string;
+  senderAddress?: string;
+  attentionBehavior?: AttentionBehavior;
   collectionId?: string;
   destinationId?: string;
   receivedAfter?: string;
@@ -103,7 +105,7 @@ type MailboxReaderOptions = {
   observePageQueryPlan?: (plan: MailboxPageQueryPlan) => void;
 };
 
-type RawMailboxAccount = {
+export type RawMailboxAccount = {
   id: string;
   provider: MailProvider;
   provider_email: string;
@@ -113,7 +115,7 @@ type RawMailboxAccount = {
   display_name: string | null;
 };
 
-type RawMailboxMessage = {
+export type RawMailboxMessage = {
   id: string;
   account_id: string;
   provider_message_id: string;
@@ -218,6 +220,21 @@ const effectiveOverrideSql = {
   updatedAt: "coalesce(classification_message.updated_at, classification_address.updated_at, classification_domain.updated_at)",
 } as const;
 
+const mailboxMessageProjectionSql = `e.id, e.account_id, e.provider_message_id, e.thread_id,
+              e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
+              e.is_read, e.human_signal, e.human_classification,
+              e.human_classification_reasons, e.human_classifier_version,
+              ${attentionSql} as attention_behavior,
+              destination.destination_id,destination.source destination_source,destination.locked destination_locked,
+              ${effectiveOverrideSql.id} as override_id,
+              ${effectiveOverrideSql.accountId} as override_account_id,
+              ${effectiveOverrideSql.targetType} as override_target_type,
+              ${effectiveOverrideSql.targetValue} as override_target_value,
+              ${effectiveOverrideSql.classification} as override_classification,
+              ${effectiveOverrideSql.source} as override_source,
+              ${effectiveOverrideSql.createdAt} as override_created_at,
+              ${effectiveOverrideSql.updatedAt} as override_updated_at`;
+
 /**
  * Deep mailbox-read module. Its single read interface owns authorization scope,
  * effective Organization attention/classification, keyset pagination, counts,
@@ -238,11 +255,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       if (accountRows.length === 0) throw new MailboxScopeError();
       const accounts = accountRows.map((account) => serializeMailboxAccount(account, capabilitiesFor));
       const accountIds = accountRows.map((account) => account.id);
-      if (input.query.collectionId && !mailboxCollectionExists(sqlite, input.query.collectionId, accountIds)) {
-        throw new MailboxScopeError("Collection not found");
-      }
-
-      if (input.query.destinationId && !queryAll(sqlite, `select id from organization_lanes where workspace_id=? and id=?`, [input.authorization.userId,input.query.destinationId]).length) throw new MailboxScopeError("Destination not found");
+      validateMailboxFilterScope(sqlite, input.authorization.userId, accountIds, input.query);
       const classification = input.query.classification ?? "all";
       const view = input.query.view ?? "default";
       const scope = cursorScope(input.query);
@@ -300,20 +313,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
           const keyset = pageKeyset(cursor, rank, accountId);
           const pageSql = `
             select
-              e.id, e.account_id, e.provider_message_id, e.thread_id,
-              e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
-              e.is_read, e.human_signal, e.human_classification,
-              e.human_classification_reasons, e.human_classifier_version,
-              ${attentionSql} as attention_behavior,
-              destination.destination_id,destination.source destination_source,destination.locked destination_locked,
-              ${effectiveOverrideSql.id} as override_id,
-              ${effectiveOverrideSql.accountId} as override_account_id,
-              ${effectiveOverrideSql.targetType} as override_target_type,
-              ${effectiveOverrideSql.targetValue} as override_target_value,
-              ${effectiveOverrideSql.classification} as override_classification,
-              ${effectiveOverrideSql.source} as override_source,
-              ${effectiveOverrideSql.createdAt} as override_created_at,
-              ${effectiveOverrideSql.updatedAt} as override_updated_at
+              ${mailboxMessageProjectionSql}
             from emails e
             ${resolvedJoinsSql}
             where ${accountBase.sql}
@@ -346,30 +346,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const pageDurationMs = clock() - pageStartedAt;
 
       const enrichmentStartedAt = clock();
-      const labels = readLabels(sqlite, pageRows.map((row) => row.id));
-      const accountById = new Map(accountRows.map((account) => [account.id, account]));
-      const messages = pageRows.map((row): InboxMessage => {
-        const account = accountById.get(row.account_id);
-        if (!account) throw new Error("A mailbox row escaped its authorized Account scope");
-        const humanClassification = resolveClassification(row);
-        return {
-          id: row.id,
-          accountId: row.account_id,
-          provider: account.provider,
-          providerMessageId: row.provider_message_id,
-          threadId: row.thread_id,
-          from: { name: row.from_name, email: row.from_address ?? "unknown@invalid" },
-          subject: row.subject ?? "",
-          snippet: row.snippet ?? "",
-          receivedAt: new Date(row.received_at ?? 0).toISOString(),
-          unread: row.is_read !== 1,
-          labels: labels.byMessage.get(row.id) ?? [],
-          attentionBehavior: row.attention_behavior as AttentionBehavior,
-          destination: { destinationId:row.destination_id,source:row.destination_source,locked:Boolean(row.destination_locked),reason:`Placement from ${row.destination_source}` },
-          humanSignal: humanClassification.effective.score,
-          humanClassification,
-        };
-      });
+      const { messages, labelAssociationRowsLoaded } = serializeMailboxRows(sqlite, pageRows, accountRows);
       const enrichmentDurationMs = clock() - enrichmentStartedAt;
       const last = pageRows.at(-1);
       const response: MailboxReadResult["response"] = {
@@ -421,7 +398,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         aggregateRowsReturned: countRows.length,
         pageRowsProjected,
         lookaheadRowsProjected: hasNextPage ? 1 : 0,
-        labelAssociationRowsLoaded: labels.rowCount,
+        labelAssociationRowsLoaded,
         effectiveOverridesProjected: pageRows.reduce((total, row) => total + (row.override_id ? 1 : 0), 0),
         accountPageQueries,
         maxPageRowsBound,
@@ -434,7 +411,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
   };
 }
 
-function readMailboxAccounts(sqlite: Database, authorization: MailboxReadAuthorization): RawMailboxAccount[] {
+export function readMailboxAccounts(sqlite: Database, authorization: MailboxReadAuthorization): RawMailboxAccount[] {
   if (authorization.accountIds !== undefined && authorization.accountIds.length === 0) return [];
   const accountFilter = authorization.accountIds === undefined
     ? { sql: "", params: [] as string[] }
@@ -458,9 +435,9 @@ function readMailboxAccounts(sqlite: Database, authorization: MailboxReadAuthori
     order by a.created_at asc, a.id asc`, [authorization.userId, ...accountFilter.params]);
 }
 
-function serializeMailboxAccount(
+export function serializeMailboxAccount(
   account: RawMailboxAccount,
-  capabilitiesFor: NonNullable<MailboxReaderOptions["capabilitiesFor"]>,
+  capabilitiesFor: NonNullable<MailboxReaderOptions["capabilitiesFor"]> = defaultCapabilitiesFor,
 ): MailAccount {
   return {
     id: account.id,
@@ -541,6 +518,8 @@ function addMailboxFilters(
   params: Array<string | number | null>,
   query: MailboxReadQuery,
 ) {
+  if (query.senderAddress) { clauses.push("lower(trim(e.from_address)) = ?"); params.push(query.senderAddress.trim().toLowerCase()); }
+  if (query.attentionBehavior) { clauses.push(`${attentionSql} = ?`); params.push(query.attentionBehavior); }
   if (query.destinationId) { clauses.push("destination.destination_id = ?"); params.push(query.destinationId); }
   if (query.collectionId) {
     clauses.push(`exists (
@@ -587,7 +566,7 @@ function behaviorsForView(view: MailboxReadQuery["view"]): AttentionBehavior[] {
   return ["notify", "focus", "normal"];
 }
 
-function mailboxRevision(sqlite: Database, accountIds: string[]) {
+export function mailboxRevision(sqlite: Database, accountIds: string[]) {
   const rows = queryAll<RawRevisionRow>(sqlite, `
     select account_id, revision
     from mailbox_revisions
@@ -600,17 +579,19 @@ function mailboxRevision(sqlite: Database, accountIds: string[]) {
   return `mailbox-v2:${digest}`;
 }
 
-function mailboxFreshAt(accounts: RawMailboxAccount[]) {
+export function mailboxFreshAt(accounts: RawMailboxAccount[]) {
   if (accounts.some((account) => account.last_synced_at === null)) return null;
   const oldest = Math.min(...accounts.map((account) => account.last_synced_at!));
   return new Date(oldest).toISOString();
 }
 
 function cursorScope(query: MailboxReadQuery) {
-  return query.destinationId || query.query || query.sender || query.collectionId || query.receivedAfter || query.receivedBefore
+  return query.senderAddress || query.attentionBehavior || query.destinationId || query.query || query.sender || query.collectionId || query.receivedAfter || query.receivedBefore
     ? JSON.stringify({
         query: query.query?.trim() ?? null,
         sender: query.sender?.trim().toLocaleLowerCase() ?? null,
+        ...(query.senderAddress ? { senderAddress: query.senderAddress.trim().toLowerCase() } : {}),
+        ...(query.attentionBehavior ? { attentionBehavior: query.attentionBehavior } : {}),
         collectionId: query.collectionId ?? null,
         destinationId: query.destinationId ?? null,
         receivedAfter: query.receivedAfter ?? null,
@@ -781,4 +762,72 @@ function emptyCounts(): RawCountRow {
     unclassified_count: 0,
     all_count: 0,
   };
+}
+
+/** Bounded canonical hydration shared by ranked search. No body projection. */
+export function serializeMailboxRows(sqlite: Database, rows: RawMailboxMessage[], accountRows: RawMailboxAccount[]) {
+      const labels = readLabels(sqlite, rows.map((row) => row.id));
+      const accountById = new Map(accountRows.map((account) => [account.id, account]));
+      const messages = rows.map((row): InboxMessage => {
+        const account = accountById.get(row.account_id);
+        if (!account) throw new Error("A mailbox row escaped its authorized Account scope");
+        const humanClassification = resolveClassification(row);
+        return {
+          id: row.id,
+          accountId: row.account_id,
+          provider: account.provider,
+          providerMessageId: row.provider_message_id,
+          threadId: row.thread_id,
+          from: { name: row.from_name, email: row.from_address ?? "unknown@invalid" },
+          subject: row.subject ?? "",
+          snippet: row.snippet ?? "",
+          receivedAt: new Date(row.received_at ?? 0).toISOString(),
+          unread: row.is_read !== 1,
+          labels: labels.byMessage.get(row.id) ?? [],
+          attentionBehavior: row.attention_behavior as AttentionBehavior,
+          destination: { destinationId:row.destination_id,source:row.destination_source,locked:Boolean(row.destination_locked),reason:`Placement from ${row.destination_source}` },
+          humanSignal: humanClassification.effective.score,
+          humanClassification,
+        };
+      });
+  return { messages, labelAssociationRowsLoaded: labels.rowCount };
+}
+
+/** Reuse the mailbox's exact account, Lane/View, Collection and classification
+ * rules for a bounded set of IDs produced by the search index. */
+export function readMailboxCandidateRows(sqlite: Database, input: {
+  authorization: MailboxReadAuthorization;
+  query: Omit<MailboxReadQuery, "query" | "cursor">;
+  messageIds: readonly string[];
+  presentationFilters?: boolean;
+}): RawMailboxMessage[] {
+  if (!sqlite.inTransaction) throw new Error("Search candidates require a canonical snapshot");
+  if (input.messageIds.length > 128) throw new Error("Search candidate batch exceeded its bound");
+  if (input.messageIds.length === 0) return [];
+  const accounts = readMailboxAccounts(sqlite, input.authorization);
+  if (!accounts.length) throw new MailboxScopeError();
+  const accountIds = accounts.map(account => account.id);
+  validateMailboxFilterScope(sqlite, input.authorization.userId, accountIds, input.query);
+  const base = buildBaseWhere(accountIds, { ...input.query, query: undefined });
+  const applyInboxPolicy = input.query.destinationId
+    ? input.query.destinationId === inboxDestinationId(sqlite, input.authorization.userId)
+    : input.query.view === "normal" || input.query.view === undefined;
+  const policy = applyInboxPolicy ? inboxVisibilityPredicate(sqlite, input.authorization.userId) : { sql: "1", params: [] };
+  const presentation = input.presentationFilters !== false;
+  const behaviors = behaviorsForView(input.query.destinationId ? "all" : input.query.view);
+  return queryAll<RawMailboxMessage>(sqlite, `select ${mailboxMessageProjectionSql}
+    from emails e ${resolvedJoinsSql}
+    where ${base.sql} and ${policy.sql}
+      and e.id in (${placeholders(input.messageIds.length)})
+      ${presentation ? `and ${attentionSql} in (${placeholders(behaviors.length)}) and ${classificationWhere(input.query.classification ?? "all")}` : ""}`,
+    [...base.params, ...policy.params, ...input.messageIds, ...(presentation ? behaviors : [])]);
+}
+
+export function validateMailboxFilterScope(sqlite: Database, userId: string, accountIds: string[], query: Pick<MailboxReadQuery, "collectionId" | "destinationId">): void {
+  if (query.collectionId && !mailboxCollectionExists(sqlite, query.collectionId, accountIds)) throw new MailboxScopeError("Collection not found");
+  if (query.destinationId && !queryAll(sqlite, "select id from organization_lanes where workspace_id=? and id=?", [userId, query.destinationId]).length) throw new MailboxScopeError("Destination not found");
+}
+
+export function mailboxMessageClassification(row: RawMailboxMessage): string {
+  return row.override_classification ?? row.human_classification ?? "unclassified";
 }

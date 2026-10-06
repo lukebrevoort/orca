@@ -342,8 +342,8 @@
   width: min(760px,100%);
   max-height: calc(100dvh - clamp(48px,14vh,128px));
   display: grid;
-  grid-template-areas: "heading" "form" "toolbar" "filters" "actions" "results";
-  grid-template-rows: auto auto auto auto auto minmax(0,1fr);
+  grid-template-areas: "heading" "form" "coverage" "toolbar" "filters" "actions" "results";
+  grid-template-rows: auto auto auto auto auto auto minmax(0,1fr);
   overflow: hidden;
   border: 1px solid var(--desktop-border-strong);
   border-radius: 16px;
@@ -423,7 +423,7 @@
 
 @media (max-width: 760px) {
   .global-mail-search-layer { align-items: stretch; padding: 0; }
-  .global-mail-search { width: 100%; max-height: 100dvh; min-height: 100dvh; border: 0; border-radius: 0; grid-template-rows: auto auto auto auto auto minmax(120px,1fr); }
+  .global-mail-search { width: 100%; max-height: 100dvh; min-height: 100dvh; border: 0; border-radius: 0; grid-template-rows: auto auto auto auto auto auto minmax(120px,1fr); }
   .global-mail-search-heading { padding-inline: 12px; }
   .global-mail-search-return span { display: none; }
   .global-mail-search-form { padding: 10px 12px 8px; }
@@ -1096,3 +1096,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .desktop-view-delete-actions button:hover,.desktop-hidden-spaces button:hover { background: var(--desktop-surface-hover); }
 .desktop-view-delete-actions button:disabled,.desktop-hidden-spaces button:disabled { color: var(--desktop-control-disabled-ink); background: var(--desktop-control-disabled-background); border-color: var(--desktop-control-disabled-border); cursor: not-allowed; }
 .desktop-demo-delete-note { color: var(--desktop-muted); font-size: 11px; line-height: 1.5; }
+
+.global-mail-search-coverage { grid-area: coverage; margin: 0; padding: 0 14px 10px; color: var(--desktop-muted); font: 500 11px/1.5 var(--desktop-sans); }
+.global-mail-search-continuation { padding-block: 12px; color: var(--desktop-muted); font-size: 12px; }
+
+.global-mail-search-exact-scope { grid-area: actions; margin: 0; padding: 8px 14px; color: var(--desktop-muted); font-size: 11px; }
+.global-mail-search-exact-scope button { border: 1px solid var(--desktop-border); border-radius: 6px; background: var(--desktop-paper); color: var(--desktop-ink); padding: 5px 8px; }

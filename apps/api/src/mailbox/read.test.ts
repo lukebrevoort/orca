@@ -557,3 +557,19 @@ describe("empty attention page pruning", () => {
     } finally { fixture.sqlite.close(); }
   });
 });
+
+test("pre-upgrade scoped cursors remain valid when new exact filters are absent", () => {
+  const fixture = createFixture(4);
+  try {
+    const reader = createMailboxReader(fixture.sqlite);
+    const query = { view: "all" as const, classification: "all" as const, query: "Subject", sender: "sender", limit: 1 };
+    const first = reader.read({ authorization: fixture.authorization, query }).response;
+    const previous = JSON.parse(Buffer.from(first.nextCursor!, "base64url").toString("utf8"));
+    // Exact scope representation emitted by the pre-search-upgrade reader.
+    previous.scope = JSON.stringify({ query: "Subject", sender: "sender", collectionId: null, destinationId: null, receivedAfter: null, receivedBefore: null });
+    const oldCursor = Buffer.from(JSON.stringify(previous)).toString("base64url");
+    const next = reader.read({ authorization: fixture.authorization, query: { ...query, cursor: oldCursor } }).response;
+    expect(next.messages).toHaveLength(1); expect(next.messages[0]!.id).not.toBe(first.messages[0]!.id);
+    expect(() => reader.read({ authorization: fixture.authorization, query: { ...query, senderAddress: "sender-0@group-0.example", cursor: oldCursor } })).toThrow(MailboxCursorError);
+  } finally { fixture.sqlite.close(); }
+});

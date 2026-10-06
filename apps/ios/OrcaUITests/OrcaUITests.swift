@@ -17,6 +17,78 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test19IndexedSearchLoadsTenThenMoreAndPreservesNavigation() throws {
+        try setFixtureSearchMode("legacy-metadata")
+        addTeardownBlock { try self.setFixtureSearchMode("indexed") }
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        chooseMailbox("All Mail", in: app)
+        search(for: "Or", in: app)
+        let count = app.staticTexts["inbox.search.count"]
+        let coverage = app.staticTexts["inbox.search.coverage"]
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertTrue(count.label.contains("Mailbox order"), "Short queries remain available before activation")
+        XCTAssertTrue(coverage.label.contains("Message bodies are not searched"))
+        attachScreenshot(named: "39-legacy-search-short-query")
+
+        let initialSearch = app.searchFields["Search mail"]
+        initialSearch.tap(); initialSearch.buttons["Clear text"].tap()
+        initialSearch.typeText("oceanblue"); app.keyboards.buttons["Search"].tap()
+        XCTAssertTrue(app.staticTexts["No matching mail"].waitForExistence(timeout: 10))
+        XCTAssertTrue(coverage.label.contains("Message bodies are not searched"))
+        attachScreenshot(named: "40-legacy-search-body-excluded")
+        try setFixtureSearchMode("indexed")
+        initialSearch.tap(); app.keyboards.buttons["Search"].tap()
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label, "10 shown · Most relevant first")
+        XCTAssertFalse(coverage.label.contains("not searched"))
+        attachScreenshot(named: "41-activated-search-body-included")
+        initialSearch.tap(); initialSearch.buttons["Clear text"].tap()
+        search(for: "Orcabeacon", in: app)
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label, "10 shown · Most relevant first")
+        let firstIdentifier = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "inbox.message.ios-fixture-search-message-")).firstMatch.identifier
+        XCTAssertFalse(firstIdentifier.isEmpty)
+        let first = app.descendants(matching: .any)[firstIdentifier].firstMatch
+        let firstNumber = String(firstIdentifier.suffix(2))
+        let editedNumber = firstNumber == "01" ? "02" : "01"
+        attachScreenshot(named: "35-indexed-search-first-ten")
+
+        let list = app.collectionViews["inbox.list"]
+        let more = app.buttons["inbox.search.load-more"]
+        for _ in 0..<10 { if more.isHittable { break }; list.swipeUp() }
+        XCTAssertTrue(more.isHittable); XCTAssertTrue(more.isEnabled)
+        more.tap()
+        XCTAssertTrue(more.waitForNonExistence(timeout: 10))
+        for _ in 0..<10 { if count.isHittable { break }; list.swipeDown() }
+        XCTAssertTrue(count.isHittable); XCTAssertEqual(count.label, "12 shown · Most relevant first")
+        attachScreenshot(named: "36-indexed-search-all-twelve")
+
+        XCTAssertTrue(first.isHittable); first.tap()
+        XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Orcabeacon record \(firstNumber)"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "37-indexed-search-open-result")
+        navigateBack(in: app)
+        XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
+        let searchField = app.searchFields["Search mail"]
+        XCTAssertEqual(searchField.value as? String, "Orcabeacon")
+        XCTAssertTrue(first.exists)
+
+        searchField.tap(); searchField.buttons["Clear text"].tap()
+        searchField.typeText("\"fixture body \(editedNumber)\"")
+        XCTAssertFalse(first.exists, "Editing the query must hide results from its prior snapshot")
+        app.keyboards.buttons["Search"].tap()
+        let bodyMatch = app.descendants(matching: .any)["inbox.message.ios-fixture-search-message-\(editedNumber)"].firstMatch
+        XCTAssertTrue(bodyMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label, "1 shown · Most relevant first")
+        XCTAssertFalse(first.exists); XCTAssertFalse(more.exists)
+        XCTAssertTrue(app.navigationBars["All Mail"].exists)
+        attachScreenshot(named: "38-indexed-search-edited-body-phrase")
+    }
+
+    private func setFixtureSearchMode(_ mode: String) throws {
+        _ = try composeFixtureRequest("__fixture/search/mode", method: "POST", body: ["mode": mode])
+    }
+
     func test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade() throws {
         try setFixtureSending(false)
         addTeardownBlock { try self.restoreFixtureSending() }

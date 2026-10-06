@@ -1,0 +1,1845 @@
+{
+  "generatedAt": "2026-10-05T22:46:26.424Z",
+  "runtime": "1.3.14",
+  "platform": "linux",
+  "arch": "x64",
+  "release": "6.18.44",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "logicalCpus": 9,
+  "fixtureDirectory": "<local-synthetic-artifact>",
+  "filesystem": {
+    "type": "0x794c7630",
+    "label": "overlayfs"
+  },
+  "configuration": {
+    "messages": 20000,
+    "samples": 5,
+    "pageSize": 10,
+    "maximumBodyBytes": 160
+  },
+  "limitations": [
+    "Local filesystem and warm host caches; no cache-drop or production traffic. No Railway price or capacity claim.",
+    "Only ordinary small synthetic messages; no large-body, resource exhaustion, native-query hang, or security validation.",
+    "Prior blocked PR224 security validation remains incomplete and is not exercised or resolved here.",
+    "RSS integral is 2ms sampling, approximate, and excludes unobserved sub-2ms intervals. Child CPU uses reaped process resource usage.",
+    "Raw worker lifetime includes startup, imports, query/apply, serialization and exit. Executor timing additionally includes its protocol validation and scheduling.",
+    "Capture compares otherwise identical full canonical schemas through migration0050 versus0051 with WAL/FULL and no active index worker.",
+    "Outer phase CPU includes fixture setup and waited descendant CPU. Use writerChildren.value and queries.rawWorkers for per-operation CPU; do not sum nested measurements.",
+    "The 300ms idle sample is only a short harness observation, not a steady-state API memory or CPU estimate. Construction creates no persistent worker process."
+  ],
+  "sourceHashes": {
+    "apps/api/drizzle/0051_queued_mail_search.sql": "9be0ae059893d08504658e7e4955f6b8870a412a7efe1b7b2e46a20f818a45ad",
+    "apps/api/src/search/indexing/supervisor.ts": "71673b400745ac3f123bf994d01759ecfe9c687e92470d267ec68d868e8904ab",
+    "apps/api/src/search/indexing/worker.ts": "e3a58cf973762f20b280142508e635c188d7540bf2905c281b3c5c18ab425331",
+    "apps/api/src/search/indexing/worker-core.ts": "02a0d010188d21b921fbff312f3b2a6c125dbd63534380662d57a8ca33ab6925",
+    "apps/api/src/search/read.ts": "509a13d3659e42c319bd6e9b7ca2e7bd1f2782cf3c8aadc1dd2fa39ceeb118e9",
+    "apps/api/src/search/executor.ts": "77a99828a111fde50d66985d8291a6c44324a1de9fc20a7686769482c8a4b6a6",
+    "scripts/ci/queued-search-benchmark.ts": "8ae1a757e8478be7f494cfeaccf0a24b9c95a00d5778dd9ce7b4a13ad954b6c5"
+  },
+  "capture": {
+    "value": [
+      {
+        "repeat": 0,
+        "capture": false,
+        "countPerOperation": 300,
+        "synchronous": "FULL",
+        "timings": {
+          "insert": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.029,
+              "median": 0.042,
+              "p95": 0.096,
+              "max": 0.305,
+              "mean": 0.051
+            },
+            "wallMs": 15.924239,
+            "cpuSeconds": 0.016461
+          },
+          "metadataUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.013,
+              "max": 0.119,
+              "mean": 0.009
+            },
+            "wallMs": 3.1233349999999973,
+            "cpuSeconds": 0.002955
+          },
+          "bodyUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.008,
+              "p95": 0.01,
+              "max": 0.308,
+              "mean": 0.01
+            },
+            "wallMs": 3.0487930000000034,
+            "cpuSeconds": 0.003123
+          },
+          "readFlagUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.009,
+              "max": 0.067,
+              "mean": 0.008
+            },
+            "wallMs": 2.5728779999999887,
+            "cpuSeconds": 0.002523
+          }
+        },
+        "queuedJobs": 0,
+        "beforeCheckpoint": {
+          "databaseBytes": 1953792,
+          "walBytes": 4198312,
+          "shmBytes": 32768
+        },
+        "checkpointed": {
+          "databaseBytes": 1953792,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      {
+        "repeat": 0,
+        "capture": true,
+        "countPerOperation": 300,
+        "synchronous": "FULL",
+        "timings": {
+          "insert": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.049,
+              "median": 0.066,
+              "p95": 0.123,
+              "max": 0.244,
+              "mean": 0.074
+            },
+            "wallMs": 22.51598899999999,
+            "cpuSeconds": 0.022598
+          },
+          "metadataUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.024,
+              "median": 0.025,
+              "p95": 0.047,
+              "max": 0.278,
+              "mean": 0.03
+            },
+            "wallMs": 9.115342999999996,
+            "cpuSeconds": 0.009034
+          },
+          "bodyUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.016,
+              "median": 0.017,
+              "p95": 0.021,
+              "max": 0.114,
+              "mean": 0.018
+            },
+            "wallMs": 5.694901000000016,
+            "cpuSeconds": 0.006415
+          },
+          "readFlagUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.008,
+              "max": 0.027,
+              "mean": 0.007
+            },
+            "wallMs": 2.382791999999995,
+            "cpuSeconds": 0.00233
+          }
+        },
+        "queuedJobs": 1200,
+        "beforeCheckpoint": {
+          "databaseBytes": 2367488,
+          "walBytes": 4227152,
+          "shmBytes": 32768
+        },
+        "checkpointed": {
+          "databaseBytes": 2367488,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      {
+        "repeat": 1,
+        "capture": true,
+        "countPerOperation": 300,
+        "synchronous": "FULL",
+        "timings": {
+          "insert": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.049,
+              "median": 0.067,
+              "p95": 0.144,
+              "max": 0.394,
+              "mean": 0.079
+            },
+            "wallMs": 23.841722000000004,
+            "cpuSeconds": 0.024057
+          },
+          "metadataUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.023,
+              "median": 0.024,
+              "p95": 0.042,
+              "max": 0.163,
+              "mean": 0.028
+            },
+            "wallMs": 8.389652000000012,
+            "cpuSeconds": 0.008331
+          },
+          "bodyUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.016,
+              "median": 0.017,
+              "p95": 0.023,
+              "max": 0.248,
+              "mean": 0.019
+            },
+            "wallMs": 5.917655999999965,
+            "cpuSeconds": 0.005871
+          },
+          "readFlagUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.008,
+              "max": 0.064,
+              "mean": 0.008
+            },
+            "wallMs": 2.555833000000007,
+            "cpuSeconds": 0.002514
+          }
+        },
+        "queuedJobs": 1200,
+        "beforeCheckpoint": {
+          "databaseBytes": 2367488,
+          "walBytes": 4227152,
+          "shmBytes": 32768
+        },
+        "checkpointed": {
+          "databaseBytes": 2367488,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      {
+        "repeat": 1,
+        "capture": false,
+        "countPerOperation": 300,
+        "synchronous": "FULL",
+        "timings": {
+          "insert": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.029,
+              "median": 0.04,
+              "p95": 0.081,
+              "max": 0.25,
+              "mean": 0.046
+            },
+            "wallMs": 14.04569600000002,
+            "cpuSeconds": 0.014231
+          },
+          "metadataUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.014,
+              "max": 0.192,
+              "mean": 0.009
+            },
+            "wallMs": 2.73451,
+            "cpuSeconds": 0.002689
+          },
+          "bodyUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.01,
+              "max": 0.134,
+              "mean": 0.009
+            },
+            "wallMs": 2.729914000000008,
+            "cpuSeconds": 0.002683
+          },
+          "readFlagUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.008,
+              "max": 0.024,
+              "mean": 0.007
+            },
+            "wallMs": 2.2658059999999978,
+            "cpuSeconds": 0.002226
+          }
+        },
+        "queuedJobs": 0,
+        "beforeCheckpoint": {
+          "databaseBytes": 1953792,
+          "walBytes": 4198312,
+          "shmBytes": 32768
+        },
+        "checkpointed": {
+          "databaseBytes": 1953792,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      {
+        "repeat": 2,
+        "capture": false,
+        "countPerOperation": 300,
+        "synchronous": "FULL",
+        "timings": {
+          "insert": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.028,
+              "median": 0.042,
+              "p95": 0.097,
+              "max": 0.278,
+              "mean": 0.051
+            },
+            "wallMs": 15.455414000000019,
+            "cpuSeconds": 0.015508
+          },
+          "metadataUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.012,
+              "max": 0.127,
+              "mean": 0.009
+            },
+            "wallMs": 2.7473100000000272,
+            "cpuSeconds": 0.002698
+          },
+          "bodyUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.012,
+              "max": 0.064,
+              "mean": 0.008
+            },
+            "wallMs": 2.526488000000029,
+            "cpuSeconds": 0.00248
+          },
+          "readFlagUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.011,
+              "max": 0.198,
+              "mean": 0.009
+            },
+            "wallMs": 2.7973650000000134,
+            "cpuSeconds": 0.00275
+          }
+        },
+        "queuedJobs": 0,
+        "beforeCheckpoint": {
+          "databaseBytes": 1953792,
+          "walBytes": 4198312,
+          "shmBytes": 32768
+        },
+        "checkpointed": {
+          "databaseBytes": 1953792,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      {
+        "repeat": 2,
+        "capture": true,
+        "countPerOperation": 300,
+        "synchronous": "FULL",
+        "timings": {
+          "insert": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.048,
+              "median": 0.066,
+              "p95": 0.133,
+              "max": 0.421,
+              "mean": 0.076
+            },
+            "wallMs": 22.84271899999999,
+            "cpuSeconds": 0.022746
+          },
+          "metadataUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.023,
+              "median": 0.025,
+              "p95": 0.046,
+              "max": 0.251,
+              "mean": 0.03
+            },
+            "wallMs": 9.182212999999933,
+            "cpuSeconds": 0.009933
+          },
+          "bodyUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.016,
+              "median": 0.017,
+              "p95": 0.021,
+              "max": 0.09,
+              "mean": 0.019
+            },
+            "wallMs": 5.655751999999893,
+            "cpuSeconds": 0.00561
+          },
+          "readFlagUpdate": {
+            "latencyMs": {
+              "samples": 300,
+              "min": 0.007,
+              "median": 0.007,
+              "p95": 0.008,
+              "max": 0.025,
+              "mean": 0.007
+            },
+            "wallMs": 2.323362999999972,
+            "cpuSeconds": 0.002283
+          }
+        },
+        "queuedJobs": 1200,
+        "beforeCheckpoint": {
+          "databaseBytes": 2359296,
+          "walBytes": 4235392,
+          "shmBytes": 32768
+        },
+        "checkpointed": {
+          "databaseBytes": 2359296,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      }
+    ],
+    "wallMs": 626.638145,
+    "cpuSeconds": 0.645523,
+    "userCpuSeconds": 0.415396,
+    "systemCpuSeconds": 0.230127,
+    "peakRssBytes": 55930880,
+    "sampledRssMiBSeconds": 30.71006395334376,
+    "rssSamples": 286
+  },
+  "supervisor": {
+    "value": {
+      "messages": 16,
+      "obligations": 32,
+      "beforeConstruction": {
+        "rss": 50855936,
+        "hwm": 50855936
+      },
+      "idleBefore": {
+        "rss": 51339264,
+        "hwm": 51339264
+      },
+      "idleCpuSecondsDuring300ms": 0.011976,
+      "wallMs": 948.8532230000001,
+      "drains": [
+        {
+          "result": {
+            "attempted": 16,
+            "acknowledged": 16,
+            "blocked": 0,
+            "sealed": 1,
+            "stopped": false
+          },
+          "wallMs": 476.725215
+        },
+        {
+          "result": {
+            "attempted": 16,
+            "acknowledged": 16,
+            "blocked": 0,
+            "sealed": 1,
+            "stopped": false
+          },
+          "wallMs": 472.01478900000006
+        }
+      ],
+      "parentCpuSeconds": 0.218106,
+      "observedChildCount": 34,
+      "parentRssPeakBytes": 60026880,
+      "childRssPeakBytes": 44871680,
+      "combinedRssPeakBytes": 104599552,
+      "parentRssMiBSeconds": 52.978790026031234,
+      "childRssMiBSeconds": 27.26089224773443,
+      "afterWork": {
+        "rss": 59420672,
+        "hwm": 59465728
+      },
+      "remaining": {
+        "n": 0
+      },
+      "sourceFootprint": {
+        "databaseBytes": 1138688,
+        "walBytes": 4120032,
+        "shmBytes": 32768
+      },
+      "indexFootprint": {
+        "databaseBytes": 147456,
+        "walBytes": 0,
+        "shmBytes": 0
+      },
+      "note": "Supervisor lives in existing API process; these are an isolated harness process's absolute RSS values, not additional persistent production RSS. Samples include actual default-bounded children and seals."
+    },
+    "wallMs": 1329.802753,
+    "cpuSeconds": 1.383801,
+    "userCpuSeconds": 0.945461,
+    "systemCpuSeconds": 0.43834,
+    "peakRssBytes": 60026880,
+    "sampledRssMiBSeconds": 70.92455227822268,
+    "rssSamples": 606
+  },
+  "writerChildren": {
+    "value": [
+      {
+        "mode": "metadata",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 28.790491000000003,
+        "cpuSeconds": 0.033201,
+        "userCpuSeconds": 0.023112,
+        "systemCpuSeconds": 0.010089,
+        "peakRssBytes": 44789760,
+        "sampledRssMiBSeconds": 0.8634445247070313,
+        "rssSamples": 13
+      },
+      {
+        "mode": "metadata",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 28.655687999999998,
+        "cpuSeconds": 0.032454,
+        "userCpuSeconds": 0.020209,
+        "systemCpuSeconds": 0.012245,
+        "peakRssBytes": 44761088,
+        "sampledRssMiBSeconds": 0.826996705587891,
+        "rssSamples": 13
+      },
+      {
+        "mode": "metadata",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 28.217829999999992,
+        "cpuSeconds": 0.032675,
+        "userCpuSeconds": 0.027899,
+        "systemCpuSeconds": 0.004776,
+        "peakRssBytes": 44810240,
+        "sampledRssMiBSeconds": 0.8208536264667967,
+        "rssSamples": 13
+      },
+      {
+        "mode": "metadata",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 24.949827,
+        "cpuSeconds": 0.029696,
+        "userCpuSeconds": 0.011057,
+        "systemCpuSeconds": 0.018639,
+        "peakRssBytes": 44756992,
+        "sampledRssMiBSeconds": 0.7281099069960939,
+        "rssSamples": 12
+      },
+      {
+        "mode": "metadata",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 28.123919,
+        "cpuSeconds": 0.031869,
+        "userCpuSeconds": 0.018191,
+        "systemCpuSeconds": 0.013678,
+        "peakRssBytes": 44343296,
+        "sampledRssMiBSeconds": 0.773759822248047,
+        "rssSamples": 12
+      },
+      {
+        "mode": "full",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 27.283535,
+        "cpuSeconds": 0.030557,
+        "userCpuSeconds": 0.021827,
+        "systemCpuSeconds": 0.00873,
+        "peakRssBytes": 44208128,
+        "sampledRssMiBSeconds": 0.7518835469667969,
+        "rssSamples": 12
+      },
+      {
+        "mode": "full",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 25.93476799999999,
+        "cpuSeconds": 0.029492,
+        "userCpuSeconds": 0.025263,
+        "systemCpuSeconds": 0.004229,
+        "peakRssBytes": 44552192,
+        "sampledRssMiBSeconds": 0.7431863556210934,
+        "rssSamples": 12
+      },
+      {
+        "mode": "full",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 27.99159000000003,
+        "cpuSeconds": 0.031696,
+        "userCpuSeconds": 0.024543,
+        "systemCpuSeconds": 0.007153,
+        "peakRssBytes": 44326912,
+        "sampledRssMiBSeconds": 0.8109250003457036,
+        "rssSamples": 13
+      },
+      {
+        "mode": "full",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 27.423205999999993,
+        "cpuSeconds": 0.031718,
+        "userCpuSeconds": 0.027031,
+        "systemCpuSeconds": 0.004687,
+        "peakRssBytes": 44814336,
+        "sampledRssMiBSeconds": 0.8188261947851567,
+        "rssSamples": 13
+      },
+      {
+        "mode": "full",
+        "value": {
+          "status": "applied"
+        },
+        "wallMs": 28.572494000000006,
+        "cpuSeconds": 0.032428,
+        "userCpuSeconds": 0.023232,
+        "systemCpuSeconds": 0.009196,
+        "peakRssBytes": 43245568,
+        "sampledRssMiBSeconds": 0.7591730795273439,
+        "rssSamples": 13
+      }
+    ],
+    "wallMs": 364.0374099999999,
+    "cpuSeconds": 0.472241,
+    "userCpuSeconds": 0.347619,
+    "systemCpuSeconds": 0.124622,
+    "peakRssBytes": 59252736,
+    "sampledRssMiBSeconds": 18.562665349634774,
+    "rssSamples": 168
+  },
+  "preparation": {
+    "value": {
+      "messages": 20000,
+      "accounts": 1,
+      "insertMs": 1304.1321739999998,
+      "indexPreparationMs": 13597.329225000001,
+      "sourceBytes": {
+        "total": 3953703,
+        "maxBodyBytes": 120
+      },
+      "postingRows": {
+        "metadataRows": 20000,
+        "fullRows": 20000
+      },
+      "queue": {
+        "jobs": 0
+      },
+      "beforeCheckpoint": {
+        "canonical": {
+          "databaseBytes": 42823680,
+          "walBytes": 42221792,
+          "shmBytes": 98304
+        },
+        "index": {
+          "databaseBytes": 39485440,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      "checkpointed": {
+        "canonical": {
+          "databaseBytes": 42823680,
+          "walBytes": 0,
+          "shmBytes": 98304
+        },
+        "index": {
+          "databaseBytes": 39485440,
+          "walBytes": 0,
+          "shmBytes": 32768
+        }
+      },
+      "preparationMethod": "Existing synthetic test helper: in-process apply/ack for both modes. Excludes process-per-job overhead and is NOT supervised backfill throughput."
+    },
+    "wallMs": 14992.619418999999,
+    "cpuSeconds": 15.977033,
+    "userCpuSeconds": 12.758813,
+    "systemCpuSeconds": 3.21822,
+    "peakRssBytes": 98410496,
+    "sampledRssMiBSeconds": 1059.9522489916412,
+    "rssSamples": 6874
+  },
+  "emptyBunStartup": [
+    {
+      "value": {},
+      "wallMs": 16.74347100000159,
+      "cpuSeconds": 0.017656,
+      "userCpuSeconds": 0.007056,
+      "systemCpuSeconds": 0.0106,
+      "peakRssBytes": 36143104,
+      "sampledRssMiBSeconds": 0.3749078618223158,
+      "rssSamples": 8
+    },
+    {
+      "value": {},
+      "wallMs": 18.27732399999877,
+      "cpuSeconds": 0.01915,
+      "userCpuSeconds": 0.011284,
+      "systemCpuSeconds": 0.007866,
+      "peakRssBytes": 35119104,
+      "sampledRssMiBSeconds": 0.392222966085931,
+      "rssSamples": 9
+    },
+    {
+      "value": {},
+      "wallMs": 16.308492000000115,
+      "cpuSeconds": 0.017533,
+      "userCpuSeconds": 0.017533,
+      "systemCpuSeconds": 0,
+      "peakRssBytes": 36708352,
+      "sampledRssMiBSeconds": 0.3746131144140658,
+      "rssSamples": 8
+    },
+    {
+      "value": {},
+      "wallMs": 20.37852700000076,
+      "cpuSeconds": 0.021605,
+      "userCpuSeconds": 0.013252,
+      "systemCpuSeconds": 0.008353,
+      "peakRssBytes": 36716544,
+      "sampledRssMiBSeconds": 0.4663932156758084,
+      "rssSamples": 10
+    },
+    {
+      "value": {},
+      "wallMs": 20.839704000001802,
+      "cpuSeconds": 0.021029,
+      "userCpuSeconds": 0.016827,
+      "systemCpuSeconds": 0.004202,
+      "peakRssBytes": 36683776,
+      "sampledRssMiBSeconds": 0.4479444089062605,
+      "rssSamples": 10
+    }
+  ],
+  "queries": [
+    {
+      "name": "rareSubject",
+      "mode": "full",
+      "rawWorkers": [
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.833354,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83890176
+          },
+          "wallMs": 110.82491200000004,
+          "cpuSeconds": 0.190814,
+          "userCpuSeconds": 0.126394,
+          "systemCpuSeconds": 0.06442,
+          "peakRssBytes": 85098496,
+          "sampledRssMiBSeconds": 6.00247967338867,
+          "rssSamples": 48
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 14.297973999999996,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 82923520
+          },
+          "wallMs": 113.05191999999806,
+          "cpuSeconds": 0.200072,
+          "userCpuSeconds": 0.151114,
+          "systemCpuSeconds": 0.048958,
+          "peakRssBytes": 84307968,
+          "sampledRssMiBSeconds": 6.223623196044805,
+          "rssSamples": 48
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 13.125663000000003,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 84291584
+          },
+          "wallMs": 107.39742800000022,
+          "cpuSeconds": 0.184167,
+          "userCpuSeconds": 0.136502,
+          "systemCpuSeconds": 0.047665,
+          "peakRssBytes": 85397504,
+          "sampledRssMiBSeconds": 5.83316835092763,
+          "rssSamples": 48
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.9174,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83865600
+          },
+          "wallMs": 107.0337780000009,
+          "cpuSeconds": 0.181763,
+          "userCpuSeconds": 0.140138,
+          "systemCpuSeconds": 0.041625,
+          "peakRssBytes": 85278720,
+          "sampledRssMiBSeconds": 5.848369547736357,
+          "rssSamples": 47
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.381092999999993,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 84021248
+          },
+          "wallMs": 108.64036800000031,
+          "cpuSeconds": 0.195931,
+          "userCpuSeconds": 0.125896,
+          "systemCpuSeconds": 0.070035,
+          "peakRssBytes": 84897792,
+          "sampledRssMiBSeconds": 5.840402362185592,
+          "rssSamples": 50
+        }
+      ],
+      "executorReads": [
+        {
+          "endToEndMs": 121.43621500000154,
+          "observation": {
+            "queueWaitMs": 0.5558149999997113,
+            "processDurationMs": 117.31872400000066,
+            "readerDurationMs": 12.081563000000003,
+            "peakRssBytes": 83681280
+          },
+          "metric": {
+            "durationMs": 12.081563000000003,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 121.67344199999934,
+          "observation": {
+            "queueWaitMs": 0.01603400000021793,
+            "processDurationMs": 121.2351230000022,
+            "readerDurationMs": 12.631979999999999,
+            "peakRssBytes": 82296832
+          },
+          "metric": {
+            "durationMs": 12.631979999999999,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 112.2780160000002,
+          "observation": {
+            "queueWaitMs": 0.016204999999899883,
+            "processDurationMs": 111.99126500000057,
+            "readerDurationMs": 12.538090000000011,
+            "peakRssBytes": 82837504
+          },
+          "metric": {
+            "durationMs": 12.538090000000011,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 121.72969999999987,
+          "observation": {
+            "queueWaitMs": 0.014471999998932006,
+            "processDurationMs": 121.46732500000144,
+            "readerDurationMs": 12.640963999999997,
+            "peakRssBytes": 84504576
+          },
+          "metric": {
+            "durationMs": 12.640963999999997,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 116.98355500000253,
+          "observation": {
+            "queueWaitMs": 0.015243000001646578,
+            "processDurationMs": 116.73613399999886,
+            "readerDurationMs": 16.169089,
+            "peakRssBytes": 84463616
+          },
+          "metric": {
+            "durationMs": 16.169089,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        }
+      ]
+    },
+    {
+      "name": "oldBodyOnly",
+      "mode": "full",
+      "rawWorkers": [
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.480783000000002,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000000"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 84271104
+          },
+          "wallMs": 101.73838599999726,
+          "cpuSeconds": 0.181238,
+          "userCpuSeconds": 0.141866,
+          "systemCpuSeconds": 0.039372,
+          "peakRssBytes": 85348352,
+          "sampledRssMiBSeconds": 5.5260211499940235,
+          "rssSamples": 46
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.863126999999992,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000000"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83550208
+          },
+          "wallMs": 103.33156700000109,
+          "cpuSeconds": 0.179805,
+          "userCpuSeconds": 0.140395,
+          "systemCpuSeconds": 0.03941,
+          "peakRssBytes": 84779008,
+          "sampledRssMiBSeconds": 5.580605077861369,
+          "rssSamples": 45
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.933072999999993,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000000"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83628032
+          },
+          "wallMs": 104.33071399999972,
+          "cpuSeconds": 0.179351,
+          "userCpuSeconds": 0.130468,
+          "systemCpuSeconds": 0.048883,
+          "peakRssBytes": 84725760,
+          "sampledRssMiBSeconds": 5.6248587571093935,
+          "rssSamples": 45
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 13.94552499999999,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000000"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83918848
+          },
+          "wallMs": 111.02429699999993,
+          "cpuSeconds": 0.187171,
+          "userCpuSeconds": 0.153853,
+          "systemCpuSeconds": 0.033318,
+          "peakRssBytes": 85176320,
+          "sampledRssMiBSeconds": 5.992188929402387,
+          "rssSamples": 49
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 14.120989000000009,
+              "candidateRows": 1,
+              "indexBatches": 5,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000000"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83664896
+          },
+          "wallMs": 103.39472699999897,
+          "cpuSeconds": 0.180341,
+          "userCpuSeconds": 0.126928,
+          "systemCpuSeconds": 0.053413,
+          "peakRssBytes": 84750336,
+          "sampledRssMiBSeconds": 5.50426930897459,
+          "rssSamples": 46
+        }
+      ],
+      "executorReads": [
+        {
+          "endToEndMs": 106.004571999998,
+          "observation": {
+            "queueWaitMs": 0.014121000000159256,
+            "processDurationMs": 105.7819079999972,
+            "readerDurationMs": 12.612129999999993,
+            "peakRssBytes": 83689472
+          },
+          "metric": {
+            "durationMs": 12.612129999999993,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 106.37238300000172,
+          "observation": {
+            "queueWaitMs": 0.013660000000527361,
+            "processDurationMs": 106.15111099999922,
+            "readerDurationMs": 12.962657000000007,
+            "peakRssBytes": 83628032
+          },
+          "metric": {
+            "durationMs": 12.962657000000007,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 101.67002499999944,
+          "observation": {
+            "queueWaitMs": 0.015042999999423046,
+            "processDurationMs": 101.3712549999982,
+            "readerDurationMs": 12.604239000000007,
+            "peakRssBytes": 83324928
+          },
+          "metric": {
+            "durationMs": 12.604239000000007,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 119.69189199999892,
+          "observation": {
+            "queueWaitMs": 0.012830000003305031,
+            "processDurationMs": 119.49837099999786,
+            "readerDurationMs": 12.731358999999998,
+            "peakRssBytes": 83361792
+          },
+          "metric": {
+            "durationMs": 12.731358999999998,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 104.73424100000193,
+          "observation": {
+            "queueWaitMs": 0.014771999998629326,
+            "processDurationMs": 104.52325399999972,
+            "readerDurationMs": 13.208275999999998,
+            "peakRssBytes": 83992576
+          },
+          "metric": {
+            "durationMs": 13.208275999999998,
+            "candidateRows": 1,
+            "indexBatches": 5,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        }
+      ]
+    },
+    {
+      "name": "commonSubject",
+      "mode": "full",
+      "rawWorkers": [
+        {
+          "value": {
+            "metric": {
+              "durationMs": 10.570491000000004,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "ids": [
+              "mail-000001",
+              "mail-000002",
+              "mail-000003",
+              "mail-000004",
+              "mail-000005",
+              "mail-000006",
+              "mail-000007",
+              "mail-000008",
+              "mail-000009",
+              "mail-000010"
+            ],
+            "continuation": "matches",
+            "peakRssBytes": 82968576
+          },
+          "wallMs": 105.96717499999795,
+          "cpuSeconds": 0.181187,
+          "userCpuSeconds": 0.131855,
+          "systemCpuSeconds": 0.049332,
+          "peakRssBytes": 84467712,
+          "sampledRssMiBSeconds": 5.663686344761713,
+          "rssSamples": 48
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 10.453054000000009,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "ids": [
+              "mail-000001",
+              "mail-000002",
+              "mail-000003",
+              "mail-000004",
+              "mail-000005",
+              "mail-000006",
+              "mail-000007",
+              "mail-000008",
+              "mail-000009",
+              "mail-000010"
+            ],
+            "continuation": "matches",
+            "peakRssBytes": 83476480
+          },
+          "wallMs": 95.05304099999921,
+          "cpuSeconds": 0.166938,
+          "userCpuSeconds": 0.144117,
+          "systemCpuSeconds": 0.022821,
+          "peakRssBytes": 84705280,
+          "sampledRssMiBSeconds": 5.045315681390683,
+          "rssSamples": 44
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 10.092772999999994,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "ids": [
+              "mail-000001",
+              "mail-000002",
+              "mail-000003",
+              "mail-000004",
+              "mail-000005",
+              "mail-000006",
+              "mail-000007",
+              "mail-000008",
+              "mail-000009",
+              "mail-000010"
+            ],
+            "continuation": "matches",
+            "peakRssBytes": 83742720
+          },
+          "wallMs": 98.06560099999842,
+          "cpuSeconds": 0.170137,
+          "userCpuSeconds": 0.115959,
+          "systemCpuSeconds": 0.054178,
+          "peakRssBytes": 85352448,
+          "sampledRssMiBSeconds": 5.3829773718456275,
+          "rssSamples": 45
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 10.691584000000006,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "ids": [
+              "mail-000001",
+              "mail-000002",
+              "mail-000003",
+              "mail-000004",
+              "mail-000005",
+              "mail-000006",
+              "mail-000007",
+              "mail-000008",
+              "mail-000009",
+              "mail-000010"
+            ],
+            "continuation": "matches",
+            "peakRssBytes": 84787200
+          },
+          "wallMs": 104.27834599999915,
+          "cpuSeconds": 0.190021,
+          "userCpuSeconds": 0.136608,
+          "systemCpuSeconds": 0.053413,
+          "peakRssBytes": 86065152,
+          "sampledRssMiBSeconds": 5.608274099605485,
+          "rssSamples": 47
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 10.800367000000008,
+              "candidateRows": 11,
+              "indexBatches": 1,
+              "shortBodyBytes": 0,
+              "projectedMessages": 10
+            },
+            "ids": [
+              "mail-000001",
+              "mail-000002",
+              "mail-000003",
+              "mail-000004",
+              "mail-000005",
+              "mail-000006",
+              "mail-000007",
+              "mail-000008",
+              "mail-000009",
+              "mail-000010"
+            ],
+            "continuation": "matches",
+            "peakRssBytes": 83824640
+          },
+          "wallMs": 108.15303099999801,
+          "cpuSeconds": 0.187999,
+          "userCpuSeconds": 0.120541,
+          "systemCpuSeconds": 0.067458,
+          "peakRssBytes": 85291008,
+          "sampledRssMiBSeconds": 5.738013616955072,
+          "rssSamples": 48
+        }
+      ],
+      "executorReads": [
+        {
+          "endToEndMs": 101.00371799999994,
+          "observation": {
+            "queueWaitMs": 0.014682000000902917,
+            "processDurationMs": 100.78762300000017,
+            "readerDurationMs": 10.348316999999994,
+            "peakRssBytes": 82710528
+          },
+          "metric": {
+            "durationMs": 10.348316999999994,
+            "candidateRows": 11,
+            "indexBatches": 1,
+            "shortBodyBytes": 0,
+            "projectedMessages": 10
+          },
+          "returned": 10
+        },
+        {
+          "endToEndMs": 100.46365100000185,
+          "observation": {
+            "queueWaitMs": 0.012869999998656567,
+            "processDurationMs": 100.18764600000213,
+            "readerDurationMs": 10.349829,
+            "peakRssBytes": 83042304
+          },
+          "metric": {
+            "durationMs": 10.349829,
+            "candidateRows": 11,
+            "indexBatches": 1,
+            "shortBodyBytes": 0,
+            "projectedMessages": 10
+          },
+          "returned": 10
+        },
+        {
+          "endToEndMs": 113.0624859999989,
+          "observation": {
+            "queueWaitMs": 0.015161999999691034,
+            "processDurationMs": 112.84193500000038,
+            "readerDurationMs": 10.788348,
+            "peakRssBytes": 83881984
+          },
+          "metric": {
+            "durationMs": 10.788348,
+            "candidateRows": 11,
+            "indexBatches": 1,
+            "shortBodyBytes": 0,
+            "projectedMessages": 10
+          },
+          "returned": 10
+        },
+        {
+          "endToEndMs": 106.10906700000123,
+          "observation": {
+            "queueWaitMs": 0.01486300000033225,
+            "processDurationMs": 105.85630700000183,
+            "readerDurationMs": 12.347413000000003,
+            "peakRssBytes": 82882560
+          },
+          "metric": {
+            "durationMs": 12.347413000000003,
+            "candidateRows": 11,
+            "indexBatches": 1,
+            "shortBodyBytes": 0,
+            "projectedMessages": 10
+          },
+          "returned": 10
+        },
+        {
+          "endToEndMs": 118.90272099999856,
+          "observation": {
+            "queueWaitMs": 0.015894000000116648,
+            "processDurationMs": 118.59558000000106,
+            "readerDurationMs": 10.886415999999997,
+            "peakRssBytes": 83959808
+          },
+          "metric": {
+            "durationMs": 10.886415999999997,
+            "candidateRows": 11,
+            "indexBatches": 1,
+            "shortBodyBytes": 0,
+            "projectedMessages": 10
+          },
+          "returned": 10
+        }
+      ]
+    },
+    {
+      "name": "noHit",
+      "mode": "full",
+      "rawWorkers": [
+        {
+          "value": {
+            "metric": {
+              "durationMs": 11.022580000000005,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "ids": [],
+            "continuation": "none",
+            "peakRssBytes": 82960384
+          },
+          "wallMs": 116.99966900000072,
+          "cpuSeconds": 0.206185,
+          "userCpuSeconds": 0.165713,
+          "systemCpuSeconds": 0.040472,
+          "peakRssBytes": 83263488,
+          "sampledRssMiBSeconds": 6.1865853225,
+          "rssSamples": 52
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 9.514916,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "ids": [],
+            "continuation": "none",
+            "peakRssBytes": 82972672
+          },
+          "wallMs": 117.01964000000225,
+          "cpuSeconds": 0.212379,
+          "userCpuSeconds": 0.16513,
+          "systemCpuSeconds": 0.047249,
+          "peakRssBytes": 83832832,
+          "sampledRssMiBSeconds": 6.250424456892519,
+          "rssSamples": 52
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 10.747496999999996,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "ids": [],
+            "continuation": "none",
+            "peakRssBytes": 84811776
+          },
+          "wallMs": 105.8737489999985,
+          "cpuSeconds": 0.182342,
+          "userCpuSeconds": 0.136489,
+          "systemCpuSeconds": 0.045853,
+          "peakRssBytes": 85643264,
+          "sampledRssMiBSeconds": 5.801113790628909,
+          "rssSamples": 47
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 9.017237000000009,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "ids": [],
+            "continuation": "none",
+            "peakRssBytes": 81526784
+          },
+          "wallMs": 94.87729499999841,
+          "cpuSeconds": 0.164061,
+          "userCpuSeconds": 0.140491,
+          "systemCpuSeconds": 0.02357,
+          "peakRssBytes": 81825792,
+          "sampledRssMiBSeconds": 4.787517082759855,
+          "rssSamples": 41
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 9.491429999999994,
+              "candidateRows": 0,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 0
+            },
+            "ids": [],
+            "continuation": "none",
+            "peakRssBytes": 83169280
+          },
+          "wallMs": 93.787687,
+          "cpuSeconds": 0.160005,
+          "userCpuSeconds": 0.099202,
+          "systemCpuSeconds": 0.060803,
+          "peakRssBytes": 83681280,
+          "sampledRssMiBSeconds": 4.899141499154292,
+          "rssSamples": 43
+        }
+      ],
+      "executorReads": [
+        {
+          "endToEndMs": 118.01829600000201,
+          "observation": {
+            "queueWaitMs": 0.02106199999980163,
+            "processDurationMs": 117.80334200000289,
+            "readerDurationMs": 10.496080000000006,
+            "peakRssBytes": 82743296
+          },
+          "metric": {
+            "durationMs": 10.496080000000006,
+            "candidateRows": 0,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 0
+          },
+          "returned": 0
+        },
+        {
+          "endToEndMs": 117.99971699999878,
+          "observation": {
+            "queueWaitMs": 0.013681000000360655,
+            "processDurationMs": 117.77374799999961,
+            "readerDurationMs": 9.247934,
+            "peakRssBytes": 82288640
+          },
+          "metric": {
+            "durationMs": 9.247934,
+            "candidateRows": 0,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 0
+          },
+          "returned": 0
+        },
+        {
+          "endToEndMs": 101.98095100000137,
+          "observation": {
+            "queueWaitMs": 0.03399100000024191,
+            "processDurationMs": 101.75339800000074,
+            "readerDurationMs": 9.363927999999987,
+            "peakRssBytes": 82231296
+          },
+          "metric": {
+            "durationMs": 9.363927999999987,
+            "candidateRows": 0,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 0
+          },
+          "returned": 0
+        },
+        {
+          "endToEndMs": 97.38386399999945,
+          "observation": {
+            "queueWaitMs": 0.029153999999834923,
+            "processDurationMs": 97.15364799999952,
+            "readerDurationMs": 9.059290000000004,
+            "peakRssBytes": 83202048
+          },
+          "metric": {
+            "durationMs": 9.059290000000004,
+            "candidateRows": 0,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 0
+          },
+          "returned": 0
+        },
+        {
+          "endToEndMs": 101.84969300000012,
+          "observation": {
+            "queueWaitMs": 0.013630000001285225,
+            "processDurationMs": 101.54725899999903,
+            "readerDurationMs": 9.84411,
+            "peakRssBytes": 82833408
+          },
+          "metric": {
+            "durationMs": 9.84411,
+            "candidateRows": 0,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 0
+          },
+          "returned": 0
+        }
+      ]
+    },
+    {
+      "name": "metadataOnly",
+      "mode": "metadata",
+      "rawWorkers": [
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.022165000000001,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83513344
+          },
+          "wallMs": 109.02695799999856,
+          "cpuSeconds": 0.184264,
+          "userCpuSeconds": 0.140642,
+          "systemCpuSeconds": 0.043622,
+          "peakRssBytes": 84496384,
+          "sampledRssMiBSeconds": 5.790839846648461,
+          "rssSamples": 49
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.201954999999998,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 81211392
+          },
+          "wallMs": 101.6443849999996,
+          "cpuSeconds": 0.172735,
+          "userCpuSeconds": 0.146493,
+          "systemCpuSeconds": 0.026242,
+          "peakRssBytes": 82190336,
+          "sampledRssMiBSeconds": 5.25942416222466,
+          "rssSamples": 45
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 11.675742999999997,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83566592
+          },
+          "wallMs": 104.97043399999893,
+          "cpuSeconds": 0.179332,
+          "userCpuSeconds": 0.15192,
+          "systemCpuSeconds": 0.027412,
+          "peakRssBytes": 84582400,
+          "sampledRssMiBSeconds": 5.493054382898386,
+          "rssSamples": 47
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 11.087669000000005,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83841024
+          },
+          "wallMs": 127.00604399999793,
+          "cpuSeconds": 0.201115,
+          "userCpuSeconds": 0.134095,
+          "systemCpuSeconds": 0.06702,
+          "peakRssBytes": 85262336,
+          "sampledRssMiBSeconds": 7.270631946798849,
+          "rssSamples": 57
+        },
+        {
+          "value": {
+            "metric": {
+              "durationMs": 12.535064999999989,
+              "candidateRows": 1,
+              "indexBatches": 4,
+              "shortBodyBytes": 0,
+              "projectedMessages": 1
+            },
+            "ids": [
+              "mail-000012"
+            ],
+            "continuation": "none",
+            "peakRssBytes": 83988480
+          },
+          "wallMs": 104.64227100000062,
+          "cpuSeconds": 0.178032,
+          "userCpuSeconds": 0.115359,
+          "systemCpuSeconds": 0.062673,
+          "peakRssBytes": 84951040,
+          "sampledRssMiBSeconds": 5.63137904133593,
+          "rssSamples": 47
+        }
+      ],
+      "executorReads": [
+        {
+          "endToEndMs": 113.27213100000154,
+          "observation": {
+            "queueWaitMs": 0.012408999999024672,
+            "processDurationMs": 113.06758300000001,
+            "readerDurationMs": 12.188895000000002,
+            "peakRssBytes": 82092032
+          },
+          "metric": {
+            "durationMs": 12.188895000000002,
+            "candidateRows": 1,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 116.73809700000129,
+          "observation": {
+            "queueWaitMs": 0.014892999999574386,
+            "processDurationMs": 116.51931699999841,
+            "readerDurationMs": 11.635563000000005,
+            "peakRssBytes": 81932288
+          },
+          "metric": {
+            "durationMs": 11.635563000000005,
+            "candidateRows": 1,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 116.47520099999747,
+          "observation": {
+            "queueWaitMs": 0.016896000000997446,
+            "processDurationMs": 116.22071800000049,
+            "readerDurationMs": 11.619088000000005,
+            "peakRssBytes": 82612224
+          },
+          "metric": {
+            "durationMs": 11.619088000000005,
+            "candidateRows": 1,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 105.3858390000023,
+          "observation": {
+            "queueWaitMs": 0.013429999999061693,
+            "processDurationMs": 105.20569800000158,
+            "readerDurationMs": 12.107112,
+            "peakRssBytes": 84373504
+          },
+          "metric": {
+            "durationMs": 12.107112,
+            "candidateRows": 1,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        },
+        {
+          "endToEndMs": 109.34429000000091,
+          "observation": {
+            "queueWaitMs": 0.014701999996759696,
+            "processDurationMs": 109.15839200000119,
+            "readerDurationMs": 12.296597000000006,
+            "peakRssBytes": 83681280
+          },
+          "metric": {
+            "durationMs": 12.296597000000006,
+            "candidateRows": 1,
+            "indexBatches": 4,
+            "shortBodyBytes": 0,
+            "projectedMessages": 1
+          },
+          "returned": 1
+        }
+      ]
+    }
+  ],
+  "complete": true,
+  "publicationNote": "Synthetic measurements only; local paths redacted. Source hashes and measured values preserved. Runtime/capability integration may evolve; compare hashes before treating this as final-head evidence."
+}

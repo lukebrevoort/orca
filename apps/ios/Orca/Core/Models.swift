@@ -17,6 +17,70 @@ struct InboxMessage: Codable, Identifiable, Hashable {
 struct Freshness: Codable, Hashable { var revision: String; var lastSyncedAt: String? }
 struct InboxCounts: Codable, Hashable { var focus: Int; var normal: Int; var quiet: Int; var hidden: Int; var all: Int }
 struct InboxPage: Codable { var accounts: [MailAccount]; var messages: [InboxMessage]; var nextCursor: String?; var freshness: Freshness?; var counts: InboxCounts }
+enum MailSearchView: String, Codable { case all, inbox, focus, normal, quiet, hidden }
+enum MailSearchMode: String, Codable { case legacyMetadata = "legacy-metadata", indexed }
+struct MailSearchCapabilities: Codable, Equatable {
+    var version: Int; var mode: MailSearchMode; var epoch: String; var ownerId: String
+    var coverage: String; var semantics: String
+    enum CodingKeys: String, CodingKey { case version, mode, epoch, ownerId, coverage, semantics }
+}
+extension MailSearchCapabilities {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decode(Int.self, forKey: .version); mode = try values.decode(MailSearchMode.self, forKey: .mode)
+        epoch = try values.decode(String.self, forKey: .epoch); ownerId = try values.decode(String.self, forKey: .ownerId)
+        coverage = try values.decode(String.self, forKey: .coverage); semantics = try values.decode(String.self, forKey: .semantics)
+        guard version == 1, !epoch.isEmpty, !ownerId.isEmpty,
+              coverage == (mode == .indexed ? "stored-plaintext" : "stored-metadata"),
+              semantics == (mode == .indexed ? "literal-index-v3" : "legacy-substring-v1") else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported search capabilities."))
+        }
+    }
+}
+struct MailSearchSession: Equatable {
+    var capabilities: MailSearchCapabilities
+    var origin: URL
+    var isLegacyServer: Bool
+}
+enum MailSearchContinuation: String, Codable { case matches, scan, none }
+enum MailSearchOrder: String, Codable { case fieldRelevance = "field-relevance-v1" }
+enum MailSearchSemantics: String, Codable { case literalIndex = "literal-index-v3" }
+// Native search always requests full stored plaintext. Do not accept a metadata
+// response as successful full-mail results if the server contract changes.
+enum MailSearchCoverage: String, Codable { case storedPlaintext = "stored-plaintext" }
+struct MailSearchPage: Codable {
+    var accounts: [MailAccount]; var messages: [InboxMessage]; var nextCursor: String?
+    var continuation: MailSearchContinuation; var snapshot: String
+    var order: MailSearchOrder; var semantics: MailSearchSemantics; var coverage: MailSearchCoverage
+    enum CodingKeys: String, CodingKey { case accounts, messages, nextCursor, continuation, snapshot, order, semantics, coverage }
+}
+extension MailSearchPage {
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(accounts, forKey: .accounts); try values.encode(messages, forKey: .messages)
+        if let nextCursor { try values.encode(nextCursor, forKey: .nextCursor) } else { try values.encodeNil(forKey: .nextCursor) }
+        try values.encode(continuation, forKey: .continuation); try values.encode(snapshot, forKey: .snapshot)
+        try values.encode(order, forKey: .order); try values.encode(semantics, forKey: .semantics); try values.encode(coverage, forKey: .coverage)
+    }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        accounts = try values.decode([MailAccount].self, forKey: .accounts)
+        messages = try values.decode([InboxMessage].self, forKey: .messages)
+        guard values.contains(.nextCursor) else {
+            throw DecodingError.keyNotFound(CodingKeys.nextCursor, .init(codingPath: decoder.codingPath, debugDescription: "Search responses must include nextCursor."))
+        }
+        nextCursor = try values.decodeIfPresent(String.self, forKey: .nextCursor)
+        continuation = try values.decode(MailSearchContinuation.self, forKey: .continuation)
+        snapshot = try values.decode(String.self, forKey: .snapshot)
+        order = try values.decode(MailSearchOrder.self, forKey: .order)
+        semantics = try values.decode(MailSearchSemantics.self, forKey: .semantics)
+        coverage = try values.decode(MailSearchCoverage.self, forKey: .coverage)
+        guard !snapshot.isEmpty, messages.count <= 50, nextCursor?.isEmpty != true,
+              (continuation == .none) == (nextCursor == nil) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Search continuation must identify a consistent snapshot and cursor."))
+        }
+    }
+}
 struct MailAttachment: Codable, Identifiable, Hashable { var id: String; var filename: String; var mimeType: String; var size: Int }
 struct ThreadMessage: Codable, Identifiable, Hashable {
     var id: String; var accountId: String; var provider: String; var providerMessageId: String; var from: MailContact

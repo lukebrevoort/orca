@@ -593,6 +593,8 @@ export const inboxQuerySchema = z
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
     query: z.string().trim().min(1).max(200).optional(),
     sender: z.string().trim().min(1).max(320).optional(),
+    senderAddress: z.string().trim().min(1).max(320).optional(),
+    attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
     accountId: nonEmptyStringSchema.optional(),
     collectionId: nonEmptyStringSchema.optional(),
     destinationId: nonEmptyStringSchema.optional(),

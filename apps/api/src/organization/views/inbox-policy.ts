@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { organizationViewDefinitionSchema } from "@orca/shared";
+import { organizationViewDefinitionSchema } from "@orca/shared/organization-views";
 import { threadMatchPredicate } from "./thread-predicate.ts";
 
 /** Matches the catalog's displayed Inbox identity, including an explicit normal mapping. */
