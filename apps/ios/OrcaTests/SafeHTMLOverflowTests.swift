@@ -27,7 +27,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
         for (width, size, theme) in [(CGFloat(272), CGFloat(22), ColorScheme.light), (342, 22, .dark), (342, 44, .light)] {
             let metrics = try await render("<p>Build output</p><pre><code>\(code)</code></pre><p>End of message.</p>", width: width, size: size, theme: theme)
             XCTAssertEqual(metrics["preText"] as? String, code, "Wrapping must preserve every character and indentation")
-            assertFits(metrics, width: width)
+            assertFits(metrics, width: width, size: size)
             XCTAssertGreaterThan(number(metrics, "preHeight"), size * 3, "Long code must reflow into visible lines")
         }
     }
@@ -40,7 +40,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
         """
         for (width, size, theme) in [(CGFloat(272), CGFloat(22), ColorScheme.light), (342, 22, .dark), (342, 44, .light)] {
             let metrics = try await render(html, width: width, size: size, theme: theme)
-            assertFits(metrics, width: width)
+            assertFits(metrics, width: width, size: size)
             XCTAssertEqual(metrics["headers"] as? [String], ["Job", "Status", "Commit"])
             XCTAssertEqual(metrics["cells"] as? [String], ["Native reader", "Passed", "f0a9180a8a185cd2bdb293d87a617e81414ebbaf"])
             XCTAssertEqual(metrics["tableDisplay"] as? String, "table", "Keep native table semantics for assistive technology")
@@ -48,7 +48,8 @@ final class SafeHTMLOverflowTests: XCTestCase {
         }
     }
 
-    private func assertFits(_ metrics: [String: Any], width: CGFloat, file: StaticString = #filePath, line: UInt = #line) {
+    private func assertFits(_ metrics: [String: Any], width: CGFloat, size: CGFloat, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(number(metrics, "bodyFontSize"), Double(size), accuracy: 0.1, "Keep the requested reading size", file: file, line: line)
         XCTAssertLessThanOrEqual(number(metrics, "documentWidth"), Double(width) + 1, "The disabled outer scroll view must not hide horizontal overflow: \(metrics)", file: file, line: line)
         XCTAssertLessThanOrEqual(number(metrics, "textRight"), Double(width) + 1, "Every rendered text fragment must fit the reader", file: file, line: line)
         XCTAssertGreaterThanOrEqual(number(metrics, "textLeft"), -1, file: file, line: line)
@@ -91,6 +92,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
         const table = document.querySelector('table'), pre = document.querySelector('pre');
         return {
           documentWidth: document.documentElement.scrollWidth,
+          bodyFontSize: parseFloat(getComputedStyle(document.body).fontSize),
           textRight: Math.max(...rectangles.map(r => r.right)),
           textLeft: Math.min(...rectangles.map(r => r.left)),
           scale: window.visualViewport.scale,
@@ -103,6 +105,11 @@ final class SafeHTMLOverflowTests: XCTestCase {
         };
         """, arguments: [:], in: nil, contentWorld: .defaultClient)
         let metrics = try XCTUnwrap(result as? [String: Any])
+        let snapshot = try await view.takeSnapshot(with: nil)
+        let attachment = XCTAttachment(image: snapshot)
+        attachment.name = "reader-overflow-\(theme)-\(Int(width))-\(Int(size))"
+        attachment.lifetime = .keepAlways
+        add(attachment)
         print("NATIVE_READER_OVERFLOW width=\(width) size=\(size) theme=\(theme) metrics=\(metrics)")
         return metrics
     }
