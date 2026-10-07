@@ -1139,3 +1139,43 @@ final class InboxLoadingTests: XCTestCase {
         }
     }
 }
+
+
+/// Regression checks call the production ComposeView serialization path. All
+/// messages are synthetic; these tests never create or deliver real email.
+@MainActor
+final class DraftLifecycleTests: XCTestCase {
+    func testDraftLifecycleOpeningLocalRichDraftPreservesHTML() {
+        let body = DraftBody(text: "Keep this link", html: "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>")
+        let draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",
+                               content: DraftContent(subject: "Rich draft", body: body))
+        let serialized = ComposeView(localDraft: draft).content()
+        XCTAssertEqual(serialized.body.text, body.text)
+        XCTAssertEqual(serialized.body.html, body.html, "Opening an unchanged draft must not destroy its rich body")
+    }
+
+    func testDraftLifecycleOpeningServerRichDraftPreservesHTML() {
+        let body = DraftBody(text: "Keep formatting", html: "<p>Keep <strong>formatting</strong></p>")
+        let draft = MessageDraft(id: "fixture-server-draft", accountId: "fixture-account", to: [], cc: [], bcc: [],
+                                 subject: "Rich server draft", body: body, context: nil, attachments: [], revision: 1,
+                                 deliveryStatus: "draft", providerSyncStatus: "synced", providerSyncError: nil,
+                                 providerDraftId: nil, providerMessageId: nil, providerThreadId: nil,
+                                 createdAt: "2026-10-07T00:00:00Z", updatedAt: "2026-10-07T00:00:00Z")
+        let serialized = ComposeView(serverDraft: draft).content()
+        XCTAssertEqual(serialized.body.text, body.text)
+        XCTAssertEqual(serialized.body.html, body.html, "The first local autosave must preserve the server rich body")
+    }
+
+    func testDraftLifecycleUnchangedRichBodySurvivesSaveAndReopen() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let body = DraftBody(text: "Keep formatting", html: "<p>Keep <em>formatting</em></p>")
+        var draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: DraftContent(body: body))
+        // This is the content() -> DraftStore.save sequence used by saveLocal().
+        draft.content = ComposeView(localDraft: draft).content()
+        try await DraftStore(directory: directory).save(draft)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reopened.count, 1)
+        XCTAssertEqual(reopened.first?.content.body.html, body.html)
+    }
+}
