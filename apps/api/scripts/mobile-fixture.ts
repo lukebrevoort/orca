@@ -118,8 +118,55 @@ type RefreshGate = {
   pending: boolean;
 };
 let refreshGate: RefreshGate | undefined;
+// Inbox recovery controls are scoped to this authenticated, disposable server.
+let emptyInboxOnce = false;
+let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/__fixture/inbox-recovery/")) {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    const action = url.pathname.slice("/__fixture/inbox-recovery/".length);
+    if (request.method === "GET" && action === "wait") {
+      const gate = inboxRecoveryGate;
+      if (!gate) return new Response(null, { status: 409 });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([gate.started, new Promise<void>((resolve) => { timer = setTimeout(resolve, 5_000); })]);
+        return new Response(null, { status: gate.pending ? 204 : 408 });
+      } finally { clearTimeout(timer); }
+    }
+    if (request.method !== "POST") return new Response(null, { status: 405 });
+    if (action === "reset") {
+      emptyInboxOnce = false; inboxRecoveryGate?.release(); inboxRecoveryGate = undefined;
+      return new Response(null, { status: 204 });
+    }
+    if (action === "empty-once") { emptyInboxOnce = true; return new Response(null, { status: 204 }); }
+    if (action === "hold-catalog" || action === "hold-views") {
+      inboxRecoveryGate?.release();
+      let markStarted!: () => void, release!: () => void;
+      const started = new Promise<void>((resolve) => { markStarted = resolve; });
+      const released = new Promise<void>((resolve) => { release = resolve; });
+      inboxRecoveryGate = { started, markStarted, released, release, pending: false,
+        path: action === "hold-catalog" ? "/v1/destinations" : "/v1/organization/views" };
+      return new Response(null, { status: 204 });
+    }
+    return new Response(null, { status: 404 });
+  }
+  if (request.method === "GET" && inboxRecoveryGate?.path === url.pathname) {
+    const gate = inboxRecoveryGate;
+    gate.pending = true; gate.markStarted();
+    const timer = setTimeout(gate.release, 20_000);
+    try { await gate.released; }
+    finally { clearTimeout(timer); gate.pending = false; if (inboxRecoveryGate === gate) inboxRecoveryGate = undefined; }
+  }
+  if (request.method === "GET" && url.pathname === "/v1/inbox" && emptyInboxOnce) {
+    emptyInboxOnce = false;
+    const response = await app.fetch(request);
+    if (!response.ok) return response;
+    const page = await response.json() as Record<string, unknown>;
+    return Response.json({ ...page, messages: [], nextCursor: null,
+      counts: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 } });
+  }
   // Authenticated controls exist only inside this disposable loopback fixture.
   // They simulate browser consent and another device completing delivery; no
   // Google/OAuth request, persistent grant, or provider delivery is performed.
@@ -217,3 +264,4 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => {
   rmSync(directory, { recursive: true, force: true });
   process.exit(0);
 });
+
