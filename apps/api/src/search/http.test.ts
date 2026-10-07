@@ -10,6 +10,7 @@ import { createApp } from "../index.ts";
 import { prepareSyntheticSearchIndex } from "./test-support.ts";
 import { disableSearch } from "./indexing/admin.ts";
 import { mailSearchCapabilitiesSchema } from "@orca/shared/mail-search";
+import type { RankedSearchExecutionObservation } from "./executor.ts";
 const directories: string[] = [];
 afterEach(() => { for (const path of directories.splice(0)) rmSync(path, { recursive: true, force: true }); });
 
@@ -34,7 +35,8 @@ test("indexed HTTP search is authorized, full-index ranked, paged and explicitly
         fromAddress: "studio@example.test", fromName: "Studio", subject: i === 0 ? "Appointment confirmation" : "Older saved note",
         snippet: "Synthetic record", bodyText: "Appointment confirmation with AI update, literal 50% code_a.", receivedAt: new Date("2020-01-01T00:00:00Z") }).run();
     }
-    const app = createApp({ dbFactory: () => createDatabaseClient(path) });
+    const observations: RankedSearchExecutionObservation[] = [];
+    const app = createApp({ dbFactory: () => createDatabaseClient(path), rankedSearchObserver: observation => observations.push(observation) });
     const session = await createSession(db, "owner"); const headers = { cookie: `orca_session=${session.token}` };
     expect((await app.request("/v1/mail/search?query=appointment")).status).toBe(401);
     const inactive = await app.request("/v1/mail/search?query=AI", { headers });
@@ -60,9 +62,14 @@ test("indexed HTTP search is authorized, full-index ranked, paged and explicitly
     expect(active.mode).toBe("indexed"); expect(active.epoch).not.toBe(initial.epoch);
     const staleMode = await app.request("/v1/mail/search?query=AI&cursor=invalid", { headers: expectedLegacy });
     expect(staleMode.status).toBe(409); expect((await staleMode.json()).error.code).toBe("search_mode_changed");
+    expect(observations).toHaveLength(0);
     const response = await app.request("/v1/mail/search?query=confirmation+appointment", { headers });
     expect(response.status).toBe(200); expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(response.headers.get("X-Orca-Search-Mode")).toBe("indexed"); expect(response.headers.get("X-Orca-Search-Epoch")).toBe(active.epoch);
+    expect(observations).toHaveLength(1);
+    expect(observations[0]!.budgetReason).toBeNull();
+    expect(observations[0]!.stdoutBytes).toBeGreaterThan(0);
+    expect(observations[0]!.readerDurationMs).not.toBeNull();
     const first = await response.json(); expect(first.messages).toHaveLength(10); expect(first.messages[0].id).toBe("message-00");
     expect(first.counts).toBeUndefined(); expect(first.continuation).toBe("matches");
     const second = await (await app.request(`/v1/mail/search?query=confirmation+appointment&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).json();
@@ -71,6 +78,9 @@ test("indexed HTTP search is authorized, full-index ranked, paged and explicitly
     expect([...first.messages, ...second.messages].every((row: { accountId: string }) => row.accountId === "owned")).toBe(true);
     const legacy = await (await app.request("/v1/inbox?classification=all&view=all&query=appointment", { headers })).json();
     expect(legacy.messages).toHaveLength(1); expect(legacy.counts.attention.all).toBe(1);
+    expect(observations).toHaveLength(3);
+    expect(observations[2]!.budgetReason).toBeNull();
+    expect(observations[2]!.stdoutBytes).toBeGreaterThan(0);
     for (const invalid of ["query=AI", "query=" + Array.from({ length: 17 }, (_, i) => `term${i}`).join("+"), "query=appointment&limit=51", "query=appointment&searchBodyText=false"]) {
       expect((await app.request(`/v1/mail/search?${invalid}`, { headers })).status).toBe(400);
     }

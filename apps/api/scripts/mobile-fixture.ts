@@ -96,6 +96,17 @@ let accountsUnavailable = false;
 let sendRequests = 0;
 const app = createApp({
   dbFactory: () => createDatabaseClient(),
+  rankedSearchObserver: observation => {
+    // Explicit fixture-only allowlist: no request, account, path or worker text.
+    console.log("Synthetic search execution:", JSON.stringify({
+      budgetReason: observation.budgetReason,
+      queueWaitMs: observation.queueWaitMs,
+      processDurationMs: observation.processDurationMs,
+      readerDurationMs: observation.readerDurationMs,
+      stdoutBytes: observation.stdoutBytes,
+      peakRssBytes: observation.peakRssBytes,
+    }));
+  },
   providerRegistry: new ProviderRegistry([{
     ...gmailProvider,
     createOAuthApp: () => new Hono<{ Variables: AuthVariables }>(),

@@ -6,7 +6,7 @@ import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 import { mailSearchCapabilitiesSchema, mailSearchQuerySchema, mailSearchPageSchema, MailSearchQueryError, parseMailSearch } from "@orca/shared/mail-search";
-import { executeRankedSearch, shutdownRankedSearch } from "./search/executor.ts";
+import { executeRankedSearch, shutdownRankedSearch, type RankedSearchExecutionObservation } from "./search/executor.ts";
 import { SearchError } from "./search/errors.ts";
 import { readSearchMode, readStagedMetadata, requireIndexedSearch } from "./search/mode.ts";
 import { searchCursorKey, createSearchIndexScheduler } from "./search/runtime.ts";
@@ -204,6 +204,7 @@ type CreateAppOptions = {
   calendarFetch?: CalendarFetch;
   replyBriefAvailability?: (input: { userId: string; request: ReplyBriefInvocationRequest; thread: ThreadDetail }) => Promise<CalendarAvailabilityResponse | null>;
   mailboxReadObserver?: (metric: MailboxReadMetric) => void;
+  rankedSearchObserver?: (observation: RankedSearchExecutionObservation) => void;
   gmailSyncCoordinator?: GmailSyncCoordinator;
 };
 
@@ -608,7 +609,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           const result = await executeRankedSearch({
             databasePath: sqlite.filename, ...input, query: { ...input.query, query: query.query! },
             mode: "metadata", exactCounts: true, expectedEpoch: staged.snapshot.capabilities.epoch,
-          }, { signal, capabilitiesFor: mailboxCapabilitiesFor });
+          }, { signal, capabilitiesFor: mailboxCapabilitiesFor, observe: options.rankedSearchObserver });
           return { ...result.page, counts: result.counts!, freshness: result.freshness };
         } catch (error) {
           if (error instanceof MailboxCursorError) throw new McpReadError("invalid_cursor", error.message);
@@ -2353,7 +2354,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
           query: { ...query, view: view === "inbox" ? undefined : view }, mode: "full", cursorKey: searchCursorKey(),
           expectedEpoch: snapshot.capabilities.epoch,
-        }, { signal: c.req.raw.signal, capabilitiesFor: mailboxCapabilitiesFor });
+        }, { signal: c.req.raw.signal, capabilitiesFor: mailboxCapabilitiesFor, observe: options.rankedSearchObserver });
         c.header("X-Orca-Search-Mode", snapshot.capabilities.mode);
         c.header("X-Orca-Search-Epoch", snapshot.capabilities.epoch);
         c.header("Server-Timing", `orca-search;dur=${(performance.now() - started).toFixed(2)}`);
@@ -2433,7 +2434,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             const result = await executeRankedSearch({ databasePath: sqlite.filename,
               authorization: input.authorization, query: { ...input.query, query: query! },
               mode: "metadata", exactCounts: true, cursorKey: input.cursorKey, expectedEpoch: staged.snapshot.capabilities.epoch,
-            }, { signal: c.req.raw.signal, capabilitiesFor: mailboxCapabilitiesFor });
+            }, { signal: c.req.raw.signal, capabilitiesFor: mailboxCapabilitiesFor, observe: options.rankedSearchObserver });
             c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
             return jsonWithSchema(c, inboxResponseSchema, { accounts: result.page.accounts, messages: result.page.messages,
               nextCursor: result.page.nextCursor, freshness: result.freshness,

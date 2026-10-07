@@ -15,6 +15,11 @@ export type RankedSearchExecutionObservation = {
   queueWaitMs: number;
   processDurationMs: number;
   readerDurationMs: number | null;
+  /** Bytes received on stdout, including a chunk that exceeds the cap. */
+  stdoutBytes: number;
+  /** Fixed parent-side classification; worker_budget leaves the worker's
+   * internal guard unspecified. Never child text or request contents. */
+  budgetReason: "execution_deadline" | "stdout_limit" | "worker_budget" | null;
   /** Linux executable VmHWM, null when unavailable or killed before a reply. */
   peakRssBytes: number | null;
 };
@@ -104,6 +109,8 @@ export function createRankedSearchExecutor(testOptions: ExecutorOptions = {}) {
     const startedAt = performance.now();
     let readerDurationMs: number | null = null;
     let peakRssBytes: number | null = null;
+    let stdoutBytes = 0;
+    let budgetReason: RankedSearchExecutionObservation["budgetReason"] = null;
     try {
       // Fixed executable, no shell, no inherited credentials or .env loading.
       // Request text and cursor signing material travel only through stdin.
@@ -113,20 +120,20 @@ export function createRankedSearchExecutor(testOptions: ExecutorOptions = {}) {
       const closed = new Promise<number | null>(resolve => child.once("close", code => resolve(code)));
       let failure: Error | undefined;
       const chunks: Buffer[] = [];
-      let bytes = 0;
-      const terminate = (error: Error) => {
+      const terminate = (error: Error, reason: RankedSearchExecutionObservation["budgetReason"] = null) => {
         if (failure) return;
         failure = error;
+        budgetReason = reason;
         lifecycle("kill", child.pid);
         child.kill("SIGKILL");
       };
       const abort = () => terminate(new SearchError("search_aborted"));
       const streamError = () => terminate(new SearchError("search_failed"));
       activeCancels.add(abort);
-      const deadline = setTimeout(() => terminate(new SearchError("search_budget_exceeded")), deadlineMs);
+      const deadline = setTimeout(() => terminate(new SearchError("search_budget_exceeded"), "execution_deadline"), deadlineMs);
       child.stdout!.on("data", (chunk: Buffer) => {
-        bytes += chunk.byteLength;
-        if (bytes > maxStdoutBytes) { terminate(new SearchError("search_budget_exceeded")); return; }
+        stdoutBytes += chunk.byteLength;
+        if (stdoutBytes > maxStdoutBytes) { terminate(new SearchError("search_budget_exceeded"), "stdout_limit"); return; }
         if (!failure) chunks.push(chunk);
       });
       child.stdout!.on("error", streamError);
@@ -150,7 +157,10 @@ export function createRankedSearchExecutor(testOptions: ExecutorOptions = {}) {
       const decoded = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks));
       const reply = rankedSearchWorkerReplySchema.parse(JSON.parse(decoded));
       peakRssBytes = reply.peakRssBytes;
-      if (!reply.ok) throw rankedSearchErrorFromCode(reply.code);
+      if (!reply.ok) {
+        if (reply.code === "search_budget_exceeded") budgetReason = "worker_budget";
+        throw rankedSearchErrorFromCode(reply.code);
+      }
       const result = reply.result;
       readerDurationMs = result.metric.durationMs;
       if (result.page.coverage !== (job.request.mode === "full" ? "stored-plaintext" : "stored-metadata")
@@ -178,7 +188,8 @@ export function createRankedSearchExecutor(testOptions: ExecutorOptions = {}) {
       throw new SearchError("search_failed");
     } finally {
       try {
-        job.options.observe?.({ queueWaitMs: startedAt - job.queuedAt, processDurationMs: performance.now() - startedAt, readerDurationMs, peakRssBytes });
+        job.options.observe?.({ queueWaitMs: startedAt - job.queuedAt, processDurationMs: performance.now() - startedAt,
+          readerDurationMs, stdoutBytes, budgetReason, peakRssBytes });
       } catch { /* Observability must not fail an otherwise valid request. */ }
     }
   }

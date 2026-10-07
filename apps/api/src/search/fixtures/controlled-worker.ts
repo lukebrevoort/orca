@@ -1,15 +1,16 @@
 // A tiny subprocess fixture: wait for a test-owned release file, then return one
-// ordinary page. It deliberately performs no SQLite work or expensive operation.
-import { existsSync, writeFileSync } from "node:fs";
+// ordinary page or fixed budget error. No SQLite work or expensive operation.
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { RankedSearchWorkerReply, RankedSearchWorkerRequest } from "../protocol.ts";
 
 const request = JSON.parse(await Bun.stdin.text()) as RankedSearchWorkerRequest;
 const root = dirname(request.databasePath);
+const releasePath = join(root, `${request.authorization.userId}.release`);
 writeFileSync(join(root, `${request.authorization.userId}.ready`), String(process.pid));
 await new Promise<void>(resolve => {
   const poll = setInterval(() => {
-    if (!existsSync(join(root, `${request.authorization.userId}.release`))) return;
+    if (!existsSync(releasePath)) return;
     clearInterval(poll); resolve();
   }, 5);
 });
@@ -27,4 +28,7 @@ const result = {
   capabilityAccounts: [{ id: "a", provider: "gmail" as const, scope: "fixture-scope" }],
   metric: { durationMs: 1, candidateRows: 1, indexBatches: 1, shortBodyBytes: 0, projectedMessages: 1 },
 };
-await Bun.write(Bun.stdout, JSON.stringify({ version: 1, ok: true, result, peakRssBytes: 1024 } satisfies RankedSearchWorkerReply));
+const reply: RankedSearchWorkerReply = readFileSync(releasePath, "utf8") === "search_budget_exceeded"
+  ? { version: 1, ok: false, code: "search_budget_exceeded", peakRssBytes: 1024 }
+  : { version: 1, ok: true, result, peakRssBytes: 1024 };
+await Bun.write(Bun.stdout, JSON.stringify(reply));
