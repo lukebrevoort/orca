@@ -778,37 +778,75 @@ function upsertEmails(
       };
   });
   for (const batch of chunks(rows, 200)) {
-    db.insert(emails).values(batch)
-      .onConflictDoUpdate({
-        target: [emails.accountId, emails.providerMessageId],
-        set: {
-          threadId: sql`excluded.thread_id`,
-          fromAddress: sql`excluded.from_address`,
-          fromName: sql`excluded.from_name`,
-          toRecipients: sql`excluded.to_recipients`,
-          ccRecipients: sql`excluded.cc_recipients`,
-          bccRecipients: sql`excluded.bcc_recipients`,
-          subject: sql`excluded.subject`,
-          snippet: sql`excluded.snippet`,
-          bodyText: sql`excluded.body_text`,
-          bodyHtml: sql`excluded.body_html`,
-          internetMessageId: sql`excluded.internet_message_id`,
-          references: sql.raw('excluded."references"'),
-          receivedAt: sql`excluded.received_at`,
-          internalDate: sql`excluded.internal_date`,
-          isRead: sql`CASE WHEN ${emails.isRead} = 1 AND excluded.is_read = 0 THEN 1 ELSE excluded.is_read END`,
-          isStarred: sql`excluded.is_starred`,
-          isDraft: sql`excluded.is_draft`,
-          humanSignal: sql`excluded.human_signal`,
-          humanClassification: sql`excluded.human_classification`,
-          humanClassificationReasons: sql`excluded.human_classification_reasons`,
-          humanClassifierVersion: sql`excluded.human_classifier_version`,
-          humanClassificationEvidence: sql`excluded.human_classification_evidence`,
-          providerSnapshotDigest: sql`excluded.provider_snapshot_digest`,
-          updatedAt: now,
-        },
-      })
-      .run();
+    // The snapshot digest also covers labels and flags. Compare searchable
+    // fields inside the persistence transaction before naming them in an
+    // UPDATE: SQLite UPDATE OF triggers fire even when values are unchanged.
+    // Send the already-normalized inputs to SQLite; return only change flags
+    // rather than hydrating another batch of existing bodies into JS memory.
+    const incomingRows = sql.join(batch.map((row) => sql`(
+      ${row.providerMessageId}, ${row.fromAddress}, ${row.fromName},
+      ${row.subject}, ${row.snippet}, ${row.bodyText}
+    )`), sql`, `);
+    const changes = db.select({
+      providerMessageId: sql<string>`incoming.provider_message_id`,
+      metadataChanged: sql<number>`${emails.id} IS NULL
+        OR ${emails.fromAddress} IS NOT incoming.from_address
+        OR ${emails.fromName} IS NOT incoming.from_name
+        OR ${emails.subject} IS NOT incoming.subject
+        OR ${emails.snippet} IS NOT incoming.snippet`,
+      bodyChanged: sql<number>`${emails.id} IS NULL OR ${emails.bodyText} IS NOT incoming.body_text`,
+    }).from(sql`(
+      SELECT column1 AS provider_message_id, column2 AS from_address, column3 AS from_name,
+        column4 AS subject, column5 AS snippet, column6 AS body_text
+      FROM (VALUES ${incomingRows})
+    ) AS incoming`).leftJoin(emails, and(
+      eq(emails.accountId, batch[0]!.accountId),
+      eq(emails.providerMessageId, sql`incoming.provider_message_id`),
+    )).all();
+    const changesByProviderId = new Map(changes.map((row) => [row.providerMessageId, row]));
+    const groups = new Map<number, typeof batch>();
+    for (const row of batch) {
+      const change = changesByProviderId.get(row.providerMessageId)!;
+      const fields = (change.metadataChanged ? 1 : 0) | (change.bodyChanged ? 2 : 0);
+      const group = groups.get(fields) ?? [];
+      group.push(row);
+      groups.set(fields, group);
+    }
+    for (const [fields, group] of groups) {
+      db.insert(emails).values(group)
+        .onConflictDoUpdate({
+          target: [emails.accountId, emails.providerMessageId],
+          set: {
+            threadId: sql`excluded.thread_id`,
+            ...(fields & 1 ? {
+              fromAddress: sql`excluded.from_address`,
+              fromName: sql`excluded.from_name`,
+              subject: sql`excluded.subject`,
+              snippet: sql`excluded.snippet`,
+            } : {}),
+            ...(fields & 2 ? { bodyText: sql`excluded.body_text` } : {}),
+            toRecipients: sql`excluded.to_recipients`,
+            ccRecipients: sql`excluded.cc_recipients`,
+            bccRecipients: sql`excluded.bcc_recipients`,
+            bodyHtml: sql`excluded.body_html`,
+            internetMessageId: sql`excluded.internet_message_id`,
+            references: sql.raw('excluded."references"'),
+            receivedAt: sql`excluded.received_at`,
+            internalDate: sql`excluded.internal_date`,
+            isRead: sql`CASE WHEN ${emails.isRead} = 1 AND excluded.is_read = 0 THEN 1 ELSE excluded.is_read END`,
+            isStarred: sql`excluded.is_starred`,
+            isDraft: sql`excluded.is_draft`,
+            humanSignal: sql`excluded.human_signal`,
+            humanClassification: sql`excluded.human_classification`,
+            humanClassificationReasons: sql`excluded.human_classification_reasons`,
+            humanClassifierVersion: sql`excluded.human_classifier_version`,
+            humanClassificationEvidence: sql`excluded.human_classification_evidence`,
+            providerSnapshotDigest: sql`excluded.provider_snapshot_digest`,
+            updatedAt: now,
+          },
+        })
+        .run();
+    }
   }
 }
 

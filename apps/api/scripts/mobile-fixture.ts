@@ -219,6 +219,24 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) 
     writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
     return response;
   }
+  if (request.method === "GET" && url.pathname === "/v1/mail/search") {
+    const response = await app.fetch(request);
+    // This disposable fixture logs contract shape only, never request URLs,
+    // query text, cursors, credentials, message contents or account identifiers.
+    // Together with the UI screenshot this distinguishes a server continuation
+    // error from native decoding/navigation failures on hosted simulators.
+    const body = await response.clone().json().catch(() => null);
+    console.log("Synthetic search response:", JSON.stringify({
+      continuationRequest: url.searchParams.has("cursor"), status: response.status,
+      messages: Array.isArray(body?.messages) ? body.messages.length : null,
+      hasNextCursor: typeof body?.nextCursor === "string",
+      continuation: ["none", "matches", "scan"].includes(body?.continuation) ? body.continuation : null,
+      errorCode: typeof body?.error?.code === "string" && /^search_[a-z_]+$/.test(body.error.code) ? body.error.code : null,
+      expectedModeMatches: response.headers.get("X-Orca-Search-Mode") === request.headers.get("X-Orca-Expected-Search-Mode"),
+      expectedEpochMatches: response.headers.get("X-Orca-Search-Epoch") === request.headers.get("X-Orca-Expected-Search-Epoch"),
+    }));
+    return response;
+  }
   return app.fetch(request);
 } });
 const metadata = { readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };

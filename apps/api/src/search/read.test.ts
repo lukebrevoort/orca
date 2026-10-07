@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,13 +7,15 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { mailSearchPageSchema } from "@orca/shared/mail-search";
 import { createDatabaseClient } from "../db/client.ts";
 import { users, oauthAccounts, threads, emails } from "../db/schema.ts";
-import { initializeSearchBuild, enableSearch } from "./indexing/admin.ts";
+import { initializeSearchBuild, enableSearch, disableSearch } from "./indexing/admin.ts";
 import { acquireWriterOwnership } from "./indexing/ownership.ts";
 import { enqueueBaseline, claimNextJob, acknowledgeReceipt } from "./indexing/queue.ts";
 import { getSearchIndexPath, openCanonicalReadOnly, readSearchControl, readSourceAccounts } from "./indexing/schema.ts";
 import { applyIndexJob, publishAccountReady } from "./indexing/worker-core.ts";
 import { createMailboxReader } from "../mailbox/read.ts";
+import * as mailboxRead from "../mailbox/read.ts";
 import { readRankedSearch, type RankedSearchInput } from "./read.ts";
+import { decodeSearchCursor, encodeSearchCursor } from "./cursor.ts";
 import { SearchError } from "./errors.ts";
 
 const directories: string[] = [];
@@ -206,5 +208,136 @@ test("legacy exact sender and attention filters remain exact and bind cursors", 
       expect(f.read("appointment", { query: scoped }).page.messages.map(message => message.id)).toEqual(["owned-sender"]);
       expect(() => f.read("appointment", { query: { ...scoped, cursor: first.page.nextCursor! } })).toThrow("changed");
     }
+  } finally { f.close(); }
+});
+
+test("exact counts hydrate once and signed continuation pages avoid recounting the full result", () => {
+  const f = fixture();
+  const hydrate = spyOn(mailboxRead, "readMailboxCandidateRows");
+  try {
+    for (let i = 0; i < 192; i++) f.insert(`match-${String(i).padStart(3, "0")}`, { subject: "Appointment" });
+    f.insert("foreign-match", { subject: "Appointment", accountId: "foreign" });
+    f.build();
+    const input = f.input("appointment", { mode: "metadata", exactCounts: true });
+    const first = readRankedSearch(input);
+    expect(first.counts?.attention.all).toBe(192);
+    expect(first.metric.candidateRows).toBe(192);
+    expect(first.metric.indexBatches).toBe(4);
+    expect(hydrate).toHaveBeenCalledTimes(3);
+    expect(hydrate.mock.calls.reduce((total, [, batch]) => total + batch.messageIds.length, 0)).toBe(192);
+    hydrate.mockClear();
+
+    const second = readRankedSearch({ ...input, query: { ...input.query, cursor: first.page.nextCursor! } });
+    expect(second.counts).toEqual(first.counts);
+    expect(second.page.messages).toHaveLength(10);
+    expect(second.metric.candidateRows).toBe(11);
+    expect(second.metric.indexBatches).toBe(1);
+    expect(hydrate).toHaveBeenCalledTimes(1);
+    expect(hydrate.mock.calls[0]![1].messageIds).toHaveLength(64);
+    expect(second.page.messages.every(row => !first.page.messages.some(prior => prior.id === row.id))).toBe(true);
+    expect(second.page.snapshot).toBe(first.page.snapshot);
+
+    // Position-only v3 cursors from a prior server remain usable, with one
+    // complete recount before they acquire the signed totals optimization.
+    const binding = first.page.snapshot.slice("search-v3:".length);
+    const { tier, after } = decodeSearchCursor(first.page.nextCursor!, binding, input.cursorKey);
+    const oldCursor = encodeSearchCursor({ tier, after }, binding, input.cursorKey);
+    const old = readRankedSearch({ ...input, query: { ...input.query, cursor: oldCursor } });
+    expect(old.page.messages).toEqual(second.page.messages);
+    expect(old.counts).toEqual(first.counts);
+    expect(old.metric.candidateRows).toBe(192);
+    expect(decodeSearchCursor(old.page.nextCursor!, binding, input.cursorKey).counts).toEqual(first.counts);
+  } finally { hydrate.mockRestore(); f.close(); }
+});
+
+test("cached counts preserve complete filtered pages across relevance tiers and short-clause false positives", () => {
+  const f = fixture();
+  try {
+    for (let i = 0; i < 21; i++) {
+      const tier = i % 3;
+      f.insert(`match-${i}`, { subject: tier === 0 ? "AI appointment" : "A note",
+        sender: tier === 1 ? "AI appointment" : "Sender", snippet: tier === 2 ? "AI appointment" : "Fixture",
+        address: i % 2 ? "bulk@example.test" : "human@example.test" });
+    }
+    for (let i = 0; i < 12; i++) f.insert(`false-${i}`, { subject: "Appointment without a short clause" });
+    f.insert("body-only", { body: "AI appointment" });
+    f.sqlite.exec("INSERT INTO human_classification_overrides(id,account_id,target_type,target_value,classification,source,created_at,updated_at) VALUES('bulk','a','sender_address','bulk@example.test','automated_or_bulk','user',0,0)");
+    f.build();
+    const input = f.input("AI appointment", { mode: "metadata", exactCounts: true,
+      query: { query: "AI appointment", view: "all", classification: "human", limit: 3 } });
+    const all = readRankedSearch({ ...input, query: { ...input.query, limit: 100 } });
+    expect(all.page.messages).toHaveLength(11);
+    expect(all.counts?.classification).toEqual({ all: 21, likely_human: 11, automated_or_bulk: 10, uncertain: 0, unclassified: 0 });
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    do {
+      // Exact adapter pages may not turn into public partial-scan pages even
+      // when presentation filters and short clauses reject many candidates.
+      const result = readRankedSearch({ ...input, query: { ...input.query, cursor } }, { candidatePageBudget: 1 });
+      expect(result.counts).toEqual(all.counts);
+      expect(result.page.continuation).not.toBe("scan");
+      if (result.page.nextCursor) expect(result.page.messages).toHaveLength(3);
+      ids.push(...result.page.messages.map(row => row.id));
+      cursor = result.page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(ids).toEqual(all.page.messages.map(row => row.id));
+    expect(new Set(ids).size).toBe(ids.length);
+  } finally { f.close(); }
+});
+
+test("one-pass count presentation matches canonical classification, attention and destination filters", () => {
+  const f = fixture();
+  try {
+    for (const [i, behavior] of ["notify", "focus", "normal", "quiet", "hidden"].entries()) {
+      f.insert(`row-${i}`, { subject: "Appointment", address: `sender-${i}@example.test` });
+      f.sqlite.query("INSERT INTO sender_attention_rules(id,account_id,scope,value,behavior,source,created_at,updated_at) VALUES(?, 'a','address',?,?,'user_choice',0,0)")
+        .run(`rule-${i}`, `sender-${i}@example.test`, behavior!);
+      f.sqlite.query("UPDATE emails SET human_classification=? WHERE id=?").run(["likely_human", "automated_or_bulk", "uncertain", null, "likely_human"][i]!, `row-${i}`);
+    }
+    f.build();
+    const authorization = f.input().authorization;
+    const destinationId = f.read().page.messages[0]!.destination!.destinationId;
+    for (const view of [undefined, "all", "focus", "normal", "quiet", "hidden"] as const) {
+      for (const classification of ["all", "human", "tideline", "uncertain"] as const) {
+        for (const destination of [undefined, destinationId]) {
+          const query = { query: "appointment", limit: 100, view, classification, destinationId: destination };
+          const canonical = createMailboxReader(f.sqlite).read({ authorization, query }).response;
+          const result = f.read("appointment", { mode: "metadata", exactCounts: true, query });
+          expect(result.counts).toEqual(canonical.counts);
+          expect(result.page.messages.map(row => row.id).sort()).toEqual(canonical.messages.map(row => row.id).sort());
+        }
+      }
+    }
+  } finally { f.close(); }
+});
+
+test("cached exact counts revalidate owner, filters, exact revisions, mode and activation epoch", () => {
+  const f = fixture();
+  try {
+    for (let i = 0; i < 4; i++) f.insert(`match-${i}`, { subject: "Appointment" });
+    f.build();
+    const input = f.input("appointment", { mode: "metadata", exactCounts: true, query: { ...f.input().query, limit: 1 } });
+    const first = readRankedSearch(input);
+    const next = { ...input, query: { ...input.query, cursor: first.page.nextCursor! } };
+    for (const query of [{ classification: "human" as const }, { view: "normal" as const }, { sender: "Sender" }, { query: "different" },
+      { receivedAfter: "2020-01-01T00:00:00.000Z" }]) {
+      expect(() => readRankedSearch({ ...next, query: { ...next.query, ...query } })).toThrow("changed");
+    }
+    for (const change of [{ mode: "full" as const, exactCounts: false }, { exactCounts: false },
+      { authorization: { userId: "user", accountIds: ["b"] } }, { authorization: { userId: "foreign" } }]) {
+      expect(() => readRankedSearch({ ...next, ...change })).toThrow("changed");
+    }
+    f.sqlite.exec("UPDATE emails SET is_read=1 WHERE id='match-0'");
+    expect(() => readRankedSearch(next)).toThrow("changed");
+    const refreshed = readRankedSearch(input);
+    const refreshedNext = { ...input, query: { ...input.query, cursor: refreshed.page.nextCursor! } };
+    f.sqlite.exec("UPDATE emails SET subject='Appointment changed' WHERE id='match-0'");
+    expect(() => readRankedSearch(refreshedNext)).toThrow("catching up");
+    f.build();
+    expect(() => readRankedSearch(refreshedNext)).toThrow("changed");
+    const beforeDisable = readRankedSearch(input);
+    disableSearch(f.sqlite, "Synthetic cursor epoch test");
+    enableSearch(f.sqlite, f.index);
+    expect(() => readRankedSearch({ ...input, query: { ...input.query, cursor: beforeDisable.page.nextCursor! } })).toThrow("changed");
   } finally { f.close(); }
 });

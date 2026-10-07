@@ -1,9 +1,9 @@
 # Orca stored mail search migration
 
-Version 5 staged replacement candidate, public edition | 6 October 2026
+Version 5 staged replacement candidate, public edition | 7 October 2026
 
-Publication reference: draft PR and hosted checks pending. Runtime implementation checkpoint `a825cef` is based on settled main `f0a9180a8a185cd2bdb293d87a617e81414ebbaf`.
-Performance reference: prior source-hashed read/count and capture/write snapshots, before staged mode/epoch changes; current HTTP/capability/auth latency and production measurements pending.
+Publication reference: [draft PR 228](https://github.com/lukebrevoort/orca/pull/228), initially published at `fb34e0db81169112a82149f8b8eec7c10b21501d` on main `f0a9180a8a185cd2bdb293d87a617e81414ebbaf`. Check the PR for the exact follow-up head and its hosted verification results.
+Performance reference: the historical read/count and capture/write figures below predate both staged mode/epoch changes and the provider/idle/count follow-up fixes. They are not measurements of the current code. Current HTTP/capability/auth latency and production measurements remain pending.
 
 ## Outcome and current status
 
@@ -26,6 +26,8 @@ flowchart LR
 ```
 
 The API process hosts the lightweight scheduler; this is not a new always-on service. It starts a bounded drain only when persisted `worker_enabled=1` and `paused=0`. Startup does not create an index, backfill mail or enable search. Capture triggers always record obligations after migration, including while indexed reads and workers are disabled or paused. Idle supervisors hold no writer lock. There is no external queue broker or search vendor. Short claim/ack writes and shared CPU/disk contention remain.
+
+The follow-up scheduler first performs a read-only advisory probe. Caught-up ticks now avoid owner-token writes, empty claim transactions and seal-cursor updates. Claimed recovery and stale ownership remain visible, and fresh child-side proofs still control readiness. The probe can read delayed queue entries and account modes; it is not a hard constant-time bound. Gmail label/read/category-only persistence also omits unchanged searchable columns while retaining canonical revisions and filter updates, avoiding unnecessary index jobs.
 
 ## Staged activation preserves existing search
 
@@ -130,6 +132,8 @@ The read child admits 64 candidates per batch, at most 2,048 candidate positions
 
 Signed indexed cursors bind user, query, filters, parser/order version, mode, activation epoch, source/build, selected account incarnations and exact source/mailbox revisions. A change requires restarting; clients cannot append a page from a different snapshot. First indexed page defaults to 10, public maximum is 50. Once activated, MCP and the compatible count adapter remain metadata-only and use exact counts through a separate execution path under the same hard deadline; they do not gain body access. Exact counting can fail its budget and is not needed by normal ranked search. Before activation, the original metadata reader, counts and order are preserved.
 
+The count adapter now hydrates each candidate batch once, projecting canonical presentation-filter membership in that same query. Initial exact totals still require a complete candidate scan. Signed continuation cursors preserve those totals under the same exact binding, so later pages traverse only their ranked candidates and lookahead instead of recounting the entire result set. They remain complete count-adapter pages; they do not silently adopt the public endpoint's partial-scan contract. Sparse filters can still be expensive under the shared reader deadline. Position-only cursors remain accepted by the updated server, but pre-fix servers reject the extended cursors: complete the reader rollout before relying on cross-replica continuation, or restart affected pagination.
+
 Web search enters a dedicated stored-mail results surface and uses authenticated capability to select labeled metadata `/v1/inbox` or full indexed `/v1/mail/search`, rather than filtering only currently loaded rows. iOS negotiates the same modes and uses explicit Load more. Query/account/scope/mode changes invalidate results and pending requests; stale, offline, updating, blocked and unavailable states are visible. A stale continuation requires restart. Neither client presents cached or incomplete results as a complete search.
 
 ## Process and capacity bounds
@@ -215,6 +219,8 @@ Validation must tie to the final replacement head. Draft PR and hosted-check sta
 No blocked PR 224 candidate security scan, exploit test or stress sequence was resumed for this document. Ordinary deterministic implementation checks do not complete that security assessment or establish deployment isolation.
 
 ## Performance costs and architecture choice
+
+All numerical benchmark and cost figures in this section are historical context for earlier source checkpoints. The current provider, scheduler and count-pagination fixes are covered by focused work-count regressions; the old figures must not be presented as current latency, idle-write, storage or cost evidence.
 
 The prior source-hashed read/count pass used 20,000 synthetic messages in one account with a maximum 120-byte body, warm host caches and workspace overlayfs. Five raw children and five full executor reads were measured per ordinary case. Case means were 118-121 ms across the local executor/child lifecycle versus 9.8-13.7 ms in the raw reader core. Maximum reported executable VmHWM was about 82.3 MiB. The later staged mode/epoch change modified read/schema paths, so these hashes are not the final staged checkpoint. The figures exclude HTTP routing, authentication, capability negotiation and network round trips; **118-121 ms is not measured current full-HTTP search latency**. These are case means and observed memory, not a p95 or production capacity guarantee.
 

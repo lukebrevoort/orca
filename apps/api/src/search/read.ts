@@ -167,6 +167,7 @@ export function readRankedSearch(input: RankedSearchInput, options: { afterCanon
         receivedAfter: input.query.receivedAfter ?? null, receivedBefore: input.query.receivedBefore ?? null }, exactCounts: Boolean(input.exactCounts) });
     const cursor = decodeSearchCursor(input.query.cursor, binding, input.cursorKey);
     if (input.mode === "metadata" && cursor.tier > 2) throw new SearchError("search_invalid_cursor");
+    if (cursor.counts && !input.exactCounts) throw new SearchError("search_invalid_cursor");
     const scopes = sources.map(source => searchScopeKey(source.account_id, source.incarnation));
     const query = { ...input.query, query: undefined, cursor: undefined };
     let candidateRows = 0;
@@ -175,8 +176,10 @@ export function readRankedSearch(input: RankedSearchInput, options: { afterCanon
     const matches: Matched[] = [];
     let continuation: MailSearchPage["continuation"] = "none";
     let nextPosition: SearchPosition | undefined;
-    let counts: InboxClassificationResponse["counts"] | undefined;
-    if (input.exactCounts) {
+    // Signed totals are reusable only for this exact owner/query/filter/mode/
+    // epoch/source/mailbox snapshot, already revalidated above on every page.
+    let counts = cursor.counts;
+    if (input.exactCounts && !counts) {
       counts = emptyCounts();
       const tiers: Matched[][] = [[], [], []];
       let after = "0";
@@ -186,7 +189,6 @@ export function readRankedSearch(input: RankedSearchInput, options: { afterCanon
         if (!batch.length) break;
         candidateRows += batch.length;
         const baseRows = readMailboxCandidateRows(canonical, { authorization: input.authorization, query, messageIds: batch.map(candidate => candidate.message_id), presentationFilters: false });
-        const presented = new Set(readMailboxCandidateRows(canonical, { authorization: input.authorization, query, messageIds: batch.map(candidate => candidate.message_id) }).map(row => row.id));
         const byId = new Map(baseRows.map(row => [row.id, row]));
         for (const candidate of batch) {
           after = candidate.doc_id;
@@ -196,13 +198,13 @@ export function readRankedSearch(input: RankedSearchInput, options: { afterCanon
           if (tier === 3) continue;
           addCount(counts, row);
           const position = { tier, after };
-          if (presented.has(row.id) && follows(position, cursor) && tiers[tier]!.length < input.query.limit + 1) tiers[tier]!.push({ position, row });
+          if (row.presentation_match && follows(position, cursor) && tiers[tier]!.length < input.query.limit + 1) tiers[tier]!.push({ position, row });
         }
       }
       matches.push(...tiers.flat().slice(0, input.query.limit + 1));
       if (matches.length > input.query.limit) { matches.length = input.query.limit; continuation = "matches"; nextPosition = matches.at(-1)!.position; }
     } else {
-      let position = { ...cursor };
+      let position: SearchPosition = { tier: cursor.tier, after: cursor.after };
       const maxTier = input.mode === "full" ? 3 : 2;
       scan: for (let tier = cursor.tier; tier <= maxTier; tier++) {
         let after = tier === cursor.tier ? cursor.after : "0";
@@ -213,7 +215,10 @@ export function readRankedSearch(input: RankedSearchInput, options: { afterCanon
           const rows = readMailboxCandidateRows(canonical, { authorization: input.authorization, query, messageIds: batch.map(candidate => candidate.message_id) });
           const byId = new Map(rows.map(row => [row.id, row]));
           for (const candidate of batch) {
-            if (candidateRows >= (options.candidatePageBudget ?? rankedSearchReadLimits.candidatePageBudget)) { continuation = "scan"; nextPosition = position; break scan; }
+            // The count adapter promises complete pages, unlike public ranked
+            // search's explicit partial-scan continuation. Keep its hard process
+            // deadline, but do not silently introduce partial exact-count pages.
+            if (!input.exactCounts && candidateRows >= (options.candidatePageBudget ?? rankedSearchReadLimits.candidatePageBudget)) { continuation = "scan"; nextPosition = position; break scan; }
             const row = byId.get(candidate.message_id);
             const actualTier = row && row.account_id === candidate.account_id
               ? matchCandidate(canonical, row, parsed.clauses, parsed.shortClauses, input.mode, budget, tier) : null;
@@ -236,7 +241,7 @@ export function readRankedSearch(input: RankedSearchInput, options: { afterCanon
     const projected = serializeMailboxRows(canonical, matches.map(match => match.row), accounts);
     return {
       page: { accounts: accounts.map(account => serializeMailboxAccount(account)), messages: projected.messages,
-        nextCursor: nextPosition ? encodeSearchCursor(nextPosition, binding, input.cursorKey) : null,
+        nextCursor: nextPosition ? encodeSearchCursor({ ...nextPosition, ...(counts ? { counts } : {}) }, binding, input.cursorKey) : null,
         continuation, snapshot: `search-v3:${binding}`, order: mailSearchOrder, semantics: mailSearchSemantics,
         coverage: input.mode === "full" ? "stored-plaintext" : "stored-metadata" },
       ...(counts ? { counts } : {}), freshness: { revision, lastSyncedAt: mailboxFreshAt(accounts) },

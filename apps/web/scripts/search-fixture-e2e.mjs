@@ -35,9 +35,13 @@ try {
       page = await context.newPage();
       page.on('pageerror', error => result.pageErrors.push(error.message));
       await page.goto(origin.origin);
-      await page.keyboard.press('Control+k');
+      // Wait for the authenticated React surface, then use its real search form.
+      // A keyboard shortcut sent immediately after navigation can precede mount.
+      const entry = page.getByRole('textbox', { name: 'Search mail', exact: true });
+      await entry.fill('Orcabeacon'); await entry.press('Enter');
       const query = page.getByRole('textbox', { name: 'Search stored mail' });
-      await query.fill('Orcabeacon'); await query.press('Enter');
+      await query.waitFor({ state: 'visible' });
+      assert.equal(await query.inputValue(), 'Orcabeacon');
       const rows = page.locator('.global-mail-result-list a');
       await until(async () => await rows.count() === 10, 'First ranked page must contain 10 messages');
       assert(await page.getByText('10 shown', { exact: false }).isVisible());

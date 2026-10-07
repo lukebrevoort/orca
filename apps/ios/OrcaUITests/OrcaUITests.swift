@@ -21,6 +21,9 @@ final class OrcaUITests: XCTestCase {
         try setFixtureSearchMode("legacy-metadata")
         addTeardownBlock { try self.setFixtureSearchMode("indexed") }
         let app = try launchApp(); assertInboxLoaded(in: app)
+        // Keep the visible state even when an assertion ends this journey before
+        // its next named screenshot. Fixture data is synthetic throughout.
+        addTeardownBlock { self.attachScreenshot(named: "42-indexed-search-final-state") }
         chooseMailbox("All Mail", in: app)
         search(for: "Or", in: app)
         let count = app.staticTexts["inbox.search.count"]
@@ -58,7 +61,17 @@ final class OrcaUITests: XCTestCase {
         for _ in 0..<10 { if more.isHittable { break }; list.swipeUp() }
         XCTAssertTrue(more.isHittable); XCTAssertTrue(more.isEnabled)
         more.tap()
-        XCTAssertTrue(more.waitForNonExistence(timeout: 10))
+        let continuationFinished = more.waitForNonExistence(timeout: 10)
+        let resultListRemains = list.waitForExistence(timeout: 10)
+        attachScreenshot(named: "43-indexed-search-after-load-more")
+        // A failed continuation also removes Load more. Assert the positive
+        // results surface before scrolling, and retain any visible error copy.
+        if app.buttons["inbox.retry"].exists || !resultListRemains {
+            let visibleText = app.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " | ")
+            XCTFail("Search results disappeared after Load more. Visible state: \(visibleText)")
+            return
+        }
+        XCTAssertTrue(continuationFinished, "The twelve-message fixture should exhaust its continuation")
         for _ in 0..<10 { if count.isHittable { break }; list.swipeDown() }
         XCTAssertTrue(count.isHittable); XCTAssertEqual(count.label, "12 shown · Most relevant first")
         attachScreenshot(named: "36-indexed-search-all-twelve")

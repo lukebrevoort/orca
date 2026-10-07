@@ -800,7 +800,7 @@ export function readMailboxCandidateRows(sqlite: Database, input: {
   query: Omit<MailboxReadQuery, "query" | "cursor">;
   messageIds: readonly string[];
   presentationFilters?: boolean;
-}): RawMailboxMessage[] {
+}): Array<RawMailboxMessage & { presentation_match: number }> {
   if (!sqlite.inTransaction) throw new Error("Search candidates require a canonical snapshot");
   if (input.messageIds.length > 128) throw new Error("Search candidate batch exceeded its bound");
   if (input.messageIds.length === 0) return [];
@@ -815,12 +815,17 @@ export function readMailboxCandidateRows(sqlite: Database, input: {
   const policy = applyInboxPolicy ? inboxVisibilityPredicate(sqlite, input.authorization.userId) : { sql: "1", params: [] };
   const presentation = input.presentationFilters !== false;
   const behaviors = behaviorsForView(input.query.destinationId ? "all" : input.query.view);
-  return queryAll<RawMailboxMessage>(sqlite, `select ${mailboxMessageProjectionSql}
+  const presentationSql = `${attentionSql} in (${placeholders(behaviors.length)}) and ${classificationWhere(input.query.classification ?? "all")}`;
+  // Exact search counts need the base rows and their presentation membership.
+  // Project the existing predicate in that same read instead of hydrating every
+  // batch again with presentation filters enabled.
+  return queryAll<RawMailboxMessage & { presentation_match: number }>(sqlite, `select ${mailboxMessageProjectionSql},
+      ${presentation ? "1" : `(${presentationSql})`} as presentation_match
     from emails e ${resolvedJoinsSql}
     where ${base.sql} and ${policy.sql}
       and e.id in (${placeholders(input.messageIds.length)})
-      ${presentation ? `and ${attentionSql} in (${placeholders(behaviors.length)}) and ${classificationWhere(input.query.classification ?? "all")}` : ""}`,
-    [...base.params, ...policy.params, ...input.messageIds, ...(presentation ? behaviors : [])]);
+      ${presentation ? `and ${presentationSql}` : ""}`,
+    [...(presentation ? [] : behaviors), ...base.params, ...policy.params, ...input.messageIds, ...(presentation ? behaviors : [])]);
 }
 
 export function validateMailboxFilterScope(sqlite: Database, userId: string, accountIds: string[], query: Pick<MailboxReadQuery, "collectionId" | "destinationId">): void {

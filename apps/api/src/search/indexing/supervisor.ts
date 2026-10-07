@@ -1,9 +1,10 @@
-import { Database } from "bun:sqlite";
-import { readFileSync } from "node:fs";
+import { constants, Database } from "bun:sqlite";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { acquireWriterOwnership, type WriterOwnership } from "./ownership.ts";
 import { acknowledgeReceipt, claimNextJob, DEFAULT_INDEX_LIMITS, failAttempt, recoverClaimedJobs, type IndexLimits, type IndexReceipt } from "./queue.ts";
-import { assertDurableCanonical, assertNoLegacySearch, canonicalizePath, getSearchIndexPath, readSearchControl, type SourceAccount } from "./schema.ts";
+import { assertDurableCanonical, assertMatchingBuild, assertNoLegacySearch, canonicalizePath, getSearchIndexPath, readSearchControl, type IndexControl, type SourceAccount } from "./schema.ts";
 import type { IndexWorkerRequest } from "./worker.ts";
 
 export interface SupervisorOptions {
@@ -17,6 +18,29 @@ class SearchIndexShutdownError extends Error {
 }
 
 export interface DrainResult { attempted: number; acknowledged: number; blocked: number; sealed: number; stopped: boolean }
+
+function readProbeControl(probe: Database): IndexControl {
+  const control = probe.query<IndexControl, []>("SELECT source_id,build_id,format_version,owner_token FROM search_index.index_control WHERE singleton=1").get();
+  if (!control) throw new Error("search_index_incompatible");
+  assertMatchingBuild(readSearchControl(probe), control);
+  return control;
+}
+
+/** Advisory selection only: every child still obtains its own fresh seal proof.
+ * Filter ready modes before LIMIT so one-shot drains cannot starve a later dirty
+ * account behind an arbitrarily long prefix of already-ready accounts. LIMIT
+ * bounds returned candidates/children, not the number of account rows read. */
+function readSealCandidates(probe: Database, limit: number): SourceAccount[] {
+  const cursor = probe.query<{ seal_account: string; seal_mode: string }, []>("SELECT seal_account,seal_mode FROM mail_search_control WHERE singleton=1").get()!;
+  return probe.query<SourceAccount, [string, string, string, number]>(`SELECT a.* FROM mail_search_accounts a
+    LEFT JOIN search_index.index_accounts i ON i.account_id=a.account_id AND i.incarnation=a.incarnation AND i.mode=a.mode
+    WHERE a.deleted=0 AND a.baseline_complete=1
+      AND (i.account_id IS NULL OR i.ready<>1 OR i.deleted<>0 OR i.published_revision IS NOT a.revision)
+      AND NOT EXISTS (SELECT 1 FROM mail_search_outbox o WHERE o.account_id=a.account_id AND o.incarnation=a.incarnation AND o.mode=a.mode)
+    ORDER BY CASE WHEN a.account_id>? OR (a.account_id=? AND a.mode>?) THEN 0 ELSE 1 END,a.account_id,a.mode LIMIT ?`)
+    .all(cursor.seal_account, cursor.seal_account, cursor.seal_mode, limit);
+}
+
 /** Demand-started only. Construction and import never initialize, backfill, enable, or spawn. */
 export class SearchIndexSupervisor {
   private running: Promise<DrainResult> | null = null;
@@ -101,22 +125,44 @@ export class SearchIndexSupervisor {
     const canonicalPath = canonicalizePath(this.options.canonicalPath);
     const indexPath = canonicalizePath(this.options.indexPath ?? getSearchIndexPath(canonicalPath));
     if (canonicalPath === indexPath) throw new Error("search_index_must_be_separate");
-    const canonical = new Database(canonicalPath, { strict: true, readwrite: true, create: false });
-    canonical.exec("PRAGMA synchronous=FULL; PRAGMA busy_timeout=100");
+    // Both files are opened read-only for the idle probe. URI mode prevents the
+    // attachment from creating a missing sidecar or ever writing through it.
+    const probe = new Database(canonicalPath, constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI);
+    let canonical: Database | undefined;
     let index: Database | undefined;
     let ownership: WriterOwnership | undefined;
     try {
-      assertNoLegacySearch(canonical); assertDurableCanonical(canonical);
-      const control = readSearchControl(canonical);
+      probe.exec("PRAGMA query_only=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=100; PRAGMA cache_size=-2048");
+      assertNoLegacySearch(probe); assertDurableCanonical(probe);
+      let control = readSearchControl(probe);
+      if (!control.worker_enabled || control.paused) return result;
+      probe.query("ATTACH DATABASE ? AS search_index").run(`${pathToFileURL(indexPath).href}?mode=ro`);
+      const derived = readProbeControl(probe);
+      // Preserve explicit-recovery errors even when no jobs need to run. These
+      // checks are advisory; acquisition below remains the atomic owner fence.
+      if (existsSync(`${indexPath}.writer-lock`)) throw new Error("search_writer_owned_or_recovery_required");
+      if (derived.owner_token !== null) throw new Error("search_writer_recovery_required");
+      const recoverable = probe.query("SELECT 1 FROM mail_search_outbox WHERE state='claimed' LIMIT 1").get();
+      // This read-only existence probe can scan delayed pending rows. The
+      // separate write-locked claim still inspects at most 32 indexed IDs.
+      const due = probe.query("SELECT 1 FROM mail_search_outbox WHERE state='pending' AND build_id=? AND available_at<=? LIMIT 1").get(control.build_id, Date.now());
+      if (!recoverable && !due && readSealCandidates(probe, 1).length === 0) return result;
+
+      // No empty-queue claim transaction, ownership record/token, or durable
+      // cursor update is needed on the genuinely idle path above. A concurrent
+      // change missed by the probe is reconsidered on the next scheduler tick.
+      canonical = new Database(canonicalPath, { strict: true, readwrite: true, create: false });
+      canonical.exec("PRAGMA synchronous=FULL; PRAGMA busy_timeout=100");
+      control = readSearchControl(canonical);
       if (!control.worker_enabled || control.paused) return result;
       index = new Database(indexPath, { strict: true, readwrite: true, create: false });
       index.exec("PRAGMA synchronous=FULL; PRAGMA busy_timeout=100");
       ownership = acquireWriterOwnership(index, indexPath, control);
-      recoverClaimedJobs(canonical, Date.now(), limits);
+      recoverClaimedJobs(canonical, Date.now(), limits, control);
       const identity = { sourceId: control.source_id, buildId: control.build_id, ownerToken: ownership.token };
       const started = Date.now();
       while (!this.stopped && result.attempted < limits.maxJobsPerRun && Date.now() - started < limits.maxRunMs) {
-        const job = claimNextJob(canonical);
+        const job = claimNextJob(canonical, Date.now(), undefined, control);
         if (!job) break;
         result.attempted++;
         try {
@@ -130,14 +176,15 @@ export class SearchIndexSupervisor {
         }
       }
       // A new bounded child obtains each fresh proof after all matching acks.
-      const cursor = canonical.query<{ seal_account: string; seal_mode: string }, []>("SELECT seal_account,seal_mode FROM mail_search_control WHERE singleton=1").get()!;
-      const accounts = canonical.query<SourceAccount, [string, string, string, number]>("SELECT a.* FROM mail_search_accounts a WHERE a.deleted=0 AND a.baseline_complete=1 AND NOT EXISTS (SELECT 1 FROM mail_search_outbox o WHERE o.account_id=a.account_id AND o.incarnation=a.incarnation AND o.mode=a.mode) ORDER BY CASE WHEN a.account_id>? OR (a.account_id=? AND a.mode>?) THEN 0 ELSE 1 END,a.account_id,a.mode LIMIT ?").all(cursor.seal_account, cursor.seal_account, cursor.seal_mode, limits.maxJobsPerRun);
+      assertMatchingBuild(control, readProbeControl(probe));
+      const accounts = readSealCandidates(probe, limits.maxJobsPerRun);
       for (const account of accounts) {
         const currentControl = readSearchControl(canonical);
+        if (currentControl.source_id !== control.source_id || currentControl.build_id !== control.build_id) throw new Error("search_build_mismatch");
         if (this.stopped || !currentControl.worker_enabled || currentControl.paused || Date.now() - started >= limits.maxRunMs) break;
-        canonical.query("UPDATE mail_search_control SET seal_account=?,seal_mode=? WHERE singleton=1").run(account.account_id, account.mode);
-        const state = index.query<{ ready: number; published_revision: number }, [string, string, string]>("SELECT ready,published_revision FROM index_accounts WHERE account_id=? AND incarnation=? AND mode=?").get(account.account_id, account.incarnation, account.mode);
-        if (state?.ready && state.published_revision === account.revision) continue;
+        const state = index.query<{ ready: number; deleted: number; published_revision: number }, [string, string, string]>("SELECT ready,deleted,published_revision FROM index_accounts WHERE account_id=? AND incarnation=? AND mode=?").get(account.account_id, account.incarnation, account.mode);
+        if (state?.ready && !state.deleted && state.published_revision === account.revision) continue;
+        if (canonical.query("UPDATE mail_search_control SET seal_account=?,seal_mode=? WHERE singleton=1 AND source_id=? AND build_id=?").run(account.account_id, account.mode, control.source_id, control.build_id).changes !== 1) throw new Error("search_build_mismatch");
         const seal = await this.invoke({ protocol: 1, action: "seal", canonicalPath, indexPath, identity, accountId: account.account_id, incarnation: account.incarnation, mode: account.mode }, ownership, limits) as { protocol: number; sealed: boolean };
         if (seal.protocol !== 1) throw new Error("search_receipt_mismatch");
         if (seal.sealed) result.sealed++;
@@ -152,7 +199,7 @@ export class SearchIndexSupervisor {
       throw error;
     } finally {
       try { ownership?.release(); }
-      finally { index?.close(); canonical.close(); }
+      finally { index?.close(); canonical?.close(); probe.close(); }
     }
   }
 }

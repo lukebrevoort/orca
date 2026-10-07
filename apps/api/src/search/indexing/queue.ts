@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { randomUUID } from "node:crypto";
-import { readSearchControl, type SearchMode, type SourceAccount } from "./schema.ts";
+import { readSearchControl, type SearchControl, type SearchMode, type SourceAccount } from "./schema.ts";
 
 export interface IndexJob {
   account_id: string; incarnation: string; mode: SearchMode; target: "message" | "account";
@@ -25,9 +25,13 @@ export function jobKey(job: Pick<IndexJob, "account_id" | "incarnation" | "mode"
   return [job.account_id, job.incarnation, job.mode, job.target, job.message_id];
 }
 const exactAttempt = "account_id=? AND incarnation=? AND mode=? AND target=? AND message_id=? AND version=? AND attempt_token=? AND build_id=? AND state='claimed'";
-export function claimNextJob(db: Database, now = Date.now(), afterAccount?: string): IndexJob | null {
+function assertExpectedBuild(control: SearchControl, expected?: Pick<SearchControl, "source_id" | "build_id">): void {
+  if (expected && (control.source_id !== expected.source_id || control.build_id !== expected.build_id)) throw new Error("search_build_mismatch");
+}
+export function claimNextJob(db: Database, now = Date.now(), afterAccount?: string, expected?: Pick<SearchControl, "source_id" | "build_id">): IndexJob | null {
   return db.transaction((): IndexJob | null => {
     const control = readSearchControl(db);
+    assertExpectedBuild(control, expected);
     if (!control.worker_enabled || control.paused) return null;
     // Durable round-robin accounts; metadata precedes full work for each account.
     const cursor = afterAccount ?? db.query<{ claim_account: string }, []>("SELECT claim_account FROM mail_search_control WHERE singleton=1").get()!.claim_account;
@@ -61,9 +65,12 @@ export function failAttempt(db: Database, job: IndexJob, errorCode: string, now 
     .run(job.attempt_count >= limits.maxAttempts ? "blocked" : "pending", now + limits.retryBaseMs * 2 ** Math.min(job.attempt_count - 1, 8), errorCode, ...jobKey(job), job.version, job.attempt_token, job.build_id).changes === 1;
 }
 /** Only call while holding exclusive ownership, after all earlier child processes are confirmed stopped. */
-export function recoverClaimedJobs(db: Database, now = Date.now(), limits: IndexLimits = DEFAULT_INDEX_LIMITS): number {
-  return db.query("UPDATE mail_search_outbox SET state=CASE WHEN attempt_count>=? THEN 'blocked' ELSE 'pending' END,attempt_token=NULL,available_at=?,error_code='interrupted' WHERE state='claimed'")
-    .run(limits.maxAttempts, now + limits.retryBaseMs).changes;
+export function recoverClaimedJobs(db: Database, now = Date.now(), limits: IndexLimits = DEFAULT_INDEX_LIMITS, expected?: Pick<SearchControl, "source_id" | "build_id">): number {
+  return db.transaction(() => {
+    assertExpectedBuild(readSearchControl(db), expected);
+    return db.query("UPDATE mail_search_outbox SET state=CASE WHEN attempt_count>=? THEN 'blocked' ELSE 'pending' END,attempt_token=NULL,available_at=?,error_code='interrupted' WHERE state='claimed'")
+      .run(limits.maxAttempts, now + limits.retryBaseMs).changes;
+  }).immediate();
 }
 export function enqueueBaseline(db: Database, accountId: string, mode: SearchMode, batchSize: number = DEFAULT_INDEX_LIMITS.baselineBatch): { enqueued: number; complete: boolean } {
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 256) throw new Error("invalid_baseline_batch");
