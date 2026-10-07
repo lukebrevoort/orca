@@ -64,7 +64,11 @@ try {
       await until(async () => await rows.count() === 10 && (await query.inputValue()) === 'oceanblue', 'Body-only search must match');
       scenario.checks.push('stored plaintext body-only match');
       await page.getByRole('button', { name: /Filters/ }).click();
-      await page.getByLabel('Account', { exact: true }).selectOption('second');
+      // The wrapping label also contains option text. Locate its visible title
+      // explicitly so exact label-text matching cannot absorb those options.
+      const accountFilter = page.locator('#global-mail-search-filters label')
+        .filter({ has: page.locator('span', { hasText: /^Account$/ }) }).locator('select');
+      await accountFilter.selectOption('second');
       await until(async () => await rows.count() === 0 && await page.getByText('No matches', { exact: true }).isVisible(), 'Selected account must exclude other account messages');
       scenario.checks.push('explicit account scope');
       await query.fill('AI'); await query.press('Enter');
@@ -73,7 +77,7 @@ try {
       await query.fill('AI update'); await query.press('Enter');
       await until(async () => await page.getByText('No matches', { exact: true }).isVisible(), 'Mixed short clause must be accepted');
       scenario.checks.push('mixed short query accepted');
-      await page.getByLabel('Account', { exact: true }).selectOption('');
+      await accountFilter.selectOption('');
       await query.fill('Orcabeacon'); await query.press('Enter');
       await until(async () => await rows.count() === 10, 'Search should recover after query edits');
       assert.equal((await context.request.post(`${origin.origin}/__fixture/search/mode`, { data: { mode: 'legacy-metadata' }, maxRedirects: 0 })).status(), 204);
