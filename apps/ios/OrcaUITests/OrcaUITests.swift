@@ -347,16 +347,100 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "43-compose-sent-local-edits-copy-delivered")
     }
 
+    func test33RichDraftRequiresConfirmationAndCancelPreservesHTML() throws {
+        try exerciseRichDraftConversion(confirm: false)
+    }
+
+    func test34RichDraftExplicitConversionPersistsAfterReopen() throws {
+        try exerciseRichDraftConversion(confirm: true)
+    }
+
+    func test35RichDraftConversionAtAccessibilitySize() throws {
+        try exerciseRichDraftConversion(confirm: false, contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+    }
+
+    private func exerciseRichDraftConversion(confirm: Bool, contentSize: String = "UICTContentSizeCategoryL") throws {
+        try setFixtureSending(true)
+        addTeardownBlock { try self.restoreFixtureSending() }
+        let subject = "Rich conversion " + UUID().uuidString
+        let richText = "Keep this link"
+        let richHTML = "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>"
+        let draft = try createComposeFixtureDraft(subject: subject, message: ["text": richText, "html": richHTML])
+        let id = try XCTUnwrap(draft["id"] as? String)
+        let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app)
+        app.tabBars.buttons["Drafts"].tap()
+        let row = app.descendants(matching: .any)["draft.\(id)"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        let body = messageBody(in: app)
+        XCTAssertTrue(body.waitForExistence(timeout: 10))
+        let status = app.descendants(matching: .any)["compose.save-status"]
+        expectation(for: NSPredicate(format: "label == %@", "Saved locally"), evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        attachScreenshot(named: "44-compose-rich-draft-protected")
+        XCTAssertFalse(body.isEnabled, "A rich body must stay read-only until the user explicitly accepts conversion")
+        XCTAssertEqual(body.value as? String, richText)
+        let edit = app.buttons["compose.edit-plain-text"]
+        for _ in 0..<8 { if edit.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(edit.isHittable); edit.tap()
+        let dialog = app.alerts["Edit as plain text?"]
+        XCTAssertTrue(dialog.waitForExistence(timeout: 5))
+        XCTAssertTrue(dialog.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@ AND label CONTAINS[c] %@", "formatting", "links")).firstMatch.exists)
+        attachScreenshot(named: "45-compose-rich-conversion-confirmation")
+        dialog.buttons["Cancel"].tap()
+        XCTAssertTrue(dialog.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(body.isEnabled)
+        XCTAssertEqual(body.value as? String, richText)
+        // Cancel and app interruption must leave conversion unapproved.
+        XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertFalse(body.isEnabled)
+        if confirm {
+            for _ in 0..<8 { if edit.isHittable { break }; app.swipeUp() }
+            edit.tap(); XCTAssertTrue(dialog.waitForExistence(timeout: 5))
+            dialog.buttons["Convert to plain text"].tap()
+            expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: body)
+            waitForExpectations(timeout: 10)
+            XCTAssertFalse(edit.exists)
+            for _ in 0..<8 { if body.isHittable { break }; app.swipeDown() }
+            body.tap(); body.typeText(" Updated words.")
+        } else {
+            for _ in 0..<8 { if app.textFields["compose.subject"].isHittable { break }; app.swipeDown() }
+            let title = app.textFields["compose.subject"]; title.tap(); title.typeText(" reviewed")
+        }
+        let expectedText = confirm ? try XCTUnwrap(body.value as? String) : richText
+        if confirm { XCTAssertTrue(expectedText.contains("Updated words.")) }
+        navigateBack(in: app)
+        let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
+        XCTAssertTrue(localRow.waitForExistence(timeout: 10))
+        app.terminate()
+        let reopened = try launchApp(contentSize: contentSize); assertInboxLoaded(in: reopened)
+        reopened.tabBars.buttons["Drafts"].tap()
+        let savedRow = reopened.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
+        XCTAssertTrue(savedRow.waitForExistence(timeout: 10)); savedRow.tap()
+        XCTAssertEqual(messageBody(in: reopened).value as? String, expectedText)
+        XCTAssertEqual(messageBody(in: reopened).isEnabled, confirm)
+        attachScreenshot(named: confirm ? "46-compose-converted-draft-reopened" : "47-compose-cancelled-conversion-reopened")
+        let send = reopened.buttons["compose.send"]
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: send)
+        waitForExpectations(timeout: 10); send.tap()
+        XCTAssertTrue(reopened.navigationBars["Drafts"].waitForExistence(timeout: 15))
+        let sent = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
+        XCTAssertEqual(sent["deliveryStatus"] as? String, "sent")
+        let sentBody = try XCTUnwrap(sent["body"] as? [String: Any])
+        XCTAssertEqual(sentBody["text"] as? String, expectedText)
+        if confirm { XCTAssertTrue(sentBody["html"] is NSNull, "Only confirmed conversion may strip the original HTML") }
+        else { XCTAssertEqual(sentBody["html"] as? String, richHTML, "Cancel, backgrounding, subject edits, autosave, and reopen must preserve exact HTML") }
+    }
+
     private func setFixtureSending(_ enabled: Bool, accountsUnavailable: Bool = false) throws {
         _ = try composeFixtureRequest("__fixture/compose/capabilities", method: "POST", body: ["sendEnabled": enabled, "accountsUnavailable": accountsUnavailable])
     }
     private func restoreFixtureSending() throws {
         try setFixtureSending(ProcessInfo.processInfo.environment["ORCA_FIXTURE_READ_ONLY"] != "1")
     }
-    private func createComposeFixtureDraft(subject: String, attachments: [[String: Any]] = []) throws -> [String: Any] {
+    private func createComposeFixtureDraft(subject: String, attachments: [[String: Any]] = [], message: [String: Any] = ["text": "Protected fixture writing", "html": NSNull()]) throws -> [String: Any] {
         try composeFixtureRequest("v1/drafts?accountId=ios-fixture-account", method: "POST", body: [
             "to": [["name": NSNull(), "email": "maya@example.com"]], "cc": [], "bcc": [], "subject": subject,
-            "body": ["text": "Protected fixture writing", "html": NSNull()], "context": NSNull(), "attachments": attachments,
+            "body": message, "context": NSNull(), "attachments": attachments,
         ])
     }
     private func composeFixtureRequest(_ path: String, method: String = "GET", body: [String: Any]? = nil) throws -> [String: Any] {
@@ -909,7 +993,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
     }
 
-    private func launchApp() throws -> XCUIApplication {
+    private func launchApp(contentSize: String = "UICTContentSizeCategoryL") throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
             XCTFail("Set ORCA_FIXTURE_API_URL to the isolated fixture API URL before running OrcaUITests.")
@@ -926,7 +1010,7 @@ final class OrcaUITests: XCTestCase {
             "--fixture-access-token", accessToken,
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
-            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL",
+            "-UIPreferredContentSizeCategoryName", contentSize,
         ]
         app.launch()
         return app

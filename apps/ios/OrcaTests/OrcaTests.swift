@@ -1202,6 +1202,21 @@ final class DraftLifecycleTests: XCTestCase {
         XCTAssertEqual(persisted.first?.serverRevision, created.serverRevision)
     }
 
+    func testDraftLifecycleUnapprovedBodyEditCannotDiscardHTMLDuringAutosave() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let original = DraftBody(text: "Keep this link", html: "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>")
+        let store = DraftStore(directory: directory)
+        var draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: DraftContent(body: original)))
+        // An input/autosave path without conversion approval must fail closed,
+        // even if the text editor accidentally supplies a changed value.
+        draft.content.body = ComposeView.bodyForSaving(text: "Accidental edit", original: draft.content.body)
+        _ = try await store.save(draft)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reopened.first?.content.body.html, original.html, "An unapproved autosave must retain the exact HTML and links")
+        XCTAssertEqual(reopened.first?.content.body.text, original.text, "A locked rich body cannot diverge from its original text")
+    }
+
     func testDraftLifecycleBodyEditDiscardsStaleHTML() {
         let original = DraftBody(text: "Original", html: "<p><strong>Original</strong></p>")
         let edited = ComposeView.bodyForSaving(text: "Changed", original: original)
