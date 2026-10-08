@@ -22,9 +22,17 @@ final class SafeHTMLOverflowTests: XCTestCase {
         }
     }
 
+    private var layouts: [(CGFloat, CGFloat, ColorScheme)] {
+        [CGFloat(272), 342].flatMap { width in
+            [CGFloat(22), 44].flatMap { size in
+                [ColorScheme.light, .dark].map { (width, size, $0) }
+            }
+        }
+    }
+
     func testLongPreformattedCodeRemainsReadableWithoutHorizontalScrolling() async throws {
         let code = "const artifact = \"" + String(repeating: "release_candidate_", count: 16) + "\";\n  return artifact;"
-        for (width, size, theme) in [(CGFloat(272), CGFloat(22), ColorScheme.light), (342, 22, .dark), (342, 44, .light)] {
+        for (width, size, theme) in layouts {
             let metrics = try await render("<p>Build output</p><pre><code>\(code)</code></pre><p>End of message.</p>", width: width, size: size, theme: theme)
             XCTAssertEqual(metrics["preText"] as? String, code, "Wrapping must preserve every character and indentation")
             assertFits(metrics, width: width, size: size)
@@ -36,16 +44,35 @@ final class SafeHTMLOverflowTests: XCTestCase {
     func testFixedWidthTableKeepsHeadersAndEveryCellWithinReader() async throws {
         let html = """
         <p>Build results</p><table width="1200"><caption>Required checks</caption>
-        <thead><tr><th scope="col">Job</th><th scope="col">Status</th><th scope="col">Commit</th></tr></thead>
+        <thead><tr><th>Job</th><th>Status</th><th>Commit</th></tr></thead>
         <tbody><tr><td>Native reader</td><td>Passed</td><td>f0a9180a8a185cd2bdb293d87a617e81414ebbaf</td></tr></tbody></table><p>End of message.</p>
         """
-        for (width, size, theme) in [(CGFloat(272), CGFloat(22), ColorScheme.light), (342, 22, .dark), (342, 44, .light)] {
+        for (width, size, theme) in layouts {
             let metrics = try await render(html, width: width, size: size, theme: theme)
             assertFits(metrics, width: width, size: size)
             XCTAssertEqual(metrics["headers"] as? [String], ["Job", "Status", "Commit"])
             XCTAssertEqual(metrics["cells"] as? [String], ["Native reader", "Passed", "f0a9180a8a185cd2bdb293d87a617e81414ebbaf"])
             XCTAssertEqual(metrics["tableDisplay"] as? String, "table", "Keep native table semantics for assistive technology")
             XCTAssertLessThanOrEqual(number(metrics, "tableRight"), Double(width) + 1)
+        }
+    }
+
+    func testSenderInlineWidthsAndNoWrapCannotHideTableText() async throws {
+        let html = """
+        <table style="width:1200px;min-width:1200px;table-layout:auto">
+        <colgroup width="1200"><col width="800"><col style="width:400px"></colgroup>
+        <thead><tr><th width="800">Job</th><th style="width:400px">Status</th></tr></thead>
+        <tbody><tr><td width="800" style="white-space:nowrap">Native reader checks</td><td style="min-width:400px">Passed</td></tr></tbody></table>
+        <pre style="white-space:pre"><code style="white-space:pre">    release_candidate_release_candidate_release_candidate_release_candidate</code></pre>
+        """
+        for (width, size, theme) in layouts {
+            let metrics = try await render(html, width: width, size: size, theme: theme)
+            assertFits(metrics, width: width, size: size)
+            XCTAssertEqual(metrics["headers"] as? [String], ["Job", "Status"])
+            XCTAssertEqual(metrics["cells"] as? [String], ["Native reader checks", "Passed"])
+            XCTAssertEqual(metrics["tableDisplay"] as? String, "table")
+            XCTAssertEqual(metrics["preText"] as? String, "    release_candidate_release_candidate_release_candidate_release_candidate")
+            XCTAssertEqual(number(metrics, "tableFontSize"), Double(size), accuracy: 0.1, "Table text must respect the requested reading size")
         }
     }
 
@@ -67,12 +94,23 @@ final class SafeHTMLOverflowTests: XCTestCase {
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
         let view = WKWebView(frame: CGRect(x: 0, y: 0, width: width, height: 800), configuration: configuration)
         view.scrollView.isScrollEnabled = false
-        let window = UIWindow(frame: view.bounds)
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previousKeyWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        window.frame = view.bounds
+        window.overrideUserInterfaceStyle = theme == .dark ? .dark : .light
         let controller = UIViewController()
+        controller.view.backgroundColor = theme == .dark ? .black : .white
+        view.isOpaque = false
+        view.backgroundColor = .clear
         window.rootViewController = controller
         controller.view.addSubview(view)
         window.makeKeyAndVisible()
-        defer { view.removeFromSuperview(); window.isHidden = true }
+        defer {
+            view.removeFromSuperview()
+            window.isHidden = true
+            previousKeyWindow?.makeKeyAndVisible()
+        }
         let loaded = expectation(description: "Reader HTML loaded")
         let observer = NavigationObserver(loaded)
         view.navigationDelegate = observer
@@ -83,6 +121,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
         // Wait for the actual bundled font before measuring any line boxes.
         let result = try await view.callAsyncJavaScript("""
         await document.fonts.ready;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         const rectangles = [];
         while (walker.nextNode()) {
@@ -103,13 +142,17 @@ final class SafeHTMLOverflowTests: XCTestCase {
           headers: Array.from(document.querySelectorAll('th')).map(n => n.textContent),
           cells: Array.from(document.querySelectorAll('td')).map(n => n.textContent),
           tableRight: table ? table.getBoundingClientRect().right : 0,
+          tableFontSize: table ? parseFloat(getComputedStyle(table).fontSize) : 0,
           tableDisplay: table ? getComputedStyle(table).display : ''
         };
         """, arguments: [:], in: nil, contentWorld: .defaultClient)
         let metrics = try XCTUnwrap(result as? [String: Any])
         let captured = expectation(description: "Synthetic reader snapshot")
-        view.takeSnapshot(with: nil) { snapshot, error in
+        let snapshotConfiguration = WKSnapshotConfiguration()
+        snapshotConfiguration.afterScreenUpdates = true
+        view.takeSnapshot(with: snapshotConfiguration) { snapshot, error in
             XCTAssertNil(error)
+            XCTAssertNotNil(snapshot)
             if let snapshot {
                 let attachment = XCTAttachment(image: snapshot)
                 attachment.name = "reader-overflow-\(theme)-\(Int(width))-\(Int(size))"
