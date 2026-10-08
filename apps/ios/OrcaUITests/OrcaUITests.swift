@@ -256,7 +256,9 @@ final class OrcaUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.2)
         }
         XCTAssertEqual(held["deliveryStatus"] as? String, "sent")
+        XCTAssertTrue(app.navigationBars["Drafts"].waitForExistence(timeout: 10), "The reopened composer must finish waiting when the original send completes")
         let after = try composeFixtureRequest("__fixture/draft-lifecycle/state")
+        XCTAssertEqual(after["createRequests"] as? Int, (before["createRequests"] as? Int).map { $0 + 1 }, "The shared reservation must prevent even a second create request")
         XCTAssertEqual(after["deliveries"] as? Int, (before["deliveries"] as? Int).map { $0 + 1 }, "Reopening the same local draft must not create a second delivery")
         let drafts = try composeFixtureRequest("v1/drafts?accountId=ios-fixture-account")
         let copies = (drafts["items"] as? [[String: Any]])?.filter { $0["subject"] as? String == subject }

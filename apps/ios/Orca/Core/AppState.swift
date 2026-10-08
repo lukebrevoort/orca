@@ -21,6 +21,7 @@ import SwiftUI
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()
     let draftStore = DraftStore()
+    @Published var activeDraftOperations = [UUID: UUID]()
     let cache: CacheStore
     @Published private(set) var userID: String?
     private(set) var client: APIClient?
@@ -134,3 +135,4 @@ enum DemoData {
         InboxMessage(id: "m3", accountId: "demo-account", provider: "gmail", providerMessageId: "p3", threadId: "t3", from: .init(name: "Orca updates", email: "updates@orca.test"), subject: "Your weekly current", snippet: "Three conversations moved into focus this week.", receivedAt: "2026-09-21T16:00:00Z", unread: false, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 2, humanClassification: nil)
     ]
 }
+

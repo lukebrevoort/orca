@@ -37,10 +37,12 @@ struct ComposeOperationReservation {
 @MainActor enum ComposeReconciliationCheckpoint {
     enum Failure: Error { case localSave(Error) }
     static func loadRemote(afterCheckpointing draft: LocalDraft, store: DraftStore,
+                           reservation: DraftStore.Reservation? = nil,
+                           didCheckpoint: (LocalDraft) -> Void = { _ in },
                            load: () async throws -> MessageDraft) async throws -> MessageDraft {
         // Retain the contested server identity until verification succeeds. The
         // visible words must already be durable if this network call stalls.
-        do { try await store.save(draft) }
+        do { didCheckpoint(try await store.save(draft, reservation: reservation)) }
         catch { throw Failure.localSave(error) }
         return try await load()
     }
@@ -59,10 +61,13 @@ struct ComposeView: View {
     @State private var local: LocalDraft?
     @State private var status = "Saved locally"
     @State private var draftOperation = ComposeOperationReservation()
+    @State private var storageReservation: DraftStore.Reservation?
+    @State private var lastOwnedOperation: UUID?
     @State private var saveTask: Task<Void, Never>?
     @State private var showingImporter = false
     @State private var draftAccountID: String?
     @State private var draftOwnerScope: String?
+    @State private var preparing = true
     @State private var completed = false
     @State private var staleConflict = false
     @State private var refreshingPermissions = false
@@ -194,11 +199,27 @@ struct ComposeView: View {
         .task {
             if draftAccountID == nil { draftAccountID = state.selectedAccount?.id }
             if draftOwnerScope == nil { draftOwnerScope = state.ownerScope }
-            seed()
-            if !draftOperation.isBusy { await queueLocalSave(debounce: false).value }
+            if preparing {
+                if let opened = local {
+                    guard let current = await state.draftStore.current(opened.id, ownerScope: opened.ownerScope, accountId: opened.accountId) else {
+                        completed = true; preparing = false; dismiss(); return
+                    }
+                    adopt(current)
+                }
+                seed(); preparing = false
+            }
+            if heldByAnotherComposer { status = "This draft is being updated in another window" }
+            else if !draftOperation.isBusy { await queueLocalSave(debounce: false).value }
             try? await state.refreshAccountCapabilities()
         }
         .onChange(of: snapshot) { _ = queueLocalSave(debounce: true) }
+        .onChange(of: state.activeDraftOperations) { previous, current in
+            guard let id = local?.id, !completed, !draftOperation.isBusy, storageReservation == nil,
+                  Self.shouldReloadAfterSharedOperation(draftID: id, previous: previous,
+                      current: current, lastOwnedOperation: lastOwnedOperation) else { return }
+            preparing = true
+            Task { await reloadAfterSharedOperation() }
+        }
         .onChange(of: scenePhase) { if scenePhase == .inactive || scenePhase == .background { flushForTransition() } }
         .onDisappear { flushForTransition() }
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in if case let .success(urls) = result { Task { await attach(urls) } } }
@@ -225,7 +246,7 @@ struct ComposeView: View {
         Button(primaryActionTitle) { Task { if rejectedDelivery { await editRejectedCopy() } else { await send() } } }
             .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
             .buttonStyle(OrcaPrimaryButtonStyle())
-            .disabled(local == nil || sending || editingAttachments || staleConflict || (!deliveryRecoveryAction && (sendPermissionGate.blocksNormalSend || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)) || (deliveryRecoveryAction && local?.serverID == nil))
+            .disabled(preparing || local == nil || sending || editingAttachments || staleConflict || (!deliveryRecoveryAction && (sendPermissionGate.blocksNormalSend || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)) || (deliveryRecoveryAction && local?.serverID == nil))
             .accessibilityIdentifier("compose.send")
     }
     private var composeActionsHorizontal: some View {
@@ -259,11 +280,12 @@ struct ComposeView: View {
         .padding(.vertical, 13)
     }
     var snapshot: String { [to, cc, bcc, subject, messageBody].joined(separator: "\u{1f}") }
-    var sending: Bool { draftOperation.active == .delivery || draftOperation.active == .reconciliation }
+    var heldByAnotherComposer: Bool { local.map { state.activeDraftOperations[$0.id] != nil && state.activeDraftOperations[$0.id] != storageReservation?.id } ?? false }
+    var sending: Bool { draftOperation.active == .delivery || draftOperation.active == .reconciliation || heldByAnotherComposer }
     var editingAttachments: Bool { draftOperation.active == .attachments }
     var rejectedDelivery: Bool { local?.deliveryState == "rejected" }
     var deliveryRecoveryAction: Bool { local.map { ["sending", "ambiguous", "rejected"].contains($0.deliveryState) } ?? false }
-    var deliveryFrozen: Bool { sending || (local.map { ["sending", "ambiguous", "rejected"].contains($0.deliveryState) } ?? false) }
+    var deliveryFrozen: Bool { preparing || sending || (local.map { ["sending", "ambiguous", "rejected"].contains($0.deliveryState) } ?? false) }
     var primaryActionTitle: String { rejectedDelivery ? "Edit a new copy" : (deliveryFrozen ? "Check delivery" : "Send") }
     var composeAccount: MailAccount? { guard let draftAccountID else { return state.selectedAccount }; return state.accounts.first(where: { $0.id == draftAccountID }) }
     var sendPermissionGate: ComposeSendPermissionGate { Self.sendPermissionGate(account: composeAccount, deliveryState: local?.deliveryState) }
@@ -308,15 +330,62 @@ struct ComposeView: View {
     static func canEditRejectedCopy(remoteDeliveryStatus: String, localDeliveryState: String) -> Bool { remoteDeliveryStatus == "rejected" && localDeliveryState == "rejected" }
     @discardableResult func queueLocalSave(debounce: Bool) -> Task<Void, Never> {
         let task = ComposeSaveSequencing.enqueue(after: saveTask, debounce: debounce,
-            canSave: { !draftOperation.isBusy && !completed }, save: { _ = await saveLocal() })
+            canSave: { !preparing && !heldByAnotherComposer && !draftOperation.isBusy && !completed }, save: { _ = await saveLocal() })
         saveTask = task; return task
     }
-    func saveLocal() async -> Bool { guard !completed, let accountID = draftAccountID, let ownerScope = draftOwnerScope else { return false }; var draft = local ?? LocalDraft(ownerScope: ownerScope, accountId: accountID); if local == nil, let seedServer { draft.serverID = seedServer.id; draft.serverRevision = seedServer.revision; draft.deliveryState = seedServer.deliveryStatus }; draft.content = content(); draft.recipientText = .init(to: to, cc: cc, bcc: bcc); do { try await state.draftStore.save(draft); local = draft; status = draft.deliveryState == "rejected" ? "Delivery was rejected. Edit a new copy to try again." : "Saved locally"; return true } catch { status = "Local save failed — sending is paused"; return false } }
+    static func shouldReloadAfterSharedOperation(draftID: UUID, previous: [UUID: UUID],
+                                                current: [UUID: UUID], lastOwnedOperation: UUID?) -> Bool {
+        // Only an observer was frozen by this operation. Its owner may still
+        // have unsaved visible edits after validation or a disk-write failure.
+        guard let finished = previous[draftID], current[draftID] == nil else { return false }
+        return finished != lastOwnedOperation
+    }
+    func beginSharedOperation() async -> DraftStore.Reservation? {
+        guard let draft = local else { return nil }
+        do {
+            let reservation = try await state.draftStore.reserve(draft)
+            storageReservation = reservation; lastOwnedOperation = reservation.id
+            state.activeDraftOperations[draft.id] = reservation.id
+            return reservation
+        } catch {
+            status = error.localizedDescription
+            return nil
+        }
+    }
+    func endSharedOperation(_ reservation: DraftStore.Reservation) {
+        storageReservation = nil
+        Task { @MainActor in
+            await state.draftStore.release(reservation)
+            if state.activeDraftOperations[reservation.draftID] == reservation.id {
+                state.activeDraftOperations.removeValue(forKey: reservation.draftID)
+            }
+        }
+    }
+    func reloadAfterSharedOperation() async {
+        guard let previous = local, !completed, !draftOperation.isBusy, storageReservation == nil else { preparing = false; return }
+        preparing = true
+        let current = await state.draftStore.current(previous.id, ownerScope: previous.ownerScope, accountId: previous.accountId)
+        guard local?.id == previous.id, !completed else { preparing = false; return }
+        guard state.activeDraftOperations[previous.id] == nil else { preparing = false; return }
+        guard let current else { completed = true; preparing = false; dismiss(); return }
+        adopt(current); preparing = false
+        status = current.deliveryState == "rejected" ? "Delivery was rejected. Edit a new copy to try again." : "Saved locally"
+    }
+    func adopt(_ draft: LocalDraft) {
+        local = draft
+        to = draft.recipientText?.to ?? draft.content.to.map(\.email).joined(separator: ", ")
+        cc = draft.recipientText?.cc ?? draft.content.cc.map(\.email).joined(separator: ", ")
+        bcc = draft.recipientText?.bcc ?? draft.content.bcc.map(\.email).joined(separator: ", ")
+        subject = draft.content.subject; messageBody = draft.content.body.text
+    }
+    func saveLocal() async -> Bool { guard !completed, let accountID = draftAccountID, let ownerScope = draftOwnerScope else { return false }; var draft = local ?? LocalDraft(ownerScope: ownerScope, accountId: accountID); if local == nil, let seedServer { draft.serverID = seedServer.id; draft.serverRevision = seedServer.revision; draft.deliveryState = seedServer.deliveryStatus }; draft.content = content(); draft.recipientText = .init(to: to, cc: cc, bcc: bcc); do { draft = try await state.draftStore.save(draft, reservation: storageReservation); local = draft; status = draft.deliveryState == "rejected" ? "Delivery was rejected. Edit a new copy to try again." : "Saved locally"; return true } catch { status = "Local save failed — sending is paused"; return false } }
     func attach(_ urls: [URL]) async {
         guard local != nil, !deliveryFrozen, !editingAttachments, let accountID = draftAccountID, let ownerScope = draftOwnerScope else { return }
         guard draftOperation.reserve(.attachments) else { return }; defer { draftOperation.release(.attachments) }
         let pendingSave = saveTask; pendingSave?.cancel(); await pendingSave?.value
         guard !Task.isCancelled, !completed, ownerScope == state.ownerScope else { return }
+        guard let sharedOperation = await beginSharedOperation() else { return }
+        defer { endSharedOperation(sharedOperation) }
         var attachments = local?.content.attachments ?? seedServer?.attachments ?? []
         var total = attachments.reduce(0) { $0 + $1.size }; var rejected = false
         for url in urls {
@@ -328,7 +397,7 @@ struct ComposeView: View {
         }
         var draft = local ?? LocalDraft(ownerScope: ownerScope, accountId: accountID)
         draft.content = content(); draft.content.attachments = attachments; draft.recipientText = .init(to: to, cc: cc, bcc: bcc)
-        do { try await state.draftStore.save(draft); local = draft; status = rejected ? "Some files were not added; use up to 25 files totaling 25 MB or less" : "Attachment saved locally" }
+        do { draft = try await state.draftStore.save(draft, reservation: storageReservation); local = draft; status = rejected ? "Some files were not added; use up to 25 files totaling 25 MB or less" : "Attachment saved locally" }
         catch { status = "Attachment save failed" }
     }
     func removeAttachment(_ id: String) async {
@@ -338,9 +407,11 @@ struct ComposeView: View {
         guard draftOperation.reserve(.attachments) else { return }; defer { draftOperation.release(.attachments) }
         let pendingSave = saveTask; pendingSave?.cancel(); await pendingSave?.value
         guard !Task.isCancelled, !completed, draftOwnerScope == state.ownerScope, var draft = local else { return }
+        guard let sharedOperation = await beginSharedOperation() else { return }
+        defer { endSharedOperation(sharedOperation) }
         draft.content = content(); draft.content.attachments.removeAll { $0.id == id }
         draft.recipientText = .init(to: to, cc: cc, bcc: bcc)
-        do { try await state.draftStore.save(draft); local = draft; status = "Attachment removed; draft saved locally" }
+        do { draft = try await state.draftStore.save(draft, reservation: storageReservation); local = draft; status = "Attachment removed; draft saved locally" }
         catch { status = "Attachment removal failed; the saved draft is unchanged" }
     }
     func refreshSendingAccess() async {
@@ -358,7 +429,7 @@ struct ComposeView: View {
         }
     }
     func flushForTransition() {
-        guard !sending, !editingAttachments, !completed else { return }
+        guard !preparing, !sending, !editingAttachments, !completed else { return }
         let pendingSave = saveTask; pendingSave?.cancel()
         let taskID = UIApplication.shared.beginBackgroundTask(withName: "Save Orca draft")
         saveTask = Task {
@@ -368,16 +439,18 @@ struct ComposeView: View {
         }
     }
     func send() async {
-        guard local != nil, draftOperation.reserve(.delivery) else { return }; defer { draftOperation.release(.delivery) }
+        guard !preparing, !heldByAnotherComposer, local != nil, draftOperation.reserve(.delivery) else { return }; defer { draftOperation.release(.delivery) }
         let pendingSave = saveTask; pendingSave?.cancel(); await pendingSave?.value
         guard !Task.isCancelled, !completed else { return }
         guard !state.demoMode, let client = state.client, let ownerScope = draftOwnerScope, ownerScope == state.ownerScope, let accountID = draftAccountID, let account = state.accounts.first(where: { $0.id == accountID }) else { status = "This draft’s account is unavailable in the current session"; return }
+        guard let sharedOperation = await beginSharedOperation() else { return }
+        defer { endSharedOperation(sharedOperation) }
         if let current = local, ["sending", "ambiguous"].contains(current.deliveryState) {
             do {
                 let result = try await DraftDeliveryRecovery.check(current, client: client)
                 guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, state.client === client, local?.id == current.id else { return }
-                if result.status == "sent" { completed = true; try await state.draftStore.remove(current.id); dismiss() }
-                else if result.status == "rejected" { if let rejected = try await state.draftStore.markRejected(current.id) { local = rejected; status = result.error?.message ?? "Delivery was rejected. Edit a new copy to try again." } }
+                if result.status == "sent" { completed = true; try await state.draftStore.remove(current.id, reservation: storageReservation); dismiss() }
+                else if result.status == "rejected" { if let rejected = try await state.draftStore.markRejected(current.id, reservation: storageReservation) { local = rejected; status = result.error?.message ?? "Delivery was rejected. Edit a new copy to try again." } }
                 else { status = "Delivery remains uncertain — no duplicate was sent" }
             } catch {
                 if APIClient.sendFailurePhase(for: error) == .confirmedPreReservation {
@@ -390,23 +463,23 @@ struct ComposeView: View {
         guard account.capabilities.send else { status = sendPermissionGate.guidance ?? "Sending is unavailable; your draft stays editable."; return }
         guard await saveLocal(), var current = local else { return }
         do {
-            if current.serverID == nil { let server = try await client.createDraft(accountId: account.id, content: current.content); current.serverID = server.id; current.serverRevision = server.revision; try await state.draftStore.save(current) }
-            else if let id = current.serverID, let revision = current.serverRevision { let server = try await client.updateDraft(id, accountId: account.id, revision: revision, content: current.content); current.serverRevision = server.revision; try await state.draftStore.save(current) }
+            if current.serverID == nil { let server = try await client.createDraft(accountId: account.id, content: current.content); current.serverID = server.id; current.serverRevision = server.revision; current = try await state.draftStore.save(current, reservation: storageReservation); local = current }
+            else if let id = current.serverID, let revision = current.serverRevision { let server = try await client.updateDraft(id, accountId: account.id, revision: revision, content: current.content); current.serverRevision = server.revision; current = try await state.draftStore.save(current, reservation: storageReservation); local = current }
         } catch let APIClient.ClientError.http(code, body) where code == 409 && body?.code == "stale_draft" { await inspectStaleConflict(client: client, accountID: account.id, ownerScope: ownerScope); return }
         catch { status = "Could not save to server: \(error.localizedDescription) Your local draft is safe."; return }
         do {
-            current = try await state.draftStore.prepareSend(current.id); local = current
+            current = try await state.draftStore.prepareSend(current.id, reservation: storageReservation); local = current
             guard let id = current.serverID, let revision = current.serverRevision, let key = current.idempotencyKey else { return }
             let result = try await client.sendDraft(id, accountId: account.id, revision: revision, idempotencyKey: key)
-            if result.status == "sent" { completed = true; try await state.draftStore.remove(current.id); status = "Sent"; dismiss() }
-            else if result.status == "ambiguous" || result.status == "sending" { try await state.draftStore.markAmbiguous(current.id); status = "Delivery uncertain — check before retrying" }
-            else if result.status == "rejected" { if let rejected = try await state.draftStore.markRejected(current.id) { local = rejected; status = result.error?.message ?? "Delivery was rejected. Edit a new copy to try again." } }
+            if result.status == "sent" { completed = true; try await state.draftStore.remove(current.id, reservation: storageReservation); status = "Sent"; dismiss() }
+            else if result.status == "ambiguous" || result.status == "sending" { if let ambiguous = try await state.draftStore.markAmbiguous(current.id, reservation: storageReservation) { local = ambiguous }; status = "Delivery uncertain — check before retrying" }
+            else if result.status == "rejected" { if let rejected = try await state.draftStore.markRejected(current.id, reservation: storageReservation) { local = rejected; status = result.error?.message ?? "Delivery was rejected. Edit a new copy to try again." } }
             else { status = result.error?.message ?? "Send failed; draft is safe" }
         } catch {
             if APIClient.sendFailurePhase(for: error) == .confirmedPreReservation {
                 await recoverPreReservationFailure(error, draft: current, client: client, accountID: account.id, ownerScope: ownerScope)
             } else {
-                if let ambiguous = try? await state.draftStore.transition(current.id, .uncertain) { local = ambiguous }
+                if let ambiguous = try? await state.draftStore.transition(current.id, .uncertain, reservation: storageReservation) { local = ambiguous }
                 status = "Delivery uncertain — draft and delivery key are safe"
             }
         }
@@ -418,25 +491,25 @@ struct ComposeView: View {
         guard identityIsCurrent(), case let APIClient.ClientError.http(_, body) = error else { return }
         if body?.code == "stale_draft" {
             guard let serverID = draft.serverID else {
-                if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: body?.currentRevision)) { local = recovered }
+                if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: body?.currentRevision), reservation: storageReservation) { local = recovered }
                 staleConflict = true; status = "This draft changed elsewhere. Your local version is editable and was not sent."
                 return
             }
             do {
                 let remote = try await client.draft(serverID, accountId: accountID)
                 guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
-                if remote.deliveryStatus == "draft", let recovered = try await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: nil)) {
+                if remote.deliveryStatus == "draft", let recovered = try await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: nil), reservation: storageReservation) {
                     guard identityIsCurrent() else { return }
                     local = recovered; staleConflict = true; status = "This draft changed elsewhere. Keep both versions, or leave this local copy unchanged."
                 } else { await applyVerifiedDeliveryStatus(remote.deliveryStatus, draft: draft, message: "The draft changed while delivery was checked") }
             } catch {
                 guard identityIsCurrent() else { return }
-                if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain) { guard identityIsCurrent() else { return }; local = ambiguous }
+                if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain, reservation: storageReservation) { guard identityIsCurrent() else { return }; local = ambiguous }
                 staleConflict = false; status = "Delivery could not be verified. The original delivery key is preserved; check again before editing or retrying."
             }
             return
         }
-        if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: draft.serverRevision)) { guard identityIsCurrent() else { return }; local = recovered }
+        if let recovered = try? await state.draftStore.transition(draft.id, .confirmedPreReservation(serverRevision: draft.serverRevision), reservation: storageReservation) { guard identityIsCurrent() else { return }; local = recovered }
         staleConflict = false
         status = body?.code == "missing_capability"
             ? (sendPermissionGate.guidance ?? "Sending is unavailable; your draft stays editable.")
@@ -445,11 +518,11 @@ struct ComposeView: View {
     func applyVerifiedDeliveryStatus(_ remoteStatus: String, draft: LocalDraft, message: String) async {
         switch remoteStatus {
         case "sent":
-            completed = true; try? await state.draftStore.remove(draft.id); dismiss()
+            completed = true; try? await state.draftStore.remove(draft.id, reservation: storageReservation); dismiss()
         case "rejected":
-            if let rejected = try? await state.draftStore.transition(draft.id, .rejected) { local = rejected }; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again."
+            if let rejected = try? await state.draftStore.transition(draft.id, .rejected, reservation: storageReservation) { local = rejected }; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again."
         default:
-            if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain) { local = ambiguous }; staleConflict = false; status = "\(message). Delivery is \(remoteStatus); no new send was started."
+            if let ambiguous = try? await state.draftStore.transition(draft.id, .uncertain, reservation: storageReservation) { local = ambiguous }; staleConflict = false; status = "\(message). Delivery is \(remoteStatus); no new send was started."
         }
     }
     func inspectStaleConflict(client: APIClient, accountID: String, ownerScope: String) async {
@@ -457,7 +530,7 @@ struct ComposeView: View {
         do {
             let remote = try await client.draft(serverID, accountId: accountID)
             guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
-            if remote.deliveryStatus == "rejected" { if let rejected = try await state.draftStore.markRejected(draft.id) { local = rejected; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again." }; return }
+            if remote.deliveryStatus == "rejected" { if let rejected = try await state.draftStore.markRejected(draft.id, reservation: storageReservation) { local = rejected; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again." }; return }
             if Self.canKeepBoth(remoteDeliveryStatus: remote.deliveryStatus, localDeliveryState: draft.deliveryState, hasDeliveryKey: draft.idempotencyKey != nil) { staleConflict = true; status = "This draft changed elsewhere. Keep both versions, or leave this local copy unchanged." }
             else { staleConflict = false; status = "This draft’s delivery is \(remote.deliveryStatus). It cannot be detached safely." }
         } catch { guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client else { return }; staleConflict = false; status = "This draft changed elsewhere. Delivery status could not be verified, so no copy was detached." }
@@ -467,36 +540,42 @@ struct ComposeView: View {
         defer { draftOperation.release(.reconciliation) }
         let pendingSave = saveTask; pendingSave?.cancel(); await pendingSave?.value
         guard !Task.isCancelled, !completed, var draft = local, draft.idempotencyKey == nil, let serverID = draft.serverID, let accountID = draftAccountID, draft.accountId == accountID, let ownerScope = draftOwnerScope, ownerScope == state.ownerScope, let client = state.client else { return }
+        guard let sharedOperation = await beginSharedOperation() else { return }
+        defer { endSharedOperation(sharedOperation) }
         draft.content = content(); draft.recipientText = .init(to: to, cc: cc, bcc: bcc)
+        var verifiedRemote: MessageDraft?
         do {
-            let remote = try await ComposeReconciliationCheckpoint.loadRemote(afterCheckpointing: draft, store: state.draftStore) {
+            let remote = try await ComposeReconciliationCheckpoint.loadRemote(afterCheckpointing: draft, store: state.draftStore, reservation: storageReservation,
+                didCheckpoint: { saved in draft = saved; local = saved }) {
                 try await client.draft(serverID, accountId: accountID)
             }
             guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
-            if remote.deliveryStatus == "rejected" { if let rejected = try await state.draftStore.markRejected(draft.id) { local = rejected; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again." }; return }
+            if remote.deliveryStatus == "rejected" { if let rejected = try await state.draftStore.markRejected(draft.id, reservation: storageReservation) { local = rejected; staleConflict = false; status = "Delivery was rejected. Edit a new copy to try again." }; return }
             guard Self.canKeepBoth(remoteDeliveryStatus: remote.deliveryStatus, localDeliveryState: draft.deliveryState, hasDeliveryKey: draft.idempotencyKey != nil) else { staleConflict = false; status = "This draft’s delivery is \(remote.deliveryStatus). It cannot be detached safely."; return }
+            verifiedRemote = remote
         } catch is ComposeReconciliationCheckpoint.Failure {
             guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, state.client === client else { return }
             status = "Could not save your latest edits. Keep this draft open and try again. No server copy was changed."
             return
         } catch { guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client else { return }; staleConflict = false; status = "Delivery status could not be verified, so no copy was detached."; return }
-        draft.serverID = nil; draft.serverRevision = nil; draft.idempotencyKey = nil; draft.deliveryState = "local"
-        do { try await state.draftStore.save(draft); local = draft; staleConflict = false; status = "Both drafts kept. This version will send as a new draft." }
+        guard let verifiedRemote else { return }
+        do { local = try await state.draftStore.makeEditableCopy(draft, verifiedRemote: verifiedRemote, reservation: storageReservation); staleConflict = false; status = "Both drafts kept. This version will send as a new draft." }
         catch { status = "Could not preserve both drafts — no server copy was changed" }
     }
     func editRejectedCopy() async {
-        guard rejectedDelivery, draftOperation.reserve(.reconciliation) else { return }
+        guard !heldByAnotherComposer, rejectedDelivery, draftOperation.reserve(.reconciliation) else { return }
         defer { draftOperation.release(.reconciliation) }
         let pendingSave = saveTask; pendingSave?.cancel(); await pendingSave?.value
         guard !Task.isCancelled, !completed, var draft = local, rejectedDelivery, let serverID = draft.serverID, let accountID = draftAccountID, draft.accountId == accountID, let ownerScope = draftOwnerScope, ownerScope == state.ownerScope, let client = state.client else { return }
+        guard let sharedOperation = await beginSharedOperation() else { return }
+        defer { endSharedOperation(sharedOperation) }
         do {
             let remote = try await client.draft(serverID, accountId: accountID)
             guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
             guard Self.canEditRejectedCopy(remoteDeliveryStatus: remote.deliveryStatus, localDeliveryState: draft.deliveryState) else { status = "Delivery is \(remote.deliveryStatus). A new copy was not created."; return }
-            draft.serverID = nil; draft.serverRevision = nil; draft.idempotencyKey = nil; draft.deliveryState = "local"
-            try await state.draftStore.save(draft)
+            let copy = try await state.draftStore.makeEditableCopy(draft, verifiedRemote: remote, reservation: storageReservation)
             guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client, local?.id == draft.id else { return }
-            local = draft; status = "New editable copy created. The rejected server record was preserved."
+            local = copy; status = "New editable copy created. The rejected server record was preserved."
         } catch { guard !Task.isCancelled, ownerScope == state.ownerScope, draftAccountID == accountID, let activeClient = state.client, activeClient === client else { return }; status = "Rejection could not be verified, so no new copy was created." }
     }
 }
