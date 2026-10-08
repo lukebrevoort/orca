@@ -57,6 +57,9 @@ actor DraftStore {
     }
     private var drafts = [LocalDraft](); private let fileURL: URL; private var recoveryError: Error?
     private var reservations = [UUID: Reservation]()
+    // A visible editor may have typing that has not reached autosave yet.
+    // Runtime-only registrations protect that writing during list refreshes.
+    private var editors = [UUID: UUID]()
     init(directory: URL? = nil) {
         let root = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appending(path: "Orca")
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -78,6 +81,55 @@ actor DraftStore {
     func all(ownerScope: String, accountId: String) -> [LocalDraft] { drafts.filter { $0.ownerScope == ownerScope && $0.accountId == accountId }.sorted { $0.modifiedAt > $1.modifiedAt } }
     func current(_ id: UUID, ownerScope: String, accountId: String) -> LocalDraft? {
         drafts.first { $0.id == id && $0.ownerScope == ownerScope && $0.accountId == accountId }
+    }
+    func beginEditing(_ id: UUID, ownerScope: String, accountId: String, editorID: UUID) -> LocalDraft? {
+        guard let draft = current(id, ownerScope: ownerScope, accountId: accountId) else { return nil }
+        editors[editorID] = id
+        return draft
+    }
+    func endEditing(_ editorID: UUID) { editors.removeValue(forKey: editorID) }
+    /// Only call with the full, freshly fetched server draft. List summaries
+    /// omit writing fields and cannot establish that a local shadow is unchanged.
+    @discardableResult func reconcileSent(_ remote: MessageDraft, ownerScope: String, accountId: String, reservation: Reservation? = nil, editorID: UUID? = nil) throws -> [LocalDraft] {
+        try requireHealthy()
+        if let reservation {
+            try requireReservation(for: reservation.draftID, reservation: reservation)
+            guard let owned = current(reservation.draftID, ownerScope: ownerScope, accountId: accountId),
+                  owned.serverID == remote.id, remote.accountId == accountId else { throw StoreError.invalidReservation }
+            if let editorID, editors[editorID] != reservation.draftID { throw StoreError.invalidReservation }
+        } else if editorID != nil { throw StoreError.invalidReservation }
+        guard remote.deliveryStatus == "sent", remote.accountId == accountId else {
+            return all(ownerScope: ownerScope, accountId: accountId)
+        }
+        // A lease freezes future edits, but another editor may still hold
+        // pre-lease typing. Bypass only the requesting editor's registration.
+        let openDraftIDs = Set(editors.compactMap { id, draftID in
+            id == editorID && draftID == reservation?.draftID ? nil : draftID
+        })
+        var removed = Set<UUID>()
+        let candidate = drafts.compactMap { draft -> LocalDraft? in
+            guard draft.ownerScope == ownerScope, draft.accountId == accountId, draft.serverID == remote.id,
+                  reservation?.draftID == draft.id || reservations[draft.id] == nil, !openDraftIDs.contains(draft.id),
+                  draft.serverRevision.map({ remote.revision >= $0 }) ?? false else { return draft }
+            if Self.hasSameWriting(draft, as: remote) {
+                removed.insert(draft.id)
+                return nil
+            }
+            // These words were not sent. Preserve their identity and the
+            // original delivery key, and require an explicit copy to edit/send.
+            guard draft.deliveryState != "sent" || draft.serverRevision != remote.revision else { return draft }
+            var preserved = draft
+            // Retain the newest verified revision so a late older response
+            // cannot subsequently retire preserved writing on a false match.
+            preserved.serverRevision = remote.revision
+            preserved.deliveryState = "sent"; preserved.storageRevision = UUID()
+            return preserved
+        }
+        if candidate != drafts {
+            try persist(candidate); drafts = candidate
+            editors = editors.filter { !removed.contains($0.value) }
+        }
+        return all(ownerScope: ownerScope, accountId: accountId)
     }
     func recoveryMessage() -> String? { recoveryError == nil ? nil : StoreError.recoveryRequired.localizedDescription }
     func reserve(_ snapshot: LocalDraft) throws -> Reservation {
@@ -112,6 +164,7 @@ actor DraftStore {
             value.modifiedAt = current.modifiedAt; value.storageRevision = current.storageRevision
             if value == current { return current }
             try requireCurrent(draft, current: current)
+            guard current.deliveryState != "sent" else { throw StoreError.identityChanged }
             guard (current.serverID == nil || draft.serverID == current.serverID),
                   draft.idempotencyKey == current.idempotencyKey,
                   draft.deliveryState == current.deliveryState else { throw StoreError.identityChanged }
@@ -142,7 +195,8 @@ actor DraftStore {
               current.serverRevision.map({ remote.revision >= $0 }) ?? false else { throw StoreError.copyNotAllowed }
         let unreserved = remote.deliveryStatus == "draft" && ["local", "draft"].contains(current.deliveryState) && current.idempotencyKey == nil
         let rejected = remote.deliveryStatus == "rejected" && current.deliveryState == "rejected"
-        guard unreserved || rejected else { throw StoreError.copyNotAllowed }
+        let sent = remote.deliveryStatus == "sent" && current.deliveryState == "sent"
+        guard unreserved || rejected || sent else { throw StoreError.copyNotAllowed }
         var copy = draft
         copy.id = UUID(); copy.storageRevision = UUID(); copy.modifiedAt = .now
         copy.serverID = nil; copy.serverRevision = nil; copy.idempotencyKey = nil; copy.deliveryState = "local"
@@ -150,6 +204,7 @@ actor DraftStore {
         // Stale composers retain the retired ID/revision and cannot restore it.
         var candidate = drafts; candidate[index] = copy
         try persist(candidate); drafts = candidate
+        editors = editors.mapValues { $0 == draft.id ? copy.id : $0 }
         return copy
     }
     func remove(_ id: UUID, reservation: Reservation? = nil) throws {
@@ -157,11 +212,13 @@ actor DraftStore {
         try requireReservation(for: id, reservation: reservation)
         let candidate = drafts.filter { $0.id != id }
         try persist(candidate); drafts = candidate
+        editors = editors.filter { $0.value != id }
     }
     func transition(_ id: UUID, _ transition: DraftDeliveryTransition, reservation: Reservation? = nil) throws -> LocalDraft? {
         try requireHealthy()
         try requireReservation(for: id, reservation: reservation)
         guard let index = drafts.firstIndex(where: { $0.id == id }) else { return nil }
+        guard drafts[index].deliveryState != "sent" else { throw StoreError.identityChanged }
         var candidate = drafts
         switch transition {
         case .prepare:
@@ -183,6 +240,29 @@ actor DraftStore {
     func prepareSend(_ id: UUID, reservation: Reservation? = nil) throws -> LocalDraft { guard let draft = try transition(id, .prepare, reservation: reservation) else { throw CocoaError(.fileNoSuchFile) }; return draft }
     @discardableResult func markAmbiguous(_ id: UUID, reservation: Reservation? = nil) throws -> LocalDraft? { try transition(id, .uncertain, reservation: reservation) }
     func markRejected(_ id: UUID, reservation: Reservation? = nil) throws -> LocalDraft? { try transition(id, .rejected, reservation: reservation) }
+    private static func normalizedAddresses(_ recipients: [Recipient]) -> [String] {
+        recipients.map { $0.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+    }
+    private static func rawRecipientsMatch(_ text: String, recipients: [Recipient]) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let addresses = trimmed.isEmpty ? [] : text.split(separator: ",", omittingEmptySubsequences: false).map {
+            String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        // Never filter invalid/unfinished tokens: doing so would discard typing.
+        return addresses == normalizedAddresses(recipients)
+    }
+    private static func hasSameWriting(_ draft: LocalDraft, as remote: MessageDraft) -> Bool {
+        let local = draft.content
+        guard normalizedAddresses(local.to) == normalizedAddresses(remote.to),
+              normalizedAddresses(local.cc) == normalizedAddresses(remote.cc),
+              normalizedAddresses(local.bcc) == normalizedAddresses(remote.bcc),
+              local.subject == remote.subject, local.body == remote.body,
+              local.context == remote.context, local.attachments == remote.attachments else { return false }
+        guard let raw = draft.recipientText else { return true }
+        return rawRecipientsMatch(raw.to, recipients: local.to)
+            && rawRecipientsMatch(raw.cc, recipients: local.cc)
+            && rawRecipientsMatch(raw.bcc, recipients: local.bcc)
+    }
     private func requireHealthy() throws { if recoveryError != nil { throw StoreError.recoveryRequired } }
     private func requireReservation(for id: UUID, reservation: Reservation?) throws {
         if let reservation {

@@ -156,7 +156,7 @@ final class OrcaTests: XCTestCase {
         let account = MailAccount(id: "gmail", provider: "gmail", email: "me@example.com", displayName: "Me", avatarUrl: nil, capabilities: MailCapabilities(read: true, send: false, draft: false))
         let normal = ComposeView.sendPermissionGate(account: account, deliveryState: "local")
         XCTAssertTrue(normal.blocksNormalSend); XCTAssertEqual(normal.guidance, "This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then return here and refresh sending access. Your draft remains editable.")
-        for state in ["sending", "ambiguous", "rejected"] { XCTAssertFalse(ComposeView.sendPermissionGate(account: account, deliveryState: state).blocksNormalSend) }
+        for state in ["sending", "ambiguous", "rejected", "sent"] { XCTAssertFalse(ComposeView.sendPermissionGate(account: account, deliveryState: state).blocksNormalSend) }
         var unsupported = account; unsupported.provider = "outlook"
         XCTAssertEqual(ComposeView.sendPermissionGate(account: unsupported, deliveryState: "local").guidance, "Sending is not supported for this provider yet. Your draft remains editable in Orca.")
     }
@@ -1158,6 +1158,21 @@ final class InboxLoadingTests: XCTestCase {
 /// messages are synthetic; these tests never create or deliver real email.
 @MainActor
 final class DraftLifecycleTests: XCTestCase {
+    func testVerifiedCopyOnlyAllowsMatchingTerminalDeliveryStates() {
+        for local in ["local", "draft", "sending", "ambiguous", "rejected", "sent"] {
+            for remote in ["draft", "sending", "ambiguous", "rejected", "sent"] {
+                XCTAssertEqual(ComposeView.canEditVerifiedCopy(remoteDeliveryStatus: remote, localDeliveryState: local),
+                               ["rejected", "sent"].contains(local) && remote == local,
+                               "local=\(local), remote=\(remote)")
+            }
+        }
+        var sent = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        sent.deliveryState = "sent"
+        let composer = ComposeView(localDraft: sent)
+        XCTAssertTrue(composer.copyableDelivery); XCTAssertTrue(composer.deliveryRecoveryAction)
+        XCTAssertEqual(composer.primaryActionTitle, "Edit a new copy")
+    }
+
     func testSharedOperationCompletionReloadsOnlyTheBlockedObserver() {
         let draft = UUID(), owner = UUID(), other = UUID()
         let active = [draft: owner]
@@ -1716,5 +1731,482 @@ final class DraftStoreRevisionTests: XCTestCase {
     private func assertMutationFails(_ expected: DraftStore.StoreError, file: StaticString = #filePath, line: UInt = #line, operation: () async throws -> Void) async {
         do { try await operation(); XCTFail("Expected rejected operation", file: file, line: line) }
         catch { XCTAssertEqual(error as? DraftStore.StoreError, expected, file: file, line: line) }
+    }
+}
+
+final class DraftStoreSentReconciliationTests: XCTestCase {
+    func testVerifiedSentRemovesUnchangedShadowAfterRestartAndNormalizesRecipientNames() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = DraftStore(directory: directory)
+        var initial = localDraft()
+        initial.content.to = [.init(name: "Local name", email: "  MAYA@EXAMPLE.COM  ")]
+        initial.content.cc = [.init(name: "Local cc", email: " CC@example.com ")]
+        initial.content.bcc = [.init(name: "Local bcc", email: "BCC@example.com")]
+        initial.recipientText = .init(to: "maya@example.com", cc: " cc@EXAMPLE.COM ", bcc: "bcc@example.com")
+        let draft = try await first.save(initial)
+        var remote = remoteDraft(for: draft)
+        remote.to = [.init(name: "Server name", email: "maya@example.com")]
+        remote.cc = [.init(name: nil, email: "cc@example.com")]
+        remote.bcc = [.init(name: "Server bcc", email: "bcc@example.com")]
+        remote.revision += 1
+        let restarted = DraftStore(directory: directory)
+        let rows = try await restarted.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(rows.isEmpty, "A fresh server detail must retire the durable sent shadow")
+        let persisted = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(persisted.isEmpty)
+        do { _ = try await restarted.save(draft); XCTFail("A stale composer cannot restore a sent shadow") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .staleDraft) }
+    }
+
+    func testSentReconciliationPreservesEveryWritingDifferenceAndRawUnfinishedRecipient() async throws {
+        let changes: [(String, (inout LocalDraft) -> Void)] = [
+            ("subject", { $0.content.subject = "Unsent subject" }),
+            ("plain text", { $0.content.body.text = "Unsent words" }),
+            ("rich text", { $0.content.body.html = "<p><strong>Unsent formatting</strong></p>" }),
+            ("context", { $0.content.context?.references.append("<new@example.com>") }),
+            ("attachment bytes", { $0.content.attachments[0].contentBase64 = "eQ==" }),
+            ("attachment metadata", { $0.content.attachments[0].filename = "renamed.txt" }),
+            ("removed attachment", { $0.content.attachments = [] }),
+            ("recipient", { $0.content.to[0].email = "different@example.com" }),
+            ("raw to", { $0.recipientText?.to += ", unfinished" }),
+            ("raw cc", { $0.recipientText?.cc = "unfinished" }),
+            ("raw bcc", { $0.recipientText?.bcc = "unfinished" }),
+            ("trailing separator", { $0.recipientText?.to += "," }),
+            ("empty tokens", { $0.recipientText?.cc = ",," })
+        ]
+        for (label, change) in changes {
+            let directory = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = localDraft()
+            let remote = remoteDraft(for: initial)
+            change(&initial)
+            initial.idempotencyKey = "original-command"; initial.deliveryState = "ambiguous"
+            let draft = try await store.save(initial)
+            let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            let preserved = try XCTUnwrap(rows.first, label)
+            var expected = draft; expected.deliveryState = "sent"; expected.storageRevision = preserved.storageRevision
+            XCTAssertEqual(preserved, expected, "Must preserve \(label), writing, identity, and delivery command")
+            XCTAssertNotEqual(preserved.storageRevision, draft.storageRevision, label)
+            let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(reopened, [preserved], label)
+            let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+            let repeated = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(repeated, [preserved], label)
+            XCTAssertEqual(try Data(contentsOf: directory.appending(path: "drafts.json")), bytes, "Repeated refresh must not churn revisions")
+        }
+    }
+
+    func testSentReconciliationIgnoresWrongStatusAccountScopeIdentityAndOldRevision() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        var invalid = ["draft", "sending", "ambiguous", "rejected"].map { status -> MessageDraft in
+            var remote = remoteDraft(for: draft); remote.deliveryStatus = status; return remote
+        }
+        var wrongAccount = remoteDraft(for: draft); wrongAccount.accountId = "other-account"; invalid.append(wrongAccount)
+        var wrongID = remoteDraft(for: draft); wrongID.id = "other-server-draft"; invalid.append(wrongID)
+        var oldRevision = remoteDraft(for: draft); oldRevision.revision -= 1; invalid.append(oldRevision)
+        for remote in invalid {
+            let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(rows, [draft])
+        }
+        _ = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: "other-owner", accountId: draft.accountId)
+        _ = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: "other-account")
+        let current = await store.all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(current, [draft]); XCTAssertEqual(try Data(contentsOf: file), bytes)
+    }
+
+    func testSentReconciliationIgnoresLocalRowsWithoutVerifiedServerRevision() async throws {
+        for divergent in [false, true] {
+            let directory = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = localDraft()
+            let remote = remoteDraft(for: initial)
+            initial.serverRevision = nil
+            if divergent { initial.content.body.text = "Unsent writing" }
+            let draft = try await store.save(initial)
+            let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+            let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(rows, [draft], "Unknown local revision must remain untouched")
+            XCTAssertEqual(try Data(contentsOf: file), bytes)
+        }
+    }
+
+    func testSentReconciliationRemembersNewestVerifiedRevisionBeforeIgnoringOlderMatchingResponse() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = localDraft()
+        var newest = remoteDraft(for: initial); newest.revision = 4
+        initial.content.body.text = "Local edits after the last save"
+        initial.idempotencyKey = "original-command"
+        let draft = try await store.save(initial)
+        let first = try await store.reconcileSent(newest, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        let preserved = try XCTUnwrap(first.first)
+        XCTAssertEqual(preserved.serverRevision, 4)
+        XCTAssertEqual(preserved.content, draft.content); XCTAssertEqual(preserved.idempotencyKey, draft.idempotencyKey)
+        XCTAssertEqual(preserved.modifiedAt, draft.modifiedAt)
+        newest.revision = 5
+        let second = try await store.reconcileSent(newest, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        let advanced = try XCTUnwrap(second.first)
+        XCTAssertEqual(advanced.serverRevision, 5); XCTAssertNotEqual(advanced.storageRevision, preserved.storageRevision)
+        XCTAssertEqual(advanced.content, draft.content); XCTAssertEqual(advanced.modifiedAt, draft.modifiedAt)
+        var staleMatching = remoteDraft(for: advanced); staleMatching.revision = 4
+        let restarted = DraftStore(directory: directory)
+        let afterStale = try await restarted.reconcileSent(staleMatching, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(afterStale, [advanced], "Older sent writing must never retire the preserved current revision")
+    }
+
+    func testSentReconciliationOnlyChangesMatchingRowsAndReturnsCurrentScopedList() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        var otherOwner = localDraft(); otherOwner.ownerScope = "other-owner"
+        otherOwner = try await store.save(otherOwner)
+        var otherAccount = localDraft(); otherAccount.accountId = "other-account"
+        otherAccount = try await store.save(otherAccount)
+        var otherServer = localDraft(); otherServer.serverID = "other-server-draft"
+        otherServer = try await store.save(otherServer)
+        let rows = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(rows, [otherServer])
+        let ownerRows = await store.all(ownerScope: otherOwner.ownerScope, accountId: otherOwner.accountId)
+        let accountRows = await store.all(ownerScope: otherAccount.ownerScope, accountId: otherAccount.accountId)
+        XCTAssertEqual(ownerRows, [otherOwner]); XCTAssertEqual(accountRows, [otherAccount])
+    }
+
+    func testSentReconciliationUsesLatestActorWritingRatherThanPreFetchSnapshotOrTimestamps() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let preFetch = try await store.save(localDraft())
+        let fetchedRemote = remoteDraft(for: preFetch)
+        var edit = preFetch
+        edit.content.body.text = "Typed while remote detail was loading"
+        edit.modifiedAt = .distantPast
+        let latest = try await store.save(edit)
+        let rows = try await store.reconcileSent(fetchedRemote, ownerScope: preFetch.ownerScope, accountId: preFetch.accountId)
+        let preserved = try XCTUnwrap(rows.first)
+        XCTAssertEqual(preserved.content, latest.content)
+        XCTAssertEqual(preserved.modifiedAt, latest.modifiedAt)
+        XCTAssertEqual(preserved.id, latest.id); XCTAssertEqual(preserved.deliveryState, "sent")
+        XCTAssertNotEqual(preserved.storageRevision, latest.storageRevision)
+    }
+
+    func testSentReconciliationSkipsActiveReservationUntilRelease() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let reservation = try await store.reserve(draft)
+        let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+        let skipped = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(skipped, [draft])
+        XCTAssertEqual(try Data(contentsOf: directory.appending(path: "drafts.json")), bytes)
+        await store.release(reservation)
+        let removed = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    func testOwnedSentReconciliationPreservesDivergentWritingWhileSkippingOtherLeasesAndEditors() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = localDraft()
+        let remote = remoteDraft(for: initial)
+        initial.content.body.text = "Unsent edits checkpointed before recovery"
+        initial.recipientText?.cc = "unfinished"
+        initial.idempotencyKey = "original-command"; initial.deliveryState = "ambiguous"
+        let draft = try await store.save(initial)
+        let reservedOther = try await store.save(localDraft())
+        let openOther = try await store.save(localDraft())
+        let ownerID = UUID(), observerID = UUID(), otherID = UUID()
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: ownerID)
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: observerID)
+        _ = await store.beginEditing(openOther.id, ownerScope: openOther.ownerScope, accountId: openOther.accountId, editorID: otherID)
+        let owner = try await store.reserve(draft)
+        let otherOwner = try await store.reserve(reservedOther)
+        let withoutEditor = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner)
+        XCTAssertEqual(withoutEditor.first { $0.id == draft.id }, draft, "A lease alone must not bypass live editors")
+        let observerProtected = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: ownerID)
+        XCTAssertEqual(observerProtected.first { $0.id == draft.id }, draft, "Another same-row editor may still hold unsaved visible writing")
+        await store.endEditing(observerID)
+        let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: ownerID)
+        let preserved = try XCTUnwrap(rows.first { $0.id == draft.id })
+        XCTAssertEqual(preserved.deliveryState, "sent")
+        XCTAssertNotEqual(preserved.storageRevision, draft.storageRevision)
+        XCTAssertEqual(preserved.content, draft.content); XCTAssertEqual(preserved.recipientText, draft.recipientText)
+        XCTAssertEqual(preserved.serverID, draft.serverID); XCTAssertEqual(preserved.idempotencyKey, draft.idempotencyKey)
+        XCTAssertEqual(rows.first { $0.id == reservedOther.id }, reservedOther)
+        XCTAssertEqual(rows.first { $0.id == openOther.id }, openOther)
+        let persisted = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(persisted, rows)
+        await store.release(owner); await store.release(otherOwner)
+        await store.endEditing(ownerID); await store.endEditing(observerID); await store.endEditing(otherID)
+    }
+
+    func testOwnedSentReconciliationRemovesExactShadowAndRejectsObserverResurrection() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let ownerID = UUID(), observerID = UUID()
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: ownerID)
+        let opened = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: observerID)
+        let observer = try XCTUnwrap(opened)
+        let reservation = try await store.reserve(draft)
+        let protected = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: reservation, editorID: ownerID)
+        XCTAssertEqual(protected, [draft], "The observer must finish checkpointing and close before exact-shadow removal")
+        await store.endEditing(observerID)
+        let rows = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: reservation, editorID: ownerID)
+        XCTAssertTrue(rows.isEmpty)
+        await store.release(reservation)
+        do { _ = try await store.save(observer); XCTFail("An observer must not resurrect the retired sent identity") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .staleDraft) }
+        let persisted = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(persisted.isEmpty)
+        var replacement = localDraft(); replacement.id = draft.id
+        replacement = try await store.save(replacement)
+        let removed = try await store.reconcileSent(remoteDraft(for: replacement), ownerScope: replacement.ownerScope, accountId: replacement.accountId)
+        XCTAssertTrue(removed.isEmpty, "Successful removal must retire the owner and observer registrations")
+    }
+
+    func testOwnedSentReconciliationRejectsWrongExpiredCrossDraftAndCrossScopeReservations() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        var other = localDraft(); other.serverID = "other-server-draft"
+        other = try await store.save(other)
+        let owner = try await store.reserve(draft)
+        let otherOwner = try await store.reserve(other)
+        let remote = remoteDraft(for: draft)
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        for token in [DraftStore.Reservation(id: UUID(), draftID: draft.id), otherOwner] {
+            do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: token); XCTFail("Wrong owner must not bypass reconciliation protection") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        }
+        do { _ = try await store.reconcileSent(remote, ownerScope: "other-owner", accountId: draft.accountId, reservation: owner); XCTFail("Cross-scope lease must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: "other-account", reservation: owner); XCTFail("Cross-account lease must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: UUID()); XCTFail("Unregistered editor must not bypass protection") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        let editorID = UUID()
+        _ = await store.beginEditing(other.id, ownerScope: other.ownerScope, accountId: other.accountId, editorID: editorID)
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: editorID); XCTFail("Another row's editor token must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: editorID); XCTFail("An editor token without a lease cannot bypass protection") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        await store.release(owner)
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner); XCTFail("Expired lease must not become background reconciliation") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        let current = await store.current(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(current, draft)
+        await store.release(otherOwner)
+    }
+
+    func testOpenEditorsProtectUnsavedWritingUntilEveryEditorEnds() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let firstID = UUID(), secondID = UUID()
+        let first = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: firstID)
+        let second = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: secondID)
+        XCTAssertEqual(first, draft); XCTAssertEqual(second, draft)
+        let remote = remoteDraft(for: draft)
+        let skipped = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(skipped, [draft])
+        await store.endEditing(firstID)
+        await store.endEditing(UUID())
+        let stillOpen = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(stillOpen, [draft])
+        var pendingTyping = try XCTUnwrap(second); pendingTyping.content.body.text = "Visible unsaved writing"
+        let saved = try await store.save(pendingTyping)
+        await store.endEditing(secondID)
+        let reconciled = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reconciled.first?.content, saved.content)
+        XCTAssertEqual(reconciled.first?.deliveryState, "sent")
+    }
+
+    func testBeginEditingReturnsLatestRowAndRejectsWrongScopeOrRemovedIdentity() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let stale = try await store.save(localDraft())
+        var edit = stale; edit.content.body.text = "Latest saved writing"
+        let latest = try await store.save(edit)
+        let wrongOwner = await store.beginEditing(latest.id, ownerScope: "other-owner", accountId: latest.accountId, editorID: UUID())
+        let wrongAccount = await store.beginEditing(latest.id, ownerScope: latest.ownerScope, accountId: "other-account", editorID: UUID())
+        let missing = await store.beginEditing(UUID(), ownerScope: latest.ownerScope, accountId: latest.accountId, editorID: UUID())
+        XCTAssertNil(wrongOwner); XCTAssertNil(wrongAccount); XCTAssertNil(missing)
+        let editorID = UUID()
+        let opened = await store.beginEditing(stale.id, ownerScope: stale.ownerScope, accountId: stale.accountId, editorID: editorID)
+        XCTAssertEqual(opened, latest)
+        await store.endEditing(editorID)
+        let removed = try await store.reconcileSent(remoteDraft(for: latest), ownerScope: latest.ownerScope, accountId: latest.accountId)
+        XCTAssertTrue(removed.isEmpty, "Failed registrations must not pin the row")
+        let retired = await store.beginEditing(stale.id, ownerScope: stale.ownerScope, accountId: stale.accountId, editorID: editorID)
+        XCTAssertNil(retired)
+    }
+
+    func testEditorRegistrationsAreEphemeralAcrossStoreRestart() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: UUID())
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        let restored = DraftStore(directory: directory)
+        let removed = try await restored.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(removed.isEmpty, "An editor from a terminated process must not pin sent mail")
+    }
+
+    func testEditableCopyTransfersAllEditorRegistrationsToFreshIdentity() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let original = try await store.save(localDraft())
+        let firstID = UUID(), secondID = UUID()
+        _ = await store.beginEditing(original.id, ownerScope: original.ownerScope, accountId: original.accountId, editorID: firstID)
+        _ = await store.beginEditing(original.id, ownerScope: original.ownerScope, accountId: original.accountId, editorID: secondID)
+        var verified = remoteDraft(for: original); verified.deliveryStatus = "draft"
+        var copy = try await store.makeEditableCopy(original, verifiedRemote: verified)
+        copy.serverID = "new-server-draft"; copy.serverRevision = 1
+        copy = try await store.save(copy)
+        let remote = remoteDraft(for: copy)
+        let skipped = try await store.reconcileSent(remote, ownerScope: copy.ownerScope, accountId: copy.accountId)
+        XCTAssertEqual(skipped, [copy])
+        await store.endEditing(firstID)
+        let stillOpen = try await store.reconcileSent(remote, ownerScope: copy.ownerScope, accountId: copy.accountId)
+        XCTAssertEqual(stillOpen, [copy])
+        await store.endEditing(secondID)
+        let removed = try await store.reconcileSent(remote, ownerScope: copy.ownerScope, accountId: copy.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    func testRemovalRetiresOnlyMatchingEditorRegistrations() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let first = try await store.save(localDraft())
+        var other = localDraft(); other.serverID = "other-server-draft"
+        other = try await store.save(other)
+        let otherID = UUID()
+        _ = await store.beginEditing(first.id, ownerScope: first.ownerScope, accountId: first.accountId, editorID: UUID())
+        _ = await store.beginEditing(other.id, ownerScope: other.ownerScope, accountId: other.accountId, editorID: otherID)
+        try await store.remove(first.id)
+        // Reuse the ID in a genuinely new, unversioned row to observe whether
+        // the old registration was retired. Saved stale snapshots still fail.
+        var replacement = localDraft(); replacement.id = first.id
+        replacement = try await store.save(replacement)
+        _ = try await store.reconcileSent(remoteDraft(for: replacement), ownerScope: replacement.ownerScope, accountId: replacement.accountId)
+        let otherSkipped = try await store.reconcileSent(remoteDraft(for: other), ownerScope: other.ownerScope, accountId: other.accountId)
+        XCTAssertEqual(otherSkipped, [other], "Removing one row must not release another editor")
+        await store.endEditing(otherID)
+        let removed = try await store.reconcileSent(remoteDraft(for: other), ownerScope: other.ownerScope, accountId: other.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    func testPreservedSentWritingIsFrozenUntilVerifiedExplicitCopy() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = localDraft()
+        let sentRemote = remoteDraft(for: initial)
+        initial.content.body.text = "My unsent edits"; initial.idempotencyKey = "same-command"; initial.deliveryState = "ambiguous"
+        let original = try await store.save(initial)
+        let rows = try await store.reconcileSent(sentRemote, ownerScope: original.ownerScope, accountId: original.accountId)
+        let preserved = try XCTUnwrap(rows.first)
+        let identical = try await store.save(preserved)
+        XCTAssertEqual(identical, preserved)
+        var edit = preserved; edit.content.subject = "Must copy before editing"
+        do { _ = try await store.save(edit); XCTFail("Sent writing must remain frozen") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .identityChanged) }
+        for transition in [DraftDeliveryTransition.prepare, .uncertain, .rejected, .confirmedPreReservation(serverRevision: nil)] {
+            do { _ = try await store.transition(preserved.id, transition); XCTFail("Sent identity must never restart delivery") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .identityChanged) }
+        }
+        var invalid = ["draft", "sending", "ambiguous", "rejected"].map { status -> MessageDraft in
+            var remote = sentRemote; remote.deliveryStatus = status; return remote
+        }
+        var wrongID = sentRemote; wrongID.id = "other-server-draft"; invalid.append(wrongID)
+        var wrongAccount = sentRemote; wrongAccount.accountId = "other-account"; invalid.append(wrongAccount)
+        var oldRevision = sentRemote; oldRevision.revision -= 1; invalid.append(oldRevision)
+        for remote in invalid {
+            do { _ = try await store.makeEditableCopy(preserved, verifiedRemote: remote); XCTFail("Copy needs matching freshly verified sent status") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .copyNotAllowed) }
+        }
+        let copied = try await store.makeEditableCopy(preserved, verifiedRemote: sentRemote)
+        XCTAssertNotEqual(copied.id, preserved.id); XCTAssertNotEqual(copied.storageRevision, preserved.storageRevision)
+        XCTAssertEqual(copied.content, preserved.content); XCTAssertEqual(copied.recipientText, preserved.recipientText)
+        XCTAssertEqual(copied.deliveryState, "local")
+        XCTAssertNil(copied.serverID); XCTAssertNil(copied.serverRevision); XCTAssertNil(copied.idempotencyKey)
+        let persisted = await DraftStore(directory: directory).all(ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertEqual(persisted, [copied])
+    }
+
+    func testSentReconciliationDiskFailureDoesNotRemoveOrFreezeInMemory() async throws {
+        for divergent in [false, true] {
+            let directory = temporaryDirectory(), backup = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory); try? FileManager.default.removeItem(at: backup) }
+            let store = DraftStore(directory: directory)
+            var initial = localDraft()
+            let remote = remoteDraft(for: initial)
+            if divergent { initial.content.body.text = "Unsent writing" }
+            let current = try await store.save(initial)
+            let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+            try FileManager.default.moveItem(at: directory, to: backup)
+            try Data("blocked-directory".utf8).write(to: directory)
+            do { _ = try await store.reconcileSent(remote, ownerScope: current.ownerScope, accountId: current.accountId); XCTFail("Expected disk failure") } catch {}
+            let unchanged = await store.all(ownerScope: current.ownerScope, accountId: current.accountId)
+            XCTAssertEqual(unchanged, [current]); XCTAssertEqual(try Data(contentsOf: backup.appending(path: "drafts.json")), bytes)
+            try FileManager.default.removeItem(at: directory)
+            try FileManager.default.moveItem(at: backup, to: directory)
+            let retried = try await store.reconcileSent(remote, ownerScope: current.ownerScope, accountId: current.accountId)
+            if divergent { XCTAssertEqual(retried.first?.deliveryState, "sent"); XCTAssertEqual(retried.first?.content, current.content) }
+            else { XCTAssertTrue(retried.isEmpty) }
+        }
+    }
+
+    func testFailedCopyOrRemovalKeepsOriginalEditorRegistration() async throws {
+        let directory = temporaryDirectory(), backup = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory); try? FileManager.default.removeItem(at: backup) }
+        let store = DraftStore(directory: directory)
+        let original = try await store.save(localDraft())
+        let editorID = UUID()
+        _ = await store.beginEditing(original.id, ownerScope: original.ownerScope, accountId: original.accountId, editorID: editorID)
+        try FileManager.default.moveItem(at: directory, to: backup)
+        try Data("blocked-directory".utf8).write(to: directory)
+        var editableRemote = remoteDraft(for: original); editableRemote.deliveryStatus = "draft"
+        do { _ = try await store.makeEditableCopy(original, verifiedRemote: editableRemote); XCTFail("Expected disk failure") } catch {}
+        do { try await store.remove(original.id); XCTFail("Expected disk failure") } catch {}
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.moveItem(at: backup, to: directory)
+        let skipped = try await store.reconcileSent(remoteDraft(for: original), ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertEqual(skipped, [original])
+        await store.endEditing(editorID)
+        let removed = try await store.reconcileSent(remoteDraft(for: original), ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    private func temporaryDirectory() -> URL { FileManager.default.temporaryDirectory.appending(path: UUID().uuidString) }
+    private func localDraft() -> LocalDraft {
+        var draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        draft.serverID = "server-draft"; draft.serverRevision = 2
+        draft.content = .init(to: [.init(name: "Maya", email: "maya@example.com")], subject: "Sent subject", body: .init(text: "Sent words", html: "<p>Sent words</p>"), context: .init(kind: "reply", threadId: "thread", messageId: "message", providerMessageId: "provider-message", providerThreadId: "provider-thread", inReplyTo: "<original@example.com>", references: ["<original@example.com>"]), attachments: [.init(id: "attachment", filename: "note.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")])
+        draft.recipientText = .init(to: "maya@example.com", cc: "", bcc: "")
+        return draft
+    }
+    private func remoteDraft(for draft: LocalDraft) -> MessageDraft {
+        MessageDraft(id: draft.serverID ?? "missing-server-draft", accountId: draft.accountId, to: draft.content.to, cc: draft.content.cc, bcc: draft.content.bcc, subject: draft.content.subject, body: draft.content.body, context: draft.content.context, attachments: draft.content.attachments, revision: draft.serverRevision ?? 1, deliveryStatus: "sent", providerSyncStatus: "synced", providerSyncError: nil, providerDraftId: nil, providerMessageId: "sent-message", providerThreadId: "sent-thread", createdAt: "2026-10-07T00:00:00Z", updatedAt: "2026-10-07T00:00:00Z")
     }
 }

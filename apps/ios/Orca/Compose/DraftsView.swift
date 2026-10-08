@@ -5,6 +5,7 @@ struct DraftsView: View {
     @State private var serverDrafts = [MessageDraft]()
     @State private var localDrafts = [LocalDraft]()
     @State private var error: String?
+    @State private var loadGeneration = UUID()
     var body: some View {
         NavigationStack {
             Group {
@@ -29,10 +30,11 @@ struct DraftsView: View {
             .toolbar { NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose").accessibilityIdentifier("compose.open") }
             .task(id: state.selectedAccountID) { await load() }
             .onAppear { Task { await load() } }
+            .onDisappear { loadGeneration = UUID() }
             .refreshable { await load() }
         }
     }
-    func localStatus(_ deliveryState: String) -> String { switch deliveryState { case "ambiguous", "sending": "Delivery uncertain — check before retrying"; case "rejected": "Delivery rejected — edit a new copy"; default: "Saved locally" } }
+    func localStatus(_ deliveryState: String) -> String { switch deliveryState { case "ambiguous", "sending": "Delivery uncertain — check before retrying"; case "rejected": "Delivery rejected — edit a new copy"; case "sent": "Sent elsewhere — local edits kept"; default: "Saved locally" } }
     func serverStatus(_ draft: MessageDraft) -> String {
         switch draft.deliveryStatus {
         case "sending", "ambiguous", "rejected": return localStatus(draft.deliveryStatus)
@@ -40,16 +42,44 @@ struct DraftsView: View {
         }
     }
     func load() async {
+        let generation = UUID(); loadGeneration = generation
         guard let account = state.selectedAccount else { localDrafts = []; serverDrafts = []; return }
         let scope = state.ownerScope, accountID = account.id, client = state.client
-        func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == accountID }
+        func identityIsCurrent() -> Bool {
+            !Task.isCancelled && generation == loadGeneration && scope == state.ownerScope
+                && state.selectedAccount?.id == accountID && state.client === client
+        }
         serverDrafts = []; error = nil
         let stored = await state.draftStore.all(ownerScope: scope, accountId: accountID)
         guard identityIsCurrent() else { return }; localDrafts = stored
         guard !state.demoMode, let client else { return }
-        do { let loaded = try await client.drafts(accountId: accountID); guard identityIsCurrent() else { return }; serverDrafts = loaded.filter { $0.deliveryStatus != "sent" }; error = nil }
-        catch { guard identityIsCurrent() else { return }; self.error = error.localizedDescription }
+        do {
+            let loaded = try await client.drafts(accountId: accountID)
+            guard identityIsCurrent() else { return }
+            let latest = await state.draftStore.all(ownerScope: scope, accountId: accountID)
+            guard identityIsCurrent() else { return }
+            let linkedIDs = Set(latest.compactMap(\.serverID))
+            var reconciliationFailed = false
+            for item in loaded where item.deliveryStatus == "sent" && linkedIDs.contains(item.id) {
+                do {
+                    // The list may omit sent bodies/attachments. Compare only a
+                    // full verified detail against the actor's latest writing.
+                    let remote = try await client.draft(item.id, accountId: accountID)
+                    guard identityIsCurrent() else { return }
+                    _ = try await state.draftStore.reconcileSent(remote, ownerScope: scope, accountId: accountID)
+                    guard identityIsCurrent() else { return }
+                } catch {
+                    guard identityIsCurrent() else { return }
+                    reconciliationFailed = true
+                }
+            }
+            let reconciled = await state.draftStore.all(ownerScope: scope, accountId: accountID)
+            guard identityIsCurrent() else { return }
+            localDrafts = reconciled; serverDrafts = loaded.filter { $0.deliveryStatus != "sent" }
+            error = reconciliationFailed ? "Some sent drafts could not be checked. Local writing was kept." : nil
+        } catch { guard identityIsCurrent() else { return }; self.error = error.localizedDescription }
     }
+
 }
 private struct DraftRow: View {
     var subject: String; var recipients: [String]; var status: String

@@ -302,6 +302,51 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "41-compose-remote-sent-reconciled")
     }
 
+    func test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy() throws {
+        try setFixtureSending(true)
+        addTeardownBlock { try self.restoreFixtureSending() }
+        let subject = "Sent with local edits " + UUID().uuidString
+        let draft = try createComposeFixtureDraft(subject: subject)
+        let id = try XCTUnwrap(draft["id"] as? String)
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        app.tabBars.buttons["Drafts"].tap()
+        let serverRow = app.descendants(matching: .any)["draft.\(id)"]
+        XCTAssertTrue(serverRow.waitForExistence(timeout: 10)); serverRow.tap()
+        let body = messageBody(in: app)
+        XCTAssertTrue(body.waitForExistence(timeout: 5)); body.tap(); body.typeText(" These local edits were never sent.")
+        let latestWriting = try XCTUnwrap(body.value as? String)
+        XCTAssertTrue(latestWriting.contains("These local edits were never sent."))
+        navigateBack(in: app)
+        _ = try composeFixtureRequest("__fixture/compose/delivery", method: "POST", body: ["draftId": id, "status": "sent"])
+        app.tabBars.buttons["Inbox"].tap(); app.tabBars.buttons["Drafts"].tap()
+        let preserved = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@ AND label CONTAINS[c] %@", "draft.", subject, "Sent elsewhere")).firstMatch
+        XCTAssertTrue(preserved.waitForExistence(timeout: 10)); preserved.tap()
+        XCTAssertEqual(messageBody(in: app).value as? String, latestWriting)
+        XCTAssertFalse(messageBody(in: app).isEnabled)
+        let copy = app.buttons["compose.send"]
+        XCTAssertEqual(copy.label, "Edit a new copy")
+        attachScreenshot(named: "42-compose-sent-local-edits-preserved")
+        copy.tap()
+        expectation(for: NSPredicate(format: "label == %@ AND enabled == true", "Send"), evaluatedWith: copy)
+        waitForExpectations(timeout: 10)
+        XCTAssertTrue(messageBody(in: app).isEnabled)
+        let before = try composeFixtureRequest("__fixture/compose/state")
+        copy.tap()
+        XCTAssertTrue(app.navigationBars["Drafts"].waitForExistence(timeout: 15))
+        let original = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
+        XCTAssertEqual(original["deliveryStatus"] as? String, "sent")
+        XCTAssertEqual((original["body"] as? [String: Any])?["text"] as? String, "Protected fixture writing")
+        let listed = try composeFixtureRequest("v1/drafts?accountId=ios-fixture-account")
+        let newCopy = try XCTUnwrap((listed["items"] as? [[String: Any]])?.first { $0["subject"] as? String == subject && $0["id"] as? String != id })
+        let copyID = try XCTUnwrap(newCopy["id"] as? String)
+        let sent = try composeFixtureRequest("v1/drafts/\(copyID)?accountId=ios-fixture-account")
+        XCTAssertEqual(sent["deliveryStatus"] as? String, "sent")
+        XCTAssertEqual((sent["body"] as? [String: Any])?["text"] as? String, latestWriting)
+        let after = try composeFixtureRequest("__fixture/compose/state")
+        XCTAssertEqual(after["deliveries"] as? Int, (before["deliveries"] as? Int).map { $0 + 1 })
+        attachScreenshot(named: "43-compose-sent-local-edits-copy-delivered")
+    }
+
     private func setFixtureSending(_ enabled: Bool, accountsUnavailable: Bool = false) throws {
         _ = try composeFixtureRequest("__fixture/compose/capabilities", method: "POST", body: ["sendEnabled": enabled, "accountsUnavailable": accountsUnavailable])
     }
