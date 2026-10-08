@@ -1,0 +1,29 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/mailbox/search-contract.test.ts:
+(pass) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [138.47ms]
+71 |     expect(Object.keys(oldest).sort()).toEqual(["accounts", "counts", "freshness", "messages", "nextCursor"]);
+72 |     expect(oldest.counts.all).toBe(2); expect(oldest.counts.attention).toBeUndefined();
+73 |     const continued = await (await f.request(`query=needle&searchMode=metadata&limit=1&cursor=${encodeURIComponent(oldest.nextCursor)}`)).json();
+74 |     expect(continued.messages).toHaveLength(1); expect(continued.messages[0].id).not.toBe(oldest.messages[0].id);
+75 |     expect(f.sqlite.query("PRAGMA journal_mode").get()).toEqual({ journal_mode: "wal" });
+76 |     expect(f.sqlite.query("PRAGMA synchronous").get()).toEqual({ synchronous: 2 });
+                                                            ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "synchronous": 2,
++   "synchronous": 1,
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (<isolated-checkout>/apps/api/src/mailbox/search-contract.test.ts:76:56)
+(fail) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [99.69ms]
+(pass) canonical metadata reflects updates/deletes and cannot reuse a cursor across an account incarnation [100.89ms]
+
+ 2 pass
+ 1 fail
+ 33 expect() calls
+Ran 3 tests across 1 file. [673.00ms]

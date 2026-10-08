@@ -1,0 +1,49 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/mailbox/search-contract.test.ts:
+37 | 
+38 | test("explicit metadata remains complete for oversized bodies AND metadata across authorized accounts", async () => {
+39 |   const f = await fixture();
+40 |   try {
+41 |     const response = await f.request("query=needle&searchMode=metadata&limit=1");
+42 |     expect(response.status).toBe(200);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 200
+Received: 400
+
+      at <anonymous> (<isolated-checkout>/apps/api/src/mailbox/search-contract.test.ts:42:29)
+(fail) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [89.26ms]
+58 | 
+59 | test("full body requests fail explicitly without metadata results; legacy clients retain their exact envelope", async () => {
+60 |   const f = await fixture();
+61 |   try {
+62 |     const response = await f.request("query=needle&searchMode=full");
+63 |     expect(response.status).toBe(503);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 503
+Received: 400
+
+      at <anonymous> (<isolated-checkout>/apps/api/src/mailbox/search-contract.test.ts:63:29)
+(fail) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [70.89ms]
+74 | 
+75 | test("canonical metadata reflects updates/deletes and cannot reuse a cursor across an account incarnation", async () => {
+76 |   const f = await fixture();
+77 |   try {
+78 |     const first = await (await f.request("query=needle&searchMode=metadata&limit=1")).json();
+79 |     expect(first.nextCursor).toBeString();
+                                  ^
+error: expect(received).toBeString()
+
+Received: undefined
+
+      at <anonymous> (<isolated-checkout>/apps/api/src/mailbox/search-contract.test.ts:79:30)
+(fail) canonical metadata reflects updates/deletes and cannot reuse a cursor across an account incarnation [72.47ms]
+
+ 0 pass
+ 3 fail
+ 3 expect() calls
+Ran 3 tests across 1 file. [632.00ms]
