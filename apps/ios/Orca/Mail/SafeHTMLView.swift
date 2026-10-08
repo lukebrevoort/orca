@@ -43,7 +43,7 @@ struct SafeHTMLView: UIViewRepresentable {
             blockquote{border-left:2px solid #65746d;margin:1em 0;padding-left:1em}
             /* Outer WebKit scrolling is disabled: reflow wide content instead of clipping it or shrinking the message. */
             pre{max-width:100%!important;min-width:0!important;box-sizing:border-box}
-            pre,pre *{white-space:pre-wrap!important;overflow-wrap:anywhere!important}
+            pre,pre *{white-space:break-spaces!important;overflow-wrap:anywhere!important}
             table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important;font:inherit}
             col,colgroup,th,td{width:auto!important;min-width:0!important;max-width:100%!important}
             th,td{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
