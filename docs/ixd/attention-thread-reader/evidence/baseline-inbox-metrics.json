@@ -1,0 +1,59 @@
+{
+  "alerts": [],
+  "badges": [
+    {
+      "display": "none",
+      "text": "Notify me"
+    },
+    {
+      "display": "none",
+      "text": "Notify me"
+    },
+    {
+      "display": "none",
+      "text": "Keep in focus"
+    },
+    {
+      "display": "none",
+      "text": "Keep in focus"
+    },
+    {
+      "display": "none",
+      "text": "normal"
+    },
+    {
+      "display": "none",
+      "text": "normal"
+    },
+    {
+      "display": "none",
+      "text": "quiet"
+    },
+    {
+      "display": "none",
+      "text": "quiet"
+    },
+    {
+      "display": "none",
+      "text": "hidden"
+    },
+    {
+      "display": "none",
+      "text": "hidden"
+    }
+  ],
+  "dates": [
+    "Today",
+    "Yesterday",
+    "Earlier this week",
+    "Today",
+    "Yesterday",
+    "Today",
+    "Yesterday",
+    "Today",
+    "Yesterday"
+  ],
+  "encodedPreviews": 5,
+  "height": 1000,
+  "width": 1440
+}

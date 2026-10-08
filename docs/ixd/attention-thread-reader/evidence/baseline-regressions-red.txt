@@ -1,0 +1,5 @@
+FAIL All ten attention labels are visible
+FAIL Encoded apostrophes do not leak into preview text
+FAIL Long thread initially folds earlier message bodies
+FAIL Inline answer after quoted lines remains in current text
+4 of 4 desired contracts fail on the captured production baseline. No production fix is included in this design stage.

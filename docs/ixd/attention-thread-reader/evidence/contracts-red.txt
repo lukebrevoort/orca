@@ -1,0 +1,14 @@
+bun test v1.3.14 (d1632b29)
+
+docs/ixd/attention-thread-reader/contracts.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module './model' from '/Users/lbrevoort/Documents/Codex/2026-10-08/task-3/orca/docs/ixd/attention-thread-reader/contracts.test.ts'
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [45.00ms]

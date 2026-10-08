@@ -1,0 +1,13 @@
+bun test v1.3.14 (d1632b29)
+
+docs/ixd/attention-thread-reader/contracts.test.ts:
+(pass) synthetic long-thread design contracts > fixture is wire-valid and includes 24 messages, unread, HTML, attachments and inline answers [3.64ms]
+(pass) synthetic long-thread design contracts > attention precedes dates without changing existing five-state priority [1.63ms]
+(pass) synthetic long-thread design contracts > first unread wins; otherwise latest; empty has no target; does not mutate read flags [0.35ms]
+(pass) synthetic long-thread design contracts > quote folding is lossless and never folds a unique answer after quotes [0.49ms]
+(pass) synthetic long-thread design contracts > preview decoding is bounded and yields text, never markup execution [0.08ms]
+
+ 5 pass
+ 0 fail
+ 44 expect() calls
+Ran 5 tests across 1 file. [119.00ms]

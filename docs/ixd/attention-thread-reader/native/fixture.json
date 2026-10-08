@@ -1,0 +1,1720 @@
+{
+  "messages": [
+    {
+      "id": "synthetic-message-1",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-1",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The east entrance will stay open during the installation.",
+      "receivedAt": "2026-10-01T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "bcc": [],
+      "bodyText": "The east entrance will stay open during the installation.\n\nUpdate 1: this is the unique contribution from this message. Keep it available when reading the full conversation.",
+      "bodyHtml": "<p>The east entrance will stay open during the installation.</p><p>Update 1: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p>",
+      "internetMessageId": "<synthetic-0@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-2",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-2",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "Please use the revised floor plan for the reading room.",
+      "receivedAt": "2026-10-01T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "Please use the revised floor plan for the reading room.\n\nUpdate 2: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-1@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-3",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-3",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The workshop starts at 10:30, with a quiet hour before lunch.",
+      "receivedAt": "2026-10-01T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The workshop starts at 10:30, with a quiet hour before lunch.\n\nUpdate 3: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-2@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-4",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-4",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "We can move the welcome table away from the lift.",
+      "receivedAt": "2026-10-02T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "We can move the welcome table away from the lift.\n\nUpdate 4: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 3: We can move the welcome table away from the lift.\n> > Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": "<p>We can move the welcome table away from the lift.</p><p>Update 4: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 3: We can move the welcome table away from the lift.<br>&gt; &gt; Update 2: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 1: Please use the revised floor plan for the reading room.</blockquote>",
+      "internetMessageId": "<synthetic-3@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-5",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-5",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The printed guide needs a larger type size.",
+      "receivedAt": "2026-10-02T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The printed guide needs a larger type size.\n\nUpdate 5: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 4: The printed guide needs a larger type size.\n> > Update 3: We can move the welcome table away from the lift.\n> > > Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-4@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-6",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-6",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The ramp inspection is complete; the path is clear.",
+      "receivedAt": "2026-10-02T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "bcc": [],
+      "bodyText": "The ramp inspection is complete; the path is clear.\n\nUpdate 6: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 5: The ramp inspection is complete; the path is clear.\n> > Update 4: The printed guide needs a larger type size.\n> > > Update 3: We can move the welcome table away from the lift.\n> Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-5@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-7",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-7",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The east entrance will stay open during the installation.",
+      "receivedAt": "2026-10-03T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The east entrance will stay open during the installation.\n\nUpdate 7: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 6: The east entrance will stay open during the installation.\n> > Update 5: The ramp inspection is complete; the path is clear.\n> > > Update 4: The printed guide needs a larger type size.\n> Update 3: We can move the welcome table away from the lift.\n> > Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": "<p>The east entrance will stay open during the installation.</p><p>Update 7: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 6: The east entrance will stay open during the installation.<br>&gt; &gt; Update 5: The ramp inspection is complete; the path is clear.<br>&gt; &gt; &gt; Update 4: The printed guide needs a larger type size.<br>&gt; Update 3: We can move the welcome table away from the lift.<br>&gt; &gt; Update 2: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 1: Please use the revised floor plan for the reading room.</blockquote>",
+      "internetMessageId": "<synthetic-6@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-8",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-8",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "Please use the revised floor plan for the reading room.",
+      "receivedAt": "2026-10-03T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "Please use the revised floor plan for the reading room.\n\nUpdate 8: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 7: Please use the revised floor plan for the reading room.\n> > Update 6: The east entrance will stay open during the installation.\n> > > Update 5: The ramp inspection is complete; the path is clear.\n> Update 4: The printed guide needs a larger type size.\n> > Update 3: We can move the welcome table away from the lift.\n> > > Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-7@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-9",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-9",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The workshop starts at 10:30, with a quiet hour before lunch.",
+      "receivedAt": "2026-10-03T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The workshop starts at 10:30, with a quiet hour before lunch.\n\nUpdate 9: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 7: Please use the revised floor plan for the reading room.\n> > > Update 6: The east entrance will stay open during the installation.\n> Update 5: The ramp inspection is complete; the path is clear.\n> > Update 4: The printed guide needs a larger type size.\n> > > Update 3: We can move the welcome table away from the lift.\n> Update 2: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 1: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-8@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-10",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-10",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "We can move the welcome table away from the lift.",
+      "receivedAt": "2026-10-04T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "We can move the welcome table away from the lift.\n\nUpdate 10: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 9: We can move the welcome table away from the lift.\n> > Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 7: Please use the revised floor plan for the reading room.\n> Update 6: The east entrance will stay open during the installation.\n> > Update 5: The ramp inspection is complete; the path is clear.\n> > > Update 4: The printed guide needs a larger type size.\n> Update 3: We can move the welcome table away from the lift.\n> > Update 2: The workshop starts at 10:30, with a quiet hour before lunch.",
+      "bodyHtml": "<p>We can move the welcome table away from the lift.</p><p>Update 10: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 9: We can move the welcome table away from the lift.<br>&gt; &gt; Update 8: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 7: Please use the revised floor plan for the reading room.<br>&gt; Update 6: The east entrance will stay open during the installation.<br>&gt; &gt; Update 5: The ramp inspection is complete; the path is clear.<br>&gt; &gt; &gt; Update 4: The printed guide needs a larger type size.<br>&gt; Update 3: We can move the welcome table away from the lift.<br>&gt; &gt; Update 2: The workshop starts at 10:30, with a quiet hour before lunch.</blockquote>",
+      "internetMessageId": "<synthetic-9@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-11",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-11",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The printed guide needs a larger type size.",
+      "receivedAt": "2026-10-04T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "bcc": [],
+      "bodyText": "The printed guide needs a larger type size.\n\nUpdate 11: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 10: The printed guide needs a larger type size.\n> > Update 9: We can move the welcome table away from the lift.\n> > > Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 7: Please use the revised floor plan for the reading room.\n> > Update 6: The east entrance will stay open during the installation.\n> > > Update 5: The ramp inspection is complete; the path is clear.\n> Update 4: The printed guide needs a larger type size.\n> > Update 3: We can move the welcome table away from the lift.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-10@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-12",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-12",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The ramp inspection is complete; the path is clear.",
+      "receivedAt": "2026-10-04T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The ramp inspection is complete; the path is clear.\n\nUpdate 12: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 11: The ramp inspection is complete; the path is clear.\n> > Update 10: The printed guide needs a larger type size.\n> > > Update 9: We can move the welcome table away from the lift.\n> Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 7: Please use the revised floor plan for the reading room.\n> > > Update 6: The east entrance will stay open during the installation.\n> Update 5: The ramp inspection is complete; the path is clear.\n> > Update 4: The printed guide needs a larger type size.\n\nUnique inline answer: use entrance C, not entrance B.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-11@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-13",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-13",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The east entrance will stay open during the installation.",
+      "receivedAt": "2026-10-05T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The east entrance will stay open during the installation.\n\nUpdate 13: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 12: The east entrance will stay open during the installation.\n> > Update 11: The ramp inspection is complete; the path is clear.\n> > > Update 10: The printed guide needs a larger type size.\n> Update 9: We can move the welcome table away from the lift.\n> > Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 7: Please use the revised floor plan for the reading room.\n> Update 6: The east entrance will stay open during the installation.\n> > Update 5: The ramp inspection is complete; the path is clear.",
+      "bodyHtml": "<p>The east entrance will stay open during the installation.</p><p>Update 13: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 12: The east entrance will stay open during the installation.<br>&gt; &gt; Update 11: The ramp inspection is complete; the path is clear.<br>&gt; &gt; &gt; Update 10: The printed guide needs a larger type size.<br>&gt; Update 9: We can move the welcome table away from the lift.<br>&gt; &gt; Update 8: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 7: Please use the revised floor plan for the reading room.<br>&gt; Update 6: The east entrance will stay open during the installation.<br>&gt; &gt; Update 5: The ramp inspection is complete; the path is clear.</blockquote>",
+      "internetMessageId": "<synthetic-12@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-14",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-14",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "Please use the revised floor plan for the reading room.",
+      "receivedAt": "2026-10-05T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "Please use the revised floor plan for the reading room.\n\nUpdate 14: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 13: Please use the revised floor plan for the reading room.\n> > Update 12: The east entrance will stay open during the installation.\n> > > Update 11: The ramp inspection is complete; the path is clear.\n> Update 10: The printed guide needs a larger type size.\n> > Update 9: We can move the welcome table away from the lift.\n> > > Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 7: Please use the revised floor plan for the reading room.\n> > Update 6: The east entrance will stay open during the installation.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-13@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-15",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-15",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The workshop starts at 10:30, with a quiet hour before lunch.",
+      "receivedAt": "2026-10-05T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The workshop starts at 10:30, with a quiet hour before lunch.\n\nUpdate 15: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 13: Please use the revised floor plan for the reading room.\n> > > Update 12: The east entrance will stay open during the installation.\n> Update 11: The ramp inspection is complete; the path is clear.\n> > Update 10: The printed guide needs a larger type size.\n> > > Update 9: We can move the welcome table away from the lift.\n> Update 8: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 7: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-14@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-16",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-16",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "We can move the welcome table away from the lift.",
+      "receivedAt": "2026-10-06T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "bcc": [],
+      "bodyText": "We can move the welcome table away from the lift.\n\nUpdate 16: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 15: We can move the welcome table away from the lift.\n> > Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 13: Please use the revised floor plan for the reading room.\n> Update 12: The east entrance will stay open during the installation.\n> > Update 11: The ramp inspection is complete; the path is clear.\n> > > Update 10: The printed guide needs a larger type size.\n> Update 9: We can move the welcome table away from the lift.\n> > Update 8: The workshop starts at 10:30, with a quiet hour before lunch.",
+      "bodyHtml": "<p>We can move the welcome table away from the lift.</p><p>Update 16: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 15: We can move the welcome table away from the lift.<br>&gt; &gt; Update 14: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 13: Please use the revised floor plan for the reading room.<br>&gt; Update 12: The east entrance will stay open during the installation.<br>&gt; &gt; Update 11: The ramp inspection is complete; the path is clear.<br>&gt; &gt; &gt; Update 10: The printed guide needs a larger type size.<br>&gt; Update 9: We can move the welcome table away from the lift.<br>&gt; &gt; Update 8: The workshop starts at 10:30, with a quiet hour before lunch.</blockquote>",
+      "internetMessageId": "<synthetic-15@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-17",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-17",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The printed guide needs a larger type size.",
+      "receivedAt": "2026-10-06T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The printed guide needs a larger type size.\n\nUpdate 17: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 16: The printed guide needs a larger type size.\n> > Update 15: We can move the welcome table away from the lift.\n> > > Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 13: Please use the revised floor plan for the reading room.\n> > Update 12: The east entrance will stay open during the installation.\n> > > Update 11: The ramp inspection is complete; the path is clear.\n> Update 10: The printed guide needs a larger type size.\n> > Update 9: We can move the welcome table away from the lift.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-16@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-18",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-18",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The ramp inspection is complete; the path is clear.",
+      "receivedAt": "2026-10-06T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The ramp inspection is complete; the path is clear.\n\nUpdate 18: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 17: The ramp inspection is complete; the path is clear.\n> > Update 16: The printed guide needs a larger type size.\n> > > Update 15: We can move the welcome table away from the lift.\n> Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 13: Please use the revised floor plan for the reading room.\n> > > Update 12: The east entrance will stay open during the installation.\n> Update 11: The ramp inspection is complete; the path is clear.\n> > Update 10: The printed guide needs a larger type size.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-17@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-19",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-19",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The east entrance will stay open during the installation.",
+      "receivedAt": "2026-10-07T09:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The east entrance will stay open during the installation.\n\nUpdate 19: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 18: The east entrance will stay open during the installation.\n> > Update 17: The ramp inspection is complete; the path is clear.\n> > > Update 16: The printed guide needs a larger type size.\n> Update 15: We can move the welcome table away from the lift.\n> > Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 13: Please use the revised floor plan for the reading room.\n> Update 12: The east entrance will stay open during the installation.\n> > Update 11: The ramp inspection is complete; the path is clear.",
+      "bodyHtml": "<p>The east entrance will stay open during the installation.</p><p>Update 19: this is the unique contribution from this message. Keep it available when reading the full conversation.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 18: The east entrance will stay open during the installation.<br>&gt; &gt; Update 17: The ramp inspection is complete; the path is clear.<br>&gt; &gt; &gt; Update 16: The printed guide needs a larger type size.<br>&gt; Update 15: We can move the welcome table away from the lift.<br>&gt; &gt; Update 14: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 13: Please use the revised floor plan for the reading room.<br>&gt; Update 12: The east entrance will stay open during the installation.<br>&gt; &gt; Update 11: The ramp inspection is complete; the path is clear.</blockquote>",
+      "internetMessageId": "<synthetic-18@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-20",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-20",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "Please use the revised floor plan for the reading room.",
+      "receivedAt": "2026-10-07T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "Please use the revised floor plan for the reading room.\n\nUpdate 20: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 19: Please use the revised floor plan for the reading room.\n> > Update 18: The east entrance will stay open during the installation.\n> > > Update 17: The ramp inspection is complete; the path is clear.\n> Update 16: The printed guide needs a larger type size.\n> > Update 15: We can move the welcome table away from the lift.\n> > > Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 13: Please use the revised floor plan for the reading room.\n> > Update 12: The east entrance will stay open during the installation.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-19@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-21",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-21",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The workshop starts at 10:30, with a quiet hour before lunch.",
+      "receivedAt": "2026-10-07T11:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "bcc": [],
+      "bodyText": "The workshop starts at 10:30, with a quiet hour before lunch.\n\nUpdate 21: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 20: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 19: Please use the revised floor plan for the reading room.\n> > > Update 18: The east entrance will stay open during the installation.\n> Update 17: The ramp inspection is complete; the path is clear.\n> > Update 16: The printed guide needs a larger type size.\n> > > Update 15: We can move the welcome table away from the lift.\n> Update 14: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 13: Please use the revised floor plan for the reading room.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-20@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-22",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-22",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The final accessibility walk-through is booked for Friday at 09:00. Please confirm who can join.",
+      "receivedAt": "2026-10-08T09:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Alex Morgan",
+          "email": "alex@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The final accessibility walk-through is booked for Friday at 09:00. Please confirm who can join.\n\nOne change: the north door needs to remain unlocked until everyone has arrived.\n\nOn an earlier day, Maya wrote:\n> Update 21: We can move the welcome table away from the lift.\n> > Update 20: The workshop starts at 10:30, with a quiet hour before lunch.\n> > > Update 19: Please use the revised floor plan for the reading room.\n> Update 18: The east entrance will stay open during the installation.\n> > Update 17: The ramp inspection is complete; the path is clear.\n> > > Update 16: The printed guide needs a larger type size.\n> Update 15: We can move the welcome table away from the lift.\n> > Update 14: The workshop starts at 10:30, with a quiet hour before lunch.",
+      "bodyHtml": "<p>The final accessibility walk-through is booked for Friday at 09:00. Please confirm who can join.</p><p>One change: the north door needs to remain unlocked until everyone has arrived.</p><p><a href=\"https://example.com/plan\" target=\"_blank\" rel=\"noopener noreferrer\">Review the floor plan</a></p><blockquote>&gt; Update 21: We can move the welcome table away from the lift.<br>&gt; &gt; Update 20: The workshop starts at 10:30, with a quiet hour before lunch.<br>&gt; &gt; &gt; Update 19: Please use the revised floor plan for the reading room.<br>&gt; Update 18: The east entrance will stay open during the installation.<br>&gt; &gt; Update 17: The ramp inspection is complete; the path is clear.<br>&gt; &gt; &gt; Update 16: The printed guide needs a larger type size.<br>&gt; Update 15: We can move the welcome table away from the lift.<br>&gt; &gt; Update 14: The workshop starts at 10:30, with a quiet hour before lunch.</blockquote>",
+      "internetMessageId": "<synthetic-21@example.com>",
+      "references": [],
+      "attachments": [
+        {
+          "id": "synthetic-attachment",
+          "filename": "reading-room-plan.pdf",
+          "mimeType": "application/pdf",
+          "size": 42800
+        }
+      ]
+    },
+    {
+      "id": "synthetic-message-23",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-23",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The printed guide needs a larger type size.",
+      "receivedAt": "2026-10-08T10:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Noah Reed",
+          "email": "noah@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The printed guide needs a larger type size.\n\nUpdate 23: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 22: The printed guide needs a larger type size.\n> > Update 21: We can move the welcome table away from the lift.\n> > > Update 20: The workshop starts at 10:30, with a quiet hour before lunch.\n> Update 19: Please use the revised floor plan for the reading room.\n> > Update 18: The east entrance will stay open during the installation.\n> > > Update 17: The ramp inspection is complete; the path is clear.\n> Update 16: The printed guide needs a larger type size.\n> > Update 15: We can move the welcome table away from the lift.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-22@example.com>",
+      "references": [],
+      "attachments": []
+    },
+    {
+      "id": "synthetic-message-24",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "synthetic-provider-24",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "The ramp inspection is complete; the path is clear.",
+      "receivedAt": "2026-10-08T11:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      },
+      "to": [
+        {
+          "name": "Maya Chen",
+          "email": "maya@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "bodyText": "The ramp inspection is complete; the path is clear.\n\nUpdate 24: this is the unique contribution from this message. Keep it available when reading the full conversation.\n\nOn an earlier day, Maya wrote:\n> Update 23: The ramp inspection is complete; the path is clear.\n> > Update 22: The printed guide needs a larger type size.\n> > > Update 21: We can move the welcome table away from the lift.\n> Update 20: The workshop starts at 10:30, with a quiet hour before lunch.\n> > Update 19: Please use the revised floor plan for the reading room.\n> > > Update 18: The east entrance will stay open during the installation.\n> Update 17: The ramp inspection is complete; the path is clear.\n> > Update 16: The printed guide needs a larger type size.",
+      "bodyHtml": null,
+      "internetMessageId": "<synthetic-23@example.com>",
+      "references": [],
+      "attachments": []
+    }
+  ],
+  "inbox": [
+    {
+      "id": "row-notify-0",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-notify-0",
+      "threadId": "thread-notify-0",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Volunteer rota",
+      "snippet": "Here&amp;#39;s the update for the opening weekend.",
+      "receivedAt": "2026-10-08T10:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "notify",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-notify-1",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-notify-1",
+      "threadId": "thread-notify-1",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Volunteer rota",
+      "snippet": "All fixture content is synthetic and safe to share.",
+      "receivedAt": "2026-10-07T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "notify",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-focus-0",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-focus-0",
+      "threadId": "synthetic-long-thread",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Reading room · opening weekend",
+      "snippet": "Here&amp;#39;s the update for the opening weekend.",
+      "receivedAt": "2026-10-05T10:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-focus-1",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-focus-1",
+      "threadId": "thread-focus-1",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Room signs",
+      "snippet": "All fixture content is synthetic and safe to share.",
+      "receivedAt": "2026-10-04T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "focus",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-normal-0",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-normal-0",
+      "threadId": "thread-normal-0",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Supplier receipt",
+      "snippet": "Here&amp;#39;s the update for the opening weekend.",
+      "receivedAt": "2026-10-08T10:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "normal",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-normal-1",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-normal-1",
+      "threadId": "thread-normal-1",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Supplier receipt",
+      "snippet": "All fixture content is synthetic and safe to share.",
+      "receivedAt": "2026-10-07T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "normal",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-quiet-0",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-quiet-0",
+      "threadId": "thread-quiet-0",
+      "from": {
+        "name": "Maya Chen",
+        "email": "maya@example.com"
+      },
+      "subject": "Monthly digest",
+      "snippet": "Here&amp;#39;s the update for the opening weekend.",
+      "receivedAt": "2026-10-08T10:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "quiet",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-quiet-1",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-quiet-1",
+      "threadId": "thread-quiet-1",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Monthly digest",
+      "snippet": "All fixture content is synthetic and safe to share.",
+      "receivedAt": "2026-10-07T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "quiet",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-hidden-0",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-hidden-0",
+      "threadId": "thread-hidden-0",
+      "from": {
+        "name": "Alex Morgan",
+        "email": "alex@example.com"
+      },
+      "subject": "Archived announcement",
+      "snippet": "Here&amp;#39;s the update for the opening weekend.",
+      "receivedAt": "2026-10-08T10:00:00.000Z",
+      "unread": true,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "hidden",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    },
+    {
+      "id": "row-hidden-1",
+      "accountId": "acct_local_gmail",
+      "provider": "gmail",
+      "providerMessageId": "row-provider-hidden-1",
+      "threadId": "thread-hidden-1",
+      "from": {
+        "name": "Noah Reed",
+        "email": "noah@example.com"
+      },
+      "subject": "Archived announcement",
+      "snippet": "All fixture content is synthetic and safe to share.",
+      "receivedAt": "2026-10-07T10:00:00.000Z",
+      "unread": false,
+      "labels": [
+        "INBOX"
+      ],
+      "attentionBehavior": "hidden",
+      "humanSignal": 9,
+      "humanClassification": {
+        "automatic": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1"
+        },
+        "effective": {
+          "classification": "likely_human",
+          "score": 9,
+          "reasonCodes": [
+            "direct_recipient"
+          ],
+          "classifierVersion": "m5-v1",
+          "source": "automatic_heuristic",
+          "userOverride": null
+        },
+        "userOverride": null
+      }
+    }
+  ]
+}
