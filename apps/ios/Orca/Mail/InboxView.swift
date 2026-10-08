@@ -5,7 +5,7 @@ import SwiftUI
     private var requestGeneration = UUID()
     private var activeKey: String?
     func load(state: AppState, reset: Bool = true) async {
-        guard let account = state.selectedAccount, reset || !isLoading else { return }
+        guard let account = state.selectedAccount, reset || (!isLoading && nextCursor != nil) else { return }
         let scope = state.ownerScope, requestedView = view, requestedSearch = search
         let key = "\(scope)|\(account.id)|inbox|\(requestedView)|\(requestedSearch)"
         if activeKey != key { messages = []; nextCursor = nil; error = nil; activeKey = key }
@@ -26,10 +26,23 @@ import SwiftUI
                 let catalog: MailActionJSON = try await client.request("v1/destinations")
                 destinationID = catalog["legacyDestinationIds"][requestedView].text
             }
-            let page = try await client.inbox(accountId: account.id, view: requestedView.hasPrefix("destination:") ? "all" : requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: reset ? nil : nextCursor, destinationId: requestedView == "all" ? nil : destinationID)
             guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
-            messages = reset ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
-            if reset { try? await state.cache.save(page, key: key) }
+            let cursor = reset ? nil : nextCursor
+            var replacesMessages = reset
+            let page: InboxPage
+            do {
+                page = try await client.inbox(accountId: account.id, view: requestedView.hasPrefix("destination:") ? "all" : requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: cursor, destinationId: destinationID)
+            } catch APIClient.ClientError.http(400, let body) where !reset && cursor != nil && body?.code == "invalid_cursor" {
+                guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+                // A changed mailbox invalidates this snapshot. Retire its cursor
+                // before the single restart, including when that restart fails.
+                nextCursor = nil
+                replacesMessages = true
+                page = try await client.inbox(accountId: account.id, view: requestedView.hasPrefix("destination:") ? "all" : requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, destinationId: destinationID)
+            }
+            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+            messages = replacesMessages ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
+            if replacesMessages { try? await state.cache.save(page, key: key) }
         } catch {
             let cached: InboxPage? = reset ? await state.cache.load(InboxPage.self, key: key) : nil
             guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
@@ -57,37 +70,47 @@ struct InboxView: View {
                         guard state.selectSavedViewThread(item) else { return }
                         savedThread = item
                     }
-                } else if model.isLoading && model.messages.isEmpty { ProgressView("Getting your inbox") }
-                else if let error = model.error, model.messages.isEmpty {
-                    VStack(spacing: 16) {
-                        ContentUnavailableView("Inbox unavailable", systemImage: "wifi.exclamationmark", description: Text("Your mail is safe. \(error)"))
-                        Button("Try again") { Task { await model.load(state: state) } }
-                    }
-                }
-                else if model.messages.isEmpty { ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here.")) }
-                else {
+                } else {
+                    // Keep one refreshable surface even when the mailbox is empty.
                     List {
-                        // Keep the introduction in the scrolling content. Plain List section
-                        // headers pin above rows and participate in refresh inset layout.
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
-                                .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.2).foregroundStyle(OrcaTheme.accent)
-                            Text(dynamicTypeSize.isAccessibilitySize ? "Your mail" : (model.view == "focus" ? "A little more focus." : "What deserves you now"))
-                                .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 20 : 34)).fixedSize(horizontal: false, vertical: true).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
-                                .accessibilityAddTraits(.isHeader)
-                            Text("\(model.messages.filter(\.unread).count) unread shown").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).textCase(nil)
-                        }.padding(.vertical, 18)
-                        .listRowBackground(OrcaTheme.paper)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                        ForEach(model.messages) { message in
-                            NavigationLink(value: message) { MessageRow(message: message) }
-                                .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
-                                .listRowSeparatorTint(OrcaTheme.border)
-                                .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
-                                .accessibilityIdentifier("inbox.message.\(message.id)")
-                                .contextMenu { MailActionMenu(message: message) { actionTarget = $0 } }
-                                .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
+                        if model.messages.isEmpty {
+                            Group {
+                                if model.isLoading { ProgressView("Getting your inbox") }
+                                else if let error = model.error {
+                                    VStack(spacing: 16) {
+                                        ContentUnavailableView("Inbox unavailable", systemImage: "wifi.exclamationmark", description: Text("Your mail is safe. \(error)"))
+                                        Button("Try again") { Task { await model.load(state: state) } }
+                                    }
+                                } else {
+                                    ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here."))
+                                }
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 240)
+                            .listRowBackground(OrcaTheme.paper)
+                            .listRowSeparator(.hidden)
+                        } else {
+                            // Keep the introduction in the scrolling content. Plain List section
+                            // headers pin above rows and participate in refresh inset layout.
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.2).foregroundStyle(OrcaTheme.accent)
+                                Text(dynamicTypeSize.isAccessibilitySize ? "Your mail" : (model.view == "focus" ? "A little more focus." : "What deserves you now"))
+                                    .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 20 : 34)).fixedSize(horizontal: false, vertical: true).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
+                                    .accessibilityAddTraits(.isHeader)
+                                Text("\(model.messages.filter(\.unread).count) unread shown").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).textCase(nil)
+                            }.padding(.vertical, 18)
+                            .listRowBackground(OrcaTheme.paper)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                            ForEach(model.messages) { message in
+                                NavigationLink(value: message) { MessageRow(message: message) }
+                                    .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
+                                    .listRowSeparatorTint(OrcaTheme.border)
+                                    .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
+                                    .accessibilityIdentifier("inbox.message.\(message.id)")
+                                    .contextMenu { MailActionMenu(message: message) { actionTarget = $0 } }
+                                    .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
+                            }
                         }
                     }.listStyle(.plain).scrollContentBackground(.hidden).accessibilityIdentifier("inbox.list")
                         .refreshable { await model.load(state: state) }
@@ -202,3 +225,4 @@ private struct MailboxSearch: ViewModifier {
         else { content }
     }
 }
+
