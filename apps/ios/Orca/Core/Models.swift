@@ -1,5 +1,23 @@
 import Foundation
 
+struct SavedMailboxView: Codable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var description: String
+    var revision: Int
+    var selectionID: String { "view:\(id)" }
+}
+struct SavedMailboxViewCatalog: Codable { var items: [SavedMailboxView] }
+struct SavedViewThread: Codable, Identifiable, Hashable {
+    var accountId: String; var accountEmail: String; var provider: String; var threadId: String
+    var subject: String; var latestReceivedAt: String; var messageCount: Int; var readState: String; var sender: MailContact
+    var id: String { "\(accountId)|\(threadId)" }
+}
+struct SavedViewPage: Codable {
+    var viewId: String; var viewRevision: Int; var accountIds: [String]
+    var items: [SavedViewThread]; var nextCursor: String?
+}
+
 struct MailContact: Codable, Hashable { var name: String?; var email: String }
 struct MailCapabilities: Codable, Hashable { var read: Bool; var send: Bool; var draft: Bool }
 struct MailAccount: Codable, Identifiable, Hashable {

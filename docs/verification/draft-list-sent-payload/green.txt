@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/draft-list-payload.test.ts:
+draft-list synthetic fixture: 200 sent + 5 unresolved; 16 KiB text + 8 KiB HTML + 48 KiB attachment per record {"legacy":{"responseBytes":18596791,"selectedRows":205,"selectedBytes":18550256,"selectCount":1,"elapsedMs":134.67},"projected":{"responseBytes":553391,"selectedRows":205,"selectedBytes":503256,"selectCount":1,"elapsedMs":22.89}}
+draft-list warmed request milliseconds (no row-size instrumentation) {"legacy":[61.49,61.63,60.87,68.92,65.56,71.29,61.98],"projected":[27.13,27.32,28.26,28.42,17.45,25.39,26.17]}
+(pass) draft list can omit sent content without losing delivery reconciliation or unresolved writing [1209.86ms]
+
+ 1 pass
+ 0 fail
+Ran 1 test across 1 file. [1.52s]

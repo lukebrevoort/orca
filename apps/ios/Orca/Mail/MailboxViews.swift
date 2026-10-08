@@ -1,13 +1,5 @@
 import SwiftUI
 
-struct SavedMailboxView: Codable, Identifiable, Hashable {
-    var id: String
-    var name: String
-    var description: String
-    var revision: Int
-    var selectionID: String { "view:\(id)" }
-}
-struct SavedMailboxViewCatalog: Codable { var items: [SavedMailboxView] }
 struct MailboxOption: Identifiable, Equatable { var id: String; var name: String }
 
 /// Browsing choices belong to this signed-in identity on this device, independently of push.
@@ -97,16 +89,6 @@ struct MailboxPreferenceStore {
         if case let APIClient.ClientError.http(code, _) = error { return code >= 500 }
         return error is URLError
     }
-}
-
-struct SavedViewThread: Codable, Identifiable, Hashable {
-    var accountId: String; var accountEmail: String; var provider: String; var threadId: String
-    var subject: String; var latestReceivedAt: String; var messageCount: Int; var readState: String; var sender: MailContact
-    var id: String { "\(accountId)|\(threadId)" }
-}
-struct SavedViewPage: Codable {
-    var viewId: String; var viewRevision: Int; var accountIds: [String]
-    var items: [SavedViewThread]; var nextCursor: String?
 }
 
 @MainActor final class SavedViewReader: ObservableObject {
