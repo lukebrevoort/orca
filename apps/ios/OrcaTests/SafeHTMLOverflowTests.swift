@@ -77,6 +77,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
     }
 
     private func assertFits(_ metrics: [String: Any], width: CGFloat, size: CGFloat, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(metrics["cellsContainText"] as? Bool, true, "Table text must fit its own cell without overlapping adjacent columns", file: file, line: line)
         XCTAssertEqual(number(metrics, "bodyFontSize"), Double(size), accuracy: 0.1, "Keep the requested reading size", file: file, line: line)
         XCTAssertLessThanOrEqual(number(metrics, "documentWidth"), Double(width) + 1, "The disabled outer scroll view must not hide horizontal overflow: \(metrics)", file: file, line: line)
         XCTAssertLessThanOrEqual(number(metrics, "textRight"), Double(width) + 1, "Every rendered text fragment must fit the reader", file: file, line: line)
@@ -102,7 +103,8 @@ final class SafeHTMLOverflowTests: XCTestCase {
         let controller = UIViewController()
         controller.view.backgroundColor = theme == .dark ? .black : .white
         view.isOpaque = false
-        view.backgroundColor = .clear
+        view.backgroundColor = controller.view.backgroundColor
+        view.underPageBackgroundColor = controller.view.backgroundColor!
         window.rootViewController = controller
         controller.view.addSubview(view)
         window.makeKeyAndVisible()
@@ -141,6 +143,11 @@ final class SafeHTMLOverflowTests: XCTestCase {
           preText: pre ? pre.textContent : '',
           headers: Array.from(document.querySelectorAll('th')).map(n => n.textContent),
           cells: Array.from(document.querySelectorAll('td')).map(n => n.textContent),
+          cellsContainText: Array.from(document.querySelectorAll('th,td')).every(cell => {
+            const bounds = cell.getBoundingClientRect(), range = document.createRange();
+            range.selectNodeContents(cell);
+            return Array.from(range.getClientRects()).every(r => r.left >= bounds.left - 1 && r.right <= bounds.right + 1);
+          }),
           tableRight: table ? table.getBoundingClientRect().right : 0,
           tableFontSize: table ? parseFloat(getComputedStyle(table).fontSize) : 0,
           tableDisplay: table ? getComputedStyle(table).display : ''
@@ -154,7 +161,15 @@ final class SafeHTMLOverflowTests: XCTestCase {
             XCTAssertNil(error)
             XCTAssertNotNil(snapshot)
             if let snapshot {
-                let attachment = XCTAttachment(image: snapshot)
+                // The reader HTML is transparent over a native theme surface.
+                // WebKit's captured pixels omit that surface; include the same
+                // host backdrop so light-mode screenshots are readable too.
+                let image = UIGraphicsImageRenderer(size: snapshot.size).image { context in
+                    controller.view.backgroundColor!.setFill()
+                    context.fill(CGRect(origin: .zero, size: snapshot.size))
+                    snapshot.draw(at: .zero)
+                }
+                let attachment = XCTAttachment(image: image)
                 attachment.name = "reader-overflow-\(theme)-\(Int(width))-\(Int(size))"
                 attachment.lifetime = .keepAlways
                 self.add(attachment)
