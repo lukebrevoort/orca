@@ -158,9 +158,15 @@ final class OrcaUITests: XCTestCase {
         let conflicted = try composeFixtureRequest("__fixture/compose/state")
         XCTAssertEqual(conflicted["sendRequests"] as? Int, before["sendRequests"] as? Int)
         let remove = app.buttons["compose.attachment.remove.remove"]
-        for _ in 0..<5 { if remove.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(remove.isHittable); remove.tap()
-        XCTAssertTrue(remove.waitForNonExistence(timeout: 5))
+        revealComposeControl(remove, in: app, scrollUp: true)
+        attachScreenshot(named: "50-compose-conflict-remove-fully-visible")
+        remove.tap()
+        let removed = remove.waitForNonExistence(timeout: 10)
+        if !removed {
+            attachScreenshot(named: "51-compose-conflict-remove-failed")
+            print("COMPOSE_REMOVE_FAILURE enabled=\(remove.isEnabled) frame=\(remove.frame) status=\(app.descendants(matching: .any)["compose.save-status"].label)")
+        }
+        XCTAssertTrue(removed)
         for _ in 0..<5 { if body.isHittable { break }; app.swipeDown() }
         body.tap(); body.typeText(" Latest words before keeping both.")
         // A fresh simulator can show Apple's slide-to-type introduction after
@@ -401,8 +407,9 @@ final class OrcaUITests: XCTestCase {
         XCTAssertEqual(body.value as? String, richText)
         XCTAssertFalse(app.keyboards.firstMatch.exists, "Focusing the protected body must not start editing")
         let edit = app.buttons["compose.edit-plain-text"]
-        for _ in 0..<8 { if edit.isHittable { break }; app.swipeDown() }
-        XCTAssertTrue(edit.isHittable); edit.tap()
+        revealComposeControl(edit, in: app, scrollUp: true)
+        XCTAssertEqual(edit.label, "Edit as plain text")
+        edit.tap()
         let dialog = app.alerts["Edit as plain text?"]
         XCTAssertTrue(dialog.waitForExistence(timeout: 5))
         XCTAssertTrue(dialog.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@ AND label CONTAINS[c] %@", "formatting", "links")).firstMatch.exists)
@@ -418,7 +425,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertFalse(body.isEnabled)
         XCTAssertEqual(body.value as? String, richText)
         if confirm {
-            for _ in 0..<8 { if edit.isHittable { break }; app.swipeDown() }
+            revealComposeControl(edit, in: app, scrollUp: true)
             edit.tap(); XCTAssertTrue(dialog.waitForExistence(timeout: 5))
             dialog.buttons["Convert to plain text"].tap()
             expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: body)
@@ -463,6 +470,35 @@ final class OrcaUITests: XCTestCase {
         XCTAssertEqual(sentBody["text"] as? String, sentText)
         if confirm { XCTAssertTrue(sentBody["html"] is NSNull, "Only confirmed conversion may strip the original HTML") }
         else { XCTAssertEqual(sentBody["html"] as? String, richHTML, "Cancel, backgrounding, subject edits, autosave, and reopen must preserve exact HTML") }
+    }
+
+    private func revealComposeControl(_ control: XCUIElement, in app: XCUIApplication, scrollUp: Bool,
+                                      file: StaticString = #filePath, line: UInt = #line) {
+        let form = app.scrollViews["compose.form"]
+        XCTAssertTrue(form.waitForExistence(timeout: 10), file: file, line: line)
+        let status = app.descendants(matching: .any)["compose.save-status"]
+        for attempt in 0..<10 {
+            let top = app.navigationBars.firstMatch.frame.maxY + 8
+            let bottom = status.frame.minY - 12
+            if control.exists && control.isHittable && control.frame.minY >= top && control.frame.maxY <= bottom { break }
+            let up = control.exists && !control.frame.isEmpty
+                ? control.frame.maxY > bottom : (attempt < 5 ? scrollUp : !scrollUp)
+            // Drag the outer form's padding. A gesture through TextEditor can
+            // scroll its inner text instead of revealing the covered control.
+            let start = form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.75 : 0.25))
+            let end = form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.25 : 0.75))
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
+        if !control.exists || !control.isHittable || control.frame.maxY > status.frame.minY - 8 {
+            let namedEdit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit as plain text")).firstMatch
+            if namedEdit.exists { print("COMPOSE_EDIT_LOOKUP identifier=\(namedEdit.identifier) frame=\(namedEdit.frame) enabled=\(namedEdit.isEnabled)") }
+            print("COMPOSE_REVEAL_FAILURE status=\(status.label) footer=\(status.frame)")
+            attachScreenshot(named: "52-compose-control-reveal-failed")
+        }
+        XCTAssertTrue(control.exists && control.isHittable, file: file, line: line)
+        XCTAssertLessThanOrEqual(control.frame.maxY, status.frame.minY - 8, "Control must be above the fixed footer before tapping", file: file, line: line)
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: control)
+        waitForExpectations(timeout: 10)
     }
 
     private func revealDraftRow(_ row: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {

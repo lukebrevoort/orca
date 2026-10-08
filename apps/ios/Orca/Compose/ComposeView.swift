@@ -168,7 +168,6 @@ struct ComposeView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 14)
-                    .accessibilityIdentifier("compose.rich-body-guidance")
                 }
 
                 TextEditor(text: $messageBody)
