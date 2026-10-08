@@ -28,7 +28,8 @@ final class SafeHTMLOverflowTests: XCTestCase {
             let metrics = try await render("<p>Build output</p><pre><code>\(code)</code></pre><p>End of message.</p>", width: width, size: size, theme: theme)
             XCTAssertEqual(metrics["preText"] as? String, code, "Wrapping must preserve every character and indentation")
             assertFits(metrics, width: width, size: size)
-            XCTAssertGreaterThan(number(metrics, "preHeight"), size * 3, "Long code must reflow into visible lines")
+            XCTAssertTrue(["pre", "pre-wrap", "break-spaces"].contains(metrics["preWhiteSpace"] as? String ?? ""), "Preserve indentation and explicit line breaks visually")
+            XCTAssertGreaterThan(number(metrics, "preHeight"), size * 5, "Long code must reflow into visible lines")
         }
     }
 
@@ -97,6 +98,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
           textLeft: Math.min(...rectangles.map(r => r.left)),
           scale: window.visualViewport.scale,
           preHeight: pre ? pre.getBoundingClientRect().height : 0,
+          preWhiteSpace: pre ? getComputedStyle(pre).whiteSpace : '',
           preText: pre ? pre.textContent : '',
           headers: Array.from(document.querySelectorAll('th')).map(n => n.textContent),
           cells: Array.from(document.querySelectorAll('td')).map(n => n.textContent),
@@ -105,11 +107,18 @@ final class SafeHTMLOverflowTests: XCTestCase {
         };
         """, arguments: [:], in: nil, contentWorld: .defaultClient)
         let metrics = try XCTUnwrap(result as? [String: Any])
-        let snapshot = try await view.takeSnapshot(with: nil)
-        let attachment = XCTAttachment(image: snapshot)
-        attachment.name = "reader-overflow-\(theme)-\(Int(width))-\(Int(size))"
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        let captured = expectation(description: "Synthetic reader snapshot")
+        view.takeSnapshot(with: nil) { snapshot, error in
+            XCTAssertNil(error)
+            if let snapshot {
+                let attachment = XCTAttachment(image: snapshot)
+                attachment.name = "reader-overflow-\(theme)-\(Int(width))-\(Int(size))"
+                attachment.lifetime = .keepAlways
+                self.add(attachment)
+            }
+            captured.fulfill()
+        }
+        await fulfillment(of: [captured], timeout: 10)
         print("NATIVE_READER_OVERFLOW width=\(width) size=\(size) theme=\(theme) metrics=\(metrics)")
         return metrics
     }
