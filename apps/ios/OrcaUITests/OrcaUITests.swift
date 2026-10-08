@@ -448,6 +448,12 @@ final class OrcaUITests: XCTestCase {
         let richText = "Keep this link"
         let richHTML = "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>"
         let draft = try createComposeFixtureDraft(subject: subject, message: ["text": richText, "html": richHTML])
+        // The server canonicalizes HTML on create. The composer must preserve
+        // the exact rich body it receives, including canonical link safeguards.
+        let canonicalHTML = try XCTUnwrap((draft["body"] as? [String: Any])?["html"] as? String)
+        XCTAssertTrue(canonicalHTML.contains("href=\"https://example.com/notes\""))
+        XCTAssertTrue(canonicalHTML.contains("target=\"_blank\""))
+        XCTAssertTrue(canonicalHTML.contains("rel=\"noopener noreferrer\""))
         let id = try XCTUnwrap(draft["id"] as? String)
         let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app)
         app.tabBars.buttons["Drafts"].tap()
@@ -546,7 +552,7 @@ final class OrcaUITests: XCTestCase {
         let sentBody = try XCTUnwrap(sent["body"] as? [String: Any])
         XCTAssertEqual(sentBody["text"] as? String, sentText)
         if confirm { XCTAssertTrue(sentBody["html"] is NSNull, "Only confirmed conversion may strip the original HTML") }
-        else { XCTAssertEqual(sentBody["html"] as? String, richHTML, "Cancel, backgrounding, subject edits, autosave, and reopen must preserve exact HTML") }
+        else { XCTAssertEqual(sentBody["html"] as? String, canonicalHTML, "Cancel, backgrounding, subject edits, autosave, and reopen must preserve exact HTML") }
     }
 
     private func revealComposeControl(_ control: XCUIElement, in app: XCUIApplication, scrollUp: Bool,
