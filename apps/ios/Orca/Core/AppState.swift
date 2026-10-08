@@ -21,6 +21,7 @@ import SwiftUI
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()
     let draftStore = DraftStore()
+    @Published var activeDraftOperations = [UUID: UUID]()
     let cache: CacheStore
     @Published private(set) var userID: String?
     private(set) var client: APIClient?
