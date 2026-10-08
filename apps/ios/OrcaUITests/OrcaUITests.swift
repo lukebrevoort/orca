@@ -441,7 +441,7 @@ final class OrcaUITests: XCTestCase {
             XCTAssertTrue(savedSubject.contains("reviewed"))
             // Use an initially empty recipient field: tapping an existing To
             // address can place the caret in its middle at large text sizes.
-            let disclosure = app.buttons["Cc and Bcc"]
+            let disclosure = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Cc and Bcc")).firstMatch
             revealComposeControl(disclosure, in: app, scrollUp: false)
             disclosure.tap()
             let cc = app.textFields["compose.cc"]
