@@ -41,6 +41,12 @@ struct SafeHTMLView: UIViewRepresentable {
             body{font-family:OrcaReader,Georgia,serif;font-size:\(size)px;line-height:1.6;color:\(ink);background:transparent;overflow-wrap:anywhere;margin:0}
             p{margin:0 0 1.2em}img{max-width:100%;height:auto}a{color:inherit;text-underline-offset:3px}
             blockquote{border-left:2px solid #65746d;margin:1em 0;padding-left:1em}
+            /* Outer WebKit scrolling is disabled: reflow wide content instead of clipping it or shrinking the message. */
+            pre{max-width:100%!important;min-width:0!important;box-sizing:border-box}
+            pre,pre *{white-space:break-spaces!important;overflow-wrap:anywhere!important}
+            table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important;font:inherit}
+            col,colgroup,th,td{width:auto!important;min-width:0!important;max-width:100%!important}
+            th,td{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
             </style>
             """ + html
             view.loadHTMLString(shell, baseURL: nil)
@@ -62,4 +68,5 @@ private final class ContentSizedWebView: WKWebView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: max(44, scrollView.contentSize.height)) }
 }
+
 
