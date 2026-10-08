@@ -303,16 +303,25 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy() throws {
+        try exerciseSentLocalEditsRecovery()
+    }
+
+    func test36SentRecoveryStatusAtAccessibilitySize() throws {
+        try exerciseSentLocalEditsRecovery(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+    }
+
+    private func exerciseSentLocalEditsRecovery(contentSize: String = "UICTContentSizeCategoryL") throws {
         try setFixtureSending(true)
         addTeardownBlock { try self.restoreFixtureSending() }
         let subject = "Sent with local edits " + UUID().uuidString
         let draft = try createComposeFixtureDraft(subject: subject)
         let id = try XCTUnwrap(draft["id"] as? String)
-        let app = try launchApp(); assertInboxLoaded(in: app)
+        let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app)
         app.tabBars.buttons["Drafts"].tap()
         let serverRow = app.descendants(matching: .any)["draft.\(id)"]
-        XCTAssertTrue(serverRow.waitForExistence(timeout: 10)); serverRow.tap()
+        revealDraftRow(serverRow, in: app); serverRow.tap()
         let body = messageBody(in: app)
+        for _ in 0..<8 { if body.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(body.waitForExistence(timeout: 5)); body.tap(); body.typeText(" These local edits were never sent.")
         let latestWriting = try XCTUnwrap(body.value as? String)
         XCTAssertTrue(latestWriting.contains("These local edits were never sent."))
@@ -320,11 +329,16 @@ final class OrcaUITests: XCTestCase {
         _ = try composeFixtureRequest("__fixture/compose/delivery", method: "POST", body: ["draftId": id, "status": "sent"])
         app.tabBars.buttons["Inbox"].tap(); app.tabBars.buttons["Drafts"].tap()
         let preserved = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@ AND label CONTAINS[c] %@", "draft.", subject, "Sent elsewhere")).firstMatch
-        XCTAssertTrue(preserved.waitForExistence(timeout: 10)); preserved.tap()
+        revealDraftRow(preserved, in: app); preserved.tap()
+        for _ in 0..<8 { if messageBody(in: app).exists { break }; app.swipeUp() }
         XCTAssertEqual(messageBody(in: app).value as? String, latestWriting)
         XCTAssertFalse(messageBody(in: app).isEnabled)
         let copy = app.buttons["compose.send"]
         XCTAssertEqual(copy.label, "Edit a new copy")
+        let recoveryStatus = app.descendants(matching: .any)["compose.save-status"]
+        XCTAssertEqual(recoveryStatus.label, "Sent elsewhere. Your local edits are preserved; edit a new copy to continue.")
+        XCTAssertTrue(recoveryStatus.isHittable)
+        XCTAssertTrue(copy.isHittable)
         attachScreenshot(named: "42-compose-sent-local-edits-preserved")
         copy.tap()
         expectation(for: NSPredicate(format: "label == %@ AND enabled == true", "Send"), evaluatedWith: copy)
@@ -370,8 +384,12 @@ final class OrcaUITests: XCTestCase {
         let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app)
         app.tabBars.buttons["Drafts"].tap()
         let row = app.descendants(matching: .any)["draft.\(id)"]
-        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        if contentSize.contains("Accessibility") { attachScreenshot(named: "48-compose-large-draft-list-before-locating") }
+        revealDraftRow(row, in: app)
+        if contentSize.contains("Accessibility") { attachScreenshot(named: "49-compose-large-draft-row-visible") }
+        row.tap()
         let body = messageBody(in: app)
+        for _ in 0..<8 { if body.exists { break }; app.swipeUp() }
         XCTAssertTrue(body.waitForExistence(timeout: 10))
         let status = app.descendants(matching: .any)["compose.save-status"]
         expectation(for: NSPredicate(format: "label == %@", "Saved locally"), evaluatedWith: status)
@@ -379,8 +397,11 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "44-compose-rich-draft-protected")
         XCTAssertFalse(body.isEnabled, "A rich body must stay read-only until the user explicitly accepts conversion")
         XCTAssertEqual(body.value as? String, richText)
+        if body.isHittable { body.tap() }
+        XCTAssertEqual(body.value as? String, richText)
+        XCTAssertFalse(app.keyboards.firstMatch.exists, "Focusing the protected body must not start editing")
         let edit = app.buttons["compose.edit-plain-text"]
-        for _ in 0..<8 { if edit.isHittable { break }; app.swipeUp() }
+        for _ in 0..<8 { if edit.isHittable { break }; app.swipeDown() }
         XCTAssertTrue(edit.isHittable); edit.tap()
         let dialog = app.alerts["Edit as plain text?"]
         XCTAssertTrue(dialog.waitForExistence(timeout: 5))
@@ -390,34 +411,47 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(dialog.waitForNonExistence(timeout: 5))
         XCTAssertFalse(body.isEnabled)
         XCTAssertEqual(body.value as? String, richText)
-        // Cancel and app interruption must leave conversion unapproved.
+        // Interrupt a still-pending confirmation without accepting conversion.
+        edit.tap(); XCTAssertTrue(dialog.waitForExistence(timeout: 5))
         XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertTrue(dialog.waitForNonExistence(timeout: 5))
         XCTAssertFalse(body.isEnabled)
+        XCTAssertEqual(body.value as? String, richText)
         if confirm {
-            for _ in 0..<8 { if edit.isHittable { break }; app.swipeUp() }
+            for _ in 0..<8 { if edit.isHittable { break }; app.swipeDown() }
             edit.tap(); XCTAssertTrue(dialog.waitForExistence(timeout: 5))
             dialog.buttons["Convert to plain text"].tap()
             expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: body)
             waitForExpectations(timeout: 10)
             XCTAssertFalse(edit.exists)
-            for _ in 0..<8 { if body.isHittable { break }; app.swipeDown() }
-            body.tap(); body.typeText(" Updated words.")
         } else {
             for _ in 0..<8 { if app.textFields["compose.subject"].isHittable { break }; app.swipeDown() }
             let title = app.textFields["compose.subject"]; title.tap(); title.typeText(" reviewed")
+            let to = app.textFields["compose.to"]
+            for _ in 0..<8 { if to.isHittable { break }; app.swipeDown() }
+            to.tap(); to.typeText(", friend@example.com")
         }
         let expectedText = confirm ? try XCTUnwrap(body.value as? String) : richText
-        if confirm { XCTAssertTrue(expectedText.contains("Updated words.")) }
         navigateBack(in: app)
         let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
-        XCTAssertTrue(localRow.waitForExistence(timeout: 10))
+        revealDraftRow(localRow, in: app)
         app.terminate()
         let reopened = try launchApp(contentSize: contentSize); assertInboxLoaded(in: reopened)
         reopened.tabBars.buttons["Drafts"].tap()
         let savedRow = reopened.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
-        XCTAssertTrue(savedRow.waitForExistence(timeout: 10)); savedRow.tap()
-        XCTAssertEqual(messageBody(in: reopened).value as? String, expectedText)
-        XCTAssertEqual(messageBody(in: reopened).isEnabled, confirm)
+        revealDraftRow(savedRow, in: reopened); savedRow.tap()
+        let reopenedBody = messageBody(in: reopened)
+        for _ in 0..<8 { if reopenedBody.exists { break }; reopened.swipeUp() }
+        XCTAssertTrue(reopenedBody.waitForExistence(timeout: 10))
+        XCTAssertEqual(reopenedBody.value as? String, expectedText)
+        expectation(for: NSPredicate(format: "enabled == %@", NSNumber(value: confirm)), evaluatedWith: reopenedBody)
+        waitForExpectations(timeout: 10)
+        if confirm {
+            for _ in 0..<8 { if reopenedBody.isHittable { break }; reopened.swipeUp() }
+            reopenedBody.tap(); reopenedBody.typeText(" Updated words.")
+        }
+        let sentText = confirm ? try XCTUnwrap(reopenedBody.value as? String) : expectedText
+        if confirm { XCTAssertTrue(sentText.contains("Updated words.")) }
         attachScreenshot(named: confirm ? "46-compose-converted-draft-reopened" : "47-compose-cancelled-conversion-reopened")
         let send = reopened.buttons["compose.send"]
         expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: send)
@@ -426,9 +460,26 @@ final class OrcaUITests: XCTestCase {
         let sent = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
         XCTAssertEqual(sent["deliveryStatus"] as? String, "sent")
         let sentBody = try XCTUnwrap(sent["body"] as? [String: Any])
-        XCTAssertEqual(sentBody["text"] as? String, expectedText)
+        XCTAssertEqual(sentBody["text"] as? String, sentText)
         if confirm { XCTAssertTrue(sentBody["html"] is NSNull, "Only confirmed conversion may strip the original HTML") }
         else { XCTAssertEqual(sentBody["html"] as? String, richHTML, "Cancel, backgrounding, subject edits, autosave, and reopen must preserve exact HTML") }
+    }
+
+    private func revealDraftRow(_ row: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let list = app.descendants(matching: .any)["drafts.list"]
+        XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
+        if row.waitForExistence(timeout: 2), row.isHittable { return }
+        // Accessibility-sized rows and retained local drafts can push a newly
+        // created server row outside List's materialized accessibility range.
+        for _ in 0..<16 {
+            if row.exists && row.isHittable { return }
+            list.swipeUp()
+        }
+        for _ in 0..<16 {
+            if row.exists && row.isHittable { return }
+            list.swipeDown()
+        }
+        XCTAssertTrue(row.exists && row.isHittable, "Expected draft row after scrolling the actual list", file: file, line: line)
     }
 
     private func setFixtureSending(_ enabled: Bool, accountsUnavailable: Bool = false) throws {
@@ -1072,8 +1123,8 @@ final class OrcaUITests: XCTestCase {
     }
 
     private func messageBody(in app: XCUIApplication) -> XCUIElement {
-        let identified = app.textViews["compose.body"]
-        return identified.exists ? identified : app.textViews["Message body"]
+        // Keep the identifier query live while scroll content is offscreen.
+        app.textViews["compose.body"]
     }
 
     private func navigateBack(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {

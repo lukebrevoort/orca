@@ -1217,8 +1217,149 @@ final class DraftLifecycleTests: XCTestCase {
         XCTAssertEqual(reopened.first?.content.body.text, original.text, "A locked rich body cannot diverge from its original text")
     }
 
-    func testDraftLifecycleBodyEditDiscardsStaleHTML() {
-        let original = DraftBody(text: "Original", html: "<p><strong>Original</strong></p>")
+    func testExplicitConversionPersistsBeforeAnyTextEditAndKeepsDraftIdentity() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: DraftContent(
+            to: [.init(name: nil, email: "maya@example.com")], subject: "Keep metadata",
+            body: .init(text: "Keep this link", html: "<p>Keep <a href=\"https://example.com\">this link</a></p>"),
+            attachments: [.init(id: "a", filename: "note.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")]))
+        initial.serverID = "server-draft"; initial.serverRevision = 4
+        initial.recipientText = .init(to: "maya@example.com, unfinished", cc: "", bcc: "")
+        let draft = try await store.save(initial)
+        let request = ComposePlainTextConversion.Request(draftID: draft.id, body: draft.content.body)
+        let reservation = try await store.reserve(draft)
+        let converted = try await ComposePlainTextConversion.save(draft, request: request, store: store, reservation: reservation)
+        await store.release(reservation)
+        var expected = draft.content; expected.body.html = nil
+        XCTAssertEqual(converted.content, expected)
+        XCTAssertEqual(converted.recipientText, draft.recipientText)
+        XCTAssertEqual(converted.id, draft.id); XCTAssertEqual(converted.serverID, draft.serverID)
+        XCTAssertEqual(converted.serverRevision, draft.serverRevision)
+        XCTAssertEqual(converted.idempotencyKey, draft.idempotencyKey)
+        XCTAssertNotEqual(converted.storageRevision, draft.storageRevision)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reopened, [converted], "Conversion alone must be durable even if snapshot text never changes")
+        let edited = ComposeView.bodyForSaving(text: "New plain text", original: converted.content.body)
+        XCTAssertEqual(edited.text, "New plain text"); XCTAssertNil(edited.html)
+    }
+
+    func testConversionRejectsChangedBodyStaleSnapshotAndForeignLease() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let initial = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",
+            content: DraftContent(body: .init(text: "Rich writing", html: "<p>Rich writing</p>"))))
+        let approved = ComposePlainTextConversion.Request(draftID: initial.id, body: initial.content.body)
+        var changed = initial; changed.content.subject = "Newer subject"
+        changed = try await store.save(changed)
+        let reservation = try await store.reserve(changed)
+        do {
+            _ = try await ComposePlainTextConversion.save(initial, request: approved, store: store, reservation: reservation)
+            XCTFail("A stale snapshot must not convert or overwrite newer writing")
+        } catch { XCTAssertEqual(error as? DraftStore.StoreError, .staleDraft) }
+        await store.release(reservation)
+        changed.content.body.html = "<p><strong>New formatting</strong></p>"
+        changed = try await store.save(changed)
+        let currentReservation = try await store.reserve(changed)
+        do {
+            _ = try await ComposePlainTextConversion.save(changed, request: approved, store: store, reservation: currentReservation)
+            XCTFail("Approval for an earlier body must not destroy newly adopted HTML")
+        } catch { XCTAssertTrue(error is ComposePlainTextConversion.Failure) }
+        let other = try await store.save(LocalDraft(ownerScope: initial.ownerScope, accountId: initial.accountId))
+        let foreignReservation = try await store.reserve(other)
+        let currentApproval = ComposePlainTextConversion.Request(draftID: changed.id, body: changed.content.body)
+        do {
+            _ = try await ComposePlainTextConversion.save(changed, request: currentApproval, store: store, reservation: foreignReservation)
+            XCTFail("A conversion cannot bypass another operation's lease")
+        } catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        await store.release(currentReservation); await store.release(foreignReservation)
+        let unchanged = await store.current(changed.id, ownerScope: changed.ownerScope, accountId: changed.accountId)
+        XCTAssertEqual(unchanged, changed)
+    }
+
+    func testConversionRefusesFrozenDeliveryStates() async throws {
+        for delivery in ["sending", "ambiguous", "rejected", "sent"] {
+            let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",
+                content: DraftContent(body: .init(text: "Frozen writing", html: "<p>Frozen writing</p>")))
+            initial.deliveryState = delivery
+            let draft = try await store.save(initial), reservation = try await store.reserve(draft)
+            let request = ComposePlainTextConversion.Request(draftID: draft.id, body: draft.content.body)
+            do {
+                _ = try await ComposePlainTextConversion.save(draft, request: request, store: store, reservation: reservation)
+                XCTFail("Recovery must use an explicit new copy before body conversion")
+            } catch { XCTAssertTrue(error is ComposePlainTextConversion.Failure) }
+            await store.release(reservation)
+            let unchanged = await store.current(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(unchanged, draft)
+        }
+    }
+
+    func testFailedConversionKeepsRichBodyOnDiskAndInMemoryUntilSuccessfulRetry() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let backup = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory); try? FileManager.default.removeItem(at: backup) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",
+            content: DraftContent(body: .init(text: "Kept writing", html: "<p>Kept <strong>writing</strong></p>"))))
+        let request = ComposePlainTextConversion.Request(draftID: draft.id, body: draft.content.body)
+        let reservation = try await store.reserve(draft)
+        let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+        try FileManager.default.moveItem(at: directory, to: backup)
+        try Data("blocked-directory".utf8).write(to: directory)
+        do {
+            _ = try await ComposePlainTextConversion.save(draft, request: request, store: store, reservation: reservation)
+            XCTFail("Expected a durable save failure")
+        } catch {}
+        let unchanged = await store.current(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(unchanged, draft)
+        XCTAssertEqual(try Data(contentsOf: backup.appending(path: "drafts.json")), bytes)
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.moveItem(at: backup, to: directory)
+        let retried = try await ComposePlainTextConversion.save(draft, request: request, store: store, reservation: reservation)
+        await store.release(reservation)
+        XCTAssertNil(retried.content.body.html)
+        XCTAssertEqual(retried.content.body.text, draft.content.body.text)
+    }
+
+    func testCommittedConversionCanBeAdoptedAfterInterruptionButCannotReplaceAnotherIdentityOrRevision() {
+        var previous = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",
+            content: DraftContent(body: .init(text: "Writing", html: "<p>Writing</p>")))
+        previous.storageRevision = UUID()
+        var committed = previous; committed.content.body.html = nil; committed.storageRevision = UUID()
+        // Visibility, activity, and editor appearance are not post-commit gates:
+        // Back/background cancellation cannot roll back a successful disk write.
+        XCTAssertTrue(ComposePlainTextConversion.shouldAdoptCommitted(committed, replacing: previous, current: previous, ownerScope: previous.ownerScope, accountID: previous.accountId))
+        XCTAssertTrue(ComposePlainTextConversion.shouldAdoptCommitted(committed, replacing: previous, current: committed, ownerScope: previous.ownerScope, accountID: previous.accountId))
+        var newer = previous; newer.storageRevision = UUID()
+        var other = previous; other.id = UUID()
+        for current in [newer, other] {
+            XCTAssertFalse(ComposePlainTextConversion.shouldAdoptCommitted(committed, replacing: previous, current: current, ownerScope: previous.ownerScope, accountID: previous.accountId))
+        }
+        XCTAssertFalse(ComposePlainTextConversion.shouldAdoptCommitted(committed, replacing: previous, current: previous, ownerScope: "another-owner", accountID: previous.accountId))
+        XCTAssertFalse(ComposePlainTextConversion.shouldAdoptCommitted(committed, replacing: previous, current: previous, ownerScope: previous.ownerScope, accountID: "another-account"))
+        XCTAssertFalse(ComposePlainTextConversion.shouldAdoptCommitted(committed, replacing: previous, current: nil, ownerScope: previous.ownerScope, accountID: previous.accountId))
+    }
+
+    func testConversionReservationExcludesEveryOtherMutationAndRepeatTap() {
+        let operations: [ComposeOperationReservation.Operation] = [.attachments, .delivery, .reconciliation, .conversion]
+        for first in operations {
+            var reservation = ComposeOperationReservation()
+            XCTAssertTrue(reservation.reserve(first))
+            for second in operations { XCTAssertFalse(reservation.reserve(second)) }
+            reservation.release(first)
+            XCTAssertTrue(reservation.reserve(.conversion))
+            reservation.release(.conversion)
+            XCTAssertFalse(reservation.isBusy)
+        }
+    }
+
+    func testDraftLifecycleConvertedBodyEditsRemainPlainText() {
+        let original = DraftBody(text: "Original", html: nil)
         let edited = ComposeView.bodyForSaving(text: "Changed", original: original)
         XCTAssertEqual(edited.text, "Changed")
         XCTAssertNil(edited.html, "Sending edited plain text must not send the old rich body instead")

@@ -6,7 +6,7 @@ struct ComposeSendPermissionGate: Equatable {
 }
 
 struct ComposeOperationReservation {
-    enum Operation: Equatable { case attachments, delivery, reconciliation }
+    enum Operation: Equatable { case attachments, delivery, reconciliation, conversion }
     private(set) var active: Operation?
     var isBusy: Bool { active != nil }
     mutating func reserve(_ operation: Operation) -> Bool {
@@ -48,6 +48,34 @@ struct ComposeOperationReservation {
     }
 }
 
+@MainActor enum ComposePlainTextConversion {
+    struct Request: Equatable {
+        let draftID: UUID
+        let body: DraftBody
+    }
+    enum Failure: Error { case draftChanged }
+    static func shouldAdoptCommitted(_ converted: LocalDraft, replacing previous: LocalDraft,
+                                     current: LocalDraft?, ownerScope: String?, accountID: String?) -> Bool {
+        guard let current else { return false }
+        return ownerScope == previous.ownerScope && accountID == previous.accountId &&
+            current.id == previous.id && current.ownerScope == previous.ownerScope && current.accountId == previous.accountId &&
+            ((current.storageRevision == previous.storageRevision && current.content.body == previous.content.body) ||
+             (current.storageRevision == converted.storageRevision && current.content.body == converted.content.body))
+    }
+    static func save(_ draft: LocalDraft, request: Request, store: DraftStore,
+                     reservation: DraftStore.Reservation) async throws -> LocalDraft {
+        // Approval applies only to the rich body shown in the confirmation.
+        // The store still enforces revision, identity, and lease ownership.
+        guard draft.id == request.draftID, draft.content.body == request.body,
+              request.body.html != nil, ["local", "draft"].contains(draft.deliveryState) else {
+            throw Failure.draftChanged
+        }
+        var converted = draft
+        converted.content.body.html = nil
+        return try await store.save(converted, reservation: reservation)
+    }
+}
+
 struct ComposeView: View {
     @EnvironmentObject var state: AppState; @Environment(\.dismiss) var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -65,6 +93,8 @@ struct ComposeView: View {
     @State private var lastOwnedOperation: UUID?
     @State private var saveTask: Task<Void, Never>?
     @State private var showingImporter = false
+    @State private var showingPlainTextConfirmation = false
+    @State private var plainTextConversionRequest: ComposePlainTextConversion.Request?
     @State private var draftAccountID: String?
     @State private var draftOwnerScope: String?
     @State private var editorID = UUID()
@@ -120,6 +150,27 @@ struct ComposeView: View {
 
                 Divider().overlay(OrcaTheme.border)
 
+                if richBodyProtected {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Formatting and links are preserved")
+                            .font(OrcaTheme.ui(13, weight: .semibold))
+                            .foregroundStyle(OrcaTheme.ink)
+                        Text("To change this message’s body, convert it to plain text. This removes formatting and embedded links.")
+                            .font(OrcaTheme.ui(12))
+                            .foregroundStyle(OrcaTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Edit as plain text") { requestPlainTextConversion() }
+                            .font(OrcaTheme.ui(13, weight: .semibold))
+                            .foregroundStyle(OrcaTheme.accent)
+                            .frame(minHeight: 44, alignment: .leading)
+                            .accessibilityIdentifier("compose.edit-plain-text")
+                            .disabled(deliveryFrozen || editingAttachments || local == nil)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 14)
+                    .accessibilityIdentifier("compose.rich-body-guidance")
+                }
+
                 TextEditor(text: $messageBody)
                     .font(OrcaTheme.reader(20))
                     .foregroundStyle(OrcaTheme.ink)
@@ -128,7 +179,8 @@ struct ComposeView: View {
                     .padding(.vertical, 14)
                     .accessibilityLabel("Message body")
                     .accessibilityIdentifier("compose.body")
-                    .disabled(deliveryFrozen || editingAttachments)
+                    .accessibilityHint(richBodyProtected ? "Read-only. Choose Edit as plain text to change this body." : "")
+                    .disabled(deliveryFrozen || editingAttachments || richBodyProtected)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Button { showingImporter = true } label: {
@@ -225,15 +277,33 @@ struct ComposeView: View {
             preparing = true
             Task { await reloadAfterSharedOperation() }
         }
-        .onChange(of: scenePhase) { if scenePhase == .inactive || scenePhase == .background { flushForTransition() } }
-        .onDisappear { isVisible = false; flushForTransition(closingEditor: editorID) }
+        .onChange(of: scenePhase) {
+            if scenePhase == .inactive || scenePhase == .background {
+                showingPlainTextConfirmation = false; plainTextConversionRequest = nil
+                flushForTransition()
+            }
+        }
+        .onDisappear {
+            isVisible = false; showingPlainTextConfirmation = false; plainTextConversionRequest = nil
+            flushForTransition(closingEditor: editorID)
+        }
+        .alert("Edit as plain text?", isPresented: $showingPlainTextConfirmation, presenting: plainTextConversionRequest) { request in
+            Button("Cancel", role: .cancel) { plainTextConversionRequest = nil }
+            Button("Convert to plain text", role: .destructive) {
+                plainTextConversionRequest = nil
+                Task { await convertBodyToPlainText(request) }
+            }
+        } message: { _ in
+            Text("This permanently removes formatting and embedded links from this draft. The plain text shown in the message body will be kept. This cannot be undone.")
+        }
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in if case let .success(urls) = result { Task { await attach(urls) } } }
     }
     private var saveStatus: some View {
         Label(status, systemImage: status.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle")
             .font(OrcaTheme.ui(11, weight: .medium))
             .foregroundStyle(OrcaTheme.muted)
-            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(status)
             .accessibilityIdentifier("compose.save-status")
@@ -251,15 +321,17 @@ struct ComposeView: View {
         Button(primaryActionTitle) { Task { if copyableDelivery { await editVerifiedCopy() } else { await send() } } }
             .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
             .buttonStyle(OrcaPrimaryButtonStyle())
-            .disabled(preparing || local == nil || sending || editingAttachments || staleConflict || (!deliveryRecoveryAction && (sendPermissionGate.blocksNormalSend || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)) || (deliveryRecoveryAction && local?.serverID == nil))
+            .disabled(preparing || local == nil || sending || editingAttachments || convertingBody || staleConflict || (!deliveryRecoveryAction && (sendPermissionGate.blocksNormalSend || to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)) || (deliveryRecoveryAction && local?.serverID == nil))
             .accessibilityIdentifier("compose.send")
     }
     private var composeActionsHorizontal: some View {
-        HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 8) {
             saveStatus
-            Spacer(minLength: 8)
-            if staleConflict { keepBothButton }
-            sendButton
+            HStack(spacing: 14) {
+                Spacer(minLength: 0)
+                if staleConflict { keepBothButton }
+                sendButton
+            }
         }
     }
     private var composeActionsVertical: some View {
@@ -288,11 +360,13 @@ struct ComposeView: View {
     var heldByAnotherComposer: Bool { local.map { state.activeDraftOperations[$0.id] != nil && state.activeDraftOperations[$0.id] != storageReservation?.id } ?? false }
     var sending: Bool { draftOperation.active == .delivery || draftOperation.active == .reconciliation || heldByAnotherComposer }
     var editingAttachments: Bool { draftOperation.active == .attachments }
+    var convertingBody: Bool { draftOperation.active == .conversion }
+    var richBodyProtected: Bool { (local?.content.body ?? seedServer?.body)?.html != nil }
     var rejectedDelivery: Bool { local?.deliveryState == "rejected" }
     var copyableDelivery: Bool { local.map { ["rejected", "sent"].contains($0.deliveryState) } ?? false }
     var deliveryRecoveryAction: Bool { local.map { ["sending", "ambiguous", "rejected", "sent"].contains($0.deliveryState) } ?? false }
-    var deliveryFrozen: Bool { preparing || sending || (local.map { ["sending", "ambiguous", "rejected", "sent"].contains($0.deliveryState) } ?? false) }
-    var primaryActionTitle: String { copyableDelivery ? "Edit a new copy" : (deliveryFrozen ? "Check delivery" : "Send") }
+    var deliveryFrozen: Bool { preparing || sending || convertingBody || (local.map { ["sending", "ambiguous", "rejected", "sent"].contains($0.deliveryState) } ?? false) }
+    var primaryActionTitle: String { copyableDelivery ? "Edit a new copy" : ((deliveryRecoveryAction || sending) ? "Check delivery" : "Send") }
     var composeAccount: MailAccount? { guard let draftAccountID else { return state.selectedAccount }; return state.accounts.first(where: { $0.id == draftAccountID }) }
     var sendPermissionGate: ComposeSendPermissionGate { Self.sendPermissionGate(account: composeAccount, deliveryState: local?.deliveryState) }
     static func sendPermissionGate(account: MailAccount?, deliveryState: String?) -> ComposeSendPermissionGate {
@@ -324,9 +398,51 @@ struct ComposeView: View {
     }
     func content() -> DraftContent { var result = DraftContent(to: validRecipients(to), cc: validRecipients(cc), bcc: validRecipients(bcc), subject: subject, body: Self.bodyForSaving(text: messageBody, original: local?.content.body ?? seedServer?.body), context: local?.content.context ?? seedServer?.context, attachments: local?.content.attachments ?? seedServer?.attachments ?? []); if let context, let last = context.messages.last { result.context = DraftContext(kind: kind, threadId: context.thread.id, messageId: last.id, providerMessageId: last.providerMessageId, providerThreadId: context.thread.providerThreadId, inReplyTo: last.internetMessageId, references: last.references) }; return result }
     static func bodyForSaving(text: String, original: DraftBody?) -> DraftBody {
-        // The plain-text editor cannot update HTML. Preserve the rich body when
-        // merely opening/autosaving, but never send stale HTML after a text edit.
-        DraftBody(text: text, html: original?.text == text ? original?.html : nil)
+        // Rich bodies stay read-only until an explicit, durable conversion.
+        // Fail closed even if an input/autosave path supplies changed text.
+        if let original, original.html != nil { return original }
+        return DraftBody(text: text, html: nil)
+    }
+    func requestPlainTextConversion() {
+        guard !deliveryFrozen, !editingAttachments, let draft = local, draft.content.body.html != nil else { return }
+        plainTextConversionRequest = .init(draftID: draft.id, body: draft.content.body)
+        showingPlainTextConfirmation = true
+    }
+    func convertBodyToPlainText(_ request: ComposePlainTextConversion.Request) async {
+        guard isVisible, scenePhase == .active, !completed, !deliveryFrozen, !editingAttachments,
+              local?.id == request.draftID, local?.content.body == request.body,
+              let accountID = draftAccountID, let ownerScope = draftOwnerScope, ownerScope == state.ownerScope,
+              draftOperation.reserve(.conversion) else { return }
+        defer { draftOperation.release(.conversion) }
+        let activeEditor = editorID
+        func identityIsCurrent() -> Bool {
+            isVisible && scenePhase == .active && editorID == activeEditor && !completed &&
+            ownerScope == state.ownerScope && draftAccountID == accountID && local?.accountId == accountID &&
+            local?.id == request.draftID && local?.content.body == request.body &&
+            !deliveryRecoveryAction && !heldByAnotherComposer
+        }
+        // Drain previous writes before taking the shared lease. Only the
+        // persisted conversion unlocks editing; failures keep the rich body.
+        let pendingSave = saveTask; pendingSave?.cancel(); await pendingSave?.value
+        guard !Task.isCancelled, identityIsCurrent(), let sharedOperation = await beginSharedOperation() else { return }
+        defer { endSharedOperation(sharedOperation) }
+        guard !Task.isCancelled, identityIsCurrent(), var draft = local else { return }
+        draft.content = content(); draft.recipientText = .init(to: to, cc: cc, bcc: bcc)
+        do {
+            let converted = try await ComposePlainTextConversion.save(draft, request: request,
+                store: state.draftStore, reservation: sharedOperation)
+            // The write has committed. Retain its revision even if Back or
+            // backgrounding interrupted the await. The owned-operation reload
+            // intentionally skips us, and all edits remain frozen until defer.
+            guard draftOwnerScope == ownerScope,
+                  ComposePlainTextConversion.shouldAdoptCommitted(converted, replacing: draft,
+                current: local, ownerScope: state.ownerScope, accountID: draftAccountID) else { return }
+            local = converted
+            status = "Converted to plain text. Saved locally."
+        } catch {
+            guard identityIsCurrent() else { return }
+            status = "Could not convert this draft. Formatting and links are still preserved. Try again after reopening the saved draft."
+        }
     }
     func validRecipients(_ value: String) -> [Recipient] { value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { Self.isEmail($0) }.map { Recipient(name: nil, email: $0) } }
     func recipientsAreValid(_ value: String, allowingEmpty: Bool) -> Bool { if allowingEmpty && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }; let values = value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }; return !values.isEmpty && values.allSatisfy(Self.isEmail) }
@@ -472,7 +588,7 @@ struct ComposeView: View {
         }
     }
     func flushForTransition(closingEditor: UUID? = nil) {
-        guard !preparing, !deliveryRecoveryAction, !sending, !editingAttachments, !completed else {
+        guard !preparing, !deliveryRecoveryAction, !draftOperation.isBusy, !heldByAnotherComposer, !completed else {
             if let closingEditor { Task { await state.draftStore.endEditing(closingEditor) } }
             return
         }
