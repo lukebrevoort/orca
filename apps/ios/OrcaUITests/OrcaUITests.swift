@@ -336,7 +336,8 @@ final class OrcaUITests: XCTestCase {
         app.tabBars.buttons["Inbox"].tap(); app.tabBars.buttons["Drafts"].tap()
         let preserved = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@ AND label CONTAINS[c] %@", "draft.", subject, "Sent elsewhere")).firstMatch
         revealDraftRow(preserved, in: app); preserved.tap()
-        for _ in 0..<8 { if messageBody(in: app).exists { break }; app.swipeUp() }
+        XCTAssertTrue(app.scrollViews["compose.form"].waitForExistence(timeout: 10))
+        revealComposeBody(in: app)
         XCTAssertEqual(messageBody(in: app).value as? String, latestWriting)
         XCTAssertFalse(messageBody(in: app).isEnabled)
         let copy = app.buttons["compose.send"]
@@ -383,6 +384,7 @@ final class OrcaUITests: XCTestCase {
         try setFixtureSending(true)
         addTeardownBlock { try self.restoreFixtureSending() }
         let subject = "Rich conversion " + UUID().uuidString
+        var savedSubject = subject
         let richText = "Keep this link"
         let richHTML = "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>"
         let draft = try createComposeFixtureDraft(subject: subject, message: ["text": richText, "html": richHTML])
@@ -394,6 +396,7 @@ final class OrcaUITests: XCTestCase {
         revealDraftRow(row, in: app)
         if contentSize.contains("Accessibility") { attachScreenshot(named: "49-compose-large-draft-row-visible") }
         row.tap()
+        XCTAssertTrue(app.scrollViews["compose.form"].waitForExistence(timeout: 10))
         let body = messageBody(in: app)
         for _ in 0..<8 { if body.exists { break }; app.swipeUp() }
         XCTAssertTrue(body.waitForExistence(timeout: 10))
@@ -434,19 +437,31 @@ final class OrcaUITests: XCTestCase {
         } else {
             for _ in 0..<8 { if app.textFields["compose.subject"].isHittable { break }; app.swipeDown() }
             let title = app.textFields["compose.subject"]; title.tap(); title.typeText(" reviewed")
-            let to = app.textFields["compose.to"]
-            for _ in 0..<8 { if to.isHittable { break }; app.swipeDown() }
-            to.tap(); to.typeText(", friend@example.com")
+            savedSubject = try XCTUnwrap(title.value as? String)
+            XCTAssertTrue(savedSubject.contains("reviewed"))
+            // Use an initially empty recipient field: tapping an existing To
+            // address can place the caret in its middle at large text sizes.
+            let disclosure = app.buttons["Cc and Bcc"]
+            revealComposeControl(disclosure, in: app, scrollUp: false)
+            disclosure.tap()
+            let cc = app.textFields["compose.cc"]
+            revealComposeControl(cc, in: app, scrollUp: false)
+            cc.tap(); cc.typeText("friend@example.com")
+            XCTAssertEqual(cc.value as? String, "friend@example.com")
         }
         let expectedText = confirm ? try XCTUnwrap(body.value as? String) : richText
         navigateBack(in: app)
-        let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
+        let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", savedSubject)).firstMatch
         revealDraftRow(localRow, in: app)
+        let localRowID = localRow.identifier
+        XCTAssertTrue(localRowID.hasPrefix("draft."))
         app.terminate()
         let reopened = try launchApp(contentSize: contentSize); assertInboxLoaded(in: reopened)
         reopened.tabBars.buttons["Drafts"].tap()
-        let savedRow = reopened.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
+        let savedRow = reopened.descendants(matching: .any)[localRowID]
         revealDraftRow(savedRow, in: reopened); savedRow.tap()
+        XCTAssertTrue(reopened.scrollViews["compose.form"].waitForExistence(timeout: 10))
+        XCTAssertEqual(reopened.textFields["compose.subject"].value as? String, savedSubject)
         let reopenedBody = messageBody(in: reopened)
         for _ in 0..<8 { if reopenedBody.exists { break }; reopened.swipeUp() }
         XCTAssertTrue(reopenedBody.waitForExistence(timeout: 10))
@@ -466,6 +481,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(reopened.navigationBars["Drafts"].waitForExistence(timeout: 15))
         let sent = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
         XCTAssertEqual(sent["deliveryStatus"] as? String, "sent")
+        XCTAssertEqual(sent["subject"] as? String, savedSubject)
+        if !confirm { XCTAssertEqual((sent["cc"] as? [[String: Any]])?.compactMap { $0["email"] as? String }, ["friend@example.com"]) }
         let sentBody = try XCTUnwrap(sent["body"] as? [String: Any])
         XCTAssertEqual(sentBody["text"] as? String, sentText)
         if confirm { XCTAssertTrue(sentBody["html"] is NSNull, "Only confirmed conversion may strip the original HTML") }
@@ -501,21 +518,44 @@ final class OrcaUITests: XCTestCase {
         waitForExpectations(timeout: 10)
     }
 
+    private func revealComposeBody(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let form = app.scrollViews["compose.form"]
+        XCTAssertTrue(form.waitForExistence(timeout: 10), file: file, line: line)
+        for _ in 0..<12 {
+            if messageBody(in: app).exists { return }
+            let start = form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.75))
+            let end = form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.25))
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
+        attachScreenshot(named: "53-compose-body-not-revealed")
+        XCTAssertTrue(messageBody(in: app).waitForExistence(timeout: 5), file: file, line: line)
+    }
+
     private func revealDraftRow(_ row: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let list = app.descendants(matching: .any)["drafts.list"]
         XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
-        if row.waitForExistence(timeout: 2), row.isHittable { return }
-        // Accessibility-sized rows and retained local drafts can push a newly
-        // created server row outside List's materialized accessibility range.
-        for _ in 0..<16 {
-            if row.exists && row.isHittable { return }
-            list.swipeUp()
+        func isFullyVisible() -> Bool {
+            guard row.exists, row.isHittable else { return false }
+            let top = max(list.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 8
+            let bottom = min(list.frame.maxY, app.tabBars.firstMatch.frame.minY) - 8
+            return row.frame.minY >= top && row.frame.maxY <= bottom
         }
-        for _ in 0..<16 {
-            if row.exists && row.isHittable { return }
-            list.swipeDown()
+        _ = row.waitForExistence(timeout: 2)
+        for attempt in 0..<32 {
+            if isFullyVisible() { return }
+            var up = attempt < 16
+            if row.exists && !row.frame.isEmpty {
+                let bottom = min(list.frame.maxY, app.tabBars.firstMatch.frame.minY) - 8
+                up = row.frame.maxY > bottom
+            }
+            // Smaller list drags avoid skipping a tall accessibility-sized row.
+            let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: up ? 0.65 : 0.35))
+            let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: up ? 0.35 : 0.65))
+            start.press(forDuration: 0.05, thenDragTo: end)
         }
-        XCTAssertTrue(row.exists && row.isHittable, "Expected draft row after scrolling the actual list", file: file, line: line)
+        attachScreenshot(named: "54-draft-row-not-fully-visible")
+        print("DRAFT_ROW_LOOKUP expected=\(row.debugDescription)")
+        XCTAssertTrue(isFullyVisible(), "Expected full draft row above the tab bar before tapping", file: file, line: line)
     }
 
     private func setFixtureSending(_ enabled: Bool, accountsUnavailable: Bool = false) throws {
