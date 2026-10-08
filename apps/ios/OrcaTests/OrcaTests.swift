@@ -1139,3 +1139,76 @@ final class InboxLoadingTests: XCTestCase {
         }
     }
 }
+
+
+final class InboxRecoveryTests: XCTestCase {
+    @MainActor func testInvalidMailboxCursorRestartsOnceAndReplacesStalePage() async throws {
+        for view in ["all", "destination:projects", "normal"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let first = try InboxLoadingTestSupport.page("stale", cursor: "expired-cursor")
+            let fresh = try InboxLoadingTestSupport.page("fresh", cursor: "fresh-cursor")
+            var queries = [[String: String]]()
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+                let query = InboxLoadingTestSupport.query(request); queries.append(query)
+                if queries.count == 1 { return (200, first) }
+                if query["cursor"] == "expired-cursor" {
+                    return (400, Data(#"{"error":{"code":"invalid_cursor","message":"Mailbox changed"}}"#.utf8))
+                }
+                return (200, fresh)
+            }
+            let model = InboxViewModel(); model.view = view; model.search = "same search"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(queries.map { $0["cursor"] }, [nil, "expired-cursor", nil], view)
+            XCTAssertEqual(queries.map { $0["query"] }, Array(repeating: "same search", count: 3), view)
+            XCTAssertEqual(model.messages.map(\.id), ["fresh"], "Recovery replaces rather than appends a new snapshot")
+            XCTAssertEqual(model.nextCursor, "fresh-cursor"); XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+        }
+    }
+
+    @MainActor func testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let first = try InboxLoadingTestSupport.page("saved", cursor: "expired-cursor")
+        var requests = 0
+        StubURLProtocol.handler = { _ in
+            requests += 1
+            if requests == 1 { return (200, first) }
+            return (400, Data(#"{"error":{"code":"invalid_cursor","message":"Mailbox changed"}}"#.utf8))
+        }
+        let model = InboxViewModel(); model.view = "all"
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(requests, 3, "A failed restart must not recurse indefinitely")
+        XCTAssertEqual(model.messages.map(\.id), ["saved"]); XCTAssertNil(model.nextCursor)
+        XCTAssertNotNil(model.error); XCTAssertFalse(model.isLoading)
+    }
+
+    @MainActor func testUnrelatedPaginationFailuresKeepCursorForManualRetry() async throws {
+        for (status, code) in [(400, "invalid_request"), (401, "unauthorized"), (503, "unavailable")] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let first = try InboxLoadingTestSupport.page("saved", cursor: "valid-cursor")
+            var requests = 0
+            StubURLProtocol.handler = { _ in
+                requests += 1
+                return requests == 1 ? (200, first) : (status, Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"Try again\"}}".utf8))
+            }
+            let model = InboxViewModel(); model.view = "all"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(requests, 2); XCTAssertEqual(model.nextCursor, "valid-cursor")
+            XCTAssertEqual(model.messages.map(\.id), ["saved"]); XCTAssertEqual(model.error, "Try again")
+        }
+    }
+
+    @MainActor func testPaginationWithoutCursorDoesNotDuplicateFirstPage() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let first = try InboxLoadingTestSupport.page("only-page")
+        var requests = 0
+        StubURLProtocol.handler = { _ in requests += 1; return (200, first) }
+        let model = InboxViewModel(); model.view = "all"
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(requests, 1); XCTAssertEqual(model.messages.map(\.id), ["only-page"])
+    }
+}

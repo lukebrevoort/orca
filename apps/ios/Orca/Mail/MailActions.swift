@@ -66,12 +66,14 @@ struct MailActionsSheet: View {
     @State private var name = ""
     @State private var preview: MailActionJSON?
     @State private var retryKey = UUID().uuidString
-    @State private var busy = true
+    @State private var busy = false
+    @State private var loading = true
+    @State private var presented = true
     @State private var error: String?
     @State private var scope = ""
     @State private var resolvedMessage: InboxMessage?
     private var message: InboxMessage { resolvedMessage ?? target.message }
-    private var current: Bool { scope == state.ownerScope && state.phase == .ready && !Task.isCancelled }
+    private var current: Bool { presented && scope == state.ownerScope && state.phase == .ready && !Task.isCancelled }
 
     var body: some View {
         NavigationStack {
@@ -133,7 +135,7 @@ struct MailActionsSheet: View {
                             .accessibilityIdentifier("mail-action.preview")
                     }
                 }
-                if busy { ProgressView("Working…") }
+                if busy || loading { ProgressView("Working…") }
                 if let error {
                     Section {
                         Text(error).foregroundStyle(.red)
@@ -141,19 +143,20 @@ struct MailActionsSheet: View {
                     }
                 }
             }
-            .disabled(busy)
+            .disabled(busy || loading)
             .navigationTitle(target.mode == .move ? "Move mail" : "Use sender in View")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(busy) } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { presented = false; dismiss() }.disabled(busy) } }
             .interactiveDismissDisabled(busy)
-            .task { await load() }
-            .onChange(of: state.ownerScope) { dismiss() }
+            .task { presented = true; await load() }
+            .onDisappear { presented = false }
+            .onChange(of: state.ownerScope) { presented = false; dismiss() }
         }
     }
 
     private func load() async {
-        scope = state.ownerScope; busy = true; error = nil
-        defer { busy = false }
+        scope = state.ownerScope; loading = true; error = nil
+        defer { loading = false }
         guard let client = state.client, !state.demoMode else { error = "Connect an account to organize mail."; return }
         do {
             if target.resolveMessage {
@@ -164,6 +167,7 @@ struct MailActionsSheet: View {
             }
             if target.mode == .move {
                 let catalog: MailActionJSON = try await client.request("v1/destinations")
+                guard current else { return }
                 let routing: MailActionJSON = try await client.request("v1/destinations/routing", query: [.init(name: "accountId", value: message.accountId), .init(name: "threadId", value: message.threadId)])
                 guard current else { return }
                 self.catalog = catalog; self.routing = routing
@@ -225,3 +229,4 @@ struct MailActionsSheet: View {
         } catch { if current { self.error = error.localizedDescription } }
     }
 }
+

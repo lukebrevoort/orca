@@ -17,6 +17,66 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test20EmptyInboxCanRefreshIntoMail() throws {
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/empty-once", method: "POST", body: [:])
+        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:]) }
+        let app = try launchApp()
+        XCTAssertTrue(app.staticTexts["Nothing here"].waitForExistence(timeout: 20))
+        attachScreenshot(named: "40-empty-inbox-before-refresh")
+        let list = app.collectionViews["inbox.list"]
+        XCTAssertTrue(list.exists, "An empty mailbox must retain its refreshable scrolling surface")
+        // Do not hold this response: XCTest waits for the empty-state spinner
+        // to become idle after the gesture. The initial empty assertion and
+        // subsequent fixture rows prove that the pull made a fresh request.
+        let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+        let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        assertInboxLoaded(in: app)
+        attachScreenshot(named: "41-empty-inbox-refreshed")
+    }
+
+    func test21MoveCatalogLoadCanBeCancelledAndReopened() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/hold-catalog", method: "POST", body: [:])
+        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:]) }
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        row.press(forDuration: 1.4)
+        app.buttons["Move mail…"].tap()
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/wait")
+        let cancel = app.navigationBars["Move mail"].buttons["Cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        attachScreenshot(named: "42-move-catalog-loading-cancel")
+        XCTAssertTrue(cancel.isEnabled, "Read-only loading must not trap the user in a sheet")
+        cancel.tap()
+        XCTAssertTrue(app.navigationBars["Move mail"].waitForNonExistence(timeout: 5))
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:])
+        row.press(forDuration: 1.4); app.buttons["Move mail…"].tap()
+        let move = app.buttons["mail-action.move"]
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: move)
+        waitForExpectations(timeout: 10)
+        app.navigationBars["Move mail"].buttons["Cancel"].tap()
+        assertInboxLoaded(in: app)
+        attachScreenshot(named: "43-move-catalog-cancelled-and-reopened")
+    }
+
+    func test22SenderViewCatalogLoadCanBeSwipedAway() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/hold-views", method: "POST", body: [:])
+        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:]) }
+        app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch.press(forDuration: 1.4)
+        app.buttons["Use sender in View…"].tap()
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/wait")
+        let bar = app.navigationBars["Use sender in View"]
+        XCTAssertTrue(bar.waitForExistence(timeout: 5))
+        attachScreenshot(named: "44-view-catalog-loading-swipe")
+        let start = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        XCTAssertTrue(bar.waitForNonExistence(timeout: 5), "Read-only loading must allow sheet dismissal")
+        _ = try composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:])
+        assertInboxLoaded(in: app)
+    }
+
     func test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade() throws {
         try setFixtureSending(false)
         addTeardownBlock { try self.restoreFixtureSending() }
@@ -225,7 +285,7 @@ final class OrcaUITests: XCTestCase {
         var output: [String: Any] = [:]
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             XCTAssertNil(error)
-            XCTAssertTrue((200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0))
+            XCTAssertTrue((200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0), "Fixture \(path) returned HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             if let data, !data.isEmpty {
                 let json = try? JSONSerialization.jsonObject(with: data)
                 output = json as? [String: Any] ?? ["items": json as? [[String: Any]] ?? []]
@@ -863,3 +923,4 @@ final class OrcaUITests: XCTestCase {
 private enum TestConfigurationError: Error {
     case missingFixtureEnvironment
 }
+
