@@ -6,7 +6,7 @@ import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -2005,7 +2005,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
         : getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
-      const drafts = db.select().from(messageDrafts)
+      // Lists still include sent identities for delivery reconciliation. Opt-in
+      // clients can skip their large content, while detail reads and legacy
+      // clients retain the complete draft contract. Project in SQLite so sent
+      // bodies and attachment JSON never cross into Drizzle or the serializer.
+      const omitSentContent = c.req.query("omitSentContent") === "true";
+      const columns = getTableColumns(messageDrafts);
+      const drafts = db.select(omitSentContent ? {
+        ...columns,
+        bodyText: sql<string>`case when ${messageDrafts.deliveryStatus} = 'sent' then '' else ${messageDrafts.bodyText} end`,
+        bodyHtml: sql<string | null>`case when ${messageDrafts.deliveryStatus} = 'sent' then null else ${messageDrafts.bodyHtml} end`,
+        attachments: sql<string>`case when ${messageDrafts.deliveryStatus} = 'sent' then '[]' else ${messageDrafts.attachments} end`,
+      } : columns).from(messageDrafts)
         .where(eq(messageDrafts.accountId, account.id))
         .orderBy(desc(messageDrafts.updatedAt), asc(messageDrafts.id)).all();
       for (const draft of drafts) {

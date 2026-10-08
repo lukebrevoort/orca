@@ -65,7 +65,9 @@ extension APIClient {
     }
     func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)]) }
     func markRead(_ id: String, accountId: String, isRead: Bool = true) async throws { struct Ack: Decodable { var ok: Bool }; let _: Ack = try await request("v1/threads/\(id)/read", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: ["isRead": isRead]) }
-    func drafts(accountId: String) async throws -> [MessageDraft] { try await request("v1/drafts", query: [.init(name: "accountId", value: accountId)]) }
+    // Sent rows supply delivery reconciliation metadata only; use draft(_:accountId:)
+    // when full content is needed. Unresolved rows retain their complete writing.
+    func drafts(accountId: String) async throws -> [MessageDraft] { try await request("v1/drafts", query: [.init(name: "accountId", value: accountId), .init(name: "omitSentContent", value: "true")]) }
     func draft(_ id: String, accountId: String) async throws -> MessageDraft { try await request("v1/drafts/\(id)", query: [.init(name: "accountId", value: accountId)]) }
     func createDraft(accountId: String, content: DraftContent) async throws -> MessageDraft { try await request("v1/drafts", method: "POST", query: [.init(name: "accountId", value: accountId)], body: content) }
     func updateDraft(_ id: String, accountId: String, revision: Int, content: DraftContent) async throws -> MessageDraft { struct Update: Encodable { var revision: Int; var to: [Recipient]; var cc: [Recipient]; var bcc: [Recipient]; var subject: String; var body: DraftBody; var context: DraftContext?; var attachments: [OutboundAttachment] }; return try await request("v1/drafts/\(id)", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: Update(revision: revision, to: content.to, cc: content.cc, bcc: content.bcc, subject: content.subject, body: content.body, context: content.context, attachments: content.attachments)) }
