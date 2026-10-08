@@ -282,7 +282,10 @@ final class OrcaUITests: XCTestCase {
         let marker = try createComposeFixtureDraft(subject: "Reload marker " + UUID().uuidString)
         let markerID = try XCTUnwrap(marker["id"] as? String)
         addTeardownBlock { _ = try self.composeFixtureRequest("v1/drafts/\(markerID)?accountId=ios-fixture-account", method: "DELETE") }
-        app.swipeDown()
+        // Re-enter the tab to run the production onAppear load reliably; a
+        // short swipe may merely scroll and never cross refresh's threshold.
+        app.tabBars.buttons["Inbox"].tap()
+        app.tabBars.buttons["Drafts"].tap()
         // Seeing a server row created after the sent transition proves the
         // fresh server list has been applied, avoiding transient-empty passes.
         let markerRow = app.descendants(matching: .any)["draft.\(markerID)"]
