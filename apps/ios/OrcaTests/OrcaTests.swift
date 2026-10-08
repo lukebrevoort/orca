@@ -140,7 +140,7 @@ final class OrcaTests: XCTestCase {
     func testPKCEProducesURLSafeChallenge() { let verifier = PKCE.verifier(), challenge = PKCE.challenge(verifier); XCTAssertGreaterThanOrEqual(verifier.count, 43); XCTAssertFalse(challenge.contains("=")); XCTAssertFalse(challenge.contains("+")); XCTAssertFalse(challenge.contains("/")) }
     func testLocalDraftSurvivesStoreRecreationAndKeepsSendKey() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString); var draft = LocalDraft(ownerScope: "https://one.example", accountId: "account-a"); draft.content.subject = "Safe across termination"
-        let first = DraftStore(directory: directory); try await first.save(draft); let sending = try await first.prepareSend(draft.id); let second = DraftStore(directory: directory); let restored = await second.all(ownerScope: "https://one.example", accountId: "account-a")
+        let first = DraftStore(directory: directory); draft = try await first.save(draft); let sending = try await first.prepareSend(draft.id); let second = DraftStore(directory: directory); let restored = await second.all(ownerScope: "https://one.example", accountId: "account-a")
         XCTAssertEqual(restored.first?.content.subject, "Safe across termination"); XCTAssertEqual(restored.first?.idempotencyKey, sending.idempotencyKey); XCTAssertEqual(restored.first?.deliveryState, "sending")
     }
     func testDraftsAreAccountIsolated() async throws {
@@ -156,7 +156,7 @@ final class OrcaTests: XCTestCase {
         let account = MailAccount(id: "gmail", provider: "gmail", email: "me@example.com", displayName: "Me", avatarUrl: nil, capabilities: MailCapabilities(read: true, send: false, draft: false))
         let normal = ComposeView.sendPermissionGate(account: account, deliveryState: "local")
         XCTAssertTrue(normal.blocksNormalSend); XCTAssertEqual(normal.guidance, "This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then return here and refresh sending access. Your draft remains editable.")
-        for state in ["sending", "ambiguous", "rejected"] { XCTAssertFalse(ComposeView.sendPermissionGate(account: account, deliveryState: state).blocksNormalSend) }
+        for state in ["sending", "ambiguous", "rejected", "sent"] { XCTAssertFalse(ComposeView.sendPermissionGate(account: account, deliveryState: state).blocksNormalSend) }
         var unsupported = account; unsupported.provider = "outlook"
         XCTAssertEqual(ComposeView.sendPermissionGate(account: unsupported, deliveryState: "local").guidance, "Sending is not supported for this provider yet. Your draft remains editable in Orca.")
     }
@@ -250,7 +250,8 @@ final class OrcaTests: XCTestCase {
             var local = LocalDraft(ownerScope: "origin|user", accountId: "account")
             local.serverID = "contested-server-draft"; local.serverRevision = 1
             local.content.attachments = [.init(id: "x", filename: "x.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")]
-            try await store.save(local)
+            local = try await store.save(local)
+            let remote = MessageDraft(id: "contested-server-draft", accountId: "account", to: [], cc: [], bcc: [], subject: "Remote copy", body: .init(text: "Remote words", html: nil), context: nil, attachments: [], revision: 2, deliveryStatus: "draft", providerSyncStatus: "synced", providerSyncError: nil, providerDraftId: nil, providerMessageId: nil, providerThreadId: nil, createdAt: "2026-10-01T12:00:00Z", updatedAt: "2026-10-01T12:00:00Z")
             var reservation = ComposeOperationReservation()
             let started = expectation(description: "First mutation reserved before delayed work")
             var resume: CheckedContinuation<Void, Never>?
@@ -259,9 +260,10 @@ final class OrcaTests: XCTestCase {
                 defer { reservation.release(first) }
                 var snapshot = local
                 await withCheckedContinuation { continuation in resume = continuation; started.fulfill() }
-                if first == .attachments { snapshot.content.attachments.removeAll() }
-                else { snapshot.serverID = nil; snapshot.serverRevision = nil }
-                try await store.save(snapshot); local = snapshot
+                if first == .attachments {
+                    snapshot.content.attachments.removeAll()
+                    local = try await store.save(snapshot)
+                } else { local = try await store.makeEditableCopy(snapshot, verifiedRemote: remote) }
             }
             await fulfillment(of: [started], timeout: 3)
             let second: ComposeOperationReservation.Operation = first == .attachments ? .reconciliation : .attachments
@@ -276,9 +278,11 @@ final class OrcaTests: XCTestCase {
             // and detachment survive regardless of which action was first.
             XCTAssertTrue(reservation.reserve(second))
             var latest = local
-            if second == .attachments { latest.content.attachments.removeAll() }
-            else { latest.serverID = nil; latest.serverRevision = nil }
-            try await store.save(latest); local = latest; reservation.release(second)
+            if second == .attachments {
+                latest.content.attachments.removeAll()
+                local = try await store.save(latest)
+            } else { local = try await store.makeEditableCopy(latest, verifiedRemote: remote) }
+            reservation.release(second)
             let saved = await store.all(ownerScope: "origin|user", accountId: "account")
             XCTAssertTrue(try XCTUnwrap(saved.first).content.attachments.isEmpty)
             XCTAssertNil(saved.first?.serverID); XCTAssertNil(saved.first?.serverRevision)
@@ -318,15 +322,16 @@ final class OrcaTests: XCTestCase {
         let store = DraftStore(directory: folder)
         var draft = LocalDraft(ownerScope: "origin|user", accountId: "account")
         draft.serverID = "contested-server-draft"; draft.serverRevision = 1
-        draft.content.body.text = "Previously saved words"; try await store.save(draft)
+        draft.content.body.text = "Previously saved words"; draft = try await store.save(draft)
         draft.content.body.text = "Latest visible words typed before the debounce"
         draft.content.subject = "Latest subject"
         draft.recipientText = .init(to: "maya@example.com", cc: "unfinished", bcc: "")
         let current = draft
+        var checkpointed = draft
         let remoteStarted = expectation(description: "Remote check starts after durable checkpoint")
         var finishRemote: CheckedContinuation<MessageDraft, Error>?
         let pending = Task { @MainActor in
-            try await ComposeReconciliationCheckpoint.loadRemote(afterCheckpointing: current, store: store) {
+            try await ComposeReconciliationCheckpoint.loadRemote(afterCheckpointing: current, store: store, didCheckpoint: { checkpointed = $0 }) {
                 try await withCheckedThrowingContinuation { continuation in finishRemote = continuation; remoteStarted.fulfill() }
             }
         }
@@ -346,6 +351,14 @@ final class OrcaTests: XCTestCase {
         XCTAssertEqual(afterFailure.first?.content.body.text, current.content.body.text)
         XCTAssertEqual(afterFailure.first?.serverID, "contested-server-draft")
         XCTAssertNil(afterFailure.first?.idempotencyKey)
+        XCTAssertNotEqual(checkpointed.storageRevision, current.storageRevision)
+        XCTAssertEqual(checkpointed.storageRevision, afterFailure.first?.storageRevision)
+        checkpointed.content.body.text = "More writing after the remote check failed"
+        let continued = try await store.save(checkpointed)
+        XCTAssertEqual(continued.content.body.text, checkpointed.content.body.text)
+        XCTAssertEqual(continued.serverID, "contested-server-draft")
+        let continuedAfterRestart = await DraftStore(directory: folder).all(ownerScope: "origin|user", accountId: "account")
+        XCTAssertEqual(continuedAfterRestart, [continued])
     }
     @MainActor func testFailedKeepBothCheckpointNeverStartsRemoteVerification() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
@@ -1137,5 +1150,1136 @@ final class InboxLoadingTests: XCTestCase {
             let json = try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
             print("INBOX_LOADING_BENCHMARK \(String(decoding: json, as: UTF8.self))")
         }
+    }
+}
+
+
+/// Regression checks call the production ComposeView serialization path. All
+/// messages are synthetic; these tests never create or deliver real email.
+@MainActor
+final class DraftLifecycleTests: XCTestCase {
+    func testVerifiedCopyOnlyAllowsMatchingTerminalDeliveryStates() {
+        for local in ["local", "draft", "sending", "ambiguous", "rejected", "sent"] {
+            for remote in ["draft", "sending", "ambiguous", "rejected", "sent"] {
+                XCTAssertEqual(ComposeView.canEditVerifiedCopy(remoteDeliveryStatus: remote, localDeliveryState: local),
+                               ["rejected", "sent"].contains(local) && remote == local,
+                               "local=\(local), remote=\(remote)")
+            }
+        }
+        var sent = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        sent.deliveryState = "sent"
+        let composer = ComposeView(localDraft: sent)
+        XCTAssertTrue(composer.copyableDelivery); XCTAssertTrue(composer.deliveryRecoveryAction)
+        XCTAssertEqual(composer.primaryActionTitle, "Edit a new copy")
+    }
+
+    func testSharedOperationCompletionReloadsOnlyTheBlockedObserver() {
+        let draft = UUID(), owner = UUID(), other = UUID()
+        let active = [draft: owner]
+        // Invalid recipients or a failed checkpoint may leave the owner with
+        // unsaved visible words. Releasing its own lease must not replace them.
+        XCTAssertFalse(ComposeView.shouldReloadAfterSharedOperation(draftID: draft, previous: active, current: [:], lastOwnedOperation: owner))
+        XCTAssertTrue(ComposeView.shouldReloadAfterSharedOperation(draftID: draft, previous: active, current: [:], lastOwnedOperation: nil))
+        XCTAssertTrue(ComposeView.shouldReloadAfterSharedOperation(draftID: draft, previous: active, current: [:], lastOwnedOperation: other))
+        XCTAssertFalse(ComposeView.shouldReloadAfterSharedOperation(draftID: draft, previous: active, current: [draft: other], lastOwnedOperation: nil))
+        XCTAssertFalse(ComposeView.shouldReloadAfterSharedOperation(draftID: UUID(), previous: active, current: [:], lastOwnedOperation: nil))
+    }
+
+    func testDraftLifecycleStaleSaveCannotEraseAnEstablishedServerIdentity() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let reopened = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: DraftContent(subject: "One operation")))
+        var created = reopened
+        created.serverID = "fixture-server-draft"; created.serverRevision = 1
+        created = try await store.save(created)
+        do {
+            try await store.save(reopened)
+            XCTFail("A stale composer must not erase the first create's server identity")
+        } catch { /* A stale local snapshot must fail closed. */ }
+        let persisted = await store.all(ownerScope: reopened.ownerScope, accountId: reopened.accountId)
+        XCTAssertEqual(persisted.first?.serverID, created.serverID)
+        XCTAssertEqual(persisted.first?.serverRevision, created.serverRevision)
+    }
+
+    func testDraftLifecycleBodyEditDiscardsStaleHTML() {
+        let original = DraftBody(text: "Original", html: "<p><strong>Original</strong></p>")
+        let edited = ComposeView.bodyForSaving(text: "Changed", original: original)
+        XCTAssertEqual(edited.text, "Changed")
+        XCTAssertNil(edited.html, "Sending edited plain text must not send the old rich body instead")
+        XCTAssertNil(ComposeView.bodyForSaving(text: "New message", original: nil).html)
+    }
+
+    func testDraftLifecycleOpeningLocalRichDraftPreservesHTML() {
+        let body = DraftBody(text: "Keep this link", html: "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>")
+        let draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",
+                               content: DraftContent(subject: "Rich draft", body: body))
+        let serialized = ComposeView(localDraft: draft).content()
+        XCTAssertEqual(serialized.body.text, body.text)
+        XCTAssertEqual(serialized.body.html, body.html, "Opening an unchanged draft must not destroy its rich body")
+    }
+
+    func testDraftLifecycleOpeningServerRichDraftPreservesHTML() {
+        let body = DraftBody(text: "Keep formatting", html: "<p>Keep <strong>formatting</strong></p>")
+        let draft = MessageDraft(id: "fixture-server-draft", accountId: "fixture-account", to: [], cc: [], bcc: [],
+                                 subject: "Rich server draft", body: body, context: nil, attachments: [], revision: 1,
+                                 deliveryStatus: "draft", providerSyncStatus: "synced", providerSyncError: nil,
+                                 providerDraftId: nil, providerMessageId: nil, providerThreadId: nil,
+                                 createdAt: "2026-10-07T00:00:00Z", updatedAt: "2026-10-07T00:00:00Z")
+        let serialized = ComposeView(serverDraft: draft).content()
+        XCTAssertEqual(serialized.body.text, body.text)
+        XCTAssertEqual(serialized.body.html, body.html, "The first local autosave must preserve the server rich body")
+    }
+
+    func testDraftLifecycleUnchangedRichBodySurvivesSaveAndReopen() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let body = DraftBody(text: "Keep formatting", html: "<p>Keep <em>formatting</em></p>")
+        var draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: DraftContent(body: body))
+        // This is the content() -> DraftStore.save sequence used by saveLocal().
+        draft.content = ComposeView(localDraft: draft).content()
+        try await DraftStore(directory: directory).save(draft)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reopened.count, 1)
+        XCTAssertEqual(reopened.first?.content.body.html, body.html)
+    }
+}
+
+/// Exercises the actual disk-backed store with independent composer snapshots.
+/// No API requests or live mail are involved.
+final class DraftStoreRevisionTests: XCTestCase {
+    func testConcurrentReservationAcquisitionHasExactlyOneOwnerPerDraft() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account"))
+        let other = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account"))
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        let acquired = await withTaskGroup(of: DraftStore.Reservation?.self, returning: [DraftStore.Reservation].self) { group in
+            for _ in 0..<8 {
+                group.addTask {
+                    do { return try await store.reserve(draft) }
+                    catch { XCTAssertEqual(error as? DraftStore.StoreError, .operationInProgress); return nil }
+                }
+            }
+            var results = [DraftStore.Reservation]()
+            for await result in group { if let result { results.append(result) } }
+            return results
+        }
+        XCTAssertEqual(acquired.count, 1)
+        let owner = try XCTUnwrap(acquired.first)
+        XCTAssertEqual(owner.draftID, draft.id)
+        let otherOwner = try await store.reserve(other)
+        XCTAssertNotEqual(owner.id, otherOwner.id, "Distinct drafts may operate independently")
+        XCTAssertEqual(try Data(contentsOf: file), bytes, "Reservations never modify persistence")
+        await store.release(owner); await store.release(otherOwner)
+        let reserved = await store.isReserved(draft.id)
+        XCTAssertFalse(reserved)
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+    }
+
+    func testReservationAcquisitionRejectsStaleRemovedUnsavedAndWrongScopeSnapshots() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let original = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: .init(subject: "Original")))
+        var edit = original; edit.content.subject = "Changed"
+        edit = try await store.save(edit)
+        edit.content = original.content
+        let latest = try await store.save(edit)
+        // Ordinary identical-save adoption is deliberately more permissive
+        // than acquisition: an operation must capture the exact current revision.
+        await assertReservationFails(original, store: store, expected: .staleDraft)
+        var unversioned = latest; unversioned.storageRevision = nil
+        await assertReservationFails(unversioned, store: store, expected: .staleDraft)
+        var wrongOwner = latest; wrongOwner.ownerScope = "other-owner"
+        await assertReservationFails(wrongOwner, store: store, expected: .identityChanged)
+        var wrongAccount = latest; wrongAccount.accountId = "other-account"
+        await assertReservationFails(wrongAccount, store: store, expected: .identityChanged)
+        await assertReservationFails(LocalDraft(ownerScope: latest.ownerScope, accountId: latest.accountId), store: store, expected: .staleDraft)
+        let reserved = await store.isReserved(latest.id)
+        XCTAssertFalse(reserved, "Failed acquisition must not take ownership")
+        let owner = try await store.reserve(latest)
+        await store.release(owner)
+        try await store.remove(latest.id)
+        await assertReservationFails(latest, store: store, expected: .staleDraft)
+    }
+
+    func testReservationBlocksEveryForeignMutationIncludingIdenticalAutosave() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        initial.serverID = "server-draft"; initial.serverRevision = 2
+        let draft = try await store.save(initial)
+        let other = try await store.save(LocalDraft(ownerScope: draft.ownerScope, accountId: draft.accountId))
+        let owner = try await store.reserve(draft)
+        let otherOwner = try await store.reserve(other)
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        let wrong = DraftStore.Reservation(id: UUID(), draftID: draft.id)
+        let cases: [(DraftStore.Reservation?, DraftStore.StoreError)] = [(nil, .operationInProgress), (wrong, .invalidReservation), (otherOwner, .invalidReservation)]
+        for (token, expected) in cases {
+            await assertMutationFails(expected) { _ = try await store.save(draft, reservation: token) }
+            var changed = draft; changed.content.body.text = "Foreign writing"
+            await assertMutationFails(expected) { _ = try await store.save(changed, reservation: token) }
+            await assertMutationFails(expected) { try await store.remove(draft.id, reservation: token) }
+            await assertMutationFails(expected) { _ = try await store.transition(draft.id, .confirmedPreReservation(serverRevision: 3), reservation: token) }
+            await assertMutationFails(expected) { _ = try await store.prepareSend(draft.id, reservation: token) }
+            await assertMutationFails(expected) { _ = try await store.markAmbiguous(draft.id, reservation: token) }
+            await assertMutationFails(expected) { _ = try await store.markRejected(draft.id, reservation: token) }
+            let remote = remoteDraft(for: draft)
+            await assertMutationFails(expected) { _ = try await store.makeEditableCopy(draft, verifiedRemote: remote, reservation: token) }
+        }
+        let current = await store.current(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(current, draft)
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        await store.release(owner); await store.release(otherOwner)
+    }
+
+    func testWrongReleaseCannotUnlockDraftAndExpiredTokenCannotMutateAfterReacquisition() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account"))
+        let first = try await store.reserve(draft)
+        await store.release(.init(id: UUID(), draftID: draft.id))
+        await store.release(.init(id: first.id, draftID: UUID()))
+        let stillReserved = await store.isReserved(draft.id)
+        XCTAssertTrue(stillReserved)
+        await assertReservationFails(draft, store: store, expected: .operationInProgress)
+        await store.release(first)
+        let released = await store.isReserved(draft.id)
+        XCTAssertFalse(released)
+        await assertMutationFails(.invalidReservation) { _ = try await store.save(draft, reservation: first) }
+        await assertMutationFails(.invalidReservation) { try await store.remove(draft.id, reservation: first) }
+        await assertMutationFails(.invalidReservation) { _ = try await store.prepareSend(draft.id, reservation: first) }
+        await assertMutationFails(.invalidReservation) { _ = try await store.markAmbiguous(draft.id, reservation: first) }
+        await assertMutationFails(.invalidReservation) { _ = try await store.markRejected(draft.id, reservation: first) }
+        await assertMutationFails(.invalidReservation) { _ = try await store.transition(draft.id, .uncertain, reservation: first) }
+        let remote = remoteDraft(for: draft)
+        await assertMutationFails(.invalidReservation) { _ = try await store.makeEditableCopy(draft, verifiedRemote: remote, reservation: first) }
+        let second = try await store.reserve(draft)
+        XCTAssertNotEqual(second.id, first.id)
+        await store.release(first)
+        let reacquired = await store.isReserved(draft.id)
+        XCTAssertTrue(reacquired, "A late release must not unlock a new operation")
+        await assertMutationFails(.invalidReservation) { _ = try await store.prepareSend(draft.id, reservation: first) }
+        let unchanged = try await store.save(draft, reservation: second)
+        XCTAssertEqual(unchanged, draft)
+        await store.release(second)
+        let ordinarySave = try await store.save(draft)
+        XCTAssertEqual(ordinarySave, draft)
+    }
+
+    func testReservationOwnerCanPersistServerIdentityAndEveryDeliveryTransition() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: .init(subject: "Local writing")))
+        let owner = try await store.reserve(draft)
+        draft.serverID = "created-on-server"; draft.serverRevision = 1
+        draft = try await store.save(draft, reservation: owner)
+        XCTAssertEqual(draft.serverID, "created-on-server")
+        draft = try await store.prepareSend(draft.id, reservation: owner)
+        let key = try XCTUnwrap(draft.idempotencyKey)
+        XCTAssertEqual(draft.deliveryState, "sending")
+        let ambiguous = try await store.markAmbiguous(draft.id, reservation: owner)
+        draft = try XCTUnwrap(ambiguous)
+        XCTAssertEqual(draft.deliveryState, "ambiguous"); XCTAssertEqual(draft.idempotencyKey, key)
+        let rejected = try await store.markRejected(draft.id, reservation: owner)
+        draft = try XCTUnwrap(rejected)
+        XCTAssertEqual(draft.deliveryState, "rejected"); XCTAssertEqual(draft.idempotencyKey, key)
+        let recovered = try await store.transition(draft.id, .confirmedPreReservation(serverRevision: 2), reservation: owner)
+        draft = try XCTUnwrap(recovered)
+        XCTAssertEqual(draft.deliveryState, "local"); XCTAssertNil(draft.idempotencyKey); XCTAssertEqual(draft.serverRevision, 2)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reopened, [draft])
+        try await store.remove(draft.id, reservation: owner)
+        let removed = await store.all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(removed.isEmpty)
+        // Row retirement does not silently release ownership; a pending callback
+        // with no token still cannot recreate an unsaved value under the old UUID.
+        var recreation = LocalDraft(ownerScope: draft.ownerScope, accountId: draft.accountId); recreation.id = draft.id
+        await assertMutationFails(.operationInProgress) { _ = try await store.save(recreation) }
+        await store.release(owner)
+        await assertMutationFails(.invalidReservation) { _ = try await store.save(recreation, reservation: owner) }
+    }
+
+    func testReservationOwnerCanMakeVerifiedEditableCopyWithoutTransferringLease() async throws {
+        for rejected in [false, true] {
+            let directory = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: .init(subject: "Keep my words"))
+            initial.serverID = "server-draft"; initial.serverRevision = 2
+            var draft = try await store.save(initial)
+            let owner = try await store.reserve(draft)
+            if rejected {
+                _ = try await store.prepareSend(draft.id, reservation: owner)
+                let terminal = try await store.markRejected(draft.id, reservation: owner)
+                draft = try XCTUnwrap(terminal)
+            }
+            let copied = try await store.makeEditableCopy(draft, verifiedRemote: remoteDraft(for: draft, status: rejected ? "rejected" : "draft"), reservation: owner)
+            XCTAssertNotEqual(copied.id, draft.id); XCTAssertEqual(copied.content, draft.content)
+            XCTAssertNil(copied.serverID); XCTAssertNil(copied.idempotencyKey)
+            let originalReserved = await store.isReserved(draft.id), copyReserved = await store.isReserved(copied.id)
+            XCTAssertTrue(originalReserved); XCTAssertFalse(copyReserved)
+            await assertMutationFails(.invalidReservation) { _ = try await store.save(copied, reservation: owner) }
+            let copyOwner = try await store.reserve(copied)
+            await store.release(owner)
+            let stillReserved = await store.isReserved(copied.id)
+            XCTAssertTrue(stillReserved)
+            var changed = copied; changed.content.body.text = "Continued writing"
+            let saved = try await store.save(changed, reservation: copyOwner)
+            XCTAssertEqual(saved.content.body.text, "Continued writing")
+            await store.release(copyOwner)
+            await assertSaveFails(draft, store: store, expected: .staleDraft)
+        }
+    }
+
+    func testReservationsAreEphemeralAndNeverSerialized() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account"))
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        let owner = try await store.reserve(draft)
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        let restored = DraftStore(directory: directory)
+        let restoredReserved = await restored.isReserved(draft.id)
+        XCTAssertFalse(restoredReserved, "Runtime leases must not survive process restart")
+        await assertMutationFails(.invalidReservation) { _ = try await restored.save(draft, reservation: owner) }
+        let newOwner = try await restored.reserve(draft)
+        XCTAssertNotEqual(newOwner, owner)
+        await restored.release(newOwner); await store.release(owner)
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+    }
+
+    func testNoOpSavePreservesRevisionTimestampAndDiskBytes() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: .init(subject: "Same writing"))
+        let current = try await store.save(initial)
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        var flush = current; flush.modifiedAt = current.modifiedAt.addingTimeInterval(60)
+        let unchanged = try await store.save(flush)
+        XCTAssertEqual(unchanged, current)
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        await assertSaveFails(initial, store: store, expected: .staleDraft)
+        var wrongOwner = current; wrongOwner.ownerScope = "other-owner"
+        await assertSaveFails(wrongOwner, store: store, expected: .identityChanged)
+        var wrongAccount = current; wrongAccount.accountId = "other-account"
+        await assertSaveFails(wrongAccount, store: store, expected: .identityChanged)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: current.ownerScope, accountId: current.accountId)
+        XCTAssertEqual(reopened, [current])
+    }
+
+    func testStaleButIdenticalSaveAdoptsCurrentRevisionWithoutAnotherWrite() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let original = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: .init(subject: "Original writing")))
+        var edit = original; edit.content.subject = "Temporary change"
+        edit = try await store.save(edit)
+        edit.content = original.content
+        let latest = try await store.save(edit)
+        XCTAssertNotEqual(latest.storageRevision, original.storageRevision)
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        let adopted = try await store.save(original)
+        XCTAssertEqual(adopted, latest)
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        var different = original; different.recipientText = .init(to: "unfinished", cc: "", bcc: "")
+        await assertSaveFails(different, store: store, expected: .staleDraft)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertEqual(reopened, [latest])
+    }
+
+    func testStaleBodyAndAttachmentSnapshotCannotOverwriteNewerWriting() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        initial.content.body = .init(text: "Old words", html: "<p>Old words</p>")
+        initial.content.attachments = [.init(id: "old", filename: "old.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")]
+        let stale = try await store.save(initial)
+        var edit = stale
+        edit.content.body = .init(text: "Latest words", html: nil)
+        edit.content.subject = "Latest subject"
+        edit.content.attachments.removeAll()
+        edit.recipientText = .init(to: "maya@example.com", cc: "unfinished", bcc: "")
+        let latest = try await store.save(edit)
+        XCTAssertNotEqual(stale.storageRevision, latest.storageRevision)
+        let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+        await assertSaveFails(stale, store: store, expected: .staleDraft)
+        let inMemory = await store.all(ownerScope: initial.ownerScope, accountId: initial.accountId)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: initial.ownerScope, accountId: initial.accountId)
+        XCTAssertEqual(inMemory, [latest]); XCTAssertEqual(reopened, [latest])
+        XCTAssertEqual(try Data(contentsOf: directory.appending(path: "drafts.json")), bytes)
+    }
+
+    func testCurrentRevisionCannotRegressEstablishedIdentityOrDeliveryMetadata() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        initial.serverID = "server-draft"; initial.serverRevision = 4
+        let current = try await store.save(initial)
+        let changes: [(inout LocalDraft) -> Void] = [
+            { $0.serverID = nil }, { $0.serverID = "different-server-draft" },
+            { $0.serverRevision = nil }, { $0.serverRevision = 3 },
+            { $0.ownerScope = "other-owner" }, { $0.accountId = "other-account" },
+            { $0.idempotencyKey = "invented-command" }, { $0.deliveryState = "sending" }
+        ]
+        for change in changes {
+            var proposed = current; change(&proposed)
+            await assertSaveFails(proposed, store: store, expected: .identityChanged)
+        }
+        let unchanged = await store.all(ownerScope: current.ownerScope, accountId: current.accountId)
+        XCTAssertEqual(unchanged, [current])
+        var nextRevision = current; nextRevision.serverRevision = 5
+        let advanced = try await store.save(nextRevision)
+        XCTAssertEqual(advanced.serverRevision, 5)
+        let sending = try await store.prepareSend(current.id)
+        var clearedKey = sending; clearedKey.idempotencyKey = nil
+        await assertSaveFails(clearedKey, store: store, expected: .identityChanged)
+        var editable = sending; editable.deliveryState = "local"
+        await assertSaveFails(editable, store: store, expected: .identityChanged)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: current.ownerScope, accountId: current.accountId)
+        XCTAssertEqual(reopened, [sending])
+    }
+
+    func testDeletedPersistedDraftCannotBeResurrectedEvenAfterStoreRecreation() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account"))
+        try await store.remove(draft.id)
+        await assertSaveFails(draft, store: store, expected: .staleDraft)
+        let reopenedStore = DraftStore(directory: directory)
+        await assertSaveFails(draft, store: reopenedStore, expected: .staleDraft)
+        let reopened = await reopenedStore.all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(reopened.isEmpty)
+    }
+
+    func testLegacyRowsReceiveDurableRevisionsBeforeTheyCanBeOpened() async throws {
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var legacy = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        legacy.serverID = "server-draft"; legacy.serverRevision = 2
+        legacy.content.body.text = "Legacy writing"
+        legacy.recipientText = .init(to: "maya@example.com", cc: "unfinished", bcc: "")
+        let file = directory.appending(path: "drafts.json")
+        let original = try JSONEncoder().encode([legacy])
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: original) as? [[String: Any]])
+        XCTAssertNil(json.first?["storageRevision"], "This fixture must predate storage revisions")
+        try original.write(to: file)
+        let store = DraftStore(directory: directory)
+        let rows = await store.all(ownerScope: legacy.ownerScope, accountId: legacy.accountId)
+        let migrated = try XCTUnwrap(rows.first)
+        XCTAssertNotNil(migrated.storageRevision)
+        var expected = legacy; expected.storageRevision = migrated.storageRevision
+        XCTAssertEqual(migrated, expected, "Migration changes only storage metadata")
+        let onDisk = try JSONDecoder().decode([LocalDraft].self, from: Data(contentsOf: file))
+        let reopened = await DraftStore(directory: directory).all(ownerScope: legacy.ownerScope, accountId: legacy.accountId)
+        XCTAssertEqual(onDisk, [migrated]); XCTAssertEqual(reopened, [migrated])
+        await assertSaveFails(legacy, store: store, expected: .staleDraft)
+        var changed = migrated; changed.content.body.text = "After migration"
+        let saved = try await store.save(changed)
+        XCTAssertNotEqual(saved.storageRevision, migrated.storageRevision)
+    }
+
+    func testFailedLegacyMigrationPreservesFileAndDoesNotExposeUnversionedRows() async throws {
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let legacy = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        let file = directory.appending(path: "drafts.json")
+        let original = try JSONEncoder().encode([legacy]); try original.write(to: file)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: directory.path)
+        let blocked = DraftStore(directory: directory)
+        let rows = await blocked.all(ownerScope: legacy.ownerScope, accountId: legacy.accountId)
+        let recoveryMessage = await blocked.recoveryMessage()
+        XCTAssertTrue(rows.isEmpty); XCTAssertNotNil(recoveryMessage)
+        await assertSaveFails(legacy, store: blocked, expected: .recoveryRequired)
+        XCTAssertEqual(try Data(contentsOf: file), original)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        let recovered = await DraftStore(directory: directory).all(ownerScope: legacy.ownerScope, accountId: legacy.accountId)
+        XCTAssertNotNil(recovered.first?.storageRevision)
+    }
+
+    func testEveryDeliveryTransitionReturnsAFreshDurableRevision() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var draft = try await store.save(LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account"))
+        var revisions = Set([try XCTUnwrap(draft.storageRevision)])
+        for transition in [DraftDeliveryTransition.prepare, .uncertain, .rejected, .confirmedPreReservation(serverRevision: nil)] {
+            let previous = draft
+            let changed = try await store.transition(draft.id, transition)
+            draft = try XCTUnwrap(changed)
+            XCTAssertTrue(revisions.insert(try XCTUnwrap(draft.storageRevision)).inserted)
+            await assertSaveFails(previous, store: store, expected: .staleDraft)
+            let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(reopened, [draft])
+        }
+    }
+
+    func testExplicitEditableCopiesPreserveWritingAndRetireOldIdentity() async throws {
+        for rejected in [false, true] {
+            let directory = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+            initial.serverID = "server-draft"; initial.serverRevision = 2
+            initial.content = .init(to: [.init(name: "Maya", email: "maya@example.com")], subject: "Keep my words", body: .init(text: "Rich writing", html: "<p>Rich writing</p>"), context: .init(kind: "reply", threadId: "thread", messageId: "message", providerMessageId: "provider-message", providerThreadId: "provider-thread", inReplyTo: "<original@example.com>", references: ["<original@example.com>"]), attachments: [.init(id: "attachment", filename: "note.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")])
+            initial.recipientText = .init(to: "maya@example.com", cc: "unfinished", bcc: "")
+            var original = try await store.save(initial)
+            if rejected {
+                _ = try await store.prepareSend(original.id)
+                let terminal = try await store.markRejected(original.id)
+                original = try XCTUnwrap(terminal)
+                XCTAssertNotNil(original.idempotencyKey)
+            }
+            let copied = try await store.makeEditableCopy(original, verifiedRemote: remoteDraft(for: original, status: rejected ? "rejected" : "draft"))
+            XCTAssertNotEqual(copied.id, original.id)
+            XCTAssertNotNil(copied.storageRevision); XCTAssertNotEqual(copied.storageRevision, original.storageRevision)
+            XCTAssertEqual(copied.ownerScope, original.ownerScope); XCTAssertEqual(copied.accountId, original.accountId)
+            XCTAssertEqual(copied.content, original.content); XCTAssertEqual(copied.recipientText, original.recipientText)
+            XCTAssertNil(copied.serverID); XCTAssertNil(copied.serverRevision); XCTAssertNil(copied.idempotencyKey)
+            XCTAssertEqual(copied.deliveryState, "local")
+            let reopened = await DraftStore(directory: directory).all(ownerScope: original.ownerScope, accountId: original.accountId)
+            XCTAssertEqual(reopened, [copied])
+            await assertSaveFails(original, store: store, expected: .staleDraft)
+            var editedCopy = copied; editedCopy.content.body.text = "Continued writing"
+            let updatedCopy = try await store.save(editedCopy)
+            XCTAssertEqual(updatedCopy.id, copied.id); XCTAssertEqual(updatedCopy.content.body.text, "Continued writing")
+        }
+    }
+
+    func testEditableCopyRejectsUnverifiedStatusesIdentityAndStaleSnapshots() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        initial.serverID = "server-draft"; initial.serverRevision = 2
+        let current = try await store.save(initial)
+        var invalidRemotes = ["sending", "ambiguous", "sent", "rejected"].map { remoteDraft(for: current, status: $0) }
+        var wrongID = remoteDraft(for: current); wrongID.id = "other-server-draft"; invalidRemotes.append(wrongID)
+        var wrongAccount = remoteDraft(for: current); wrongAccount.accountId = "other-account"; invalidRemotes.append(wrongAccount)
+        var staleRemote = remoteDraft(for: current); staleRemote.revision = 1; invalidRemotes.append(staleRemote)
+        for remote in invalidRemotes {
+            do { _ = try await store.makeEditableCopy(current, verifiedRemote: remote); XCTFail("Unsafe copy must fail") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .copyNotAllowed) }
+        }
+        var edit = current; edit.content.subject = "A genuinely newer edit"
+        let latest = try await store.save(edit)
+        do { _ = try await store.makeEditableCopy(current, verifiedRemote: remoteDraft(for: current)); XCTFail("Stale copy must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .staleDraft) }
+        let sending = try await store.prepareSend(latest.id)
+        do { _ = try await store.makeEditableCopy(sending, verifiedRemote: remoteDraft(for: sending)); XCTFail("An active delivery command must not be detached") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .copyNotAllowed) }
+        let reopened = await DraftStore(directory: directory).all(ownerScope: sending.ownerScope, accountId: sending.accountId)
+        XCTAssertEqual(reopened, [sending])
+    }
+
+    func testDiskFailuresNeverCommitSaveTransitionCopyOrRemovalInMemory() async throws {
+        let directory = temporaryDirectory(), backup = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory); try? FileManager.default.removeItem(at: backup) }
+        let store = DraftStore(directory: directory)
+        var initial = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        initial.serverID = "server-draft"; initial.serverRevision = 2
+        initial.content.body.text = "Durable original"
+        let current = try await store.save(initial)
+        let original = try Data(contentsOf: directory.appending(path: "drafts.json"))
+        // Replacing the parent directory with a file causes a real, deterministic
+        // filesystem failure without relying on permission bits or disk space.
+        try FileManager.default.moveItem(at: directory, to: backup)
+        try Data("blocked-directory".utf8).write(to: directory)
+        var edited = current; edited.content.body.text = "Uncommitted edit"
+        do { _ = try await store.save(edited); XCTFail("Expected disk failure") } catch {}
+        do { _ = try await store.prepareSend(current.id); XCTFail("Expected disk failure") } catch {}
+        do { _ = try await store.makeEditableCopy(current, verifiedRemote: remoteDraft(for: current)); XCTFail("Expected disk failure") } catch {}
+        do { try await store.remove(current.id); XCTFail("Expected disk failure") } catch {}
+        let inMemory = await store.all(ownerScope: current.ownerScope, accountId: current.accountId)
+        XCTAssertEqual(inMemory, [current], "Failed writes must not advance revisions or retire identity")
+        XCTAssertEqual(try Data(contentsOf: backup.appending(path: "drafts.json")), original)
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.moveItem(at: backup, to: directory)
+        let retried = try await store.save(edited)
+        XCTAssertEqual(retried.content.body.text, "Uncommitted edit")
+        XCTAssertNotEqual(retried.storageRevision, current.storageRevision)
+        let reopened = await DraftStore(directory: directory).all(ownerScope: current.ownerScope, accountId: current.accountId)
+        XCTAssertEqual(reopened, [retried])
+    }
+
+    private func temporaryDirectory() -> URL { FileManager.default.temporaryDirectory.appending(path: UUID().uuidString) }
+    private func remoteDraft(for draft: LocalDraft, status: String = "draft") -> MessageDraft {
+        MessageDraft(id: draft.serverID ?? "missing-server-draft", accountId: draft.accountId, to: draft.content.to, cc: draft.content.cc, bcc: draft.content.bcc, subject: draft.content.subject, body: draft.content.body, context: draft.content.context, attachments: draft.content.attachments, revision: draft.serverRevision ?? 1, deliveryStatus: status, providerSyncStatus: "synced", providerSyncError: nil, providerDraftId: nil, providerMessageId: nil, providerThreadId: nil, createdAt: "2026-10-07T00:00:00Z", updatedAt: "2026-10-07T00:00:00Z")
+    }
+    private func assertSaveFails(_ draft: LocalDraft, store: DraftStore, expected: DraftStore.StoreError, file: StaticString = #filePath, line: UInt = #line) async {
+        do { _ = try await store.save(draft); XCTFail("Expected rejected snapshot", file: file, line: line) }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, expected, file: file, line: line) }
+    }
+    private func assertReservationFails(_ draft: LocalDraft, store: DraftStore, expected: DraftStore.StoreError, file: StaticString = #filePath, line: UInt = #line) async {
+        await assertMutationFails(expected, file: file, line: line) { _ = try await store.reserve(draft) }
+    }
+    private func assertMutationFails(_ expected: DraftStore.StoreError, file: StaticString = #filePath, line: UInt = #line, operation: () async throws -> Void) async {
+        do { try await operation(); XCTFail("Expected rejected operation", file: file, line: line) }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, expected, file: file, line: line) }
+    }
+}
+
+final class DraftStoreSentReconciliationTests: XCTestCase {
+    func testVerifiedSentRemovesUnchangedShadowAfterRestartAndNormalizesRecipientNames() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = DraftStore(directory: directory)
+        var initial = localDraft()
+        initial.content.to = [.init(name: "Local name", email: "  MAYA@EXAMPLE.COM  ")]
+        initial.content.cc = [.init(name: "Local cc", email: " CC@example.com ")]
+        initial.content.bcc = [.init(name: "Local bcc", email: "BCC@example.com")]
+        initial.recipientText = .init(to: "maya@example.com", cc: " cc@EXAMPLE.COM ", bcc: "bcc@example.com")
+        let draft = try await first.save(initial)
+        var remote = remoteDraft(for: draft)
+        remote.to = [.init(name: "Server name", email: "maya@example.com")]
+        remote.cc = [.init(name: nil, email: "cc@example.com")]
+        remote.bcc = [.init(name: "Server bcc", email: "bcc@example.com")]
+        remote.revision += 1
+        let restarted = DraftStore(directory: directory)
+        let rows = try await restarted.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(rows.isEmpty, "A fresh server detail must retire the durable sent shadow")
+        let persisted = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(persisted.isEmpty)
+        do { _ = try await restarted.save(draft); XCTFail("A stale composer cannot restore a sent shadow") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .staleDraft) }
+    }
+
+    func testSentReconciliationPreservesEveryWritingDifferenceAndRawUnfinishedRecipient() async throws {
+        let changes: [(String, (inout LocalDraft) -> Void)] = [
+            ("subject", { $0.content.subject = "Unsent subject" }),
+            ("plain text", { $0.content.body.text = "Unsent words" }),
+            ("rich text", { $0.content.body.html = "<p><strong>Unsent formatting</strong></p>" }),
+            ("context", { $0.content.context?.references.append("<new@example.com>") }),
+            ("attachment bytes", { $0.content.attachments[0].contentBase64 = "eQ==" }),
+            ("attachment metadata", { $0.content.attachments[0].filename = "renamed.txt" }),
+            ("removed attachment", { $0.content.attachments = [] }),
+            ("recipient", { $0.content.to[0].email = "different@example.com" }),
+            ("raw to", { $0.recipientText?.to += ", unfinished" }),
+            ("raw cc", { $0.recipientText?.cc = "unfinished" }),
+            ("raw bcc", { $0.recipientText?.bcc = "unfinished" }),
+            ("trailing separator", { $0.recipientText?.to += "," }),
+            ("empty tokens", { $0.recipientText?.cc = ",," })
+        ]
+        for (label, change) in changes {
+            let directory = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = localDraft()
+            let remote = remoteDraft(for: initial)
+            change(&initial)
+            initial.idempotencyKey = "original-command"; initial.deliveryState = "ambiguous"
+            let draft = try await store.save(initial)
+            let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            let preserved = try XCTUnwrap(rows.first, label)
+            var expected = draft; expected.deliveryState = "sent"; expected.storageRevision = preserved.storageRevision
+            XCTAssertEqual(preserved, expected, "Must preserve \(label), writing, identity, and delivery command")
+            XCTAssertNotEqual(preserved.storageRevision, draft.storageRevision, label)
+            let reopened = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(reopened, [preserved], label)
+            let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+            let repeated = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(repeated, [preserved], label)
+            XCTAssertEqual(try Data(contentsOf: directory.appending(path: "drafts.json")), bytes, "Repeated refresh must not churn revisions")
+        }
+    }
+
+    func testSentReconciliationIgnoresWrongStatusAccountScopeIdentityAndOldRevision() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        var invalid = ["draft", "sending", "ambiguous", "rejected"].map { status -> MessageDraft in
+            var remote = remoteDraft(for: draft); remote.deliveryStatus = status; return remote
+        }
+        var wrongAccount = remoteDraft(for: draft); wrongAccount.accountId = "other-account"; invalid.append(wrongAccount)
+        var wrongID = remoteDraft(for: draft); wrongID.id = "other-server-draft"; invalid.append(wrongID)
+        var oldRevision = remoteDraft(for: draft); oldRevision.revision -= 1; invalid.append(oldRevision)
+        for remote in invalid {
+            let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(rows, [draft])
+        }
+        _ = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: "other-owner", accountId: draft.accountId)
+        _ = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: "other-account")
+        let current = await store.all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(current, [draft]); XCTAssertEqual(try Data(contentsOf: file), bytes)
+    }
+
+    func testSentReconciliationIgnoresLocalRowsWithoutVerifiedServerRevision() async throws {
+        for divergent in [false, true] {
+            let directory = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = DraftStore(directory: directory)
+            var initial = localDraft()
+            let remote = remoteDraft(for: initial)
+            initial.serverRevision = nil
+            if divergent { initial.content.body.text = "Unsent writing" }
+            let draft = try await store.save(initial)
+            let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+            let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+            XCTAssertEqual(rows, [draft], "Unknown local revision must remain untouched")
+            XCTAssertEqual(try Data(contentsOf: file), bytes)
+        }
+    }
+
+    func testSentReconciliationRemembersNewestVerifiedRevisionBeforeIgnoringOlderMatchingResponse() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = localDraft()
+        var newest = remoteDraft(for: initial); newest.revision = 4
+        initial.content.body.text = "Local edits after the last save"
+        initial.idempotencyKey = "original-command"
+        let draft = try await store.save(initial)
+        let first = try await store.reconcileSent(newest, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        let preserved = try XCTUnwrap(first.first)
+        XCTAssertEqual(preserved.serverRevision, 4)
+        XCTAssertEqual(preserved.content, draft.content); XCTAssertEqual(preserved.idempotencyKey, draft.idempotencyKey)
+        XCTAssertEqual(preserved.modifiedAt, draft.modifiedAt)
+        newest.revision = 5
+        let second = try await store.reconcileSent(newest, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        let advanced = try XCTUnwrap(second.first)
+        XCTAssertEqual(advanced.serverRevision, 5); XCTAssertNotEqual(advanced.storageRevision, preserved.storageRevision)
+        XCTAssertEqual(advanced.content, draft.content); XCTAssertEqual(advanced.modifiedAt, draft.modifiedAt)
+        var staleMatching = remoteDraft(for: advanced); staleMatching.revision = 4
+        let restarted = DraftStore(directory: directory)
+        let afterStale = try await restarted.reconcileSent(staleMatching, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(afterStale, [advanced], "Older sent writing must never retire the preserved current revision")
+    }
+
+    func testSentReconciliationOnlyChangesMatchingRowsAndReturnsCurrentScopedList() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        var otherOwner = localDraft(); otherOwner.ownerScope = "other-owner"
+        otherOwner = try await store.save(otherOwner)
+        var otherAccount = localDraft(); otherAccount.accountId = "other-account"
+        otherAccount = try await store.save(otherAccount)
+        var otherServer = localDraft(); otherServer.serverID = "other-server-draft"
+        otherServer = try await store.save(otherServer)
+        let rows = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(rows, [otherServer])
+        let ownerRows = await store.all(ownerScope: otherOwner.ownerScope, accountId: otherOwner.accountId)
+        let accountRows = await store.all(ownerScope: otherAccount.ownerScope, accountId: otherAccount.accountId)
+        XCTAssertEqual(ownerRows, [otherOwner]); XCTAssertEqual(accountRows, [otherAccount])
+    }
+
+    func testSentReconciliationUsesLatestActorWritingRatherThanPreFetchSnapshotOrTimestamps() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let preFetch = try await store.save(localDraft())
+        let fetchedRemote = remoteDraft(for: preFetch)
+        var edit = preFetch
+        edit.content.body.text = "Typed while remote detail was loading"
+        edit.modifiedAt = .distantPast
+        let latest = try await store.save(edit)
+        let rows = try await store.reconcileSent(fetchedRemote, ownerScope: preFetch.ownerScope, accountId: preFetch.accountId)
+        let preserved = try XCTUnwrap(rows.first)
+        XCTAssertEqual(preserved.content, latest.content)
+        XCTAssertEqual(preserved.modifiedAt, latest.modifiedAt)
+        XCTAssertEqual(preserved.id, latest.id); XCTAssertEqual(preserved.deliveryState, "sent")
+        XCTAssertNotEqual(preserved.storageRevision, latest.storageRevision)
+    }
+
+    func testSentReconciliationSkipsActiveReservationUntilRelease() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let reservation = try await store.reserve(draft)
+        let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+        let skipped = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(skipped, [draft])
+        XCTAssertEqual(try Data(contentsOf: directory.appending(path: "drafts.json")), bytes)
+        await store.release(reservation)
+        let removed = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    func testOwnedSentReconciliationPreservesDivergentWritingWhileSkippingOtherLeasesAndEditors() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = localDraft()
+        let remote = remoteDraft(for: initial)
+        initial.content.body.text = "Unsent edits checkpointed before recovery"
+        initial.recipientText?.cc = "unfinished"
+        initial.idempotencyKey = "original-command"; initial.deliveryState = "ambiguous"
+        let draft = try await store.save(initial)
+        let reservedOther = try await store.save(localDraft())
+        let openOther = try await store.save(localDraft())
+        let ownerID = UUID(), observerID = UUID(), otherID = UUID()
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: ownerID)
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: observerID)
+        _ = await store.beginEditing(openOther.id, ownerScope: openOther.ownerScope, accountId: openOther.accountId, editorID: otherID)
+        let owner = try await store.reserve(draft)
+        let otherOwner = try await store.reserve(reservedOther)
+        let withoutEditor = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner)
+        XCTAssertEqual(withoutEditor.first { $0.id == draft.id }, draft, "A lease alone must not bypass live editors")
+        let observerProtected = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: ownerID)
+        XCTAssertEqual(observerProtected.first { $0.id == draft.id }, draft, "Another same-row editor may still hold unsaved visible writing")
+        await store.endEditing(observerID)
+        let rows = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: ownerID)
+        let preserved = try XCTUnwrap(rows.first { $0.id == draft.id })
+        XCTAssertEqual(preserved.deliveryState, "sent")
+        XCTAssertNotEqual(preserved.storageRevision, draft.storageRevision)
+        XCTAssertEqual(preserved.content, draft.content); XCTAssertEqual(preserved.recipientText, draft.recipientText)
+        XCTAssertEqual(preserved.serverID, draft.serverID); XCTAssertEqual(preserved.idempotencyKey, draft.idempotencyKey)
+        XCTAssertEqual(rows.first { $0.id == reservedOther.id }, reservedOther)
+        XCTAssertEqual(rows.first { $0.id == openOther.id }, openOther)
+        let persisted = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(persisted, rows)
+        await store.release(owner); await store.release(otherOwner)
+        await store.endEditing(ownerID); await store.endEditing(observerID); await store.endEditing(otherID)
+    }
+
+    func testOwnedSentReconciliationRemovesExactShadowAndRejectsObserverResurrection() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let ownerID = UUID(), observerID = UUID()
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: ownerID)
+        let opened = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: observerID)
+        let observer = try XCTUnwrap(opened)
+        let reservation = try await store.reserve(draft)
+        let protected = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: reservation, editorID: ownerID)
+        XCTAssertEqual(protected, [draft], "The observer must finish checkpointing and close before exact-shadow removal")
+        await store.endEditing(observerID)
+        let rows = try await store.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: reservation, editorID: ownerID)
+        XCTAssertTrue(rows.isEmpty)
+        await store.release(reservation)
+        do { _ = try await store.save(observer); XCTFail("An observer must not resurrect the retired sent identity") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .staleDraft) }
+        let persisted = await DraftStore(directory: directory).all(ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(persisted.isEmpty)
+        var replacement = localDraft(); replacement.id = draft.id
+        replacement = try await store.save(replacement)
+        let removed = try await store.reconcileSent(remoteDraft(for: replacement), ownerScope: replacement.ownerScope, accountId: replacement.accountId)
+        XCTAssertTrue(removed.isEmpty, "Successful removal must retire the owner and observer registrations")
+    }
+
+    func testOwnedSentReconciliationRejectsWrongExpiredCrossDraftAndCrossScopeReservations() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        var other = localDraft(); other.serverID = "other-server-draft"
+        other = try await store.save(other)
+        let owner = try await store.reserve(draft)
+        let otherOwner = try await store.reserve(other)
+        let remote = remoteDraft(for: draft)
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        for token in [DraftStore.Reservation(id: UUID(), draftID: draft.id), otherOwner] {
+            do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: token); XCTFail("Wrong owner must not bypass reconciliation protection") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        }
+        do { _ = try await store.reconcileSent(remote, ownerScope: "other-owner", accountId: draft.accountId, reservation: owner); XCTFail("Cross-scope lease must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: "other-account", reservation: owner); XCTFail("Cross-account lease must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: UUID()); XCTFail("Unregistered editor must not bypass protection") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        let editorID = UUID()
+        _ = await store.beginEditing(other.id, ownerScope: other.ownerScope, accountId: other.accountId, editorID: editorID)
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner, editorID: editorID); XCTFail("Another row's editor token must fail") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: editorID); XCTFail("An editor token without a lease cannot bypass protection") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        await store.release(owner)
+        do { _ = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId, reservation: owner); XCTFail("Expired lease must not become background reconciliation") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .invalidReservation) }
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        let current = await store.current(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(current, draft)
+        await store.release(otherOwner)
+    }
+
+    func testOpenEditorsProtectUnsavedWritingUntilEveryEditorEnds() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let firstID = UUID(), secondID = UUID()
+        let first = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: firstID)
+        let second = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: secondID)
+        XCTAssertEqual(first, draft); XCTAssertEqual(second, draft)
+        let remote = remoteDraft(for: draft)
+        let skipped = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(skipped, [draft])
+        await store.endEditing(firstID)
+        await store.endEditing(UUID())
+        let stillOpen = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(stillOpen, [draft])
+        var pendingTyping = try XCTUnwrap(second); pendingTyping.content.body.text = "Visible unsaved writing"
+        let saved = try await store.save(pendingTyping)
+        await store.endEditing(secondID)
+        let reconciled = try await store.reconcileSent(remote, ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertEqual(reconciled.first?.content, saved.content)
+        XCTAssertEqual(reconciled.first?.deliveryState, "sent")
+    }
+
+    func testBeginEditingReturnsLatestRowAndRejectsWrongScopeOrRemovedIdentity() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let stale = try await store.save(localDraft())
+        var edit = stale; edit.content.body.text = "Latest saved writing"
+        let latest = try await store.save(edit)
+        let wrongOwner = await store.beginEditing(latest.id, ownerScope: "other-owner", accountId: latest.accountId, editorID: UUID())
+        let wrongAccount = await store.beginEditing(latest.id, ownerScope: latest.ownerScope, accountId: "other-account", editorID: UUID())
+        let missing = await store.beginEditing(UUID(), ownerScope: latest.ownerScope, accountId: latest.accountId, editorID: UUID())
+        XCTAssertNil(wrongOwner); XCTAssertNil(wrongAccount); XCTAssertNil(missing)
+        let editorID = UUID()
+        let opened = await store.beginEditing(stale.id, ownerScope: stale.ownerScope, accountId: stale.accountId, editorID: editorID)
+        XCTAssertEqual(opened, latest)
+        await store.endEditing(editorID)
+        let removed = try await store.reconcileSent(remoteDraft(for: latest), ownerScope: latest.ownerScope, accountId: latest.accountId)
+        XCTAssertTrue(removed.isEmpty, "Failed registrations must not pin the row")
+        let retired = await store.beginEditing(stale.id, ownerScope: stale.ownerScope, accountId: stale.accountId, editorID: editorID)
+        XCTAssertNil(retired)
+    }
+
+    func testEditorRegistrationsAreEphemeralAcrossStoreRestart() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let draft = try await store.save(localDraft())
+        let file = directory.appending(path: "drafts.json"), bytes = try Data(contentsOf: file)
+        _ = await store.beginEditing(draft.id, ownerScope: draft.ownerScope, accountId: draft.accountId, editorID: UUID())
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        let restored = DraftStore(directory: directory)
+        let removed = try await restored.reconcileSent(remoteDraft(for: draft), ownerScope: draft.ownerScope, accountId: draft.accountId)
+        XCTAssertTrue(removed.isEmpty, "An editor from a terminated process must not pin sent mail")
+    }
+
+    func testEditableCopyTransfersAllEditorRegistrationsToFreshIdentity() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let original = try await store.save(localDraft())
+        let firstID = UUID(), secondID = UUID()
+        _ = await store.beginEditing(original.id, ownerScope: original.ownerScope, accountId: original.accountId, editorID: firstID)
+        _ = await store.beginEditing(original.id, ownerScope: original.ownerScope, accountId: original.accountId, editorID: secondID)
+        var verified = remoteDraft(for: original); verified.deliveryStatus = "draft"
+        var copy = try await store.makeEditableCopy(original, verifiedRemote: verified)
+        copy.serverID = "new-server-draft"; copy.serverRevision = 1
+        copy = try await store.save(copy)
+        let remote = remoteDraft(for: copy)
+        let skipped = try await store.reconcileSent(remote, ownerScope: copy.ownerScope, accountId: copy.accountId)
+        XCTAssertEqual(skipped, [copy])
+        await store.endEditing(firstID)
+        let stillOpen = try await store.reconcileSent(remote, ownerScope: copy.ownerScope, accountId: copy.accountId)
+        XCTAssertEqual(stillOpen, [copy])
+        await store.endEditing(secondID)
+        let removed = try await store.reconcileSent(remote, ownerScope: copy.ownerScope, accountId: copy.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    func testRemovalRetiresOnlyMatchingEditorRegistrations() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let first = try await store.save(localDraft())
+        var other = localDraft(); other.serverID = "other-server-draft"
+        other = try await store.save(other)
+        let otherID = UUID()
+        _ = await store.beginEditing(first.id, ownerScope: first.ownerScope, accountId: first.accountId, editorID: UUID())
+        _ = await store.beginEditing(other.id, ownerScope: other.ownerScope, accountId: other.accountId, editorID: otherID)
+        try await store.remove(first.id)
+        // Reuse the ID in a genuinely new, unversioned row to observe whether
+        // the old registration was retired. Saved stale snapshots still fail.
+        var replacement = localDraft(); replacement.id = first.id
+        replacement = try await store.save(replacement)
+        _ = try await store.reconcileSent(remoteDraft(for: replacement), ownerScope: replacement.ownerScope, accountId: replacement.accountId)
+        let otherSkipped = try await store.reconcileSent(remoteDraft(for: other), ownerScope: other.ownerScope, accountId: other.accountId)
+        XCTAssertEqual(otherSkipped, [other], "Removing one row must not release another editor")
+        await store.endEditing(otherID)
+        let removed = try await store.reconcileSent(remoteDraft(for: other), ownerScope: other.ownerScope, accountId: other.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    func testPreservedSentWritingIsFrozenUntilVerifiedExplicitCopy() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        var initial = localDraft()
+        let sentRemote = remoteDraft(for: initial)
+        initial.content.body.text = "My unsent edits"; initial.idempotencyKey = "same-command"; initial.deliveryState = "ambiguous"
+        let original = try await store.save(initial)
+        let rows = try await store.reconcileSent(sentRemote, ownerScope: original.ownerScope, accountId: original.accountId)
+        let preserved = try XCTUnwrap(rows.first)
+        let identical = try await store.save(preserved)
+        XCTAssertEqual(identical, preserved)
+        var edit = preserved; edit.content.subject = "Must copy before editing"
+        do { _ = try await store.save(edit); XCTFail("Sent writing must remain frozen") }
+        catch { XCTAssertEqual(error as? DraftStore.StoreError, .identityChanged) }
+        for transition in [DraftDeliveryTransition.prepare, .uncertain, .rejected, .confirmedPreReservation(serverRevision: nil)] {
+            do { _ = try await store.transition(preserved.id, transition); XCTFail("Sent identity must never restart delivery") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .identityChanged) }
+        }
+        var invalid = ["draft", "sending", "ambiguous", "rejected"].map { status -> MessageDraft in
+            var remote = sentRemote; remote.deliveryStatus = status; return remote
+        }
+        var wrongID = sentRemote; wrongID.id = "other-server-draft"; invalid.append(wrongID)
+        var wrongAccount = sentRemote; wrongAccount.accountId = "other-account"; invalid.append(wrongAccount)
+        var oldRevision = sentRemote; oldRevision.revision -= 1; invalid.append(oldRevision)
+        for remote in invalid {
+            do { _ = try await store.makeEditableCopy(preserved, verifiedRemote: remote); XCTFail("Copy needs matching freshly verified sent status") }
+            catch { XCTAssertEqual(error as? DraftStore.StoreError, .copyNotAllowed) }
+        }
+        let copied = try await store.makeEditableCopy(preserved, verifiedRemote: sentRemote)
+        XCTAssertNotEqual(copied.id, preserved.id); XCTAssertNotEqual(copied.storageRevision, preserved.storageRevision)
+        XCTAssertEqual(copied.content, preserved.content); XCTAssertEqual(copied.recipientText, preserved.recipientText)
+        XCTAssertEqual(copied.deliveryState, "local")
+        XCTAssertNil(copied.serverID); XCTAssertNil(copied.serverRevision); XCTAssertNil(copied.idempotencyKey)
+        let persisted = await DraftStore(directory: directory).all(ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertEqual(persisted, [copied])
+    }
+
+    func testSentReconciliationDiskFailureDoesNotRemoveOrFreezeInMemory() async throws {
+        for divergent in [false, true] {
+            let directory = temporaryDirectory(), backup = temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory); try? FileManager.default.removeItem(at: backup) }
+            let store = DraftStore(directory: directory)
+            var initial = localDraft()
+            let remote = remoteDraft(for: initial)
+            if divergent { initial.content.body.text = "Unsent writing" }
+            let current = try await store.save(initial)
+            let bytes = try Data(contentsOf: directory.appending(path: "drafts.json"))
+            try FileManager.default.moveItem(at: directory, to: backup)
+            try Data("blocked-directory".utf8).write(to: directory)
+            do { _ = try await store.reconcileSent(remote, ownerScope: current.ownerScope, accountId: current.accountId); XCTFail("Expected disk failure") } catch {}
+            let unchanged = await store.all(ownerScope: current.ownerScope, accountId: current.accountId)
+            XCTAssertEqual(unchanged, [current]); XCTAssertEqual(try Data(contentsOf: backup.appending(path: "drafts.json")), bytes)
+            try FileManager.default.removeItem(at: directory)
+            try FileManager.default.moveItem(at: backup, to: directory)
+            let retried = try await store.reconcileSent(remote, ownerScope: current.ownerScope, accountId: current.accountId)
+            if divergent { XCTAssertEqual(retried.first?.deliveryState, "sent"); XCTAssertEqual(retried.first?.content, current.content) }
+            else { XCTAssertTrue(retried.isEmpty) }
+        }
+    }
+
+    func testFailedCopyOrRemovalKeepsOriginalEditorRegistration() async throws {
+        let directory = temporaryDirectory(), backup = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory); try? FileManager.default.removeItem(at: backup) }
+        let store = DraftStore(directory: directory)
+        let original = try await store.save(localDraft())
+        let editorID = UUID()
+        _ = await store.beginEditing(original.id, ownerScope: original.ownerScope, accountId: original.accountId, editorID: editorID)
+        try FileManager.default.moveItem(at: directory, to: backup)
+        try Data("blocked-directory".utf8).write(to: directory)
+        var editableRemote = remoteDraft(for: original); editableRemote.deliveryStatus = "draft"
+        do { _ = try await store.makeEditableCopy(original, verifiedRemote: editableRemote); XCTFail("Expected disk failure") } catch {}
+        do { try await store.remove(original.id); XCTFail("Expected disk failure") } catch {}
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.moveItem(at: backup, to: directory)
+        let skipped = try await store.reconcileSent(remoteDraft(for: original), ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertEqual(skipped, [original])
+        await store.endEditing(editorID)
+        let removed = try await store.reconcileSent(remoteDraft(for: original), ownerScope: original.ownerScope, accountId: original.accountId)
+        XCTAssertTrue(removed.isEmpty)
+    }
+
+    private func temporaryDirectory() -> URL { FileManager.default.temporaryDirectory.appending(path: UUID().uuidString) }
+    private func localDraft() -> LocalDraft {
+        var draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account")
+        draft.serverID = "server-draft"; draft.serverRevision = 2
+        draft.content = .init(to: [.init(name: "Maya", email: "maya@example.com")], subject: "Sent subject", body: .init(text: "Sent words", html: "<p>Sent words</p>"), context: .init(kind: "reply", threadId: "thread", messageId: "message", providerMessageId: "provider-message", providerThreadId: "provider-thread", inReplyTo: "<original@example.com>", references: ["<original@example.com>"]), attachments: [.init(id: "attachment", filename: "note.txt", mimeType: "text/plain", size: 1, contentBase64: "eA==")])
+        draft.recipientText = .init(to: "maya@example.com", cc: "", bcc: "")
+        return draft
+    }
+    private func remoteDraft(for draft: LocalDraft) -> MessageDraft {
+        MessageDraft(id: draft.serverID ?? "missing-server-draft", accountId: draft.accountId, to: draft.content.to, cc: draft.content.cc, bcc: draft.content.bcc, subject: draft.content.subject, body: draft.content.body, context: draft.content.context, attachments: draft.content.attachments, revision: draft.serverRevision ?? 1, deliveryStatus: "sent", providerSyncStatus: "synced", providerSyncError: nil, providerDraftId: nil, providerMessageId: "sent-message", providerThreadId: "sent-thread", createdAt: "2026-10-07T00:00:00Z", updatedAt: "2026-10-07T00:00:00Z")
+    }
+}
+
+
+final class InboxRecoveryTests: XCTestCase {
+    @MainActor func testInvalidMailboxCursorRestartsOnceAndReplacesStalePage() async throws {
+        for view in ["all", "destination:projects", "normal"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let first = try InboxLoadingTestSupport.page("stale", cursor: "expired-cursor")
+            let fresh = try InboxLoadingTestSupport.page("fresh", cursor: "fresh-cursor")
+            var queries = [[String: String]]()
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+                let query = InboxLoadingTestSupport.query(request); queries.append(query)
+                if queries.count == 1 { return (200, first) }
+                if query["cursor"] == "expired-cursor" {
+                    return (400, Data(#"{"error":{"code":"invalid_cursor","message":"Mailbox changed"}}"#.utf8))
+                }
+                return (200, fresh)
+            }
+            let model = InboxViewModel(); model.view = view; model.search = "same search"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(queries.map { $0["cursor"] }, [nil, "expired-cursor", nil], view)
+            XCTAssertEqual(queries.map { $0["query"] }, Array(repeating: "same search", count: 3), view)
+            XCTAssertEqual(model.messages.map(\.id), ["fresh"], "Recovery replaces rather than appends a new snapshot")
+            XCTAssertEqual(model.nextCursor, "fresh-cursor"); XCTAssertNil(model.error); XCTAssertFalse(model.isLoading)
+        }
+    }
+
+    @MainActor func testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let first = try InboxLoadingTestSupport.page("saved", cursor: "expired-cursor")
+        var requests = 0
+        StubURLProtocol.handler = { _ in
+            requests += 1
+            if requests == 1 { return (200, first) }
+            return (400, Data(#"{"error":{"code":"invalid_cursor","message":"Mailbox changed"}}"#.utf8))
+        }
+        let model = InboxViewModel(); model.view = "all"
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(requests, 3, "A failed restart must not recurse indefinitely")
+        XCTAssertEqual(model.messages.map(\.id), ["saved"]); XCTAssertNil(model.nextCursor)
+        XCTAssertNotNil(model.error); XCTAssertFalse(model.isLoading)
+    }
+
+    @MainActor func testUnrelatedPaginationFailuresKeepCursorForManualRetry() async throws {
+        for (status, code) in [(400, "invalid_request"), (401, "unauthorized"), (503, "unavailable")] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let first = try InboxLoadingTestSupport.page("saved", cursor: "valid-cursor")
+            var requests = 0
+            StubURLProtocol.handler = { _ in
+                requests += 1
+                return requests == 1 ? (200, first) : (status, Data("{\"error\":{\"code\":\"\(code)\",\"message\":\"Try again\"}}".utf8))
+            }
+            let model = InboxViewModel(); model.view = "all"
+            await model.load(state: fixture.state)
+            await model.load(state: fixture.state, reset: false)
+            XCTAssertEqual(requests, 2); XCTAssertEqual(model.nextCursor, "valid-cursor")
+            XCTAssertEqual(model.messages.map(\.id), ["saved"]); XCTAssertEqual(model.error, "Try again")
+        }
+    }
+
+    @MainActor func testPaginationWithoutCursorDoesNotDuplicateFirstPage() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let first = try InboxLoadingTestSupport.page("only-page")
+        var requests = 0
+        StubURLProtocol.handler = { _ in requests += 1; return (200, first) }
+        let model = InboxViewModel(); model.view = "all"
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(requests, 1); XCTAssertEqual(model.messages.map(\.id), ["only-page"])
     }
 }

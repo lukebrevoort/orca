@@ -32,8 +32,17 @@ import Foundation
         let sent = try await client.sendDraft(draft.id, accountId: account.id, revision: updated.revision, idempotencyKey: key)
         let replay = try await client.sendDraft(draft.id, accountId: account.id, revision: updated.revision, idempotencyKey: key)
         precondition(sent.status == "sent" && replay.status == "sent")
+        let listed = try await client.drafts(accountId: account.id)
+        guard let sentMetadata = listed.first(where: { $0.id == draft.id }) else {
+            fatalError("Draft list must retain sent IDs for delivery reconciliation")
+        }
+        precondition(sentMetadata.deliveryStatus == "sent" && sentMetadata.revision == updated.revision)
+        precondition(sentMetadata.providerMessageId == sent.providerMessageId && sentMetadata.providerThreadId == sent.providerThreadId)
+        precondition(sentMetadata.body.text.isEmpty && sentMetadata.body.html == nil && sentMetadata.attachments.isEmpty, "Native draft list must opt in to omit sent content")
+        let fullSent = try await client.draft(draft.id, accountId: account.id)
+        precondition(fullSent.body.text == content.body.text, "Detail reads must retain complete sent content")
         let ledger = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: (connection["directory"] as! String) + "/deliveries.json"))) as! [[String: Any]]
         precondition(ledger.filter { $0["draftId"] as? String == draft.id }.count == 1, "Replayed send must create exactly one fixture delivery")
-        print("PASS: Swift accounts/inbox/thread/create/update/send/replay; required null fields preserved")
+        print("PASS: Swift accounts/inbox/thread/create/update/send/replay/list/detail; sent list metadata and full detail content preserved")
     }
 }

@@ -1,0 +1,29 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/draft-list-payload.test.ts:
+draft-list synthetic fixture: 200 sent + 5 unresolved; 16 KiB text + 8 KiB HTML + 48 KiB attachment per record {"legacy":{"responseBytes":18596791,"selectedRows":205,"selectedBytes":18550256,"selectCount":1,"elapsedMs":125.64},"projected":{"responseBytes":18596791,"selectedRows":205,"selectedBytes":18550256,"selectCount":1,"elapsedMs":87.31}}
+draft-list warmed request milliseconds (no row-size instrumentation) {"legacy":[77.19,67.85,67.21,63.04,69.44,68.33,65.68],"projected":[69.9,64.21,66.24,64.92,65.62,66.92,64.58]}
+ 99 |     assert.deepEqual(projected.drafts.map((draft: { id: string }) => draft.id), legacy.drafts.map((draft: { id: string }) => draft.id), "sent IDs remain available for local delivery reconciliation, with stable ordering");
+100 |     const legacyByID = new Map(legacy.drafts.map((draft: { id: string }) => [draft.id, draft]));
+101 |     for (const draft of projected.drafts) {
+102 |       const original = legacyByID.get(draft.id) as typeof draft;
+103 |       if (draft.deliveryStatus === "sent") {
+104 |         assert.equal(draft.body.text.length, 0, "opt-in list must omit sent text");
+                     ^
+AssertionError: opt-in list must omit sent text
+
+16384 !== 0
+
+ generatedMessage: false,
+     actual: 16384,
+   expected: 0,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/shared/orca-draft-payload/apps/api/src/draft-list-payload.test.ts:104:16
+      at processTicksAndRejections (native:7:39)
+(fail) draft list can omit sent content without losing delivery reconciliation or unresolved writing [1531.02ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [1.99s]
