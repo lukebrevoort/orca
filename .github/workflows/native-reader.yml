@@ -6,6 +6,7 @@ on:
       - 'apps/ios/Orca/Mail/SafeHTMLView.swift'
       - 'apps/ios/Orca/Mail/ThreadView.swift'
       - 'apps/ios/OrcaTests/SafeHTMLViewTests.swift'
+      - 'apps/ios/OrcaTests/SafeHTMLOverflowTests.swift'
       - 'apps/ios/OrcaUITests/**'
       - 'apps/ios/Orca.xcodeproj/**'
       - 'scripts/ci/**'
