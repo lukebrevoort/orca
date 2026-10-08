@@ -1145,6 +1145,32 @@ final class InboxLoadingTests: XCTestCase {
 /// messages are synthetic; these tests never create or deliver real email.
 @MainActor
 final class DraftLifecycleTests: XCTestCase {
+    func testDraftLifecycleStaleSaveCannotEraseAnEstablishedServerIdentity() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DraftStore(directory: directory)
+        let reopened = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account", content: DraftContent(subject: "One operation"))
+        try await store.save(reopened)
+        var created = reopened
+        created.serverID = "fixture-server-draft"; created.serverRevision = 1
+        try await store.save(created)
+        do {
+            try await store.save(reopened)
+            XCTFail("A stale composer must not erase the first create's server identity")
+        } catch { /* A stale local snapshot must fail closed. */ }
+        let persisted = await store.all(ownerScope: reopened.ownerScope, accountId: reopened.accountId)
+        XCTAssertEqual(persisted.first?.serverID, created.serverID)
+        XCTAssertEqual(persisted.first?.serverRevision, created.serverRevision)
+    }
+
+    func testDraftLifecycleBodyEditDiscardsStaleHTML() {
+        let original = DraftBody(text: "Original", html: "<p><strong>Original</strong></p>")
+        let edited = ComposeView.bodyForSaving(text: "Changed", original: original)
+        XCTAssertEqual(edited.text, "Changed")
+        XCTAssertNil(edited.html, "Sending edited plain text must not send the old rich body instead")
+        XCTAssertNil(ComposeView.bodyForSaving(text: "New message", original: nil).html)
+    }
+
     func testDraftLifecycleOpeningLocalRichDraftPreservesHTML() {
         let body = DraftBody(text: "Keep this link", html: "<p>Keep <a href=\"https://example.com/notes\">this link</a></p>")
         let draft = LocalDraft(ownerScope: "fixture|owner", accountId: "fixture-account",

@@ -118,8 +118,65 @@ type RefreshGate = {
   pending: boolean;
 };
 let refreshGate: RefreshGate | undefined;
+// A single held create request reproduces Back/reopen while the server draft
+// identity is not yet known to the app. Synthetic loopback mailbox only.
+let draftLifecycleCreateGate: RefreshGate | undefined;
+let draftLifecycleHeldDraftId: string | undefined;
+let draftLifecycleCreateRequests = 0;
+let draftLifecycleCreateExpired = false;
+let draftLifecycleCreateReleased = false;
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   const url = new URL(request.url);
+  if (request.method === "POST" && url.pathname === "/v1/drafts") draftLifecycleCreateRequests += 1;
+  if (url.pathname.startsWith("/__fixture/draft-lifecycle/")) {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method === "POST" && url.pathname.endsWith("/arm-create")) {
+      draftLifecycleCreateGate?.release();
+      let markStarted!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => { markStarted = resolve; });
+      const released = new Promise<void>((resolve) => { release = resolve; });
+      draftLifecycleCreateGate = { started, markStarted, released, release, pending: false };
+      draftLifecycleHeldDraftId = undefined;
+      draftLifecycleCreateExpired = false;
+      draftLifecycleCreateReleased = false;
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === "POST" && url.pathname.endsWith("/release-create")) {
+      draftLifecycleCreateReleased = true;
+      draftLifecycleCreateGate?.release();
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === "GET" && url.pathname.endsWith("/wait-create")) {
+      const gate = draftLifecycleCreateGate;
+      if (!gate) return new Response(null, { status: 409 });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([gate.started, new Promise<void>((resolve) => { timer = setTimeout(resolve, 5_000); })]);
+        return new Response(null, { status: gate.pending ? 204 : 408 });
+      } finally { clearTimeout(timer); }
+    }
+    if (request.method === "GET" && url.pathname.endsWith("/state")) {
+      return Response.json({ heldDraftId: draftLifecycleHeldDraftId ?? null, pending: draftLifecycleCreateGate?.pending ?? false, released: draftLifecycleCreateReleased, expired: draftLifecycleCreateExpired, createRequests: draftLifecycleCreateRequests, deliveries: sent.length, sendRequests });
+    }
+    return new Response(null, { status: 404 });
+  }
+  if (request.method === "POST" && url.pathname === "/v1/drafts" && draftLifecycleCreateGate && !draftLifecycleCreateGate.pending) {
+    const gate = draftLifecycleCreateGate;
+    gate.pending = true;
+    gate.markStarted();
+    const timer = setTimeout(() => { draftLifecycleCreateExpired = true; gate.release(); }, 25_000);
+    try {
+      await gate.released;
+      const response = await app.fetch(request);
+      const body = await response.clone().json() as { id?: string };
+      draftLifecycleHeldDraftId = body.id;
+      return response;
+    } finally {
+      clearTimeout(timer);
+      if (draftLifecycleCreateGate === gate) draftLifecycleCreateGate = undefined;
+    }
+  }
   // Authenticated controls exist only inside this disposable loopback fixture.
   // They simulate browser consent and another device completing delivery; no
   // Google/OAuth request, persistent grant, or provider delivery is performed.

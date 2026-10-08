@@ -201,6 +201,102 @@ final class OrcaUITests: XCTestCase {
         XCTAssertEqual(after["deliveries"] as? Int, (before["deliveries"] as? Int).map { $0 + 1 })
     }
 
+    func test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice() throws {
+        try setFixtureSending(true)
+        addTeardownBlock {
+            _ = try self.composeFixtureRequest("__fixture/draft-lifecycle/release-create", method: "POST")
+            try self.restoreFixtureSending()
+        }
+        let before = try composeFixtureRequest("__fixture/draft-lifecycle/state")
+        let subject = "Create race " + UUID().uuidString
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        app.tabBars.buttons["Drafts"].tap()
+        app.buttons["compose.open"].tap()
+        let recipient = app.textFields["compose.to"]
+        XCTAssertTrue(recipient.waitForExistence(timeout: 10)); recipient.tap(); recipient.typeText("maya@example.com")
+        let subjectField = app.textFields["compose.subject"]
+        subjectField.tap(); subjectField.typeText(subject)
+        let body = messageBody(in: app); body.tap(); body.typeText("Exactly one synthetic delivery.")
+        navigateBack(in: app)
+        let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
+        XCTAssertTrue(localRow.waitForExistence(timeout: 10)); localRow.tap()
+        _ = try composeFixtureRequest("__fixture/draft-lifecycle/arm-create", method: "POST")
+        app.buttons["compose.send"].tap()
+        _ = try composeFixtureRequest("__fixture/draft-lifecycle/wait-create")
+        let back = app.navigationBars.buttons.element(boundBy: 0)
+        XCTAssertTrue(back.exists); XCTAssertTrue(back.isEnabled)
+        back.tap()
+        XCTAssertTrue(app.navigationBars["Drafts"].waitForExistence(timeout: 5))
+        XCTAssertTrue(localRow.waitForExistence(timeout: 5)); localRow.tap()
+        let secondSend = app.buttons["compose.send"]
+        XCTAssertTrue(secondSend.waitForExistence(timeout: 5))
+        // A shared reservation may disable the reopened button. If it stays
+        // enabled, it must reject another operation before a second POST.
+        if secondSend.isEnabled { secondSend.tap() }
+        // Give the competing operation a chance to reach the actual fixture.
+        // A correct shared reservation instead rejects it before another POST.
+        for _ in 0..<20 {
+            let current = try composeFixtureRequest("__fixture/draft-lifecycle/state")
+            if (current["createRequests"] as? Int ?? 0) >= (before["createRequests"] as? Int ?? 0) + 2 { break }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        let overlap = try composeFixtureRequest("__fixture/draft-lifecycle/state")
+        XCTAssertEqual(overlap["pending"] as? Bool, true)
+        XCTAssertEqual(overlap["released"] as? Bool, false)
+        XCTAssertEqual(overlap["expired"] as? Bool, false, "The first create must still be held through the competing send")
+        _ = try composeFixtureRequest("__fixture/draft-lifecycle/release-create", method: "POST")
+        // Await the held request's actual draft, then its terminal delivery.
+        var held: [String: Any] = [:]
+        for _ in 0..<40 {
+            let state = try composeFixtureRequest("__fixture/draft-lifecycle/state")
+            if let id = state["heldDraftId"] as? String {
+                held = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
+                if held["deliveryStatus"] as? String == "sent" { break }
+            }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertEqual(held["deliveryStatus"] as? String, "sent")
+        let after = try composeFixtureRequest("__fixture/draft-lifecycle/state")
+        XCTAssertEqual(after["deliveries"] as? Int, (before["deliveries"] as? Int).map { $0 + 1 }, "Reopening the same local draft must not create a second delivery")
+        let drafts = try composeFixtureRequest("v1/drafts?accountId=ios-fixture-account")
+        let copies = (drafts["items"] as? [[String: Any]])?.filter { $0["subject"] as? String == subject }
+        XCTAssertEqual(copies?.count, 1, "The local draft must have exactly one server identity")
+        attachScreenshot(named: "40-compose-create-reopen-single-delivery")
+    }
+
+    func test31SentServerDraftDoesNotRemainAnEditableLocalCopy() throws {
+        let subject = "Remote sent " + UUID().uuidString
+        let draft = try createComposeFixtureDraft(subject: subject)
+        let id = try XCTUnwrap(draft["id"] as? String)
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        app.tabBars.buttons["Drafts"].tap()
+        let serverRow = app.descendants(matching: .any)["draft.\(id)"]
+        XCTAssertTrue(serverRow.waitForExistence(timeout: 10)); serverRow.tap()
+        XCTAssertTrue(messageBody(in: app).waitForExistence(timeout: 5))
+        navigateBack(in: app)
+        // A UUID local row distinct from the server row proves the production
+        // autosave finished before the remote delivery transition.
+        let localCopy = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND identifier != %@ AND label CONTAINS %@", "draft.", "draft.\(id)", subject)).firstMatch
+        XCTAssertTrue(localCopy.waitForExistence(timeout: 10))
+        _ = try composeFixtureRequest("__fixture/compose/delivery", method: "POST", body: ["draftId": id, "status": "sent"])
+        let marker = try createComposeFixtureDraft(subject: "Reload marker " + UUID().uuidString)
+        let markerID = try XCTUnwrap(marker["id"] as? String)
+        addTeardownBlock { _ = try self.composeFixtureRequest("v1/drafts/\(markerID)?accountId=ios-fixture-account", method: "DELETE") }
+        app.swipeDown()
+        // Seeing a server row created after the sent transition proves the
+        // fresh server list has been applied, avoiding transient-empty passes.
+        let markerRow = app.descendants(matching: .any)["draft.\(markerID)"]
+        XCTAssertTrue(markerRow.waitForExistence(timeout: 10))
+        let anyCopy = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
+        XCTAssertFalse(anyCopy.exists, "A local copy must reconcile the server's terminal sent status")
+        app.terminate()
+        let reopened = try launchApp(); assertInboxLoaded(in: reopened)
+        reopened.tabBars.buttons["Drafts"].tap()
+        XCTAssertTrue(reopened.descendants(matching: .any)["draft.\(markerID)"].waitForExistence(timeout: 10))
+        XCTAssertFalse(reopened.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch.exists)
+        attachScreenshot(named: "41-compose-remote-sent-reconciled")
+    }
+
     private func setFixtureSending(_ enabled: Bool, accountsUnavailable: Bool = false) throws {
         _ = try composeFixtureRequest("__fixture/compose/capabilities", method: "POST", body: ["sendEnabled": enabled, "accountsUnavailable": accountsUnavailable])
     }

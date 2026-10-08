@@ -294,7 +294,12 @@ struct ComposeView: View {
         let cc = kind == "reply_all" ? dedupe(message.cc, excluding: Set(to.map { $0.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })) : []
         return (to, cc)
     }
-    func content() -> DraftContent { var result = DraftContent(to: validRecipients(to), cc: validRecipients(cc), bcc: validRecipients(bcc), subject: subject, body: .init(text: messageBody, html: nil), context: local?.content.context ?? seedServer?.context, attachments: local?.content.attachments ?? seedServer?.attachments ?? []); if let context, let last = context.messages.last { result.context = DraftContext(kind: kind, threadId: context.thread.id, messageId: last.id, providerMessageId: last.providerMessageId, providerThreadId: context.thread.providerThreadId, inReplyTo: last.internetMessageId, references: last.references) }; return result }
+    func content() -> DraftContent { var result = DraftContent(to: validRecipients(to), cc: validRecipients(cc), bcc: validRecipients(bcc), subject: subject, body: Self.bodyForSaving(text: messageBody, original: local?.content.body ?? seedServer?.body), context: local?.content.context ?? seedServer?.context, attachments: local?.content.attachments ?? seedServer?.attachments ?? []); if let context, let last = context.messages.last { result.context = DraftContext(kind: kind, threadId: context.thread.id, messageId: last.id, providerMessageId: last.providerMessageId, providerThreadId: context.thread.providerThreadId, inReplyTo: last.internetMessageId, references: last.references) }; return result }
+    static func bodyForSaving(text: String, original: DraftBody?) -> DraftBody {
+        // The plain-text editor cannot update HTML. Preserve the rich body when
+        // merely opening/autosaving, but never send stale HTML after a text edit.
+        DraftBody(text: text, html: original?.text == text ? original?.html : nil)
+    }
     func validRecipients(_ value: String) -> [Recipient] { value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { Self.isEmail($0) }.map { Recipient(name: nil, email: $0) } }
     func recipientsAreValid(_ value: String, allowingEmpty: Bool) -> Bool { if allowingEmpty && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }; let values = value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }; return !values.isEmpty && values.allSatisfy(Self.isEmail) }
     static func isEmail(_ value: String) -> Bool { value.range(of: #"^[^\s@,]+@[^\s@,]+\.[^\s@,]+$"#, options: .regularExpression) != nil }
