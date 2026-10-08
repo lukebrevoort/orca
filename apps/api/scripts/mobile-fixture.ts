@@ -121,7 +121,9 @@ let refreshGate: RefreshGate | undefined;
 // Inbox recovery controls are scoped to this authenticated, disposable server.
 let emptyInboxOnce = false;
 let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
-const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+// Read gates last up to 20 seconds; Bun’s default 10-second idle timeout
+// would sever the synthetic connection before the explicit safety release.
+const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
   if (url.pathname.startsWith("/__fixture/inbox-recovery/")) {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });

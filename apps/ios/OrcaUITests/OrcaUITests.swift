@@ -25,13 +25,12 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "40-empty-inbox-before-refresh")
         let list = app.collectionViews["inbox.list"]
         XCTAssertTrue(list.exists, "An empty mailbox must retain its refreshable scrolling surface")
-        _ = try composeFixtureRequest("__fixture/inbox-refresh/arm", method: "POST", body: [:])
-        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-refresh/release", method: "POST", body: [:]) }
+        // Do not hold this response: XCTest waits for the empty-state spinner
+        // to become idle after the gesture. The initial empty assertion and
+        // subsequent fixture rows prove that the pull made a fresh request.
         let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
         let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
         start.press(forDuration: 0.1, thenDragTo: end)
-        _ = try composeFixtureRequest("__fixture/inbox-refresh/wait")
-        _ = try composeFixtureRequest("__fixture/inbox-refresh/release", method: "POST", body: [:])
         assertInboxLoaded(in: app)
         attachScreenshot(named: "41-empty-inbox-refreshed")
     }
@@ -286,7 +285,7 @@ final class OrcaUITests: XCTestCase {
         var output: [String: Any] = [:]
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             XCTAssertNil(error)
-            XCTAssertTrue((200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0))
+            XCTAssertTrue((200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0), "Fixture \(path) returned HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             if let data, !data.isEmpty {
                 let json = try? JSONSerialization.jsonObject(with: data)
                 output = json as? [String: Any] ?? ["items": json as? [[String: Any]] ?? []]
