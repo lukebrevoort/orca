@@ -894,6 +894,9 @@ final class OrcaUITests: XCTestCase {
         assertInboxLoaded(in: app)
         attachScreenshot(named: "01-light-inbox")
 
+        let entryRow = app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"]
+        XCTAssertTrue(entryRow.isEnabled, "The initial inbox conversation must be enabled")
+        XCTAssertTrue(entryRow.isHittable, "The initial inbox conversation must be tappable before its single tap")
         openConversation(subject: Fixture.inboxSubject, in: app)
         XCTAssertTrue(app.staticTexts[Fixture.sender].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "reading view")).firstMatch.waitForExistence(timeout: 10))
@@ -1303,6 +1306,7 @@ final class OrcaUITests: XCTestCase {
         }
         let row = app.descendants(matching: .any)[identifier]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
+        print("INBOX_NAVIGATION_TARGET row=\(identifier) type=\(row.elementType.rawValue) frame=\(row.frame) hittable=\(row.isHittable) enabled=\(row.isEnabled)")
         let tapStarted = ProcessInfo.processInfo.systemUptime
         row.tap()
         let tapFinished = ProcessInfo.processInfo.systemUptime
