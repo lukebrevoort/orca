@@ -490,7 +490,7 @@ describe("App", () => {
 
   test("keeps quoted history recoverable behind a closed disclosure", () => {
     const split = splitQuotedContent("Fresh reply\n\nOn Jul 11, Maya wrote:\n> Earlier note");
-    expect(split).toEqual({ current: "Fresh reply", quoted: "On Jul 11, Maya wrote:\n> Earlier note" });
+    expect(split).toEqual({ current: "Fresh reply\n\n", quoted: "On Jul 11, Maya wrote:\n> Earlier note" });
 
     const messages = Array.from({ length: 5 }, (_, index) => makeThreadMessage(
       `message-${index}`,
@@ -511,7 +511,8 @@ describe("App", () => {
       />,
     );
 
-    expect(html).toContain("Jump to newest unread");
+    expect(html).toContain("First unread");
+    expect(html).toContain("Expand all");
     expect(html).toContain("Jump to top");
     expect(html).toContain("reader-jump-top\" hidden=\"\"");
     expect(html).toContain("Unread messages");

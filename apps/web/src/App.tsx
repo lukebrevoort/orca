@@ -1,3 +1,4 @@
+import { decodeMailPreview } from "./mail-preview";
 import { installViewNavigationHistory, requestViewNavigation } from "./view-navigation-guard";
 import { BulkSpaceMove, conversationKey, selectedConversations } from "./bulk-space-move";
 import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
@@ -5462,7 +5463,8 @@ function InboxView({
 
               return (
                 <li key={messageIdentityKey(message)}>
-                  {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
+                  {index === 0 || message.attentionBehavior !== displayMessages[index - 1]?.attentionBehavior ? <div className="stream-attention-label">{message.attentionBehavior === "notify" ? "Notify" : message.attentionBehavior === "focus" ? "Focus" : message.attentionBehavior === "quiet" ? "Quiet" : message.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</div> : null}
+                  {index === 0 || message.attentionBehavior !== displayMessages[index - 1]?.attentionBehavior || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
                   <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
                       aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
@@ -5499,7 +5501,7 @@ function InboxView({
                           <span>{formatInboxReceivedAt(message.receivedAt)}</span>
                         </div>
                         <MessageSubject subject={message.subject} unread={message.unread} />
-                        <p>{message.snippet}</p>
+                        <p>{decodeMailPreview(message.snippet)}</p>
                       </div>
                   </button>
                     <button className="message-initial-select" aria-label={`${selected ? "Deselect" : "Select"} conversation from ${senderName}: ${message.subject || "(no subject)"}`} aria-pressed={selected} disabled={bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => toggleSelection(message)} type="button" title={selected ? "Deselect conversation" : "Select conversation"}><span aria-hidden="true">{selected ? "✓" : "+"}</span></button>
@@ -5701,9 +5703,30 @@ export function MessageReader({
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
 
   const newestMessage = messages[messages.length - 1];
-  const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
-  const firstUnreadMessage = messages.find((message) => message.unread);
-  const jumpTarget = newestUnreadMessage ?? newestMessage;
+  const currentFirstUnread = messages.find((message) => message.unread);
+  const jumpTarget = newestMessage;
+  const readerIdentity = detail ? accountScopedIdentityKey(detail.account.id, detail.thread.id) : "";
+  const [cards, setCards] = useState<{ identity: string; open: Set<string>; earlier: boolean; entry: string | null; unreadEntry: string | null } | null>(null);
+  const firstUnreadMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.unreadEntry) : undefined) ?? currentFirstUnread;
+  const initialMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.entry) : undefined) ?? firstUnreadMessage ?? newestMessage;
+  const openCards = cards?.identity === readerIdentity ? cards.open : new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []);
+  const showEarlier = cards?.identity === readerIdentity && cards.earlier;
+  const entryIndex = initialMessage ? messages.indexOf(initialMessage) : 0;
+  function updateCards(open: Set<string>, earlier = Boolean(showEarlier)) { setCards({ identity: readerIdentity, open, earlier, entry: initialMessage ? messageIdentityKey(initialMessage) : null, unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null }); }
+  function jumpToMessage(message: ThreadDetailMessage | undefined) {
+    if (!message) return;
+    const key = messageIdentityKey(message);
+    updateCards(new Set([...openCards, key]), true);
+    requestAnimationFrame(() => {
+      const node = messageRefs.current.get(key);
+      node?.scrollIntoView?.({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
+      node?.focus({ preventScroll: true });
+    });
+  }
+  useEffect(() => {
+    if (status !== "ready" || !initialMessage) return;
+    setCards({ identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
+  }, [readerIdentity, status]);
   const title = detail?.thread.subject || fallbackTitle;
 
   useEffect(() => {
@@ -5720,12 +5743,7 @@ export function MessageReader({
     return () => scrollport.removeEventListener("scroll", updateJumpToTop);
   }, [status]);
 
-  function jumpToNewest() {
-    if (!jumpTarget) return;
-    const node = messageRefs.current.get(messageIdentityKey(jumpTarget));
-    node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
-    node?.focus({ preventScroll: true });
-  }
+  function jumpToNewest() { jumpToMessage(jumpTarget); }
 
   function jumpToTop() {
     headingRef.current?.focus({ preventScroll: true });
@@ -5770,21 +5788,22 @@ export function MessageReader({
         <div className="reader-document">
           <header className="reader-heading">
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
+            <p className="reader-attention-label">Attention: {(detail.thread.attention.attentionBehavior ?? "normal").replace(/^./, letter => letter.toUpperCase())}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
             <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
           </header>
 
-          {messages.length >= 5 && jumpTarget ? (
-            <button className="reader-jump" onClick={jumpToNewest} type="button">
-              <span>{newestUnreadMessage ? "Jump to newest unread" : "Jump to newest"}</span>
-              <span aria-hidden="true">↓</span>
-            </button>
-          ) : null}
+          <nav className="reader-card-controls" aria-label="Conversation navigation">
+            <button type="button" disabled={!firstUnreadMessage} title="First unread when this conversation opened" onClick={() => jumpToMessage(firstUnreadMessage)}>First unread</button>
+            <button type="button" disabled={!jumpTarget} onClick={jumpToNewest}>Newest ↓</button>
+            <button type="button" onClick={() => updateCards(openCards.size === messages.length ? new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []) : new Set(messages.map(messageIdentityKey)), openCards.size !== messages.length)}>{openCards.size === messages.length ? "Collapse all" : "Expand all"}</button>
+          </nav>
+          {entryIndex > 0 ? <button className="reader-earlier" type="button" aria-expanded={Boolean(showEarlier)} onClick={() => updateCards(openCards, !showEarlier)}>{showEarlier ? "Hide" : "Show"} {entryIndex} earlier messages</button> : null}
 
           <ReaderMessageList key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
             {messageGroups.map((group) => (
-              <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
+              <section className="reader-day-group" hidden={!showEarlier && group.messages.every(message => messages.indexOf(message) < entryIndex)} key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
                 <ol>
                   {group.messages.map((message, index) => {
@@ -5793,8 +5812,9 @@ export function MessageReader({
                     const isNewest = newestMessage ? messageKey === messageIdentityKey(newestMessage) : false;
                     const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
+                    const isOpen = openCards.has(messageKey);
                     return (
-                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={messageKey}>
+                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
@@ -5804,11 +5824,16 @@ export function MessageReader({
                           }}
                           tabIndex={-1}
                         >
+                    <button className="reader-card-toggle" type="button" aria-label={`${isOpen ? "Collapse" : "Expand"} message from ${message.from.name ?? message.from.email}`} aria-expanded={isOpen} aria-controls={`reader-card-${message.id}`} onClick={() => { const next = new Set(openCards); if (next.has(messageKey)) next.delete(messageKey); else next.add(messageKey); updateCards(next); }}>
+                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                      {!isOpen ? <span className="reader-card-preview">{decodeMailPreview(message.snippet)}</span> : null}
+                      {!isOpen ? <small>To {formatRecipientAddresses(message.to)}{message.cc.length ? ` · Cc ${formatRecipientAddresses(message.cc)}` : ""}</small> : null}
+                    </button>
+                    <div id={`reader-card-${message.id}`} hidden={!isOpen}>
                     <header className="reader-sender">
-                      <MessageMark contact={message.from} signature={signature} unread={message.unread} />
                       <div className="reader-sender-copy">
                         <div className="reader-sender-line">
-                          <h3 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
+                          <h3 className="sr-only" id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
                           {message.unread ? <span className="reader-status-label">Unread</span> : null}
                           {isNewest ? <span className="reader-status-label">Newest</span> : null}
                         </div>
@@ -5835,6 +5860,7 @@ export function MessageReader({
                         <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
                       </section>
                     ) : null}
+                    </div>
                         </article>
                       </li>
                     );

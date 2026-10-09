@@ -4659,7 +4659,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .message-meta { align-items: baseline; display: flex; gap: 8px; line-height: 1.35; margin: 0 0 3px; min-height: 18px; }
 .message-meta strong { color: var(--orca-ink); font-size: 13px; font-weight: 600; }
 .message-meta > span:last-child { color: var(--orca-muted); font-size: 11px; margin-left: auto; position: absolute; right: 17px; top: 16px; }
-.attention-badge, .message-unread-dot { display: none; }
+.message-unread-dot { display: none; }
 .message-subject-row { display: block; }
 .message-subject-row h2 { color: var(--orca-ink); font-size: 13px; font-weight: 600; line-height: 1.35; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .message-copy > p { color: var(--orca-muted); font-size: 12px; line-height: 1.45; margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -5771,3 +5771,33 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .mobile-auth-shell .oauth-notice { margin: 0; width: 100%; box-sizing: border-box; }
 .mobile-auth-shell button { min-height: 44px; }
 .mobile-auth-shell > .oauth-retry-button { align-self: flex-start; }
+
+/* Attention names explain priority independently of date and destination. */
+.stream-attention-label { padding: 24px 16px 8px; color: var(--orca-ink); font-weight: 600; text-transform: capitalize; }
+.reader-card-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 20px; }
+.reader-card-controls button, .reader-earlier, .reader-card-toggle { color: var(--orca-ink); background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 12px; padding: 12px 16px; }
+.reader-card-controls button:disabled { opacity: .6; }
+.reader-earlier { width: 100%; text-align: left; }
+.reader-card-toggle { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; text-align: left; margin-bottom: 16px; }
+.reader-card-toggle time { margin-left: auto; }
+.reader-card-preview, .reader-card-toggle small { flex-basis: 100%; overflow-wrap: anywhere; }
+.reader-card-preview { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.reader-card-toggle:focus-visible, .reader-card-controls button:focus-visible, .reader-earlier:focus-visible { outline: 2px solid var(--orca-ink); outline-offset: 3px; }
+.reader-message[hidden], .reader-day-group[hidden] { display: none; }
+
+.reader-heading h1 { font-family: var(--orca-font-reader); font-size: clamp(32px, 4vw, 48px); font-weight: 500; }
+.reader-attention-label { display: inline-block; color: var(--orca-accent); font-size: 13px; margin-block: 8px; }
+.reader-message > article { border: 1px solid var(--orca-border); border-radius: 16px; background: var(--orca-surface); padding: 20px; }
+.reader-card-toggle { border: 0; padding: 0; background: transparent; margin-bottom: 10px; }
+.reader-card-toggle .message-mark { flex-shrink: 0; }
+.reader-card-toggle small { color: var(--orca-ink); }
+.reader-message > article .reader-sender { margin-bottom: 16px; }
+.reader-document .reader-heading { padding-bottom: 16px; }
+.reader-card-controls { margin-block: 12px; }
+:root[data-reader-density] .reader-document .reader-heading { margin-bottom: 16px; padding-bottom: 0; }
+:root[data-reader-density] .reader-document { padding-top: 40px; }
+@media (max-width: 640px) {
+  :root[data-reader-density] .reader-document { padding-top: 24px; }
+  .reader-card-controls button { padding: 10px 12px; font-size: 12px; min-height: 44px; }
+  .reader-message > article { padding: 16px; }
+}

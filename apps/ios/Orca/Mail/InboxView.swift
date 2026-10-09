@@ -102,7 +102,13 @@ struct InboxView: View {
                             .listRowBackground(OrcaTheme.paper)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                            ForEach(model.messages) { message in
+                            ForEach(Array(model.messages.enumerated()), id: \.element.id) { index, message in
+                                if index == 0 || message.attentionBehavior != model.messages[index - 1].attentionBehavior {
+                                    Text(message.attentionBehavior.capitalized).font(OrcaTheme.ui(15, weight: .semibold)).foregroundStyle(OrcaTheme.ink).listRowBackground(OrcaTheme.paper).listRowSeparator(.hidden)
+                                }
+                                if index == 0 || message.attentionBehavior != model.messages[index - 1].attentionBehavior || MailPreview.day(message.receivedAt) != MailPreview.day(model.messages[index - 1].receivedAt) {
+                                    Text(MailPreview.day(message.receivedAt)?.formatted(date: .abbreviated, time: .omitted) ?? "Date unavailable").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).listRowBackground(OrcaTheme.paper).listRowSeparator(.hidden)
+                                }
                                 NavigationLink(value: message) { MessageRow(message: message) }
                                     .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
                                     .listRowSeparatorTint(OrcaTheme.border)
@@ -190,7 +196,8 @@ struct MessageRow: View {
                     if message.unread { Capsule().fill(OrcaTheme.accent).frame(width: 3, height: 14).accessibilityLabel("Unread") }
                     Text(message.subject.isEmpty ? "(No subject)" : message.subject).font(OrcaTheme.ui(15, weight: message.unread ? .semibold : .regular)).foregroundStyle(OrcaTheme.ink).lineLimit(2)
                 }
-                Text(message.snippet).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).lineSpacing(3).lineLimit(2)
+                Text("Attention: " + message.attentionBehavior.capitalized).font(OrcaTheme.ui(11, weight: .semibold)).foregroundStyle(OrcaTheme.accent)
+                Text(MailPreview.decode(message.snippet)).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).lineSpacing(3).lineLimit(2)
                 if let score = message.humanSignal {
                     Label("Human signal \(score)/10", systemImage: "person.wave.2").font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted).padding(.top, 2)
                 }
@@ -226,3 +233,21 @@ private struct MailboxSearch: ViewModifier {
     }
 }
 
+
+enum MailPreview {
+    static func day(_ value: String, calendar: Calendar = .current) -> Date? {
+        MailDate.parse(value).map { calendar.startOfDay(for: $0) }
+    }
+    static func decode(_ value: String) -> String {
+        var result = value
+        let pattern = #"&(amp|lt|gt|quot|apos|#39);"#
+        let entities = ["&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&apos;": "'", "&#39;": "'"]
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return value }
+        for _ in 0..<2 {
+            for match in expression.matches(in: result, range: NSRange(result.startIndex..., in: result)).reversed() {
+                if let range = Range(match.range, in: result), let replacement = entities[String(result[range])] { result.replaceSubrange(range, with: replacement) }
+            }
+        }
+        return result
+    }
+}
