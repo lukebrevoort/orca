@@ -5815,6 +5815,14 @@ export function MessageReader({
         <span aria-hidden="true">↑</span>
       </button>
 
+      {/* Keep fixed navigation outside the transformed entrance-animation container. */}
+      {status === "ready" ? (
+          <nav className="reader-context-jumps" aria-label="Conversation navigation">
+            <button type="button" hidden={!navigationVisibility.unread} disabled={!firstUnreadMessage} title="First unread when this conversation opened" onClick={() => jumpToMessage(firstUnreadMessage)}>Jump to unread</button>
+            <button type="button" hidden={!navigationVisibility.latest} disabled={!jumpTarget} onClick={jumpToNewest}>Jump to latest <span aria-hidden="true">↓</span></button>
+          </nav>
+      ) : null}
+
       {status === "loading" || status === "idle" ? <ReaderLoading title={fallbackTitle} messages={fallbackMessages} /> : null}
       {status === "error" ? (
         <section className="reader-state" role="alert">
@@ -5843,10 +5851,7 @@ export function MessageReader({
             </div>
           </header>
 
-          <nav className="reader-context-jumps" aria-label="Conversation navigation">
-            <button type="button" hidden={!navigationVisibility.unread} disabled={!firstUnreadMessage} title="First unread when this conversation opened" onClick={() => jumpToMessage(firstUnreadMessage)}>Jump to unread</button>
-            <button type="button" hidden={!navigationVisibility.latest} disabled={!jumpTarget} onClick={jumpToNewest}>Jump to latest <span aria-hidden="true">↓</span></button>
-          </nav>
+
           {entryIndex > 0 ? <div className="reader-earlier-divider"><button className="reader-earlier" type="button" aria-label={`${showEarlier ? "Hide" : "Show"} ${entryIndex} earlier messages`} aria-expanded={Boolean(showEarlier)} onClick={() => updateCards(openCards, !showEarlier)}>{entryIndex} earlier messages<span aria-hidden="true">{showEarlier ? "⌃" : "⌄"}</span></button></div> : null}
 
           <ReaderMessageList key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>

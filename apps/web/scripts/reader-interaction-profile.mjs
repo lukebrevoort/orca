@@ -113,6 +113,11 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
           await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
           await page.getByRole('button', { name: 'Expand all', exact: true }).click();
           await page.locator('#reader-title').scrollIntoViewIfNeeded();
+          await page.waitForFunction(() => {
+            const button = [...document.querySelectorAll('.reader-context-jumps button')].find(node => node.textContent.startsWith('Jump to latest'));
+            const bounds = button?.getBoundingClientRect();
+            return button && !button.hidden && bounds.height >= 44 && bounds.top >= 0 && bounds.bottom <= innerHeight;
+          });
           await measure('jump-newest', () => page.getByRole('button', { name: 'Jump to latest', exact: true }).click(), async () => {
             await page.waitForFunction(() => document.activeElement?.getAttribute('aria-labelledby') === 'reader-sender-profile-message-59');
           });

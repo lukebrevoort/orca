@@ -89,6 +89,7 @@ test("quiet controls move bulk actions into a labeled disclosure and retain card
   expect(menu).not.toBeNull();
   expect(menu!.querySelector('summary')?.getAttribute('aria-label')).toBe('Conversation actions');
   expect(menu!.open).toBe(false);
+  expect(browser.document.querySelector('.reader-context-jumps')?.closest('.reader-document')).toBeNull();
   expect(menu!.contains(button('Expand all'))).toBe(true);
   await act(async () => { menu!.open = true; });
   await click('Expand all');
