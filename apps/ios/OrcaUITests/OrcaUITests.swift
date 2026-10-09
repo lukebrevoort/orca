@@ -1215,7 +1215,18 @@ final class OrcaUITests: XCTestCase {
     private func assertInboxLoaded(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20), file: file, line: line)
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 20), file: file, line: line)
-        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"].exists, file: file, line: line)
+        // List realizes rows within its viewport. At accessibility sizes the
+        // attention/date headings can put the second fixture below that viewport.
+        let secondRow = app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"]
+        var scrolls = 0
+        while !secondRow.exists && scrolls < 5 {
+            app.swipeUp()
+            scrolls += 1
+        }
+        XCTAssertTrue(secondRow.exists, file: file, line: line)
+        // Leave callers at their original inbox entry point.
+        for _ in 0..<scrolls { app.swipeDown() }
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists, file: file, line: line)
         XCTAssertTrue(app.tabBars.buttons["Inbox"].isSelected, file: file, line: line)
     }
 
