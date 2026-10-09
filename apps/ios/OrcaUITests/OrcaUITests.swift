@@ -1095,12 +1095,15 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(latest.isHittable, "The newest message must be visible without scrolling past earlier replies.")
         attachScreenshot(named: "17-latest-message-on-open")
 
+        let earlierToggle = app.buttons["Show 1 earlier messages"]
+        XCTAssertTrue(earlierToggle.exists)
+        earlierToggle.tap()
         let earlier = app.staticTexts["Earlier sender"]
         for _ in 0..<5 {
             if earlier.exists && earlier.isHittable { break }
-            app.swipeUp()
+            app.swipeDown()
         }
-        XCTAssertTrue(earlier.isHittable, "Earlier replies must remain reachable below the latest message.")
+        XCTAssertTrue(earlier.isHittable, "Earlier replies must remain reachable through the earlier-messages disclosure.")
         attachScreenshot(named: "18-earlier-reply")
         app.buttons["Reply"].tap()
         let recipient = app.textFields["compose.to"]
