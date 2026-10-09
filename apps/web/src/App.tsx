@@ -1,3 +1,5 @@
+import { readerNavigationVisibility } from "./reader-navigation";
+import { decodeMailPreview } from "./mail-preview";
 import { installViewNavigationHistory, requestViewNavigation } from "./view-navigation-guard";
 import { BulkSpaceMove, conversationKey, selectedConversations } from "./bulk-space-move";
 import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
@@ -5462,7 +5464,8 @@ function InboxView({
 
               return (
                 <li key={messageIdentityKey(message)}>
-                  {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
+                  {index === 0 || message.attentionBehavior !== displayMessages[index - 1]?.attentionBehavior ? <div className="stream-attention-label">{message.attentionBehavior === "notify" ? "Notify" : message.attentionBehavior === "focus" ? "Focus" : message.attentionBehavior === "quiet" ? "Quiet" : message.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</div> : null}
+                  {index === 0 || message.attentionBehavior !== displayMessages[index - 1]?.attentionBehavior || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
                   <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
                       aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
@@ -5499,7 +5502,7 @@ function InboxView({
                           <span>{formatInboxReceivedAt(message.receivedAt)}</span>
                         </div>
                         <MessageSubject subject={message.subject} unread={message.unread} />
-                        <p>{message.snippet}</p>
+                        <p>{decodeMailPreview(message.snippet)}</p>
                       </div>
                   </button>
                     <button className="message-initial-select" aria-label={`${selected ? "Deselect" : "Select"} conversation from ${senderName}: ${message.subject || "(no subject)"}`} aria-pressed={selected} disabled={bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => toggleSelection(message)} type="button" title={selected ? "Deselect conversation" : "Select conversation"}><span aria-hidden="true">{selected ? "✓" : "+"}</span></button>
@@ -5695,15 +5698,38 @@ export function MessageReader({
   demoMode?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const threadMenuRef = useRef<HTMLDetailsElement>(null);
+  const [navigationVisibility, setNavigationVisibility] = useState({ unread: false, latest: false });
   const messageRefs = useRef(new Map<string, HTMLElement>());
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
 
   const newestMessage = messages[messages.length - 1];
-  const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
-  const firstUnreadMessage = messages.find((message) => message.unread);
-  const jumpTarget = newestUnreadMessage ?? newestMessage;
+  const currentFirstUnread = messages.find((message) => message.unread);
+  const jumpTarget = newestMessage;
+  const readerIdentity = detail ? accountScopedIdentityKey(detail.account.id, detail.thread.id) : "";
+  const [cards, setCards] = useState<{ identity: string; open: Set<string>; earlier: boolean; entry: string | null; unreadEntry: string | null } | null>(null);
+  const firstUnreadMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.unreadEntry) : undefined) ?? currentFirstUnread;
+  const initialMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.entry) : undefined) ?? firstUnreadMessage ?? newestMessage;
+  const openCards = cards?.identity === readerIdentity ? cards.open : new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []);
+  const showEarlier = cards?.identity === readerIdentity && cards.earlier;
+  const entryIndex = initialMessage ? messages.indexOf(initialMessage) : 0;
+  function updateCards(open: Set<string>, earlier = Boolean(showEarlier)) { setCards({ identity: readerIdentity, open, earlier, entry: initialMessage ? messageIdentityKey(initialMessage) : null, unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null }); }
+  function jumpToMessage(message: ThreadDetailMessage | undefined) {
+    if (!message) return;
+    const key = messageIdentityKey(message);
+    updateCards(new Set([...openCards, key]), true);
+    requestAnimationFrame(() => {
+      const node = messageRefs.current.get(key);
+      node?.scrollIntoView?.({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
+      node?.focus({ preventScroll: true });
+    });
+  }
+  useEffect(() => {
+    if (status !== "ready" || !initialMessage) return;
+    setCards({ identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
+  }, [readerIdentity, status]);
   const title = detail?.thread.subject || fallbackTitle;
 
   useEffect(() => {
@@ -5720,12 +5746,44 @@ export function MessageReader({
     return () => scrollport.removeEventListener("scroll", updateJumpToTop);
   }, [status]);
 
-  function jumpToNewest() {
-    if (!jumpTarget) return;
-    const node = messageRefs.current.get(messageIdentityKey(jumpTarget));
-    node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
-    node?.focus({ preventScroll: true });
+  useEffect(() => {
+    if (status !== "ready") return;
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    let frame = 0;
+    const update = () => {
+      const contained = scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY);
+      const viewport = contained ? scrollport.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      const bounds = (message: ThreadDetailMessage | undefined) => message ? messageRefs.current.get(messageIdentityKey(message))?.getBoundingClientRect() ?? null : null;
+      const offset = contained ? scrollport.scrollTop : window.scrollY;
+      const next = readerNavigationVisibility(bounds(firstUnreadMessage), bounds(newestMessage), viewport, offset > 40 || Boolean(showEarlier));
+      if (next.unread && firstUnreadMessage === newestMessage) next.latest = false;
+      setNavigationVisibility(previous => previous.unread === next.unread && previous.latest === next.latest ? previous : next);
+    };
+    const schedule = () => { window.cancelAnimationFrame(frame); frame = window.requestAnimationFrame(update); };
+    update();
+    // Capture both document scrolling on mobile and the desktop scrollport.
+    window.addEventListener("scroll", schedule, { passive: true, capture: true });
+    window.addEventListener("resize", schedule);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+    // Earlier quotes/images can move a target without resizing the target itself.
+    const messageList = newestMessage && messageRefs.current.get(messageIdentityKey(newestMessage))?.closest(".reader-message-list");
+    if (messageList) observer?.observe(messageList);
+    for (const message of [firstUnreadMessage, newestMessage]) {
+      const node = message && messageRefs.current.get(messageIdentityKey(message));
+      if (node) observer?.observe(node);
+    }
+    return () => { window.removeEventListener("scroll", schedule, true); window.removeEventListener("resize", schedule); window.cancelAnimationFrame(frame); observer?.disconnect(); };
+  }, [readerIdentity, status, cards, firstUnreadMessage, newestMessage, showEarlier]);
+
+  function setAllCards(expand: boolean) {
+    updateCards(expand ? new Set(messages.map(messageIdentityKey)) : new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []), expand);
+    if (threadMenuRef.current) {
+      threadMenuRef.current.open = false;
+      threadMenuRef.current.querySelector("summary")?.focus();
+    }
   }
+
+  function jumpToNewest() { jumpToMessage(jumpTarget); }
 
   function jumpToTop() {
     headingRef.current?.focus({ preventScroll: true });
@@ -5757,6 +5815,14 @@ export function MessageReader({
         <span aria-hidden="true">↑</span>
       </button>
 
+      {/* Keep fixed navigation outside the transformed entrance-animation container. */}
+      {status === "ready" ? (
+          <nav className="reader-context-jumps" aria-label="Conversation navigation">
+            <button type="button" hidden={!navigationVisibility.unread} disabled={!firstUnreadMessage} title="First unread when this conversation opened" onClick={() => jumpToMessage(firstUnreadMessage)}>Jump to unread</button>
+            <button type="button" hidden={!navigationVisibility.latest} disabled={!jumpTarget} onClick={jumpToNewest}>Jump to latest <span aria-hidden="true">↓</span></button>
+          </nav>
+      ) : null}
+
       {status === "loading" || status === "idle" ? <ReaderLoading title={fallbackTitle} messages={fallbackMessages} /> : null}
       {status === "error" ? (
         <section className="reader-state" role="alert">
@@ -5770,21 +5836,27 @@ export function MessageReader({
         <div className="reader-document">
           <header className="reader-heading">
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
+            <p className="reader-attention-label">Attention: {(detail.thread.attention.attentionBehavior ?? "normal").replace(/^./, letter => letter.toUpperCase())}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
-            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
+            <div className="reader-heading-actions">
+              <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
+              <details className="reader-thread-menu" ref={threadMenuRef} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+                <summary role="button" aria-label="Conversation actions" title="Conversation actions">···</summary>
+                <div className="reader-thread-menu-items">
+                  <button type="button" onClick={() => setAllCards(true)}>Expand all</button>
+                  <button type="button" onClick={() => setAllCards(false)}>Collapse all</button>
+                </div>
+              </details>
+            </div>
           </header>
 
-          {messages.length >= 5 && jumpTarget ? (
-            <button className="reader-jump" onClick={jumpToNewest} type="button">
-              <span>{newestUnreadMessage ? "Jump to newest unread" : "Jump to newest"}</span>
-              <span aria-hidden="true">↓</span>
-            </button>
-          ) : null}
+
+          {entryIndex > 0 ? <div className="reader-earlier-divider"><button className="reader-earlier" type="button" aria-label={`${showEarlier ? "Hide" : "Show"} ${entryIndex} earlier messages`} aria-expanded={Boolean(showEarlier)} onClick={() => updateCards(openCards, !showEarlier)}>{entryIndex} earlier messages<span aria-hidden="true">{showEarlier ? "⌃" : "⌄"}</span></button></div> : null}
 
           <ReaderMessageList key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
             {messageGroups.map((group) => (
-              <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
+              <section className="reader-day-group" hidden={!showEarlier && group.messages.every(message => messages.indexOf(message) < entryIndex)} key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
                 <ol>
                   {group.messages.map((message, index) => {
@@ -5793,8 +5865,9 @@ export function MessageReader({
                     const isNewest = newestMessage ? messageKey === messageIdentityKey(newestMessage) : false;
                     const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
+                    const isOpen = openCards.has(messageKey);
                     return (
-                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={messageKey}>
+                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
@@ -5804,11 +5877,16 @@ export function MessageReader({
                           }}
                           tabIndex={-1}
                         >
+                    <button className="reader-card-toggle" type="button" aria-label={`${isOpen ? "Collapse" : "Expand"} message from ${message.from.name ?? message.from.email}`} aria-expanded={isOpen} aria-controls={`reader-card-${message.id}`} onClick={() => { const next = new Set(openCards); if (next.has(messageKey)) next.delete(messageKey); else next.add(messageKey); updateCards(next); }}>
+                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                      {!isOpen ? <span className="reader-card-preview">{decodeMailPreview(message.snippet)}</span> : null}
+                      {!isOpen ? <small>To {formatRecipientAddresses(message.to)}{message.cc.length ? ` · Cc ${formatRecipientAddresses(message.cc)}` : ""}</small> : null}
+                    </button>
+                    <div id={`reader-card-${message.id}`} hidden={!isOpen}>
                     <header className="reader-sender">
-                      <MessageMark contact={message.from} signature={signature} unread={message.unread} />
                       <div className="reader-sender-copy">
                         <div className="reader-sender-line">
-                          <h3 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
+                          <h3 className="sr-only" id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
                           {message.unread ? <span className="reader-status-label">Unread</span> : null}
                           {isNewest ? <span className="reader-status-label">Newest</span> : null}
                         </div>
@@ -5835,6 +5913,7 @@ export function MessageReader({
                         <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
                       </section>
                     ) : null}
+                    </div>
                         </article>
                       </li>
                     );

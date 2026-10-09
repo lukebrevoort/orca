@@ -102,10 +102,23 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
           const name = `profile-${count}-${theme}-${rendering}-reader.png`;
           await page.screenshot({ path: join(out, name) }); screenshots.push(name);
         }
-        await measure('plain-text', () => page.getByRole('button', { name: 'Plain text', exact: true }).first().click(), () => page.locator('.reader-body-plain').first().waitFor());
-        await measure('formatted', () => page.getByRole('button', { name: 'Formatted', exact: true }).first().click(), () => page.locator('.reader-formatted-region').first().waitFor());
+        const activeCard = page.locator('.reader-message').last();
+        assert.equal(await activeCard.locator('.reader-card-toggle').getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), 1, 'Opening an all-read conversation expands only its latest message');
+        await measure('plain-text', () => activeCard.getByRole('button', { name: 'Plain text', exact: true }).click(), () => activeCard.locator('.reader-body-plain').waitFor());
+        await measure('formatted', () => activeCard.getByRole('button', { name: 'Formatted', exact: true }).click(), () => activeCard.locator('.reader-formatted-region').waitFor());
         if (count > 1) {
-          await measure('jump-newest', () => page.getByRole('button', { name: 'Jump to newest', exact: true }).click(), async () => {
+          // The latest-only entry has no redundant jump. Reveal history and
+          // move to the header before measuring the contextual latest shortcut.
+          await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
+          await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+          await page.locator('#reader-title').scrollIntoViewIfNeeded();
+          await page.waitForFunction(() => {
+            const button = [...document.querySelectorAll('.reader-context-jumps button')].find(node => node.textContent.startsWith('Jump to latest'));
+            const bounds = button?.getBoundingClientRect();
+            return button && !button.hidden && bounds.height >= 44 && bounds.top >= 0 && bounds.bottom <= innerHeight;
+          });
+          await measure('jump-newest', () => page.getByRole('button', { name: 'Jump to latest', exact: true }).click(), async () => {
             await page.waitForFunction(() => document.activeElement?.getAttribute('aria-labelledby') === 'reader-sender-profile-message-59');
           });
           await measure('jump-top', () => page.getByRole('button', { name: 'Jump to top', exact: true }).click(), async () => {
@@ -120,6 +133,10 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       // these checks may force every offscreen body's layout before profiling.
       if (count > 1) {
         await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
+        // Whole-thread search/focus operates on the explicitly expanded view.
+        await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
+        await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), count);
         const allText = await page.locator('.reader-message-list').textContent();
         for (let index = 1; index <= count; index++) assert(allText.includes(`End of review ${index}`));
         const found = await page.evaluate(() => {
@@ -241,6 +258,9 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         // Start a fresh reader before testing optimized dynamic body sizing.
         await page.locator('.reader-back').click(); await row().waitFor();
         await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
+        await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
+        await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), count);
         assert.equal(await page.locator('.reader-message-list').getAttribute('data-full-body-layout'), null);
         // The remembered size must adapt after an image decodes and reader text
         // grows. This adds a synthetic in-memory image to the mounted HTML DOM;
@@ -258,7 +278,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         });
         assert(resized.after > resized.before && resized.imageHeight > 0, 'Late image/font-size changes must expand the measured body');
         const imageNode = await page.locator('img[alt="Synthetic delayed image"]').elementHandle();
-        await page.getByRole('button', { name: 'Jump to newest', exact: true }).click(); await settle();
+        await page.getByRole('button', { name: 'Jump to latest', exact: true }).click(); await settle();
         await page.getByRole('button', { name: 'Jump to top', exact: true }).click(); await settle();
         assert(await imageNode.evaluate(element => element.isConnected && element.complete), 'Offscreen revisits must retain loaded image identity');
         await page.evaluate(() => { document.documentElement.dataset.readerSize = 'standard'; });
@@ -271,9 +291,9 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         await page.locator('.reader-back').click(); await row().waitFor();
       }
       // Browser history and selection must still restore the originating list.
-      await row().click(); await page.locator('.reader-body-html').first().waitFor();
+      await row().click(); await page.locator('.reader-body-html').last().waitFor();
       await measure('history-back', () => page.goBack(), () => row().waitFor(), false);
-      await measure('history-forward', () => page.goForward(), () => page.locator('.reader-body-html').first().waitFor(), false);
+      await measure('history-forward', () => page.goForward(), () => page.locator('.reader-body-html').last().waitFor(), false);
       await page.locator('.reader-back').click(); await row().waitFor();
       const select = page.locator('.message-initial-select').first();
       await measure('select-conversation', () => select.click(), () => page.locator('.bulk-selection-exit').waitFor());

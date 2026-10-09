@@ -121,12 +121,19 @@ final class ReaderUITests: XCTestCase {
             if isVisible(text, in: app) { return }
             let top = app.navigationBars["Conversation"].frame.maxY
             let bottom = app.buttons["Reply"].frame.minY - 12
+            // Contextual jumps can cover the center drag origin at large
+            // text sizes. Start in scroll content, above every visible jump,
+            // so the gesture tests scrolling rather than dragging a Button.
+            let jumps = ["thread.jump-unread", "thread.jump-latest"]
+                .map { app.buttons[$0] }.filter { $0.exists && $0.isHittable }
+            let gestureBottom = jumps.reduce(bottom) { min($0, $1.frame.minY - 12) }
+            XCTAssertGreaterThan(gestureBottom - top, 80, "Reader needs an unobscured scroll gesture area")
             let frame = text.frame
-            let step = max(40, (bottom - top) * 0.5)
+            let step = max(40, (gestureBottom - top) * 0.5)
             let distance = frame.minY < top
                 ? -min(top - frame.minY + 8, step)
                 : min(max(frame.maxY - bottom + 8, 30), step)
-            let startY = distance > 0 ? bottom - 20 : top + 20
+            let startY = distance > 0 ? gestureBottom - 20 : top + 20
             let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
             let start = origin.withOffset(CGVector(dx: app.frame.width / 2, dy: startY))
             let end = origin.withOffset(CGVector(dx: app.frame.width / 2, dy: startY - distance))

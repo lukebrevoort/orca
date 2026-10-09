@@ -58,11 +58,13 @@ describe("message body alternatives", () => {
     expect(container.querySelector(".reader-body-html img")).toBe(originalImage);
     expect(container.querySelector('button[aria-pressed="true"]')?.textContent).toBe("Plain text");
     expect(container.querySelector(".reader-body-plain")?.textContent).toContain("const ready = true;\nreturn ready;");
-    expect(container.querySelector("details")?.open).toBe(false);
-    expect(container.querySelector("details")?.textContent).toContain("Earlier discussion.");
-    expect(container.querySelector("details")?.textContent).toContain("Footer remains available.");
+    expect(container.querySelector("details")).toBeNull();
+    expect(container.querySelector(".reader-body-plain")?.textContent).toContain("Footer remains available.");
+    expect(container.querySelector(".reader-body-plain")?.textContent).toContain("Earlier discussion.");
+    expect(container.querySelector(".reader-body-plain")?.textContent).toContain("Footer remains available.");
     expect(container.textContent).toContain("Some formatting may be missing.");
-    await act(async () => { container.querySelector("details")!.open = true; });
+    await click("Show complete original text");
+    expect(container.querySelector(".reader-body-plain")?.textContent).toBe(text);
     await click("Formatted");
     expect(container.querySelector(".reader-body-html")).toBe(originalNode);
     expect(container.querySelector(".reader-body-html a")).toBe(originalLink);
@@ -137,10 +139,10 @@ describe("reader content focus layout", () => {
     expect(container.querySelector(".reader-body-html a")).toBe(originalLink);
   });
   test("covers quoted-history focus and resets for a new thread identity", async () => {
-    await act(async () => root.render(<ReaderMessageList key="one"><ReaderBody html={null} text={text} /></ReaderMessageList>));
+    await act(async () => root.render(<ReaderMessageList key="one"><ReaderBody html={null} text={"Reply\nOn Monday, Sam wrote:\n> Quoted"} /></ReaderMessageList>));
     await act(async () => (container.querySelector("summary") as HTMLElement).focus());
     expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBe("true");
-    await act(async () => root.render(<ReaderMessageList key="two"><ReaderBody html={null} text={text} /></ReaderMessageList>));
+    await act(async () => root.render(<ReaderMessageList key="two"><ReaderBody html={null} text={"Reply\nOn Monday, Sam wrote:\n> Quoted"} /></ReaderMessageList>));
     expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBeUndefined();
   });
 });

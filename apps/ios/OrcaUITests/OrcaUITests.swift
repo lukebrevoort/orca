@@ -894,6 +894,9 @@ final class OrcaUITests: XCTestCase {
         assertInboxLoaded(in: app)
         attachScreenshot(named: "01-light-inbox")
 
+        let entryRow = app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"]
+        XCTAssertTrue(entryRow.isEnabled, "The initial inbox conversation must be enabled")
+        XCTAssertTrue(entryRow.isHittable, "The initial inbox conversation must be tappable before its single tap")
         openConversation(subject: Fixture.inboxSubject, in: app)
         XCTAssertTrue(app.staticTexts[Fixture.sender].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "reading view")).firstMatch.waitForExistence(timeout: 10))
@@ -1086,6 +1089,57 @@ final class OrcaUITests: XCTestCase {
         restoredInbox.tap()
     }
 
+    func test37LongConversationOffersOffscreenUnreadAndLatestJumps() throws {
+        _ = try composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": true])
+        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": false]) }
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        openConversation(subject: Fixture.inboxSubject, in: app)
+        let unread = app.staticTexts["Reader sender 22"]
+        let newest = app.staticTexts["Reader sender 24"]
+        let jumpUnread = app.buttons["thread.jump-unread"]
+        let jumpLatest = app.buttons["thread.jump-latest"]
+        XCTAssertTrue(unread.waitForExistence(timeout: 10))
+        XCTAssertTrue(unread.isHittable)
+        attachScreenshot(named: "reader-jumps-first-unread")
+        XCTAssertTrue(jumpLatest.waitForExistence(timeout: 5), "Latest is below the long first-unread card and needs a jump")
+        XCTAssertTrue(jumpLatest.isHittable)
+        XCTAssertFalse(jumpUnread.exists, "Unread is already visible")
+        jumpLatest.tap()
+        XCTAssertTrue(newest.waitForExistence(timeout: 5))
+        XCTAssertTrue(newest.isHittable)
+        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        XCTAssertFalse(jumpLatest.exists, "Latest jump must disappear at its target")
+        attachScreenshot(named: "reader-jumps-at-latest")
+        jumpUnread.tap()
+        XCTAssertTrue(unread.isHittable)
+        XCTAssertTrue(jumpLatest.waitForExistence(timeout: 5))
+        XCTAssertFalse(jumpUnread.exists)
+        // Return to the history divider, then reveal the 21 preceding cards.
+        for _ in 0..<6 {
+            if app.buttons["Show 21 earlier messages"].isHittable { break }
+            app.swipeDown()
+        }
+        app.buttons["Show 21 earlier messages"].tap()
+        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        XCTAssertTrue(jumpLatest.isHittable)
+        attachScreenshot(named: "reader-jumps-earlier-history")
+        jumpUnread.tap()
+        XCTAssertTrue(unread.isHittable)
+        XCTAssertFalse(jumpUnread.exists)
+        // Scroll back into preceding messages until the entire unread card is
+        // outside the viewport, not just its sender heading.
+        for _ in 0..<6 {
+            if jumpUnread.exists { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        jumpUnread.tap()
+        XCTAssertTrue(unread.isHittable)
+        XCTAssertFalse(jumpUnread.exists)
+        attachScreenshot(named: "reader-jumps-return-to-unread")
+    }
+
     func test07ConversationOpensAtLatestMessage() throws {
         let app = try launchApp()
         assertInboxLoaded(in: app)
@@ -1095,12 +1149,27 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(latest.isHittable, "The newest message must be visible without scrolling past earlier replies.")
         attachScreenshot(named: "17-latest-message-on-open")
 
+        let actions = app.buttons["thread.actions"]
+        XCTAssertTrue(actions.isHittable, "Conversation actions must remain reachable in the toolbar.")
+        actions.tap()
+        XCTAssertTrue(app.buttons["Expand all"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Collapse all"].exists)
+        attachScreenshot(named: "17b-conversation-actions")
+        app.buttons["Expand all"].tap()
+        XCTAssertTrue(app.buttons["Hide 1 earlier messages"].exists)
+        actions.tap()
+        app.buttons["Collapse all"].tap()
+        XCTAssertTrue(latest.isHittable, "Collapse all must retain the entry message.")
+
+        let earlierToggle = app.buttons["Show 1 earlier messages"]
+        XCTAssertTrue(earlierToggle.exists)
+        earlierToggle.tap()
         let earlier = app.staticTexts["Earlier sender"]
         for _ in 0..<5 {
             if earlier.exists && earlier.isHittable { break }
-            app.swipeUp()
+            app.swipeDown()
         }
-        XCTAssertTrue(earlier.isHittable, "Earlier replies must remain reachable below the latest message.")
+        XCTAssertTrue(earlier.isHittable, "Earlier replies must remain reachable through the earlier-messages disclosure.")
         attachScreenshot(named: "18-earlier-reply")
         app.buttons["Reply"].tap()
         let recipient = app.textFields["compose.to"]
@@ -1212,7 +1281,18 @@ final class OrcaUITests: XCTestCase {
     private func assertInboxLoaded(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20), file: file, line: line)
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 20), file: file, line: line)
-        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"].exists, file: file, line: line)
+        // List realizes rows within its viewport. At accessibility sizes the
+        // attention/date headings can put the second fixture below that viewport.
+        let secondRow = app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"]
+        var scrolls = 0
+        while !secondRow.exists && scrolls < 5 {
+            app.swipeUp()
+            scrolls += 1
+        }
+        XCTAssertTrue(secondRow.exists, file: file, line: line)
+        // Leave callers at their original inbox entry point.
+        for _ in 0..<scrolls { app.swipeDown() }
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists, file: file, line: line)
         XCTAssertTrue(app.tabBars.buttons["Inbox"].isSelected, file: file, line: line)
     }
 
@@ -1226,6 +1306,7 @@ final class OrcaUITests: XCTestCase {
         }
         let row = app.descendants(matching: .any)[identifier]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
+        print("INBOX_NAVIGATION_TARGET row=\(identifier) type=\(row.elementType.rawValue) frame=\(row.frame) hittable=\(row.isHittable) enabled=\(row.isEnabled)")
         let tapStarted = ProcessInfo.processInfo.systemUptime
         row.tap()
         let tapFinished = ProcessInfo.processInfo.systemUptime

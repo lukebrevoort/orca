@@ -30,6 +30,28 @@ private func requestBodyData(_ request: URLRequest) throws -> Data {
 }
 
 final class OrcaTests: XCTestCase {
+    func testReaderQuotesPreserveExactTextAndInlineAnswers() {
+        let body = "  Reply\r\n\r\nOn Monday, Sam wrote:\r\n> old\r\n"
+        let parts = ReaderQuoteParts.split(body)
+        XCTAssertNotNil(parts.quoted)
+        XCTAssertEqual(parts.current + (parts.quoted ?? ""), body)
+        let inline = "Reply\nOn Monday, Sam wrote:\n> old\nUnique answer"
+        XCTAssertNil(ReaderQuoteParts.split(inline).quoted)
+        XCTAssertEqual(ReaderQuoteParts.split(inline).current, inline)
+    }
+    func testAttentionDateGroupsUseTheLocalCalendar() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let day = try XCTUnwrap(MailPreview.day("2026-10-08T02:00:00.000Z", calendar: calendar))
+        XCTAssertEqual(calendar.component(.day, from: day), 7)
+        XCTAssertEqual(MailPreview.day("2026-10-07T23:00:00.000Z", calendar: calendar), day)
+    }
+    func testPreviewDecodingIsBoundedTextOnly() {
+        XCTAssertEqual(MailPreview.decode("Here&amp;#39;s"), "Here's")
+        XCTAssertEqual(MailPreview.decode("&amp;amp;amp;"), "&amp;")
+        XCTAssertEqual(MailPreview.decode("&lt;script&gt;literal&lt;/script&gt;"), "<script>literal</script>")
+    }
+
     func testViewDefinitionRoundTripPreservesServerOwnedFields() throws {
         let raw = ##"{"mode":"update","skipInbox":true,"viewId":"v","viewRevision":2,"source":{"kind":"sender_selection","label":"iOS"},"identity":{"name":"People","color":"#aabbcc","position":3},"definition":{"revision":1,"accountIds":["a"],"sender":{"addresses":["maya@example.com"]},"thread":{"readState":"unread"},"humanSignal":{"minimumScore":7}},"unsupportedClauses":[],"definitionDigest":"sha256:example"}"##.data(using: .utf8)!
         let reviewed = try JSONDecoder().decode(MailActionJSON.self, from: raw)
@@ -2437,5 +2459,16 @@ final class InboxRecoveryTests: XCTestCase {
         await model.load(state: fixture.state)
         await model.load(state: fixture.state, reset: false)
         XCTAssertEqual(requests, 1); XCTAssertEqual(model.messages.map(\.id), ["only-page"])
+    }
+}
+
+final class ReaderNavigationVisibilityTests: XCTestCase {
+    func testNavigationTracksVisiblePortionsAndClippedCards() {
+        XCTAssertTrue(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: -200, width: 300, height: 1000), viewportHeight: 700))
+        XCTAssertTrue(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 650, width: 300, height: 100), viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 700, width: 300, height: 100), viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: -100, width: 300, height: 100), viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(.zero, viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 0, width: 300, height: 100), viewportHeight: 0))
     }
 }

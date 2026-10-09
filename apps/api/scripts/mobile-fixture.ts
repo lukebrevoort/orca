@@ -9,6 +9,7 @@ import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
+import type { ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
 
 const readOnly = process.argv.includes("--read-only");
@@ -126,12 +127,36 @@ let draftLifecycleCreateRequests = 0;
 let draftLifecycleCreateExpired = false;
 let draftLifecycleCreateReleased = false;
 // Inbox recovery controls are scoped to this authenticated, disposable server.
+let longReaderFixture = false;
 let emptyInboxOnce = false;
 let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
 // Read gates last up to 20 seconds and draft creation gates up to 25 seconds.
 // Keep the connection alive until each gate’s explicit safety release.
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname === "/__fixture/reader") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method !== "POST") return new Response(null, { status: 405 });
+    longReaderFixture = (await request.json()).enabled === true;
+    return new Response(null, { status: 204 });
+  }
+  if (longReaderFixture && request.method === "GET" && url.pathname === "/v1/threads/ios-fixture-thread-1") {
+    const response = await app.fetch(request);
+    if (!response.ok) return response;
+    const detail = await response.json() as ThreadDetail;
+    const template = detail.messages[0]!;
+    detail.messages = Array.from({ length: 24 }, (_, i) => ({
+      ...template, id: `reader-message-${i + 1}`, providerMessageId: `reader-provider-${i + 1}`,
+      from: { name: `Reader sender ${i + 1}`, email: `reader${i + 1}@example.com` },
+      receivedAt: new Date(now.getTime() - (24 - i) * 3_600_000).toISOString(), unread: i >= 21,
+      snippet: `Conversation message ${i + 1}.`, bodyHtml: null,
+      bodyText: `Message ${i + 1} begins here.\n\n` + Array.from({ length: 14 }, (_, paragraph) =>
+        `Paragraph ${paragraph + 1}: This synthetic conversation makes offscreen navigation testable.`).join("\n\n") +
+        "\n\n> Earlier quoted context remains recoverable.", attachments: [],
+    }));
+    detail.thread.messageCount = 24;
+    return Response.json(detail);
+  }
   if (request.method === "POST" && url.pathname === "/v1/drafts") draftLifecycleCreateRequests += 1;
   if (url.pathname.startsWith("/__fixture/draft-lifecycle/")) {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });

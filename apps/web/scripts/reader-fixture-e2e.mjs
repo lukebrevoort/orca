@@ -155,7 +155,14 @@ async function checkQuotes(page, body, entry, name) {
   await current.waitFor();
   assert((await current.innerText()).includes(entry.plainCurrentMarker), 'Current reply text is missing');
   const quote = body.locator('.reader-quoted');
-  if (entry.quoteMarker) {
+  if (entry.id === 'github-notification') {
+    // Unique unquoted footer text follows this quote: keep the whole message
+    // visible rather than treating that footer as expendable quoted history.
+    assert.equal(await quote.count(), 0, 'Mixed quoted and unique text must stay visible');
+    assert.equal(await current.textContent(), entry.bodyText, 'Mixed quoted history must preserve every character');
+    assert((await current.innerText()).includes(entry.quoteMarker));
+    assert((await current.innerText()).includes(entry.endMarker));
+  } else if (entry.quoteMarker) {
     assert.equal(await quote.count(), 1, 'Quoted history must have a disclosure');
     assert.equal(await quote.evaluate(node => node.open), false, 'Quoted history starts collapsed');
     const summary = quote.locator('summary');
