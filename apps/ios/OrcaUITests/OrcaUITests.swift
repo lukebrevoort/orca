@@ -1086,6 +1086,57 @@ final class OrcaUITests: XCTestCase {
         restoredInbox.tap()
     }
 
+    func test37LongConversationOffersOffscreenUnreadAndLatestJumps() throws {
+        _ = try composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": true])
+        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": false]) }
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        openConversation(subject: Fixture.inboxSubject, in: app)
+        let unread = app.staticTexts["Reader sender 22"]
+        let newest = app.staticTexts["Reader sender 24"]
+        let jumpUnread = app.buttons["thread.jump-unread"]
+        let jumpLatest = app.buttons["thread.jump-latest"]
+        XCTAssertTrue(unread.waitForExistence(timeout: 10))
+        XCTAssertTrue(unread.isHittable)
+        attachScreenshot(named: "reader-jumps-first-unread")
+        XCTAssertTrue(jumpLatest.waitForExistence(timeout: 5), "Latest is below the long first-unread card and needs a jump")
+        XCTAssertTrue(jumpLatest.isHittable)
+        XCTAssertFalse(jumpUnread.exists, "Unread is already visible")
+        jumpLatest.tap()
+        XCTAssertTrue(newest.waitForExistence(timeout: 5))
+        XCTAssertTrue(newest.isHittable)
+        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        XCTAssertFalse(jumpLatest.exists, "Latest jump must disappear at its target")
+        attachScreenshot(named: "reader-jumps-at-latest")
+        jumpUnread.tap()
+        XCTAssertTrue(unread.isHittable)
+        XCTAssertTrue(jumpLatest.waitForExistence(timeout: 5))
+        XCTAssertFalse(jumpUnread.exists)
+        // Return to the history divider, then reveal the 21 preceding cards.
+        for _ in 0..<6 {
+            if app.buttons["Show 21 earlier messages"].isHittable { break }
+            app.swipeDown()
+        }
+        app.buttons["Show 21 earlier messages"].tap()
+        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        XCTAssertTrue(jumpLatest.isHittable)
+        attachScreenshot(named: "reader-jumps-earlier-history")
+        jumpUnread.tap()
+        XCTAssertTrue(unread.isHittable)
+        XCTAssertFalse(jumpUnread.exists)
+        // Scroll back into preceding messages until the entire unread card is
+        // outside the viewport, not just its sender heading.
+        for _ in 0..<6 {
+            if jumpUnread.exists { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        jumpUnread.tap()
+        XCTAssertTrue(unread.isHittable)
+        XCTAssertFalse(jumpUnread.exists)
+        attachScreenshot(named: "reader-jumps-return-to-unread")
+    }
+
     func test07ConversationOpensAtLatestMessage() throws {
         let app = try launchApp()
         assertInboxLoaded(in: app)

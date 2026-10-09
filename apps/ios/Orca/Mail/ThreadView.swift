@@ -88,20 +88,18 @@ struct ThreadView: View {
                         }
                     }
                 }.padding(24)
-                .background(GeometryReader { geometry in
-                    Color.clear.preference(key: ReaderHeaderOffsetKey.self, value: geometry.frame(in: .named("threadViewport")).minY)
-                })
+                .onGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.frame(in: .named("threadViewport")).minY
+                } action: { headerOffset = $0 }
             } else if let error {
                 ContentUnavailableView("Conversation unavailable", systemImage: "exclamationmark.bubble", description: Text(error))
                 Button("Try again") { Task { await load() } }
             } else { ProgressView("Getting conversation").padding(.top, 80) }
         }.background(OrcaTheme.paper)
         .coordinateSpace(name: "threadViewport")
-        .background(GeometryReader { geometry in
-            Color.clear.preference(key: ReaderViewportHeightKey.self, value: geometry.size.height)
-        })
-        .onPreferenceChange(ReaderViewportHeightKey.self) { viewportHeight = $0 }
-        .onPreferenceChange(ReaderHeaderOffsetKey.self) { headerOffset = $0 }
+        // Observe the scroll viewport directly. A background PreferenceKey can
+        // resolve to its zero default here, suppressing every contextual jump.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
         .onPreferenceChange(ReaderMessageFramesKey.self) { frames in
             messageFrames = frames
         }
@@ -288,14 +286,6 @@ private struct ReaderJumpButtonStyle: ButtonStyle {
 private struct ReaderMessageFramesKey: PreferenceKey {
     static let defaultValue: [String: CGRect] = [:]
     static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
-}
-private struct ReaderViewportHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
-private struct ReaderHeaderOffsetKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 enum ReaderNavigationVisibility {
     static func isVisible(_ frame: CGRect, viewportHeight: CGFloat) -> Bool {

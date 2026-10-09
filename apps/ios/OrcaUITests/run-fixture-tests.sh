@@ -82,8 +82,8 @@ elif [[ ${ORCA_UI_TEST_SCOPE:-all} == views ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage -only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == reading ]]; then
-  light_tests=(-only-testing:OrcaUITests/ReaderUITests -only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage)
-  dark_tests=(-only-testing:OrcaUITests/ReaderUITests -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage)
+  light_tests=(-only-testing:OrcaUITests/OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps -only-testing:OrcaUITests/ReaderUITests -only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps -only-testing:OrcaUITests/ReaderUITests -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == notifications ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
