@@ -1095,6 +1095,18 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(latest.isHittable, "The newest message must be visible without scrolling past earlier replies.")
         attachScreenshot(named: "17-latest-message-on-open")
 
+        let actions = app.buttons["thread.actions"]
+        XCTAssertTrue(actions.isHittable, "Conversation actions must remain reachable in the toolbar.")
+        actions.tap()
+        XCTAssertTrue(app.buttons["Expand all"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Collapse all"].exists)
+        attachScreenshot(named: "17b-conversation-actions")
+        app.buttons["Expand all"].tap()
+        XCTAssertTrue(app.buttons["Hide 1 earlier messages"].exists)
+        actions.tap()
+        app.buttons["Collapse all"].tap()
+        XCTAssertTrue(latest.isHittable, "Collapse all must retain the entry message.")
+
         let earlierToggle = app.buttons["Show 1 earlier messages"]
         XCTAssertTrue(earlierToggle.exists)
         earlierToggle.tap()

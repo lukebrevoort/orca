@@ -5765,6 +5765,9 @@ export function MessageReader({
     window.addEventListener("scroll", schedule, { passive: true, capture: true });
     window.addEventListener("resize", schedule);
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+    // Earlier quotes/images can move a target without resizing the target itself.
+    const messageList = newestMessage && messageRefs.current.get(messageIdentityKey(newestMessage))?.closest(".reader-message-list");
+    if (messageList) observer?.observe(messageList);
     for (const message of [firstUnreadMessage, newestMessage]) {
       const node = message && messageRefs.current.get(messageIdentityKey(message));
       if (node) observer?.observe(node);

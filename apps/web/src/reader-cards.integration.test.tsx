@@ -99,3 +99,35 @@ test("quiet controls move bulk actions into a labeled disclosure and retain card
   expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(1);
   expect(browser.document.querySelector('.reader-earlier')!.getAttribute('aria-label')).toBe('Show 21 earlier messages');
 });
+
+test("updates contextual navigation when preceding content grows without scrolling", async () => {
+  const originalObserver = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
+  const observers: { targets: Set<Element>; notify: () => void }[] = [];
+  Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, value: class {
+    targets = new Set<Element>();
+    constructor(public notify: () => void) { observers.push(this); }
+    observe(target: Element) { this.targets.add(target); }
+    disconnect() { this.targets.clear(); }
+  }});
+  try {
+    await render();
+    const latest = browser.document.querySelector('.reader-message article')!;
+    const list = browser.document.querySelector('.reader-message-list')!;
+    let top = 100;
+    latest.getBoundingClientRect = () => new browser.DOMRect(0, top, 200, 100);
+    const jump = [...browser.document.querySelectorAll('button')].find(node => node.textContent?.startsWith('Jump to latest'))!;
+    await act(async () => { browser.dispatchEvent(new browser.Event('resize')); await new Promise(resolve => browser.requestAnimationFrame(resolve)); });
+    expect(jump.hidden).toBe(true);
+    // A quote or image in an earlier card grows. The latest card retains its own size.
+    top = browser.innerHeight + 100;
+    await act(async () => {
+      for (const observer of observers) if (observer.targets.has(list as unknown as Element)) observer.notify();
+      await new Promise(resolve => browser.requestAnimationFrame(resolve));
+    });
+    expect(jump.hidden).toBe(false);
+    expect(writes).toEqual([]);
+  } finally {
+    if (originalObserver) Object.defineProperty(globalThis, 'ResizeObserver', originalObserver);
+    else delete (globalThis as any).ResizeObserver;
+  }
+});
