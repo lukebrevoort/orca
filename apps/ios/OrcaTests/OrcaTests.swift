@@ -2461,3 +2461,14 @@ final class InboxRecoveryTests: XCTestCase {
         XCTAssertEqual(requests, 1); XCTAssertEqual(model.messages.map(\.id), ["only-page"])
     }
 }
+
+final class ReaderNavigationVisibilityTests: XCTestCase {
+    func testNavigationTracksVisiblePortionsAndClippedCards() {
+        XCTAssertTrue(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: -200, width: 300, height: 1000), viewportHeight: 700))
+        XCTAssertTrue(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 650, width: 300, height: 100), viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 700, width: 300, height: 100), viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: -100, width: 300, height: 100), viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(.zero, viewportHeight: 700))
+        XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 0, width: 300, height: 100), viewportHeight: 0))
+    }
+}

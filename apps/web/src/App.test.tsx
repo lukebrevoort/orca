@@ -511,7 +511,7 @@ describe("App", () => {
       />,
     );
 
-    expect(html).toContain("First unread");
+    expect(html).toContain("Jump to unread");
     expect(html).toContain("Expand all");
     expect(html).toContain("Jump to top");
     expect(html).toContain("reader-jump-top\" hidden=\"\"");

@@ -63,7 +63,7 @@ test("keeps the first-unread card visible and open after a same-thread read refr
   expect(first.getAttribute("aria-expanded")).toBe("true");
   expect(first.closest("li")?.hasAttribute("hidden")).toBe(false);
   expect(browser.document.querySelector('[aria-controls="reader-card-reader-0"]')?.closest("li")?.hasAttribute("hidden")).toBe(true);
-  expect(button("First unread").disabled).toBe(false);
+  expect(button("Jump to unread").disabled).toBe(false);
   await click("Expand all");
   expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(24);
   await click("Collapse all");
@@ -76,8 +76,26 @@ test("an all-read conversation initially opens its latest message", async () => 
   const messages = Array.from({length:24}, (_, index) => ({...detail.messages[0]!, id:`reader-${index}`, receivedAt:`2026-10-08T${String(index).padStart(2,"0")}:00:00.000Z`, unread:false}));
   await render({...detail, messages});
   expect(browser.document.querySelector('[aria-controls="reader-card-reader-23"]')?.getAttribute("aria-expanded")).toBe("true");
-  expect(button("First unread").disabled).toBe(true);
+  expect(button("Jump to unread").disabled).toBe(true);
   await render({...detail, messages:[...messages, {...messages[23]!, id:"new-unread", receivedAt:"2026-10-09T01:00:00.000Z", unread:true}]});
-  expect(button("First unread").disabled).toBe(false);
+  expect(button("Jump to unread").disabled).toBe(false);
   expect(browser.document.querySelector(".reader-unread-divider")).not.toBeNull();
+});
+
+test("quiet controls move bulk actions into a labeled disclosure and retain card behavior", async () => {
+  const messages = Array.from({length:24}, (_, index) => ({...detail.messages[0]!, id:`quiet-${index}`, receivedAt:`2026-10-08T${String(index).padStart(2,"0")}:00:00.000Z`, unread:index>=21}));
+  await render({...detail,messages});
+  const menu = browser.document.querySelector('.reader-thread-menu') as import('happy-dom').HTMLDetailsElement | null;
+  expect(menu).not.toBeNull();
+  expect(menu!.querySelector('summary')?.getAttribute('aria-label')).toBe('Conversation actions');
+  expect(menu!.open).toBe(false);
+  expect(menu!.contains(button('Expand all'))).toBe(true);
+  await act(async () => { menu!.open = true; });
+  await click('Expand all');
+  expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(24);
+  expect(menu!.open).toBe(false);
+  await act(async () => { menu!.open = true; });
+  await click('Collapse all');
+  expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(1);
+  expect(browser.document.querySelector('.reader-earlier')!.getAttribute('aria-label')).toBe('Show 21 earlier messages');
 });

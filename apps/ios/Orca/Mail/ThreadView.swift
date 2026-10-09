@@ -6,6 +6,11 @@ struct ThreadView: View {
     @State private var expanded: Set<String> = []
     @State private var showEarlier = false
     @State private var entryID: String?
+    @State private var unreadEntryID: String?
+    @State private var messageFrames: [String: CGRect] = [:]
+    private var visibleMessageIDs: Set<String> { Set(messageFrames.filter { ReaderNavigationVisibility.isVisible($0.value, viewportHeight: viewportHeight) }.map(\.key)) }
+    @State private var viewportHeight: CGFloat = 0
+    @State private var headerOffset: CGFloat = 0
     @AccessibilityFocusState private var focusedMessage: String?
     init(message: InboxMessage) { accountId = message.accountId; threadId = message.threadId }
     init(accountId: String, threadId: String) { self.accountId = accountId; self.threadId = threadId }
@@ -25,18 +30,20 @@ struct ThreadView: View {
                     let messages = detail.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
                     let entry = messages.first(where: { $0.id == entryID }) ?? messages.first(where: \.unread) ?? messages.last
                     let firstIndex = messages.firstIndex(where: { $0.id == entry?.id }) ?? 0
-                    let controlLayout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
-                    controlLayout {
-                        Button("First unread") { if let item = messages.first(where: \.unread) { jump(item.id, proxy: proxy) } }.disabled(!messages.contains(where: \.unread))
-                        Button("Newest ↓") { if let item = messages.last { jump(item.id, proxy: proxy) } }
-                        Button(expanded.count == messages.count ? "Collapse all" : "Expand all") {
-                            if expanded.count == messages.count { expanded = Set(entry.map { [$0.id] } ?? []); showEarlier = false }
-                            else { expanded = Set(messages.map(\.id)); showEarlier = true }
-                        }
-                    }.font(OrcaTheme.ui(12)).buttonStyle(.bordered)
                     if firstIndex > 0 {
-                        Button("\(showEarlier ? "Hide" : "Show") \(firstIndex) earlier messages") { showEarlier.toggle() }
-                            .font(OrcaTheme.ui(13)).buttonStyle(.bordered)
+                        HStack(spacing: 12) {
+                            Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            Button { showEarlier.toggle() } label: {
+                                HStack(spacing: 8) {
+                                    Text("\(firstIndex) earlier messages")
+                                    Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
+                                }.font(OrcaTheme.ui(12)).frame(minHeight: 44).padding(.horizontal, 8).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain).foregroundStyle(OrcaTheme.ink)
+                            .accessibilityLabel("\(showEarlier ? "Hide" : "Show") \(firstIndex) earlier messages")
+                            .accessibilityValue(showEarlier ? "Expanded" : "Collapsed")
+                            Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                        }
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, item in
                         if showEarlier || index >= firstIndex {
@@ -75,17 +82,64 @@ struct ThreadView: View {
                             }
                         }.padding(16).background(OrcaTheme.surface, in: RoundedRectangle(cornerRadius: 16))
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(OrcaTheme.border)).id(item.id)
+                            .background(GeometryReader { geometry in
+                                Color.clear.preference(key: ReaderMessageFramesKey.self, value: [item.id: geometry.frame(in: .named("threadViewport"))])
+                            })
                         }
                     }
                 }.padding(24)
+                .background(GeometryReader { geometry in
+                    Color.clear.preference(key: ReaderHeaderOffsetKey.self, value: geometry.frame(in: .named("threadViewport")).minY)
+                })
             } else if let error {
                 ContentUnavailableView("Conversation unavailable", systemImage: "exclamationmark.bubble", description: Text(error))
                 Button("Try again") { Task { await load() } }
             } else { ProgressView("Getting conversation").padding(.top, 80) }
         }.background(OrcaTheme.paper)
+        .coordinateSpace(name: "threadViewport")
+        .background(GeometryReader { geometry in
+            Color.clear.preference(key: ReaderViewportHeightKey.self, value: geometry.size.height)
+        })
+        .onPreferenceChange(ReaderViewportHeightKey.self) { viewportHeight = $0 }
+        .onPreferenceChange(ReaderHeaderOffsetKey.self) { headerOffset = $0 }
+        .onPreferenceChange(ReaderMessageFramesKey.self) { frames in
+            messageFrames = frames
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let detail, viewportHeight > 0 {
+                let messages = detail.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
+                let unread = messages.first(where: { $0.id == unreadEntryID }) ?? messages.first(where: \.unread)
+                let showUnread = unread.map { !visibleMessageIDs.contains($0.id) && (headerOffset < -40 || showEarlier) } ?? false
+                HStack(spacing: 8) {
+                    if let unread, showUnread {
+                        Button("Jump to unread") { jump(unread.id, proxy: proxy) }
+                            .accessibilityIdentifier("thread.jump-unread")
+                    }
+                    if let newest = messages.last, !visibleMessageIDs.contains(newest.id), !(showUnread && newest.id == unread?.id) {
+                        Button("Jump to latest") { jump(newest.id, proxy: proxy) }
+                            .accessibilityIdentifier("thread.jump-latest")
+                    }
+                }
+                .font(OrcaTheme.ui(12)).buttonStyle(ReaderJumpButtonStyle())
+                .padding(12)
+            }
+        }
         }
         .navigationTitle("Conversation").navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let detail {
+                    Menu {
+                        Button("Expand all") { expanded = Set(detail.messages.map(\.id)); showEarlier = true }
+                        Button("Collapse all") { expanded = Set(entryID.map { [$0] } ?? []); showEarlier = false }
+                    } label: {
+                        Image(systemName: "ellipsis").frame(width: 44, height: 44).contentShape(Rectangle())
+                    }.accessibilityLabel("Conversation actions").accessibilityIdentifier("thread.actions")
+                        .foregroundStyle(OrcaTheme.ink)
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             if let detail {
                 replyActions(detail).font(OrcaTheme.ui(12)).padding(.horizontal, 20).padding(.vertical, 12).background(OrcaTheme.paper)
@@ -132,6 +186,7 @@ struct ThreadView: View {
     private func accept(_ loaded: ThreadDetail) {
         if detail == nil {
             let ordered = loaded.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
+            unreadEntryID = ordered.first(where: \.unread)?.id
             entryID = (ordered.first(where: \.unread) ?? ordered.last)?.id
             expanded = Set(entryID.map { [$0] } ?? [])
         }
@@ -218,5 +273,32 @@ enum ReaderQuoteParts {
               match.range.location > 0,
               let range = Range(match.range, in: body) else { return (body, nil) }
         return (String(body[..<range.lowerBound]), String(body[range]))
+    }
+}
+
+
+private struct ReaderJumpButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.padding(.horizontal, 14).frame(minWidth: 44, minHeight: 44)
+            .foregroundStyle(OrcaTheme.ink)
+            .background(configuration.isPressed ? OrcaTheme.paper : OrcaTheme.surface, in: Capsule())
+            .overlay(Capsule().stroke(OrcaTheme.border))
+    }
+}
+private struct ReaderMessageFramesKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
+}
+private struct ReaderViewportHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+private struct ReaderHeaderOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+enum ReaderNavigationVisibility {
+    static func isVisible(_ frame: CGRect, viewportHeight: CGFloat) -> Bool {
+        viewportHeight > 0 && frame.height > 0 && frame.maxY > 0 && frame.minY < viewportHeight
     }
 }
