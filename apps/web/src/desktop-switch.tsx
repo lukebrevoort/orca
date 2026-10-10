@@ -108,6 +108,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       </button>
       <p className="desktop-sidebar-label">Mail</p>
       <SidebarItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => onNavigate("inbox")} />
+      <SidebarItem active={active === "focus"} icon={<NavIcon name="view" />} label="Focus" onClick={() => onNavigate("focus")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
       {(["Spaces", "Tools"] as const).map(group => <Fragment key={group}>
         <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">{group === "Tools" ? "Customize tools" : "Manage spaces"}</button>}</div>
@@ -145,6 +146,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
           <div aria-label="Mail" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
             <MobileMenuItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => navigateFromMobileMenu("inbox")} />
+            <MobileMenuItem active={active === "focus"} icon={<NavIcon name="view" />} label="Focus" onClick={() => navigateFromMobileMenu("focus")} />
             <MobileMenuItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => navigateFromMobileMenu("drafts")} />
             <MobileMenuItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => navigateFromMobileMenu("all")} />
           </div>
@@ -1130,3 +1132,4 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
 export function OrganizationStudio(props: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState; viewsRoute?: ViewsManagementRoute | null }) {
   return <OrganizationAuthorityProvider previewMode={props.interactivePreview}><OrganizationStudioContent {...props} /></OrganizationAuthorityProvider>;
 }
+

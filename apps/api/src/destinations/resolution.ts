@@ -40,7 +40,7 @@ export function resolveDestination(db: Db, workspaceId: string, accountId: strin
         const old = db.all<{
             behavior: string;
         }>(sql `select behavior from thread_attention_overrides where account_id=${accountId} and thread_id=${threadId}`)[0];
-        if (old)
+        if (old && !["notify", "focus"].includes(old.behavior))
             return result(legacy(old.behavior), "conversation");
     }
     const sender = binding("sender", address);
@@ -51,7 +51,7 @@ export function resolveDestination(db: Db, workspaceId: string, accountId: strin
             const old = db.all<{
                 behavior: string;
             }>(sql `select behavior from sender_attention_rules where account_id=${accountId} and scope='address' and value=${address}`)[0];
-            if (old)
+            if (old && !["notify", "focus"].includes(old.behavior))
                 return result(legacy(old.behavior), "sender");
         }
     }
@@ -60,7 +60,7 @@ export function resolveDestination(db: Db, workspaceId: string, accountId: strin
     const domain = db.all<{
         behavior: string;
     }>(sql `select behavior from sender_attention_rules where account_id=${accountId} and scope='domain' and value=${address.split("@")[1] ?? ""}`)[0];
-    if (domain)
+    if (domain && !["notify", "focus"].includes(domain.behavior))
         return result(legacy(domain.behavior), "legacy");
     const account = binding("account", "");
     if (skip !== "account") {
@@ -70,7 +70,7 @@ export function resolveDestination(db: Db, workspaceId: string, accountId: strin
             const old = db.all<{
                 behavior: string | null;
             }>(sql `select default_behavior behavior from account_attention_routing where account_id=${accountId}`)[0];
-            if (old?.behavior)
+            if (old?.behavior && !["notify", "focus"].includes(old.behavior))
                 return result(legacy(old.behavior), "account");
         }
     }

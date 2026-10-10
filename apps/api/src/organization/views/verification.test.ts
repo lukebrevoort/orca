@@ -1214,16 +1214,16 @@ test("skipInbox overlap, off, delete and scope edits restore only eligible mail 
     assert.equal(inbox().messages.length, 1);
     assert.throws(() => reader.read({ authorization: { userId: "owner" }, query: { view: "all", limit: 1, cursor: oldCursor } }), MailboxCursorError);
     await removePolicyView(fixture, second);
-    assert.equal(inbox().messages.length, 4);
+    assert.deepEqual(inbox().messages.map(m => m.id), ["message_maya", "message_maya_duplicate", "message_account_b"]);
     first = await updatePolicyView(fixture, first, { skipInbox: true });
     assert.equal(inbox().messages.length, 1);
     const revisionBefore = db.sqlite.query("SELECT account_id,revision FROM mailbox_revisions ORDER BY account_id").all() as Array<{ account_id: string; revision: number }>;
     first = await updatePolicyView(fixture, first, { definition: { revision: 1, accountIds: ["account_b"], sender: { addresses: ["ari@example.com"] } } });
-    assert.equal(inbox().messages.length, 3);
+    assert.deepEqual(inbox().messages.map(m => m.id), ["message_maya", "message_maya_duplicate"]);
     const revisionAfter = db.sqlite.query("SELECT account_id,revision FROM mailbox_revisions ORDER BY account_id").all() as typeof revisionBefore;
     for (const old of revisionBefore) assert.equal(revisionAfter.find(row => row.account_id === old.account_id)!.revision > old.revision, old.account_id !== "account_foreign");
     await removePolicyView(fixture, first);
-    assert.equal(inbox().messages.length, 4);
+    assert.deepEqual(inbox().messages.map(m => m.id), ["message_maya", "message_maya_duplicate", "message_account_b"]);
     assert.deepEqual(snapshot(), before);
   } finally { db.sqlite.close(); }
 });
@@ -1237,8 +1237,8 @@ test("skipInbox manual Inbox and safety locks win, clearing overrides resumes th
     const inbox = () => reader.read({ authorization: { userId: "owner" }, query: { view: "all", destinationId: ownerLane, limit: 50 } }).response.messages;
     db.sqlite.query("UPDATE organization_thread_lane_states SET manual_override_lane_id=? WHERE workspace_id='owner' AND account_id='account_a' AND thread_id='thread_a'").run(ownerLane);
     db.sqlite.query("UPDATE organization_thread_lane_states SET safety_locked=1,safety_lock_lane_id=? WHERE workspace_id='owner' AND account_id='account_a' AND thread_id='thread_b'").run(ownerLane);
-    assert.equal(inbox().length, 4);
-    assert.equal(createDestinations(db.db, "owner").list().destinations.find(d => d.id === ownerLane)!.counts.total, 4);
+    assert.deepEqual(inbox().map(m => m.id), ["message_maya", "message_maya_duplicate", "message_account_b"]);
+    assert.equal(createDestinations(db.db, "owner").list().destinations.find(d => d.id === ownerLane)!.counts.total, 3);
     db.sqlite.query("UPDATE organization_thread_lane_states SET manual_override_lane_id=NULL,safety_locked=0,safety_lock_lane_id=NULL WHERE workspace_id='owner'").run();
     assert.deepEqual(inbox().map(m => m.id), ["message_account_b"]);
   } finally { db.sqlite.close(); }
@@ -1261,8 +1261,9 @@ test("skipInbox uses same-message predicates for future mail across owned accoun
     add("account_a", "low-github", "low", "github@example.com", 1, "2026-08-27T18:00:00Z");
     const reader = createMailboxReader(db.sqlite);
     const inbox = () => reader.read({ authorization: { userId: "owner" }, query: { view: "all", destinationId: ownerLane, limit: 50 } }).response.messages;
-    assert.ok(inbox().some(m => m.id === "old-github"));
-    assert.ok(inbox().some(m => m.id === "new-other"));
+    // The old GitHub sender and new date belong to different messages, so this
+    // conversation remains eligible and is represented only by its latest reply.
+    assert.deepEqual(inbox().filter(m => m.accountId === "account_a" && m.threadId === "same").map(m => m.id), ["new-other"]);
     assert.ok(inbox().some(m => m.id === "low-github"));
     assert.ok(!inbox().some(m => ["new-github", "reply"].includes(m.id)));
     const results = await (await app.request(`/v1/organization/views/${view.id}/results?limit=50`, { headers })).json();
@@ -1306,7 +1307,17 @@ test("skipInbox dynamic facet/workflow/context predicates track membership and i
         const results = await (await app.request(`/v1/organization/views/${view.id}/results?limit=50`, { headers })).json();
         const hidden = new Set(results.items.map((item: { accountId: string; threadId: string }) => JSON.stringify([item.accountId, item.threadId])));
         const all = reader.read({ authorization, query: { view: "all", limit: 50 } }).response.messages;
-        assert.deepEqual(visible.map(m => m.id), all.filter(m => !hidden.has(JSON.stringify([m.accountId, m.threadId]))).map(m => m.id));
+        // All Mail remains message-oriented; Inbox retains only the latest row
+        // per conversation (these fixtures tie on date, so the ID breaks ties).
+        const represented = new Set<string>();
+        const representatives = all.filter(m => {
+          const key = JSON.stringify([m.accountId, m.threadId]);
+          if (represented.has(key)) return false;
+          represented.add(key);
+          return !hidden.has(key);
+        });
+        assert.deepEqual(visible.map(m => m.id), representatives.map(m => m.id));
+        assert.equal(all.length, 4);
       }
     }
   } finally { db.sqlite.close(); }
