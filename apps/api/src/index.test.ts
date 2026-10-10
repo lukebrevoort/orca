@@ -825,8 +825,8 @@ describe("Orca API", () => {
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.deepEqual(body.messages.map((message: { id: string }) => message.id), ["email_old", "email_new"]);
-      assert.equal(body.messages[0].bodyHtml, "<div>Dark foreground</div><div>Pale background</div><h2>Hello <strong>Luke</strong></h2><table><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\" />");
-      assert.equal(body.messages[0].bodyText, "Dark foregroundPale backgroundHello LukeReadable layout copyRead more");
+      assert.equal(body.messages[0].bodyHtml, '<div class="orca-mail-formatted"><div>Dark foreground</div><div>Pale background</div><h2>Hello <strong>Luke</strong></h2><table class="orca-mail-layout" role="presentation"><tr><td><p>Readable layout copy</p></td></tr></table><p><a href="https://example.com" target="_blank" rel="noopener noreferrer">Read more</a></p></div>');
+      assert.equal(body.messages[0].bodyText, "Dark foreground\nPale background\nHello Luke\nReadable layout copy\nRead more (https://example.com)\n");
       assert.equal(body.messages[1].bodyHtml, null);
       assert.equal(body.messages[1].bodyText, null);
       assert.deepEqual(body.messages[0].attachments, [{ id: "attachment_1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }]);

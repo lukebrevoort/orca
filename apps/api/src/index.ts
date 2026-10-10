@@ -13,7 +13,7 @@ import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit, ordinaryJsonBodyBytes, readBoundedRequestBody } from "./request-body.ts";
 import { validator } from "hono/validator";
-import sanitizeHtml from "sanitize-html";
+import { sanitizeProviderHtml, sanitizeInboundHtml, readableHtmlText } from "./mail/provider-html.ts";
 import {
   type AttentionBehavior,
   type ResolvedSenderAttention,
@@ -3153,7 +3153,7 @@ function readThreadDetailSnapshot(
   const routing = loadAttentionRouting(db, account.id);
   const destination = readThreadDestination(db, db.select({userId:oauthAccounts.userId}).from(oauthAccounts).where(eq(oauthAccounts.id,account.id)).get()!.userId, account.id, thread.id) ?? undefined;
   const messages = messageRows.map((message) => {
-    const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
+    const bodyHtml = sanitizeInboundHtml(message.bodyHtml);
     const humanClassification = resolveHumanClassification(message, resolveClassification);
     return {
       id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
@@ -3574,111 +3574,13 @@ function selectConnectedAccounts(
     .orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id))
     .all() as ConnectedAccount[];
 }
-const providerHtmlPolicy: sanitizeHtml.IOptions = {
-  allowedTags: [
-    "a", "abbr", "address", "article", "aside", "b", "blockquote", "br", "caption",
-    "cite", "code", "col", "colgroup", "dd", "del", "details", "div", "dl", "dt",
-    "em", "fieldset", "figcaption", "figure", "footer", "h1", "h2", "h3", "h4",
-    "h5", "h6", "header", "hr", "i", "img", "ins", "legend", "li", "main", "mark",
-    "nav", "ol", "p", "pre", "s", "section", "small", "span", "strong", "sub",
-    "summary", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "time", "tr",
-    "u", "ul",
-  ],
-  allowedAttributes: {
-    a: ["href", "title", "target", "rel", "name"],
-    img: ["src", "alt", "width", "height", "title"],
-    td: ["colspan", "rowspan", "align", "valign", "width", "height", "style"],
-    th: ["colspan", "rowspan", "align", "valign", "width", "height", "style"],
-    table: ["border", "cellpadding", "cellspacing", "width", "align", "style"],
-    col: ["width", "style"],
-    colgroup: ["width", "span", "style"],
-    tr: ["align", "valign", "style"],
-    div: ["align", "style", "data-email-preheader"],
-    p: ["align", "style"],
-    span: ["style"],
-    "*": ["class", "style"],
-  },
-  allowedSchemes: ["http", "https", "mailto", "cid"],
-  disallowedTagsMode: "discard",
-  exclusiveFilter: (frame) => {
-    if (frame.tag !== "div") return false;
-    if (frame.attribs["data-email-preheader"] === "true") return true;
-    const style = frame.attribs.style ?? "";
-    const hasHiddenStyle = /(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0)/i.test(style);
-    const hasZeroSize = /(?:height|max-height|width|max-width)\s*:\s*0(?:px)?/i.test(style);
-    return hasHiddenStyle && hasZeroSize;
-  },
-  allowedStyles: {
-    "*": {
-      "margin": [/.*/],
-      "margin-top": [/.*/],
-      "margin-right": [/.*/],
-      "margin-bottom": [/.*/],
-      "margin-left": [/.*/],
-      "padding": [/.*/],
-      "padding-top": [/.*/],
-      "padding-right": [/.*/],
-      "padding-bottom": [/.*/],
-      "padding-left": [/.*/],
-      "width": [/.*/],
-      "height": [/.*/],
-      "max-width": [/.*/],
-      "max-height": [/.*/],
-      "min-width": [/.*/],
-      "min-height": [/.*/],
-      "text-align": [/.*/],
-      "visibility": [/.*/],
-      "opacity": [/.*/],
-      "overflow": [/.*/],
-      "overflow-x": [/.*/],
-      "overflow-y": [/.*/],
-      "vertical-align": [/.*/],
-      "font-family": [/.*/],
-      "font-size": [/.*/],
-      "font-weight": [/.*/],
-      "font-style": [/.*/],
-      "line-height": [/.*/],
-      "letter-spacing": [/.*/],
-      "text-decoration": [/.*/],
-      "text-transform": [/.*/],
-      "border": [/.*/],
-      "border-top": [/.*/],
-      "border-right": [/.*/],
-      "border-bottom": [/.*/],
-      "border-left": [/.*/],
-      "border-radius": [/.*/],
-      "border-collapse": [/.*/],
-      "border-spacing": [/.*/],
-      "display": [/.*/],
-      "float": [/.*/],
-      "white-space": [/.*/],
-      "word-break": [/.*/],
-      "overflow-wrap": [/.*/],
-      "table-layout": [/.*/],
-    },
-  },
-  transformTags: {
-    a: (_tagName, attributes) => ({
-      tagName: "a",
-      attribs: { ...attributes, target: "_blank", rel: "noopener noreferrer" },
-    }),
-  },
-};
-
-function sanitizeProviderHtml(value: string | null) {
-  return value === null ? null : sanitizeHtml(value, providerHtmlPolicy) || null;
-}
 
 function sanitizeOutboundHtml(value: string | null) {
   return sanitizeProviderHtml(value);
 }
 
 function htmlToText(value: string | null) {
-  if (value === null) return null;
-  const visibleHtml = sanitizeProviderHtml(value);
-  if (visibleHtml === null) return null;
-  const text = sanitizeHtml(visibleHtml, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim();
-  return text || null;
+  return readableHtmlText(value);
 }
 
 function parseContacts(value: string | null) {
