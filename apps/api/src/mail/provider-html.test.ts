@@ -70,7 +70,7 @@ describe("inbound readable formatting and privacy", () => {
     const swift = readFileSync(new URL("../../../ios/OrcaTests/SafeHTMLOverflowTests.swift", import.meta.url), "utf8");
     const marked = swift.split('// BEGIN API NEWSLETTER FIXTURE')[1]!.split('// END API NEWSLETTER FIXTURE')[0]!;
     const literal = marked.split('"""')[1]!.replace(/^\n/, '').replace(/\n *$/, '').split('\n').map(line => line.replace(/^ {8}/, '')).join('\n');
-    expect(literal).toBe(sanitizeInboundHtml(raw));
+    expect(literal).toBe(sanitizeInboundHtml(raw)!);
   });
 
   test("structured fallback preserves paragraphs, destinations, table rows, and code whitespace", () => {
