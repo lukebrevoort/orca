@@ -1,5 +1,10 @@
 import sanitizeHtml from "sanitize-html";
-import { parseDocument, DomUtils } from "htmlparser2";
+import { createRequire } from "node:module";
+
+// sanitize-html loads this ESM parser through require(). Use the same synchronous
+// path: Bun 1.3 otherwise races an ESM import against that CommonJS load on a
+// clean, deduplicated installation ("require() async module is unsupported").
+const { parseDocument, DomUtils } = createRequire(import.meta.url)("htmlparser2") as typeof import("htmlparser2");
 
 export const providerHtmlPolicy: sanitizeHtml.IOptions = {
   allowedTags: [
