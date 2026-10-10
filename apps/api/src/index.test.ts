@@ -897,16 +897,18 @@ describe("Orca API", () => {
       const request = (view: string) => testApp.request(`/v1/inbox?view=${view}`, { headers: { cookie: `orca_session=${session.token}` } });
 
       const focus = await (await request("focus")).json();
-      assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["email_family", "email_bank"]);
+      assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["email_bank", "email_family"]);
       assert.equal(focus.messages[0].humanSignal, null);
       assert.equal(focus.messages[1].humanSignal, null);
       assert.equal(focus.messages[0].humanClassification.effective.classification, "unclassified");
-      assert.deepEqual(focus.counts, { focus: 2, normal: 1, quiet: 1, hidden: 2, all: 6 });
+      // Inbox counts describe eligible conversation representatives; All Mail retains raw messages.
+      assert.deepEqual(focus.counts, { focus: 2, normal: 1, quiet: 0, hidden: 0, all: 3 });
+      assert.deepEqual((await (await request("all")).json()).counts, { focus: 2, normal: 1, quiet: 1, hidden: 2, all: 6 });
       assert.deepEqual((await (await request("quiet")).json()).messages.map((message: { id: string }) => message.id), ["email_news"]);
-      assert.deepEqual((await (await request("normal")).json()).messages.map((message: { id: string }) => message.id), ["email_mixed_latest"]);
+      assert.deepEqual((await (await request("normal")).json()).messages.map((message: { id: string }) => message.id), ["email_bank", "email_family", "email_mixed_latest"]);
       assert.deepEqual((await (await request("hidden")).json()).messages.map((message: { id: string }) => message.id), ["email_hidden", "email_mixed_hidden"]);
       const defaultInbox = await (await testApp.request("/v1/inbox", { headers: { cookie: `orca_session=${session.token}` } })).json();
-      assert.deepEqual(defaultInbox.messages.map((message: { id: string }) => message.id), ["email_family", "email_bank", "email_mixed_latest"]);
+      assert.deepEqual(defaultInbox.messages.map((message: { id: string }) => message.id), ["email_bank", "email_family", "email_mixed_latest"]);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
@@ -1010,9 +1012,9 @@ describe("Orca API", () => {
       assert.equal(secondPage.messages.some((message: { id: string }) => message.id === "private_message"), false);
 
       const focus = await (await testApp.request("/v1/inbox?view=focus", { headers })).json();
-      assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["secondary_notify", "primary_focus"]);
+      assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["primary_focus", "secondary_notify"]);
       const normal = await (await testApp.request("/v1/inbox?view=normal", { headers })).json();
-      assert.deepEqual(normal.messages.map((message: { id: string }) => message.id), ["primary_normal"]);
+      assert.deepEqual(normal.messages.map((message: { id: string }) => message.id), ["primary_focus", "secondary_notify", "primary_normal"]);
       const quiet = await (await testApp.request("/v1/inbox?view=quiet", { headers })).json();
       assert.deepEqual(quiet.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
 
@@ -1105,7 +1107,8 @@ describe("Orca API", () => {
       const session = await createSession(db, "human_user");
       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
       const headers = { cookie: `orca_session=${session.token}` };
-      const first = await (await testApp.request("/v1/inbox?view=normal&classification=tideline&limit=2", { headers })).json();
+      // Classification is message-scoped: explicitly exercise the All Mail projection.
+      const first = await (await testApp.request("/v1/inbox?view=all&classification=tideline&limit=2", { headers })).json();
       assert.deepEqual(first.messages.map((message: { id: string }) => message.id), ["mixed_bulk", "bulk_page_1"]);
       assert.deepEqual(first.messages[0].labels, ["Inbox", "Newsletter"]);
       assert.equal(first.messages[0].humanClassification.effective.classification, "automated_or_bulk");
@@ -1115,21 +1118,28 @@ describe("Orca API", () => {
         classification: { likely_human: 1, automated_or_bulk: 4, uncertain: 1, unclassified: 1, all: 7 },
       });
       db.insert(oauthAccounts).values({ id: "new_account", userId: "human_user", provider: "gmail", providerEmail: "new@gmail.com", providerId: "new-gmail" }).run();
-      const changedAccountSet = await testApp.request(`/v1/inbox?view=normal&classification=tideline&limit=2&cursor=${encodeURIComponent(first.nextCursor)}`, { headers });
+      const changedAccountSet = await testApp.request(`/v1/inbox?view=all&classification=tideline&limit=2&cursor=${encodeURIComponent(first.nextCursor)}`, { headers });
       assert.equal(changedAccountSet.status, 400);
-      const fresh = await (await testApp.request("/v1/inbox?view=normal&classification=tideline&limit=2", { headers })).json();
-      const second = await (await testApp.request(`/v1/inbox?view=normal&classification=tideline&limit=2&cursor=${encodeURIComponent(fresh.nextCursor)}`, { headers })).json();
+      const fresh = await (await testApp.request("/v1/inbox?view=all&classification=tideline&limit=2", { headers })).json();
+      const second = await (await testApp.request(`/v1/inbox?view=all&classification=tideline&limit=2&cursor=${encodeURIComponent(fresh.nextCursor)}`, { headers })).json();
       assert.deepEqual(second.messages.map((message: { id: string }) => message.id), ["bulk_page_2", "outlook_same_sender"]);
       assert.equal(second.nextCursor, null);
-      assert.equal((await testApp.request(`/v1/inbox?view=normal&classification=human&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).status, 400);
-      const foreignCursor = Buffer.from(JSON.stringify({ accountId: "private_human", id: "private_message", view: "normal", classification: "human" })).toString("base64url");
-      assert.equal((await testApp.request(`/v1/inbox?view=normal&classification=human&cursor=${encodeURIComponent(foreignCursor)}`, { headers })).status, 400);
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=human&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).status, 400);
+      const foreignCursor = Buffer.from(JSON.stringify({ accountId: "private_human", id: "private_message", view: "all", classification: "human" })).toString("base64url");
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=human&cursor=${encodeURIComponent(foreignCursor)}`, { headers })).status, 400);
 
-      const human = await (await testApp.request("/v1/inbox?classification=human", { headers })).json();
+      // Inbox classifies the latest representative, not the older bulk message,
+      // while its provider Inbox membership can come from either thread message.
+      const inboxHuman = await (await testApp.request("/v1/inbox?view=normal&classification=human", { headers })).json();
+      assert.deepEqual(inboxHuman.messages.map((message: { id: string }) => message.id), ["overridden_human"]);
+      const inboxBulk = await (await testApp.request("/v1/inbox?view=normal&classification=tideline", { headers })).json();
+      assert.deepEqual(inboxBulk.messages.map((message: { id: string }) => message.id), ["outlook_same_sender"]);
+
+      const human = await (await testApp.request("/v1/inbox?view=all&classification=human", { headers })).json();
       assert.deepEqual(human.messages.map((message: { id: string }) => message.id), ["overridden_human"]);
       assert.equal(human.messages[0].humanSignal, null);
       assert.equal(human.messages[0].humanClassification.effective.source, "user_override");
-      const review = await (await testApp.request("/v1/inbox?classification=uncertain", { headers })).json();
+      const review = await (await testApp.request("/v1/inbox?view=all&classification=uncertain", { headers })).json();
       assert.deepEqual(review.messages.map((message: { id: string }) => message.id), ["uncertain_message", "unclassified_message"]);
 
       const thread = await (await testApp.request("/v1/threads/mixed_thread?accountId=gmail_human", { headers })).json();
@@ -1218,7 +1228,7 @@ describe("Orca API", () => {
       const session = await createSession(db, "m5-user");
       const headers = { cookie: `orca_session=${session.token}` };
       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
-      const allResponse = await testApp.request("/v1/inbox?classification=all&limit=100", { headers });
+      const allResponse = await testApp.request("/v1/inbox?view=all&classification=all&limit=100", { headers });
       assert.equal(allResponse.status, 200);
       const all = await allResponse.json();
       assert.deepEqual(all.accounts.map((account: { provider: string }) => account.provider), ["gmail", "outlook"]);
@@ -1233,16 +1243,16 @@ describe("Orca API", () => {
       assert.equal(all.messages.find((message: { id: string }) => message.id === "m5_gmail_override").humanClassification.effective.source, "user_override");
       assert.equal(all.messages.find((message: { id: string }) => message.id === "m5_gmail_override").humanSignal, null);
 
-      const humanPage = await (await testApp.request("/v1/inbox?classification=human&limit=2", { headers })).json();
+      const humanPage = await (await testApp.request("/v1/inbox?view=all&classification=human&limit=2", { headers })).json();
       assert.deepEqual(humanPage.messages.map((message: { id: string }) => message.id), ["m5_gmail_reply", "m5_gmail_human"]);
       assert.ok(humanPage.nextCursor);
-      const humanRemainder = await (await testApp.request(`/v1/inbox?classification=human&limit=10&cursor=${encodeURIComponent(humanPage.nextCursor)}`, { headers })).json();
+      const humanRemainder = await (await testApp.request(`/v1/inbox?view=all&classification=human&limit=10&cursor=${encodeURIComponent(humanPage.nextCursor)}`, { headers })).json();
       assert.deepEqual(humanRemainder.messages.map((message: { id: string }) => message.id), ["m5_gmail_mixed_human", "m5_gmail_override", "m5_outlook_human"]);
-      assert.equal((await testApp.request(`/v1/inbox?classification=tideline&cursor=${encodeURIComponent(humanPage.nextCursor)}`, { headers })).status, 400);
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=tideline&cursor=${encodeURIComponent(humanPage.nextCursor)}`, { headers })).status, 400);
 
-      const review = await (await testApp.request("/v1/inbox?classification=uncertain", { headers })).json();
+      const review = await (await testApp.request("/v1/inbox?view=all&classification=uncertain", { headers })).json();
       assert.deepEqual(review.messages.map((message: { id: string }) => message.id), ["m5_gmail_ambiguous", "m5_outlook_unknown"]);
-      const tideline = await (await testApp.request("/v1/inbox?classification=tideline", { headers })).json();
+      const tideline = await (await testApp.request("/v1/inbox?view=all&classification=tideline", { headers })).json();
       assert.deepEqual(tideline.messages.map((message: { id: string }) => message.id), ["m5_gmail_transactional", "m5_gmail_newsletter", "m5_gmail_mixed_bulk"]);
 
       const mixedThread = await (await testApp.request("/v1/threads/gmail:acct_m5_gmail:mixed-thread?accountId=acct_m5_gmail", { headers })).json();
@@ -1558,7 +1568,10 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "mailbox_revisions"));
         assert.equal(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_page_idx'").get(), null);
         assert.deepEqual(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_account_page_idx'").get(), { name: "emails_mailbox_account_page_idx" });
-        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 1 });
+        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 2 });
+        // 0051 invalidates existing mailbox cursors once; a migration replay is a no-op.
+        migrate(db, { migrationsFolder: fullMigrations });
+        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 2 });
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
         assert.deepEqual(emailColumns.filter((column) => ["internet_message_id", "references"].includes(column.name)).map((column) => column.name), ["internet_message_id", "references"]);

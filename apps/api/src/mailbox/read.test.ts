@@ -308,8 +308,8 @@ describe("bounded mailbox reader", () => {
     const reader = createMailboxReader(fixture.sqlite, { observePageQueryPlan: (plan) => plans.push(plan) });
     const expected = fixture.sqlite.query<{ id: string }, []>(`
       select id from emails
-      where account_id = 'account-two' or from_address like '%@group-2.example'
-      order by coalesce(received_at, 0) desc, account_id asc, id asc`).all().map((row) => row.id);
+      where account_id = 'account-two' or from_address like '%@group-0.example' or from_address like '%@group-1.example' or from_address like '%@group-2.example'
+      order by case when is_read=0 and (from_address like '%@group-0.example' or from_address like '%@group-1.example') then 0 else 1 end, coalesce(received_at, 0) desc, account_id asc, id asc`).all().map((row) => row.id);
     const actual: string[] = [];
     let cursor: string | undefined;
     do {
@@ -556,4 +556,106 @@ describe("empty attention page pruning", () => {
       expect(empty.response.nextCursor).toBeNull();
     } finally { fixture.sqlite.close(); }
   });
+});
+
+describe("Inbox unread Focus timeline", () => {
+  test("read Focus returns to chronological Inbox; unread Notify and Focus share one newest-first promotion", () => {
+    const fixture = createFixture(15);
+    const reader = createMailboxReader(fixture.sqlite);
+    // All generated Focus/Notify destinations are implicit compatibility state.
+    const result = reader.read({ authorization: fixture.authorization, query: { limit: 30 } }).response;
+    expect(result.messages.map(m => m.id)).toEqual([1, 5, 11, 0, 2, 6, 7, 10, 12].map(i => `message-${String(i).padStart(5, "0")}`));
+    expect(result.messages.find(m => m.id === "message-00006")?.attentionBehavior).toBe("focus");
+    const focus = reader.read({ authorization: fixture.authorization, query: { view: "focus", limit: 30 } }).response;
+    expect(focus.messages.map(m => m.id)).toEqual(result.messages.filter(m => ["focus", "notify"].includes(m.attentionBehavior)).map(m => m.id));
+    fixture.sqlite.close();
+  });
+
+  test("latest representative uses any-message unread and repromotes after mark unread; stale cursors rejected", () => {
+    const fixture = createFixture(15);
+    const reader = createMailboxReader(fixture.sqlite);
+    fixture.sqlite.query("UPDATE emails SET thread_id='thread-00006',from_address='sender-6@group-1.example' WHERE id='message-00011'").run();
+    const read = () => reader.read({ authorization: fixture.authorization, query: { limit: 30 } }).response;
+    expect(read().messages.filter(m => m.threadId === "thread-00006")).toMatchObject([{ id: "message-00006", unread: true }]);
+    const cursor = reader.read({ authorization: fixture.authorization, query: { limit: 1 } }).response.nextCursor!;
+    fixture.sqlite.query("UPDATE emails SET is_read=1 WHERE thread_id='thread-00006'").run();
+    expect(read().messages.findIndex(m => m.id === "message-00006")).toBeGreaterThan(read().messages.findIndex(m => m.id === "message-00002"));
+    expect(() => reader.read({ authorization: fixture.authorization, query: { limit: 1, cursor } })).toThrow(MailboxCursorError);
+    fixture.sqlite.query("UPDATE emails SET is_read=0 WHERE id='message-00011'").run();
+    expect(read().messages.slice(0, 3).map(m => m.id)).toEqual(["message-00001", "message-00005", "message-00006"]);
+    fixture.sqlite.close();
+  });
+
+  test("cursor pages equal complete ordering across accounts and read/promotion boundaries", () => {
+    const fixture = createFixture(45);
+    const authorization = addSecondAccount(fixture, 16);
+    const reader = createMailboxReader(fixture.sqlite);
+    const expected = reader.read({ authorization, query: { limit: 100 } }).response.messages;
+    const actual = [];
+    let cursor: string | undefined;
+    do {
+      const page = reader.read({ authorization, query: { limit: 3, cursor } }).response;
+      actual.push(...page.messages);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(actual).toEqual(expected);
+    expect(new Set(actual.map(m => `${m.accountId}:${m.threadId}`)).size).toBe(actual.length);
+    fixture.sqlite.close();
+  });
+});
+
+test("Gmail archive excludes the whole thread from Inbox and Focus without deleting All Mail", () => {
+  const fixture = createFixture(15);
+  const reader = createMailboxReader(fixture.sqlite);
+  fixture.db.insert(labels).values({ id: "inbox-label", accountId: "account", providerLabelId: "INBOX", name: "INBOX", type: "system" }).run();
+  fixture.sqlite.query("INSERT INTO email_labels(id,email_id,label_id) SELECT 'link-'||id,id,'inbox-label' FROM emails").run();
+  const read = (view?: "focus" | "all") => reader.read({ authorization: fixture.authorization, query: { view, limit: 30 } }).response;
+  const cursor = reader.read({ authorization: fixture.authorization, query: { limit: 1 } }).response.nextCursor!;
+  fixture.sqlite.query("DELETE FROM email_labels WHERE email_id='message-00001'").run();
+  expect(read().messages.some(m => m.id === "message-00001")).toBe(false);
+  expect(read("focus").messages.some(m => m.id === "message-00001")).toBe(false);
+  expect(read("all").messages.some(m => m.id === "message-00001")).toBe(true);
+  expect(() => reader.read({ authorization: fixture.authorization, query: { limit: 1, cursor } })).toThrow(MailboxCursorError);
+  // Provider labels from another account cannot resurrect this archived thread.
+  fixture.sqlite.query("UPDATE emails SET thread_id='thread-00006' WHERE id='message-00011'").run();
+  expect(read().messages.filter(m => m.threadId === "thread-00006")).toHaveLength(1);
+  fixture.sqlite.close();
+});
+
+test("a newly synced unread reply repromotes a read Focus conversation once, at latest date", () => {
+  const fixture = createFixture(15);
+  const reader = createMailboxReader(fixture.sqlite);
+  const before = reader.read({ authorization: fixture.authorization, query: { limit: 30 } }).response;
+  expect(before.messages.find(m => m.id === "message-00006")?.unread).toBe(false);
+  fixture.db.insert(emails).values({ id: "new-reply", accountId: "account", threadId: "thread-00006", providerMessageId: "new-reply", fromAddress: "sender-6@group-1.example", receivedAt: new Date(fixture.baseTime + 1_000), isRead: false }).run();
+  const after = reader.read({ authorization: fixture.authorization, query: { limit: 30 } }).response;
+  expect(after.messages[0]).toMatchObject({ id: "new-reply", threadId: "thread-00006", unread: true, attentionBehavior: "focus" });
+  expect(after.messages.filter(m => m.threadId === "thread-00006")).toHaveLength(1);
+  fixture.sqlite.close();
+});
+
+test("Inbox search matches earlier thread content but returns its latest representative", () => {
+  const fixture = createFixture(15);
+  fixture.sqlite.query("UPDATE emails SET thread_id='thread-00006',snippet='Earlier matching needle' WHERE id='message-00011'").run();
+  const reader = createMailboxReader(fixture.sqlite);
+  const result = reader.read({ authorization: fixture.authorization, query: { query: "needle", limit: 10 } }).response;
+  expect(result.messages).toMatchObject([{ id: "message-00006", unread: true }]);
+  expect(result.messages).toHaveLength(1);
+  fixture.sqlite.close();
+});
+
+test("Focus pages traverse combined unread and read ranks across accounts and reject old cursor format", () => {
+  const fixture = createFixture(45), authorization = addSecondAccount(fixture, 12);
+  fixture.db.insert(senderAttentionRules).values({ id: "second-focus", accountId: "account-two", scope: "domain", value: "unruled.example", behavior: "focus", source: "user_choice" }).run();
+  const reader = createMailboxReader(fixture.sqlite), query = { view: "focus" as const, limit: 100 };
+  const expected = reader.read({ authorization, query }).response.messages;
+  for (const limit of [1, 2, 5]) {
+    const rows = []; let cursor: string | undefined;
+    do { const page = reader.read({ authorization, query: { ...query, limit, cursor } }).response; rows.push(...page.messages); cursor = page.nextCursor ?? undefined; } while (cursor);
+    expect(rows).toEqual(expected);
+  }
+  const page = reader.read({ authorization, query: { ...query, limit: 1 } }).response;
+  const cursor = JSON.parse(Buffer.from(page.nextCursor!, "base64url").toString()); cursor.version = 1;
+  expect(() => reader.read({ authorization, query: { ...query, cursor: Buffer.from(JSON.stringify(cursor)).toString("base64url") } })).toThrow(MailboxCursorError);
+  fixture.sqlite.close();
 });

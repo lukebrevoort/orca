@@ -1,4 +1,4 @@
-import { inboxDestinationId, inboxVisibilityPredicate } from "../organization/views/inbox-policy.ts";
+import { inboxDestinationId, inboxVisibilityPredicate, latestThreadMessageSql, providerInboxSql } from "../organization/views/inbox-policy.ts";
 import { createHash } from "node:crypto";
 
 import type { Database } from "bun:sqlite";
@@ -157,7 +157,7 @@ type RawRevisionRow = { account_id: string; revision: number };
 type RawQueryPlanRow = { detail: string };
 
 type InboxCursor = {
-  version: 1;
+  version: 2;
   accountId: string;
   id: string;
   attentionRank: number;
@@ -170,6 +170,8 @@ type InboxCursor = {
 };
 
 const attentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
+// Promotion is a read-state property, not a new attention or destination value.
+const threadUnreadSql = `exists (select 1 from emails unread_email where unread_email.account_id=e.account_id and unread_email.thread_id=e.thread_id and unread_email.is_read=0)`;
 const reasonCodes = new Set<HumanClassificationReasonCode>([
   "sender_no_reply_pattern", "list_id_header", "list_unsubscribe_header", "bulk_precedence_header",
   "auto_submitted_header", "provider_bulk_signal", "provider_promotions_signal", "provider_transactional_signal",
@@ -206,6 +208,7 @@ const resolvedJoinsSql = `
     and classification_domain.target_type = 'sender_domain'
     and classification_domain.target_value = ${normalizedDomainSql}`;
 const attentionSql = "coalesce(attention_thread.behavior, attention_address.behavior, attention_domain.behavior, attention_account.default_behavior, 'normal')";
+const promotedSql = `(${attentionSql} in ('notify','focus') and ${threadUnreadSql})`;
 const effectiveClassificationSql = "coalesce(classification_message.classification, classification_address.classification, classification_domain.classification, e.human_classification, 'unclassified')";
 const effectiveOverrideSql = {
   id: "coalesce(classification_message.id, classification_address.id, classification_domain.id)",
@@ -250,12 +253,26 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const cursor = decodeCursor(input.query.cursor);
       validateCursor(cursor, { accountIds, classification, revision, scope, view });
 
+      const inboxId = inboxDestinationId(sqlite, input.authorization.userId);
       const applyInboxPolicy = input.query.destinationId
-        ? input.query.destinationId === inboxDestinationId(sqlite, input.authorization.userId)
-        : input.query.view === "normal" || input.query.view === undefined;
+        ? input.query.destinationId === inboxId
+        : input.query.view === "normal" || input.query.view === "focus" || input.query.view === undefined;
+      const effectiveQuery = applyInboxPolicy ? { ...input.query, ...(inboxId ? { destinationId: inboxId } : {}), query: undefined, sender: undefined, receivedAfter: undefined, receivedBefore: undefined } : input.query;
+      const threadMatchClauses: string[] = [];
+      const threadMatchParams: Array<string | number | null> = [];
+      if (applyInboxPolicy) addMailboxFilters(threadMatchClauses, threadMatchParams, {
+        limit: input.query.limit, query: input.query.query, sender: input.query.sender,
+        receivedAfter: input.query.receivedAfter, receivedBefore: input.query.receivedBefore,
+      });
+      const threadMatchSql = threadMatchClauses.length
+        ? ` AND exists (select 1 from emails matching where matching.account_id=e.account_id and matching.thread_id=e.thread_id and ${threadMatchClauses.join(" AND ").replaceAll("e.", "matching.")})`
+        : "";
       const inboxPolicy = applyInboxPolicy ? inboxVisibilityPredicate(sqlite, input.authorization.userId) : { sql: "1", params: [] };
-      const withInboxPolicy = (base: { sql: string; params: Array<string | number | null> }) => ({ sql: `${base.sql} AND ${inboxPolicy.sql}`, params: [...base.params, ...inboxPolicy.params] });
-      const base = withInboxPolicy(buildBaseWhere(accountIds, input.query));
+      const withInboxPolicy = (base: { sql: string; params: Array<string | number | null> }) => ({
+        sql: `${base.sql} AND ${inboxPolicy.sql}${applyInboxPolicy ? ` AND ${latestThreadMessageSql} AND (${providerInboxSql})${threadMatchSql}` : ""}`,
+        params: [...base.params, ...inboxPolicy.params, ...threadMatchParams],
+      });
+      const base = withInboxPolicy(buildBaseWhere(accountIds, effectiveQuery));
       const countStartedAt = clock();
       const countRows = queryAll<RawCountRow>(sqlite, `
         select
@@ -282,27 +299,33 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const pageRows: RawMailboxMessage[] = [];
       let pageRowsProjected = 0;
       let accountPageQueries = 0;
-      for (const behavior of behaviorsForView(input.query.destinationId ? "all" : input.query.view)) {
+      // Two keyset streams keep projection bounded without sorting the complete mailbox.
+      // All other surfaces retain their existing ordering and eligibility.
+      const groups = applyInboxPolicy
+        ? [
+            { behavior: "focus" as AttentionBehavior, rank: 0, predicate: promotedSql },
+            { behavior: "normal" as AttentionBehavior, rank: 1, predicate: `not ${promotedSql}` },
+          ]
+        : behaviorsForView(input.query.destinationId ? "all" : input.query.view).map(behavior => ({ behavior, rank: attentionRank[behavior], predicate: `${attentionSql} = '${behavior}'` }));
+      for (const { behavior, rank, predicate } of groups) {
         if (pageRows.length >= requestedRows) break;
-        // Counts cover these filters and every authorized account in this snapshot.
-        // A zero aggregate safely rules out the group, even before classification/keyset filtering.
-        const behaviorCount = behavior === "notify" || behavior === "focus"
-          ? counts.focus_count
-          : counts[`${behavior}_count`];
-        if (numberCount(behaviorCount) === 0) continue;
-        const rank = attentionRank[behavior];
+        if (applyInboxPolicy && (numberCount(counts.all_count) === 0 || ((rank === 0 || input.query.view === "focus") && numberCount(counts.focus_count) === 0))) continue;
+        if (!applyInboxPolicy) {
+          const behaviorCount = behavior === "notify" || behavior === "focus" ? counts.focus_count : counts[`${behavior}_count`];
+          if (numberCount(behaviorCount) === 0) continue;
+        }
         if (cursor && rank < cursor.attentionRank) continue;
         const remaining = requestedRows - pageRows.length;
         const classificationPredicate = classificationWhere(classification);
         const accountRowsForBehavior: RawMailboxMessage[][] = [];
         for (const accountId of accountIds) {
-          const accountBase = withInboxPolicy(buildAccountBaseWhere(accountId, input.query));
+          const accountBase = withInboxPolicy(buildAccountBaseWhere(accountId, effectiveQuery));
           const keyset = pageKeyset(cursor, rank, accountId);
           const pageSql = `
             select
               e.id, e.account_id, e.provider_message_id, e.thread_id,
               e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
-              e.is_read, e.human_signal, e.human_classification,
+              ${applyInboxPolicy ? `case when ${threadUnreadSql} then 0 else 1 end` : "e.is_read"} as is_read, e.human_signal, e.human_classification,
               e.human_classification_reasons, e.human_classifier_version,
               ${attentionSql} as attention_behavior,
               destination.destination_id,destination.source destination_source,destination.locked destination_locked,
@@ -317,12 +340,13 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
             from emails e
             ${resolvedJoinsSql}
             where ${accountBase.sql}
-              and ${attentionSql} = ?
+              and ${predicate}
+              ${applyInboxPolicy && input.query.view === "focus" ? `and ${attentionSql} in ('notify','focus')` : ""}
               and ${classificationPredicate}
               ${keyset.sql}
             order by coalesce(e.received_at, 0) desc, e.id asc
             limit ?`;
-          const pageParams = [...accountBase.params, behavior, ...keyset.params, remaining];
+          const pageParams = [...accountBase.params, ...keyset.params, remaining];
           if (options.observePageQueryPlan) {
             options.observePageQueryPlan({
               accountId,
@@ -397,10 +421,10 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         },
         nextCursor: hasNextPage && last
           ? encodeCursor({
-              version: 1,
+              version: 2,
               accountId: last.account_id,
               id: last.id,
-              attentionRank: attentionRank[last.attention_behavior as AttentionBehavior],
+              attentionRank: applyInboxPolicy ? (last.is_read !== 1 && ["notify", "focus"].includes(last.attention_behavior) ? 0 : 1) : attentionRank[last.attention_behavior as AttentionBehavior],
               receivedAt: last.received_at ?? 0,
               view,
               classification,
@@ -651,7 +675,7 @@ function decodeCursor(value: string | undefined): InboxCursor | null {
   if (!value) return null;
   try {
     const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<InboxCursor>;
-    if (parsed.version === 1
+    if (parsed.version === 2
       && typeof parsed.accountId === "string" && parsed.accountId.length > 0
       && typeof parsed.id === "string" && parsed.id.length > 0
       && Number.isInteger(parsed.attentionRank) && parsed.attentionRank! >= 0 && parsed.attentionRank! <= 4

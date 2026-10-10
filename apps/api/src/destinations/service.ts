@@ -1,4 +1,4 @@
-import { inboxVisibilityPredicate } from "../organization/views/inbox-policy.ts";
+import { inboxDestinationId, inboxVisibilityPredicate, latestThreadMessageSql, providerInboxSql } from "../organization/views/inbox-policy.ts";
 import { sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { destinationBatchChangeSchema, destinationCreateSchema, destinationUpdateSchema, destinationRetireSchema, destinationRoutingChangeSchema, destinationListSchema, destinationRoutingStateSchema, attentionRoutingTargetSchema, type AttentionRoutingTarget, type OrganizationLaneAction } from "@orca/shared";
@@ -28,11 +28,12 @@ export function createDestinations(db: Db, workspaceId: string) {
     function list() {
         const c = config();
         const inboxPolicy = inboxVisibilityPredicate(db.$client, workspaceId, "d");
+        const inboxId = inboxDestinationId(db.$client, workspaceId);
         const counts = db.$client.query<{
             id: string;
             total: number;
             unread: number;
-        }, Array<string | number>>(`select d.destination_id id,count(*) total,sum(case when e.is_read=0 then 1 else 0 end) unread from emails e join organization_effective_destinations d on d.account_id=e.account_id and d.thread_id=e.thread_id where d.workspace_id=? AND ${inboxPolicy.sql} group by d.destination_id`).all(workspaceId, ...inboxPolicy.params);
+        }, Array<string | number>>(`select d.destination_id id,count(*) total,sum(case when d.destination_id=? then case when exists (select 1 from emails unread_email where unread_email.account_id=e.account_id and unread_email.thread_id=e.thread_id and unread_email.is_read=0) then 1 else 0 end else case when e.is_read=0 then 1 else 0 end end) unread from emails e join organization_effective_destinations d on d.account_id=e.account_id and d.thread_id=e.thread_id where d.workspace_id=? AND ${inboxPolicy.sql} AND (d.destination_id<>? OR (${latestThreadMessageSql} AND (${providerInboxSql}))) group by d.destination_id`).all(inboxId ?? "", workspaceId, ...inboxPolicy.params, inboxId ?? "");
         return destinationListSchema.parse({ revision: revision(), fallbackDestinationId: c.fallbackLaneId, legacyDestinationIds: { normal: c.fallbackLaneId, ...Object.fromEntries(db.all<{
                     behavior: string;
                     id: string;
@@ -79,12 +80,12 @@ export function createDestinations(db: Db, workspaceId: string) {
             value: string;
             behavior: string;
         }>(sql `select scope,value,behavior from sender_attention_rules where account_id=${accountId} order by scope,value`);
-        const senders = [...old.filter(r => r.scope !== "address" || !bindings.some(b => b.scope === "sender" && b.value === r.value)).map(r => ({ scope: r.scope, value: r.value, destinationId: mapped(r.behavior), source: "legacy" as const, editable: r.scope === "address" })), ...bindings.filter(b => b.scope === "sender" && b.destinationId !== null).map(b => ({ scope: "address" as const, value: b.value, destinationId: b.destinationId!, source: "user_choice" as const, editable: true }))].sort((a, b) => a.scope.localeCompare(b.scope) || a.value.localeCompare(b.value));
+        const senders = [...old.filter(r => !["notify", "focus"].includes(r.behavior) && (r.scope !== "address" || !bindings.some(b => b.scope === "sender" && b.value === r.value))).map(r => ({ scope: r.scope, value: r.value, destinationId: mapped(r.behavior), source: "legacy" as const, editable: r.scope === "address" })), ...bindings.filter(b => b.scope === "sender" && b.destinationId !== null).map(b => ({ scope: "address" as const, value: b.value, destinationId: b.destinationId!, source: "user_choice" as const, editable: true }))].sort((a, b) => a.scope.localeCompare(b.scope) || a.value.localeCompare(b.value));
         const accountBinding = bindings.find(b => b.scope === "account");
         const accountLegacy = db.all<{
             behavior: string | null;
         }>(sql `select default_behavior behavior from account_attention_routing where account_id=${accountId}`)[0]?.behavior;
-        const defaultDestinationId = accountBinding ? accountBinding.destinationId : accountLegacy ? mapped(accountLegacy) : null;
+        const defaultDestinationId = accountBinding ? accountBinding.destinationId : accountLegacy && !["notify", "focus"].includes(accountLegacy) ? mapped(accountLegacy) : null;
         return { state: destinationRoutingStateSchema.parse({ accountId, revision: revision(), defaultDestinationId, senders, selection: { target, explicitDestinationId: explicit, effective, inherited: resolveDestination(db, workspaceId, accountId, address, threadId, target.scope) } }), binding, value };
     }
     return {

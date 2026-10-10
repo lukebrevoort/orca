@@ -16,6 +16,7 @@ import SwiftUI
     @Published var selectedAccountID: String? { didSet { UserDefaults.standard.set(selectedAccountID, forKey: "selectedAccountID") } }
     @Published var errorMessage: String?
     @Published var selectedTab = "inbox"
+    @Published private(set) var mailboxReadRevision = UUID()
     private var connectionGeneration = UUID()
     private var accountRefreshGeneration = UUID()
     @Published var routedThread: (id: String, accountId: String)?
@@ -111,6 +112,23 @@ import SwiftUI
         selectedAccountID = thread.accountId
         return true
     }
+    /// A successful read mutation retires every cached inbox lens for this
+    /// identity/account, including pages saved before a later app launch.
+    func inboxCacheKey(accountID: String, view: String, search: String) -> String {
+        let revision = UserDefaults.standard.string(forKey: "inboxReadRevision|\(ownerScope)|\(accountID)") ?? "initial"
+        return "\(ownerScope)|\(accountID)|inbox-unread-focus-v1|\(revision)|\(view)|\(search)"
+    }
+    func markThreadRead(_ threadID: String, accountID: String, isRead: Bool = true) async throws {
+        guard let client else { throw APIClient.ClientError.invalidResponse }
+        let scope = ownerScope
+        try await client.markRead(threadID, accountId: accountID, isRead: isRead)
+        // Persist for the original owner even if navigation changed while the
+        // request was in flight. Never publish a former identity's mutation.
+        let revision = UUID()
+        UserDefaults.standard.set(revision.uuidString, forKey: "inboxReadRevision|\(scope)|\(accountID)")
+        guard scope == ownerScope else { return }
+        mailboxReadRevision = revision
+    }
     func routeNotification(_ userInfo: [AnyHashable: Any]) {
         guard phase == .ready, let thread = userInfo["threadId"] as? String, !thread.isEmpty,
               let account = userInfo["accountId"] as? String, accounts.contains(where: { $0.id == account }) else { return }
@@ -128,6 +146,51 @@ import SwiftUI
 }
 
 enum DemoData {
+    private struct ThreadKey: Hashable { var accountID: String; var threadID: String }
+
+    static func inbox(view: String, messages: [InboxMessage] = DemoData.messages) -> [InboxMessage] {
+        let isInbox = view == "normal" || view == "focus"
+        func newestFirst(_ left: InboxMessage, _ right: InboxMessage) -> Bool {
+            if left.receivedAt != right.receivedAt { return left.receivedAt > right.receivedAt }
+            if left.accountId != right.accountId { return left.accountId < right.accountId }
+            return left.id < right.id
+        }
+        let rows: [InboxMessage]
+        if isInbox {
+            let threads = Dictionary(grouping: messages) { ThreadKey(accountID: $0.accountId, threadID: $0.threadId) }
+            rows = threads.values.compactMap { threadMessages -> InboxMessage? in
+                // Membership and unread belong to the entire account-scoped
+                // thread; a newer sent/read reply remains its visible summary.
+                guard threadMessages.contains(where: { $0.labels.contains("INBOX") }),
+                      var latest = threadMessages.sorted(by: newestFirst).first else { return nil }
+                latest.unread = threadMessages.contains(where: \.unread)
+                return latest
+            }
+        } else {
+            rows = messages
+        }
+        let legacyRank = ["notify": 0, "focus": 1, "normal": 2, "quiet": 3, "hidden": 4]
+        return rows.filter { message in
+            switch view {
+            case "normal": return !["quiet", "hidden"].contains(message.attentionBehavior)
+            case "focus": return ["focus", "notify"].contains(message.attentionBehavior)
+            case "all": return true
+            default: return message.attentionBehavior == view
+            }
+        }.sorted { left, right in
+            if isInbox {
+                let leftPromoted = left.unread && ["focus", "notify"].contains(left.attentionBehavior)
+                let rightPromoted = right.unread && ["focus", "notify"].contains(right.attentionBehavior)
+                if leftPromoted != rightPromoted { return leftPromoted }
+            } else {
+                let leftRank = legacyRank[left.attentionBehavior] ?? 2
+                let rightRank = legacyRank[right.attentionBehavior] ?? 2
+                if leftRank != rightRank { return leftRank < rightRank }
+            }
+            return newestFirst(left, right)
+        }
+    }
+
     static let accounts = [MailAccount(id: "demo-account", provider: "gmail", email: "hello@example.com", displayName: "Alex Rivera", avatarUrl: nil, capabilities: .init(read: true, send: true, draft: true))]
     static let messages = [
         InboxMessage(id: "m1", accountId: "demo-account", provider: "gmail", providerMessageId: "p1", threadId: "t1", from: .init(name: "Maya Chen", email: "maya@example.com"), subject: "The quiet launch plan", snippet: "I tightened the rollout notes and left one question for you…", receivedAt: "2026-09-22T15:30:00Z", unread: true, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: nil),
@@ -135,3 +198,4 @@ enum DemoData {
         InboxMessage(id: "m3", accountId: "demo-account", provider: "gmail", providerMessageId: "p3", threadId: "t3", from: .init(name: "Orca updates", email: "updates@orca.test"), subject: "Your weekly current", snippet: "Three conversations moved into focus this week.", receivedAt: "2026-09-21T16:00:00Z", unread: false, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 2, humanClassification: nil)
     ]
 }
+

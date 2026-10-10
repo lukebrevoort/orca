@@ -159,7 +159,8 @@ test("SQL counts/filter/pagination apply conversation and default before limitin
   };
   const inbox = await read("limit=1");
   expect(inbox.messages.map((m: { id: string }) => m.id)).toEqual(["m1"]);
-  expect(inbox.counts).toMatchObject({ normal: 1, quiet: 2, all: 3 });
+  expect(inbox.counts).toEqual({ focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 });
+  expect((await read("view=all&limit=10")).counts).toMatchObject({ normal: 1, quiet: 2, all: 3 });
   const quiet = await read("view=quiet&limit=1");
   expect(quiet.messages[0].id).toBe("m3");
   const next = await read(`view=quiet&limit=1&cursor=${encodeURIComponent(quiet.nextCursor)}`);

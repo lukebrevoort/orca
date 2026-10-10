@@ -118,7 +118,8 @@ describe("BRE-314 Rule Revision migration", () => {
         const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('organization_views','organization_rules','organization_rule_revisions') ORDER BY name").all() as Array<{ name: string }>;
         assert.deepEqual(tables.map(({ name }) => name), ["organization_rule_revisions", "organization_rules", "organization_views"]);
         const workspaceState = client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace-1'").get() as { revision: number };
-        assert.equal(workspaceState.revision, 7);
+        // 0051 invalidates derived routing once; the second migrate above is a no-op.
+        assert.equal(workspaceState.revision, 8);
 
         client.sqlite.query("INSERT INTO organization_rules (workspace_id,id,name,latest_revision,position) VALUES ('workspace-1','rule-1','Focus failures',1,0)").run();
         assert.throws(() => client.sqlite.query(`INSERT INTO organization_rule_revisions (
