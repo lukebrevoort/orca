@@ -1,0 +1,161 @@
+{
+  "revisions": {
+    "base": "6ac83d1ae1bed08dd5d380774667b03d5dffe55b",
+    "head": "067cceea7b826ba47872660732acef6bf5dfe1f3"
+  },
+  "harnessSha256": "ff48cae2b9286951e8a9d3c87f2d5f8772e6711e803133550bd0c95263c9e724",
+  "trials": 4,
+  "samplesPerWorkloadPerTrial": 20,
+  "warmups": 3,
+  "maxChildSeconds": 90,
+  "maxSchedulingSeconds": 900,
+  "elapsedSeconds": 250.34279299993068,
+  "runs": [
+    {
+      "trial": 1,
+      "size": 1000,
+      "mode": "base",
+      "file": "trial-1-1000-base.json"
+    },
+    {
+      "trial": 1,
+      "size": 1000,
+      "mode": "head",
+      "file": "trial-1-1000-head.json"
+    },
+    {
+      "trial": 1,
+      "size": 5000,
+      "mode": "base",
+      "file": "trial-1-5000-base.json"
+    },
+    {
+      "trial": 1,
+      "size": 5000,
+      "mode": "head",
+      "file": "trial-1-5000-head.json"
+    },
+    {
+      "trial": 1,
+      "size": 10000,
+      "mode": "base",
+      "file": "trial-1-10000-base.json"
+    },
+    {
+      "trial": 1,
+      "size": 10000,
+      "mode": "head",
+      "file": "trial-1-10000-head.json"
+    },
+    {
+      "trial": 2,
+      "size": 1000,
+      "mode": "head",
+      "file": "trial-2-1000-head.json"
+    },
+    {
+      "trial": 2,
+      "size": 1000,
+      "mode": "base",
+      "file": "trial-2-1000-base.json"
+    },
+    {
+      "trial": 2,
+      "size": 5000,
+      "mode": "head",
+      "file": "trial-2-5000-head.json"
+    },
+    {
+      "trial": 2,
+      "size": 5000,
+      "mode": "base",
+      "file": "trial-2-5000-base.json"
+    },
+    {
+      "trial": 2,
+      "size": 10000,
+      "mode": "head",
+      "file": "trial-2-10000-head.json"
+    },
+    {
+      "trial": 2,
+      "size": 10000,
+      "mode": "base",
+      "file": "trial-2-10000-base.json"
+    },
+    {
+      "trial": 3,
+      "size": 1000,
+      "mode": "base",
+      "file": "trial-3-1000-base.json"
+    },
+    {
+      "trial": 3,
+      "size": 1000,
+      "mode": "head",
+      "file": "trial-3-1000-head.json"
+    },
+    {
+      "trial": 3,
+      "size": 5000,
+      "mode": "base",
+      "file": "trial-3-5000-base.json"
+    },
+    {
+      "trial": 3,
+      "size": 5000,
+      "mode": "head",
+      "file": "trial-3-5000-head.json"
+    },
+    {
+      "trial": 3,
+      "size": 10000,
+      "mode": "base",
+      "file": "trial-3-10000-base.json"
+    },
+    {
+      "trial": 3,
+      "size": 10000,
+      "mode": "head",
+      "file": "trial-3-10000-head.json"
+    },
+    {
+      "trial": 4,
+      "size": 1000,
+      "mode": "head",
+      "file": "trial-4-1000-head.json"
+    },
+    {
+      "trial": 4,
+      "size": 1000,
+      "mode": "base",
+      "file": "trial-4-1000-base.json"
+    },
+    {
+      "trial": 4,
+      "size": 5000,
+      "mode": "head",
+      "file": "trial-4-5000-head.json"
+    },
+    {
+      "trial": 4,
+      "size": 5000,
+      "mode": "base",
+      "file": "trial-4-5000-base.json"
+    },
+    {
+      "trial": 4,
+      "size": 10000,
+      "mode": "head",
+      "file": "trial-4-10000-head.json"
+    },
+    {
+      "trial": 4,
+      "size": 10000,
+      "mode": "base",
+      "file": "trial-4-10000-base.json"
+    }
+  ],
+  "allResultSignaturesEqual": true,
+  "allSeededAndCheckpointedDiskSizesEqual": true
+}

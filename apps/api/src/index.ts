@@ -1,3 +1,4 @@
+import { metadataSearchReceipt } from "@orca/shared";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
@@ -2327,7 +2328,15 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId, destinationId } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification, searchMode, query, sender, accountId, collectionId, destinationId } = c.req.valid("query");
+      if (searchMode === "full") {
+        // Never reinterpret a full-body request as complete metadata results.
+        return c.json({ error: {
+          code: "search_full_body_unavailable",
+          message: "Full-body search is unavailable. Request metadata search explicitly to search sender, subject, and preview text.",
+          availableModes: ["metadata"],
+        } }, 503);
+      }
       const useClassificationResponse = classification !== undefined;
       const { sqlite } = dbFactory();
       try {
@@ -2344,6 +2353,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           return jsonWithSchema(c, inboxResponseSchema, {
             ...result,
             counts: useClassificationResponse ? result.counts : result.counts.attention,
+            ...(searchMode === "metadata" ? { search: metadataSearchReceipt } : {}),
           });
         } catch (error) {
           if (error instanceof MailboxCursorError) {

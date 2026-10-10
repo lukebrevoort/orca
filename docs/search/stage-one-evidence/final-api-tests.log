@@ -1,0 +1,12 @@
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [86.21ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [124.19ms]
+
+apps/api/src/mailbox/search-contract.test.ts:
+(pass) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [117.99ms]
+(pass) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [149.96ms]
+(pass) canonical metadata reflects updates/deletes and cannot reuse a cursor across an account incarnation [226.23ms]
+
+ 56 pass
+ 0 fail
+ 207 expect() calls
+Ran 56 tests across 3 files. [8.72s]

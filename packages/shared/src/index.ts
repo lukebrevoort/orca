@@ -267,6 +267,8 @@ export {
   createProviderPageSchema,
   inboxMessagePageSchema,
   inboxMessageSchema,
+  metadataSearchReceipt,
+  metadataSearchReceiptSchema,
   inboxQuerySchema,
   inboxClassificationResponseSchema,
   inboxResponseSchema,
