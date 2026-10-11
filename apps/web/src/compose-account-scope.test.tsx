@@ -14,13 +14,14 @@ let controller: ComposeDraftController;
 let requests: Array<{ method: string; url: URL }>;
 let saved: MessageDraft | null;
 let activeAccount: string;
-function Harness() { controller = useComposeDraft(activeAccount, "new", false); return null; }
+let available: MessageDraft[] | undefined;
+function Harness() { controller = useComposeDraft(activeAccount, "new", false, undefined, available); return null; }
 beforeEach(async () => {
   browser = new Window({ url: "http://localhost" });
   for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : browser[name] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
   root = createRoot(browser.document.createElement("div") as unknown as Element);
-  requests = []; saved = null; activeAccount = "second";
+  requests = []; saved = null; activeAccount = "second"; available = undefined;
   globalThis.fetch = (async (path: string, init?: RequestInit) => {
     const url = new URL(path, "http://localhost"); const method = init?.method ?? "GET";
     requests.push({ method, url });
@@ -104,4 +105,168 @@ test("unmount and a new account identity never adopt the old account checkpoint"
   expect(controller.draft.subject).toBe("");
   expect(controller.draft.body).toBe("");
   expect(controller.recipientQueries).toEqual({ to: "", cc: "", bcc: "" });
+});
+
+
+test("discard waits for an in-flight first autosave and deletes the created draft", async () => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => {
+    if (init?.method === "POST") await held;
+    const result = await previousFetch(path, init);
+    if (init?.method === "DELETE") saved = null;
+    return result;
+  }) as typeof fetch;
+  await act(async () => controller.updateDraft({ body: "Discard this synthetic writing" }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  let discarding: ReturnType<ComposeDraftController["discardDraft"]>;
+  await act(async () => { discarding = controller.discardDraft(); });
+  await act(async () => { release(); await discarding; });
+  expect(requests.map(request => request.method)).toEqual(["GET", "POST", "DELETE"]);
+  expect(saved).toBeNull();
+  expect(controller.draft.body).toBe("");
+  expect(controller.draft.revision).toBeNull();
+  expect(controller.saveMessage).toBe("Draft discarded");
+});
+
+
+for (const failDelete of [false, true]) test(`late DELETE ${failDelete ? "failure" : "success"} cannot reset another account's draft`, async () => {
+  await act(async () => controller.updateDraft({ body: "Second account draft" }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => {
+    if (init?.method === "DELETE") {
+      await held;
+      if (failDelete) return Response.json({ error: "synthetic_delete_failure" }, { status: 503 });
+    }
+    return previousFetch(path, init);
+  }) as typeof fetch;
+  let discarding: ReturnType<ComposeDraftController["discardDraft"]>;
+  await act(async () => { discarding = controller.discardDraft(); });
+  expect(controller.isDiscarding).toBe(true);
+  activeAccount = "third";
+  await act(async () => root.render(<Harness />));
+  await act(async () => controller.updateDraft({ body: "Third account private writing" }));
+  await act(async () => { release(); expect(await discarding).toBe(false); });
+  expect(controller.draft.accountId).toBe("third");
+  expect(controller.draft.body).toBe("Third account private writing");
+  expect(controller.isDiscarding).toBe(false);
+  expect(controller.saveMessage).not.toContain("discard");
+  expect(requests.filter(request => request.method === "DELETE").every(request => request.url.searchParams.get("accountId") === "second")).toBe(true);
+});
+
+test("account change while first save is pending cancels discard without deleting the new account", async () => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => {
+    if (init?.method === "POST") await held;
+    return previousFetch(path, init);
+  }) as typeof fetch;
+  await act(async () => controller.updateDraft({ body: "Second account draft" }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  let discarding: ReturnType<ComposeDraftController["discardDraft"]>;
+  await act(async () => { discarding = controller.discardDraft(); });
+  activeAccount = "third";
+  await act(async () => root.render(<Harness />));
+  await act(async () => controller.updateDraft({ body: "Third account private writing" }));
+  await act(async () => { release(); expect(await discarding).toBe(false); });
+  expect(controller.draft.accountId).toBe("third");
+  expect(controller.draft.body).toBe("Third account private writing");
+  expect(controller.draft.revision).toBeNull();
+  expect(requests.some(request => request.method === "DELETE")).toBe(false);
+});
+
+test("failed DELETE keeps writing recoverable and permits another discard attempt", async () => {
+  await act(async () => controller.updateDraft({ body: "Keep this synthetic writing" }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => init?.method === "DELETE"
+    ? Response.json({ error: "synthetic_delete_failure" }, { status: 503 })
+    : previousFetch(path, init)) as typeof fetch;
+  await act(async () => { expect(await controller.discardDraft()).toBe(false); });
+  expect(controller.draft.body).toBe("Keep this synthetic writing");
+  expect(JSON.parse(browser.localStorage.getItem("orca-compose-draft:second:new")!).body).toBe("Keep this synthetic writing");
+  expect(controller.isDiscarding).toBe(false);
+  globalThis.fetch = previousFetch;
+  await act(async () => { expect(await controller.discardDraft()).toBe(true); });
+  expect(controller.draft.body).toBe("");
+});
+
+test("pending discard blocks a duplicate discard, send and edits, then cancels debounce", async () => {
+  await act(async () => controller.updateDraft({ body: "Last saved writing", to: [{ name: null, email: "synthetic@example.com" }] }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  await act(async () => controller.updateDraft({ body: "Edit still in debounce" }));
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => {
+    if (init?.method === "DELETE") await held;
+    return previousFetch(path, init);
+  }) as typeof fetch;
+  let discarding: ReturnType<ComposeDraftController["discardDraft"]>;
+  await act(async () => { discarding = controller.discardDraft(); });
+  await act(async () => {
+    expect(await controller.discardDraft()).toBe(false);
+    await expect(controller.sendDraft!()).rejects.toThrow("discarding");
+    controller.updateDraft({ body: "Blocked edit" });
+  });
+  expect(controller.draft.body).toBe("Edit still in debounce");
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  expect(requests.map(request => request.method)).toEqual(["GET", "POST"]);
+  await act(async () => { release(); expect(await discarding).toBe(true); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  expect(requests.map(request => request.method)).toEqual(["GET", "POST", "DELETE"]);
+  expect(controller.draft.body).toBe("");
+});
+
+test("failed first save does not become a false successful discard", async () => {
+  globalThis.fetch = (async () => { throw new Error("Synthetic disconnected response"); }) as unknown as typeof fetch;
+  await act(async () => controller.updateDraft({ body: "Keep until server identity is known" }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  await act(async () => { expect(await controller.discardDraft()).toBe(false); });
+  expect(controller.draft.body).toBe("Keep until server identity is known");
+  expect(controller.isDiscarding).toBe(false);
+});
+
+
+test("a draft-list response begun before discard cannot restore the deleted draft", async () => {
+  await act(async () => controller.updateDraft({ body: "Discard despite stale list" }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 470)); });
+  const staleDraft = saved!;
+  available = [staleDraft];
+  await act(async () => root.render(<Harness />));
+  let release!: (response: Response) => void;
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => !init?.method
+    ? new Promise<Response>(resolve => { release = resolve; })
+    : previousFetch(path, init)) as typeof fetch;
+  available = undefined;
+  await act(async () => root.render(<Harness />));
+  await act(async () => { expect(await controller.discardDraft()).toBe(true); });
+  await act(async () => release(Response.json([staleDraft])));
+  expect(controller.draft.body).toBe("");
+  expect(controller.draft.revision).toBeNull();
+  expect(controller.saveMessage).toBe("Draft discarded");
+});
+
+test("discard refuses to race a delivery already in flight", async () => {
+  await act(async () => controller.updateDraft({ body: "Synthetic delivery", to: [{ name: null, email: "fixture@example.com" }] }));
+  let release!: () => void;
+  let started!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const sending = new Promise<void>(resolve => { started = resolve; });
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (path: string, init?: RequestInit) => {
+    if (new URL(path, "http://localhost").pathname.endsWith("/send")) { started(); await held; }
+    return previousFetch(path, init);
+  }) as typeof fetch;
+  let delivery: ReturnType<NonNullable<ComposeDraftController["sendDraft"]>>;
+  await act(async () => { delivery = controller.sendDraft!(); await sending; });
+  await act(async () => { expect(await controller.discardDraft()).toBe(false); });
+  expect(requests.some(request => request.method === "DELETE")).toBe(false);
+  await act(async () => { release(); expect((await delivery).status).toBe("sent"); });
 });

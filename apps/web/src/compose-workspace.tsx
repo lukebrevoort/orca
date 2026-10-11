@@ -71,6 +71,7 @@ export type ComposeDraftController = {
   saveMessage?: string;
   conflict?: ComposeDraftConflict | null;
   isHydrated?: boolean;
+  isDiscarding?: boolean;
   hasContent: boolean;
   updateDraft: (update: Partial<ComposeDraftFields>) => void;
   attachFiles: (files: Iterable<File>) => ComposeAttachmentAcceptance;
@@ -473,6 +474,10 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const pollTimerRef = useRef<number | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
   const sendingRef = useRef(false);
+  const discardOperationRef = useRef<object | null>(null);
+  const [isDiscarding, setIsDiscarding] = useState(false);
+  const remoteSaveFailedRef = useRef(false);
+  const draftListEpochRef = useRef(0);
   const sendIdempotencyKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -483,6 +488,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      discardOperationRef.current = null;
       revokeComposeAttachments(attachmentsRef.current);
       if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
     };
@@ -504,6 +510,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   useEffect(() => {
     if (storageScopeRef.current === scopeKey) return;
     flushPendingDraft();
+    discardOperationRef.current = null;
+    setIsDiscarding(false);
+    remoteSaveFailedRef.current = false;
     storageScopeRef.current = scopeKey;
     saveScopeRef.current = scopeKey;
     saveSequenceRef.current = Promise.resolve();
@@ -545,11 +554,12 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     }
     if (availableDrafts === null) return;
     let cancelled = false;
+    const listEpoch = draftListEpochRef.current;
     const loadDrafts = availableDrafts === undefined
       ? requestDraft(draftRequestPath(accountId), messageDraftListSchema)
       : Promise.resolve(availableDrafts);
     void loadDrafts.then((drafts) => {
-      if (cancelled) return;
+      if (cancelled || discardOperationRef.current || listEpoch !== draftListEpochRef.current) return;
       const editableDrafts = drafts.filter((item) => item.accountId === accountId && item.deliveryStatus === "draft");
       const local = hasWritingEditsRef.current ? draftRef.current : readComposeDraft(accountId, window.localStorage, scope);
       const sameDraft = local.revision === null ? null : editableDrafts.find((item) => item.id === local.id);
@@ -592,7 +602,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       }
       setHydratedScope(scopeKey);
     }).catch(() => {
-      if (cancelled) return;
+      if (cancelled || discardOperationRef.current || listEpoch !== draftListEpochRef.current) return;
       // Recovery failed: absence of a saved draft has not been established.
       isNewDraftRef.current = false;
       setHydratedScope(scopeKey);
@@ -624,15 +634,17 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }, [accountId, draft, hydratedScope, recipientQueries, scopeKey, writing]);
 
   const pollProviderStatus = useCallback((draftId: string) => {
+    const expectedScope = storageScopeRef.current;
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
     pollTimerRef.current = window.setTimeout(() => {
       void requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema).then((latest) => {
-        if (serverIdRef.current !== latest.id || serverRevisionRef.current !== latest.revision) return;
+        if (!mountedRef.current || discardOperationRef.current || storageScopeRef.current !== expectedScope || serverIdRef.current !== latest.id || serverRevisionRef.current !== latest.revision) return;
         setDraft((current) => ({ ...current, providerSyncStatus: latest.providerSyncStatus, providerSyncError: latest.providerSyncError }));
         setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
         setSaveMessage(providerSaveMessage(latest));
         if (latest.providerSyncStatus === "pending") pollProviderStatus(latest.id);
       }).catch(() => {
+        if (!mountedRef.current || discardOperationRef.current || storageScopeRef.current !== expectedScope || serverIdRef.current !== draftId) return;
         setSaveStatus("failed");
         setSaveMessage("Saved on this device · provider status is unavailable");
       });
@@ -663,6 +675,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
             body: JSON.stringify(content),
           });
       if (storageScopeRef.current !== expectedScopeKey || serverIdRef.current !== serverId || serverRevisionRef.current !== revision) return;
+      remoteSaveFailedRef.current = false;
       serverIdRef.current = saved.id;
       serverRevisionRef.current = saved.revision;
       serverAttachmentsRef.current = saved.attachments;
@@ -673,6 +686,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       if (saved.providerSyncStatus === "pending") pollProviderStatus(saved.id);
     } catch (error) {
       if (storageScopeRef.current !== expectedScopeKey) return;
+      remoteSaveFailedRef.current = true;
       if (error instanceof DraftRequestError && error.code === "stale_draft" && serverId) {
         try {
           const server = await requestDraft(draftRequestPath(accountId, serverId), messageDraftSchema);
@@ -691,7 +705,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   useEffect(() => {
     if (hydratedScope !== scopeKey) return;
-    if (sendingRef.current) return;
+    if (sendingRef.current || discardOperationRef.current) return;
     const serialized = JSON.stringify(persistableDraft(draft));
     const needsRemoteSave = !demoMode && hasComposeContent(draft) && (
       !serverIdRef.current
@@ -730,7 +744,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       if (autosaveTimerRef.current === timer) autosaveTimerRef.current = null;
       flushPendingDraft();
     };
-  }, [accountId, conflict, demoMode, draft, flushPendingDraft, hydratedScope, persistRemote, retryToken, scope, scopeKey]);
+  }, [accountId, conflict, demoMode, draft, flushPendingDraft, hydratedScope, persistRemote, retryToken, scope, scopeKey, isDiscarding]);
 
   useEffect(() => {
     const retry = () => setRetryToken((current) => current + 1);
@@ -750,11 +764,13 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }, [draft.attachments.length]);
 
   function updateDraft(update: Partial<ComposeDraftFields>) {
+    if (discardOperationRef.current) return;
     hasWritingEditsRef.current = true;
     setDraft((current) => ({ ...current, ...update, updatedAt: new Date().toISOString() }));
   }
 
   const updateRecipientQueries = useCallback<Dispatch<SetStateAction<RecipientQueries>>>((update) => {
+    if (discardOperationRef.current) return;
     // Preserve the existing query setter semantics; even typing then deleting
     // establishes that the user has started this draft before preferences arrive.
     hasWritingEditsRef.current = true;
@@ -762,6 +778,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }, []);
 
   function attachFiles(files: Iterable<File>): ComposeAttachmentAcceptance {
+    if (discardOperationRef.current) return { accepted: [], rejected: [] };
     hasWritingEditsRef.current = true;
     let acceptance: ComposeAttachmentAcceptance = { accepted: [], rejected: [] };
     setDraft((current) => {
@@ -774,6 +791,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   function removeAttachment(attachmentId: string) {
+    if (discardOperationRef.current) return;
     hasWritingEditsRef.current = true;
     setDraft((current) => {
       const remaining = current.attachments.filter((attachment) => attachment.id !== attachmentId);
@@ -785,40 +803,75 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   async function discardDraft() {
+    if (discardOperationRef.current || sendingRef.current || resolvingRef.current) return false;
+    if (hydratedScope !== scopeKey) {
+      setSaveStatus("failed");
+      setSaveMessage("Wait for this draft to finish loading before discarding it.");
+      return false;
+    }
+    const operation = {};
+    draftListEpochRef.current += 1;
+    discardOperationRef.current = operation;
+    setIsDiscarding(true);
+    const isCurrent = () => mountedRef.current && discardOperationRef.current === operation && storageScopeRef.current === scopeKey;
+    const stopTimers = () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+      if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+      autosaveTimerRef.current = null;
+      pollTimerRef.current = null;
+    };
+    stopTimers();
+    flushPendingDraft();
     try {
+      // A first POST has no server ID until it resolves. Drain saves before
+      // choosing the DELETE target; never report success and orphan that draft.
+      await saveSequenceRef.current;
+      if (!isCurrent()) return false;
+      stopTimers();
+      if (!serverIdRef.current && remoteSaveFailedRef.current) {
+        throw new Error("Couldn’t confirm the saved draft. Reconnect and retry before discarding it.");
+      }
       if (serverIdRef.current) {
         await requestDraft(draftRequestPath(accountId, serverIdRef.current), { parse: () => null }, { method: "DELETE" });
       }
+      if (!isCurrent()) return false;
+      const empty = createNewDraft();
+      isNewDraftRef.current = true;
+      hasWritingEditsRef.current = false;
+      initialFieldsAppliedRef.current = false;
+      waitingForWritingOpenRef.current = true;
+      pendingDraftRef.current = null;
+      revokeComposeAttachments(attachmentsRef.current);
+      window.localStorage.removeItem(draftStorageKey(accountId, scope));
+      persistedDraftRef.current = JSON.stringify(persistableDraft(empty));
+      serverIdRef.current = null;
+      serverRevisionRef.current = null;
+      lastRemoteSignatureRef.current = null;
+      attachmentsDirtyRef.current = false;
+      serverAttachmentsRef.current = [];
+      setConflict(null);
+      setDraft(empty);
+      setSaveStatus("saved");
+      setSaveMessage("Draft discarded");
+      setRecipientQueries(emptyRecipientState());
+      remoteSaveFailedRef.current = false;
+      return true;
     } catch (error) {
+      if (!isCurrent()) return false;
       setSaveStatus("failed");
-      setSaveMessage(error instanceof DraftRequestError ? error.message : "Couldn’t discard this draft. It is still safe.");
+      setSaveMessage(error instanceof Error ? error.message : "Couldn’t discard this draft. It is still safe.");
       return false;
+    } finally {
+      if (isCurrent()) {
+        discardOperationRef.current = null;
+        setIsDiscarding(false);
+      }
     }
-    const empty = createNewDraft();
-    isNewDraftRef.current = true;
-    hasWritingEditsRef.current = false;
-    initialFieldsAppliedRef.current = false;
-    waitingForWritingOpenRef.current = true;
-    pendingDraftRef.current = null;
-    revokeComposeAttachments(attachmentsRef.current);
-    window.localStorage.removeItem(draftStorageKey(accountId, scope));
-    persistedDraftRef.current = JSON.stringify(persistableDraft(empty));
-    serverIdRef.current = null;
-    serverRevisionRef.current = null;
-    lastRemoteSignatureRef.current = null;
-    attachmentsDirtyRef.current = false;
-    serverAttachmentsRef.current = [];
-    setConflict(null);
-    setDraft(empty);
-    setSaveStatus("saved");
-    setSaveMessage("Draft discarded");
-    setRecipientQueries(emptyRecipientState());
-    return true;
   }
 
   async function resolveConflict(choice: "server" | "local") {
     const resolvingConflict = conflictRef.current;
-    if (!resolvingConflict || resolvingRef.current) return;
+    if (!resolvingConflict || resolvingRef.current || discardOperationRef.current) return;
     const local = draftRef.current;
     // Keep inherited attachments with this version while local bytes are read.
     const inheritedAttachments = serverAttachmentsRef.current.map(attachment => ({ ...attachment }));
@@ -877,6 +930,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   async function sendDraft(deliveryFields?: Partial<ComposeDraftFields>): Promise<DeliveryResult> {
+    if (discardOperationRef.current) throw new Error("Wait for this draft to finish discarding.");
     if (sendingRef.current) throw new Error("This draft is already being sent.");
     const deliveryDraft = { ...draftRef.current, ...deliveryFields, updatedAt: new Date().toISOString() };
     // Validate every pending field before changing any recipient or starting delivery.
@@ -1027,6 +1081,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     saveMessage,
     conflict,
     isHydrated: hydratedScope === scopeKey,
+    isDiscarding,
     hasContent,
     updateDraft,
     attachFiles,
@@ -1334,7 +1389,7 @@ export function ComposeWorkspace({
   const workspaceClass = `compose-workspace${draggingFiles ? " compose-workspace-drop" : ""}`;
 
   const editor = (
-    <>
+    <div inert={controller.isDiscarding || undefined} style={{ display: "contents" }}>
       {variant !== "reply" || editReplyDetails ? <div className="compose-addressing">
         <RecipientField autoFocus={autoFocusTo && variant === "panel"} contacts={contacts} error={recipientErrors.to} inputRef={(input) => { recipientInputRefs.current.to = input; }} kind="to" label="To" onChange={(to) => updateDraft({ to })} onErrorChange={(error) => setRecipientErrors((current) => ({ ...current, to: error }))} onQueryChange={(query) => { setRecipientQueries((current) => ({ ...current, to: query })); setDeliveryValidationError(null); }} query={recipientQueries.to} recipients={draft.to} />
         {showCarbonCopy ? (
@@ -1384,7 +1439,7 @@ export function ComposeWorkspace({
         tabIndex={-1}
         type="file"
       />
-    </>
+    </div>
   );
 
   if (variant === "zen") {
@@ -1671,12 +1726,12 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
     <footer className="compose-delivery-bar">
       <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span className={draft.body.trim() ? "compose-delivery-word-count" : "compose-delivery-empty"}>{deliveryProgress}</span></div>
       <div className="compose-delivery-actions">
-        {hasContent ? <button className="compose-discard" onClick={onDiscard} type="button">Discard</button> : null}
+        {hasContent ? <button className="compose-discard" disabled={controller.isDiscarding || deliveryStatus === "sending"} onClick={onDiscard} type="button">{controller.isDiscarding ? "Discarding…" : "Discard"}</button> : null}
         <button
           aria-describedby={deliveryReasonId}
           aria-disabled={!deliveryReady || undefined}
           className="compose-send"
-          disabled={deliveryStatus === "sending" || deliveryStatus === "sent" || (!canSend && !onRequestSendAccess)}
+          disabled={controller.isDiscarding || deliveryStatus === "sending" || deliveryStatus === "sent" || (!canSend && !onRequestSendAccess)}
           onClick={() => void onSend?.()}
           type="button"
         >{deliveryStatus === "sending" ? "Sending…" : canSend ? actionLabel === "Send" ? "Send" : `Send ${actionLabel.toLowerCase()}` : "Enable sending"}</button>
