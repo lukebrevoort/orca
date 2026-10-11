@@ -306,7 +306,8 @@ try {
   results.scenarios.push({theme,name:'discard-awaits-first-autosave-then-deletes',status:'passed',draftId:createdForDiscard.id});
   scope=await newCompose(page);
   assert.equal(await scope.getByRole('textbox',{name:'Subject',exact:true}).inputValue(),'');
-  assert.equal(await scope.getByRole('textbox',{name:'Message body',exact:true}).innerText(),'');
+  // Chromium represents an empty contenteditable block as a line break.
+  assert.equal((await scope.getByRole('textbox',{name:'Message body',exact:true}).innerText()).trim(),'');
   const uncertainSubject=prefix+' uncertain'; const uncertainBody='Synthetic lost response.\n\nDo not deliver twice.';
   await scope.getByRole('textbox',{name:'Subject',exact:true}).fill(uncertainSubject);
   await scope.getByRole('textbox',{name:'Message body',exact:true}).fill(uncertainBody);
