@@ -1,0 +1,74 @@
+[
+  {
+    "file": "dark-focus-lens.png",
+    "sha256": "c301c7228e77040f9143623bb5afb0e32052824471ba0b3db0479c86b96cb2db",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "dark-inbox-after-read.png",
+    "sha256": "c1c54ece1c3bf89d92a9b67f4af103427ffbd2ecac4fde6ae51ac2a1026bf478",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "dark-inbox-before.png",
+    "sha256": "c7345f1aef56714a0e5a7cfa5fe68b0f7d3538d2df7cc94965e5c37479228576",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "light-focus-lens.png",
+    "sha256": "8490a4887e709d4ce22b49c87761b0df3ad9ff1eea2c552c2e816a83f2120dde",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "light-inbox-after-read.png",
+    "sha256": "2734aab7d2387a353589f6371d334730502d3f2b0f3879bb1f535fbf0be498fa",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "light-inbox-before.png",
+    "sha256": "b9bfbc2d007df9d3b85114e7bd89d4ed7d6bad003def025d9cb9e17da50e9480",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "combined/dark-focus-lens.png",
+    "sha256": "c301c7228e77040f9143623bb5afb0e32052824471ba0b3db0479c86b96cb2db",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "combined/dark-inbox-after-read.png",
+    "sha256": "c1c54ece1c3bf89d92a9b67f4af103427ffbd2ecac4fde6ae51ac2a1026bf478",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "combined/dark-inbox-before.png",
+    "sha256": "c7345f1aef56714a0e5a7cfa5fe68b0f7d3538d2df7cc94965e5c37479228576",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "combined/light-focus-lens.png",
+    "sha256": "8490a4887e709d4ce22b49c87761b0df3ad9ff1eea2c552c2e816a83f2120dde",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "combined/light-inbox-after-read.png",
+    "sha256": "2734aab7d2387a353589f6371d334730502d3f2b0f3879bb1f535fbf0be498fa",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  },
+  {
+    "file": "combined/light-inbox-before.png",
+    "sha256": "b9bfbc2d007df9d3b85114e7bd89d4ed7d6bad003def025d9cb9e17da50e9480",
+    "visuallyInspected": true,
+    "platform": "web Chromium Linux"
+  }
+]

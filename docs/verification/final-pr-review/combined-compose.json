@@ -1,0 +1,109 @@
+{
+  "syntheticOnly": true,
+  "browserVersion": "154.0.8037.57",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "scenarios": [
+    {
+      "theme": "light",
+      "name": "delayed-account-and-draft-recovery-close-discard",
+      "status": "passed",
+      "seededDraftId": "1b60d810-4484-40a3-9f9c-21bf15b83ea4"
+    },
+    {
+      "theme": "light",
+      "name": "new-compose-reload-recipients-attachment-removal-double-send",
+      "status": "passed",
+      "account": "first",
+      "draftId": "64531bc9-3796-49eb-be76-1043453275c4"
+    },
+    {
+      "theme": "light",
+      "name": "second-account-reply-double-send",
+      "status": "passed",
+      "account": "second",
+      "draftId": "c5731541-3cfd-478c-836e-c7748b5cf04e"
+    },
+    {
+      "theme": "light",
+      "name": "invalid-pending-recipient-no-dispatch",
+      "status": "passed"
+    },
+    {
+      "theme": "light",
+      "name": "conflict-copy-latest-writing-removed-attachment-original-preserved",
+      "status": "passed",
+      "originalId": "62f948c3-1895-4ac2-8e55-1d2823662cac",
+      "copyId": "3acf8a51-990e-45d8-9d06-134c17a6e88c"
+    },
+    {
+      "theme": "light",
+      "name": "discard-awaits-first-autosave-then-deletes",
+      "status": "passed",
+      "draftId": "26be33ec-af92-4e7b-b25c-e1911baebc63"
+    },
+    {
+      "theme": "light",
+      "name": "uncertain-delivery-retains-content-replay-no-provider-repeat",
+      "status": "passed",
+      "draftId": "36ac7783-d4d3-47a4-a55c-d6665bb9ef0b"
+    },
+    {
+      "theme": "light",
+      "name": "session-rejection-removes-writing-surface",
+      "status": "passed"
+    },
+    {
+      "theme": "dark",
+      "name": "delayed-account-and-draft-recovery-close-discard",
+      "status": "passed",
+      "seededDraftId": "0e89defe-8c5c-40e7-80ad-4dadc5540c09"
+    },
+    {
+      "theme": "dark",
+      "name": "new-compose-reload-recipients-attachment-removal-double-send",
+      "status": "passed",
+      "account": "first",
+      "draftId": "18c97276-f688-4e8a-8387-f36f7b286e37"
+    },
+    {
+      "theme": "dark",
+      "name": "second-account-reply-double-send",
+      "status": "passed",
+      "account": "second",
+      "draftId": "5047fa74-d9c2-4f9e-aaf0-f44a89ea8dea"
+    },
+    {
+      "theme": "dark",
+      "name": "invalid-pending-recipient-no-dispatch",
+      "status": "passed"
+    },
+    {
+      "theme": "dark",
+      "name": "conflict-copy-latest-writing-removed-attachment-original-preserved",
+      "status": "passed",
+      "originalId": "2cc9bdd6-8c4f-4e5b-a9ab-628b0438d078",
+      "copyId": "0c31c7c5-0367-43c9-a21d-5ce748c47704"
+    },
+    {
+      "theme": "dark",
+      "name": "discard-awaits-first-autosave-then-deletes",
+      "status": "passed",
+      "draftId": "2b026e25-4bdc-4287-87b8-0a5c949ea96a"
+    },
+    {
+      "theme": "dark",
+      "name": "uncertain-delivery-retains-content-replay-no-provider-repeat",
+      "status": "passed",
+      "draftId": "995e19dc-857e-477a-9cc5-8e9dcb9e4684"
+    },
+    {
+      "theme": "dark",
+      "name": "session-rejection-removes-writing-surface",
+      "status": "passed"
+    }
+  ],
+  "pageErrors": []
+}

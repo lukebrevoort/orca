@@ -1,0 +1,49 @@
+{
+  "source": "405527baf151b9987d2fd98de28e745ea558d6a7",
+  "tree": "b25455e8ec0d2e628069a03fd7afc5c0ec40a7b5",
+  "browser": "154.0.8037.57",
+  "coverage": "local Linux Chromium, real loopback API/SQLite, synthetic seeded mail",
+  "scenarios": [
+    {
+      "theme": "light",
+      "before": [
+        "JLJordan LeeNotify meOct 10Notify: partner questionSynthetic review fixture — Notify: partner question",
+        "MCMaya ChenKeep in focusOct 9Focus: launch decisionSynthetic review fixture — Focus: launch decision",
+        "AMAri Morgannormal10:00 AMToday: design reviewSynthetic review fixture — Today: design review",
+        "SRSam RiveraKeep in focusOct 7Focus: completed planningSynthetic review fixture — Focus: completed planning"
+      ],
+      "after": [
+        "JLJordan LeeNotify meOct 10Notify: partner questionSynthetic review fixture — Notify: partner question",
+        "AMAri Morgannormal10:00 AMToday: design reviewSynthetic review fixture — Today: design review",
+        "MCMaya ChenKeep in focusOct 9Focus: launch decisionSynthetic review fixture — Focus: launch decision",
+        "SRSam RiveraKeep in focusOct 7Focus: completed planningSynthetic review fixture — Focus: completed planning"
+      ],
+      "focus": [
+        "JLJordan LeeNotify meOct 10Notify: partner questionSynthetic review fixture — Notify: partner question",
+        "MCMaya ChenKeep in focusOct 9Focus: launch decisionSynthetic review fixture — Focus: launch decision",
+        "SRSam RiveraKeep in focusOct 7Focus: completed planningSynthetic review fixture — Focus: completed planning"
+      ]
+    },
+    {
+      "theme": "dark",
+      "before": [
+        "JLJordan LeeNotify meOct 10Notify: partner questionSynthetic review fixture — Notify: partner question",
+        "MCMaya ChenKeep in focusOct 9Focus: launch decisionSynthetic review fixture — Focus: launch decision",
+        "AMAri Morgannormal10:00 AMToday: design reviewSynthetic review fixture — Today: design review",
+        "SRSam RiveraKeep in focusOct 7Focus: completed planningSynthetic review fixture — Focus: completed planning"
+      ],
+      "after": [
+        "JLJordan LeeNotify meOct 10Notify: partner questionSynthetic review fixture — Notify: partner question",
+        "AMAri Morgannormal10:00 AMToday: design reviewSynthetic review fixture — Today: design review",
+        "MCMaya ChenKeep in focusOct 9Focus: launch decisionSynthetic review fixture — Focus: launch decision",
+        "SRSam RiveraKeep in focusOct 7Focus: completed planningSynthetic review fixture — Focus: completed planning"
+      ],
+      "focus": [
+        "JLJordan LeeNotify meOct 10Notify: partner questionSynthetic review fixture — Notify: partner question",
+        "MCMaya ChenKeep in focusOct 9Focus: launch decisionSynthetic review fixture — Focus: launch decision",
+        "SRSam RiveraKeep in focusOct 7Focus: completed planningSynthetic review fixture — Focus: completed planning"
+      ]
+    }
+  ],
+  "errors": []
+}

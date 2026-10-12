@@ -1,0 +1,9 @@
+{
+  "source": "405527baf151b9987d2fd98de28e745ea558d6a7",
+  "tree": "b25455e8ec0d2e628069a03fd7afc5c0ec40a7b5",
+  "browser": "154.0.8037.57",
+  "coverage": "local Linux Chromium, real loopback API/SQLite, synthetic seeded mail",
+  "scenarios": [],
+  "errors": [],
+  "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(before[0].includes('Notify: partner question'))\n\n    at file:///workspace/scratch/final-pr-review/focus/browser.mjs:22:3"
+}

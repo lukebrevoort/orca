@@ -1,0 +1,135 @@
+{
+  "main": "ab541c00d6e8dc23812d05004c0611fe9fd19c32",
+  "heads": {
+    "238": "bf5587020af7cf70dba36dd8c52b84ee2041cd61",
+    "240": "fb9b4a0365e851dd800855182b43908d1015d316",
+    "241": "2825f65225470bb6400e7006d650461d4f573402"
+  },
+  "proposedOrder": [
+    238,
+    240,
+    241
+  ],
+  "integration": {
+    "commit": "5182b18631942419df42ab5871d9a546228880bb",
+    "tree": "d58bb3db5e88c45b4edbdbbdc64f6332527c53a0",
+    "scope": "local Linux; no hosted combined native run",
+    "tests": {
+      "api": 740,
+      "web": 624,
+      "shared": 95,
+      "fail": 0
+    },
+    "typecheck": "passed",
+    "build": "passed",
+    "apiSmoke": "passed",
+    "independentReview": {
+      "tests": 74,
+      "assertions": 529,
+      "blockingFindings": 0
+    },
+    "browser": {
+      "composeScenarios": 16,
+      "readerScenarios": 6
+    }
+  },
+  "hosted": [
+    {
+      "pr": 238,
+      "workflow_runs": [
+        {
+          "id": 38069198575,
+          "name": "Native Reader Checks",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 50,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38069198575/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38069198575/logs",
+          "workflow_id": 375708526
+        },
+        {
+          "id": 38069198576,
+          "name": "Unit Tests",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 1258,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38069198576/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38069198576/logs",
+          "workflow_id": 304431639
+        },
+        {
+          "id": 38069198583,
+          "name": "Fixture Checks",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 101,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38069198583/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38069198583/logs",
+          "workflow_id": 374977047
+        }
+      ]
+    },
+    {
+      "pr": 240,
+      "workflow_runs": [
+        {
+          "id": 38139143412,
+          "name": "Unit Tests",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 1264,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38139143412/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38139143412/logs",
+          "workflow_id": 304431639
+        },
+        {
+          "id": 38139143441,
+          "name": "Fixture Checks",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 107,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38139143441/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38139143441/logs",
+          "workflow_id": 374977047
+        }
+      ]
+    },
+    {
+      "pr": 241,
+      "workflow_runs": [
+        {
+          "id": 38249249735,
+          "name": "Fixture Checks",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 108,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38249249735/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38249249735/logs",
+          "workflow_id": 374977047
+        },
+        {
+          "id": 38249249771,
+          "name": "Unit Tests",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 1265,
+          "jobs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38249249771/jobs",
+          "logs_url": "https://api.github.com/repos/lukebrevoort/orca/actions/runs/38249249771/logs",
+          "workflow_id": 304431639
+        }
+      ]
+    }
+  ],
+  "native238": {
+    "exactSourceReader": "bf5587020af7cf70dba36dd8c52b84ee2041cd61",
+    "fixtureMerge": "5542febbd7ba39c0ddf79444d89b1502aa13dad5",
+    "fixtureBase": "29958f22a1f91dd90c46766a67238603a5a5f857",
+    "screenshotsInspected": false
+  },
+  "limits": [
+    "Fresh combined native workflow unavailable: GitHub CLI GET actions/workflows/native-reader.yml returned Forbidden, no callable dispatch tool exposed. No dispatch attempted.",
+    "Prior denied artifact download routes not retried.",
+    "Library upload previously failed; no confirmed library_file_id.",
+    "Synthetic cloud Chromium, not Safari/physical device/VoiceOver."
+  ]
+}
