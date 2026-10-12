@@ -1,0 +1,27 @@
+{
+  "browser": "Chromium 154.0.8037.57",
+  "scope": "Linux cloud browser, not hosted GitHub CI or native",
+  "result": {
+    "syntheticOnly": true,
+    "scenarios": [],
+    "pageErrors": [],
+    "externalRequestsBlocked": [
+      {
+        "origin": "https://fonts.googleapis.com",
+        "path": "/css2"
+      }
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/v1/sync/gmail"
+      }
+    ],
+    "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(await jump.evaluate(node => node === document.activeElement && node.matches(':focus-visible')))\n\n    at checkReaderScroll (file:///workspace/orca/apps/web/scripts/reader-scroll-regression.mjs:77:9)\n    at async file:///workspace/scratch/october12-bug-sweep/run-browser.mjs:9:13"
+  },
+  "screenshots": [
+    "jump-top-light-mobile-default.png",
+    "jump-top-light-mobile-hover.png",
+    "jump-top-light-failure.png"
+  ]
+}
