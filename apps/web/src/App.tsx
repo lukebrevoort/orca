@@ -5769,11 +5769,19 @@ export function MessageReader({
   useEffect(() => {
     if (status !== "ready") return;
     const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
-    if (!scrollport) return;
-    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(scrollport.scrollTop, scrollport.clientHeight));
+    const updateJumpToTop = () => {
+      const contained = scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY);
+      setShowJumpToTop(shouldShowReaderJumpToTop(contained ? scrollport.scrollTop : window.scrollY, contained ? scrollport.clientHeight : window.innerHeight));
+    };
     updateJumpToTop();
-    scrollport.addEventListener("scroll", updateJumpToTop, { passive: true });
-    return () => scrollport.removeEventListener("scroll", updateJumpToTop);
+    // Mobile scrolls the document. Capture element scrolls too, and recheck
+    // the active scroll container when a resize crosses the layout breakpoint.
+    window.addEventListener("scroll", updateJumpToTop, { passive: true, capture: true });
+    window.addEventListener("resize", updateJumpToTop);
+    return () => {
+      window.removeEventListener("scroll", updateJumpToTop, true);
+      window.removeEventListener("resize", updateJumpToTop);
+    };
   }, [status]);
 
   useEffect(() => {
@@ -5818,7 +5826,10 @@ export function MessageReader({
   function jumpToTop() {
     headingRef.current?.focus({ preventScroll: true });
     const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
-    if (!scrollport) return;
+    if (!scrollport || !/^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY)) {
+      window.scrollTo({ top: 0, behavior: shouldReduceMotion() ? "auto" : "smooth" });
+      return;
+    }
     if (typeof scrollport.scrollTo === "function") {
       scrollport.scrollTo({ top: 0, behavior: shouldReduceMotion() ? "auto" : "smooth" });
     } else {

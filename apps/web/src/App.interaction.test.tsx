@@ -3608,10 +3608,75 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Launch notes for Orca Mail");
   });
 
+  test("visible reader jump follows document scrolling after a mobile resize", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    workspace.style.overflowY = "auto";
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
+    workspace.scrollTop = 600;
+    await act(async () => { workspace.dispatchEvent(new browserWindow.Event("scroll") as unknown as Event); });
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(jump.hidden).toBe(false);
+    workspace.style.overflowY = "visible";
+    workspace.scrollTop = 0;
+    scrollPosition.y = 600;
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("resize")); flushAnimationFrames(); });
+    await act(async () => jump.click());
+    expect(scrollPosition.y).toBe(0);
+    expect(browserWindow.document.activeElement?.id).toBe("reader-title");
+  });
+
+  test("document scrolling exposes reader jump-to-top on mobile", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    workspace.style.overflowY = "visible";
+    Object.defineProperty(browserWindow, "innerHeight", { configurable: true, value: 844 });
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 2400 });
+    workspace.scrollTop = 0;
+    scrollPosition.y = 600;
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.Event("scroll"));
+      flushAnimationFrames();
+    });
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(browserWindow.getComputedStyle(workspace as never).overflowY).toBe("visible");
+    expect(jump.hidden).toBe(false);
+    await act(async () => jump.click());
+    expect(scrollPosition.y).toBe(0);
+    expect(browserWindow.document.activeElement?.id).toBe("reader-title");
+  });
+
+  test("reader jump recomputes visibility when resizing between scroll containers", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    workspace.style.overflowY = "visible";
+    Object.defineProperty(browserWindow, "innerHeight", { configurable: true, value: 844 });
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
+    scrollPosition.y = 600;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("resize")));
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(jump.hidden).toBe(false);
+    workspace.style.overflowY = "auto";
+    workspace.scrollTop = 0;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("resize")));
+    expect(jump.hidden).toBe(true);
+    workspace.scrollTop = 600;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("resize")));
+    expect(jump.hidden).toBe(false);
+    // Mobile document position must not determine visibility on desktop.
+    scrollPosition.y = 0;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("scroll")));
+    expect(jump.hidden).toBe(false);
+  });
+
   test("observes and scrolls the desktop workspace for reader jump-to-top", async () => {
     await renderApp();
     await openMessage("Luke Brevoort");
     const workspace = desktopWorkspace();
+    workspace.style.overflowY = "auto";
     Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
     Object.defineProperty(workspace, "scrollTo", {
       configurable: true,
