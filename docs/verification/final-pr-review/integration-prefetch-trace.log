@@ -1,0 +1,62 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/.review-retry-trace.test.tsx:
+REVIEW_REQUEST 1 Error
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/.review-retry-trace.test.tsx:3395:113)
+    at fetchJson (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:6799:26)
+    at load (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:92:21)
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:2049:27)
+    at react_stack_bottom_frame (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+    at runWithFiberInDEV (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+    at commitHookEffectListMount (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+    at commitHookPassiveMountEffects (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:13336:11)
+    at commitPassiveMountOnFiber (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:15484:13)
+    at recursivelyTraversePassiveMountEffects (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:15439:11)
+REVIEW_REQUEST 2 Error
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/.review-retry-trace.test.tsx:3395:113)
+    at fetchJson (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:6799:26)
+    at load (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:92:21)
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:121:22)
+    at from (native:1:11)
+    at prefetch (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:127:29)
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:2004:42)
+REVIEW_REQUEST 3 Error
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/.review-retry-trace.test.tsx:3395:113)
+    at fetchJson (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:6799:26)
+    at load (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:92:21)
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:121:22)
+    at from (native:1:11)
+    at prefetch (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:127:29)
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:2004:42)
+REVIEW_BEFORE_RETRY 3
+REVIEW_REQUEST 4 Error
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/.review-retry-trace.test.tsx:3395:113)
+    at fetchJson (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:6799:26)
+    at load (/workspace/scratch/orca-focus-visual/apps/web/src/thread-detail-cache.ts:92:21)
+    at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/App.tsx:2049:27)
+    at react_stack_bottom_frame (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+    at runWithFiberInDEV (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+    at commitHookEffectListMount (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+    at commitHookPassiveMountEffects (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:13336:11)
+    at commitPassiveMountOnFiber (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:15484:13)
+    at recursivelyTraversePassiveMountEffects (/workspace/scratch/orca-focus-visual/node_modules/react-dom/cjs/react-dom-client.development.js:15439:11)
+3407 |       const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
+3408 |       expect(retry?.textContent).toBe("Try again");
+3409 | 
+3410 |       await waitFor(150); console.log("REVIEW_BEFORE_RETRY",threadReads.length); await act(async () => retry.click());
+3411 |       for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-document:not(.reader-loading)"); index += 1) await waitFor(0);
+3412 |       expect(threadReads.filter((path) => path.includes(encodeURIComponent(failedMessage.threadId)))).toHaveLength(2);
+                                                                                                             ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 2
+Received length: 4
+
+      at <anonymous> (/workspace/scratch/orca-focus-visual/apps/web/src/.review-retry-trace.test.tsx:3412:103)
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread [366.29ms]
+
+ 0 pass
+ 126 filtered out
+ 1 fail
+ 2 expect() calls
+Ran 1 test across 1 file. [724.00ms]
