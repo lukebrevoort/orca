@@ -31,7 +31,7 @@ export function destinationLabel(id: string | null | undefined) {
   return snapshot.data?.destinations.find(item => item.id === id)?.name ?? (id ? "Unavailable space" : "No space");
 }
 // Explicitly synthetic destinations for the existing /dev preview only.
-const previewCatalog = destinationListSchema.parse({ revision: 1, fallbackDestinationId: "inbox", legacyDestinationIds: { normal: "inbox", focus: "focus", notify: "signals", quiet: "quiet" }, destinations: ["Inbox", "Focus", "Signals", "Quiet"].map((name, position) => ({ id: name.toLowerCase(), name, isFallback: position === 0, position, retiredAt: null, revision: 1, notificationPreference: "quiet", delivery: "proposal_only", counts: { total: 0, unread: 0 } })) });
+const previewCatalog = destinationListSchema.parse({ revision: 1, fallbackDestinationId: "inbox", legacyDestinationIds: { normal: "inbox", focus: "focus", notify: "signals", quiet: "quiet" }, destinations: ["Inbox", "Focus", "Signals", "Quiet"].map((name, position) => ({ id: name.toLowerCase(), name: name === "Focus" ? "Focus (legacy)" : name, isFallback: position === 0, position, retiredAt: null, revision: 1, notificationPreference: "quiet", delivery: "proposal_only", counts: { total: 0, unread: 0 } })) });
 export function useDestinations(preview = false) {
   const liveState = useSyncExternalStore(listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }, () => snapshot, () => snapshot);
   const state = preview ? { data: previewCatalog, loading: false, error: "" } : liveState;
@@ -156,3 +156,4 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
     </TopLayer>}
   </>;
 }
+

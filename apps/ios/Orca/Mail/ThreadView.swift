@@ -22,7 +22,7 @@ struct ThreadView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("CONVERSATION").font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.5).foregroundStyle(OrcaTheme.accent)
                         DisclosureGroup("Attention: " + (detail.thread.attention.attentionBehavior ?? "normal").capitalized) {
-                            Text("Attention sets the order: Notify, Focus, Normal, Quiet, then Hidden; dates sort within each group. This value is separate from the destination. The winning rule is unavailable in this response.").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                            Text("Unread Focus and Notify conversations appear first in Inbox, newest first. Read conversations return to date order and keep their attention setting. Focus filters the same Inbox without moving mail. The winning rule is unavailable in this response.").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                         }.font(OrcaTheme.ui(12))
                         Text(detail.thread.subject.isEmpty ? "(No subject)" : detail.thread.subject).font(OrcaTheme.reader(34)).tracking(-0.6).foregroundStyle(OrcaTheme.ink).fixedSize(horizontal: false, vertical: true)
                     }
@@ -208,7 +208,7 @@ struct ThreadView: View {
             let loaded = try await client.thread(threadId, accountId: accountId)
             guard identityIsCurrent() else { return }; accept(loaded); error = nil
             try? await state.cache.save(loaded, key: key)
-            guard identityIsCurrent() else { return }; try? await client.markRead(threadId, accountId: accountId)
+            guard identityIsCurrent() else { return }; try? await state.markThreadRead(threadId, accountID: accountId)
         } catch {
             guard identityIsCurrent() else { return }
             if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
@@ -292,3 +292,4 @@ enum ReaderNavigationVisibility {
         viewportHeight > 0 && frame.height > 0 && frame.maxY > 0 && frame.minY < viewportHeight
     }
 }
+
