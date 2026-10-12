@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-12",
+  "windowHours": 72,
+  "sampleRateSeconds": 3600,
+  "service": {
+    "id": "c39760aa-ad0a-4f40-a8d4-44a6328c534e",
+    "name": "pr235-synthetic-comparison"
+  },
+  "environment": {
+    "id": "33d450ee-d1d7-4d4b-96bc-b46580fc230d",
+    "name": "synthetic"
+  },
+  "metrics": [
+    {
+      "measurement": "CPU_USAGE",
+      "current": 0,
+      "average": 0,
+      "min": 0,
+      "max": 0,
+      "sampleCount": 73
+    },
+    {
+      "measurement": "MEMORY_USAGE_GB",
+      "current": 0,
+      "average": 0,
+      "min": 0,
+      "max": 0,
+      "sampleCount": 73
+    },
+    {
+      "measurement": "DISK_USAGE_GB",
+      "current": 0.02297856,
+      "average": 0.021921855123287697,
+      "min": 0,
+      "max": 0.02297856,
+      "sampleCount": 73
+    }
+  ],
+  "provisionedVolumeMB": 5000,
+  "configuredCpuLimit": 8,
+  "configuredMemoryBytes": 8000000000,
+  "caveat": "Hourly samples do not establish historical peaks or accrued billing. No infrastructure mutation."
+}
