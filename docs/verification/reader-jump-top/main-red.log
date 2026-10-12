@@ -1,0 +1,38 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/App.interaction.test.tsx:
+3621 |     workspace.style.overflowY = "visible";
+3622 |     workspace.scrollTop = 0;
+3623 |     scrollPosition.y = 600;
+3624 |     await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("resize")); flushAnimationFrames(); });
+3625 |     await act(async () => jump.click());
+3626 |     expect(scrollPosition.y).toBe(0);
+                                    ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 600
+
+      at <anonymous> (/workspace/orca/apps/web/src/App.interaction.test.tsx:3626:30)
+(fail) Inbox reader viewport restoration > visible reader jump follows document scrolling after a mobile resize [322.71ms]
+3639 |       browserWindow.dispatchEvent(new browserWindow.Event("scroll"));
+3640 |       flushAnimationFrames();
+3641 |     });
+3642 |     const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+3643 |     expect(browserWindow.getComputedStyle(workspace as never).overflowY).toBe("visible");
+3644 |     expect(jump.hidden).toBe(false);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/workspace/orca/apps/web/src/App.interaction.test.tsx:3644:25)
+(fail) Inbox reader viewport restoration > document scrolling exposes reader jump-to-top on mobile [167.33ms]
+(pass) Inbox reader viewport restoration > observes and scrolls the desktop workspace for reader jump-to-top [140.16ms]
+
+ 1 pass
+ 118 filtered out
+ 2 fail
+ 9 expect() calls
+Ran 3 tests across 1 file. [1032.00ms]
