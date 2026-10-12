@@ -37,3 +37,11 @@ export function inboxVisibilityPredicate(sqlite: Database, workspaceId: string, 
     params: [inboxId, ...matches.flatMap(match => match.params)],
   };
 }
+
+export const latestThreadMessageSql = `e.id=(select latest.id from emails latest where latest.account_id=e.account_id and latest.thread_id=e.thread_id order by latest.received_at desc,latest.created_at desc,latest.id asc limit 1)`;
+// Gmail's INBOX label is authoritative when its provider catalog is available.
+// Outlook sync is not implemented; do not infer folder membership from categories.
+export const providerInboxSql = `not exists (select 1 from labels inbox_label where inbox_label.account_id=e.account_id and inbox_label.provider_label_id='INBOX') or exists (
+  select 1 from emails inbox_email join email_labels inbox_link on inbox_link.email_id=inbox_email.id
+  join labels inbox_label on inbox_label.id=inbox_link.label_id
+  where inbox_email.account_id=e.account_id and inbox_email.thread_id=e.thread_id and inbox_label.account_id=e.account_id and inbox_label.provider_label_id='INBOX')`;

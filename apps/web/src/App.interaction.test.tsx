@@ -1721,7 +1721,7 @@ describe("Desktop evidence and navigation", () => {
     const focus = navButtons.find((button) => button.textContent?.includes("Focus"))!;
     const custom = navButtons.find((button) => button.textContent?.includes("Orca launch"))!;
     await act(async () => { focus.click(); });
-    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("destination:focus");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("focus");
     await act(async () => { custom.click(); });
     expect(new URL(browserWindow.location.href).searchParams.get("destination")).toStartWith("space:");
     await act(async () => {
@@ -4309,5 +4309,153 @@ describe("BRE-418 canonical demo App journey", () => {
     await press("Inbox", ".desktop-sidebar-item"); await press("Family sample", ".desktop-sidebar-item");
     expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
     expect(demoStore.getView(view.id)?.revision).toBe(2);
+  });
+});
+
+
+describe("unread Focus Inbox contract", () => {
+  beforeEach(installDom);
+  afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } restoreDom(); });
+  const fixture = (id: string, day: number, behavior: InboxMessage["attentionBehavior"], unread: boolean): InboxMessage => ({ ...demoMessages[0]!, id, threadId: id, subject: id, receivedAt: `2026-10-${String(day).padStart(2, "0")}T12:00:00.000Z`, attentionBehavior: behavior, unread, from: { name: id, email: `${id}@example.com` } });
+  const subjects = () => [...browserWindow.document.querySelectorAll("button.message-row h2")].map(node => node.textContent?.trim());
+
+  test.each(["light", "dark"] as const)("renders one compact timeline without attention headers in %s", async theme => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    const messages = [fixture("read-focus", 2, "focus", false), fixture("notify-old", 1, "notify", true), fixture("normal-new", 10, "normal", false), fixture("focus-new", 4, "focus", true)];
+    await renderApp(defaultReaderPreferences, false, { theme, initialDemoMessages: messages });
+    expect(subjects()).toEqual(["focus-new", "notify-old", "normal-new", "read-focus"]);
+    expect(browserWindow.document.querySelector(".stream-attention-label")).toBeNull();
+    expect(browserWindow.document.querySelectorAll(".attention-badge")).toHaveLength(4);
+  });
+
+  test("opening unread Focus demotes it by date on return while retaining its Focus category", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    await renderApp(defaultReaderPreferences, false, { initialDemoMessages: [fixture("focus-old", 2, "focus", true), fixture("normal-new", 10, "normal", false)], theme: "light" });
+    expect(subjects()).toEqual(["focus-old", "normal-new"]);
+    await openMessage("focus-old");
+    await goBackToInbox();
+    expect(subjects()).toEqual(["normal-new", "focus-old"]);
+    const row = messageRow("focus-old");
+    expect(row.classList.contains("message-row-unread")).toBe(false);
+    expect(row.querySelector(".attention-badge")?.textContent).toBe("Keep in focus");
+  });
+
+  test("Focus demo membership matches Inbox, including latest sent replies but excluding archived threads", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=focus");
+    const inbox = fixture("inbox-focus", 2, "focus", true);
+    const sentReply = { ...fixture("latest-sent", 5, "focus", false), threadId: inbox.threadId, labels: ["SENT"] };
+    const archived = { ...fixture("archived-focus", 10, "focus", true), labels: [] };
+    const olderFocus = fixture("old-focus-now-normal", 1, "focus", true);
+    const latestNormal = { ...fixture("latest-normal", 8, "normal", false), threadId: olderFocus.threadId };
+    await renderApp(defaultReaderPreferences, false, { initialDemoMessages: [inbox, sentReply, archived, olderFocus, latestNormal, fixture("quiet", 6, "quiet", true), fixture("hidden", 7, "hidden", true)], theme: "light" });
+    expect(subjects()).toEqual(["latest-sent"]);
+    expect(messageRow("latest-sent").classList.contains("message-row-unread")).toBe(true);
+  });
+
+  test.each([true, false])("pending read mutation rejects older pages and preserves unread on failure (success=%s)", async succeeded => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    const focus = { ...fixture("focus-old", 2, "focus", true), accountId: accountFixture.id };
+    const normal = { ...fixture("normal-new", 10, "normal", false), accountId: accountFixture.id };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [focus, normal] });
+    let releasePage!: () => void, releaseRead!: () => void;
+    const pageGate = new Promise<void>(resolve => { releasePage = resolve; });
+    const readGate = new Promise<void>(resolve => { releaseRead = resolve; });
+    let readStarted = false, readSettled = false, pageStarted = false, canonicalReloads = 0;
+    const response = (messages: InboxMessage[], nextCursor: string | null) => jsonResponse({ accounts: [accountFixture], messages, nextCursor, counts: { attention: { focus: 1, normal: 1, quiet: 0, hidden: 0, all: 2 }, classification: { likely_human: 2, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 2 } } });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname.endsWith("/read") && init?.method === "PATCH") {
+        readStarted = true;
+        await readGate;
+        readSettled = true;
+        return succeeded ? new Response(null, { status: 204 }) : jsonResponse({ error: "Read update failed" }, 503);
+      }
+      if (url.pathname === "/v1/inbox") {
+        if (url.searchParams.has("cursor")) { pageStarted = true; await pageGate; return response([focus], null); }
+        if (readSettled) { if (!url.searchParams.has("destinationId")) canonicalReloads += 1; return jsonResponse({ error: "Canonical reload unavailable" }, 503); }
+        return response([focus, normal], "older-page");
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i = 0; i < 20 && !subjects().includes("focus-old"); i++) await waitFor(0);
+    const loadMore = [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Load more messages")!;
+    await act(async () => loadMore.click());
+    expect(pageStarted).toBe(true);
+    await openMessage("focus-old");
+    expect(readStarted).toBe(true);
+    await act(async () => releasePage());
+    await waitFor(0);
+    await act(async () => releaseRead());
+    await waitFor(0);
+    await goBackToInbox();
+    expect(canonicalReloads).toBeGreaterThan(0);
+    expect(messageRow("focus-old").classList.contains("message-row-unread")).toBe(!succeeded);
+    expect(subjects()).toEqual(succeeded ? ["normal-new", "focus-old"] : ["focus-old", "normal-new"]);
+  });
+
+  test("sidebar Focus lens opens Inbox intersection while a custom Focus Space keeps its own destination", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    const focus = { ...fixture("inbox-focus", 4, "focus", true), accountId: accountFixture.id };
+    const custom = { ...fixture("custom-space-mail", 10, "normal", false), accountId: accountFixture.id };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [focus, custom] });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/destinations") {
+        const catalog = destinationCatalogFixture([focus, custom]);
+        catalog.destinations = catalog.destinations.map(item => item.id === "focus" ? { ...item, name: "Focus (legacy)" } : item);
+        catalog.destinations.push({ ...catalog.destinations[1]!, id: "manual-focus", name: "Focus", position: 9 });
+        return jsonResponse(catalog);
+      }
+      if (url.pathname === "/v1/inbox") {
+        const messages = url.searchParams.get("destinationId") === "manual-focus" ? [custom] : url.searchParams.get("destinationId") === "inbox" ? [focus] : [];
+        return jsonResponse({ accounts: [accountFixture], messages, nextCursor: null, counts: { attention: { focus: 1, normal: 0, quiet: 0, hidden: 0, all: 1 }, classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 } } });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    await waitFor(0);
+    const focusButtons = () => [...browserWindow.document.querySelectorAll(".desktop-sidebar-content .desktop-sidebar-item")].filter(button => [...button.querySelectorAll("span")].some(span => span.textContent === "Focus"));
+    expect(focusButtons()).toHaveLength(2);
+    await act(async () => (focusButtons()[0] as unknown as HTMLButtonElement).click());
+    await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("focus");
+    expect(subjects()).toEqual(["inbox-focus"]);
+    await act(async () => (focusButtons()[1] as unknown as HTMLButtonElement).click());
+    await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("destination:manual-focus");
+    expect(subjects()).toEqual(["custom-space-mail"]);
+  });
+
+  test("Focus uses Inbox membership and view-specific pagination, never the wider mail cache", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=focus");
+    const focus = { ...fixture("focus-inbox", 4, "focus", true), accountId: accountFixture.id };
+    const notify = { ...fixture("notify-inbox", 3, "notify", true), accountId: accountFixture.id };
+    const archived = { ...fixture("archived-focus", 10, "focus", true), accountId: accountFixture.id, labels: [] };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [focus, notify, archived] });
+    const queries: URL[] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox") {
+        queries.push(url);
+        const scopedFocus = url.searchParams.get("destinationId") === "inbox" && url.searchParams.get("view") === "focus";
+        const messages = scopedFocus ? (url.searchParams.has("cursor") ? [{ ...focus, id: "focus-updated", unread: false }, notify] : [focus]) : [archived];
+        return jsonResponse({ accounts: [accountFixture], messages, nextCursor: scopedFocus && !url.searchParams.has("cursor") ? "focus-page-2" : null, counts: { attention: { focus: 2, normal: 0, quiet: 0, hidden: 0, all: 2 }, classification: { likely_human: 2, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 2 } } });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i = 0; i < 20 && !subjects().includes("focus-inbox"); i++) await waitFor(0);
+    expect(subjects()).toEqual(["focus-inbox"]);
+    expect(queries.some(url => url.searchParams.get("view") === "focus" && url.searchParams.get("destinationId") === "inbox")).toBe(true);
+    const loadMore = [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent?.includes("Load more"));
+    expect(loadMore).toBeDefined();
+    await act(async () => loadMore!.click());
+    await waitFor(0);
+    expect(subjects()).toEqual(["notify-inbox", "focus-inbox"]);
+    const page = queries.find(url => url.searchParams.has("cursor"));
+    expect(page?.searchParams.get("view")).toBe("focus");
+    expect(page?.searchParams.get("destinationId")).toBe("inbox");
+    expect(subjects()).not.toContain("archived-focus");
   });
 });

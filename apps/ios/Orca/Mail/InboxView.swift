@@ -7,10 +7,10 @@ import SwiftUI
     func load(state: AppState, reset: Bool = true) async {
         guard let account = state.selectedAccount, reset || (!isLoading && nextCursor != nil) else { return }
         let scope = state.ownerScope, requestedView = view, requestedSearch = search
-        let key = "\(scope)|\(account.id)|inbox|\(requestedView)|\(requestedSearch)"
+        let key = state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch)
         if activeKey != key { messages = []; nextCursor = nil; error = nil; activeKey = key }
         requestGeneration = UUID(); let generation = requestGeneration
-        if state.demoMode { messages = DemoData.messages.filter { requestedView == "all" || $0.attentionBehavior == requestedView }; return }
+        if state.demoMode { messages = DemoData.inbox(view: requestedView); nextCursor = nil; return }
         guard let client = state.client else { return }
         isLoading = true
         defer { if generation == requestGeneration { isLoading = false } }
@@ -21,31 +21,32 @@ import SwiftUI
             } else if requestedView.hasPrefix("destination:") {
                 destinationID = String(requestedView.dropFirst(12))
             } else {
-                // Legacy Focus/Inbox must resolve fresh destination routing, not
-                // the old attention flag. All Mail and explicit IDs need no lookup.
+                // Focus is a lens over Inbox membership, not a destination.
+                // Resolve the same current Inbox destination for both choices.
                 let catalog: MailActionJSON = try await client.request("v1/destinations")
-                destinationID = catalog["legacyDestinationIds"][requestedView].text
+                destinationID = catalog["legacyDestinationIds"][requestedView == "focus" ? "normal" : requestedView].text
             }
-            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
+            let apiView = requestedView.hasPrefix("destination:") || (requestedView == "normal" && destinationID != nil) ? "all" : requestedView
             let cursor = reset ? nil : nextCursor
             var replacesMessages = reset
             let page: InboxPage
             do {
-                page = try await client.inbox(accountId: account.id, view: requestedView.hasPrefix("destination:") ? "all" : requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: cursor, destinationId: destinationID)
+                page = try await client.inbox(accountId: account.id, view: apiView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: cursor, destinationId: destinationID)
             } catch APIClient.ClientError.http(400, let body) where !reset && cursor != nil && body?.code == "invalid_cursor" {
-                guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+                guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
                 // A changed mailbox invalidates this snapshot. Retire its cursor
                 // before the single restart, including when that restart fails.
                 nextCursor = nil
                 replacesMessages = true
-                page = try await client.inbox(accountId: account.id, view: requestedView.hasPrefix("destination:") ? "all" : requestedView, query: requestedSearch.isEmpty ? nil : requestedSearch, destinationId: destinationID)
+                page = try await client.inbox(accountId: account.id, view: apiView, query: requestedSearch.isEmpty ? nil : requestedSearch, destinationId: destinationID)
             }
-            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
             messages = replacesMessages ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
             if replacesMessages { try? await state.cache.save(page, key: key) }
         } catch {
             let cached: InboxPage? = reset ? await state.cache.load(InboxPage.self, key: key) : nil
-            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id else { return }
+            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
             if let cached { messages = cached.messages; nextCursor = nil; self.error = "Offline — showing saved mail" }
             else { self.error = error.localizedDescription }
         }
@@ -58,6 +59,7 @@ struct InboxView: View {
     @State private var savedThread: SavedViewThread?
     @State private var actionTarget: MailActionTarget?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var state: AppState; @StateObject private var model = InboxViewModel(); @State private var selected: InboxMessage?
     var body: some View {
         NavigationStack { VStack(spacing: 0) {
@@ -103,10 +105,7 @@ struct InboxView: View {
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                             ForEach(Array(model.messages.enumerated()), id: \.element.id) { index, message in
-                                if index == 0 || message.attentionBehavior != model.messages[index - 1].attentionBehavior {
-                                    Text(message.attentionBehavior.capitalized).font(OrcaTheme.ui(15, weight: .semibold)).foregroundStyle(OrcaTheme.ink).listRowBackground(OrcaTheme.paper).listRowSeparator(.hidden)
-                                }
-                                if index == 0 || message.attentionBehavior != model.messages[index - 1].attentionBehavior || MailPreview.day(message.receivedAt) != MailPreview.day(model.messages[index - 1].receivedAt) {
+                                if index == 0 || MailPreview.day(message.receivedAt) != MailPreview.day(model.messages[index - 1].receivedAt) {
                                     Text(MailPreview.day(message.receivedAt)?.formatted(date: .abbreviated, time: .omitted) ?? "Date unavailable").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).listRowBackground(OrcaTheme.paper).listRowSeparator(.hidden)
                                 }
                                 NavigationLink(value: message) { MessageRow(message: message) }
@@ -152,8 +151,13 @@ struct InboxView: View {
         .sheet(item: $actionTarget) { target in
             MailActionsSheet(target: target) { await model.load(state: state) }
         }
-        .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)") {
+        .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(state.mailboxReadRevision)") {
             if mailboxes.selectedView == nil { model.view = mailboxes.selectedID; await model.load(state: state) }
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active, state.phase == .ready, mailboxes.selectedView == nil {
+                Task { await model.load(state: state) }
+            }
         }
         .navigationDestination(item: $savedThread) { ThreadView(accountId: $0.accountId, threadId: $0.threadId) }
         .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread { selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
@@ -196,7 +200,9 @@ struct MessageRow: View {
                     if message.unread { Capsule().fill(OrcaTheme.accent).frame(width: 3, height: 14).accessibilityLabel("Unread") }
                     Text(message.subject.isEmpty ? "(No subject)" : message.subject).font(OrcaTheme.ui(15, weight: message.unread ? .semibold : .regular)).foregroundStyle(OrcaTheme.ink).lineLimit(2)
                 }
-                Text("Attention: " + message.attentionBehavior.capitalized).font(OrcaTheme.ui(11, weight: .semibold)).foregroundStyle(OrcaTheme.accent)
+                Text(message.attentionBehavior.capitalized)
+                    .font(OrcaTheme.ui(10, weight: .medium)).foregroundStyle(OrcaTheme.muted)
+                    .accessibilityLabel("Attention: " + message.attentionBehavior.capitalized)
                 Text(MailPreview.decode(message.snippet)).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).lineSpacing(3).lineLimit(2)
                 if let score = message.humanSignal {
                     Label("Human signal \(score)/10", systemImage: "person.wave.2").font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted).padding(.top, 2)
@@ -251,3 +257,4 @@ enum MailPreview {
         return result
     }
 }
+

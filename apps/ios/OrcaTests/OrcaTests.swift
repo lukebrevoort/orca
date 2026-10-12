@@ -979,14 +979,14 @@ final class InboxLoadingTests: XCTestCase {
             return (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response)
         }
         for (view, destination) in [("all", nil), ("destination:custom /&?", "custom /&?"),
-                                    ("normal", "inbox-lane"), ("focus", "focus-lane"),
+                                    ("normal", "inbox-lane"), ("focus", "inbox-lane"),
                                     ("quiet", "quiet-lane"), ("hidden", "hidden-lane"), ("unknown", nil)] as [(String, String?)] {
             requests = []
             let model = InboxViewModel(); model.view = view; model.search = "two words & more"
             await model.load(state: fixture.state)
             XCTAssertEqual(requests.compactMap { $0.url?.path }, InboxLoadingTestSupport.paths(for: view), view)
             let request = try XCTUnwrap(requests.last)
-            var expected = ["accountId": "demo-account", "view": view.hasPrefix("destination:") ? "all" : view,
+            var expected = ["accountId": "demo-account", "view": view.hasPrefix("destination:") || view == "normal" ? "all" : view,
                             "limit": "30", "query": "two words & more"]
             expected["destinationId"] = destination
             XCTAssertEqual(InboxLoadingTestSupport.query(request), expected, view)
@@ -1044,7 +1044,7 @@ final class InboxLoadingTests: XCTestCase {
             XCTAssertEqual(queries.map { $0["cursor"] }, [nil, "opaque + / cursor", nil])
             XCTAssertEqual(queries.map { $0["query"] }, ["subject", "subject", "subject"])
             if view == "normal" || view == "focus" {
-                let prefix = view == "normal" ? "inbox" : "focus"
+                let prefix = "inbox"
                 XCTAssertEqual(queries.map { $0["destinationId"] }, ["\(prefix)-1", "\(prefix)-2", "\(prefix)-3"])
             }
         }
@@ -1103,7 +1103,7 @@ final class InboxLoadingTests: XCTestCase {
             let response = try InboxLoadingTestSupport.page()
             StubURLProtocol.handler = { request in (200, request.url?.path == "/v1/destinations" ? InboxLoadingTestSupport.catalog : response) }
             let model = InboxViewModel(); model.view = "all"
-            let oldKey = "\(fixture.state.ownerScope)|demo-account|inbox|all|"
+            let oldKey = fixture.state.inboxCacheKey(accountID: "demo-account", view: "all", search: "")
             let task = Task { await model.load(state: fixture.state) }
             await fulfillment(of: [gate.started], timeout: 3)
             switch interruption {
@@ -2470,5 +2470,188 @@ final class ReaderNavigationVisibilityTests: XCTestCase {
         XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: -100, width: 300, height: 100), viewportHeight: 700))
         XCTAssertFalse(ReaderNavigationVisibility.isVisible(.zero, viewportHeight: 700))
         XCTAssertFalse(ReaderNavigationVisibility.isVisible(CGRect(x: 0, y: 0, width: 300, height: 100), viewportHeight: 0))
+    }
+}
+
+
+
+final class UnreadFocusTimelineTests: XCTestCase {
+    func testDemoTimelinePromotesOnlyUnreadFocusCategoryWithoutNotifyTier() {
+        func row(_ id: String, attention: String, unread: Bool, date: String) -> InboxMessage {
+            var row = DemoData.messages[0]; row.id = id; row.threadId = id
+            row.attentionBehavior = attention; row.unread = unread; row.receivedAt = date
+            return row
+        }
+        var rows = [row("normal", attention: "normal", unread: true, date: "2026-10-10T00:00:00Z"),
+                    row("focus", attention: "focus", unread: true, date: "2026-10-09T00:00:00Z"),
+                    row("notify", attention: "notify", unread: true, date: "2026-10-08T00:00:00Z")]
+        XCTAssertEqual(DemoData.inbox(view: "normal", messages: rows).map(\.id), ["focus", "notify", "normal"])
+        rows[1].unread = false
+        XCTAssertEqual(DemoData.inbox(view: "normal", messages: rows).map(\.id), ["notify", "normal", "focus"])
+        XCTAssertEqual(DemoData.inbox(view: "focus", messages: rows).map(\.id), ["notify", "focus"])
+        XCTAssertEqual(rows[1].attentionBehavior, "focus")
+        rows[1].unread = true
+        XCTAssertEqual(DemoData.inbox(view: "focus", messages: rows).map(\.id), ["focus", "notify"])
+        rows[1].labels = []
+        XCTAssertEqual(DemoData.inbox(view: "focus", messages: rows).map(\.id), ["notify"])
+    }
+
+    func testDemoInboxAggregatesUnreadAndMembershipAcrossWholeAccountThread() throws {
+        var older = DemoData.messages[0]
+        older.id = "older-inbox"; older.threadId = "shared-thread"
+        older.receivedAt = "2026-10-07T00:00:00Z"
+        var latest = older
+        latest.id = "latest-sent"; latest.receivedAt = "2026-10-09T00:00:00Z"
+        latest.unread = false; latest.labels = ["SENT"]
+        var otherAccount = latest
+        otherAccount.id = "other-account-sent"; otherAccount.accountId = "other-account"
+        let messages = [latest, otherAccount, older]
+        for view in ["normal", "focus"] {
+            let rows = DemoData.inbox(view: view, messages: messages)
+            XCTAssertEqual(rows.map(\.id), ["latest-sent"])
+            let row = try XCTUnwrap(rows.first)
+            XCTAssertTrue(row.unread)
+            XCTAssertEqual(row.receivedAt, latest.receivedAt)
+            XCTAssertEqual(row.labels, ["SENT"], "Keep the latest message summary; aggregate membership separately")
+        }
+        XCTAssertEqual(DemoData.inbox(view: "all", messages: messages).count, 3,
+                       "Non-Inbox demo surfaces retain their existing message rows")
+    }
+
+    func testDemoNonInboxKeepsAttentionOrderAndUsesAscendingAccountAndIDTies() {
+        func row(_ id: String, account: String = "a", attention: String, unread: Bool, date: String) -> InboxMessage {
+            var row = DemoData.messages[0]
+            row.id = id; row.threadId = id; row.accountId = account
+            row.attentionBehavior = attention; row.unread = unread; row.receivedAt = date
+            return row
+        }
+        let date = "2026-10-09T00:00:00Z"
+        let rows = [row("unread-focus", attention: "focus", unread: true, date: date),
+                    row("read-notify", attention: "notify", unread: false, date: "2026-10-01T00:00:00Z"),
+                    row("normal-b", account: "b", attention: "normal", unread: true, date: date),
+                    row("normal-z", attention: "normal", unread: false, date: date),
+                    row("normal-a", attention: "normal", unread: false, date: date)]
+        XCTAssertEqual(DemoData.inbox(view: "all", messages: rows).map(\.id),
+                       ["read-notify", "unread-focus", "normal-a", "normal-z", "normal-b"])
+        let normalRows = Array(rows.suffix(3))
+        XCTAssertEqual(DemoData.inbox(view: "normal", messages: normalRows).map(\.id),
+                       ["normal-a", "normal-z", "normal-b"])
+    }
+
+    @MainActor func testMissingInboxDestinationKeepsSemanticInboxFallback() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        for view in ["normal", "focus"] {
+            StubURLProtocol.handler = { request in
+                if request.url?.path == "/v1/destinations" { return (200, Data("{}".utf8)) }
+                XCTAssertEqual(InboxLoadingTestSupport.query(request)["view"], view)
+                XCTAssertNil(InboxLoadingTestSupport.query(request)["destinationId"])
+                return (200, try InboxLoadingTestSupport.page())
+            }
+            let model = InboxViewModel(); model.view = view
+            await model.load(state: fixture.state)
+            XCTAssertNil(model.error)
+        }
+    }
+
+    @MainActor func testReadMutationInvalidatesAllInboxLensesOnlyAfterSuccess() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let state = fixture.state
+        let inboxKey = state.inboxCacheKey(accountID: "demo-account", view: "normal", search: "")
+        let focusKey = state.inboxCacheKey(accountID: "demo-account", view: "focus", search: "subject")
+        let otherKey = state.inboxCacheKey(accountID: "other", view: "normal", search: "")
+        let revision = state.mailboxReadRevision
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "PATCH")
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["accountId"], "demo-account")
+            return (503, Data(#"{"error":{"code":"unavailable","message":"Try later"}}"#.utf8))
+        }
+        do { try await state.markThreadRead("thread", accountID: "demo-account"); XCTFail("Expected failure") }
+        catch { }
+        XCTAssertEqual(state.mailboxReadRevision, revision)
+        XCTAssertEqual(state.inboxCacheKey(accountID: "demo-account", view: "normal", search: ""), inboxKey)
+        StubURLProtocol.handler = { request in
+            let body = try JSONSerialization.jsonObject(with: requestBodyData(request)) as? [String: Bool]
+            XCTAssertEqual(body?["isRead"], false)
+            return (200, Data(#"{"ok":true}"#.utf8))
+        }
+        try await state.markThreadRead("thread", accountID: "demo-account", isRead: false)
+        XCTAssertNotEqual(state.mailboxReadRevision, revision)
+        XCTAssertNotEqual(state.inboxCacheKey(accountID: "demo-account", view: "normal", search: ""), inboxKey)
+        XCTAssertNotEqual(state.inboxCacheKey(accountID: "demo-account", view: "focus", search: "subject"), focusKey)
+        XCTAssertEqual(state.inboxCacheKey(accountID: "other", view: "normal", search: ""), otherKey)
+        let relaunched = InboxLoadingTestSupport.Fixture(); defer { relaunched.cleanup() }
+        XCTAssertEqual(relaunched.state.inboxCacheKey(accountID: "demo-account", view: "focus", search: "subject"),
+                       state.inboxCacheKey(accountID: "demo-account", view: "focus", search: "subject"))
+    }
+
+    @MainActor func testSuccessfulReadCannotRestoreStaleOfflinePromotion() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "PATCH" { return (200, Data(#"{"ok":true}"#.utf8)) }
+            if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+            return (200, try InboxLoadingTestSupport.page())
+        }
+        let model = InboxViewModel(); model.view = "focus"
+        await model.load(state: fixture.state)
+        XCTAssertTrue(model.messages[0].unread)
+        try await fixture.state.markThreadRead("t1", accountID: "demo-account")
+        StubURLProtocol.handler = { _ in throw URLError(.notConnectedToInternet) }
+        await model.load(state: fixture.state)
+        XCTAssertTrue(model.messages.isEmpty)
+        XCTAssertNil(model.nextCursor)
+        XCTAssertNotEqual(model.error, "Offline — showing saved mail")
+    }
+
+    @MainActor func testReadMutationRejectsAnOlderInFlightInboxResponse() async throws {
+        let gate = InboxLoadingTestSupport.FirstRequestGate(started: expectation(description: "old inbox suspended"))
+        let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" })
+        defer { fixture.cleanup() }
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "PATCH" { return (200, Data(#"{"ok":true}"#.utf8)) }
+            return (200, try InboxLoadingTestSupport.page("stale-unread"))
+        }
+        let model = InboxViewModel(); model.view = "all"
+        let oldKey = fixture.state.inboxCacheKey(accountID: "demo-account", view: "all", search: "")
+        let old = Task { await model.load(state: fixture.state) }
+        await fulfillment(of: [gate.started], timeout: 3)
+        try await fixture.state.markThreadRead("t1", accountID: "demo-account")
+        await gate.release(); await old.value
+        XCTAssertTrue(model.messages.isEmpty)
+        let cached = await fixture.state.cache.load(InboxPage.self, key: oldKey)
+        XCTAssertNil(cached)
+    }
+
+    @MainActor func testServerTimelineOrderAndThreadUnreadSurvivePaginationAndOfflineCache() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        func message(_ id: String, _ attention: String, _ unread: Bool, _ date: String) -> InboxMessage {
+            var value = DemoData.messages[0]
+            value.id = id; value.threadId = id; value.attentionBehavior = attention
+            value.unread = unread; value.receivedAt = date; return value
+        }
+        let rows = [message("new-focus", "focus", true, "2026-10-09T10:00:00Z"),
+                    message("older-notify", "notify", true, "2026-10-08T10:00:00Z"),
+                    message("new-normal", "normal", false, "2026-10-10T10:00:00Z"),
+                    message("read-focus", "focus", false, "2026-10-07T10:00:00Z")]
+        func page(_ messages: [InboxMessage], cursor: String?) throws -> Data {
+            try JSONEncoder().encode(InboxPage(accounts: DemoData.accounts, messages: messages, nextCursor: cursor,
+                counts: InboxCounts(focus: 3, normal: 4, quiet: 0, hidden: 0, all: 4)))
+        }
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
+            let query = InboxLoadingTestSupport.query(request)
+            XCTAssertEqual(query["destinationId"], "inbox-lane")
+            XCTAssertEqual(query["view"], "all")
+            if query["cursor"] == nil { return (200, try page(Array(rows.prefix(3)), cursor: "next")) }
+            return (200, try page([rows[3]], cursor: nil))
+        }
+        let model = InboxViewModel(); model.view = "normal"
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(model.messages, rows, "Do not regroup server pages by attention or Space")
+        StubURLProtocol.handler = { _ in throw URLError(.notConnectedToInternet) }
+        await model.load(state: fixture.state)
+        XCTAssertEqual(model.messages, Array(rows.prefix(3)))
+        XCTAssertNil(model.nextCursor)
+        XCTAssertEqual(model.messages.map(\.unread), [true, true, false])
     }
 }
