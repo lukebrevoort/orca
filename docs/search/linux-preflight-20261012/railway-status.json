@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-12",
+  "source": "Railway read-only MCP describe_environment and get_logs",
+  "projectId": "11ba9a74-676d-404c-9f66-00d173a42149",
+  "environmentId": "33d450ee-d1d7-4d4b-96bc-b46580fc230d",
+  "serviceId": "c39760aa-ad0a-4f40-a8d4-44a6328c534e",
+  "deploymentId": "312cd352-aa26-46a3-939b-9afbd68fa7a1",
+  "status": "CRASHED",
+  "volume": {
+    "id": "fb2ee670-54ba-416e-9146-cea7e9f83a3e",
+    "name": "pr235-synthetic-disposable",
+    "sizeMB": 5000,
+    "state": "live",
+    "mountPath": "/data"
+  },
+  "stagedChanges": null,
+  "failure": [
+    {
+      "timestamp": "2026-10-09T21:54:19.522393696Z",
+      "kind": "failure",
+      "message": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   synchronous: 2\n-   synchronous: 1\n  }\n",
+      "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   synchronous: 2\n-   synchronous: 1\n  }\n\n    at connect (/harness/harness.ts:49:12)\n    at seed (/harness/harness.ts:63:46)\n    at processTicksAndRejections (native:7:39)",
+      "offered": 0,
+      "completed": 0
+    }
+  ],
+  "limits": "No billing queried; allocated volume size is not an observed usage or cost. No mutation or new staging budget."
+}
