@@ -79,7 +79,7 @@ test("full body requests fail explicitly without metadata results; legacy client
   } finally { f.sqlite.close(); }
 });
 
-test("canonical metadata reflects updates/deletes and cannot reuse a cursor across an account incarnation", async () => {
+test("canonical metadata reflects updates/deletes, invalidates stale cursors and denies foreign-owner account reuse", async () => {
   const f = await fixture();
   try {
     const first = await (await f.request("query=needle&searchMode=metadata&limit=1")).json();

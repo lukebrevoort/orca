@@ -68,8 +68,11 @@ async function measure(name: string, work: (iteration: number) => unknown | Prom
 try {
   migrate(client.db, { migrationsFolder: join(root, "apps/api/drizzle") });
   assert.deepEqual(client.sqlite.query("PRAGMA journal_mode").get(), { journal_mode: "wal" });
-  const synchronous = client.sqlite.query("PRAGMA synchronous").get();
-  assert.deepEqual(synchronous, { synchronous: mode === "head" ? 2 : 1 });
+  const synchronous = client.sqlite.query("PRAGMA synchronous").get() as { synchronous: number };
+  // Observe the unmodified factory: Bun's baseline is NORMAL on the measured
+  // Mac, but FULL on Linux. Never lower it to manufacture a NORMAL/FULL pair.
+  if (mode === "head") assert.deepEqual(synchronous, { synchronous: 2 });
+  else assert([1, 2].includes(synchronous.synchronous), "Baseline must retain NORMAL or FULL");
   client.db.insert(users).values([{ id: "owner", email: "owner@example.test" }, { id: "foreign", email: "foreign@example.test" }]).run();
   for (const id of ["a", "b", "foreign"]) client.db.insert(oauthAccounts).values({ id, userId: id === "foreign" ? "foreign" : "owner", provider: "gmail", providerId: id, providerEmail: `${id}@example.test` }).run();
   const insertThread = client.sqlite.prepare("INSERT INTO threads(id,account_id,provider_thread_id,subject,latest_received_at) VALUES(?,?,?,?,?)");

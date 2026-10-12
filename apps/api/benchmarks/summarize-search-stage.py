@@ -9,9 +9,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 DIRECTORY = ROOT / "docs/search/performance-evidence"
 manifest = json.loads((DIRECTORY / "manifest.json").read_text())
-assert manifest["harnessSha256"] == hashlib.sha256((ROOT / "apps/api/benchmarks/search-stage.ts").read_bytes()).hexdigest()
+assert manifest["harnessSha256"] == hashlib.sha256((DIRECTORY / "harness.ts").read_bytes()).hexdigest()
 runs = [json.loads((DIRECTORY / item["file"]).read_text()) for item in manifest["runs"]]
 assert len(runs) == 24 and all(run["passed"] for run in runs)
+# This renderer describes the retained October 9 Mac experiment. Other hosts
+# need their own report; never label Linux FULL/FULL data as Mac NORMAL/FULL.
+assert all(run["host"]["platform"] == "darwin" and
+           run["synchronous"]["synchronous"] == (1 if run["mode"] == "base" else 2)
+           for run in runs), "Use a separate report for a different platform/durability baseline"
 
 
 def summarize(values):

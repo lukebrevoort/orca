@@ -26,6 +26,8 @@ def main():
     OUTPUT.mkdir(exist_ok=True)
     if list(OUTPUT.glob("trial-*.json")):
         raise SystemExit("Refusing to overwrite existing trial evidence; use a fresh checkout")
+    # Retain the exact measured source when the live harness changes later.
+    shutil.copyfile(HARNESS, OUTPUT / "harness.ts")
     bun = shutil.which("bun")
     assert bun, "Bun 1.3.14 required"
     assert subprocess.check_output([bun, "--version"], text=True).strip() == "1.3.14"
