@@ -1,0 +1,94 @@
+{
+  "browser": "Chromium 154.0.8037.57",
+  "scope": "Linux cloud browser, not hosted GitHub CI or native",
+  "result": {
+    "syntheticOnly": true,
+    "scenarios": [
+      {
+        "theme": "light",
+        "stage": "mobile",
+        "width": 390,
+        "before": {
+          "windowY": 900,
+          "workspaceY": 0,
+          "overflowY": "visible"
+        },
+        "returnedToTop": true,
+        "headingFocused": true
+      },
+      {
+        "theme": "light",
+        "stage": "desktop-after-resize",
+        "width": 1440,
+        "before": {
+          "windowY": 0,
+          "workspaceY": 900,
+          "overflowY": "auto"
+        },
+        "returnedToTop": true,
+        "headingFocused": true
+      },
+      {
+        "theme": "light",
+        "stage": "mobile-after-resize",
+        "width": 390,
+        "before": {
+          "windowY": 900,
+          "workspaceY": 0,
+          "overflowY": "visible"
+        },
+        "returnedToTop": true,
+        "headingFocused": true
+      },
+      {
+        "theme": "dark",
+        "stage": "mobile",
+        "width": 390,
+        "before": {
+          "windowY": 900,
+          "workspaceY": 0,
+          "overflowY": "visible"
+        },
+        "returnedToTop": true,
+        "headingFocused": true
+      }
+    ],
+    "pageErrors": [],
+    "externalRequestsBlocked": [
+      {
+        "origin": "https://fonts.googleapis.com",
+        "path": "/css2"
+      },
+      {
+        "origin": "https://fonts.googleapis.com",
+        "path": "/css2"
+      }
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/v1/sync/gmail"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/sync/gmail"
+      }
+    ],
+    "error": "AssertionError [ERR_ASSERTION]: Fixture did not actually scroll: {\"windowY\":0,\"workspaceY\":0,\"overflowY\":\"auto\"}\n    at checkReaderScroll (file:///workspace/orca/apps/web/scripts/reader-scroll-regression.mjs:71:9)\n    at async file:///workspace/scratch/october12-bug-sweep/run-browser.mjs:9:13"
+  },
+  "screenshots": [
+    "jump-top-light-mobile-default.png",
+    "jump-top-light-mobile-hover.png",
+    "jump-top-light-mobile-focus.png",
+    "jump-top-light-desktop-after-resize-default.png",
+    "jump-top-light-desktop-after-resize-hover.png",
+    "jump-top-light-desktop-after-resize-focus.png",
+    "jump-top-light-mobile-after-resize-default.png",
+    "jump-top-light-mobile-after-resize-hover.png",
+    "jump-top-light-mobile-after-resize-focus.png",
+    "jump-top-dark-mobile-default.png",
+    "jump-top-dark-mobile-hover.png",
+    "jump-top-dark-mobile-focus.png",
+    "jump-top-dark-failure.png"
+  ]
+}

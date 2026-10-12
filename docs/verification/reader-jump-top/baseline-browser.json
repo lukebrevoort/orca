@@ -1,0 +1,22 @@
+{
+  "browser": "Chromium 154.0.8037.57",
+  "scope": "Linux cloud browser, not hosted GitHub CI or native",
+  "result": {
+    "syntheticOnly": true,
+    "scenarios": [],
+    "pageErrors": [],
+    "externalRequestsBlocked": [
+      {
+        "origin": "https://fonts.googleapis.com",
+        "path": "/css2"
+      }
+    ],
+    "writes": [],
+    "error": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Jump to top', exact: true }) to be visible\u001b[22m\n\n    at checkReaderScroll (/workspace/orca/apps/web/scripts/reader-scroll-regression.mjs:75:20)\n    at async file:///workspace/scratch/october12-bug-sweep/run-baseline-browser.mjs:9:13"
+  },
+  "screenshots": [
+    "jump-top-light-failure.png"
+  ],
+  "testedSourceSha": "ab541c00d6e8dc23812d05004c0611fe9fd19c32",
+  "harnessSha": "53511b270e62dd8b628a7f313d5b818a3616b502"
+}
