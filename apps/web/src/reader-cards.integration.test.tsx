@@ -66,7 +66,7 @@ test("keeps the first-unread card visible and open after a same-thread read refr
   expect(button("Jump to unread").disabled).toBe(false);
   await click("Expand all");
   expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(24);
-  await click("Collapse all");
+  await click("Reset message view");
   expect(first.getAttribute("aria-expanded")).toBe("true");
   expect(JSON.stringify(conversation.messages.map(message => message.unread))).toBe(before);
   expect(writes).toEqual([]);
@@ -96,8 +96,11 @@ test("quiet controls move bulk actions into a labeled disclosure and retain card
   expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(24);
   expect(menu!.open).toBe(false);
   await act(async () => { menu!.open = true; });
-  await click('Collapse all');
+  await click('Reset message view');
   expect(browser.document.querySelectorAll('.reader-card-toggle[aria-expanded="true"]').length).toBe(1);
+  expect(browser.document.querySelector('[aria-controls="reader-card-quiet-21"]')?.getAttribute('aria-expanded')).toBe('true');
+  expect(menu!.open).toBe(false);
+  expect(browser.document.activeElement).toBe(menu!.querySelector('summary')!);
   expect(browser.document.querySelector('.reader-earlier')!.getAttribute('aria-label')).toBe('Show 21 earlier messages');
 });
 

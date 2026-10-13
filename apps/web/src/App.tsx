@@ -5886,7 +5886,7 @@ export function MessageReader({
                 <summary role="button" aria-label="Conversation actions" title="Conversation actions">···</summary>
                 <div className="reader-thread-menu-items">
                   <button type="button" onClick={() => setAllCards(true)}>Expand all</button>
-                  <button type="button" onClick={() => setAllCards(false)}>Collapse all</button>
+                  <button type="button" onClick={() => setAllCards(false)}>Reset message view</button>
                 </div>
               </details>
             </div>
