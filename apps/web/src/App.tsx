@@ -5633,7 +5633,7 @@ export function DraftsView({ drafts, status = "ready", error = null, onRetry = (
           ))}
         </ol>
       ) : (
-        <InboxStatusState description="Open Write to start something human. Orca saves drafts here as you work." eyebrow="Nothing waiting" title="No drafts yet" />
+        <InboxStatusState description="Choose Compose to start something human. Orca saves drafts here as you work." eyebrow="Nothing waiting" title="No drafts yet" />
       )}
     </section>
   );
