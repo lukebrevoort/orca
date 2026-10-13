@@ -5,8 +5,9 @@
 @media (max-width: 760px) {
   /* Keyboard scrolling must clear the sticky mail header and the fixed reader
      jumps/nav (latest jump ends 156px above the safe area and is 44px tall).
+     Gate on the active route: the reader stays mounted when hidden.
      Scroll padding changes the focus viewport, not the compact layout. */
-  html:has(.mobile-mail-shell .reader-document) {
+  html:has(.mobile-mail-shell.desktop-shell-reader) {
     scroll-padding-block: calc(148px + env(safe-area-inset-top)) calc(212px + env(safe-area-inset-bottom));
   }
 

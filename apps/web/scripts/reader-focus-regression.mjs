@@ -8,7 +8,7 @@ export async function checkReaderFocus({ browser, origin, out, screenshots }) {
   const result = { syntheticOnly: true, scenarios: [] };
   for (const theme of ['light', 'dark']) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: theme, reducedMotion: 'reduce', serviceWorkers: 'block' });
-    const scenario = { theme, focus: [], failures: [] };
+    const scenario = { theme, focus: [], routes: [], failures: [] };
     result.scenarios.push(scenario);
     try {
       await context.addInitScript(theme => localStorage.setItem('orca-reader-preferences', JSON.stringify({ theme, motion: 'reduced' })), theme);
@@ -27,9 +27,33 @@ export async function checkReaderFocus({ browser, origin, out, screenshots }) {
         detail.thread.subject = 'Synthetic 60-message conversation';
         await route.fulfill({ response, json: detail });
       });
+      async function checkRouteScope(stage, expected) {
+        const state = await page.evaluate(() => ({ padding: getComputedStyle(document.documentElement).scrollPaddingBottom, readerMounted: !!document.querySelector('.reader-document'), readerVisible: !!document.querySelector('.message-reader')?.getClientRects().length }));
+        scenario.routes.push({ stage, ...state });
+        if (state.padding !== expected) scenario.failures.push(`${stage}: expected scroll padding ${expected}, got ${state.padding}`);
+      }
+      await page.goto(`${origin.origin}/?destination=drafts`);
+      await page.getByRole('heading', { name: 'No drafts yet', exact: true }).waitFor();
+      await checkRouteScope('drafts-before-reader', 'auto');
+      // Reach and activate Compose using the keyboard from the adjacent search field.
+      await page.getByRole('textbox', { name: 'Search mail', exact: true }).focus();
+      await page.keyboard.press('Shift+Tab');
+      assert(await page.locator('.mobile-mail-compose').evaluate(element => element === document.activeElement));
+      await page.keyboard.press('Enter');
+      const compose = page.getByRole('dialog', { name: 'Compose message', exact: true });
+      await compose.waitFor();
+      await checkRouteScope('drafts-compose-open', 'auto');
+      await page.keyboard.press('Tab');
+      assert(await compose.evaluate(element => element.contains(document.activeElement)), 'Compose keyboard focus must stay in its dialog');
+      await page.getByRole('button', { name: 'Close panel', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await compose.waitFor({ state: 'hidden' });
+      assert(await page.locator('.mobile-mail-compose').evaluate(element => element === document.activeElement), 'Closing Compose restores its keyboard trigger');
+      await checkRouteScope('drafts-compose-closed', 'auto');
       await page.goto(`${origin.origin}/?thread=first-thread&accountId=first`);
       await page.locator('.reader-document:not(.reader-loading)').waitFor();
       await page.evaluate(() => document.fonts.ready);
+      await checkRouteScope('reader-open', '212px');
       await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
       await page.getByRole('button', { name: 'Expand all', exact: true }).click();
       await page.locator('.reader-card-toggle').first().focus();
@@ -55,6 +79,9 @@ export async function checkReaderFocus({ browser, origin, out, screenshots }) {
       assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom), 'auto');
       await page.setViewportSize({ width: 390, height: 844 });
       if (await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingBottom) !== '212px') scenario.failures.push('Mobile focus clearance did not return after desktop resize');
+      await page.locator('.reader-back').click();
+      await page.locator('.message-reader').waitFor({ state: 'hidden' });
+      await checkRouteScope('inbox-after-reader', 'auto');
     } finally { await context.close(); }
   }
   await writeFile(join(out, 'reader-focus-results.json'), JSON.stringify(result, null, 2));
