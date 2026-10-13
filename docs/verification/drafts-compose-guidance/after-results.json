@@ -1,0 +1,30 @@
+[
+  {
+    "width": 390,
+    "theme": "light",
+    "description": "Messages you are still writing\nDrafts\n\nYour unfinished notes will stay here.\n\nNOTHING WAITING\n\nNo drafts yet\nChoose Compose to start something human. Orca saves drafts here as you work.",
+    "guidanceMatchesAction": true,
+    "composeOpens": true
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "description": "Messages you are still writing\nDrafts\n\nYour unfinished notes will stay here.\n\nNOTHING WAITING\n\nNo drafts yet\nChoose Compose to start something human. Orca saves drafts here as you work.",
+    "guidanceMatchesAction": true,
+    "composeOpens": true
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "description": "Messages you are still writing\nDrafts\n\nYour unfinished notes will stay here.\n\nNOTHING WAITING\n\nNo drafts yet\nChoose Compose to start something human. Orca saves drafts here as you work.",
+    "guidanceMatchesAction": true,
+    "composeOpens": true
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "description": "Messages you are still writing\nDrafts\n\nYour unfinished notes will stay here.\n\nNOTHING WAITING\n\nNo drafts yet\nChoose Compose to start something human. Orca saves drafts here as you work.",
+    "guidanceMatchesAction": true,
+    "composeOpens": true
+  }
+]
