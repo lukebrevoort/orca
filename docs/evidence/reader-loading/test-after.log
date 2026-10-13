@@ -1,0 +1,35 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/reader-body.test.tsx:
+(pass) message body alternatives > keeps sanitized formatted content and destinations byte-for-byte on first render [46.29ms]
+(pass) message body alternatives > switches reversibly without deleting quotes, code, links, or footer [22.61ms]
+(pass) message body alternatives > scopes the selected alternative to the message identity [13.34ms]
+(pass) message body alternatives > keeps simultaneous message states separate across reordering and accounts [12.89ms]
+(pass) message body alternatives > recovers from an alternative disappearing on refresh [10.77ms]
+(pass) message body alternatives > does not offer invented alternatives or use a snippet as message content [11.06ms]
+(pass) message body alternatives > renders plain-text markup as text, never active HTML [5.46ms]
+(pass) reader content focus layout > keeps pointer display controls fast, then retains exact geometry through keyboard exit [7.25ms]
+(pass) reader content focus layout > covers quoted-history focus and resets for a new thread identity [9.45ms]
+
+apps/web/src/reader-navigation.test.ts:
+(pass) quiet jumps reflect the actual viewport without duplicating initial unread navigation [0.12ms]
+(pass) partial cards remain visible while clipped and collapsed cards remain targets [0.03ms]
+
+apps/web/src/reader-loading.test.tsx:
+(pass) unknown loading conversation does not invent a subject or message count [2.32ms]
+(pass) known title stays visible even without a message preview [0.81ms]
+(pass) 1 loading previews retain count and body preview [2.77ms]
+(pass) 2 loading previews retain count and body preview [0.53ms]
+(pass) known subjectless preview remains distinguishable from unknown subject [0.59ms]
+(pass) a loaded subjectless conversation keeps its subjectless heading [7.41ms]
+
+apps/web/src/reader-cards.integration.test.tsx:
+(pass) keeps the first-unread card visible and open after a same-thread read refresh [280.51ms]
+(pass) an all-read conversation initially opens its latest message [149.78ms]
+(pass) quiet controls move bulk actions into a labeled disclosure and retain card behavior [165.31ms]
+(pass) updates contextual navigation when preceding content grows without scrolling [20.20ms]
+
+ 21 pass
+ 0 fail
+ 111 expect() calls
+Ran 21 tests across 4 files. [1390.00ms]

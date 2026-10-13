@@ -1,0 +1,26 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/reader-loading.test.tsx:
+10 |     onAttentionChange={async () => "normal"} />);
+11 | }
+12 | 
+13 | test("unknown loading conversation does not invent a subject or message count", () => {
+14 |   const html = renderLoading(0, null);
+15 |   expect(html).toContain('id="reader-title">Loading conversation</h1>');
+                    ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "id=\"reader-title\">Loading conversation</h1>"
+Received: "<article class=\"message-reader\" aria-labelledby=\"reader-title\"><nav class=\"reader-nav\" aria-label=\"Reader controls\"><button class=\"reader-back\" type=\"button\"><svg aria-hidden=\"true\" fill=\"none\" height=\"16\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.6\" viewBox=\"0 0 24 24\" width=\"16\"><path d=\"M19 12H6\"></path><path d=\"M11 6l-6 6 6 6\"></path></svg><span>Inbox</span></button><span class=\"reader-escape-hint\" aria-hidden=\"true\">esc</span></nav><button class=\"reader-jump reader-jump-top\" hidden=\"\" type=\"button\"><span>Jump to top</span><span aria-hidden=\"true\">↑</span></button><section class=\"reader-document reader-loading\" aria-busy=\"true\" aria-live=\"polite\"><header class=\"reader-heading\"><p class=\"reader-kicker\">Opening conversation · 1 messages</p><h1 id=\"reader-title\"></h1></header><div class=\"reader-loading-line\"></div><div class=\"reader-loading-line reader-loading-line-short\"></div><span class=\"visually-hidden\">Loading 1 message conversation</span></section></article>"
+
+      at <anonymous> (/workspace/orca-reader-loading/apps/web/src/reader-loading.test.tsx:15:16)
+(fail) unknown loading conversation does not invent a subject or message count [15.81ms]
+(pass) known title stays visible even without a message preview [0.86ms]
+(pass) 1 loading previews retain count and body preview [5.26ms]
+(pass) 2 loading previews retain count and body preview [0.70ms]
+(pass) known subjectless preview remains distinguishable from unknown subject [0.78ms]
+
+ 4 pass
+ 1 fail
+ 11 expect() calls
+Ran 5 tests across 1 file. [1101.00ms]
