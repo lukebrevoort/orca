@@ -1,0 +1,30 @@
+[
+  {
+    "width": 390,
+    "theme": "light",
+    "title": "Loading conversation",
+    "kicker": "Opening conversation",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "title": "Loading conversation",
+    "kicker": "Opening conversation",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "title": "Loading conversation",
+    "kicker": "Opening conversation",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "title": "Loading conversation",
+    "kicker": "Opening conversation",
+    "errors": []
+  }
+]

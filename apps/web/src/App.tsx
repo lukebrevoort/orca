@@ -3379,7 +3379,7 @@ export function InboxApp({
               demoMode={demoMode}
               error={readerError}
               fallbackMessages={selectedThreadMessages}
-              fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
+              fallbackTitle={selectedThreadLatestMessage ? selectedThreadLatestMessage.subject || "(no subject)" : null}
               originLabel={readerOriginLabel}
               onAttentionChange={updateSenderAttention}
               onClassificationChange={correctClassification}
@@ -5713,7 +5713,7 @@ export function MessageReader({
   contacts?: MailContact[];
   error: string | null;
   fallbackMessages: InboxMessage[];
-  fallbackTitle: string;
+  fallbackTitle: string | null;
   originLabel?: string;
   onBack: () => void;
   onRetry: () => void;
@@ -5760,7 +5760,7 @@ export function MessageReader({
     if (status !== "ready" || !initialMessage) return;
     setCards({ identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
   }, [readerIdentity, status]);
-  const title = detail?.thread.subject || fallbackTitle;
+  const title = detail?.thread.subject || fallbackTitle || "(no subject)";
 
   useEffect(() => {
     if (status === "ready") headingRef.current?.focus({ preventScroll: true });
@@ -6163,19 +6163,19 @@ function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish
   );
 }
 
-function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
+function ReaderLoading({ title, messages }: { title: string | null; messages: InboxMessage[] }) {
   const preview = messages[messages.length - 1] ?? null;
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite">
     <header className="reader-heading">
-      <p className="reader-kicker">Opening conversation · {messages.length || 1} {messages.length === 1 ? "message" : "messages"}</p>
-      <h1 id="reader-title">{title}</h1>
+      <p className="reader-kicker">Opening conversation{messages.length > 0 ? ` · ${messages.length} ${messages.length === 1 ? "message" : "messages"}` : ""}</p>
+      <h1 id="reader-title">{title ?? "Loading conversation"}</h1>
       {preview ? <p className="reader-participants">{preview.from.name ?? preview.from.email} · {formatReceivedAt(preview.receivedAt)}</p> : null}
     </header>
     {preview ? <div className="reader-loading-preview">
       <div className="reader-loading-status"><span aria-hidden="true" />Fetching the full conversation</div>
       <p>{preview.snippet || "The message preview is ready. Its full contents are still loading."}</p>
     </div> : <><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /></>}
-    <span className="visually-hidden">Loading {messages.length || 1} message conversation</span>
+    <span className="visually-hidden">{messages.length > 0 ? `Loading ${messages.length} message conversation` : "Loading conversation"}</span>
   </section>;
 }
 
