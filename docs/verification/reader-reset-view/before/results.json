@@ -1,0 +1,42 @@
+[
+  {
+    "width": 390,
+    "theme": "light",
+    "label": "Collapse all",
+    "expandedBefore": 3,
+    "expandedAfter": 1,
+    "preservedMessage": "first unread",
+    "repeatedAction": "pass",
+    "keyboardFocusReturned": "pass"
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "label": "Collapse all",
+    "expandedBefore": 3,
+    "expandedAfter": 1,
+    "preservedMessage": "first unread",
+    "repeatedAction": "pass",
+    "keyboardFocusReturned": "pass"
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "label": "Collapse all",
+    "expandedBefore": 3,
+    "expandedAfter": 1,
+    "preservedMessage": "first unread",
+    "repeatedAction": "pass",
+    "keyboardFocusReturned": "pass"
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "label": "Collapse all",
+    "expandedBefore": 3,
+    "expandedAfter": 1,
+    "preservedMessage": "first unread",
+    "repeatedAction": "pass",
+    "keyboardFocusReturned": "pass"
+  }
+]

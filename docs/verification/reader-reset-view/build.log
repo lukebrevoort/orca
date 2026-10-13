@@ -1,0 +1,14 @@
+$ tsc -p tsconfig.json && vite build
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 191 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                1.78 kB │ gzip:   0.76 kB
+dist/assets/organization-views-HiJWHDLt.css    4.69 kB │ gzip:   1.19 kB
+dist/assets/index-DGiCTwxv.css               406.76 kB │ gzip:  61.66 kB
+dist/assets/organization-views-D3f1x6AO.js   121.70 kB │ gzip:  35.07 kB
+dist/assets/react-vendor-CQc3Zyh3.js         192.36 kB │ gzip:  60.30 kB
+dist/assets/mail-contracts-DgkX7763.js       205.74 kB │ gzip:  50.97 kB
+dist/assets/index-OWswBLpo.js                471.68 kB │ gzip: 134.34 kB
+✓ built in 6.37s
