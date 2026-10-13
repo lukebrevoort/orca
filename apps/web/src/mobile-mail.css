@@ -3,6 +3,13 @@
 .mobile-mail-header { display: none; }
 
 @media (max-width: 760px) {
+  /* Keyboard scrolling must clear the sticky mail header and the fixed reader
+     jumps/nav (latest jump ends 156px above the safe area and is 44px tall).
+     Scroll padding changes the focus viewport, not the compact layout. */
+  html:has(.mobile-mail-shell .reader-document) {
+    scroll-padding-block: calc(148px + env(safe-area-inset-top)) calc(212px + env(safe-area-inset-bottom));
+  }
+
   .mobile-mail-shell { --desktop-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   .mobile-mail-shell .desktop-workspace-header {
     position: sticky;
