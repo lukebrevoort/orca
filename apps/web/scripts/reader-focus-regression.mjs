@@ -48,6 +48,8 @@ export async function checkReaderFocus({ browser, origin, out, screenshots }) {
       await page.getByRole('button', { name: 'Close panel', exact: true }).focus();
       await page.keyboard.press('Enter');
       await compose.waitFor({ state: 'hidden' });
+      // TopLayer restores its opener on the next frame after unmount.
+      await page.waitForFunction(() => document.querySelector('.mobile-mail-compose') === document.activeElement, null, { timeout: 2000 });
       assert(await page.locator('.mobile-mail-compose').evaluate(element => element === document.activeElement), 'Closing Compose restores its keyboard trigger');
       await checkRouteScope('drafts-compose-closed', 'auto');
       await page.goto(`${origin.origin}/?thread=first-thread&accountId=first`);
