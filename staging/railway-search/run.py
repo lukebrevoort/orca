@@ -97,6 +97,39 @@ def paired(base, head):
                 assert head["results"][name]["summaryMs"]["p95"] <= 1.25 * before["summaryMs"]["p95"], f"Relative p95 gate: {name}"
 
 
+class UnstableBaseline(AssertionError):
+    """The comparison cannot distinguish code impact from run variability."""
+
+
+def baseline_stability(first, repeat):
+    for key in ["revision", "mode", "size", "samples", "warmups", "fixture", "connections", "signatures", "disk"]:
+        assert first[key] == repeat[key], f"Self-comparison mismatch: {key}"
+    assert first["passed"] and repeat["passed"]
+    assert first["mixed"] is None and repeat["mixed"] is None
+    assert first["results"].keys() == repeat["results"].keys(), "Self-comparison workload mismatch"
+    spreads = {}
+    for name, before in first["results"].items():
+        if name.startswith("legacy-") or name == "persist-25-new":
+            after = repeat["results"][name]
+            assert before["summaryMs"]["n"] == after["summaryMs"]["n"] == first["samples"]
+            a, b = before["summaryMs"]["p95"], after["summaryMs"]["p95"]
+            assert a > 0 and b > 0
+            spreads[name] = max(a, b) / min(a, b)
+    assert "legacy-common" in spreads and "persist-25-new" in spreads
+    failed = {name: ratio for name, ratio in spreads.items() if ratio > 1.25}
+    if failed:
+        raise UnstableBaseline(f"Unstable baseline p95 spread; candidate not started: {json.dumps(failed, sort_keys=True)}")
+    return {"passed": True, "maximumAllowedSpread": 1.25, "symmetricSpreads": spreads}
+
+
+def admitted_candidate(original_baseline, repeat_baseline, candidate, record_evidence=None):
+    # Keep the original baseline; never select a favorable repeat for comparison.
+    evidence = baseline_stability(original_baseline, repeat_baseline())
+    if record_evidence is not None:
+        record_evidence(evidence)
+    return candidate(), evidence
+
+
 def child_limits():
     resource.setrlimit(resource.RLIMIT_FSIZE, (256 * MIB, 256 * MIB))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
@@ -138,9 +171,9 @@ def main():
         assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip() == PINS[mode]
         assert not subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root)
     assert subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=roots["head"], text=True).strip() == TREE
-    manifest = {"pins": PINS, "tree": TREE, "localOnly": args.local, "quick": args.quick,
+    manifest = {"protocol": "railway-replacement-v2-self-comparison", "pins": PINS, "tree": TREE, "localOnly": args.local, "quick": args.quick,
                 "startedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "lifecycleDeadline": lifecycle,
-                "measurementMaxSeconds": 1200, "processMaxSeconds": 90, "passed": False,
+                "measurementMaxSeconds": 1200, "processMaxSeconds": 90, "maxChildren": 11, "maxChildBudgetSeconds": 990, "passed": False,
                 "harnessHashes": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in HERE.glob("*") if p.is_file()},
                 "mounts": Path("/proc/mounts").read_text(), "runs": []}
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2))
@@ -197,14 +230,21 @@ def main():
         for trial in range(1, (1 if args.quick else 2) + 1):
             for size in ([1000] if args.quick else [1000, 10000]):
                 pair = {}
-                for mode in (["base", "head"] if trial % 2 else ["head", "base"]):
-                    pair[mode] = run(mode, size, trial)
+                if trial == 1 and size == 10000:
+                    pair["base"] = run("base", size, trial)
+                    pair["head"], manifest["baselineStability"] = admitted_candidate(
+                        pair["base"], lambda: run("base", size, "stability"), lambda: run("head", size, trial),
+                        lambda proof: manifest.__setitem__("baselineStability", proof))
+                else:
+                    for mode in (["base", "head"] if trial % 2 else ["head", "base"]):
+                        pair[mode] = run(mode, size, trial)
                 paired(pair["base"], pair["head"])
         pair = {mode: run(mode, 10000, "mixed", 2 if args.quick else 60) for mode in ["base", "head"]}
         paired(pair["base"], pair["head"])
         manifest["passed"] = True
     except BaseException as error:
         manifest["error"] = str(error)
+        manifest["failureKind"] = "unstable_baseline" if isinstance(error, UnstableBaseline) else "failed_check"
         raise
     finally:
         if active: terminate(active)

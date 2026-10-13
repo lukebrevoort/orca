@@ -1,0 +1,13 @@
+{
+  "README.md": "f7bc5aba019763b4cb0a0c4e5c70ce20636f7c8da3440eea53af16dd82d3abdc",
+  "controls.json.gz": "6f4805622721e0a72a612f383bd8d4b1e0ff60eb480fa77eeadaf289ca0dab38",
+  "independent-v3-localization.json.gz": "77f8e9e77cbbc4935664bf1c9fbfb65bcdea83bddf7deca7367c2c6cf3381eb0",
+  "plans-base.json.gz": "ac5db95d5953fc0e4a9460b1467e8dceeeeae812f6e4541b48dedd9fd05054bc",
+  "plans-head.json.gz": "08a0b890ab0a74f6eeaf5d278d74b3bca61a167d7087428f877d1ed56f0ce9ce",
+  "plans.ts": "8d49e97aa936c60b862c7abc59bc631ee0c52e76d43df30f075be57f311310d6",
+  "reverse-candidate.json.gz": "91149e3b87982746be62b5a19ae90834feead11d8b77975b6f54fa1391d5fe36",
+  "reverse-main.json.gz": "de38d680d5ed4b6ea1ba0e82317a5c96342a1971611a5d31bb81ce03c583f6f2",
+  "run_controls.py": "dc0477e88e234f962d49494b63ecdd75f8abea5680b67f6b8b9933f5402f8c13",
+  "same-candidate-1.json.gz": "e7b86f0b279f2f9f00ccfcbbddff8032baa4cc11d2d68f3988464332f4d06048",
+  "same-candidate-2.json.gz": "c77445d87f85d506fa4a78974994c5dae243f6937c280264dc01a94595764af3"
+}

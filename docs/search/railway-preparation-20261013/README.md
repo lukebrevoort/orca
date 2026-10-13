@@ -21,7 +21,7 @@ Earlier diagnostic evidence remains in `/workspace/pr235-evidence/oct13`: the er
 
 ## Remaining gates and operations
 
-Hold paid execution while the read-latency failure is unresolved. Do not rerun until pass or weaken the gate. A further investigation must distinguish run-to-run/environment variance from an application effect; no representative Railway performance, sustained mixed-load acceptance, production capacity or crash/power-loss durability is established.
+The fixed follow-up controls reproduced non-code measurement instability: reversed order passed all relative gates, while identical candidate source varied by up to 5.751×. See [diagnostic evidence and the conservative admission guard](diagnostics/README.md). The original red result remains red; no specific host cause or absence of a regression is proven. A revised target attempt can now reject an unstable baseline before its first 10k candidate, without retries or weaker thresholds. Paid execution still requires the parent to confirm protocol and operator readiness below. No representative Railway performance, sustained mixed-load acceptance, production capacity or crash/power-loss durability is established.
 
 The authenticated browser operator can see deployment actions on the old crashed deployment. Documented Abort applies to initialization/building; future queued-state cancellation remains unverified. Before any paid attempt the parent must confirm operator coverage, service-preserving cancellation across relevant states and the absolute 45-minute lifecycle deadline. Exact staged source/config/variable operations and the local timeout safeguards are documented in the harness README. Service/volume deletion is excluded.
 
