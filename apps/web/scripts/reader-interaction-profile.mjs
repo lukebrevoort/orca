@@ -249,6 +249,13 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
           } finally { await page.evaluate(() => window.__orcaNativeFindInputGuard?.dispose()); }
         }
 
+        await openFreshExpandedReader('offscreen-prevent-scroll-focus');
+        await page.evaluate(() => { document.querySelector('.desktop-workspace').scrollTop = 0; }); await settle();
+        const noScrollLink = page.locator('.reader-message').nth(48).locator('.reader-body-html a').first();
+        await noScrollLink.evaluate(element => element.focus({ preventScroll: true })); await settle();
+        scenario.preventScrollFocus = await noScrollLink.evaluate(element => ({ active: document.activeElement === element, top: element.getBoundingClientRect().top, height: innerHeight, scrollTop: document.querySelector('.desktop-workspace').scrollTop }));
+        assert(scenario.preventScrollFocus.active && scenario.preventScrollFocus.top > scenario.preventScrollFocus.height && scenario.preventScrollFocus.scrollTop === 0, 'Explicit offscreen preventScroll focus must remain unscrolled');
+
         await openFreshExpandedReader('offscreen-keyboard-focus');
         await page.evaluate(() => { document.querySelector('.desktop-workspace').scrollTop = 0; }); await settle();
         scenario.keyboardFocusBefore = await page.locator('.reader-message').nth(48).evaluate(element => ({ top: element.getBoundingClientRect().top, height: innerHeight }));
