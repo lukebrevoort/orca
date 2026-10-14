@@ -20,7 +20,7 @@ The other explicit entry points are [create-verification-skill](../../.agents/sk
 
 For a feature: “Use the local poteto-mode feature procedure for <behavior>. Open an early draft PR, verify the changed surface, and get independent review. Stop at review-ready.” For a bug, supply a symptom and demand failing-then-passing evidence. For performance, use the existing relevant benchmark and matched before/after measurements; the compose trial is not a benchmark.
 
-Existing hosted [Fixture Checks](../../.github/workflows/fixture-checks.yml) and [Native Reader Checks](../../.github/workflows/native-reader.yml) remain the native verification path. Their path filters decide whether a PR triggers them. A skipped/non-triggered native job is **not run**, never inferred green from the Linux trial. Reuse completed runs; do not dispatch redundant jobs.
+Existing hosted [Fixture Checks](../../.github/workflows/fixture-checks.yml) and [Native Reader Checks](../../.github/workflows/native-reader.yml) remain the native verification path. Fixture Checks runs on every PR; Native Reader Checks uses path filters. A skipped/non-triggered native job is **not run**, never inferred green from the Linux trial. Reuse completed runs; do not dispatch redundant jobs.
 
 See [playbooks](playbooks.md), [supporting methods](methods.md), [feature map](../../.agents/skills/verify-orca/features/README.md), and [provenance/update instructions](PROVENANCE.md). Evidence from an actual run, not this guide, determines whether a change is verified.
 
@@ -40,3 +40,5 @@ manifest and artifacts can be edited together. Review the linked CI run and
 independent review alongside the local proof. Installed dependencies are trusted
 prerequisites, not attested by the lockfile hash. The trial rewrites internal
 absolute dependency links into scratch and rejects links that escape it.
+
+[Executed trial, screenshots, failure logs and independent reviews](evidence/README.md).
