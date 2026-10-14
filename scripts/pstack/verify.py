@@ -109,7 +109,7 @@ def instance_doctor(connection, process):
             headers={'Cookie': 'orca_session=' + metadata['token']})
         with opener.open(request, timeout=5) as response:
             body = json.load(response)
-            if path == '/v1/me' and body.get('id') != 'compose-fixture-user':
+            if path == '/v1/me' and (body.get('id'), body.get('email')) != ('first', 'first@example.com'):
                 raise ValueError('Authenticated synthetic identity mismatch')
     return metadata
 
