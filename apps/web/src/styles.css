@@ -5821,3 +5821,14 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .reader-context-jumps button { pointer-events: auto; min-width: 44px; min-height: 44px; padding: 10px 14px; color: var(--orca-ink); border: 1px solid var(--orca-border); border-radius: 24px; background: var(--orca-surface); box-shadow: 0 4px 16px rgb(15 36 34 / 8%); font-size: 12px; }
 .reader-context-jumps button[hidden] { display: none; }
 @media (max-width: 760px) { .reader-context-jumps { bottom: calc(156px + env(safe-area-inset-bottom)); right: 16px; } }
+
+/* Catch-up metadata stays visible without adding another reader action. */
+.reader-catchup-count { align-self: center; padding: 8px 12px; border: 1px solid var(--orca-border); border-radius: 20px; background: var(--orca-surface); color: var(--orca-ink); font-size: 12px; }
+.reader-message-compact > article { padding: 8px 16px; }
+.reader-card-compact { min-height: 44px; margin-bottom: 0; }
+.reader-card-compact strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reader-card-compact .reader-card-preview, .reader-card-compact small { display: none; }
+.reader-card-compact:hover { background: var(--orca-surface-hover); }
+.desktop-shell .reader-context-jumps { bottom: calc(142px + env(safe-area-inset-bottom)); }
+@media (max-width: 760px) { .desktop-shell .reader-context-jumps { bottom: calc(156px + env(safe-area-inset-bottom)); } }
+:root[data-reader-density] .reader-message.reader-message-compact { padding-block: 0; margin-bottom: 8px; border-bottom: 0; }

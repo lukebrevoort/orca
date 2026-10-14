@@ -135,3 +135,32 @@ test("updates contextual navigation when preceding content grows without scrolli
     else delete (globalThis as any).ResizeObserver;
   }
 });
+
+test('entry unread count survives mark-read refresh and distinguishes incoming mail', async () => {
+  const messages = Array.from({length:24}, (_, i) => ({...detail.messages[0]!, id:`count-${i}`, receivedAt:new Date(Date.UTC(2026,9,8,i)).toISOString(), unread:i>=21}));
+  await render({...detail,messages});
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('3 unread at entry');
+  await render({...detail,messages:messages.map(m=>({...m,unread:false}))});
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('3 unread at entry');
+  await render({...detail,messages:[...messages.map(m=>({...m,unread:false})), {...messages[23]!, id:'incoming', unread:true}]});
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('3 unread at entry · 1 new unread');
+  expect(browser.document.querySelector('[aria-controls="reader-card-incoming"]')?.getAttribute('aria-expanded')).toBe('false');
+  expect(writes).toEqual([]);
+});
+
+test('leaving and returning restores card expansion and disclosure without changing unread flags', async () => {
+  const { ReaderSessions } = await import('./reader-session');
+  const sessions = new ReaderSessions();
+  const messages = Array.from({length:24},(_,i)=>({...detail.messages[0]!,id:`return-${i}`,receivedAt:new Date(Date.UTC(2026,9,8,i)).toISOString(),unread:i>=21}));
+  const conversation={...detail,messages};
+  const show = async (active: boolean, current = conversation) => act(async()=>root.render(<TopLayerProvider><MessageReader sessions={sessions} active={active} detail={active?current:null} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={()=>{}} onRetry={()=>{}} status={active?'ready':'idle'} onAttentionChange={async()=> 'normal'} /></TopLayerProvider>));
+  await show(true);
+  await act(async()=> (browser.document.querySelector('.reader-earlier') as any).click());
+  await act(async()=> (browser.document.querySelector('[aria-controls="reader-card-return-4"]') as any).click());
+  await show(false);
+  await show(true,{...conversation,messages:messages.map(m=>({...m,unread:false}))});
+  expect(browser.document.querySelector('[aria-controls="reader-card-return-4"]')?.getAttribute('aria-expanded')).toBe('true');
+  expect(browser.document.querySelector('.reader-earlier')?.getAttribute('aria-expanded')).toBe('true');
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('0 unread at entry');
+  expect(writes).toEqual([]);
+});

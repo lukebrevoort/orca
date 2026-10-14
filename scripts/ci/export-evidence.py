@@ -38,6 +38,8 @@ def export(work, evidence, connection, status):
         source_directory = work / suite
         if (source_directory / 'results.json').is_file():
             write(f'{suite}-results.json', (source_directory / 'results.json').read_text())
+        if (source_directory / 'head-results.json').is_file():
+            write(f'{suite}-catchup-results.json', (source_directory / 'head-results.json').read_text())
         if (source_directory / 'failure-dom.txt').is_file():
             write(f'{suite}-failure-dom.txt', (source_directory / 'failure-dom.txt').read_text())
         for source in sorted(source_directory.glob('*.png')):

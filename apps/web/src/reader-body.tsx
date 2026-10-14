@@ -5,10 +5,10 @@ import { flushSync } from "react-dom";
  * so the browser's default focus scroll sees rendered heights. Retain it until
  * this thread unmounts: changing back during Tab/Shift+Tab can move the target.
  * Display controls do not opt in, so ordinary view toggles keep the fast path. */
-export function ReaderMessageList({ children }: { children: ReactNode }) {
+export function ReaderMessageList({ children, restorePosition = false }: { children: ReactNode; restorePosition?: boolean }) {
   const [fullBodyLayout, setFullBodyLayout] = useState(false);
   return <div className="reader-message-list" aria-label="Messages in conversation" role="region"
-    data-full-body-layout={fullBodyLayout ? "true" : undefined}
+    data-full-body-layout={fullBodyLayout || restorePosition ? "true" : undefined}
     onFocusCapture={(event) => {
       const target = event.target;
       if (fullBodyLayout || !(target instanceof HTMLElement)
