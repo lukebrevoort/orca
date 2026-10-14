@@ -164,3 +164,31 @@ test('leaving and returning restores card expansion and disclosure without chang
   expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('0 unread at entry');
   expect(writes).toEqual([]);
 });
+
+test.each([0, 37])('leaving during scrolling saves the delta-corrected anchor with a %ipx viewport shift', async (edgeShift) => {
+  const { ReaderSessions } = await import('./reader-session');
+  const sessions = new ReaderSessions();
+  const host = browser.document.body.firstElementChild as any;
+  host.className = 'desktop-workspace'; host.style.overflowY = 'auto';
+  const frames: FrameRequestCallback[] = [];
+  browser.requestAnimationFrame = ((callback: FrameRequestCallback) => { frames.push(callback); return frames.length; }) as any;
+  const show = async (active: boolean) => act(async () => root.render(<TopLayerProvider><MessageReader sessions={sessions} active={active} detail={active ? detail : null} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={() => {}} onRetry={() => {}} status={active ? 'ready' : 'idle'} onAttentionChange={async () => 'normal'} /></TopLayerProvider>));
+  await show(true);
+  let geometry = 0;
+  let viewportEdge = 0;
+  host.getBoundingClientRect = () => ({ top: viewportEdge, bottom: 900, height: 900 });
+  const article = browser.document.querySelector('.reader-message article') as any;
+  article.getBoundingClientRect = () => { geometry++; return { top: 100 - host.scrollTop, bottom: 2100 - host.scrollTop, height: 2000 }; };
+  await act(async () => { for (let i = 0; i < 3; i++) { const pending = frames.splice(0); pending.forEach(callback => callback(0)); } });
+  const captured = geometry;
+  await act(async () => {
+    for (const top of [200, 500, 900]) { host.scrollTop = top; host.dispatchEvent(new browser.Event('scroll', { bubbles: false })); }
+  });
+  expect(geometry).toBe(captured + 1);
+  viewportEdge = edgeShift;
+  await show(false);
+  const saved = sessions.get(detail.account.id, detail.thread.id)!;
+  expect(saved.top).toBe(900);
+  expect(saved.anchor).toBe(JSON.stringify([detail.account.id, detail.messages[0]!.id]));
+  expect(saved.offset).toBe(-800 - edgeShift);
+});

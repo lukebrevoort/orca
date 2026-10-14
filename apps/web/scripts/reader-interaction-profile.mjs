@@ -104,7 +104,15 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         }
         const activeCard = page.locator('.reader-message').last();
         assert.equal(await activeCard.locator('.reader-card-toggle').getAttribute('aria-expanded'), 'true');
-        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), 1, 'Opening an all-read conversation expands only its latest message');
+        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), sample === 0 ? 1 : count, 'First entry expands latest; returning preserves the previously expanded conversation');
+        if (sample > 0 && count > 1) {
+          // Keep subsequent interaction samples comparable after verifying the
+          // restored session. Reset is an explicit user action, not entry behavior.
+          await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
+          await page.getByRole('button', { name: 'Reset message view', exact: true }).click();
+          await settle();
+          assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), 1);
+        }
         await measure('plain-text', () => activeCard.getByRole('button', { name: 'Plain text', exact: true }).click(), () => activeCard.locator('.reader-body-plain').waitFor());
         await measure('formatted', () => activeCard.getByRole('button', { name: 'Formatted', exact: true }).click(), () => activeCard.locator('.reader-formatted-region').waitFor());
         if (count > 1) {
@@ -323,7 +331,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       if (!authenticatedFixture) throw Object.assign(error, { readerProfile: result });
     } finally { await context.close(); }
   }
-  if (result.scenarios.some(scenario => scenario.status !== 'passed')) throw Object.assign(new Error('Reader profile scenarios failed; see interactionProfile.scenarios'), { readerProfile: result });
+  if (result.scenarios.some(scenario => scenario.status !== 'passed')) throw Object.assign(new Error(`Reader profile scenarios failed: ${result.scenarios.filter(scenario => scenario.status !== 'passed').map(scenario => `${scenario.messages}/${scenario.theme}/${scenario.rendering}: ${scenario.error}`).join('\n')}`), { readerProfile: result });
   assert.deepEqual(result.pageErrors, []); assert.deepEqual(result.blockedWrites, []);
   return result;
 }

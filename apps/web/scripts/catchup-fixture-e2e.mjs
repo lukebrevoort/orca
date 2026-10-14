@@ -11,7 +11,7 @@ const browser = await chromium.launch({headless:true, executablePath:process.env
 const benchmark = process.env.CATCHUP_BENCH === '1';
 const report = {revision, syntheticOnly:true, browser:browser.version(), scenarios:[], errors:[]};
 try {
-for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390])) for (const theme of (benchmark||process.env.CATCHUP_DEBUG?['light']:['light','dark'])) for (const kind of (benchmark?['read']:process.env.CATCHUP_DEBUG?['mixed']:['mixed','read','single'])) {
+for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390])) for (const theme of (benchmark||process.env.CATCHUP_DEBUG?['light']:['light','dark'])) for (const kind of (benchmark?['read']:process.env.CATCHUP_DEBUG?[process.env.CATCHUP_DEBUG==='single'?'single':'mixed']:['mixed','read','single'])) {
  const context = await browser.newContext({viewport:{width,height:900},colorScheme:theme,reducedMotion:'reduce',serviceWorkers:'block'});
  let marked=false, incoming=false, detailServed=false, readCalls=0;
  const count=benchmark?240:kind==='single'?1:60;
@@ -65,6 +65,7 @@ for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390]
   const metrics=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
   await page.locator('.reader-earlier').click();
   scenario.samples=[];
+  scenario.measurementWindow = "two animation frames plus 180ms quiet-period work, reported separately";
   for(let trial=-2;trial<10;trial++) for(const operation of ['expand','collapse','scroll']) {
    const before=await metrics();
    const sample=await page.evaluate(async operation=>{
@@ -74,8 +75,11 @@ for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390]
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     return {elapsedMs:performance.now()-start,geometryCalls:window.__geometryCalls,domNodes:document.querySelectorAll('.reader-message-list *').length};
    },operation);
+   const immediate=await metrics();
+   await page.waitForTimeout(180);
    const after=await metrics();
-   if(trial>=0) scenario.samples.push({trial,operation,...sample,...Object.fromEntries(['TaskDuration','ScriptDuration','LayoutDuration','RecalcStyleDuration'].map(k=>[k+'Ms',(after[k]-before[k])*1000]))});
+   const settledGeometryCalls=await page.evaluate(()=>window.__geometryCalls);
+   if(trial>=0) scenario.samples.push({trial,operation,...sample,settledGeometryCalls,immediateTaskDurationMs:(immediate.TaskDuration-before.TaskDuration)*1000,...Object.fromEntries(['TaskDuration','ScriptDuration','LayoutDuration','RecalcStyleDuration'].map(k=>[k+'Ms',(after[k]-before[k])*1000]))});
   }
   await context.close();continue;
  }

@@ -5803,16 +5803,48 @@ export function MessageReader({
     const restored = saved && saved.entry && validKeys.has(saved.entry) ? saved : null;
     setCards(restored ? { ...restored, restored: true, identity: readerIdentity, open: new Set(restored.open.filter(key => validKeys.has(key))) } : { identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
     const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
-    const contained = () => scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY);
+    let isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
+    const contained = () => isContained;
     const viewportTop = () => contained() ? scrollport!.getBoundingClientRect().top : Math.max(0, document.querySelector(".desktop-workspace-header")?.getBoundingClientRect().bottom ?? 0);
     let position = { top: restored?.top ?? 0, anchor: restored?.anchor ?? null, offset: restored?.offset ?? 0 };
     let initialized = false;
+    let capturedViewportTop = 0;
+    let captureTimer: ReturnType<typeof setTimeout> | undefined;
     const capture = () => {
       if (!initialized) return;
       const top = contained() ? scrollport!.scrollTop : window.scrollY;
       const visibleTop = viewportTop();
-      const anchor = [...messageRefs.current.entries()].find(([, node]) => node.getClientRects().length && node.getBoundingClientRect().bottom > visibleTop);
-      position = { top, anchor: anchor?.[0] ?? null, offset: anchor ? anchor[1].getBoundingClientRect().top - visibleTop : 0 };
+      capturedViewportTop = visibleTop;
+      let anchor: string | null = null;
+      let offset = 0;
+      for (const [key, node] of messageRefs.current) {
+        const bounds = node.getBoundingClientRect();
+        if (bounds.height > 0 && bounds.bottom > visibleTop) { anchor = key; offset = bounds.top - visibleTop; break; }
+      }
+      position = { top, anchor, offset };
+    };
+    const trackScroll = (event: Event) => {
+      if (!initialized || (event.target !== document && event.target !== scrollport)) return;
+      const top = contained() ? scrollport!.scrollTop : window.scrollY;
+      // Refresh just the retained anchor at the start of a burst: header/font
+      // layout may have moved it since the last capture. Subsequent events use
+      // scroll deltas, without repeatedly measuring cards during scrolling.
+      const anchor = captureTimer === undefined && position.anchor ? messageRefs.current.get(position.anchor) : null;
+      if (anchor) {
+        const bounds = anchor.getBoundingClientRect();
+        if (bounds.height > 0) {
+          capturedViewportTop = viewportTop();
+          position = { ...position, top, offset: bounds.top - capturedViewportTop };
+        } else capture();
+      } else position = { ...position, top, offset: position.offset - (top - position.top) };
+      clearTimeout(captureTimer);
+      captureTimer = setTimeout(() => { captureTimer = undefined; capture(); }, 120);
+    };
+    const resize = () => {
+      isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
+      clearTimeout(captureTimer);
+      captureTimer = undefined;
+      capture();
     };
     // Allow the restored card layout and document scrollport to settle before
     // measuring. A user gesture cancels this one-time positioning.
@@ -5832,11 +5864,22 @@ export function MessageReader({
       capture();
       });
     });
-    window.addEventListener("scroll", capture, { passive: true, capture: true });
+    window.addEventListener("scroll", trackScroll, { passive: true, capture: true });
+    window.addEventListener("resize", resize);
+    // Quotes, attachments and images can change the anchor without a scroll.
+    const positionObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(capture);
+    const list = messageRefs.current.values().next().value?.closest(".reader-message-list");
+    if (list) positionObserver?.observe(list);
     return () => {
       window.cancelAnimationFrame(frame);
       removePositioningListeners();
-      window.removeEventListener("scroll", capture, true);
+      window.removeEventListener("scroll", trackScroll, true);
+      window.removeEventListener("resize", resize);
+      clearTimeout(captureTimer);
+      positionObserver?.disconnect();
+      // The mobile header can become sticky during the last scroll burst.
+      // Account for its changed edge once when leaving, without per-event layout.
+      if (initialized) position.offset += capturedViewportTop - viewportTop();
       const current = latestCards.current;
       if (current?.identity === readerIdentity) sessions?.set(detail.account.id, detail.thread.id, { open: [...current.open], earlier: current.earlier, entry: current.entry, unreadEntry: current.unreadEntry, ...position });
     };
