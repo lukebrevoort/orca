@@ -106,6 +106,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         assert.equal(await activeCard.locator('.reader-card-toggle').getAttribute('aria-expanded'), 'true');
         assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), sample === 0 ? 1 : count, 'First entry expands latest; returning preserves the previously expanded conversation');
         if (sample > 0 && count > 1) {
+          assert.equal(await page.locator('.reader-message-list').getAttribute('data-full-body-layout'), 'true', 'Restored positions require exact body geometry');
           // Keep subsequent interaction samples comparable after verifying the
           // restored session. Reset is an explicit user action, not entry behavior.
           await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
@@ -262,9 +263,13 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
           const name = `profile-${count}-${theme}-${rendering}-${target}-focus.png`;
           await page.screenshot({ path: join(out, name) }); screenshots.push(name);
         }
-        // Content focus intentionally retains exact geometry until close.
-        // Start a fresh reader before testing optimized dynamic body sizing.
+        // Content focus and restored sessions intentionally retain exact geometry.
+        // Reload from Inbox to clear the tab-lifetime session before testing the
+        // fresh-entry deferred-layout path; preserve its original assertion below.
+        assert.equal(await page.locator('.reader-message-list').getAttribute('data-full-body-layout'), 'true');
         await page.locator('.reader-back').click(); await row().waitFor();
+        await page.reload({ waitUntil: 'networkidle' }); await row().waitFor();
+        await applyRenderingOverride(); await page.evaluate(() => document.fonts.ready);
         await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
         await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
         await page.getByRole('button', { name: 'Expand all', exact: true }).click();
