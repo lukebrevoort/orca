@@ -83,6 +83,22 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       await applyRenderingOverride();
       await page.evaluate(() => document.fonts.ready);
       const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(performance.now())))));
+      async function openFreshExpandedReader(phase) {
+        // A document navigation clears the memory-only reading session. Merely
+        // reopening restores exact geometry and cannot test deferred bodies.
+        await page.goto(origin.origin, { waitUntil: 'networkidle' }); await row().waitFor();
+        await applyRenderingOverride(); await page.evaluate(() => document.fonts.ready);
+        await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
+        await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
+        await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+        await settle();
+        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), count);
+        const fullBodyLayout = await page.locator('.reader-message-list').getAttribute('data-full-body-layout');
+        const contentVisibility = await page.locator('.reader-content').nth(48).evaluate(element => getComputedStyle(element).contentVisibility);
+        assert.equal(fullBodyLayout, null, `${phase} must start without restored/focused exact geometry`);
+        assert.equal(contentVisibility, rendering === 'browser-managed' ? 'auto' : 'visible', `${phase} must exercise the requested rendering mode`);
+        (scenario.freshEntryChecks ??= []).push({ phase, fullBodyLayout, contentVisibility });
+      }
       async function measure(name, action, ready, clicked = true) {
         const before = await getMetrics(cdp);
         await page.evaluate(() => { window.__readerProfile.start = performance.now(); window.__readerProfile.longTasks = []; });
@@ -141,11 +157,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
       // User-agent find and focusing a link must reveal skipped bodies. None of
       // these checks may force every offscreen body's layout before profiling.
       if (count > 1) {
-        await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
-        // Whole-thread search/focus operates on the explicitly expanded view.
-        await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
-        await page.getByRole('button', { name: 'Expand all', exact: true }).click();
-        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), count);
+        await openFreshExpandedReader('browser-find');
         const allText = await page.locator('.reader-message-list').textContent();
         for (let index = 1; index <= count; index++) assert(allText.includes(`End of review ${index}`));
         const found = await page.evaluate(() => {
@@ -171,6 +183,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         // Native Ctrl+F uses Chromium TextFinder's separate activation path;
         // verify that real capability with OS keys on our isolated CI display.
         scenario.findSelection.revealed = selection.bottom > 0 && selection.top < selection.height;
+        await openFreshExpandedReader('native-find');
         await page.evaluate(() => {
           window.getSelection()?.removeAllRanges();
           document.querySelector('.desktop-workspace').scrollTop = 0;
@@ -236,6 +249,10 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
           } finally { await page.evaluate(() => window.__orcaNativeFindInputGuard?.dispose()); }
         }
 
+        await openFreshExpandedReader('offscreen-keyboard-focus');
+        await page.evaluate(() => { document.querySelector('.desktop-workspace').scrollTop = 0; }); await settle();
+        scenario.keyboardFocusBefore = await page.locator('.reader-message').nth(48).evaluate(element => ({ top: element.getBoundingClientRect().top, height: innerHeight }));
+        assert(scenario.keyboardFocusBefore.top > scenario.keyboardFocusBefore.height, 'Keyboard focus must start with its target offscreen');
         const link = page.locator('.reader-message').nth(48).locator('.reader-body-html a').first();
         await link.focus(); await settle();
         assert(await link.evaluate(element => document.activeElement === element), 'An offscreen body link must accept keyboard focus');
@@ -267,14 +284,7 @@ export async function profileReaderInteractions({ browser, origin, out, screensh
         // Reload from Inbox to clear the tab-lifetime session before testing the
         // fresh-entry deferred-layout path; preserve its original assertion below.
         assert.equal(await page.locator('.reader-message-list').getAttribute('data-full-body-layout'), 'true');
-        await page.locator('.reader-back').click(); await row().waitFor();
-        await page.reload({ waitUntil: 'networkidle' }); await row().waitFor();
-        await applyRenderingOverride(); await page.evaluate(() => document.fonts.ready);
-        await row().click(); await page.locator('.reader-body-html').nth(count - 1).waitFor({ state: 'attached' });
-        await page.getByRole('button', { name: 'Conversation actions', exact: true }).click();
-        await page.getByRole('button', { name: 'Expand all', exact: true }).click();
-        assert.equal(await page.locator('.reader-card-toggle[aria-expanded="true"]').count(), count);
-        assert.equal(await page.locator('.reader-message-list').getAttribute('data-full-body-layout'), null);
+        await openFreshExpandedReader('dynamic-body-sizing');
         // The remembered size must adapt after an image decodes and reader text
         // grows. This adds a synthetic in-memory image to the mounted HTML DOM;
         // it never loads external pixels or rewrites the production sanitizer.
