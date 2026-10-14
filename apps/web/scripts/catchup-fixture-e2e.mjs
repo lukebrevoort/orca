@@ -90,6 +90,8 @@ for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390]
   assert(await page.locator('#reader-card-first-message .reader-attachments').isVisible());
   await first.focus();await page.keyboard.press('Enter');
   await page.screenshot({path:join(out,prefix+'-compact-focus.png')});
+  await first.evaluate(node=>node.blur()); await first.hover();
+  await page.screenshot({path:join(out,prefix+'-compact-hover.png')});
  }
  await page.evaluate(mobile=>{if(mobile)window.scrollTo(0,900);else document.querySelector('.desktop-workspace').scrollTop=900;},width===390);
  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -124,6 +126,8 @@ for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390]
   }
   await page.screenshot({path:join(out,prefix+'-incoming.png')});
  }
+ scenario.finalReadCalls=readCalls;
+ if(revision==='head') assert.equal(readCalls,kind==='mixed'?1:0,'return and incoming mail must not cause additional read writes');
  await context.close();
 }
 assert.deepEqual(report.errors,[]);

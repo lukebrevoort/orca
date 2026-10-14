@@ -5768,6 +5768,7 @@ export function MessageReader({
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
+  const accessibleDates = useMemo(() => new Map(messages.map(message => [messageIdentityKey(message), formatFullReceivedAt(message.receivedAt)])), [messages]);
 
   const newestMessage = messages[messages.length - 1];
   const currentFirstUnread = messages.find((message) => message.unread);
@@ -6000,7 +6001,7 @@ export function MessageReader({
                           tabIndex={-1}
                         >
                     <button className={`reader-card-toggle${!isOpen ? " reader-card-compact" : ""}`} type="button" aria-label={`${isOpen ? "Collapse" : "Expand"} message from ${message.from.name ?? message.from.email}`} aria-expanded={isOpen} aria-describedby={`reader-date-${message.id}`} aria-controls={`reader-card-${message.id}`} onClick={() => { const next = new Set(openCards); if (next.has(messageKey)) next.delete(messageKey); else next.add(messageKey); updateCards(next); }}>
-                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span className="sr-only" id={`reader-date-${message.id}`}>{formatFullReceivedAt(message.receivedAt)}</span><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span className="sr-only" id={`reader-date-${message.id}`}>{accessibleDates.get(messageKey)}</span><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
                       {!isOpen ? <span className="reader-card-preview">{decodeMailPreview(message.snippet)}</span> : null}
                       {!isOpen ? <small>To {formatRecipientAddresses(message.to)}{message.cc.length ? ` · Cc ${formatRecipientAddresses(message.cc)}` : ""}</small> : null}
                     </button>
