@@ -5801,7 +5801,7 @@ export function MessageReader({
     const saved = sessions?.get(detail.account.id, detail.thread.id);
     const validKeys = new Set(messages.map(messageIdentityKey));
     const restored = saved && saved.entry && validKeys.has(saved.entry) ? saved : null;
-    setCards(restored ? { ...restored, restored: true, identity: readerIdentity, open: new Set(restored.open.filter(key => validKeys.has(key))) } : { identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
+    setCards(restored ? { ...restored, unreadEntry: currentFirstUnread ? messageIdentityKey(currentFirstUnread) : null, restored: true, identity: readerIdentity, open: new Set(restored.open.filter(key => validKeys.has(key))) } : { identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
     const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
     let isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
     const contained = () => isContained;

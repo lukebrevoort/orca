@@ -162,6 +162,11 @@ test('leaving and returning restores card expansion and disclosure without chang
   expect(browser.document.querySelector('[aria-controls="reader-card-return-4"]')?.getAttribute('aria-expanded')).toBe('true');
   expect(browser.document.querySelector('.reader-earlier')?.getAttribute('aria-expanded')).toBe('true');
   expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('0 unread at entry');
+  expect(button('Jump to unread').disabled).toBe(true);
+  await show(true,{...conversation,messages:[...messages.map(m=>({...m,unread:false})), {...messages[23]!,id:'new-return-reply',unread:true}]});
+  expect(button('Jump to unread').disabled).toBe(false);
+  await click('Jump to unread');
+  expect(browser.document.querySelector('[aria-controls="reader-card-new-return-reply"]')?.getAttribute('aria-expanded')).toBe('true');
   expect(writes).toEqual([]);
 });
 

@@ -118,6 +118,7 @@ for (const width of (benchmark?[1440]:process.env.CATCHUP_DEBUG?[390]:[1440,390]
  scenario.afterReturn=await page.evaluate(m=>m?scrollY:document.querySelector('.desktop-workspace').scrollTop,width===390);
  scenario.anchorAfter=await position();
  if(revision==='head') assert(scenario.anchorBefore.key===scenario.anchorAfter.key && Math.abs(scenario.anchorBefore.offset-scenario.anchorAfter.offset)<3,JSON.stringify(scenario));
+ if(revision==='head') assert(await page.getByRole('button',{name:'Jump to unread',exact:true,includeHidden:true}).isDisabled(),'return to fully read mail clears previous unread jump');
  if(kind==='mixed') {
   const before=await page.evaluate(m=>m?scrollY:document.querySelector('.desktop-workspace').scrollTop,width===390);
   incoming=true;await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
