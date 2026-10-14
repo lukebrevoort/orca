@@ -7,7 +7,7 @@ import { MessageReader } from "./App";
 import { TopLayerProvider } from "./top-layer";
 import { editorToPlainText } from "./compose-workspace";
 
-const names = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "KeyboardEvent", "getComputedStyle"] as const;
+const names = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "KeyboardEvent", "getComputedStyle", "requestAnimationFrame"] as const;
 const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 const originalFetch = globalThis.fetch;
 let browser: InstanceType<typeof Window>;
@@ -27,7 +27,7 @@ async function click(name: string) { await act(async () => button(name).click())
 async function render(current: ThreadDetail = detail) { await act(async () => root.render(<TopLayerProvider><MessageReader detail={current} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={() => {}} onRetry={() => {}} status="ready" onAttentionChange={async () => "normal"} /></TopLayerProvider>)); }
 beforeEach(() => {
   browser = new Window({ url: "http://localhost/" });
-  for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : name === "getComputedStyle" ? browser.getComputedStyle.bind(browser) : browser[name] });
+  for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : name === "getComputedStyle" ? browser.getComputedStyle.bind(browser) : name === "requestAnimationFrame" ? browser.requestAnimationFrame.bind(browser) : browser[name] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
   const container = browser.document.createElement("div"); browser.document.body.append(container);
   root = createRoot(container as unknown as Element); writes = []; delayPreferences = false; releasePreferences = undefined;

@@ -1,5 +1,7 @@
 # Synthetic screenshot gallery
 
+Head runtime: `65b85b84e32eb64db9ac1de57a3c7a37177099f0`. Baseline: `9844aca646feabbc843980ecdba1bf5e5fe34b14`.
+
 Baseline and head use the same payload, theme, density and viewport. Entry counts use actual per-message unread flags. The baseline can race to mark read before detail loading; this is intentionally reproduced. No real mail or account was used.
 
 ## 1440px · light · mixed
