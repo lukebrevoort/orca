@@ -2,7 +2,7 @@
 
 Scope: web reader, including mobile web. The sidebar, inbox layout, and quiet reader controls are preserved. No search changes (#235), API/schema changes, new persistent storage, native runtime changes, live-mail tests, deployment, or release.
 
-Baseline: `9844aca646feabbc843980ecdba1bf5e5fe34b14` (current main inspected October 14, 2026). Runtime: `65b85b84e32eb64db9ac1de57a3c7a37177099f0`. The PR head additionally contains synthetic evidence and harness assertions; the runtime files are unchanged from that commit.
+Baseline: `9844aca646feabbc843980ecdba1bf5e5fe34b14` (current main inspected October 14, 2026). Runtime: `4dccb4aa842521f5a4366f81a87c3e5936f004df`. The PR head additionally contains synthetic evidence and harness assertions; the runtime files are unchanged from that commit.
 
 ## Problem and existing behavior
 
@@ -23,6 +23,8 @@ The inbox also launched its whole-thread mark-read PATCH before the detail reque
 
 ## Verification
 
+The [focus follow-up](focus.md) resolves a baseline deferred-focus bug exposed by fresh-session coverage. Final follow-up: **229 tests / 1,303 assertions**, 12 catch-up browser journeys, and independent review without a blocker. Earlier measurements below retain their exact runtime attribution.
+
 Only disposable synthetic fixtures were used. New regressions were observed failing before implementation (missing entry count and session store). Tests cover entry count across read refresh, incoming unread, restored expansion, retention bounds/account keys, delayed detail before read, cancelled entry, stale mailbox versions, expired same-version prefetch, existing failed-read isolation, and reader navigation/body behavior.
 
 - Final runtime focused suite: **157 tests, 966 assertions, zero failures** across App interaction, reader cards/session/body/rendering/navigation.
@@ -34,7 +36,7 @@ Only disposable synthetic fixtures were used. New regressions were observed fail
 - The existing hosted reader profiler assumed every reopen resets to one expanded card. It now asserts restored expansion before explicitly resetting for comparable samples; failures include per-scenario diagnostics in the job log. Find, native Find, offscreen keyboard focus, and dynamic body sizing each start a fresh document and assert the expected content-visibility mode, so restored exact geometry cannot bypass deferred-body coverage. Final hosted results are recorded in the PR.
 - Native is unchanged. Existing PR Fixture Checks supplies hosted unsigned native build/unit/compose coverage; the CI-script path also automatically triggers Native Reader Checks. No dedicated native reader workflow dispatch or offline Mac was requested.
 
-The earlier screenshots and evidence remain available at [published b0e42cd](https://github.com/lukebrevoort/orca/tree/b0e42cd39bab1fc56ab8714a70646d4d7b815843/docs/verification/thread-catchup). Current screenshots target the final runtime.
+The earlier screenshots and evidence remain available at [published b0e42cd](https://github.com/lukebrevoort/orca/tree/b0e42cd39bab1fc56ab8714a70646d4d7b815843/docs/verification/thread-catchup). The original gallery targets `65b85b8`; the [focus follow-up](focus.md) includes the final-runtime catch-up matrix and screenshots.
 
 [Complete screenshot gallery](gallery.md) · [head browser results](head-results.json) · [baseline browser results](baseline-results.json) · [paired measurements](benchmark.md)
 

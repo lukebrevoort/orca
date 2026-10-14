@@ -1,0 +1,60 @@
+{
+  "revision": "fixed-prevent",
+  "browser": "154.0.8037.57",
+  "syntheticOnly": true,
+  "scenarios": [
+    {
+      "theme": "light",
+      "rendering": "browser-managed",
+      "before": {
+        "top": 64567.671875,
+        "fullLayout": null,
+        "contentVisibility": "auto"
+      },
+      "events": [
+        {
+          "type": "focus",
+          "top": 64878.359375,
+          "bottom": 64898.359375,
+          "scrollTop": 0,
+          "fullLayout": null
+        },
+        {
+          "type": "focusin",
+          "top": 129830.359375,
+          "bottom": 129850.359375,
+          "scrollTop": 0,
+          "fullLayout": "true"
+        }
+      ],
+      "after": {
+        "active": true,
+        "top": 129830.359375,
+        "bottom": 129850.359375,
+        "viewportTop": 0,
+        "viewportBottom": 1000,
+        "scrollTop": 0,
+        "fullLayout": "true"
+      },
+      "afterQuiet": {
+        "active": true,
+        "top": 129830.359375,
+        "bottom": 129850.359375,
+        "viewportTop": 0,
+        "viewportBottom": 1000,
+        "scrollTop": 0,
+        "fullLayout": "true"
+      },
+      "afterExplicitReveal": {
+        "active": true,
+        "top": 980.359375,
+        "bottom": 1000.359375,
+        "viewportTop": 0,
+        "viewportBottom": 1000,
+        "scrollTop": 128850,
+        "fullLayout": "true"
+      }
+    }
+  ],
+  "errors": []
+}
