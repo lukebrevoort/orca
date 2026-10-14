@@ -60,7 +60,13 @@ def stop(process):
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
+            pass
+        finally:
+            # The group can outlive its leader (e.g. Chromium descendants).
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             process.wait(timeout=10)
 
 
@@ -75,9 +81,9 @@ def run(command, cwd, env, log, timeout=240):
         stop(process)
 
 
-def snapshot(destination):
+def snapshot(destination, commit):
     with tempfile.TemporaryFile() as archive:
-        subprocess.run(['git', '-C', str(ROOT), 'archive', 'HEAD'], stdout=archive, check=True)
+        subprocess.run(['git', '-C', str(ROOT), 'archive', commit], stdout=archive, check=True)
         archive.seek(0)
         subprocess.run(['tar', '-xf', '-', '-C', str(destination)], stdin=archive, check=True)
     # Copy the installed dependency tree, preserving relative workspace links so
@@ -89,6 +95,14 @@ def snapshot(destination):
     for path in destination.rglob('.env*'):
         if path.name != '.env.example' and 'node_modules' not in path.parts:
             raise ValueError('Committed local environment file is forbidden in the fixture archive')
+    for path in destination.rglob('*'):
+        if path.is_symlink():
+            target = Path(os.readlink(path))
+            if target.is_absolute() and target.is_relative_to(ROOT):
+                path.unlink()
+                path.symlink_to(os.path.relpath(destination / target.relative_to(ROOT), path.parent))
+            if not path.resolve().is_relative_to(destination):
+                raise ValueError('Dependency symlink escapes disposable source: ' + str(path.relative_to(destination)))
     for name, target in (('api', 'apps/api'), ('web', 'apps/web'), ('shared', 'packages/shared')):
         link = destination / 'node_modules/@orca' / name
         if not link.is_symlink() or link.resolve() != destination / target:
@@ -126,6 +140,8 @@ def inventory(directory):
 
 def validate(directory, commit, expect_failure=False):
     manifest = json.loads((directory / 'manifest.json').read_text())
+    if (directory / 'manifest.json').is_symlink():
+        raise ValueError('Evidence symlinks are forbidden')
     if len(commit) != 40 or manifest['testedCommit'] != commit:
         raise ValueError('Evidence does not describe the requested exact commit')
     if git('rev-parse', commit + '^{tree}') != manifest['testedTree']:
@@ -134,6 +150,10 @@ def validate(directory, commit, expect_failure=False):
         expected = hashlib.sha256(subprocess.check_output(['git', '-C', str(ROOT), 'show', commit + ':' + source])).hexdigest()
         if manifest[key] != expected:
             raise ValueError('Evidence source digest mismatch: ' + source)
+    for name in inventory(directory):
+        path = Path(name)
+        if name not in {'identity.log', 'checks.log', 'fixture.log', 'outcome.json', 'browser-results.json', 'browser-failure-dom.txt'} and not (len(path.parts) == 2 and path.parts[0] == 'screenshots' and path.suffix == '.png'):
+            raise ValueError('Unexpected evidence file: ' + name)
     if manifest['files'] != inventory(directory):
         raise ValueError('Evidence inventory/hash mismatch')
     if not manifest['cleanupComplete'] or not manifest['syntheticOnly']:
@@ -154,8 +174,10 @@ def trial(output, fail_after):
     versions = doctor()
     commit = versions['testedCommit']
     # The runner itself must be the committed runner, not unrecorded local code.
-    if subprocess.check_output(['git', '-C', str(ROOT), 'show', 'HEAD:scripts/pstack/verify.py']) != Path(__file__).read_bytes():
+    if subprocess.check_output(['git', '-C', str(ROOT), 'show', commit + ':scripts/pstack/verify.py']) != Path(__file__).read_bytes():
         raise ValueError('Commit the verification runner before trial; trial tests HEAD only')
+    if hashlib.sha256(subprocess.check_output(['git', '-C', str(ROOT), 'show', commit + ':bun.lock'])).hexdigest() != versions['lockSha256']:
+        raise ValueError('Working lockfile differs from tested commit')
     output.mkdir(mode=0o700)  # Refuse to overwrite/mix evidence.
     work = Path(tempfile.mkdtemp(prefix='orca-pstack-'))
     source = work / 'source'; source.mkdir()
@@ -179,7 +201,7 @@ def trial(output, fail_after):
     try:
         with (raw / 'checks.log').open('w') as log:
             try:
-                snapshot(source)
+                snapshot(source, commit)
                 run(['bun', 'run', 'build'], source, env, log)
                 with (raw / 'fixture.log').open('w') as fixture_log:
                     fixture = subprocess.Popen(['bun', '--no-env-file', 'apps/api/scripts/compose-fixture.ts'],
@@ -202,6 +224,8 @@ def trial(output, fail_after):
             except (Exception, KeyboardInterrupt) as error:
                 log.write(f'FAIL: {type(error).__name__}: {error}\n'); log.flush()
     finally:
+        for sig in handlers:
+            signal.signal(sig, signal.SIG_IGN)
         try:
             # Reuse the established allowlist/redactor; no connection, database,
             # browser profile or raw trace is ever part of published evidence.
