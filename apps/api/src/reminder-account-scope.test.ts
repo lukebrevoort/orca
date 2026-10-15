@@ -37,7 +37,7 @@ async function fixture(run: (f: {
     }
     const session = await createSession(db, "owner");
     const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), now: () => clock });
-    await run({ db, advance: () => { clock = new Date("2026-10-17T12:00:00Z"); }, request: (path, method = "GET", body, authenticated = true) => app.request(path, {
+    await run({ db, advance: () => { clock = new Date("2026-10-17T12:00:00Z"); }, request: async (path, method = "GET", body, authenticated = true) => app.request(path, {
       method, headers: { ...(authenticated ? { cookie: `orca_session=${session.token}` } : {}), "content-type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     }) });
