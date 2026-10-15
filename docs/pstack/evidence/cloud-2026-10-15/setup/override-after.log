@@ -1,0 +1,21 @@
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected /tmp/orca-pstack-bun-override-repro/custom-bun for env
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected /tmp/orca-pstack-bun-override-repro/custom-bun for setup
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected /tmp/orca-pstack-bun-override-repro/custom-bun for doctor
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected relative/bun for env
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected relative/bun for setup
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected relative/bun for doctor
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected /tmp/orca-pstack-missing/bun for env
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected /tmp/orca-pstack-missing/bun for setup
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: rejected /tmp/orca-pstack-missing/bun for doctor
+PASS: supported absolute bun override selects executable after activation
+ORCA_PSTACK_BUN must be an absolute executable named bun at version 1.3.14
+PASS: wrong-version explicit override rejected without fallback
