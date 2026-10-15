@@ -57,7 +57,8 @@ test("malformed dates do not abort a batch or overwrite another account's matchi
     const rows = db.select().from(emails).all();
     assert.equal(rows.length, 4);
     assert.deepEqual(rows.filter(row => row.accountId === "account-b"), before);
-    const fallback = rows.find(row => row.id === "gmail:account-a:shared-provider-message")!;
+    const fallback = rows.find(row => row.id === "gmail:account-a:shared-provider-message");
+    assert.ok(fallback?.receivedAt);
     assert.equal(fallback.subject, "Account A private subject");
     assert.equal(fallback.receivedAt.toISOString(), "1970-01-01T00:00:00.000Z");
     const accountThreads = db.select().from(threads).all();
@@ -65,6 +66,7 @@ test("malformed dates do not abort a batch or overwrite another account's matchi
     for (const thread of accountThreads) {
       assert.equal(thread.id, `gmail:${thread.accountId}:shared-provider-thread`);
       assert.equal(thread.messageCount, 2);
+      assert.ok(thread.latestReceivedAt);
       assert.equal(thread.latestReceivedAt.toISOString(), "2026-06-28T18:30:00.000Z");
     }
   } finally {
