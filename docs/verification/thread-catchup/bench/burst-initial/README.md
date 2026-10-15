@@ -1,0 +1,1 @@
+Intermediate scroll optimization at c9191868366c7c06b1a5b52285d6e1272c9e5523 against baseline9844aca646feabbc843980ecdba1bf5e5fe34b14. Same extended quiet-window methodology as the final burst measurements. Preserved diagnostics; final unread-boundary correction measured separately in ../burst.

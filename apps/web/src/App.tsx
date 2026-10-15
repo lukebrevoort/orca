@@ -1,3 +1,4 @@
+import { ReaderSessions } from "./reader-session";
 import { readerNavigationVisibility } from "./reader-navigation";
 import { decodeMailPreview } from "./mail-preview";
 import { installViewNavigationHistory, requestViewNavigation } from "./view-navigation-guard";
@@ -1408,6 +1409,10 @@ export function InboxApp({
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
   const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
+  const readingSessions = useMemo(() => new ReaderSessions(), [account?.id, demoMode, status === "signedout"]);
+  useEffect(() => () => readingSessions.clear(), [readingSessions]);
+  const pendingReaderRead = useRef<InboxMessage | null>(null);
+  useEffect(() => { pendingReaderRead.current = null; }, [account?.id, status === "signedout"]);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
@@ -2027,7 +2032,9 @@ export function InboxApp({
     };
 
     if (demoMode) {
-      setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
+      const detail = createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages);
+      setThreadDetail(detail);
+      markOpenedThreadRead(detail);
       setReaderStatus("ready");
       setReaderError(null);
       return;
@@ -2035,7 +2042,8 @@ export function InboxApp({
 
     const reference = { accountId: readerAccountId, threadId: selectedThreadId };
     const cache = threadDetailCacheRef.current!;
-    const cached = cache.peek(reference);
+    // An expired/version-mismatched payload cannot establish unread-at-entry.
+    const cached = cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion) ? cache.peek(reference) : null;
     let active = true;
     if (cached) {
       setThreadDetail(cached.detail);
@@ -2045,11 +2053,14 @@ export function InboxApp({
       setReaderStatus("loading");
     }
     setReaderError(null);
-    if (cached && cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion)) return;
+    if (cached) {
+      markOpenedThreadRead(cached.detail);
+      return;
+    }
     const request = cache.load(
       reference,
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
-      { refresh: Boolean(cached), version: selectedThreadVersion },
+      { refresh: true, version: selectedThreadVersion },
     );
     const requestGeneration = cache.currentGeneration(reference);
     request
@@ -2057,6 +2068,7 @@ export function InboxApp({
         if (!active || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
+        markOpenedThreadRead(detail);
       })
       .catch((error) => {
         if (!active || cached || !cache.isCurrentGeneration(reference, requestGeneration)) return;
@@ -2100,6 +2112,7 @@ export function InboxApp({
         if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration)) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
+        markOpenedThreadRead(detail);
         readerMailboxSnapshotRef.current = request;
       })
       .catch((error) => {
@@ -2246,6 +2259,7 @@ export function InboxApp({
   }
 
   function synchronizeSurfaceLocation(location: SurfaceLocation) {
+    pendingReaderRead.current = null;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(readerFocusFrameRef.current);
@@ -2365,6 +2379,7 @@ export function InboxApp({
       return;
     }
 
+    pendingReaderRead.current = message;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(readerFocusFrameRef.current);
@@ -2379,6 +2394,12 @@ export function InboxApp({
       setSelectedThreadAccountId(message.accountId);
     });
 
+  }
+
+  function markOpenedThreadRead(detail: ThreadDetail) {
+    const message = pendingReaderRead.current;
+    if (!message || message.accountId !== detail.account.id || message.threadId !== detail.thread.id) return;
+    pendingReaderRead.current = null;
     if (message.unread) {
       const markLocallyRead = () => {
         const update = (m: InboxMessage) => m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m;
@@ -2532,6 +2553,7 @@ export function InboxApp({
   }
 
   function closeThread() {
+    pendingReaderRead.current = null;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(readerFocusFrameRef.current);
@@ -3374,6 +3396,9 @@ export function InboxApp({
           </div>
           <div style={{ display: selectedThreadId ? undefined : "none" }}>
             <MessageReader
+              key={account?.id ?? "signedout"}
+              sessions={readingSessions}
+              active={Boolean(selectedThreadId)}
               detail={threadDetail}
               contacts={composeContacts}
               demoMode={demoMode}
@@ -5691,6 +5716,8 @@ export function shouldShowReaderJumpToTop(scrollY: number, viewportHeight: numbe
 }
 
 export function MessageReader({
+  sessions,
+  active = true,
   detail,
   contacts = [],
   error,
@@ -5709,6 +5736,8 @@ export function MessageReader({
   notifyByDefault = false,
   demoMode = false,
 }: {
+  sessions?: ReaderSessions;
+  active?: boolean;
   detail: ThreadDetail | null;
   contacts?: MailContact[];
   error: string | null;
@@ -5728,24 +5757,32 @@ export function MessageReader({
   demoMode?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const entrySnapshot = useRef<{ identity: string; seen: Set<string>; unread: number } | null>(null);
+  if (!active || status !== "ready") entrySnapshot.current = null;
+  if (active && status === "ready" && detail && entrySnapshot.current?.identity !== accountScopedIdentityKey(detail.account.id, detail.thread.id)) {
+    entrySnapshot.current = { identity: accountScopedIdentityKey(detail.account.id, detail.thread.id), seen: new Set(detail.messages.map(messageIdentityKey)), unread: detail.messages.filter(message => message.unread).length };
+  }
   const threadMenuRef = useRef<HTMLDetailsElement>(null);
   const [navigationVisibility, setNavigationVisibility] = useState({ unread: false, latest: false });
   const messageRefs = useRef(new Map<string, HTMLElement>());
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
+  const accessibleDates = useMemo(() => new Map(messages.map(message => [messageIdentityKey(message), formatFullReceivedAt(message.receivedAt)])), [messages]);
 
   const newestMessage = messages[messages.length - 1];
   const currentFirstUnread = messages.find((message) => message.unread);
   const jumpTarget = newestMessage;
   const readerIdentity = detail ? accountScopedIdentityKey(detail.account.id, detail.thread.id) : "";
-  const [cards, setCards] = useState<{ identity: string; open: Set<string>; earlier: boolean; entry: string | null; unreadEntry: string | null } | null>(null);
+  const [cards, setCards] = useState<{ identity: string; open: Set<string>; earlier: boolean; entry: string | null; unreadEntry: string | null; restored?: boolean } | null>(null);
   const firstUnreadMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.unreadEntry) : undefined) ?? currentFirstUnread;
   const initialMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.entry) : undefined) ?? firstUnreadMessage ?? newestMessage;
   const openCards = cards?.identity === readerIdentity ? cards.open : new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []);
   const showEarlier = cards?.identity === readerIdentity && cards.earlier;
   const entryIndex = initialMessage ? messages.indexOf(initialMessage) : 0;
-  function updateCards(open: Set<string>, earlier = Boolean(showEarlier)) { setCards({ identity: readerIdentity, open, earlier, entry: initialMessage ? messageIdentityKey(initialMessage) : null, unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null }); }
+  const entryUnreadCount = entrySnapshot.current?.unread ?? 0;
+  const newUnreadCount = messages.filter(message => message.unread && !entrySnapshot.current?.seen.has(messageIdentityKey(message))).length;
+  function updateCards(open: Set<string>, earlier = Boolean(showEarlier)) { setCards({ identity: readerIdentity, restored: cards?.restored, open, earlier, entry: initialMessage ? messageIdentityKey(initialMessage) : null, unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null }); }
   function jumpToMessage(message: ThreadDetailMessage | undefined) {
     if (!message) return;
     const key = messageIdentityKey(message);
@@ -5756,10 +5793,97 @@ export function MessageReader({
       node?.focus({ preventScroll: true });
     });
   }
-  useEffect(() => {
-    if (status !== "ready" || !initialMessage) return;
-    setCards({ identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
-  }, [readerIdentity, status]);
+  const latestCards = useRef(cards);
+  latestCards.current = cards;
+  useLayoutEffect(() => {
+    if (!active || status !== "ready") { setCards(null); return; }
+    if (!detail || !initialMessage) return;
+    const saved = sessions?.get(detail.account.id, detail.thread.id);
+    const validKeys = new Set(messages.map(messageIdentityKey));
+    const restored = saved && saved.entry && validKeys.has(saved.entry) ? saved : null;
+    setCards(restored ? { ...restored, unreadEntry: currentFirstUnread ? messageIdentityKey(currentFirstUnread) : null, restored: true, identity: readerIdentity, open: new Set(restored.open.filter(key => validKeys.has(key))) } : { identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    let isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
+    const contained = () => isContained;
+    const viewportTop = () => contained() ? scrollport!.getBoundingClientRect().top : Math.max(0, document.querySelector(".desktop-workspace-header")?.getBoundingClientRect().bottom ?? 0);
+    let position = { top: restored?.top ?? 0, anchor: restored?.anchor ?? null, offset: restored?.offset ?? 0 };
+    let initialized = false;
+    let capturedViewportTop = 0;
+    let captureTimer: ReturnType<typeof setTimeout> | undefined;
+    const capture = () => {
+      if (!initialized) return;
+      const top = contained() ? scrollport!.scrollTop : window.scrollY;
+      const visibleTop = viewportTop();
+      capturedViewportTop = visibleTop;
+      let anchor: string | null = null;
+      let offset = 0;
+      for (const [key, node] of messageRefs.current) {
+        const bounds = node.getBoundingClientRect();
+        if (bounds.height > 0 && bounds.bottom > visibleTop) { anchor = key; offset = bounds.top - visibleTop; break; }
+      }
+      position = { top, anchor, offset };
+    };
+    const trackScroll = (event: Event) => {
+      if (!initialized || (event.target !== document && event.target !== scrollport)) return;
+      const top = contained() ? scrollport!.scrollTop : window.scrollY;
+      // Refresh just the retained anchor at the start of a burst: header/font
+      // layout may have moved it since the last capture. Subsequent events use
+      // scroll deltas, without repeatedly measuring cards during scrolling.
+      const anchor = captureTimer === undefined && position.anchor ? messageRefs.current.get(position.anchor) : null;
+      if (anchor) {
+        const bounds = anchor.getBoundingClientRect();
+        if (bounds.height > 0) {
+          capturedViewportTop = viewportTop();
+          position = { ...position, top, offset: bounds.top - capturedViewportTop };
+        } else capture();
+      } else position = { ...position, top, offset: position.offset - (top - position.top) };
+      clearTimeout(captureTimer);
+      captureTimer = setTimeout(() => { captureTimer = undefined; capture(); }, 120);
+    };
+    const resize = () => {
+      isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
+      clearTimeout(captureTimer);
+      captureTimer = undefined;
+      capture();
+    };
+    // Allow the restored card layout and document scrollport to settle before
+    // measuring. A user gesture cancels this one-time positioning.
+    const removePositioningListeners = () => { for (const type of ["pointerdown", "wheel", "touchstart", "keydown"]) window.removeEventListener(type, cancelPositioning); };
+    const cancelPositioning = () => { window.cancelAnimationFrame(frame); removePositioningListeners(); initialized = true; capture(); };
+    for (const type of ["pointerdown", "wheel", "touchstart", "keydown"]) window.addEventListener(type, cancelPositioning, { passive: true, once: true });
+    let frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+      const node = restored?.anchor ? messageRefs.current.get(restored.anchor) : messages.length > 1 ? messageRefs.current.get(messageIdentityKey(initialMessage)) : null;
+      const currentTop = contained() ? scrollport!.scrollTop : window.scrollY;
+      const top = node ? currentTop + node.getBoundingClientRect().top - viewportTop() - (restored?.offset ?? 12) : restored?.top ?? 0;
+      node?.focus({ preventScroll: true });
+      if (contained()) scrollport!.scrollTop = top;
+      else window.scrollTo({ top, behavior: "instant" });
+      removePositioningListeners();
+      initialized = true;
+      capture();
+      });
+    });
+    window.addEventListener("scroll", trackScroll, { passive: true, capture: true });
+    window.addEventListener("resize", resize);
+    // Quotes, attachments and images can change the anchor without a scroll.
+    const positionObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(capture);
+    const list = messageRefs.current.values().next().value?.closest(".reader-message-list");
+    if (list) positionObserver?.observe(list);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      removePositioningListeners();
+      window.removeEventListener("scroll", trackScroll, true);
+      window.removeEventListener("resize", resize);
+      clearTimeout(captureTimer);
+      positionObserver?.disconnect();
+      // The mobile header can become sticky during the last scroll burst.
+      // Account for its changed edge once when leaving, without per-event layout.
+      if (initialized) position.offset += capturedViewportTop - viewportTop();
+      const current = latestCards.current;
+      if (current?.identity === readerIdentity) sessions?.set(detail.account.id, detail.thread.id, { open: [...current.open], earlier: current.earlier, entry: current.entry, unreadEntry: current.unreadEntry, ...position });
+    };
+  }, [active, readerIdentity, status, sessions]);
   const title = detail?.thread.subject || fallbackTitle || "(no subject)";
 
   useEffect(() => {
@@ -5859,6 +5983,7 @@ export function MessageReader({
       {/* Keep fixed navigation outside the transformed entrance-animation container. */}
       {status === "ready" ? (
           <nav className="reader-context-jumps" aria-label="Conversation navigation">
+            <span className="reader-catchup-count" role="status" title="Message unread flags captured before opening marks this thread read. This is not a remaining-to-read count.">{entryUnreadCount} unread at entry{newUnreadCount ? ` · ${newUnreadCount} new unread` : ""}</span>
             <button type="button" hidden={!navigationVisibility.unread} disabled={!firstUnreadMessage} title="First unread when this conversation opened" onClick={() => jumpToMessage(firstUnreadMessage)}>Jump to unread</button>
             <button type="button" hidden={!navigationVisibility.latest} disabled={!jumpTarget} onClick={jumpToNewest}>Jump to latest <span aria-hidden="true">↓</span></button>
           </nav>
@@ -5895,7 +6020,7 @@ export function MessageReader({
 
           {entryIndex > 0 ? <div className="reader-earlier-divider"><button className="reader-earlier" type="button" aria-label={`${showEarlier ? "Hide" : "Show"} ${entryIndex} earlier messages`} aria-expanded={Boolean(showEarlier)} onClick={() => updateCards(openCards, !showEarlier)}>{entryIndex} earlier messages<span aria-hidden="true">{showEarlier ? "⌃" : "⌄"}</span></button></div> : null}
 
-          <ReaderMessageList key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
+          <ReaderMessageList restorePosition={Boolean(cards?.identity === readerIdentity && cards.restored)} key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
             {messageGroups.map((group) => (
               <section className="reader-day-group" hidden={!showEarlier && group.messages.every(message => messages.indexOf(message) < entryIndex)} key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
@@ -5908,7 +6033,7 @@ export function MessageReader({
                     const isFirstInGroup = index === 0;
                     const isOpen = openCards.has(messageKey);
                     return (
-                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
+                      <li className={`reader-message${!isOpen ? " reader-message-compact" : ""}${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
@@ -5918,8 +6043,8 @@ export function MessageReader({
                           }}
                           tabIndex={-1}
                         >
-                    <button className="reader-card-toggle" type="button" aria-label={`${isOpen ? "Collapse" : "Expand"} message from ${message.from.name ?? message.from.email}`} aria-expanded={isOpen} aria-controls={`reader-card-${message.id}`} onClick={() => { const next = new Set(openCards); if (next.has(messageKey)) next.delete(messageKey); else next.add(messageKey); updateCards(next); }}>
-                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                    <button className={`reader-card-toggle${!isOpen ? " reader-card-compact" : ""}`} type="button" aria-label={`${isOpen ? "Collapse" : "Expand"} message from ${message.from.name ?? message.from.email}`} aria-expanded={isOpen} aria-describedby={`reader-date-${message.id}`} aria-controls={`reader-card-${message.id}`} onClick={() => { const next = new Set(openCards); if (next.has(messageKey)) next.delete(messageKey); else next.add(messageKey); updateCards(next); }}>
+                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span className="sr-only" id={`reader-date-${message.id}`}>{accessibleDates.get(messageKey)}</span><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
                       {!isOpen ? <span className="reader-card-preview">{decodeMailPreview(message.snippet)}</span> : null}
                       {!isOpen ? <small>To {formatRecipientAddresses(message.to)}{message.cc.length ? ` · Cc ${formatRecipientAddresses(message.cc)}` : ""}</small> : null}
                     </button>

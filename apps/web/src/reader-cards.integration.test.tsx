@@ -7,7 +7,7 @@ import { MessageReader } from "./App";
 import { TopLayerProvider } from "./top-layer";
 import { editorToPlainText } from "./compose-workspace";
 
-const names = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "KeyboardEvent", "getComputedStyle"] as const;
+const names = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "KeyboardEvent", "getComputedStyle", "requestAnimationFrame"] as const;
 const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 const originalFetch = globalThis.fetch;
 let browser: InstanceType<typeof Window>;
@@ -27,7 +27,7 @@ async function click(name: string) { await act(async () => button(name).click())
 async function render(current: ThreadDetail = detail) { await act(async () => root.render(<TopLayerProvider><MessageReader detail={current} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={() => {}} onRetry={() => {}} status="ready" onAttentionChange={async () => "normal"} /></TopLayerProvider>)); }
 beforeEach(() => {
   browser = new Window({ url: "http://localhost/" });
-  for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : name === "getComputedStyle" ? browser.getComputedStyle.bind(browser) : browser[name] });
+  for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : name === "getComputedStyle" ? browser.getComputedStyle.bind(browser) : name === "requestAnimationFrame" ? browser.requestAnimationFrame.bind(browser) : browser[name] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
   const container = browser.document.createElement("div"); browser.document.body.append(container);
   root = createRoot(container as unknown as Element); writes = []; delayPreferences = false; releasePreferences = undefined;
@@ -134,4 +134,66 @@ test("updates contextual navigation when preceding content grows without scrolli
     if (originalObserver) Object.defineProperty(globalThis, 'ResizeObserver', originalObserver);
     else delete (globalThis as any).ResizeObserver;
   }
+});
+
+test('entry unread count survives mark-read refresh and distinguishes incoming mail', async () => {
+  const messages = Array.from({length:24}, (_, i) => ({...detail.messages[0]!, id:`count-${i}`, receivedAt:new Date(Date.UTC(2026,9,8,i)).toISOString(), unread:i>=21}));
+  await render({...detail,messages});
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('3 unread at entry');
+  await render({...detail,messages:messages.map(m=>({...m,unread:false}))});
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('3 unread at entry');
+  await render({...detail,messages:[...messages.map(m=>({...m,unread:false})), {...messages[23]!, id:'incoming', unread:true}]});
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('3 unread at entry · 1 new unread');
+  expect(browser.document.querySelector('[aria-controls="reader-card-incoming"]')?.getAttribute('aria-expanded')).toBe('false');
+  expect(writes).toEqual([]);
+});
+
+test('leaving and returning restores card expansion and disclosure without changing unread flags', async () => {
+  const { ReaderSessions } = await import('./reader-session');
+  const sessions = new ReaderSessions();
+  const messages = Array.from({length:24},(_,i)=>({...detail.messages[0]!,id:`return-${i}`,receivedAt:new Date(Date.UTC(2026,9,8,i)).toISOString(),unread:i>=21}));
+  const conversation={...detail,messages};
+  const show = async (active: boolean, current = conversation) => act(async()=>root.render(<TopLayerProvider><MessageReader sessions={sessions} active={active} detail={active?current:null} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={()=>{}} onRetry={()=>{}} status={active?'ready':'idle'} onAttentionChange={async()=> 'normal'} /></TopLayerProvider>));
+  await show(true);
+  await act(async()=> (browser.document.querySelector('.reader-earlier') as any).click());
+  await act(async()=> (browser.document.querySelector('[aria-controls="reader-card-return-4"]') as any).click());
+  await show(false);
+  await show(true,{...conversation,messages:messages.map(m=>({...m,unread:false}))});
+  expect(browser.document.querySelector('[aria-controls="reader-card-return-4"]')?.getAttribute('aria-expanded')).toBe('true');
+  expect(browser.document.querySelector('.reader-earlier')?.getAttribute('aria-expanded')).toBe('true');
+  expect(browser.document.querySelector('.reader-catchup-count')?.textContent).toBe('0 unread at entry');
+  expect(button('Jump to unread').disabled).toBe(true);
+  await show(true,{...conversation,messages:[...messages.map(m=>({...m,unread:false})), {...messages[23]!,id:'new-return-reply',unread:true}]});
+  expect(button('Jump to unread').disabled).toBe(false);
+  await click('Jump to unread');
+  expect(browser.document.querySelector('[aria-controls="reader-card-new-return-reply"]')?.getAttribute('aria-expanded')).toBe('true');
+  expect(writes).toEqual([]);
+});
+
+test.each([0, 37])('leaving during scrolling saves the delta-corrected anchor with a %ipx viewport shift', async (edgeShift) => {
+  const { ReaderSessions } = await import('./reader-session');
+  const sessions = new ReaderSessions();
+  const host = browser.document.body.firstElementChild as any;
+  host.className = 'desktop-workspace'; host.style.overflowY = 'auto';
+  const frames: FrameRequestCallback[] = [];
+  browser.requestAnimationFrame = ((callback: FrameRequestCallback) => { frames.push(callback); return frames.length; }) as any;
+  const show = async (active: boolean) => act(async () => root.render(<TopLayerProvider><MessageReader sessions={sessions} active={active} detail={active ? detail : null} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={() => {}} onRetry={() => {}} status={active ? 'ready' : 'idle'} onAttentionChange={async () => 'normal'} /></TopLayerProvider>));
+  await show(true);
+  let geometry = 0;
+  let viewportEdge = 0;
+  host.getBoundingClientRect = () => ({ top: viewportEdge, bottom: 900, height: 900 });
+  const article = browser.document.querySelector('.reader-message article') as any;
+  article.getBoundingClientRect = () => { geometry++; return { top: 100 - host.scrollTop, bottom: 2100 - host.scrollTop, height: 2000 }; };
+  await act(async () => { for (let i = 0; i < 3; i++) { const pending = frames.splice(0); pending.forEach(callback => callback(0)); } });
+  const captured = geometry;
+  await act(async () => {
+    for (const top of [200, 500, 900]) { host.scrollTop = top; host.dispatchEvent(new browser.Event('scroll', { bubbles: false })); }
+  });
+  expect(geometry).toBe(captured + 1);
+  viewportEdge = edgeShift;
+  await show(false);
+  const saved = sessions.get(detail.account.id, detail.thread.id)!;
+  expect(saved.top).toBe(900);
+  expect(saved.anchor).toBe(JSON.stringify([detail.account.id, detail.messages[0]!.id]));
+  expect(saved.offset).toBe(-800 - edgeShift);
 });

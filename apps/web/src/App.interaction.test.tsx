@@ -2846,11 +2846,45 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
+  test("revalidates an expired prefetch even when its mailbox version is unchanged", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalNow = Date.now;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let threadReadCount = 0;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) threadReadCount += 1;
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 20 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 20 && threadReadCount < 1; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+
+      const advanced = Date.now() + 31_000;
+      Date.now = () => advanced;
+      const row = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+      await act(async () => row.click());
+
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(selectedMessage.subject);
+      expect(threadReadCount).toBe(2);
+    } finally {
+      Date.now = originalNow;
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("revalidates a prefetched conversation when its mailbox version changes before opening", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = { ...inboxFixture[0]!, unread: false };
     const updatedMessage = {
       ...selectedMessage,
+      unread: true,
       subject: `${selectedMessage.subject} — new reply`,
       snippet: `${selectedMessage.snippet} A new reply arrived.`,
     };
@@ -2883,6 +2917,7 @@ describe("Inbox reader viewport restoration", () => {
             thread: { ...detail.thread, subject: updatedMessage.subject },
             messages: detail.messages.map((message) => ({
               ...message,
+              unread: true,
               subject: updatedMessage.subject,
               snippet: updatedMessage.snippet,
               bodyText: updatedMessage.snippet,
@@ -2914,6 +2949,7 @@ describe("Inbox reader viewport restoration", () => {
       expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
       for (let index = 0; index < 30 && browserWindow.document.querySelector("#reader-title")?.textContent !== updatedMessage.subject; index += 1) await waitFor(0);
       expect(threadReadCount).toBe(2);
+      expect(browserWindow.document.querySelector(".reader-catchup-count")?.textContent).toBe("1 unread at entry");
       expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedMessage.subject);
     } finally {
       globalThis.fetch = originalFetch;
@@ -2978,7 +3014,7 @@ describe("Inbox reader viewport restoration", () => {
       for (let index = 0; index < 30 && (updatedInboxReads < 1 || refreshButton().disabled); index += 1) await waitFor(0);
       await act(async () => (browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement).click());
       for (let index = 0; index < 30 && threadReadCount < 2; index += 1) await waitFor(0);
-      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(browserWindow.document.querySelector(".reader-loading")).not.toBeNull();
       expect(threadReadCount).toBe(2);
 
       mailboxVersion = 2;
@@ -4415,6 +4451,38 @@ describe("unread Focus Inbox contract", () => {
     await renderApp(defaultReaderPreferences, false, { initialDemoMessages: [inbox, sentReply, archived, olderFocus, latestNormal, fixture("quiet", 6, "quiet", true), fixture("hidden", 7, "hidden", true)], theme: "light" });
     expect(subjects()).toEqual(["latest-sent"]);
     expect(messageRow("latest-sent").classList.contains("message-row-unread")).toBe(true);
+  });
+
+  test.each([false, true])("captures unread before mark-read and cancels abandoned entry (cancel=%s)", async cancelled => {
+    browserWindow.history.replaceState({}, "", "/?destination=inbox");
+    const message = { ...fixture("catchup-race", 2, "normal", true), accountId: accountFixture.id };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] });
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const events: string[] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname.endsWith("/read")) { events.push("mark-read"); return new Response(null, { status: 204 }); }
+      if (url.pathname === `/v1/threads/${message.threadId}`) {
+        await gate;
+        const response = await base(input, init);
+        const detail = await response.json() as ThreadDetail;
+        events.push("detail");
+        return jsonResponse({ ...detail, messages: [0,1,2].map(i => ({ ...detail.messages[0]!, id: `race-${i}`, unread: i > 0, receivedAt: new Date(Date.UTC(2026,9,2,i)).toISOString() })) });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i=0;i<30 && !browserWindow.document.querySelector("button.message-row");i++) await waitFor(0);
+    await openMessage("catchup-race");
+    expect(events).toEqual([]);
+    if (cancelled) await goBackToInbox();
+    await act(async () => release());
+    for (let i=0;i<30 && !events.includes("mark-read");i++) await waitFor(0);
+    if (cancelled) { expect(events).not.toContain("mark-read"); return; }
+    expect(events.slice(0,2)).toEqual(["detail", "mark-read"]);
+    expect(browserWindow.document.querySelector(".reader-catchup-count")?.textContent).toBe("2 unread at entry");
+    expect(browserWindow.document.querySelector('[aria-controls="reader-card-race-1"]')?.getAttribute("aria-expanded")).toBe("true");
   });
 
   test.each([true, false])("pending read mutation rejects older pages and preserves unread on failure (success=%s)", async succeeded => {

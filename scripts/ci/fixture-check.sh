@@ -96,6 +96,7 @@ done
 if [[ "$mode" == browser ]]; then
   node apps/web/scripts/compose-fixture-e2e.mjs "$connection" "$work/browser" > "$work/checks.log" 2>&1
   node apps/web/scripts/reader-fixture-e2e.mjs "$connection" "$work/reader" >> "$work/checks.log" 2>&1
+  node apps/web/scripts/catchup-fixture-e2e.mjs "$connection" "$work/reader" head >> "$work/checks.log" 2>&1
 else
   # Exercise the production Swift client against this same isolated API before UI tests.
   bash apps/ios/Tools/check-api.sh "$connection" > "$work/checks.log" 2>&1
