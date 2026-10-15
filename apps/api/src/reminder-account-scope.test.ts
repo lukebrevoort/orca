@@ -61,7 +61,14 @@ test("reminders create against the thread's owned Gmail account, including the s
     assert.equal(reminder.id, `reminder-${account}`, "rescheduling preserves the existing identity");
     assert.equal(reminder.notify, true);
   }
-  assert.equal(db.select().from(threadReminders).all().length, 4);
+  db.insert(threads).values({ id: "fresh-second-thread", accountId: "second", providerThreadId: "fresh" }).run();
+  const freshResponse = await request("/v1/reminders", "POST", input("fresh-second-thread"));
+  assert.equal(freshResponse.status, 200);
+  const fresh = await freshResponse.json();
+  assert.equal(fresh.accountId, "second");
+  assert.equal(fresh.threadId, "fresh-second-thread");
+  assert.equal(fresh.status, "scheduled");
+  assert.equal(db.select().from(threadReminders).all().length, 5);
 }));
 
 test("reminders list and resurface both owned Gmail accounts without touching other accounts", async () => fixture(async ({ request, db, advance }) => {
