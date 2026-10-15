@@ -1,5 +1,10 @@
 # Give pstack a try in Orca
 
+For a fresh saved cloud instance, start with [reproducible cloud setup](cloud.md).
+For implementation, use the [task-to-draft procedure](task-to-pr.md) and its
+[status/handoff template](task-template.md). The original trial evidence remains
+historical evidence at its recorded commits, not verification of your new task.
+
 This is a repo-local **Codex adaptation** of Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/1e5c90a4b6f249917bd21fe361b3a2a7deb741b8/pstack), pinned to `1e5c90a4b6f249917bd21fe361b3a2a7deb741b8`. It supplies five explicit skill entry points and a runnable synthetic browser/API verification lifecycle. It does not install Cursor's plugin, model routing, background loops or automations. [Coverage](coverage.md) names every upstream skill and playbook, including unsupported capabilities.
 
 From a committed checkout with Python 3.12, git, Bun 1.3.14, Node 24, frozen-lockfile workspace dependencies and Playwright Chromium/OS dependencies already installed:
