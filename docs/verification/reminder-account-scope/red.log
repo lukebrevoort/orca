@@ -1,0 +1,75 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/reminder-account-scope.test.ts:
+53 | const input = (threadId: string) => ({ threadId, scheduledFor: "2026-10-18T12:00:00.000Z", timezone: "UTC", notify: true });
+54 | 
+55 | test("reminders create against the thread's owned Gmail account, including the second account", async () => fixture(async ({ request, db }) => {
+56 |   for (const account of ["first", "second"]) {
+57 |     const response = await request("/v1/reminders", "POST", input(`thread-${account}`));
+58 |     assert.equal(response.status, 200, `create on ${account} account`);
+                ^
+AssertionError: create on second account
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca/apps/api/src/reminder-account-scope.test.ts:58:12
+      at fixture (/workspace/orca/apps/api/src/reminder-account-scope.test.ts:46:5)
+      at processTicksAndRejections (native:7:39)
+(fail) reminders create against the thread's owned Gmail account, including the second account [187.29ms]
+64 |   assert.equal(db.select().from(threadReminders).all().length, 4);
+65 | }));
+66 | 
+67 | test("reminders list and resurface both owned Gmail accounts without touching other accounts", async () => fixture(async ({ request, db, advance }) => {
+68 |   const before = await (await request("/v1/reminders")).json();
+69 |   assert.deepEqual(before.map((r: { id: string }) => r.id), ["reminder-first", "reminder-second"]);
+              ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'reminder-first',
+-   'reminder-second'
+  ]
+
+ generatedMessage: true,
+     actual: [ "reminder-first" ],
+   expected: [ "reminder-first", "reminder-second" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca/apps/api/src/reminder-account-scope.test.ts:69:10
+      at fixture (/workspace/orca/apps/api/src/reminder-account-scope.test.ts:46:5)
+      at processTicksAndRejections (native:7:39)
+(fail) reminders list and resurface both owned Gmail accounts without touching other accounts [104.44ms]
+80 |   }
+81 | }));
+82 | 
+83 | test("second-account reminders can be snoozed, completed, and cancelled by their owner", async () => fixture(async ({ request }) => {
+84 |   const patch = await request("/v1/reminders/reminder-second", "PATCH", { scheduledFor: "2026-10-18T12:00:00.000Z", notify: true });
+85 |   assert.equal(patch.status, 200);
+              ^
+AssertionError: Expected values to be strictly equal:
+
+404 !== 200
+
+ generatedMessage: true,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca/apps/api/src/reminder-account-scope.test.ts:85:10
+      at fixture (/workspace/orca/apps/api/src/reminder-account-scope.test.ts:46:5)
+      at processTicksAndRejections (native:7:39)
+(fail) second-account reminders can be snoozed, completed, and cancelled by their owner [78.99ms]
+(pass) reminder mutations reject foreign, unsupported-provider, missing, and unauthenticated targets without writes [235.09ms]
+
+ 1 pass
+ 3 fail
+Ran 4 tests across 1 file. [1278.00ms]

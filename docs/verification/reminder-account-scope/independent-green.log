@@ -1,0 +1,16 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/index.test.ts:
+(pass) Orca API > persists account-level writing and reminder preferences [233.09ms]
+(pass) Orca API > schedules, resurfaces, completes, and cancels thread reminders with a controllable clock [242.34ms]
+
+apps/api/src/reminder-account-scope.test.ts:
+(pass) reminders create against the thread's owned Gmail account, including the second account [137.82ms]
+(pass) reminders list and resurface both owned Gmail accounts without touching other accounts [122.34ms]
+(pass) second-account reminders can be snoozed, completed, and cancelled by their owner [173.00ms]
+(pass) reminder mutations reject foreign, unsupported-provider, missing, and unauthenticated targets without writes [306.30ms]
+
+ 6 pass
+ 34 filtered out
+ 0 fail
+Ran 6 tests across 2 files. [1.98s]
