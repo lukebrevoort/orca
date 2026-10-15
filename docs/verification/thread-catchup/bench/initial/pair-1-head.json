@@ -1,0 +1,347 @@
+{
+  "revision": "head",
+  "syntheticOnly": true,
+  "browser": "154.0.8037.57",
+  "scenarios": [
+    {
+      "width": 1440,
+      "theme": "light",
+      "kind": "read",
+      "entry": "reader-card-catchup-239",
+      "readCalls": 0,
+      "samples": [
+        {
+          "trial": 0,
+          "operation": "expand",
+          "elapsedMs": 142.09999999997672,
+          "geometryCalls": 2,
+          "domNodes": 14280,
+          "TaskDurationMs": 147.4660000000001,
+          "ScriptDurationMs": 130.33700000000005,
+          "LayoutDurationMs": 2.0630000000000024,
+          "RecalcStyleDurationMs": 2.709000000000003
+        },
+        {
+          "trial": 0,
+          "operation": "collapse",
+          "elapsedMs": 141.20000000006985,
+          "geometryCalls": 2,
+          "domNodes": 14282,
+          "TaskDurationMs": 156.62700000000007,
+          "ScriptDurationMs": 132.57499999999987,
+          "LayoutDurationMs": 0.8710000000000002,
+          "RecalcStyleDurationMs": 1.223999999999996
+        },
+        {
+          "trial": 0,
+          "operation": "scroll",
+          "elapsedMs": 16.899999999906868,
+          "geometryCalls": 18,
+          "domNodes": 14282,
+          "TaskDurationMs": 4.231000000000096,
+          "ScriptDurationMs": 0.3910000000000302,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.19800000000000373
+        },
+        {
+          "trial": 1,
+          "operation": "expand",
+          "elapsedMs": 138.40000000002328,
+          "geometryCalls": 20,
+          "domNodes": 14280,
+          "TaskDurationMs": 142.94099999999997,
+          "ScriptDurationMs": 126.62200000000001,
+          "LayoutDurationMs": 2.017999999999999,
+          "RecalcStyleDurationMs": 2.1519999999999944
+        },
+        {
+          "trial": 1,
+          "operation": "collapse",
+          "elapsedMs": 144.09999999997672,
+          "geometryCalls": 20,
+          "domNodes": 14282,
+          "TaskDurationMs": 149.0429999999998,
+          "ScriptDurationMs": 135.791,
+          "LayoutDurationMs": 0.7649999999999983,
+          "RecalcStyleDurationMs": 1.5450000000000048
+        },
+        {
+          "trial": 1,
+          "operation": "scroll",
+          "elapsedMs": 8.20000000006985,
+          "geometryCalls": 6,
+          "domNodes": 14282,
+          "TaskDurationMs": 25.105999999999852,
+          "ScriptDurationMs": 0.6280000000000729,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.33199999999999896
+        },
+        {
+          "trial": 2,
+          "operation": "expand",
+          "elapsedMs": 142.59999999997672,
+          "geometryCalls": 2,
+          "domNodes": 14280,
+          "TaskDurationMs": 147.61900000000017,
+          "ScriptDurationMs": 130.28600000000012,
+          "LayoutDurationMs": 2.005,
+          "RecalcStyleDurationMs": 2.5979999999999963
+        },
+        {
+          "trial": 2,
+          "operation": "collapse",
+          "elapsedMs": 133,
+          "geometryCalls": 2,
+          "domNodes": 14282,
+          "TaskDurationMs": 137.30900000000014,
+          "ScriptDurationMs": 123.942,
+          "LayoutDurationMs": 0.7619999999999988,
+          "RecalcStyleDurationMs": 1.583000000000008
+        },
+        {
+          "trial": 2,
+          "operation": "scroll",
+          "elapsedMs": 30.300000000046566,
+          "geometryCalls": 18,
+          "domNodes": 14282,
+          "TaskDurationMs": 6.0789999999997235,
+          "ScriptDurationMs": 0.7819999999998384,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.4079999999999917
+        },
+        {
+          "trial": 3,
+          "operation": "expand",
+          "elapsedMs": 146.09999999997672,
+          "geometryCalls": 20,
+          "domNodes": 14280,
+          "TaskDurationMs": 150.3549999999998,
+          "ScriptDurationMs": 134.04300000000012,
+          "LayoutDurationMs": 2.138000000000001,
+          "RecalcStyleDurationMs": 2.348000000000003
+        },
+        {
+          "trial": 3,
+          "operation": "collapse",
+          "elapsedMs": 137.19999999995343,
+          "geometryCalls": 20,
+          "domNodes": 14282,
+          "TaskDurationMs": 142.71999999999974,
+          "ScriptDurationMs": 128.74099999999999,
+          "LayoutDurationMs": 0.7750000000000048,
+          "RecalcStyleDurationMs": 1.380000000000006
+        },
+        {
+          "trial": 3,
+          "operation": "scroll",
+          "elapsedMs": 11.800000000046566,
+          "geometryCalls": 6,
+          "domNodes": 14282,
+          "TaskDurationMs": 20.157999999999898,
+          "ScriptDurationMs": 0.6019999999997694,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.26199999999999835
+        },
+        {
+          "trial": 4,
+          "operation": "expand",
+          "elapsedMs": 135.69999999995343,
+          "geometryCalls": 2,
+          "domNodes": 14280,
+          "TaskDurationMs": 140.60499999999988,
+          "ScriptDurationMs": 120.67300000000003,
+          "LayoutDurationMs": 1.999999999999995,
+          "RecalcStyleDurationMs": 4.497000000000001
+        },
+        {
+          "trial": 4,
+          "operation": "collapse",
+          "elapsedMs": 139.30000000004657,
+          "geometryCalls": 2,
+          "domNodes": 14282,
+          "TaskDurationMs": 145.84300000000016,
+          "ScriptDurationMs": 129.15500000000034,
+          "LayoutDurationMs": 0.6410000000000027,
+          "RecalcStyleDurationMs": 1.3779999999999903
+        },
+        {
+          "trial": 4,
+          "operation": "scroll",
+          "elapsedMs": 30.800000000046566,
+          "geometryCalls": 18,
+          "domNodes": 14282,
+          "TaskDurationMs": 6.353999999999971,
+          "ScriptDurationMs": 0.6469999999998421,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.3670000000000062
+        },
+        {
+          "trial": 5,
+          "operation": "expand",
+          "elapsedMs": 139.40000000002328,
+          "geometryCalls": 20,
+          "domNodes": 14280,
+          "TaskDurationMs": 143.6550000000003,
+          "ScriptDurationMs": 125.9920000000001,
+          "LayoutDurationMs": 2.460999999999998,
+          "RecalcStyleDurationMs": 2.724000000000004
+        },
+        {
+          "trial": 5,
+          "operation": "collapse",
+          "elapsedMs": 132.69999999995343,
+          "geometryCalls": 20,
+          "domNodes": 14282,
+          "TaskDurationMs": 138.11600000000013,
+          "ScriptDurationMs": 123.92199999999987,
+          "LayoutDurationMs": 0.8400000000000005,
+          "RecalcStyleDurationMs": 1.3109999999999928
+        },
+        {
+          "trial": 5,
+          "operation": "scroll",
+          "elapsedMs": 9.400000000023283,
+          "geometryCalls": 6,
+          "domNodes": 14282,
+          "TaskDurationMs": 20.03900000000014,
+          "ScriptDurationMs": 0.4499999999998394,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.3660000000000052
+        },
+        {
+          "trial": 6,
+          "operation": "expand",
+          "elapsedMs": 136.20000000006985,
+          "geometryCalls": 2,
+          "domNodes": 14280,
+          "TaskDurationMs": 141.1960000000003,
+          "ScriptDurationMs": 124.51299999999988,
+          "LayoutDurationMs": 2.169000000000004,
+          "RecalcStyleDurationMs": 2.553
+        },
+        {
+          "trial": 6,
+          "operation": "collapse",
+          "elapsedMs": 130.09999999997672,
+          "geometryCalls": 2,
+          "domNodes": 14282,
+          "TaskDurationMs": 136.15100000000035,
+          "ScriptDurationMs": 121.25200000000014,
+          "LayoutDurationMs": 0.7469999999999977,
+          "RecalcStyleDurationMs": 1.4279999999999986
+        },
+        {
+          "trial": 6,
+          "operation": "scroll",
+          "elapsedMs": 22.400000000023283,
+          "geometryCalls": 18,
+          "domNodes": 14282,
+          "TaskDurationMs": 5.758999999999848,
+          "ScriptDurationMs": 0.5739999999998524,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.5879999999999913
+        },
+        {
+          "trial": 7,
+          "operation": "expand",
+          "elapsedMs": 139.19999999995343,
+          "geometryCalls": 20,
+          "domNodes": 14280,
+          "TaskDurationMs": 140.5960000000004,
+          "ScriptDurationMs": 125.92299999999979,
+          "LayoutDurationMs": 1.9450000000000023,
+          "RecalcStyleDurationMs": 2.6720000000000077
+        },
+        {
+          "trial": 7,
+          "operation": "collapse",
+          "elapsedMs": 132.90000000002328,
+          "geometryCalls": 20,
+          "domNodes": 14282,
+          "TaskDurationMs": 137.93200000000016,
+          "ScriptDurationMs": 123.90299999999988,
+          "LayoutDurationMs": 0.3769999999999954,
+          "RecalcStyleDurationMs": 1.5889999999999933
+        },
+        {
+          "trial": 7,
+          "operation": "scroll",
+          "elapsedMs": 26.199999999953434,
+          "geometryCalls": 6,
+          "domNodes": 14282,
+          "TaskDurationMs": 24.33899999999989,
+          "ScriptDurationMs": 0.4220000000003665,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.28800000000001047
+        },
+        {
+          "trial": 8,
+          "operation": "expand",
+          "elapsedMs": 133.79999999993015,
+          "geometryCalls": 2,
+          "domNodes": 14280,
+          "TaskDurationMs": 138.62299999999993,
+          "ScriptDurationMs": 120.70999999999987,
+          "LayoutDurationMs": 2.3029999999999995,
+          "RecalcStyleDurationMs": 2.925999999999998
+        },
+        {
+          "trial": 8,
+          "operation": "collapse",
+          "elapsedMs": 127.40000000002328,
+          "geometryCalls": 2,
+          "domNodes": 14282,
+          "TaskDurationMs": 136.42999999999984,
+          "ScriptDurationMs": 118.70099999999972,
+          "LayoutDurationMs": 0.7180000000000033,
+          "RecalcStyleDurationMs": 1.677999999999999
+        },
+        {
+          "trial": 8,
+          "operation": "scroll",
+          "elapsedMs": 23.5,
+          "geometryCalls": 18,
+          "domNodes": 14282,
+          "TaskDurationMs": 3.222000000000058,
+          "ScriptDurationMs": 0.33600000000033603,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.1900000000000096
+        },
+        {
+          "trial": 9,
+          "operation": "expand",
+          "elapsedMs": 146.09999999997672,
+          "geometryCalls": 20,
+          "domNodes": 14280,
+          "TaskDurationMs": 150.47499999999968,
+          "ScriptDurationMs": 131.64499999999978,
+          "LayoutDurationMs": 2.1580000000000004,
+          "RecalcStyleDurationMs": 3.143999999999994
+        },
+        {
+          "trial": 9,
+          "operation": "collapse",
+          "elapsedMs": 151.60000000009313,
+          "geometryCalls": 20,
+          "domNodes": 14282,
+          "TaskDurationMs": 157.32800000000057,
+          "ScriptDurationMs": 143.52100000000024,
+          "LayoutDurationMs": 0.6479999999999958,
+          "RecalcStyleDurationMs": 1.3070000000000026
+        },
+        {
+          "trial": 9,
+          "operation": "scroll",
+          "elapsedMs": 9.199999999953434,
+          "geometryCalls": 6,
+          "domNodes": 14282,
+          "TaskDurationMs": 26.45699999999973,
+          "ScriptDurationMs": 0.6870000000001042,
+          "LayoutDurationMs": 0,
+          "RecalcStyleDurationMs": 0.36899999999999433
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

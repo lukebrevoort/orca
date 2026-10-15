@@ -1,0 +1,92 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/index.test.ts:
+(pass) Orca API > requires a session before returning auth state [48.96ms]
+(pass) Orca API > requires a session before returning an account [0.50ms]
+(pass) Orca API > lists every connected provider and disconnects only owned accounts with local data [305.55ms]
+(pass) Orca API > keeps Gmail-only routes on Gmail when Outlook was connected first [413.04ms]
+(pass) Orca API > requires a session before returning inbox data [0.59ms]
+(pass) Orca API > persists account-level writing and reminder preferences [244.70ms]
+(pass) Orca API > BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings [506.76ms]
+(pass) Orca API > persists onboarding completion and exposes it on later session checks [201.57ms]
+(pass) Orca API > creates account-owned drafts with revisions and a safe delivery boundary [485.65ms]
+(pass) Orca API > persists Gmail drafts and sends exactly once after reserving the idempotency key [287.30ms]
+(pass) Orca API > marks an unconfirmed Gmail send as ambiguous instead of retrying it [204.80ms]
+(pass) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable [414.67ms]
+(pass) Orca API > dispatches account lifecycle through a partial custom registry [500.98ms]
+outlook sync failed {
+  userId: "outlook_user",
+  error: 12 | export const outlookProvider: MailProviderAdapter = {
+13 |   provider: "outlook",
+14 |   createOAuthApp: createOutlookAuthApp,
+15 |   detectCapabilities: detectOutlookCapabilities,
+16 |   async syncPage() {
+17 |     throw new ProviderNotImplementedError("outlook", "sync");
+               ^
+ProviderNotImplementedError: outlook sync is not implemented
+  provider: "outlook",
+ operation: "sync",
+
+      at syncPage (/workspace/orca/apps/api/src/providers/outlook/provider.ts:17:11)
+      at <anonymous> (/workspace/orca/apps/api/src/index.ts:2596:47)
+      at dispatch (/workspace/orca/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/workspace/orca/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/workspace/orca/apps/api/src/index.test.ts:757:42)
+,
+}
+(pass) Orca API > dispatches a registered Outlook account and keeps unsupported sync explicit [172.59ms]
+(pass) Orca API > rejects blank inbox cursors [1.30ms]
+(pass) Orca API > returns an account-scoped, chronological reader snapshot with sanitized HTML [314.61ms]
+(pass) Orca API > filters and deterministically sorts explainable attention views [264.42ms]
+(pass) Orca API > merges two owned accounts with account-local attention rules, metadata, and cursors [483.96ms]
+(pass) Orca API > filters effective Human Inbox and Tideline classes before pagination without crossing accounts or filter modes [326.96ms]
+(pass) Orca API > serves the shared M5 matrix across providers with counts, cursors, overrides, and mixed threads [299.84ms]
+(pass) Orca API > resolves classification for a mailbox-sized page with account overrides loaded once [193.31ms]
+(pass) Orca API > keeps collections additive, orders pins deterministically, and deletes only organization metadata [500.52ms]
+(pass) Orca API > imports selected Gmail labels once, supports skip, and handles accounts with no user labels [345.93ms]
+(pass) Orca API > schedules, resurfaces, completes, and cancels thread reminders with a controllable clock [283.31ms]
+(pass) Orca API > upgrades a database at migration 0003 with the reader storage migrations [74.46ms]
+(pass) Orca API > runs the manual Gmail sync endpoint for an authenticated user [145.62ms]
+(pass) Orca API > runs manual Gmail sync against the selected stacked account [162.11ms]
+(pass) Orca API > serializes manual Gmail sync behind existing account work [185.67ms]
+(pass) Orca API > reports per-account sync status and last successful sync time [145.58ms]
+gmail sync failed {
+  userId: "user_1",
+  error: 1836 | 
+1837 |       const session = await createSession(db, "user_1");
+1838 |       const testApp = createApp({
+1839 |         dbFactory: () => createDatabaseClient(dbPath),
+1840 |         syncPage: async () => {
+1841 |           throw new GmailSyncError("raw upstream detail acct_1", "provider_error");
+                       ^
+GmailSyncError: raw upstream detail acct_1
+ code: "provider_error"
+
+      at syncPage (/workspace/orca/apps/api/src/index.test.ts:1841:17)
+      at syncIncrementalPages (/workspace/orca/apps/api/src/providers/gmail/sync-runtime.ts:221:26)
+      at <anonymous> (/workspace/orca/apps/api/src/providers/gmail/sync-runtime.ts:176:29)
+      at drainOwned (/workspace/orca/apps/api/src/providers/gmail/sync-coordinator.ts:232:32)
+      at drainAccount (/workspace/orca/apps/api/src/providers/gmail/sync-coordinator.ts:214:19)
+,
+}
+(pass) Orca API > maps provider sync failures to a bounded public error response [196.63ms]
+(pass) Orca API > persists account-scoped sender rules, resolves precedence, and resets to the next rule [257.82ms]
+(pass) Orca API > validates, authorizes, and canonically reconciles account-scoped batch sender attention changes [241.13ms]
+(pass) Orca API > persists presentation independently of attention behavior [172.82ms]
+(pass) Orca API > keeps local human classification overrides account-scoped and resolves precedence without provider mutations [565.35ms]
+(pass) Orca API > resolves a large message batch from one preloaded classification override map [2.74ms]
+(pass) Orca API > marks entire thread as read including all emails [151.26ms]
+
+apps/api/src/reminder-account-scope.test.ts:
+(pass) reminders create against the thread's owned Gmail account, including the second account [191.93ms]
+(pass) reminders list and resurface both owned Gmail accounts without touching other accounts [225.72ms]
+(pass) second-account reminders can be snoozed, completed, and cancelled by their owner [196.64ms]
+(pass) reminder mutations reject foreign, unsupported-provider, missing, and unauthenticated targets without writes [382.20ms]
+
+ 40 pass
+ 0 fail
+Ran 40 tests across 2 files. [11.26s]

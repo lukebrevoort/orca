@@ -1,19 +1,33 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 
-/** Keep exact geometry after focus enters message content. This is synchronous
- * so the browser's default focus scroll sees rendered heights. Retain it until
+/** Keep exact geometry after focus enters message content. The browser can
+ * scroll before focusin; preserve its chosen visible offset while revealing bodies. Retain it until
  * this thread unmounts: changing back during Tab/Shift+Tab can move the target.
  * Display controls do not opt in, so ordinary view toggles keep the fast path. */
-export function ReaderMessageList({ children }: { children: ReactNode }) {
+export function ReaderMessageList({ children, restorePosition = false }: { children: ReactNode; restorePosition?: boolean }) {
   const [fullBodyLayout, setFullBodyLayout] = useState(false);
   return <div className="reader-message-list" aria-label="Messages in conversation" role="region"
-    data-full-body-layout={fullBodyLayout ? "true" : undefined}
+    data-full-body-layout={fullBodyLayout || restorePosition ? "true" : undefined}
     onFocusCapture={(event) => {
       const target = event.target;
-      if (fullBodyLayout || !(target instanceof HTMLElement)
+      if (fullBodyLayout || restorePosition || !(target instanceof HTMLElement)
         || !target.closest(".reader-content") || target.closest(".reader-display-controls")) return;
+      const workspace = event.currentTarget.closest<HTMLElement>(".desktop-workspace");
+      const before = target.getBoundingClientRect();
+      const contained = workspace && /^(auto|scroll)$/.test(window.getComputedStyle(workspace).overflowY);
+      const viewport = contained ? workspace.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      // Only preserve a position the browser already revealed. In particular,
+      // offscreen focus({ preventScroll: true }) must not trigger our own reveal.
+      const wasVisible = before.bottom > viewport.top && before.top < viewport.bottom;
       flushSync(() => setFullBodyLayout(true));
+      if (wasVisible) {
+        const delta = target.getBoundingClientRect().top - before.top;
+        if (delta) {
+          if (contained) workspace.scrollTop += delta;
+          else window.scrollBy({ top: delta, behavior: "instant" });
+        }
+      }
     }}>{children}</div>;
 }
 

@@ -6,7 +6,7 @@ import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -1944,10 +1944,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/reminders", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-      if (!account) return noConnectedAccount(c);
-      resurfaceDueReminders(db, account.id, now());
-      const records = db.select().from(threadReminders).where(eq(threadReminders.accountId, account.id)).orderBy(asc(threadReminders.scheduledFor), asc(threadReminders.id)).all();
+      const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+      if (accountIds.length === 0) return noConnectedAccount(c);
+      const currentTime = now();
+      for (const accountId of accountIds) resurfaceDueReminders(db, accountId, currentTime);
+      const records = db.select().from(threadReminders).where(inArray(threadReminders.accountId, accountIds)).orderBy(asc(threadReminders.scheduledFor), asc(threadReminders.id)).all();
       return c.json(records.map(toReminder));
     } finally { sqlite.close(); }
   });
@@ -1959,16 +1960,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-      if (!account) return noConnectedAccount(c);
+      const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+      if (accountIds.length === 0) return noConnectedAccount(c);
       const input = c.req.valid("json");
       const scheduledFor = validateReminderTime(c, input.scheduledFor, input.timezone, now());
       if (!scheduledFor) return c.json({ error: { code: "validation_error", message: "Choose a future time in a valid timezone" } }, 400);
-      const thread = db.select().from(threads).where(and(eq(threads.id, input.threadId), eq(threads.accountId, account.id))).get();
+      const thread = db.select().from(threads).where(and(eq(threads.id, input.threadId), inArray(threads.accountId, accountIds))).get();
       if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
-      const existing = db.select().from(threadReminders).where(and(eq(threadReminders.accountId, account.id), eq(threadReminders.threadId, input.threadId), eq(threadReminders.status, "scheduled"))).get();
+      const existing = db.select().from(threadReminders).where(and(eq(threadReminders.accountId, thread.accountId), eq(threadReminders.threadId, input.threadId), eq(threadReminders.status, "scheduled"))).get();
       const id = existing?.id ?? `reminder:${crypto.randomUUID()}`;
-      db.insert(threadReminders).values({ id, accountId: account.id, threadId: input.threadId, scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled" })
+      db.insert(threadReminders).values({ id, accountId: thread.accountId, threadId: input.threadId, scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled" })
         .onConflictDoUpdate({ target: threadReminders.id, set: { scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, updatedAt: now() } }).run();
       return jsonWithSchema(c, reminderSchema, toReminder(db.select().from(threadReminders).where(eq(threadReminders.id, id)).get()!));
     } finally { sqlite.close(); }
@@ -1981,9 +1982,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-      if (!account) return noConnectedAccount(c);
-      const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, c.req.param("id")), eq(threadReminders.accountId, account.id))).get();
+      const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+      if (accountIds.length === 0) return noConnectedAccount(c);
+      const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, c.req.param("id")), inArray(threadReminders.accountId, accountIds))).get();
       if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
       const input = c.req.valid("json");
       const timezone = input.timezone ?? record.timezone;
@@ -2891,11 +2892,11 @@ function updateReminderTerminal(
 ) {
   const { db, sqlite } = dbFactory();
   try {
-    const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-    if (!account) return noConnectedAccount(c);
+    const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+    if (accountIds.length === 0) return noConnectedAccount(c);
     const reminderId = c.req.param("id");
     if (!reminderId) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
-    const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, reminderId), eq(threadReminders.accountId, account.id))).get();
+    const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, reminderId), inArray(threadReminders.accountId, accountIds))).get();
     if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
     if (record.status !== status) {
       const timestamp = now();

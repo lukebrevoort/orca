@@ -121,6 +121,28 @@ describe("message body alternatives", () => {
 
 
 describe("reader content focus layout", () => {
+  for (const visible of [true, false]) test(`preserves ${visible ? "visible focus offset" : "offscreen no-scroll intent"} when body geometry changes`, async () => {
+    await act(async () => root.render(<section className="desktop-workspace" style={{ overflowY: "auto" }}><ReaderMessageList><ReaderBody html={html} text={text} /></ReaderMessageList></section>));
+    const workspace = container.querySelector(".desktop-workspace") as HTMLElement;
+    const list = container.querySelector(".reader-message-list") as HTMLElement;
+    const link = container.querySelector("a") as HTMLElement;
+    workspace.scrollTop = 100;
+    workspace.getBoundingClientRect = () => ({ top: 0, bottom: 1000 } as DOMRect);
+    link.getBoundingClientRect = () => {
+      const top = (visible ? 490 : 4000) + (list.dataset.fullBodyLayout ? 1412 : 0);
+      return { top, bottom: top + 20 } as DOMRect;
+    };
+    await act(async () => link.focus({ preventScroll: !visible }));
+    expect(list.dataset.fullBodyLayout).toBe("true");
+    expect(workspace.scrollTop).toBe(visible ? 1512 : 100);
+  });
+  test("restored exact geometry needs no focus correction", async () => {
+    await act(async () => root.render(<ReaderMessageList restorePosition><ReaderBody html={html} text={text} /></ReaderMessageList>));
+    const link = container.querySelector("a") as HTMLElement;
+    link.getBoundingClientRect = () => { throw new Error("Already exact layout must not be measured again"); };
+    await act(async () => link.focus());
+    expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBe("true");
+  });
   test("keeps pointer display controls fast, then retains exact geometry through keyboard exit", async () => {
     await act(async () => root.render(<ReaderMessageList><ReaderBody html={html} text={text} /></ReaderMessageList>));
     const list = container.querySelector(".reader-message-list") as HTMLElement;
@@ -130,7 +152,7 @@ describe("reader content focus layout", () => {
     const originalLink = container.querySelector(".reader-body-html a") as HTMLAnchorElement;
     await act(async () => {
       originalLink.focus();
-      // Focus scrolling happens before the next frame: state must be committed
+      // The focus transition must finish before the next frame: state is committed
       // before focus() returns, rather than waiting for an effect.
       expect(list.dataset.fullBodyLayout).toBe("true");
     });
