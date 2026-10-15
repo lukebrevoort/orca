@@ -9,6 +9,27 @@ import {
 import { gmailMessageFixture } from "./fixtures/message.fixture.ts";
 
 describe("Gmail normalizer", () => {
+  test("uses the missing-date fallback for malformed or out-of-range internal dates", () => {
+    for (const internalDate of [undefined, "", "invalid", "Infinity", "-Infinity", "8640000000000001", "-8640000000000001"]) {
+      const normalized = normalizeGmailMessage({ ...gmailMessageFixture, internalDate }, { accountId: "acct_123" });
+      assert.equal(normalized.receivedAt, "1970-01-01T00:00:00.000Z", String(internalDate));
+    }
+  });
+
+  test("preserves valid numeric and date-string internal dates", () => {
+    for (const [internalDate, expected] of [
+      ["1782671400000", "2026-06-28T18:30:00.000Z"],
+      ["2026-06-28T18:30:00.000Z", "2026-06-28T18:30:00.000Z"],
+      ["0", "1970-01-01T00:00:00.000Z"],
+      ["-1", "1969-12-31T23:59:59.999Z"],
+      ["8640000000000000", "+275760-09-13T00:00:00.000Z"],
+      ["-8640000000000000", "-271821-04-20T00:00:00.000Z"],
+    ]) {
+      const normalized = normalizeGmailMessage({ ...gmailMessageFixture, internalDate }, { accountId: "acct_123" });
+      assert.equal(normalized.receivedAt, expected, internalDate);
+    }
+  });
+
   test("maps Gmail messages to normalized Orca messages", () => {
     const normalized = normalizeGmailMessage(gmailMessageFixture, {
       accountId: "acct_123",

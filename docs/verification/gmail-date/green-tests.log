@@ -1,0 +1,27 @@
+Development run; uncommitted fix and tests; final commit verification pending
+Command: /workspace/.orca-tools/node_modules/.bin/bun test apps/api/src/providers/gmail/normalizer.test.ts apps/api/src/providers/gmail/normalizer-date-persistence.test.ts apps/api/src/providers/gmail/sync-persistence.test.ts
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:
+(pass) malformed dates do not abort a batch or overwrite another account's matching provider IDs [114.15ms]
+
+apps/api/src/providers/gmail/normalizer.test.ts:
+(pass) Gmail normalizer > uses the missing-date fallback for malformed or out-of-range internal dates [0.72ms]
+(pass) Gmail normalizer > preserves valid numeric and date-string internal dates [0.28ms]
+(pass) Gmail normalizer > maps Gmail messages to normalized Orca messages [0.18ms]
+(pass) Gmail normalizer > reduces Gmail list headers and categories to safe classifier evidence [0.15ms]
+(pass) Gmail normalizer > keeps the M5 Gmail category cases aligned with adapter evidence [0.37ms]
+(pass) Gmail normalizer > maps Gmail labels to normalized labels [0.06ms]
+(pass) Gmail normalizer > accepts an angle-bracket address without a display name [0.14ms]
+(pass) Gmail normalizer > extracts attachment metadata without fetching attachment content [0.17ms]
+(pass) Gmail normalizer > maps normalized messages to a normalized thread [0.27ms]
+
+apps/api/src/providers/gmail/sync-persistence.test.ts:
+(pass) Gmail batch persistence > writes 25 changed messages in bounded batches and skips an unchanged replay [99.37ms]
+(pass) Gmail batch persistence > rolls back mail and aggregate writes when a batch projection fails [91.00ms]
+
+ 12 pass
+ 0 fail
+Ran 12 tests across 3 files. [608.00ms]
+
+Exit: 0

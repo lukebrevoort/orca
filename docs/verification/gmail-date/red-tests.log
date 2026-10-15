@@ -1,0 +1,46 @@
+Base: 2d104ea394cc319c085d8983d2c17a923c2be467; uncommitted regression tests, original product code
+Command: /workspace/.orca-tools/node_modules/.bin/bun test apps/api/src/providers/gmail/normalizer.test.ts apps/api/src/providers/gmail/normalizer-date-persistence.test.ts
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:
+26 |   message: GmailMessage,
+27 |   options: NormalizeOptions,
+28 | ): NormalizedGmailMessage {
+29 |   const headers = getHeaders(message.payload);
+30 |   const subject = headers.get("subject") ?? "(No subject)";
+31 |   const receivedAt = normalizeInternalDate(message.internalDate);
+                          ^
+RangeError: Invalid Date
+      at normalizeGmailMessage (/workspace/orca-pilot/apps/api/src/providers/gmail/normalizer.ts:31:22)
+      at map (1:11)
+      at persistGmailMessages (/workspace/orca-pilot/apps/api/src/providers/gmail/sync.ts:306:50)
+      at <anonymous> (/workspace/orca-pilot/apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:55:26)
+(fail) malformed dates do not abort a batch or overwrite another account's matching provider IDs [145.93ms]
+
+apps/api/src/providers/gmail/normalizer.test.ts:
+26 |   message: GmailMessage,
+27 |   options: NormalizeOptions,
+28 | ): NormalizedGmailMessage {
+29 |   const headers = getHeaders(message.payload);
+30 |   const subject = headers.get("subject") ?? "(No subject)";
+31 |   const receivedAt = normalizeInternalDate(message.internalDate);
+                          ^
+RangeError: Invalid Date
+      at normalizeGmailMessage (/workspace/orca-pilot/apps/api/src/providers/gmail/normalizer.ts:31:22)
+      at <anonymous> (/workspace/orca-pilot/apps/api/src/providers/gmail/normalizer.test.ts:14:26)
+      at fn (node:test:215:18)
+(fail) Gmail normalizer > uses the missing-date fallback for malformed or out-of-range internal dates [0.71ms]
+(pass) Gmail normalizer > preserves valid numeric and date-string internal dates [0.45ms]
+(pass) Gmail normalizer > maps Gmail messages to normalized Orca messages [0.30ms]
+(pass) Gmail normalizer > reduces Gmail list headers and categories to safe classifier evidence [0.20ms]
+(pass) Gmail normalizer > keeps the M5 Gmail category cases aligned with adapter evidence [0.30ms]
+(pass) Gmail normalizer > maps Gmail labels to normalized labels [0.06ms]
+(pass) Gmail normalizer > accepts an angle-bracket address without a display name [0.09ms]
+(pass) Gmail normalizer > extracts attachment metadata without fetching attachment content [0.08ms]
+(pass) Gmail normalizer > maps normalized messages to a normalized thread [0.25ms]
+
+ 8 pass
+ 2 fail
+Ran 10 tests across 2 files. [451.00ms]
+
+Exit: 1

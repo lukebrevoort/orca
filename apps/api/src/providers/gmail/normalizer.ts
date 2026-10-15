@@ -159,7 +159,8 @@ function normalizeInternalDate(internalDate: string | undefined): string {
   }
 
   const timestamp = Number(internalDate);
-  return new Date(Number.isFinite(timestamp) ? timestamp : Date.parse(internalDate)).toISOString();
+  const date = new Date(Number.isFinite(timestamp) ? timestamp : Date.parse(internalDate));
+  return Number.isFinite(date.getTime()) ? date.toISOString() : new Date(0).toISOString();
 }
 
 function findBodyPart(part: GmailMessagePart | undefined, mimeType: string): string | null {

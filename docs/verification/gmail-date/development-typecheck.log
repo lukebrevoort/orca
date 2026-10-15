@@ -1,0 +1,10 @@
+Development run; uncommitted fix/tests
+Command: /workspace/.orca-tools/node_modules/.bin/bun run typecheck
+$ bun --filter '*' typecheck
+@orca/shared typecheck: Exited with code 0
+@orca/api typecheck: src/providers/gmail/normalizer-date-persistence.test.ts(62,18): error TS18047: 'fallback.receivedAt' is possibly 'null'.
+@orca/api typecheck: src/providers/gmail/normalizer-date-persistence.test.ts(68,20): error TS18047: 'thread.latestReceivedAt' is possibly 'null'.
+@orca/api typecheck: Exited with code 2
+@orca/web typecheck: Exited with code 0
+
+Exit: 2
