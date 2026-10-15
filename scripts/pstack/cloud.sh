@@ -10,6 +10,15 @@ fi
 TOOLS=${ORCA_PSTACK_TOOLS:-$DEFAULT_TOOLS}
 [[ "$TOOLS" = /* ]] || { echo 'ORCA_PSTACK_TOOLS must be an absolute path' >&2; exit 1; }
 BUN_VERSION=1.3.14
+# Activation adds the executable's directory to PATH; its name must be `bun`.
+# Reject an explicit override before setup can fall back or install anything.
+if [[ -n "${ORCA_PSTACK_BUN:-}" ]]; then
+  if [[ "$ORCA_PSTACK_BUN" != /* || "${ORCA_PSTACK_BUN##*/}" != bun || ! -x "$ORCA_PSTACK_BUN" ]] ||
+      [[ "$("$ORCA_PSTACK_BUN" --version)" != "$BUN_VERSION" ]]; then
+    echo "ORCA_PSTACK_BUN must be an absolute executable named bun at version $BUN_VERSION" >&2
+    exit 1
+  fi
+fi
 
 select_bun() {
   local candidate
@@ -93,7 +102,7 @@ Usage: bash scripts/pstack/cloud.sh {setup|env|doctor}
   env     Print shell-quoted exports for eval; no installation or profile changes.
   doctor  Check runtimes, dependencies, browser executable and actual browser launch.
 Optional: ORCA_PSTACK_TOOLS (absolute user-writable cache), ORCA_PSTACK_BUN
-(existing Bun 1.3.14), PLAYWRIGHT_BROWSERS_PATH, ORCA_CHROMIUM_EXECUTABLE.
+(absolute executable named bun, version 1.3.14), PLAYWRIGHT_BROWSERS_PATH, ORCA_CHROMIUM_EXECUTABLE.
 OS packages are never installed. Missing OS libraries require cloud-image provisioning.
 HELP
     ;;

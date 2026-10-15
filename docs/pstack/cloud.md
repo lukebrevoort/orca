@@ -33,6 +33,10 @@ and makes no changes; evaluate it in each new shell. Do not add it to a persiste
 shell profile. Custom `PLAYWRIGHT_BROWSERS_PATH` and
 `ORCA_CHROMIUM_EXECUTABLE` are respected; the latter skips the browser download.
 Use `ORCA_PSTACK_BUN` to select an existing exact-version executable explicitly.
+The override must be an absolute executable path whose basename is `bun` (a
+symlink named `bun` is accepted). Invalid explicit overrides fail before any
+fallback or installation; activation needs that name for downstream `bun`
+commands.
 
 The doctor checks the existing verification prerequisites and launches a new
 headless browser with an in-memory synthetic page. Missing shared libraries fail
