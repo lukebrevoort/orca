@@ -116,6 +116,11 @@ final class ReaderUITests: XCTestCase {
         let reopenedLoad = app.buttons["message.load-images"]
         for _ in 0..<4 { if reopenedLoad.isHittable { break }; app.swipeUp() }
         reopenedLoad.tap()
+        for _ in 0..<10 {
+            if try imageDownloadCount() == initialDownloads + 2 { break }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 2, "The delayed request must be in flight before navigating away")
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
         row.tap()
