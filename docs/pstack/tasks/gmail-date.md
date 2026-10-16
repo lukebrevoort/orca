@@ -1,28 +1,20 @@
-# Gmail timestamp fallback pilot
+# Gmail timestamp recovery pilot
 
-- Intent / selected playbook: `bug-fix`; prevent malformed Gmail `internalDate` from aborting a persistence batch. Reuse the existing missing-date epoch policy.
-- Acceptance: invalid and out-of-range timestamps normalize to epoch; valid numeric/ISO dates retain behavior; a mixed valid/invalid batch persists; another account's colliding provider IDs remain unchanged.
-- Owner / independent reviewer: `/root/pilot_scope`; `/root/pilot_review`. Separate agents, model diversity not claimed.
-- Status: **running**
-- Updated (UTC): 2026-10-15
-- Base SHA / branch / worktree / draft PR: `2d104ea394cc319c085d8983d2c17a923c2be467`; `fix/pstack-gmail-date`; `/workspace/orca-pilot`; draft creation pending parent publication.
-- Scope: Gmail normalizer and focused synthetic tests only. Excludes PR235 search/performance, PR248 workflow, merged #249 catch-up and #250 reminder behavior. Does not edit sync implementation or existing performance tests.
-- Dependencies / next action / blocker: workflow procedure read from `/workspace/orca-pstack` integration commit `94649278aa95de058221d3eb757e3e59c2e78647`; product base remains main. Next: parent publishes draft and follows automatic CI. No implementation blocker.
-- Fixture/privacy: temporary migrated SQLite DB, synthetic example.com identities, same provider message/thread IDs in two accounts. Assert account B's full email rows unchanged, account-scoped thread IDs, correct message counts/latest timestamps. No live API/mail, credentials or persistent database changes.
-- Before-fix: [original red log](../../verification/gmail-date/red-tests.log): 2 failures, 8 passes on main product code plus new tests. Both failures are `RangeError: Invalid Date` at normalizer entry; batch fails before writes. [Development green](../../verification/gmail-date/green-tests.log): 12 passes, no failures after guard.
-- Final executable commit / final PR head: `c970faf7cb4caea9b389de1bd5c35d4e65fba45e`; final PR head is a subsequent docs/evidence-only commit.
-- Verification: `bun run test` passed at `c970faf7cb4caea9b389de1bd5c35d4e65fba45e`: shared 95 + API 747 + web 642 = **1,484 passes, 0 failures**, exit 0 ([log](../../verification/gmail-date/final-tests.log)); `bun run typecheck` passed all workspaces, exit 0 ([log](../../verification/gmail-date/final-typecheck.log)). Bun 1.3.14, frozen-lockfile install in isolated worktree. Final evidence commit changes documentation/logs only.
-- Independent review: `/root/pilot_review` approved base `2d104ea394cc319c085d8983d2c17a923c2be467` → head `c970faf7cb4caea9b389de1bd5c35d4e65fba45e`; independently ran 12 focused tests successfully; no code blockers. See [review](../../verification/gmail-date/review.md).
-- UI evidence: not applicable; no UI changes. Compose browser trial cannot establish provider timestamp correctness and is intentionally not duplicated.
-- Hosted checks: pending draft PR; reuse automatic runs, do not dispatch extras. Subsequent live status is maintained in the PR body so CI completion does not require a docs-only commit and another CI run. No native local execution claimed.
-- Cleanup: test closes its owned SQLite connection and deletes only its unique temporary directory in `finally`; worktree, logs and branch retained.
-- Limitations: synthetic malformed provider inputs establish resilience, not evidence that Gmail has delivered malformed dates in production. Existing ISO-string fallback remains supported. Setup workflow is read from separate unmerged draft; this focused product branch does not bundle workflow scripts.
+- Intent / playbook: `bug-fix`; malformed provider dates must not abort a batch, and fallback timestamps must be revisited systematically without deleting mail.
+- Owner / independent reviewer: `/root/pilot_scope`; `/root/pilot_review`; design review `/root/workflow_review`. Separate agents, model diversity not claimed.
+- Status: **running — final hosted verification pending**. Updated 2026-10-16 UTC.
+- Base: `2d104ea394cc319c085d8983d2c17a923c2be467`; branch `fix/pstack-gmail-date`; isolated worktree `/workspace/orca-pilot`; [PR #251](https://github.com/lukebrevoort/orca/pull/251).
+- Scope: Gmail normalization, bounded date recovery through existing sync paths, synthetic regressions. No UI/schema changes or overlap with PR #235 performance, PR #248 workflow, or merged #249/#250 features.
+- Workflow dependency: followed repository-owned procedure in PR #248; product branch is independently based on main.
 
-## Decisions
+## Acceptance and outcome
 
-| Phase | Decision / reason / evidence |
-| --- | --- |
-| Scope | One implementation owner suffices for a two-line date guard and two focused test files; independent reviewer follows commit. |
-| Reproduce | Added behavior tests first; original failures retained without rewriting. |
-| Fix | Validate the constructed Date with `getTime()`, because a finite number can still exceed JavaScript Date range. Reuse epoch fallback; no new parser/framework. |
-| Verify | Initial development typecheck caught nullable DB fields in test assertions ([original log](../../verification/gmail-date/development-typecheck.log)); assertions corrected in final executable commit and all typechecks pass. Unit boundary table plus real SQLite batch/account assertions cover the changed provider seam. Existing batch regression tests run unchanged. |
+The original guard prevents RangeError for malformed or out-of-range dates. Original [red](../../verification/gmail-date/red-tests.log), [green](../../verification/gmail-date/green-tests.log), [review](../../verification/gmail-date/review.md), and final 1484-test/typecheck logs in that directory describe executable `c970faf7cb4caea9b389de1bd5c35d4e65fba45e`, not the expanded recovery revision.
+
+That guard alone did not guarantee repair: checkpoint-filtered reads can omit older messages indefinitely. Recovery now selects unknown dates and legacy ambiguous epoch dates using existing nullable `internalDate` and a versioned digest. Empty incremental/history paths perform read-only provider requests. Genuine epoch dates are retained; failed attempts rotate fairly with a cap of 20 per drain, shared across pagination/watch renewal. Only dates, attempt order, snapshot invalidation and derived thread date/subject change. Account, lease, provider identity and concurrent-snapshot checks protect writes.
+
+Final executable revision: `83eaf9f228d7a2599f04ee8adf2bfccc61d979e4`. Independent review approved with 56 focused tests passing. All workspace typechecks passed. First full suite: 1499 passes, one unrelated web Undo-receipt failure under investigation; preserved without rewriting. See [recovery evidence](../../verification/gmail-date/recovery/README.md) and [review](../../verification/gmail-date/recovery/review.md). Current hosted status is maintained in PR #251, avoiding evidence-only CI churn.
+
+Tests use temporary migrated SQLite, synthetic provider responses/tokens and two accounts with colliding provider IDs. They assert preservation of bodies, labels, attachments, read state, counts and Organization values, including stale-lease/concurrent-repair behavior. No live provider/mail writes, credentials or persistent database migrations. Test fixtures close owned connections and remove only their temporary directories. Worktree and evidence remain available.
+
+UI evidence is not applicable to this provider-only task. Recovery requires recurring successful sync opportunities and eventual valid provider timestamps; it cannot invent a correct date while upstream remains malformed. Failed requests never delete messages. The bound limits provider request count, not elapsed request time or database scan cost.
