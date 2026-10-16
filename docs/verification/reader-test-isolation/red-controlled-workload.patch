@@ -1,0 +1,19 @@
+--- original-current-test
++++ controlled-test-both-commits
+@@ -3342,7 +3342,7 @@
+     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(selectedMessage.threadId)}&accountId=${encodeURIComponent(selectedMessage.accountId)}`);
+     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+       const url = new URL(String(input), browserWindow.location.href);
+-      if (url.pathname === "/v1/inbox") {
++      if (url.pathname === "/v1/inbox" && url.searchParams.get("limit") === "100" && !url.searchParams.has("destinationId")) {
+         inboxReadCount += 1;
+         if (inboxReadCount === 2) return firstRefreshInbox;
+         if (inboxReadCount >= 3) return jsonResponse({
+@@ -3442,6 +3442,7 @@
+       for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-state button"); index += 1) await waitFor(0);
+       const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
+       expect(retry?.textContent).toBe("Try again");
++      await waitFor(150);
+ 
+       await act(async () => retry.click());
+       for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-document:not(.reader-loading)"); index += 1) await waitFor(0);

@@ -1,0 +1,58 @@
+{
+  "baseline": "2d104ea394cc319c085d8983d2c17a923c2be467",
+  "testedExecutable": "4ff6db53215a4e1b629e39ad86042784773c1f45",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "91ccb7da2ed6977d96ef8888957945666fd4291b49532001d674c52a7a59ca32"
+    },
+    {
+      "path": "green-controlled-dwell.log",
+      "sha256": "f44852a785d178585fc407fd7c515470779d95eb0b850723a07ff0664eff1a82"
+    },
+    {
+      "path": "green-focused.log",
+      "sha256": "6cf44b70a5c3531d6545be23937641f0f6703c6cf134243ed81cd11c5210883a"
+    },
+    {
+      "path": "independent-mutation.log",
+      "sha256": "f7856c3e9aa87cff67a895ab19896faf6fce737e76ac8324f6a1764a1a02744b"
+    },
+    {
+      "path": "independent-review.md",
+      "sha256": "dbb23afed461cca93010f90f2dcf2a6b89e490d246bbaf562673abc1540e866b"
+    },
+    {
+      "path": "initial-typecheck-failure.log",
+      "sha256": "aec4c592ff8a8831931476760cac86d5486410f6066e71b36dfb92108980aae8"
+    },
+    {
+      "path": "red-controlled-baseline.log",
+      "sha256": "bb9d6b0239660281209eaf11080ea740e5dddf3f78364af7fe45fc4a0fac215a"
+    },
+    {
+      "path": "red-controlled-current.log",
+      "sha256": "cfecf3626a6b03263e7a9a1b19c70b7db9130876b937db85f8f11aec318af4ab"
+    },
+    {
+      "path": "red-controlled-workload.patch",
+      "sha256": "03d5647beac8a0419b86c50c920d2a9e6986ce65012e249b2d014a2821674ce2"
+    },
+    {
+      "path": "red-original-baseline.log",
+      "sha256": "f46bf1f03cde209eb69d5a22f95bb59b9a8be87512dcf8e1e8554847b039d3ed"
+    },
+    {
+      "path": "red-original-current.log",
+      "sha256": "d5289cb9302bd3af852d0ee75ea776e59085b9e5e5fa0f1748905d8086428481"
+    },
+    {
+      "path": "typecheck.log",
+      "sha256": "387425ae0ad612e19fbbd07a9dee3e68d75dd069a52aecd60717a7df6db6d71e"
+    },
+    {
+      "path": "workspace-tests.log",
+      "sha256": "3f4688ae7da946b8067348f04f7b1fa84da347d83e6ef4ad92ec06a0f9ae145a"
+    }
+  ]
+}
