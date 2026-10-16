@@ -1,3 +1,5 @@
+import { registerMessageImageRoutes } from "./mail/images/routes.ts";
+import { hasLoadableImages } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
@@ -181,6 +183,7 @@ const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
 
 type CreateAppOptions = {
+  downloadMessageImage?: import("./mail/images/render.ts").ImageDownload;
   dbFactory?: typeof createDatabaseClient;
   syncPage?: typeof syncGmailAccountPage;
   gmailTransport?: GmailTransport;
@@ -280,6 +283,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerAttentionRoutingRoutes(app, { dbFactory });
   registerDestinationRoutes(app, { dbFactory });
   registerAttachmentRoutes(app, { dbFactory });
+  registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage });
   app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
   registerMobilePushRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
@@ -3160,6 +3164,7 @@ function readThreadDetailSnapshot(
       id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
       from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
       to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
+      imageLoadAvailable: hasLoadableImages(message.bodyHtml),
       subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
       unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
       internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
