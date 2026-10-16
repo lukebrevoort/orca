@@ -1,0 +1,27 @@
+Baseline exporter 5baf7f3 with new regression tests
+Synthetic checks exit code: 1; sanitized evidence: /tmp/tmp7q079zsy/public
+Synthetic checks exit code: 0; sanitized evidence: /tmp/tmpfopppusn/public
+..FE....
+======================================================================
+ERROR: test_failure_excerpt_is_bounded_and_handles_missing_markers (__main__.EvidenceTests.test_failure_excerpt_is_bounded_and_handles_missing_markers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpmq7mh_bh/test-export-evidence.py", line 77, in test_failure_excerpt_is_bounded_and_handles_missing_markers
+    output = evidence.failure_excerpt(('error: ' + 'x' * 5000 + '\n') * 1000)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'evidence' has no attribute 'failure_excerpt'
+
+======================================================================
+FAIL: test_early_failure_is_visible_redacted_and_cannot_issue_workflow_commands (__main__.EvidenceTests.test_early_failure_is_visible_redacted_and_cannot_issue_workflow_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpmq7mh_bh/test-export-evidence.py", line 69, in test_early_failure_is_visible_redacted_and_cannot_issue_workflow_commands
+    self.assertIn("testEarly", text)
+AssertionError: 'testEarly' not found in 'Synthetic checks exit code: 65; sanitized evidence: /tmp/tmpwvjfb4y4/public\n'
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.006s
+
+FAILED (failures=1, errors=1)
+
+Exit: 1
