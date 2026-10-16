@@ -1,0 +1,9 @@
+Tested executable: 88b2c0a9d22e9806cd409577fe4b948d97a254d1
+Command: python3 scripts/pstack/test_verify.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.234s
+
+OK
+
+Exit: 0

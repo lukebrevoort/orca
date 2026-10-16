@@ -17,6 +17,22 @@ def redact(text, tokens):
     return text
 
 
+def failure_excerpt(text):
+    """Keep early XCTest assertions visible even when later tests fill the tail."""
+    lines = text.splitlines()
+    matches = [index for index, line in enumerate(lines)
+               if re.search(r'(?i)\b(error:|failed|failure|XCTAssert\w*)', line)]
+    if not matches:
+        return 'No failure marker found; inspect the sanitized log tail/artifact.'
+    selected = set()
+    for index in matches[:20]:
+        selected.update(range(max(0, index - 1), min(len(lines), index + 2)))
+    result = [f'{index + 1}: {lines[index][:1000]}' for index in sorted(selected)]
+    if len(matches) > 20:
+        result.append(f'Additional failure markers omitted: {len(matches) - 20}; inspect artifact.')
+    return '\n'.join(result)
+
+
 def export(work, evidence, connection, status):
     tokens = []
     if connection:
@@ -71,6 +87,13 @@ def export(work, evidence, connection, status):
             data = path.read_bytes()
             if any(token.encode() in data or quote(token, safe='').encode() in data for token in tokens):
                 raise ValueError('Credential detected in evidence; refusing publication')
+    # Print only after the complete export passed its credential scan. Prefix
+    # every line so synthetic log content cannot become a workflow command.
+    if int(status) != 0 and (evidence / 'checks.log').is_file():
+        print('Sanitized failure context (bounded; full log remains in artifact):')
+        for line in failure_excerpt((evidence / 'checks.log').read_text()).splitlines():
+            line = line.replace('::', ': :').replace('##[', '# #[')
+            print(f'[fixture failure] {line}')
     print(f'Synthetic checks exit code: {status}; sanitized evidence: {evidence}')
 
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import importlib.util
 import json
+import io
+from contextlib import redirect_stdout
 import tempfile
 import unittest
 from pathlib import Path
@@ -49,6 +51,57 @@ class EvidenceTests(unittest.TestCase):
             self.assertNotIn('ephemeral-test-token', (out / 'reader-results.json').read_text())
             self.assertNotIn('ephemeral-test-token', (out / 'reader-failure-dom.txt').read_text())
             self.assertEqual({p.name for p in (out / 'screenshots').iterdir()}, {'light.png', 'reader-light.png'})
+
+    def test_early_failure_is_visible_redacted_and_cannot_issue_workflow_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'accessToken': 'fixture-secret'}))
+            (work / 'checks.log').write_text(
+                "Test Case 'testEarly' started.\n"
+                "::error::##[add-mask]XCTAssertTrue failed fixture-secret Bearer another-secret orca_session=cookie-secret;\n"
+                "Test Case 'testEarly' failed.\n" + "later successful output\n" * 200)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                evidence.export(work, out, str(connection), 65)
+            text = output.getvalue()
+            self.assertIn("testEarly", text)
+            self.assertIn("XCTAssertTrue failed", text)
+            for secret in ('fixture-secret', 'another-secret', 'cookie-secret'):
+                self.assertNotIn(secret, text)
+            self.assertNotIn('::', text)
+            self.assertNotIn('##[', text)
+            self.assertEqual(json.loads((out / 'outcome.json').read_text())['exitCode'], 65)
+
+    def test_failure_excerpt_is_bounded_and_handles_missing_markers(self):
+        output = evidence.failure_excerpt(('error: ' + 'x' * 5000 + '\n') * 1000)
+        self.assertLess(len(output), 65000)
+        self.assertIn('Additional failure markers omitted: 980', output)
+        self.assertIn('No failure marker found', evidence.failure_excerpt('ordinary output'))
+
+    def test_success_does_not_print_failure_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'checks.log').write_text('expected failure in a passing negative test')
+            output = io.StringIO()
+            with redirect_stdout(output):
+                evidence.export(work, out, '', 0)
+            self.assertNotIn('[fixture failure]', output.getvalue())
+
+    def test_credential_scan_failure_does_not_print_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir(); (work / 'browser').mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'token': 'private-fixture-secret'}))
+            (work / 'checks.log').write_text('error: private-fixture-secret')
+            (work / 'browser' / 'image.png').write_bytes(b'private-fixture-secret')
+            output = io.StringIO()
+            with redirect_stdout(output), self.assertRaises(ValueError):
+                evidence.export(work, out, str(connection), 65)
+            self.assertEqual(output.getvalue(), '')
 
     def test_rejects_connection_outside_owned_workspace(self):
         with tempfile.TemporaryDirectory() as directory:
