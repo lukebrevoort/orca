@@ -121,6 +121,8 @@ final class ReaderUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.1)
         }
         XCTAssertEqual(try imageDownloadCount(), initialDownloads + 2, "The delayed request must be in flight before navigating away")
+        XCTAssertFalse(reopenedLoad.isEnabled)
+        screenshot("images-loading-disabled")
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
         row.tap()
