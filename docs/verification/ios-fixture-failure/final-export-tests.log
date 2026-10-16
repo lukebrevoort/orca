@@ -1,0 +1,13 @@
+Tested executable: 88b2c0a9d22e9806cd409577fe4b948d97a254d1
+Command: python3 scripts/ci/test-export-evidence.py
+Sanitized failure context (bounded; full log remains in artifact):
+[fixture failure] No failure marker found; inspect the sanitized log tail/artifact.
+Synthetic checks exit code: 1; sanitized evidence: /tmp/tmpf_gcnqto/public
+Synthetic checks exit code: 0; sanitized evidence: /tmp/tmpax5vzc8m/public
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.011s
+
+OK
+
+Exit: 0
