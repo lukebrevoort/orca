@@ -1,0 +1,7 @@
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.007s
+
+OK
+Synthetic checks exit code: 1; sanitized evidence: /tmp/tmp1cstntd5/public
+Synthetic checks exit code: 0; sanitized evidence: /tmp/tmpgjstxb4q/public
