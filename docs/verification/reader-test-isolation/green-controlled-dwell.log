@@ -1,0 +1,13 @@
+bun test v1.3.14 (0d9b296a)
+
+../../tmp/orca-reader-green-dwell/apps/web/src/App.interaction.test.tsx:
+(pass) Inbox reader viewport restoration > retries a failed silent Reader refresh on a later same-version mailbox refresh [745.95ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (held prefetch) [537.58ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (completed prefetch) [1116.78ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (in-flight prefetch) [803.66ms]
+
+ 4 pass
+ 131 filtered out
+ 0 fail
+ 86 expect() calls
+Ran 4 tests across 1 file. [4.21s]

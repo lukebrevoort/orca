@@ -1,0 +1,11 @@
+$ bun --filter '*' typecheck
+@orca/shared typecheck: Exited with code 0
+@orca/api typecheck: Exited with code 0
+@orca/web typecheck: src/App.interaction.test.tsx(3496,85): error TS2769: No overload matches this call.
+@orca/web typecheck:   Overload 1 of 2, '(expected: Element | null): void', gave the following error.
+@orca/web typecheck:     Argument of type 'HTMLButtonElement' is not assignable to parameter of type 'Element'.
+@orca/web typecheck:       Type 'HTMLButtonElement' is missing the following properties from type 'Element': #private, onbeforecopy, onbeforecut, onbeforepaste, and 59 more.
+@orca/web typecheck:   Overload 2 of 2, '(expected: NoInfer<Element | null>): void', gave the following error.
+@orca/web typecheck:     Argument of type 'HTMLButtonElement' is not assignable to parameter of type 'Element'.
+@orca/web typecheck:       Type 'HTMLButtonElement' is missing the following properties from type 'Element': #private, onbeforecopy, onbeforecut, onbeforepaste, and 59 more.
+@orca/web typecheck: Exited with code 2
