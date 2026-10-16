@@ -60,7 +60,7 @@ class EvidenceTests(unittest.TestCase):
             connection.write_text(json.dumps({'accessToken': 'fixture-secret'}))
             (work / 'checks.log').write_text(
                 "Test Case 'testEarly' started.\n"
-                "::error::XCTAssertTrue failed fixture-secret Bearer another-secret orca_session=cookie-secret;\n"
+                "::error::##[add-mask]XCTAssertTrue failed fixture-secret Bearer another-secret orca_session=cookie-secret;\n"
                 "Test Case 'testEarly' failed.\n" + "later successful output\n" * 200)
             output = io.StringIO()
             with redirect_stdout(output):
@@ -70,7 +70,8 @@ class EvidenceTests(unittest.TestCase):
             self.assertIn("XCTAssertTrue failed", text)
             for secret in ('fixture-secret', 'another-secret', 'cookie-secret'):
                 self.assertNotIn(secret, text)
-            self.assertFalse(any(line.startswith('::') for line in text.splitlines()))
+            self.assertNotIn('::', text)
+            self.assertNotIn('##[', text)
             self.assertEqual(json.loads((out / 'outcome.json').read_text())['exitCode'], 65)
 
     def test_failure_excerpt_is_bounded_and_handles_missing_markers(self):

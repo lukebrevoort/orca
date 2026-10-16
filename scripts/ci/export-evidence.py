@@ -92,6 +92,7 @@ def export(work, evidence, connection, status):
     if int(status) != 0 and (evidence / 'checks.log').is_file():
         print('Sanitized failure context (bounded; full log remains in artifact):')
         for line in failure_excerpt((evidence / 'checks.log').read_text()).splitlines():
+            line = line.replace('::', ': :').replace('##[', '# #[')
             print(f'[fixture failure] {line}')
     print(f'Synthetic checks exit code: {status}; sanitized evidence: {evidence}')
 
