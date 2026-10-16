@@ -16,17 +16,22 @@ export type ImageDownload = typeof downloadRemoteImage;
 /** The default read path never calls this. Only an authorized explicit POST may resolve images. */
 export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage) {
   const {document,images}=documentImages(html);const signal=AbortSignal.timeout(20_000);
-  const replacements=new Map<string,string>();let loaded=0,totalBytes=0,attempted=0;
+  const replacements=new Map<string,string>();let loaded=0,spentBytes=0,attempted=0;
+  const maximumImageBytes=2*1024*1024, transferBudget=8*1024*1024;
   for(const image of images){
-    const url=candidate(image);if(!url||attempted>=12||signal.aborted||totalBytes>=8*1024*1024)continue;attempted++;
+    const url=candidate(image);if(!url||attempted>=12||signal.aborted||spentBytes+maximumImageBytes>transferBudget)continue;attempted++;
     try {
-      const bytes=await download(url,signal);const mime=rasterType(bytes);
-      if(!mime||bytes.length>2*1024*1024||totalBytes+bytes.length>8*1024*1024)continue;
-      totalBytes+=bytes.length;
+      const bytes=await download(url,signal);
+      spentBytes+=bytes.length;
+      const mime=rasterType(bytes);
+      if(!mime||bytes.length>maximumImageBytes)continue;
       const marker=`orca-image-${randomUUID()}`;const alt=image.attribs.alt??"";
       image.attribs={alt:marker};
       replacements.set(marker,`<img alt="${escape(alt)}" src="data:${mime};base64,${bytes.toString("base64")}" style="max-width:100%;height:auto">`);loaded++;
-    }catch{/* A failed image remains a blocked placeholder; do not expose remote diagnostics. */}
+    }catch{
+      // A failure may have consumed its entire streaming allowance. Charge it conservatively.
+      spentBytes+=maximumImageBytes;
+    }
   }
   let bodyHtml=sanitizeInboundHtml(DomUtils.getOuterHTML(document))??"";
   for(const [marker,image] of replacements){bodyHtml=bodyHtml.replace(`<span class="orca-mail-image-note">[Image blocked: ${marker}]</span>`,image);}

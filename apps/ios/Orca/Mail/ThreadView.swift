@@ -334,7 +334,7 @@ private struct MessageImageBody: View {
                 guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
                 guard result.sourceHash == revision else { status = "Message changed. Reopen it before loading images."; loading = false; return }
                 if result.loaded > 0 { html = result.bodyHtml }
-                status = result.loaded > 0 ? "\(result.loaded) images loaded. \(result.blocked) remain blocked." : "Images could not be loaded. You can try again."
+                status = result.loaded > 0 ? "\(result.loaded) image\(result.loaded == 1 ? "" : "s") loaded." + (result.blocked > 0 ? " \(result.blocked) remain blocked." : "") : "Images could not be loaded. You can try again."
             } catch {
                 guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
                 status = "Images could not be loaded. You can try again."

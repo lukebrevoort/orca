@@ -46,10 +46,23 @@ export type RemoteImageDependencies = { resolve?: (host:string)=>Promise<Address
 export async function downloadRemoteImage(url: URL, signal: AbortSignal, dependencies: RemoteImageDependencies = {}): Promise<Buffer> {
   if(!remoteImageURL(url.href)) throw new Error("Image unavailable");
   signal.throwIfAborted();
-  const addresses = await Promise.race([
-    (dependencies.resolve ?? (host=>lookup(host,{all:true})))(url.hostname),
-    new Promise<never>((_,reject)=>{const timer=setTimeout(()=>reject(new Error("Image unavailable")),3000);timer.unref();}),
-  ]);
+  let abortDNS: () => void = () => {};
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let addresses: Address[];
+  try {
+    addresses = await Promise.race([
+      (dependencies.resolve ?? (host=>lookup(host,{all:true})))(url.hostname),
+      new Promise<never>((_,reject)=>{
+        abortDNS=()=>reject(new Error("Image unavailable"));
+        signal.addEventListener("abort",abortDNS,{once:true});
+        timer=setTimeout(abortDNS,3000);
+        if(signal.aborted)abortDNS();
+      }),
+    ]);
+  } finally {
+    if(timer)clearTimeout(timer);
+    signal.removeEventListener("abort",abortDNS);
+  }
   signal.throwIfAborted();
   if(!addresses.length || addresses.some(a=>!isPublicImageAddress(a.address) || isIP(a.address)!==a.family)) throw new Error("Image unavailable");
   const address=addresses[0]!;

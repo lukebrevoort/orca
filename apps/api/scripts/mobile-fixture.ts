@@ -14,6 +14,7 @@ import type { AuthVariables } from "../src/auth/middleware.ts";
 
 const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI_TEST_SCOPE === "images";
 let imageDownloads = 0;
+let imageDelayMilliseconds = 0;
 const readOnly = process.argv.includes("--read-only");
 const directory = mkdtempSync(join(tmpdir(), "orca-ios-fixture-"));
 process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
@@ -94,9 +95,11 @@ let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
 const app = createApp({
-  downloadMessageImage: async (url) => {
+  downloadMessageImage: async (url, signal) => {
     if (!imageFixture || url.href !== "https://images.example.invalid/landscape.png") throw new Error("Fixture image unavailable");
     imageDownloads++;
+    if (imageDelayMilliseconds) await new Promise(resolve => setTimeout(resolve, imageDelayMilliseconds));
+    signal.throwIfAborted();
     return readFileSync(resolve(import.meta.dir, "../src/mail/images/fixtures/landscape.png"));
   },
   dbFactory: () => createDatabaseClient(),
@@ -142,6 +145,11 @@ let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
 // Keep the connection alive until each gate’s explicit safety release.
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname === "/__fixture/image-delay" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    imageDelayMilliseconds = 4000;
+    return new Response(null, { status: 204 });
+  }
   if (url.pathname === "/__fixture/image-downloads") {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     return Response.json({ count: imageDownloads });

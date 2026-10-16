@@ -76,3 +76,13 @@ test("native POST resolves only an authenticated user's stored message, before a
   const response=await app.request(endpoint,{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(response.status).toBe(200);expect(response.headers.get('Cache-Control')).toBe('private, no-store');expect((await response.json()).loaded).toBe(1);expect(requests).toBe(1);
  }finally{sqlite.close();rmSync(dir,{recursive:true,force:true});}
 });
+
+test("failed downloads spend their allowance and a partly used budget is never overrun",async()=>{
+ const html=Array.from({length:30},(_,i)=>`<img src="https://images.example.org/${i}">`).join('');let calls=0;
+ await renderRequestedImages(html,async()=>{calls++;throw new Error("stream failed after bytes");});expect(calls).toBe(4);
+ calls=0;let transferred=0;const almost=Buffer.alloc(2*1024*1024-100);png.copy(almost);
+ await renderRequestedImages(html,async()=>{calls++;transferred+=almost.length;return almost;});expect(calls).toBe(4);expect(transferred).toBeLessThanOrEqual(8*1024*1024);
+});
+test("global cancellation interrupts DNS before any socket is opened",async()=>{
+ const controller=new AbortController();const wire=transport();const pending=downloadRemoteImage(url,controller.signal,{resolve:()=>new Promise(()=>{}),request:wire.request});controller.abort();await expect(pending).rejects.toThrow();expect(wire.calls).toBe(0);
+});
