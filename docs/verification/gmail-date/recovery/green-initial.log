@@ -1,0 +1,13 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/date-recovery.test.ts:
+(pass) empty incremental page revisits unknown dates without changing mail or another account [111.68ms]
+(pass) history 101 revisits unknown dates without delta IDs [70.71ms]
+(pass) history 100 revisits unknown dates without delta IDs [64.64ms]
+(pass) genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed [68.76ms]
+(pass) bounded retries rotate past invalid and unavailable messages even with an unchanged clock [102.23ms]
+(pass) recovery rejects provider identity mismatch and supports clients without metadata [65.33ms]
+
+ 6 pass
+ 0 fail
+Ran 6 tests across 1 file. [715.00ms]

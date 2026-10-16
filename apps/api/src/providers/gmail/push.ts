@@ -17,6 +17,7 @@ import {
   GmailSyncError,
   getGmailProviderTokens,
   persistGmailMessages,
+  recoverGmailMessageDates,
   syncGmailAccountPage,
   type GmailSyncMetricsRecorder,
 } from "./sync.ts";
@@ -48,6 +49,7 @@ export type GmailBackfillOptions = {
   propagation?: DeterministicPropagationRuntimeOptions;
   leaseGuard?: GmailSyncLeaseGuard;
   metrics?: GmailSyncMetricsRecorder;
+  skipDateRecovery?: boolean;
 };
 
 export type GmailBackfillResult = {
@@ -95,6 +97,7 @@ export async function watchGmailAccount(
     now?: Date;
     leaseGuard?: GmailSyncLeaseGuard;
     metrics?: GmailSyncMetricsRecorder;
+    skipDateRecovery?: boolean;
   },
 ): Promise<GmailWatchResult> {
   const now = input.now ?? new Date();
@@ -144,6 +147,7 @@ export async function watchGmailAccount(
     await syncGmailAccountHistory(db, {
       accountId: account.id,
       historyId,
+      skipDateRecovery: input.skipDateRecovery,
       gmailClient,
       config,
       now,
@@ -189,6 +193,7 @@ export async function ensureGmailWatch(
     force?: boolean;
     leaseGuard?: GmailSyncLeaseGuard;
     metrics?: GmailSyncMetricsRecorder;
+    skipDateRecovery?: boolean;
   },
 ): Promise<GmailWatchResult | null> {
   const config = input.config ?? loadGmailPushConfig();
@@ -236,6 +241,7 @@ export async function backfillGmailAccount(
       accountId: input.accountId,
       gmailClient,
       fullBackfill: pages === 0,
+      skipDateRecovery: input.skipDateRecovery || pages > 0,
       now,
       pageSize,
       propagation: input.propagation,
@@ -274,6 +280,7 @@ export async function syncGmailAccountHistory(
     propagation?: DeterministicPropagationRuntimeOptions;
     leaseGuard?: GmailSyncLeaseGuard;
     metrics?: GmailSyncMetricsRecorder;
+    skipDateRecovery?: boolean;
   },
 ): Promise<GmailHistorySyncResult> {
   const now = input.now ?? new Date();
@@ -297,11 +304,16 @@ export async function syncGmailAccountHistory(
           now,
           pageSize: input.pageSize ?? input.config?.backfillPageSize,
           maxPages: input.maxPages ?? input.config?.backfillMaxPages,
+          skipDateRecovery: input.skipDateRecovery,
           propagation: input.propagation,
           leaseGuard: input.leaseGuard,
           metrics: input.metrics,
         })
       : null;
+    if (!backfill && !input.skipDateRecovery) await recoverGmailMessageDates(db, {
+      accountId: account.id, accessToken: tokenRecord.accessToken, gmailClient, now,
+      leaseGuard: input.leaseGuard, metrics: input.metrics,
+    });
     const nextHistoryId = account.syncHistoryId ?? input.historyId;
     updateHistoryCursor(db, account.id, nextHistoryId, now, input.leaseGuard, input.metrics);
     return {
@@ -363,6 +375,7 @@ export async function syncGmailAccountHistory(
         now,
         pageSize: input.pageSize ?? input.config?.backfillPageSize,
         maxPages: input.maxPages ?? input.config?.backfillMaxPages,
+        skipDateRecovery: input.skipDateRecovery,
         propagation: input.propagation,
         leaseGuard: input.leaseGuard,
         metrics: input.metrics,
@@ -504,6 +517,10 @@ export async function syncGmailAccountHistory(
     throw mapGmailPushError(error);
   }
 
+  if (!input.skipDateRecovery) await recoverGmailMessageDates(db, {
+    accountId: account.id, accessToken, gmailClient, now,
+    leaseGuard: input.leaseGuard, metrics: input.metrics,
+  });
   updateHistoryCursor(db, account.id, historyId, now, input.leaseGuard, input.metrics);
 
   return {

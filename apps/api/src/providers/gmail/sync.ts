@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
 
@@ -25,7 +25,7 @@ import {
   organizationRules,
   threads,
 } from "../../db/schema.ts";
-import { normalizeGmailLabel, normalizeGmailMessage, type NormalizedGmailMessage } from "./normalizer.ts";
+import { parseGmailInternalDate, normalizeGmailLabel, normalizeGmailMessage, type NormalizedGmailMessage } from "./normalizer.ts";
 import { createGmailClient, GmailApiError, type GmailClient } from "./client.ts";
 import type { GmailSyncLeaseGuard } from "./sync-coordinator.ts";
 
@@ -71,6 +71,8 @@ export type SyncOptions = {
   propagation?: DeterministicPropagationRuntimeOptions;
   leaseGuard?: GmailSyncLeaseGuard;
   metrics?: GmailSyncMetricsRecorder;
+  /** Internal page-drain budget: only its first page performs date recovery. */
+  skipDateRecovery?: boolean;
 };
 
 export type GmailSyncMetricsRecorder = {
@@ -229,6 +231,11 @@ export async function syncGmailAccountPage(
       },
     });
 
+    if (!options.skipDateRecovery) await recoverGmailMessageDates(db, {
+      accountId: account.id, accessToken, gmailClient, now: nowDate,
+      leaseGuard: options.leaseGuard, metrics: options.metrics,
+    });
+
     // Older cached rows may predate normalized evidence. Each normal sync moves
     // one bounded, provider-free backfill batch forward without blocking on a
     // live Outlook path or a complete mailbox history.
@@ -267,6 +274,79 @@ export async function syncGmailAccountPage(
     } catch (retryError) {
       throw mapGmailError(retryError);
     }
+  }
+}
+
+/** Revisit at most 20 unknown/legacy epoch dates independently of provider cursors.
+ * Only dates and their derived thread aggregate change; retry failures retain mail.
+ */
+export async function recoverGmailMessageDates(db: DatabaseClient, input: {
+  accountId: string;
+  accessToken: string;
+  gmailClient: GmailClient;
+  now: Date;
+  leaseGuard?: GmailSyncLeaseGuard;
+  metrics?: GmailSyncMetricsRecorder;
+}): Promise<void> {
+  if (input.leaseGuard && input.leaseGuard.accountId !== input.accountId) {
+    throw new GmailSyncError("Date recovery lease account mismatch", "sync_conflict");
+  }
+  input.leaseGuard?.assert(db);
+  const pending = and(eq(emails.accountId, input.accountId), sql`(
+    (${emails.internalDate} IS NULL AND ${emails.receivedAt} = 0) OR (
+      ${emails.receivedAt} = 0 AND ${emails.internalDate} = 0 AND
+      (${emails.providerSnapshotDigest} IS NULL OR ${emails.providerSnapshotDigest} NOT LIKE 'gmail-date-v2:%')
+    ))`);
+  const candidates = db.select({
+    id: emails.id, providerId: emails.providerMessageId, threadId: emails.threadId,
+    providerThreadId: threads.providerThreadId, updatedAt: emails.updatedAt,
+    digest: emails.providerSnapshotDigest, internalDate: emails.internalDate, receivedAt: emails.receivedAt,
+  }).from(emails).innerJoin(threads, and(eq(threads.id, emails.threadId), eq(threads.accountId, input.accountId)))
+    .where(pending).orderBy(asc(emails.updatedAt), asc(emails.id)).limit(20).all();
+  if (candidates.length === 0) return;
+  const newest = db.select({ value: sql<number>`max(${emails.updatedAt})` }).from(emails).where(pending).get()?.value ?? 0;
+  // Rotate even failures after every current candidate, including a fixed clock.
+  const attemptedAt = new Date(Math.max(input.now.getTime(), newest + 1));
+  for (const candidate of candidates) {
+    input.leaseGuard?.assert(db);
+    let message: Awaited<ReturnType<GmailClient["getMessage"]>> | null = null;
+    const startedAt = performance.now();
+    try {
+      message = await (input.gmailClient.getMessageMetadata
+        ? input.gmailClient.getMessageMetadata(input.accessToken, candidate.providerId)
+        : input.gmailClient.getMessage(input.accessToken, candidate.providerId));
+    } catch {
+      // Provider failures (including 404) are not evidence to delete local mail.
+    } finally {
+      input.metrics?.recordProviderFetch(performance.now() - startedAt);
+    }
+    const matched = message?.id === candidate.providerId && message.threadId === candidate.providerThreadId;
+    const date = matched ? parseGmailInternalDate(message!.internalDate) : null;
+    db.transaction(tx => {
+      input.leaseGuard?.assert(tx);
+      const current = tx.select().from(emails).where(and(pending, eq(emails.id, candidate.id))).get();
+      // A full sync or another repair may have won while the request was in flight.
+      if (!current || current.providerMessageId !== candidate.providerId || current.threadId !== candidate.threadId || current.providerSnapshotDigest !== candidate.digest
+        || current.updatedAt.getTime() !== candidate.updatedAt.getTime()
+        || current.internalDate?.getTime() !== candidate.internalDate?.getTime()
+        || current.receivedAt?.getTime() !== candidate.receivedAt?.getTime()) return;
+      tx.update(emails).set(date ? {
+        receivedAt: date, internalDate: date, updatedAt: attemptedAt,
+        // This is deliberately not a full snapshot hash: the next normal fetch
+        // must reconcile the complete message, including a valid epoch date.
+        providerSnapshotDigest: "gmail-date-v2:date-repaired",
+      } : { updatedAt: attemptedAt, ...(matched ? { internalDate: null } : {}) })
+        .where(and(eq(emails.accountId, input.accountId), eq(emails.id, candidate.id), eq(emails.providerMessageId, candidate.providerId))).run();
+      if (date) {
+        // Match canonical aggregate ordering without changing read state, counts,
+        // or initializing Organization facets during a date-only repair.
+        const latest = tx.select({ receivedAt: emails.receivedAt, subject: emails.subject }).from(emails)
+          .where(and(eq(emails.accountId, input.accountId), eq(emails.threadId, candidate.threadId)))
+          .orderBy(desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id)).limit(1).get();
+        if (latest) tx.update(threads).set({ latestReceivedAt: latest.receivedAt, subject: latest.subject, updatedAt: attemptedAt })
+          .where(and(eq(threads.accountId, input.accountId), eq(threads.id, candidate.threadId))).run();
+      }
+    });
   }
 }
 
@@ -740,7 +820,7 @@ function upsertThreads(
 
 function upsertEmails(
   db: DatabaseExecutor,
-  normalizedMessages: NormalizedMessage[],
+  normalizedMessages: NormalizedGmailMessage[],
   digestByMessageId: ReadonlyMap<string, string>,
   now: Date,
 ) {
@@ -764,7 +844,7 @@ function upsertEmails(
         internetMessageId: message.internetMessageId,
         references: JSON.stringify(message.references),
         receivedAt: new Date(message.receivedAt),
-        internalDate: new Date(message.receivedAt),
+        internalDate: message.providerInternalDate === null ? null : new Date(message.providerInternalDate),
         isRead: !message.unread,
         isStarred: message.labels.includes("STARRED"),
         isDraft: message.labels.includes("DRAFT"),
@@ -893,7 +973,7 @@ function upsertContacts(
 }
 
 function providerSnapshotDigest(message: NormalizedGmailMessage): string {
-  return createHash("sha256").update(JSON.stringify({
+  return "gmail-date-v2:" + createHash("sha256").update(JSON.stringify({
     threadId: message.threadId,
     providerMessageId: message.providerMessageId,
     from: message.from,
@@ -907,6 +987,7 @@ function providerSnapshotDigest(message: NormalizedGmailMessage): string {
     internetMessageId: message.internetMessageId,
     references: message.references,
     receivedAt: message.receivedAt,
+    providerInternalDate: message.providerInternalDate,
     unread: message.unread,
     labels: [...message.labels].sort(),
     classificationEvidence: message.classificationEvidence,
