@@ -3493,7 +3493,7 @@ describe("Inbox reader viewport restoration", () => {
           // without relying on a wall-clock sleep racing React's act scheduler.
           await prefetch.run();
           expect(selectedReads()).toHaveLength(2);
-          expect(browserWindow.document.querySelector(".reader-state button")).toBe(retry);
+          expect(isSameNode(browserWindow.document.querySelector(".reader-state button"), retry)).toBe(true);
         }
         const beforeRetry = selectedReads().length;
         await act(async () => retry.click());
