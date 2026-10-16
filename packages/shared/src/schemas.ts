@@ -343,6 +343,7 @@ export const normalizedMessageSchema = inboxMessageSchema
     bcc: z.array(mailContactSchema),
     bodyText: z.string().nullable(),
     bodyHtml: z.string().nullable(),
+    imageLoadAvailable: z.boolean().optional(),
     internetMessageId: z.string().nullable(),
     references: z.array(z.string()),
     classificationEvidence: humanClassificationEvidenceSchema.optional(),
