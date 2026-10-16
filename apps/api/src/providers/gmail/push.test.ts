@@ -470,8 +470,9 @@ because "Observe the first event of the second batch"`,
       accountId: "acct_1", historyId: "200", gmailClient,
       metrics: { recordProviderFetch(ms) { providerDurations.push(ms); }, recordDbWrite() {} },
     });
-    // Two history pages, 61 metadata reads, 61 body reads and one label list.
-    assert.equal(providerDurations.length, 125);
+    // Two history pages, 61 metadata reads, 61 body reads, one label list,
+    // and one bounded date-recovery metadata retry for the missing date.
+    assert.equal(providerDurations.length, 126);
     assert.ok(providerDurations.every((ms) => Number.isFinite(ms) && ms >= 0));
     assert.deepEqual(fetched, ids);
     assert.ok(maxMetadataInFlight > 1 && maxMetadataInFlight <= 5);

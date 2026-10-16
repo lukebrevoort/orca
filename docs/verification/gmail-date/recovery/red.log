@@ -1,0 +1,150 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/date-recovery.test.ts:
+62 | }
+63 | 
+64 | test("empty incremental page revisits unknown dates without changing mail or another account", () => fixture(async f => {
+65 |   await f.seed("a", [message("shared")]); await f.seed("b", [message("shared")]);
+66 |   const before = f.row("shared"), other = f.row("shared", "b");
+67 |   assert.equal(before.internalDate, null);
+              ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ 1970-01-01T00:00:00.000Z
+- null
+
+ generatedMessage: true,
+     actual: 1970-01-01T00:00:00.000Z,
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:67:10
+      at fixture (/workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:26:19)
+      at processTicksAndRejections (native:7:39)
+(fail) empty incremental page revisits unknown dates without changing mail or another account [100.87ms]
+77 | }));
+78 | 
+79 | for (const historyId of ["101", "100"]) test(`history ${historyId} revisits unknown dates without delta IDs`, () => fixture(async f => {
+80 |   await f.seed("a", [message("history")]);
+81 |   await f.history(historyId);
+82 |   assert.deepEqual(f.calls, ["token-a:history"]);
+              ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   'token-a:history'
+- ]
+
+ generatedMessage: true,
+     actual: [],
+   expected: [ "token-a:history" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:82:10
+      at fixture (/workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:26:19)
+      at processTicksAndRejections (native:7:39)
+(fail) history 101 revisits unknown dates without delta IDs [75.56ms]
+77 | }));
+78 | 
+79 | for (const historyId of ["101", "100"]) test(`history ${historyId} revisits unknown dates without delta IDs`, () => fixture(async f => {
+80 |   await f.seed("a", [message("history")]);
+81 |   await f.history(historyId);
+82 |   assert.deepEqual(f.calls, ["token-a:history"]);
+              ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   'token-a:history'
+- ]
+
+ generatedMessage: true,
+     actual: [],
+   expected: [ "token-a:history" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:82:10
+      at fixture (/workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:26:19)
+      at processTicksAndRejections (native:7:39)
+(fail) history 100 revisits unknown dates without delta IDs [63.90ms]
+86 | test("genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed", () => fixture(async f => {
+87 |   await f.seed("a", [message("genuine", "0"), message("legacy", "0"), message("unknown")]);
+88 |   f.db.update(emails).set({ providerSnapshotDigest: "legacy-hash" }).where(eq(emails.id, "gmail:a:legacy")).run();
+89 |   f.respond(id => message(id, "0"));
+90 |   await f.page(); await f.page();
+91 |   assert.deepEqual(f.calls.sort(), ["token-a:legacy", "token-a:unknown"]);
+              ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   'token-a:legacy',
+-   'token-a:unknown'
+- ]
+
+ generatedMessage: true,
+     actual: [],
+   expected: [ "token-a:legacy", "token-a:unknown" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:91:10
+      at fixture (/workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:26:19)
+      at processTicksAndRejections (native:7:39)
+(fail) genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed [64.60ms]
+102 |     if (id === "id-00") throw new GmailApiError("synthetic missing", 404);
+103 |     if (id === "id-01") throw new Error("synthetic unavailable");
+104 |     return message(id);
+105 |   });
+106 |   const preserved = f.row("id-00").bodyText;
+107 |   await f.page(); assert.equal(f.calls.length, 20);
+                               ^
+AssertionError: Expected values to be strictly equal:
+
+0 !== 20
+
+ generatedMessage: true,
+     actual: 0,
+   expected: 20,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:107:26
+      at fixture (/workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:26:19)
+      at processTicksAndRejections (native:7:39)
+(fail) bounded retries rotate past invalid and unavailable messages even with an unchanged clock [67.99ms]
+114 | test("recovery rejects provider identity mismatch and supports clients without metadata", () => fixture(async f => {
+115 |   await f.seed("a", [message("mismatch")]);
+116 |   delete f.client.getMessageMetadata;
+117 |   f.respond(() => message("other", corrected));
+118 |   await f.page();
+119 |   assert.equal(f.row("mismatch").internalDate, null);
+               ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ 1970-01-01T00:00:00.000Z
+- null
+
+ generatedMessage: true,
+     actual: 1970-01-01T00:00:00.000Z,
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:119:10
+      at fixture (/workspace/orca-pilot/apps/api/src/providers/gmail/date-recovery.test.ts:26:19)
+      at processTicksAndRejections (native:7:39)
+(fail) recovery rejects provider identity mismatch and supports clients without metadata [62.77ms]
+
+ 0 pass
+ 6 fail
+Ran 6 tests across 1 file. [717.00ms]

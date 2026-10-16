@@ -16,6 +16,14 @@ describe("Gmail normalizer", () => {
     }
   });
 
+  test("treats non-string provider date values as unknown without aborting normalization", () => {
+    for (const value of [null, 0, true, {}, [], ["0"]]) {
+      const normalized = normalizeGmailMessage({ ...gmailMessageFixture, internalDate: value as unknown as string }, { accountId: "acct_123" });
+      assert.equal(normalized.receivedAt, "1970-01-01T00:00:00.000Z");
+      assert.equal(normalized.providerInternalDate, null);
+    }
+  });
+
   test("preserves valid numeric and date-string internal dates", () => {
     for (const [internalDate, expected] of [
       ["1782671400000", "2026-06-28T18:30:00.000Z"],

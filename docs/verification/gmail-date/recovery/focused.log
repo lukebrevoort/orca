@@ -1,0 +1,115 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:
+(pass) malformed dates do not abort a batch or overwrite another account's matching provider IDs [96.89ms]
+
+apps/api/src/providers/gmail/sync.test.ts:
+(pass) syncGmailAccountPage > refreshes an expired access token before syncing and persists rotated credentials [80.59ms]
+(pass) syncGmailAccountPage > refreshes and retries a sync once after Gmail rejects an access token [67.25ms]
+(pass) syncGmailAccountPage > surfaces reconnect only when Google rejects the refresh token [67.58ms]
+(pass) syncGmailAccountPage > keeps a fresh Gmail grant on quota failure and still identifies missing permission [71.81ms]
+(pass) syncGmailAccountPage > coalesces concurrent refreshes for one Gmail account [71.74ms]
+(pass) syncGmailAccountPage > rejects malformed refresh responses without replacing credentials [65.93ms]
+(pass) syncGmailAccountPage > refreshes legacy Gmail credentials with the OAUTH_TOKEN_ENCRYPTION_KEY alias [67.36ms]
+(pass) syncGmailAccountPage > persists paginated Gmail inbox data and remains safe to rerun [83.14ms]
+(pass) syncGmailAccountPage > reuses the original sync window when resuming a later page [70.36ms]
+(pass) syncGmailAccountPage > removes stale email label joins when Gmail labels change [74.10ms]
+
+apps/api/src/providers/gmail/date-recovery.test.ts:
+(pass) empty incremental page revisits unknown dates without changing mail or another account [82.38ms]
+(pass) history 101 revisits unknown dates without delta IDs [68.85ms]
+(pass) history 100 revisits unknown dates without delta IDs [64.81ms]
+(pass) genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed [73.41ms]
+(pass) bounded retries rotate past invalid and unavailable messages even with an unchanged clock [117.03ms]
+(pass) recovery rejects provider identity mismatch and supports clients without metadata [75.03ms]
+(pass) date-only repair preserves attachments, labels, thread flags and Organization values [83.19ms]
+(pass) recovery rejects another account's lease and never writes after lease loss [64.85ms]
+(pass) an in-flight recovery cannot overwrite a concurrent successful normalization [67.61ms]
+
+apps/api/src/providers/gmail/push.test.ts:
+(pass) Gmail push sync > stores watch history and renews only when the watch is close to expiry [65.67ms]
+(pass) Gmail push sync > drains pending history before replacing the cursor during watch renewal [66.14ms]
+(pass) Gmail push sync > records freshness when an incremental notification is already at the stored cursor [60.10ms]
+(pass) Gmail push sync > advances the cursor when a changed message disappears before fetch [58.19ms]
+(pass) Gmail push sync > syncs history changes and advances the cursor only after message persistence [59.41ms]
+(pass) Gmail push sync > backfills existing messages when the first push arrives without a stored history cursor [68.41ms]
+(pass) Gmail push sync > falls back to an existing-message backfill when Gmail history has expired [63.60ms]
+(pass) Gmail push sync > removes deleted history messages and empty local threads [59.25ms]
+(pass) Gmail push sync > requires a verified Pub/Sub token and parses the Gmail notification envelope [1.01ms]
+469 |     const result = await syncGmailAccountHistory(db, {
+470 |       accountId: "acct_1", historyId: "200", gmailClient,
+471 |       metrics: { recordProviderFetch(ms) { providerDurations.push(ms); }, recordDbWrite() {} },
+472 |     });
+473 |     // Two history pages, 61 metadata reads, 61 body reads and one label list.
+474 |     assert.equal(providerDurations.length, 125);
+                 ^
+AssertionError: Expected values to be strictly equal:
+
+126 !== 125
+
+ generatedMessage: true,
+     actual: 126,
+   expected: 125,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/push.test.ts:474:12
+      at processTicksAndRejections (native:7:39)
+(fail) history persists bounded batches in global date/id order and counts distinct identities [690.10ms]
+(pass) history provider failure after a committed batch preserves cursor and replays idempotently [82.09ms]
+(pass) history lease failure after a committed batch preserves cursor and replays idempotently [88.71ms]
+(pass) history ordering failure after a committed batch preserves cursor and replays idempotently [72.47ms]
+(pass) history byte budget flushes large bodies before the count limit [86.55ms]
+(pass) history reconciles pages and metadata/body 404s, deletes in bounded fenced batches, and replays after lease loss [146.59ms]
+
+apps/api/src/providers/gmail/normalizer.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+ 6 |   normalizeGmailMessage,
+ 7 |   normalizeGmailThread,
+ 8 | } from "./normalizer.ts";
+ 9 | import { gmailMessageFixture } from "./fixtures/message.fixture.ts";
+10 | 
+11 | describe("Gmail normalizer", () => {
+     ^
+NotImplementedError: describe() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:113:26)
+      at checkNotInsideTest (node:test:118:32)
+      at createDescribe (node:test:228:21)
+      at describe (node:test:127:36)
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/normalizer.test.ts:11:1
+-------------------------------
+
+
+apps/api/src/providers/gmail/sync-persistence.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+67 |     const directory = tempDirs.pop();
+68 |     if (directory) rmSync(directory, { recursive: true, force: true });
+69 |   }
+70 | });
+71 | 
+72 | describe("Gmail batch persistence", () => {
+     ^
+NotImplementedError: describe() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:113:26)
+      at checkNotInsideTest (node:test:118:32)
+      at createDescribe (node:test:228:21)
+      at describe (node:test:127:36)
+      at /workspace/orca-pilot/apps/api/src/providers/gmail/sync-persistence.test.ts:72:1
+-------------------------------
+
+
+3 tests failed:
+(fail) history persists bounded batches in global date/id order and counts distinct identities [690.10ms]
+
+ 34 pass
+ 3 fail
+ 2 errors
+Ran 37 tests across 6 files. [3.45s]
