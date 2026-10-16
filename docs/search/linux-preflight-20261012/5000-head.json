@@ -1,0 +1,2746 @@
+{
+  "benchmark": "search-stage-v1",
+  "revision": "3ba1f615c48425e178d9fe4226b208c69ea8e454",
+  "mode": "head",
+  "size": 5000,
+  "samples": 5,
+  "warmups": 3,
+  "generatedAt": "2026-10-12T17:59:51.565Z",
+  "runtime": "1.3.14",
+  "sqlite": {
+    "version": "3.53.0"
+  },
+  "synchronous": {
+    "synchronous": 2
+  },
+  "journalMode": "wal",
+  "fixture": {
+    "seed": "search-stage-v1",
+    "ownedAccounts": 2,
+    "foreignMessages": 10,
+    "labelsPerMessage": 1,
+    "ordinaryBodyBytes": 2009,
+    "oversizedMessages": 5
+  },
+  "host": {
+    "platform": "linux",
+    "release": "6.18.44",
+    "architecture": "x64",
+    "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "logicalCpus": 5,
+    "totalMemoryBytes": 18932244480,
+    "start": {
+      "load": [
+        1.34,
+        1.68,
+        0.89
+      ],
+      "freeBytes": 18003312640
+    },
+    "end": {
+      "load": [
+        1.36,
+        1.66,
+        0.9
+      ],
+      "freeBytes": 17931390976
+    }
+  },
+  "processResources": {
+    "userCPUTime": 23306542,
+    "systemCPUTime": 5509998,
+    "maxRSS": 189448,
+    "sharedMemorySize": 0,
+    "unsharedDataSize": 0,
+    "unsharedStackSize": 0,
+    "minorPageFault": 79164,
+    "majorPageFault": 0,
+    "swappedOut": 0,
+    "fsRead": 0,
+    "fsWrite": 0,
+    "ipcSent": 0,
+    "ipcReceived": 0,
+    "signalsCount": 0,
+    "voluntaryContextSwitches": 6025,
+    "involuntaryContextSwitches": 2080
+  },
+  "disk": {
+    "seededDisk": {
+      "databaseBytes": 28798976,
+      "walBytes": 0,
+      "shmBytes": 65536
+    },
+    "afterReadsDisk": {
+      "databaseBytes": 28798976,
+      "walBytes": 0,
+      "shmBytes": 65536
+    },
+    "beforeSyncDisk": {
+      "databaseBytes": 28798976,
+      "walBytes": 3394912,
+      "shmBytes": 65536
+    },
+    "afterSyncDisk": {
+      "databaseBytes": 29114368,
+      "walBytes": 4564992,
+      "shmBytes": 65536
+    },
+    "checkpointedDisk": {
+      "databaseBytes": 30007296,
+      "walBytes": 0,
+      "shmBytes": 65536
+    }
+  },
+  "signatures": {
+    "inbox": {
+      "ids": [
+        "message-0",
+        "message-1",
+        "message-2",
+        "message-3",
+        "message-4",
+        "message-5",
+        "message-6",
+        "message-7",
+        "message-8",
+        "message-9",
+        "message-10",
+        "message-11",
+        "message-12",
+        "message-13",
+        "message-14",
+        "message-15",
+        "message-16",
+        "message-17",
+        "message-18",
+        "message-19",
+        "message-20",
+        "message-21",
+        "message-22",
+        "message-23",
+        "message-24",
+        "message-25",
+        "message-26",
+        "message-27",
+        "message-28",
+        "message-29",
+        "message-30",
+        "message-31",
+        "message-32",
+        "message-33",
+        "message-34",
+        "message-35",
+        "message-36",
+        "message-37",
+        "message-38",
+        "message-39",
+        "message-40",
+        "message-41",
+        "message-42",
+        "message-43",
+        "message-44",
+        "message-45",
+        "message-46",
+        "message-47",
+        "message-48",
+        "message-49"
+      ],
+      "count": 5000
+    },
+    "common": {
+      "ids": [
+        "message-0",
+        "message-1",
+        "message-2",
+        "message-3",
+        "message-4",
+        "message-5",
+        "message-6",
+        "message-7",
+        "message-8",
+        "message-9",
+        "message-10",
+        "message-11",
+        "message-12",
+        "message-13",
+        "message-14",
+        "message-15",
+        "message-16",
+        "message-17",
+        "message-18",
+        "message-19",
+        "message-20",
+        "message-21",
+        "message-22",
+        "message-23",
+        "message-24",
+        "message-25",
+        "message-26",
+        "message-27",
+        "message-28",
+        "message-29",
+        "message-30",
+        "message-31",
+        "message-32",
+        "message-33",
+        "message-34",
+        "message-35",
+        "message-36",
+        "message-37",
+        "message-38",
+        "message-39",
+        "message-40",
+        "message-41",
+        "message-42",
+        "message-43",
+        "message-44",
+        "message-45",
+        "message-46",
+        "message-47",
+        "message-48",
+        "message-49"
+      ],
+      "count": 5000
+    },
+    "selective": {
+      "ids": [
+        "message-0",
+        "message-10",
+        "message-20",
+        "message-30",
+        "message-40",
+        "message-50",
+        "message-60",
+        "message-70",
+        "message-80",
+        "message-90",
+        "message-100",
+        "message-110",
+        "message-120",
+        "message-130",
+        "message-140",
+        "message-150",
+        "message-160",
+        "message-170",
+        "message-180",
+        "message-190",
+        "message-200",
+        "message-210",
+        "message-220",
+        "message-230",
+        "message-240",
+        "message-250",
+        "message-260",
+        "message-270",
+        "message-280",
+        "message-290",
+        "message-300",
+        "message-310",
+        "message-320",
+        "message-330",
+        "message-340",
+        "message-350",
+        "message-360",
+        "message-370",
+        "message-380",
+        "message-390",
+        "message-400",
+        "message-410",
+        "message-420",
+        "message-430",
+        "message-440",
+        "message-450",
+        "message-460",
+        "message-470",
+        "message-480",
+        "message-490"
+      ],
+      "count": 500
+    },
+    "absent": {
+      "ids": [],
+      "count": 0
+    },
+    "body-only": {
+      "ids": [],
+      "count": 0
+    },
+    "oversized": {
+      "ids": [
+        "message-0",
+        "message-1001",
+        "message-2002",
+        "message-3003",
+        "message-4004"
+      ],
+      "count": 5
+    },
+    "account-a": {
+      "ids": [
+        "message-0",
+        "message-2",
+        "message-4",
+        "message-6",
+        "message-8",
+        "message-10",
+        "message-12",
+        "message-14",
+        "message-16",
+        "message-18",
+        "message-20",
+        "message-22",
+        "message-24",
+        "message-26",
+        "message-28",
+        "message-30",
+        "message-32",
+        "message-34",
+        "message-36",
+        "message-38",
+        "message-40",
+        "message-42",
+        "message-44",
+        "message-46",
+        "message-48",
+        "message-50",
+        "message-52",
+        "message-54",
+        "message-56",
+        "message-58",
+        "message-60",
+        "message-62",
+        "message-64",
+        "message-66",
+        "message-68",
+        "message-70",
+        "message-72",
+        "message-74",
+        "message-76",
+        "message-78",
+        "message-80",
+        "message-82",
+        "message-84",
+        "message-86",
+        "message-88",
+        "message-90",
+        "message-92",
+        "message-94",
+        "message-96",
+        "message-98"
+      ],
+      "count": 2500
+    },
+    "page-two": [
+      "message-50",
+      "message-51",
+      "message-52",
+      "message-53",
+      "message-54",
+      "message-55",
+      "message-56",
+      "message-57",
+      "message-58",
+      "message-59",
+      "message-60",
+      "message-61",
+      "message-62",
+      "message-63",
+      "message-64",
+      "message-65",
+      "message-66",
+      "message-67",
+      "message-68",
+      "message-69",
+      "message-70",
+      "message-71",
+      "message-72",
+      "message-73",
+      "message-74",
+      "message-75",
+      "message-76",
+      "message-77",
+      "message-78",
+      "message-79",
+      "message-80",
+      "message-81",
+      "message-82",
+      "message-83",
+      "message-84",
+      "message-85",
+      "message-86",
+      "message-87",
+      "message-88",
+      "message-89",
+      "message-90",
+      "message-91",
+      "message-92",
+      "message-93",
+      "message-94",
+      "message-95",
+      "message-96",
+      "message-97",
+      "message-98",
+      "message-99"
+    ]
+  },
+  "results": {
+    "legacy-inbox": {
+      "summaryMs": {
+        "n": 5,
+        "min": 129.38798300000053,
+        "p50": 137.9659930000007,
+        "p95": 160.56897500000014,
+        "max": 160.56897500000014
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 137.029,
+        "p50": 152.543,
+        "p95": 178.215,
+        "max": 178.215
+      },
+      "observations": [
+        {
+          "ms": 160.56897500000014,
+          "cpuMs": 178.215,
+          "rssBytes": 139530240,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 109.04868700000043,
+              "countDurationMs": 94.58116700000028,
+              "pageDurationMs": 10.75489800000014,
+              "enrichmentDurationMs": 1.4927209999996194,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 149.4478220000001,
+          "cpuMs": 152.543,
+          "rssBytes": 139210752,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 100.46888899999976,
+              "countDurationMs": 89.72353300000032,
+              "pageDurationMs": 9.803139999999985,
+              "enrichmentDurationMs": 0.5438179999991917,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 137.9659930000007,
+          "cpuMs": 146.261,
+          "rssBytes": 138670080,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 99.08323099999961,
+              "countDurationMs": 89.77304500000082,
+              "pageDurationMs": 6.987221000000318,
+              "enrichmentDurationMs": 1.6462499999997817,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 133.32162199999948,
+          "cpuMs": 157.168,
+          "rssBytes": 139796480,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 100.7850070000004,
+              "countDurationMs": 85.47889100000066,
+              "pageDurationMs": 12.950520999999753,
+              "enrichmentDurationMs": 1.9322490000004109,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 129.38798300000053,
+          "cpuMs": 137.029,
+          "rssBytes": 140255232,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 96.67458999999963,
+              "countDurationMs": 88.82826699999987,
+              "pageDurationMs": 6.405102000000625,
+              "enrichmentDurationMs": 0.6388660000002346,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-inbox": {
+      "summaryMs": {
+        "n": 5,
+        "min": 131.09201099999973,
+        "p50": 154.39016300000003,
+        "p95": 178.7553280000002,
+        "max": 178.7553280000002
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 145.403,
+        "p50": 190.113,
+        "p95": 216.439,
+        "max": 216.439
+      },
+      "observations": [
+        {
+          "ms": 159.33446000000004,
+          "cpuMs": 176.548,
+          "rssBytes": 141537280,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 125.45889299999999,
+              "countDurationMs": 110.78083599999991,
+              "pageDurationMs": 12.296129999999721,
+              "enrichmentDurationMs": 0.8495930000008229,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 154.39016300000003,
+          "cpuMs": 216.439,
+          "rssBytes": 143478784,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 126.47142499999973,
+              "countDurationMs": 107.21464400000059,
+              "pageDurationMs": 14.022745999999643,
+              "enrichmentDurationMs": 4.009337999999843,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 178.7553280000002,
+          "cpuMs": 197.955,
+          "rssBytes": 143691776,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 130.60619700000007,
+              "countDurationMs": 115.76154299999962,
+              "pageDurationMs": 11.882822999999917,
+              "enrichmentDurationMs": 2.43787599999996,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 131.09201099999973,
+          "cpuMs": 190.113,
+          "rssBytes": 144203776,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 103.97796600000038,
+              "countDurationMs": 91.51363500000025,
+              "pageDurationMs": 11.109776000000238,
+              "enrichmentDurationMs": 1.072664000000259,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 140.6257770000002,
+          "cpuMs": 145.403,
+          "rssBytes": 143593472,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 107.72850300000027,
+              "countDurationMs": 96.78610900000058,
+              "pageDurationMs": 8.954593000000386,
+              "enrichmentDurationMs": 0.6390860000001339,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-common": {
+      "summaryMs": {
+        "n": 5,
+        "min": 165.86710399999993,
+        "p50": 190.28447899999992,
+        "p95": 228.09151699999984,
+        "max": 228.09151699999984
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 172.53,
+        "p50": 195.263,
+        "p95": 243.651,
+        "max": 243.651
+      },
+      "observations": [
+        {
+          "ms": 228.09151699999984,
+          "cpuMs": 243.651,
+          "rssBytes": 145338368,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 175.1606440000005,
+              "countDurationMs": 154.82444900000064,
+              "pageDurationMs": 17.684943000000203,
+              "enrichmentDurationMs": 1.308972000000722,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 213.0291640000005,
+          "cpuMs": 223.982,
+          "rssBytes": 145215488,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 153.29146200000014,
+              "countDurationMs": 129.95992999999999,
+              "pageDurationMs": 19.693606000000727,
+              "enrichmentDurationMs": 2.8991150000001653,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 168.3035120000004,
+          "cpuMs": 181.191,
+          "rssBytes": 145006592,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 103.8748230000001,
+              "countDurationMs": 93.71932099999958,
+              "pageDurationMs": 7.945560999999543,
+              "enrichmentDurationMs": 0.6157640000001265,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 165.86710399999993,
+          "cpuMs": 172.53,
+          "rssBytes": 144502784,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 130.05066799999986,
+              "countDurationMs": 119.53087700000015,
+              "pageDurationMs": 8.457994999999755,
+              "enrichmentDurationMs": 1.738242999999784,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 190.28447899999992,
+          "cpuMs": 195.263,
+          "rssBytes": 143556608,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 138.25784400000066,
+              "countDurationMs": 120.71586200000002,
+              "pageDurationMs": 13.437122000000272,
+              "enrichmentDurationMs": 2.484329999999318,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-common": {
+      "summaryMs": {
+        "n": 5,
+        "min": 145.55453599999964,
+        "p50": 164.66118800000004,
+        "p95": 173.7411089999996,
+        "max": 173.7411089999996
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 157.639,
+        "p50": 174.325,
+        "p95": 182.515,
+        "max": 182.515
+      },
+      "observations": [
+        {
+          "ms": 173.7411089999996,
+          "cpuMs": 176.338,
+          "rssBytes": 144474112,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 141.42167100000006,
+              "countDurationMs": 128.60520300000007,
+              "pageDurationMs": 11.529113999999936,
+              "enrichmentDurationMs": 0.40815500000007887,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 167.93526199999997,
+          "cpuMs": 182.515,
+          "rssBytes": 144957440,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 120.70710700000018,
+              "countDurationMs": 113.14351499999975,
+              "pageDurationMs": 6.728431999999884,
+              "enrichmentDurationMs": 0.4356019999995624,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 145.55453599999964,
+          "cpuMs": 157.639,
+          "rssBytes": 144728064,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 112.31541800000014,
+              "countDurationMs": 99.09651499999927,
+              "pageDurationMs": 12.42414699999972,
+              "enrichmentDurationMs": 0.3697990000000573,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 159.8738229999999,
+          "cpuMs": 166.229,
+          "rssBytes": 144703488,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 115.57918000000063,
+              "countDurationMs": 104.03181600000062,
+              "pageDurationMs": 9.793413999999757,
+              "enrichmentDurationMs": 1.1432549999990442,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 164.66118800000004,
+          "cpuMs": 174.325,
+          "rssBytes": 144535552,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 118.75365299999976,
+              "countDurationMs": 108.45640900000035,
+              "pageDurationMs": 9.213807000000088,
+              "enrichmentDurationMs": 0.4190470000012283,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-selective": {
+      "summaryMs": {
+        "n": 5,
+        "min": 82.35050700000102,
+        "p50": 110.89303199999995,
+        "p95": 147.57836700000007,
+        "max": 147.57836700000007
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 83.717,
+        "p50": 110.213,
+        "p95": 159.068,
+        "max": 159.068
+      },
+      "observations": [
+        {
+          "ms": 82.35050700000102,
+          "cpuMs": 83.717,
+          "rssBytes": 145276928,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 53.98697100000027,
+              "countDurationMs": 27.509853999999905,
+              "pageDurationMs": 25.408690999998726,
+              "enrichmentDurationMs": 0.32967199999984587,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 87.29949000000124,
+          "cpuMs": 90.098,
+          "rssBytes": 145539072,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 53.272995999999694,
+              "countDurationMs": 32.58495599999878,
+              "pageDurationMs": 18.360278000000108,
+              "enrichmentDurationMs": 1.6454960000010033,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 110.89303199999995,
+          "cpuMs": 110.213,
+          "rssBytes": 145743872,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 51.58274200000051,
+              "countDurationMs": 33.668007999998736,
+              "pageDurationMs": 16.510311,
+              "enrichmentDurationMs": 0.7616070000003674,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 147.57836700000007,
+          "cpuMs": 159.068,
+          "rssBytes": 146395136,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 76.18632099999923,
+              "countDurationMs": 54.25178500000038,
+              "pageDurationMs": 19.5103280000003,
+              "enrichmentDurationMs": 1.6219399999990856,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 128.08848200000102,
+          "cpuMs": 120.504,
+          "rssBytes": 146206720,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 55.646654000000126,
+              "countDurationMs": 34.68572200000017,
+              "pageDurationMs": 17.437770000000455,
+              "enrichmentDurationMs": 0.4782489999997779,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-selective": {
+      "summaryMs": {
+        "n": 5,
+        "min": 83.92862000000059,
+        "p50": 106.47523799999908,
+        "p95": 114.88213300000098,
+        "max": 114.88213300000098
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 86.614,
+        "p50": 107.949,
+        "p95": 116.657,
+        "max": 116.657
+      },
+      "observations": [
+        {
+          "ms": 112.16961900000024,
+          "cpuMs": 116.189,
+          "rssBytes": 146550784,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 68.62333500000022,
+              "countDurationMs": 29.621831000000384,
+              "pageDurationMs": 37.18805400000019,
+              "enrichmentDurationMs": 0.744699999999284,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 83.92862000000059,
+          "cpuMs": 86.614,
+          "rssBytes": 147075072,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 57.84584399999949,
+              "countDurationMs": 25.63640200000009,
+              "pageDurationMs": 28.38444999999956,
+              "enrichmentDurationMs": 3.0510420000009617,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 83.98458399999981,
+          "cpuMs": 98.825,
+          "rssBytes": 147206144,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 51.350705000000744,
+              "countDurationMs": 36.72632800000065,
+              "pageDurationMs": 12.990132000000813,
+              "enrichmentDurationMs": 1.142851000000519,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 114.88213300000098,
+          "cpuMs": 116.657,
+          "rssBytes": 147464192,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 77.34456300000056,
+              "countDurationMs": 54.58403399999952,
+              "pageDurationMs": 21.296288999999888,
+              "enrichmentDurationMs": 0.9954319999997097,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 106.47523799999908,
+          "cpuMs": 107.949,
+          "rssBytes": 147501056,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 58.096120000000155,
+              "countDurationMs": 32.83842200000072,
+              "pageDurationMs": 22.378885000000082,
+              "enrichmentDurationMs": 2.495779999999286,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-absent": {
+      "summaryMs": {
+        "n": 5,
+        "min": 32.72437699999864,
+        "p50": 44.922677000000476,
+        "p95": 74.37701500000003,
+        "max": 74.37701500000003
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 33.13,
+        "p50": 49.212,
+        "p95": 75.687,
+        "max": 75.687
+      },
+      "observations": [
+        {
+          "ms": 74.37701500000003,
+          "cpuMs": 75.687,
+          "rssBytes": 147685376,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 23.509711000000607,
+              "countDurationMs": 22.171265000000858,
+              "pageDurationMs": 0.03496799999993527,
+              "enrichmentDurationMs": 0.008636000000478816,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 32.72437699999864,
+          "cpuMs": 33.13,
+          "rssBytes": 147685376,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 17.53964900000028,
+              "countDurationMs": 16.41711099999884,
+              "pageDurationMs": 0.05354299999999057,
+              "enrichmentDurationMs": 0.013933000000179163,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 44.922677000000476,
+          "cpuMs": 49.212,
+          "rssBytes": 148471808,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 27.36044899999979,
+              "countDurationMs": 26.904073999998218,
+              "pageDurationMs": 0.08468200000061188,
+              "enrichmentDurationMs": 0.013025000000197906,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 34.231800000001385,
+          "cpuMs": 34.633,
+          "rssBytes": 149258240,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 17.924567000000025,
+              "countDurationMs": 17.005597000001217,
+              "pageDurationMs": 0.013535000000047148,
+              "enrichmentDurationMs": 0.006815000000642613,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 48.28151500000058,
+          "cpuMs": 49.536,
+          "rssBytes": 149258240,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 23.418392999999924,
+              "countDurationMs": 22.93805600000087,
+              "pageDurationMs": 0.03198100000008708,
+              "enrichmentDurationMs": 0.006691000000500935,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-absent": {
+      "summaryMs": {
+        "n": 5,
+        "min": 37.71709599999849,
+        "p50": 56.928234000000884,
+        "p95": 899.9552559999993,
+        "max": 899.9552559999993
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 37.691,
+        "p50": 59.64,
+        "p95": 718.996,
+        "max": 718.996
+      },
+      "observations": [
+        {
+          "ms": 48.64529299999958,
+          "cpuMs": 51.608,
+          "rssBytes": 151142400,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 17.382658000000447,
+              "countDurationMs": 16.91405599999962,
+              "pageDurationMs": 0.12387799999851268,
+              "enrichmentDurationMs": 0.006319000000075903,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 37.71709599999849,
+          "cpuMs": 37.691,
+          "rssBytes": 151142400,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 24.188696999999593,
+              "countDurationMs": 23.102595000000292,
+              "pageDurationMs": 0.019545999999536434,
+              "enrichmentDurationMs": 0.08712300000115647,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 56.928234000000884,
+          "cpuMs": 59.64,
+          "rssBytes": 151142400,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 19.76242099999945,
+              "countDurationMs": 19.227332999998907,
+              "pageDurationMs": 0.031151999999565305,
+              "enrichmentDurationMs": 0.006381999999575783,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 899.9552559999993,
+          "cpuMs": 718.996,
+          "rssBytes": 148557824,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 879.1716940000006,
+              "countDurationMs": 876.1345430000001,
+              "pageDurationMs": 1.0471639999996114,
+              "enrichmentDurationMs": 0.3888169999991078,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 344.6719869999997,
+          "cpuMs": 376.564,
+          "rssBytes": 147795968,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 265.21541100000104,
+              "countDurationMs": 260.9180090000009,
+              "pageDurationMs": 1.7590569999993022,
+              "enrichmentDurationMs": 0.11074199999893608,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-body-only": {
+      "summaryMs": {
+        "n": 5,
+        "min": 61.36343999999917,
+        "p50": 66.43111499999941,
+        "p95": 191.65367400000105,
+        "max": 191.65367400000105
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 59.446,
+        "p50": 75.429,
+        "p95": 197.636,
+        "max": 197.636
+      },
+      "observations": [
+        {
+          "ms": 66.43111499999941,
+          "cpuMs": 109.496,
+          "rssBytes": 151031808,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 25.509620000000723,
+              "countDurationMs": 24.72153999999864,
+              "pageDurationMs": 0.012558000000353786,
+              "enrichmentDurationMs": 0.010354000000006636,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 61.36343999999917,
+          "cpuMs": 66.591,
+          "rssBytes": 151031808,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 27.931329999999434,
+              "countDurationMs": 27.409003999999186,
+              "pageDurationMs": 0.017761999999493128,
+              "enrichmentDurationMs": 0.034486000000470085,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 61.940999000000375,
+          "cpuMs": 59.446,
+          "rssBytes": 151031808,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 20.23897500000021,
+              "countDurationMs": 19.639360000001034,
+              "pageDurationMs": 0.011860000000524451,
+              "enrichmentDurationMs": 0.013793000000077882,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 69.37469400000009,
+          "cpuMs": 75.429,
+          "rssBytes": 150315008,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 20.90991700000086,
+              "countDurationMs": 20.409304000000702,
+              "pageDurationMs": 0.014221999999790569,
+              "enrichmentDurationMs": 0.01188200000069628,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 191.65367400000105,
+          "cpuMs": 197.636,
+          "rssBytes": 149667840,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 28.925531000000774,
+              "countDurationMs": 28.481972999999925,
+              "pageDurationMs": 0.015390000000479631,
+              "enrichmentDurationMs": 0.008569000001443783,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-body-only": {
+      "summaryMs": {
+        "n": 5,
+        "min": 207.08892200000082,
+        "p50": 229.2558310000004,
+        "p95": 424.3975109999992,
+        "max": 424.3975109999992
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 216.314,
+        "p50": 235.636,
+        "p95": 453.937,
+        "max": 453.937
+      },
+      "observations": [
+        {
+          "ms": 424.3975109999992,
+          "cpuMs": 453.937,
+          "rssBytes": 148918272,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 291.0160500000002,
+              "countDurationMs": 288.0428670000001,
+              "pageDurationMs": 0.6933590000007825,
+              "enrichmentDurationMs": 0.14452500000152213,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 207.08892200000082,
+          "cpuMs": 216.314,
+          "rssBytes": 148750336,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 73.82470999999896,
+              "countDurationMs": 70.8385330000001,
+              "pageDurationMs": 0.024170000000594882,
+              "enrichmentDurationMs": 0.012136999999711406,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 229.2558310000004,
+          "cpuMs": 235.636,
+          "rssBytes": 148881408,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 84.45965799999976,
+              "countDurationMs": 72.96922099999938,
+              "pageDurationMs": 0.02307199999995646,
+              "enrichmentDurationMs": 0.01470799999879091,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 249.2912740000029,
+          "cpuMs": 284.321,
+          "rssBytes": 149102592,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 119.9001219999991,
+              "countDurationMs": 114.05669199999829,
+              "pageDurationMs": 0.02533899999980349,
+              "enrichmentDurationMs": 0.0127169999977923,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 212.43355899999733,
+          "cpuMs": 222.33,
+          "rssBytes": 149069824,
+          "prepared": 13,
+          "metrics": [
+            {
+              "durationMs": 79.8318760000002,
+              "countDurationMs": 76.53023100000064,
+              "pageDurationMs": 0.02293400000053225,
+              "enrichmentDurationMs": 0.011594999999942956,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 0,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 0,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 0,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 0,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-oversized": {
+      "summaryMs": {
+        "n": 5,
+        "min": 142.2123019999999,
+        "p50": 310.2256329999982,
+        "p95": 367.9269850000019,
+        "max": 367.9269850000019
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 145.967,
+        "p50": 311.729,
+        "p95": 440.028,
+        "max": 440.028
+      },
+      "observations": [
+        {
+          "ms": 367.9269850000019,
+          "cpuMs": 440.028,
+          "rssBytes": 153407488,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 208.53037699999913,
+              "countDurationMs": 106.66721800000232,
+              "pageDurationMs": 96.03602899999896,
+              "enrichmentDurationMs": 3.1589810000004945,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 247.79383600000074,
+          "cpuMs": 262.074,
+          "rssBytes": 152768512,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 124.6559219999981,
+              "countDurationMs": 60.51501300000018,
+              "pageDurationMs": 63.48638199999914,
+              "enrichmentDurationMs": 0.2483509999983653,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 310.2256329999982,
+          "cpuMs": 311.729,
+          "rssBytes": 151842816,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 186.18447100000049,
+              "countDurationMs": 76.98632500000167,
+              "pageDurationMs": 104.9695329999995,
+              "enrichmentDurationMs": 3.895968000000721,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 320.47413400000005,
+          "cpuMs": 321.893,
+          "rssBytes": 151339008,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 169.14977900000304,
+              "countDurationMs": 102.10104399999909,
+              "pageDurationMs": 62.66258399999788,
+              "enrichmentDurationMs": 1.1407120000003488,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 142.2123019999999,
+          "cpuMs": 145.967,
+          "rssBytes": 151732224,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 76.42851900000096,
+              "countDurationMs": 39.67981499999951,
+              "pageDurationMs": 35.65586099999928,
+              "enrichmentDurationMs": 0.733288999999786,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-oversized": {
+      "summaryMs": {
+        "n": 5,
+        "min": 66.51841599999898,
+        "p50": 79.20767699999851,
+        "p95": 134.67184800000177,
+        "max": 134.67184800000177
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 66.991,
+        "p50": 79.565,
+        "p95": 138.01,
+        "max": 138.01
+      },
+      "observations": [
+        {
+          "ms": 77.76859799999875,
+          "cpuMs": 77.791,
+          "rssBytes": 154673152,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 62.11808099999689,
+              "countDurationMs": 26.569052000002557,
+              "pageDurationMs": 35.020275999999285,
+              "enrichmentDurationMs": 0.2521149999993213,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 100.07579999999871,
+          "cpuMs": 108.153,
+          "rssBytes": 154497024,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 68.89314200000081,
+              "countDurationMs": 22.23202500000116,
+              "pageDurationMs": 44.90411600000152,
+              "enrichmentDurationMs": 0.8204960000002757,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 79.20767699999851,
+          "cpuMs": 79.565,
+          "rssBytes": 154939392,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 54.1389969999982,
+              "countDurationMs": 25.79178200000024,
+              "pageDurationMs": 27.78626500000246,
+              "enrichmentDurationMs": 0.2040259999994305,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 66.51841599999898,
+          "cpuMs": 66.991,
+          "rssBytes": 154218496,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 46.7602939999997,
+              "countDurationMs": 16.640051999998832,
+              "pageDurationMs": 29.292677000001277,
+              "enrichmentDurationMs": 0.3232189999980619,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 134.67184800000177,
+          "cpuMs": 138.01,
+          "rssBytes": 153858048,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 86.1579899999997,
+              "countDurationMs": 50.34965600000214,
+              "pageDurationMs": 33.55939600000056,
+              "enrichmentDurationMs": 1.405204999999114,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 5,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 5,
+              "lookaheadRowsProjected": 0,
+              "labelAssociationRowsLoaded": 5,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-account-a": {
+      "summaryMs": {
+        "n": 5,
+        "min": 94.43741299999965,
+        "p50": 146.26009399999748,
+        "p95": 170.05862100000013,
+        "max": 170.05862100000013
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 95.733,
+        "p50": 153.033,
+        "p95": 184.558,
+        "max": 184.558
+      },
+      "observations": [
+        {
+          "ms": 149.2565480000012,
+          "cpuMs": 153.033,
+          "rssBytes": 154660864,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 95.30042499999763,
+              "countDurationMs": 76.84519200000068,
+              "pageDurationMs": 14.380651000003127,
+              "enrichmentDurationMs": 1.7596990000020014,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 170.05862100000013,
+          "cpuMs": 184.558,
+          "rssBytes": 154226688,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 91.42347999999765,
+              "countDurationMs": 82.27263099999982,
+              "pageDurationMs": 7.7490919999982,
+              "enrichmentDurationMs": 0.7816889999994601,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 94.43741299999965,
+          "cpuMs": 95.733,
+          "rssBytes": 154484736,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 68.48770200000217,
+              "countDurationMs": 60.989213000000746,
+              "pageDurationMs": 5.960677000002761,
+              "enrichmentDurationMs": 1.0036399999989953,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 146.26009399999748,
+          "cpuMs": 160.202,
+          "rssBytes": 156389376,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 116.74026400000002,
+              "countDurationMs": 101.99311600000146,
+              "pageDurationMs": 13.60398499999792,
+              "enrichmentDurationMs": 0.39329499999803375,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 102.88796099999672,
+          "cpuMs": 105.465,
+          "rssBytes": 158085120,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 71.41913100000238,
+              "countDurationMs": 64.74130399999922,
+              "pageDurationMs": 4.46083599999838,
+              "enrichmentDurationMs": 0.6336060000030557,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        }
+      ]
+    },
+    "metadata-account-a": {
+      "summaryMs": {
+        "n": 5,
+        "min": 145.52719199999774,
+        "p50": 198.0063880000016,
+        "p95": 229.72228899999755,
+        "max": 229.72228899999755
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 153.478,
+        "p50": 202.512,
+        "p95": 280.789,
+        "max": 280.789
+      },
+      "observations": [
+        {
+          "ms": 222.15786799999842,
+          "cpuMs": 280.789,
+          "rssBytes": 157724672,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 121.54293800000232,
+              "countDurationMs": 111.75736799999868,
+              "pageDurationMs": 6.583873999999923,
+              "enrichmentDurationMs": 2.3104270000003453,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 198.0063880000016,
+          "cpuMs": 202.512,
+          "rssBytes": 156749824,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 130.35882199999833,
+              "countDurationMs": 109.66497299999901,
+              "pageDurationMs": 9.60779299999922,
+              "enrichmentDurationMs": 0.6518340000002354,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 181.51798300000155,
+          "cpuMs": 184.508,
+          "rssBytes": 155070464,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 119.90307100000064,
+              "countDurationMs": 105.95102000000043,
+              "pageDurationMs": 12.402283999999781,
+              "enrichmentDurationMs": 1.0351269999991928,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 145.52719199999774,
+          "cpuMs": 153.478,
+          "rssBytes": 155705344,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 99.18064999999842,
+              "countDurationMs": 77.82354599999962,
+              "pageDurationMs": 14.54562100000112,
+              "enrichmentDurationMs": 0.9556110000012268,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        },
+        {
+          "ms": 229.72228899999755,
+          "cpuMs": 218.798,
+          "rssBytes": 155836416,
+          "prepared": 15,
+          "metrics": [
+            {
+              "durationMs": 108.15086399999927,
+              "countDurationMs": 93.3031719999999,
+              "pageDurationMs": 13.01303100000223,
+              "enrichmentDurationMs": 1.0487629999988712,
+              "accountCount": 1,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 51,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 1,
+              "maxPageRowsBound": 51,
+              "revision": "mailbox-v2:ed003f870dfef4821aa955df404cdc7d177959dd94f0ef7a41f823a2fd86c4b0"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy-page-two": {
+      "summaryMs": {
+        "n": 5,
+        "min": 157.17493900000045,
+        "p50": 166.04243900000074,
+        "p95": 195.25222999999824,
+        "max": 195.25222999999824
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 160.465,
+        "p50": 176.26,
+        "p95": 201.082,
+        "max": 201.082
+      },
+      "observations": [
+        {
+          "ms": 157.17493900000045,
+          "cpuMs": 160.465,
+          "rssBytes": 155877376,
+          "prepared": 16,
+          "metrics": [
+            {
+              "durationMs": 137.26570099999662,
+              "countDurationMs": 113.86065400000007,
+              "pageDurationMs": 19.045906999999715,
+              "enrichmentDurationMs": 2.236022999997658,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 166.04243900000074,
+          "cpuMs": 176.26,
+          "rssBytes": 156528640,
+          "prepared": 16,
+          "metrics": [
+            {
+              "durationMs": 124.93863999999667,
+              "countDurationMs": 116.14068199999747,
+              "pageDurationMs": 7.811631000000489,
+              "enrichmentDurationMs": 0.4972600000000966,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 159.65613699999813,
+          "cpuMs": 162.529,
+          "rssBytes": 156397568,
+          "prepared": 16,
+          "metrics": [
+            {
+              "durationMs": 131.90144800000053,
+              "countDurationMs": 118.3135970000003,
+              "pageDurationMs": 11.590148999999656,
+              "enrichmentDurationMs": 1.250359000001481,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 195.25222999999824,
+          "cpuMs": 201.082,
+          "rssBytes": 156385280,
+          "prepared": 16,
+          "metrics": [
+            {
+              "durationMs": 157.48263299999962,
+              "countDurationMs": 145.99111499999708,
+              "pageDurationMs": 9.351622999998654,
+              "enrichmentDurationMs": 1.3232939999979862,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        },
+        {
+          "ms": 176.0174220000008,
+          "cpuMs": 179.188,
+          "rssBytes": 156352512,
+          "prepared": 16,
+          "metrics": [
+            {
+              "durationMs": 139.69256700000187,
+              "countDurationMs": 120.70336999999927,
+              "pageDurationMs": 17.437926999999036,
+              "enrichmentDurationMs": 0.8323039999995672,
+              "accountCount": 2,
+              "limit": 50,
+              "returnedMessages": 50,
+              "aggregateRowsReturned": 1,
+              "pageRowsProjected": 102,
+              "lookaheadRowsProjected": 1,
+              "labelAssociationRowsLoaded": 50,
+              "effectiveOverridesProjected": 0,
+              "accountPageQueries": 2,
+              "maxPageRowsBound": 102,
+              "revision": "mailbox-v2:7a402c28e01a8f352136c86b7fe518cf7542d0236636d8599241cfbe06588693"
+            }
+          ]
+        }
+      ]
+    },
+    "single-autocommit-update": {
+      "summaryMs": {
+        "n": 5,
+        "min": 0.05600400000184891,
+        "p50": 0.07148299999971641,
+        "p95": 0.1705069999989064,
+        "max": 0.1705069999989064
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 0.057,
+        "p50": 0.075,
+        "p95": 0.174,
+        "max": 0.174
+      },
+      "observations": [
+        {
+          "ms": 0.07148299999971641,
+          "cpuMs": 0.075,
+          "rssBytes": 156876800,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 0.1705069999989064,
+          "cpuMs": 0.174,
+          "rssBytes": 156876800,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 0.07821100000001024,
+          "cpuMs": 0.079,
+          "rssBytes": 156876800,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 0.06191199999739183,
+          "cpuMs": 0.064,
+          "rssBytes": 156876800,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 0.05600400000184891,
+          "cpuMs": 0.057,
+          "rssBytes": 156876800,
+          "prepared": 0,
+          "metrics": []
+        }
+      ]
+    },
+    "transaction-100-updates": {
+      "summaryMs": {
+        "n": 5,
+        "min": 4.242936999999074,
+        "p50": 8.025013999998919,
+        "p95": 8.854599000002054,
+        "max": 8.854599000002054
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 4.25,
+        "p50": 8.067,
+        "p95": 8.875,
+        "max": 8.875
+      },
+      "observations": [
+        {
+          "ms": 4.242936999999074,
+          "cpuMs": 4.25,
+          "rssBytes": 156733440,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 8.025013999998919,
+          "cpuMs": 8.105,
+          "rssBytes": 156733440,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 8.854599000002054,
+          "cpuMs": 8.875,
+          "rssBytes": 156733440,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 6.08237999999983,
+          "cpuMs": 6.087,
+          "rssBytes": 156733440,
+          "prepared": 0,
+          "metrics": []
+        },
+        {
+          "ms": 8.06453799999872,
+          "cpuMs": 8.067,
+          "rssBytes": 156733440,
+          "prepared": 0,
+          "metrics": []
+        }
+      ]
+    },
+    "persist-25-new": {
+      "summaryMs": {
+        "n": 5,
+        "min": 68.29812000000311,
+        "p50": 77.58287800000107,
+        "p95": 91.84797400000025,
+        "max": 91.84797400000025
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 88.073,
+        "p50": 97.865,
+        "p95": 128.501,
+        "max": 128.501
+      },
+      "observations": [
+        {
+          "ms": 68.29812000000311,
+          "cpuMs": 106.601,
+          "rssBytes": 171507712,
+          "prepared": 16,
+          "metrics": []
+        },
+        {
+          "ms": 71.64490600000136,
+          "cpuMs": 88.073,
+          "rssBytes": 175439872,
+          "prepared": 16,
+          "metrics": []
+        },
+        {
+          "ms": 89.40826699999889,
+          "cpuMs": 97.865,
+          "rssBytes": 178905088,
+          "prepared": 16,
+          "metrics": []
+        },
+        {
+          "ms": 91.84797400000025,
+          "cpuMs": 128.501,
+          "rssBytes": 183476224,
+          "prepared": 16,
+          "metrics": []
+        },
+        {
+          "ms": 77.58287800000107,
+          "cpuMs": 90.098,
+          "rssBytes": 186712064,
+          "prepared": 16,
+          "metrics": []
+        }
+      ]
+    },
+    "persist-25-replay": {
+      "summaryMs": {
+        "n": 5,
+        "min": 9.491546000001108,
+        "p50": 17.661591000000044,
+        "p95": 33.20333899999969,
+        "max": 33.20333899999969
+      },
+      "summaryCpuMs": {
+        "n": 5,
+        "min": 10.283,
+        "p50": 17.667,
+        "p95": 33.451,
+        "max": 33.451
+      },
+      "observations": [
+        {
+          "ms": 33.20333899999969,
+          "cpuMs": 33.451,
+          "rssBytes": 190324736,
+          "prepared": 3,
+          "metrics": []
+        },
+        {
+          "ms": 26.559324999998353,
+          "cpuMs": 28.493,
+          "rssBytes": 191242240,
+          "prepared": 3,
+          "metrics": []
+        },
+        {
+          "ms": 17.661591000000044,
+          "cpuMs": 17.667,
+          "rssBytes": 192159744,
+          "prepared": 3,
+          "metrics": []
+        },
+        {
+          "ms": 10.910629999998491,
+          "cpuMs": 16.613,
+          "rssBytes": 193077248,
+          "prepared": 3,
+          "metrics": []
+        },
+        {
+          "ms": 9.491546000001108,
+          "cpuMs": 10.283,
+          "rssBytes": 193994752,
+          "prepared": 3,
+          "metrics": []
+        }
+      ]
+    }
+  },
+  "passed": true
+}

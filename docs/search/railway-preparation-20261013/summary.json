@@ -1,0 +1,216 @@
+{
+  "purpose": "Preparatory Linux only; NOT representative Railway validation",
+  "passed": false,
+  "stopReason": "10k relative read-latency gates failed; trial2 and mixed not started",
+  "container": {
+    "network": "none",
+    "cpus": 4,
+    "memoryBytes": 1073741824
+  },
+  "applicationRevisions": {
+    "main": "0e6805131a9c8386107bf70f598e2b61b0cf6a0b",
+    "integration": "fdc78bce2d4e3169f870aaaffd62da20d9f46f30"
+  },
+  "pairs": {
+    "1000": {
+      "allCorrectnessChecksPassed": true,
+      "signaturesEqual": true,
+      "synchronous": {
+        "base": {
+          "synchronous": 2
+        },
+        "head": {
+          "synchronous": 2
+        }
+      },
+      "connections": {
+        "base": 973,
+        "head": 974
+      },
+      "comparisons": {
+        "legacy-inbox": {
+          "baselineP95Ms": 69.98639299999991,
+          "candidateP95Ms": 36.49846000000002,
+          "ratio": 0.5215079451229908,
+          "relativeGatePassed": true
+        },
+        "legacy-common": {
+          "baselineP95Ms": 43.10176899999988,
+          "candidateP95Ms": 38.58414500000026,
+          "ratio": 0.8951870397709285,
+          "relativeGatePassed": true
+        },
+        "legacy-selective": {
+          "baselineP95Ms": 67.12738399999944,
+          "candidateP95Ms": 30.805921000000126,
+          "ratio": 0.4589173473526152,
+          "relativeGatePassed": true
+        },
+        "legacy-absent": {
+          "baselineP95Ms": 11.466666999999688,
+          "candidateP95Ms": 11.865348999999696,
+          "ratio": 1.0347687780590489,
+          "relativeGatePassed": true
+        },
+        "legacy-body-only": {
+          "baselineP95Ms": 11.473339999999553,
+          "candidateP95Ms": 11.963402999999744,
+          "ratio": 1.0427131942398822,
+          "relativeGatePassed": true
+        },
+        "legacy-oversized": {
+          "baselineP95Ms": 22.665301,
+          "candidateP95Ms": 21.447265000000698,
+          "ratio": 0.9462598798048478,
+          "relativeGatePassed": true
+        },
+        "legacy-account-a": {
+          "baselineP95Ms": 44.05570600000101,
+          "candidateP95Ms": 19.51916799999981,
+          "ratio": 0.44305652484605196,
+          "relativeGatePassed": true
+        },
+        "legacy-default-inbox": {
+          "baselineP95Ms": 32.26485999999932,
+          "candidateP95Ms": 34.75999899999988,
+          "ratio": 1.0773330180264415,
+          "relativeGatePassed": true
+        },
+        "legacy-focus": {
+          "baselineP95Ms": 29.594732999999906,
+          "candidateP95Ms": 24.66729099999975,
+          "ratio": 0.8335027384771415,
+          "relativeGatePassed": true
+        },
+        "legacy-older-thread-match": {
+          "baselineP95Ms": 29.238788000000568,
+          "candidateP95Ms": 26.453919999999925,
+          "ratio": 0.9047543283941664,
+          "relativeGatePassed": true
+        },
+        "legacy-page-two": {
+          "baselineP95Ms": 31.18037700000059,
+          "candidateP95Ms": 31.389501999999993,
+          "ratio": 1.006706942638936,
+          "relativeGatePassed": true
+        },
+        "persist-25-new": {
+          "baselineP95Ms": 17.12063400000079,
+          "candidateP95Ms": 17.065458999999464,
+          "ratio": 0.9967772805609112,
+          "relativeGatePassed": true
+        }
+      }
+    },
+    "10000": {
+      "allCorrectnessChecksPassed": true,
+      "signaturesEqual": true,
+      "synchronous": {
+        "base": {
+          "synchronous": 2
+        },
+        "head": {
+          "synchronous": 2
+        }
+      },
+      "connections": {
+        "base": 973,
+        "head": 974
+      },
+      "comparisons": {
+        "legacy-inbox": {
+          "baselineP95Ms": 195.82403200000044,
+          "candidateP95Ms": 211.58744000000024,
+          "ratio": 1.0804978216361094,
+          "relativeGatePassed": true
+        },
+        "legacy-common": {
+          "baselineP95Ms": 210.8957620000001,
+          "candidateP95Ms": 370.9672699999992,
+          "ratio": 1.759007703530804,
+          "relativeGatePassed": false
+        },
+        "legacy-selective": {
+          "baselineP95Ms": 80.65572799999791,
+          "candidateP95Ms": 141.66595700000107,
+          "ratio": 1.7564277269929887,
+          "relativeGatePassed": false
+        },
+        "legacy-absent": {
+          "baselineP95Ms": 24.607781999999133,
+          "candidateP95Ms": 26.804478000001836,
+          "ratio": 1.089268346086729,
+          "relativeGatePassed": true
+        },
+        "legacy-body-only": {
+          "baselineP95Ms": 23.992953000000853,
+          "candidateP95Ms": 56.26321299999836,
+          "ratio": 2.3449890890877985,
+          "relativeGatePassed": false
+        },
+        "legacy-oversized": {
+          "baselineP95Ms": 87.22001699999964,
+          "candidateP95Ms": 168.1573529999987,
+          "ratio": 1.9279674412354149,
+          "relativeGatePassed": false
+        },
+        "legacy-account-a": {
+          "baselineP95Ms": 51.48959299999842,
+          "candidateP95Ms": 74.46080000000075,
+          "ratio": 1.4461330078876915,
+          "relativeGatePassed": false
+        },
+        "legacy-default-inbox": {
+          "baselineP95Ms": 110.15409600000203,
+          "candidateP95Ms": 232.55806699999812,
+          "ratio": 2.111206713547845,
+          "relativeGatePassed": false
+        },
+        "legacy-focus": {
+          "baselineP95Ms": 112.03676700000506,
+          "candidateP95Ms": 116.78151200000138,
+          "ratio": 1.04234989215635,
+          "relativeGatePassed": true
+        },
+        "legacy-older-thread-match": {
+          "baselineP95Ms": 122.27528599999641,
+          "candidateP95Ms": 223.45456099999865,
+          "ratio": 1.8274711784358877,
+          "relativeGatePassed": false
+        },
+        "legacy-page-two": {
+          "baselineP95Ms": 147.05903399999806,
+          "candidateP95Ms": 153.08766299999843,
+          "ratio": 1.040994618528505,
+          "relativeGatePassed": true
+        },
+        "persist-25-new": {
+          "baselineP95Ms": 15.83562399999937,
+          "candidateP95Ms": 17.134461000001465,
+          "ratio": 1.0820199443989165,
+          "relativeGatePassed": true
+        }
+      }
+    }
+  },
+  "hashes": {
+    "1-10000-head.json": "ee893be7232779322d108efa2c879fcabef71bfa48ec01a8b7bd69755a8f7649",
+    "manifest.json": "82f4b71c6627bb3b3b22b1694144aeeccb746be9a5260c6dc6f3a0d9afdc208e",
+    "1-10000-base.json": "118060d7028f669b056c6378399bfbb5a20a8802501ff9cd7590ea75f44bac4f",
+    "1-1000-base.json": "81b8aaa31ebad5aad627d217bf35c957e4cc5fd6391223383e3c75128cdf4622",
+    "1-1000-head.json": "6c15637ffd3c91d9bc6ac53bb749f8787936cfa474b7882b9fdcb25c7d0c86a6",
+    "1-10000-head-resources.jsonl": "b29f63a39315a75160a5d476e46568eeb5c39939f2b113f84c310be00ddc6e4f",
+    "1-1000-head-resources.jsonl": "78c880481cf967ad790c4f2722886e55e8627d26edd8e027e761bccde09a09dd",
+    "1-10000-base-resources.jsonl": "44f7cd1054b7bdd7974da269b1efd805dd1be244101220ef018f0a06f27551f7",
+    "1-1000-base-resources.jsonl": "8f6d94fd21431304948d896dc2230e5bfb68755f8743dc77376fe05ba859f3c2"
+  },
+  "harnessSourceHashes": {
+    "mixed.ts": "027f930647dc1c96cbe8a594977790024e04bd40e0b0eb0eda58238057174bd8",
+    "Dockerfile": "696997acc4727a1b29ec4c145d3dc2ad9156c2f4f1c0c283370ff8e87117cbca",
+    "railway.json": "a2a700dacffe7d839d5d3515af7b83101ce3c3fec2603aee02eff2733acb0b6e",
+    "benchmark.ts": "92fe947f5f498cb2a7965e0edfeb8240822e1f6dd3064bd01ec24d635d19d268",
+    "test-controls.py": "13cfd089154ac1a40c2a81003aa735bd4e2a964f5c2efb9df3ef3e60c01016b1",
+    "prepare-sources.sh": "7ef449469a79043798e349eacc3e7e6c4a6958b556b4a727f49707ba96003d1e",
+    "run.py": "4f6710a604e4a999ca2661fd4c2752c023ff560acb3cf37355002206a298df94"
+  }
+}

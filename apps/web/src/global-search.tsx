@@ -151,7 +151,7 @@ export function hasMailSearchConstraint(state: MailSearchState) {
 }
 
 export function mailSearchRequest(state: MailSearchState, cursor?: string | null) {
-  const params = new URLSearchParams({ limit: "100", classification: state.evidence });
+  const params = new URLSearchParams({ limit: "100", classification: state.evidence, searchMode: "metadata" });
   if (state.mailbox !== "inbox") params.set("view", state.mailbox);
   if (state.query.trim()) params.set("query", state.query.trim());
   if (state.accountId) params.set("accountId", state.accountId);
@@ -286,6 +286,12 @@ export function openMailSearchResult(message: Pick<InboxMessage, "accountId" | "
   window.location.assign(url);
 }
 
+export function parseMetadataSearchResponse(value: unknown) {
+  const result = inboxClassificationResponseSchema.parse(value);
+  if (!result.search) throw new Error("The server did not confirm metadata search coverage. Try again after it is updated.");
+  return result;
+}
+
 type SearchStatus = "idle" | "loading" | "ready" | "error";
 
 export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject<HTMLElement | null> }) {
@@ -377,7 +383,7 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     const controller = new AbortController();
     void fetch(mailSearchRequest(state), { credentials: "include", signal: controller.signal })
       .then(readJson)
-      .then((value) => inboxClassificationResponseSchema.parse(value))
+      .then(parseMetadataSearchResponse)
       .then((result) => {
         if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
         setAccounts(result.accounts);
@@ -466,7 +472,7 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     setLoadingMore(true);
     setError(null);
     try {
-      const result = inboxClassificationResponseSchema.parse(await readJson(await fetch(mailSearchRequest(state, nextCursor), { credentials: "include", signal: controller.signal })));
+      const result = parseMetadataSearchResponse(await readJson(await fetch(mailSearchRequest(state, nextCursor), { credentials: "include", signal: controller.signal })));
       if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
       setMessages((current) => [...current, ...result.messages.filter((message) => !current.some((item) => item.id === message.id && item.accountId === message.accountId))]);
       setNextCursor(result.nextCursor);
@@ -511,12 +517,13 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     returnFocusRef={returnFocusRef}
   >
     <header className="global-mail-search-heading">
-      <div><span aria-hidden="true">⌕</span><h1 id="global-mail-search-title">Search mail</h1><p>Stored messages</p></div>
+      <div><span aria-hidden="true">⌕</span><h1 id="global-mail-search-title">Search mail</h1><p>Metadata search</p></div>
       <div className="global-mail-search-return"><kbd>Esc</kbd><span>Back to {returnLabel}</span></div>
       <button aria-label={`Close Search mail and return to ${returnLabel}`} onClick={close} type="button">×</button>
     </header>
+    <p className="global-mail-search-coverage">Searches sender, subject, and preview text in stored messages. Full message bodies are not searched.</p>
     <form className="global-mail-search-form" onSubmit={(event) => { event.preventDefault(); commit({ ...state, query: draft }); }} role="search">
-      <label><span aria-hidden="true">⌕</span><input aria-label="Search stored mail" autoComplete="off" maxLength={200} onInput={(event) => { const value = event.currentTarget.value; if (value === state.query) { setDraft(value); commit({ ...state }); return; } requestGenerationRef.current += 1; loadMoreControllerRef.current?.abort(); setDraft(value); setStatus("loading"); setMessages([]); setNextCursor(null); }} onKeyDown={(event) => { if (event.key === "ArrowDown" && messages.length > 0) { event.preventDefault(); focusFirstResult(); } }} placeholder="Sender, subject, or phrase" ref={inputRef} value={draft}/><kbd>Enter</kbd></label>
+      <label><span aria-hidden="true">⌕</span><input aria-label="Search stored mail" autoComplete="off" maxLength={200} onInput={(event) => { const value = event.currentTarget.value; if (value === state.query) { setDraft(value); commit({ ...state }); return; } requestGenerationRef.current += 1; loadMoreControllerRef.current?.abort(); setDraft(value); setStatus("loading"); setMessages([]); setNextCursor(null); }} onKeyDown={(event) => { if (event.key === "ArrowDown" && messages.length > 0) { event.preventDefault(); focusFirstResult(); } }} placeholder="Sender, subject, or preview text" ref={inputRef} value={draft}/><kbd>Enter</kbd></label>
       <button type="submit">Search</button>
     </form>
     <div className="global-mail-search-toolbar">
@@ -532,10 +539,10 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     </div>
 
     <section aria-live="polite" className="global-mail-search-results" ref={resultRegionRef}>
-      {status === "idle" ? <div className="global-mail-search-state"><p>Search all stored mail</p><h2>Find a person, subject, or phrase.</h2><span>Results open here without losing {returnLabel}.</span></div> : null}
+      {status === "idle" ? <div className="global-mail-search-state"><p>Search all stored mail</p><h2>Find a sender, subject, or preview.</h2><span>Results open here without losing {returnLabel}.</span></div> : null}
       {status === "loading" ? <div className="global-mail-search-state global-mail-search-loading"><p>Searching</p><h2>Looking through stored mail…</h2><span>Your query and scope stay in place.</span><i aria-hidden="true" /></div> : null}
       {status === "error" ? <div className="global-mail-search-state global-mail-search-error" role="alert"><p>Search unavailable</p><h2>We couldn’t reach stored mail.</h2><span>{error} Your query and scope are unchanged.</span><button onClick={() => setRetryKey((key) => key + 1)} type="button">Try again</button></div> : null}
-      {status === "ready" && messages.length === 0 ? <div className="global-mail-search-state"><p>No matches</p><h2>Nothing found for “{state.query.trim() || scope}”.</h2><span>{filterCount ? "Try the full stored mailbox without changing your query." : "Try another person, subject, or phrase."}</span><button onClick={() => { if (filterCount) commit({ ...state, query: draft, mailbox: "all", evidence: "all", accountId: null, collectionId: null }); else { setDraft(""); commit({ ...state, query: "" }); } }} type="button">{filterCount ? "Clear filters" : "Clear query"}</button></div> : null}
+      {status === "ready" && messages.length === 0 ? <div className="global-mail-search-state"><p>No matches</p><h2>Nothing found for “{state.query.trim() || scope}”.</h2><span>{filterCount ? "Try the full stored mailbox without changing your query." : "Try another sender, subject, or preview."}</span><button onClick={() => { if (filterCount) commit({ ...state, query: draft, mailbox: "all", evidence: "all", accountId: null, collectionId: null }); else { setDraft(""); commit({ ...state, query: "" }); } }} type="button">{filterCount ? "Clear filters" : "Clear query"}</button></div> : null}
       {status === "ready" && messages.length > 0 ? <><header className="global-mail-result-count"><strong>Results</strong><span>{messages.length}{nextCursor ? "+" : ""} {messages.length === 1 && !nextCursor ? "message" : "messages"} · ↓ to browse</span></header><ol className="global-mail-result-list" onFocus={(event) => { lastResultFocus.current = (event.target as HTMLElement).closest("a")?.getAttribute("href") ?? lastResultFocus.current; }} onKeyDown={moveResultFocus} ref={resultListRef}>{messages.map((message) => <li key={`${message.accountId}:${message.id}`}><a href={mailSearchReaderUrl(message)} onClick={(event) => { event.preventDefault(); openMailSearchResult(message); }}><span className="global-mail-result-sender">{message.from.name ?? message.from.email}</span><time dateTime={message.receivedAt}>{searchResultDate(message.receivedAt)}</time><strong>{message.subject || "(no subject)"}</strong><span className="global-mail-result-snippet">{message.snippet || "No preview available."}</span><small>{evidenceLabel(message)}</small></a></li>)}</ol>{nextCursor ? <button className="global-mail-load-more" disabled={loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more…" : "Load more matches"}</button> : null}</> : null}
       {status === "ready" && error ? <p className="global-mail-search-inline-error" role="alert">{error}</p> : null}
     </section>

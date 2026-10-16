@@ -1,0 +1,60 @@
+{
+  "purpose": "Deterministic pre-existing test fixture timing reproduction; does not prove the historical failure cause",
+  "runtime": "1.3.14",
+  "root": "/workspace/pr235-integration-20261013",
+  "fixtureSourceSha256": "f6e997d8386af0d0b3556d90d69c328704dcc2b3f8e5da0b92f85cfe8b9bd709",
+  "observations": [
+    {
+      "injectedClockSkewMs": 0,
+      "lifetimeMs": 600000,
+      "status": 200,
+      "response": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32602,\"message\":\"Invalid tools/call request: [\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"params\\\",\\n      \\\"name\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input: expected string, received undefined\\\"\\n  }\\n]\"}}\n\n",
+      "limiter": {
+        "connections": 1,
+        "workspaces": 1,
+        "lastAcquireSweepVisits": 0,
+        "maximumAcquireSweepVisits": 0
+      },
+      "nextValidRequestStatus": 429,
+      "calls": {
+        "verifierCalls": 2,
+        "dispatchCalls": 0
+      }
+    },
+    {
+      "injectedClockSkewMs": 1,
+      "lifetimeMs": 600001,
+      "status": 500,
+      "response": "{\"error\":\"server_error\",\"error_description\":\"Internal Server Error\"}",
+      "limiter": {
+        "connections": 0,
+        "workspaces": 0,
+        "lastAcquireSweepVisits": 0,
+        "maximumAcquireSweepVisits": 0
+      },
+      "nextValidRequestStatus": 200,
+      "calls": {
+        "verifierCalls": 2,
+        "dispatchCalls": 0
+      }
+    },
+    {
+      "injectedClockSkewMs": 0,
+      "lifetimeMs": 600000,
+      "status": 200,
+      "response": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32602,\"message\":\"Invalid tools/call request: [\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"params\\\",\\n      \\\"name\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input: expected string, received undefined\\\"\\n  }\\n]\"}}\n\n",
+      "limiter": {
+        "connections": 1,
+        "workspaces": 1,
+        "lastAcquireSweepVisits": 0,
+        "maximumAcquireSweepVisits": 0
+      },
+      "nextValidRequestStatus": 429,
+      "calls": {
+        "verifierCalls": 2,
+        "dispatchCalls": 0
+      }
+    }
+  ],
+  "passed": true
+}

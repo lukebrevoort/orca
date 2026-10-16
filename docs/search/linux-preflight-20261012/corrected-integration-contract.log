@@ -1,0 +1,11 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/mailbox/search-contract.test.ts:
+(pass) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [631.21ms]
+(pass) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [490.57ms]
+(pass) canonical metadata reflects updates/deletes, invalidates stale cursors and denies foreign-owner account reuse [414.35ms]
+
+ 3 pass
+ 0 fail
+ 35 expect() calls
+Ran 3 tests across 1 file. [3.95s]

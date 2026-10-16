@@ -1,0 +1,23 @@
+diff --git a/apps/api/src/search/indexing/indexing.test.ts b/apps/api/src/search/indexing/indexing.test.ts
+index 12d88b2..981033d 100644
+--- a/apps/api/src/search/indexing/indexing.test.ts
++++ b/apps/api/src/search/indexing/indexing.test.ts
+@@ -433,3 +433,18 @@ test("document updates and cleanup preserve IDs above Number.MAX_SAFE_INTEGER",
+     expect(f.index.query("SELECT count(*) AS n FROM index_documents WHERE metadata_deleted=1 AND full_deleted=1").get()).toEqual({ n: 2 });
+   } finally { f.close(); }
+ });
++
++test("stage-one reproduction: oversized canonical metadata blocks metadata readiness", () => {
++  const f = fixture();
++  try {
++    f.insert("one", "x".repeat(33 * 1024) + " needle", "y".repeat(257 * 1024)); f.baseline();
++    let job; let count = 0;
++    while ((job = claimNextJob(f.canonical))) {
++      if (++count > 4) throw new Error("bounded reproduction exceeded four obligations");
++      acknowledgeReceipt(f.canonical, applyIndexJob(f.readonly, f.index, job, f.identity));
++    }
++    expect(f.jobs().map(j => [j.mode, j.state, j.error_code])).toEqual([["full", "blocked", "source_too_large"], ["metadata", "blocked", "source_too_large"]]);
++    expect(f.seal("metadata")).toBe(false); expect(f.seal("full")).toBe(false);
++    expect(verifySearchBuild(f.canonical, f.index).ready).toBe(false);
++  } finally { f.close(); }
++});

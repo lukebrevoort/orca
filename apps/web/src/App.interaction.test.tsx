@@ -378,6 +378,7 @@ function createProductionInboxFetch(
     accounts: [{ ...accountFixture, state: "idle", lastSyncedAt: "2026-06-28T17:30:00.000Z", error: null }],
   };
   const inbox = {
+    search: { mode: "metadata", coverage: "stored-metadata", semantics: "legacy-substring-v1", fullBody: "unavailable" },
     accounts: [accountFixture],
     messages,
     nextCursor: null,

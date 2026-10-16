@@ -583,6 +583,17 @@ export const mcpConnectionPageSchema = z.object({
 }).strict();
 export type McpConnectionPage = z.infer<typeof mcpConnectionPageSchema>;
 
+/** Canonical metadata is independent of any queued/full-body index. */
+export const metadataSearchReceiptSchema = z.object({
+  mode: z.literal("metadata"),
+  coverage: z.literal("stored-metadata"),
+  semantics: z.literal("legacy-substring-v1"),
+  fullBody: z.literal("unavailable"),
+}).strict();
+export const metadataSearchReceipt = metadataSearchReceiptSchema.parse({
+  mode: "metadata", coverage: "stored-metadata", semantics: "legacy-substring-v1", fullBody: "unavailable",
+});
+
 export const inboxQuerySchema = z
   .object({
     cursor: z.string().trim().min(1).optional(),
@@ -591,6 +602,7 @@ export const inboxQuerySchema = z
     // message belongs in a person's workflow, while classification answers how
     // Orca currently estimates the message was produced.
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
+    searchMode: z.enum(["metadata", "full"]).optional(),
     query: z.string().trim().min(1).max(200).optional(),
     sender: z.string().trim().min(1).max(320).optional(),
     accountId: nonEmptyStringSchema.optional(),
@@ -907,6 +919,8 @@ const inboxClassificationCountsSchema = z.object({
 }).strict();
 
 const inboxResponseBaseSchema = z.object({
+  // Only emitted for an explicit searchMode request; strict legacy clients keep their envelope.
+  search: metadataSearchReceiptSchema.optional(),
   accounts: z.array(mailAccountSchema),
   messages: z.array(inboxMessageSchema),
   nextCursor: z.string().nullable(),

@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { inboxFixture, organizationLaneConfigurationFixture, summarizeOrganizationViewDefinition } from "@orca/shared";
+import { metadataSearchReceipt, inboxFixture, organizationLaneConfigurationFixture, summarizeOrganizationViewDefinition } from "@orca/shared";
 
 import { demoAccount } from "./demo-data";
 import { WorkspaceHeader } from "./desktop-switch";
 import {
+  parseMetadataSearchResponse,
   mailSearchPinFilter,
   mailSearchReaderUrl,
   mailSearchRequest,
@@ -71,6 +72,7 @@ function installSearchStyles() {
 
 function searchResponse(messages = inboxFixture) {
   return new Response(JSON.stringify({
+    search: metadataSearchReceipt,
     accounts: [demoAccount],
     messages,
     nextCursor: null,
@@ -207,7 +209,7 @@ describe("global mail search location contract", () => {
     });
     const state = readMailSearchState(browserWindow.location as unknown as Location);
     expect(state?.mailbox).toBe("inbox");
-    expect(mailSearchRequest(state!)).toBe("/v1/inbox?limit=100&classification=all&query=launch&accountId=acct_work");
+    expect(mailSearchRequest(state!)).toBe("/v1/inbox?limit=100&classification=all&searchMode=metadata&query=launch&accountId=acct_work");
   });
 });
 
@@ -519,7 +521,7 @@ describe("GlobalMailSearch interaction", () => {
       requests.push(path);
       if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
       if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
-      if (path.startsWith("/v1/inbox?")) return new Response(JSON.stringify({ accounts: [demoAccount], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } }), { status: 200 });
+      if (path.startsWith("/v1/inbox?")) return new Response(JSON.stringify({ search: metadataSearchReceipt, accounts: [demoAccount], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } }), { status: 200 });
       throw new Error(`Unexpected fetch: ${path}`);
     }) as typeof fetch;
     openMailSearchFilter({
@@ -541,7 +543,7 @@ describe("GlobalMailSearch interaction", () => {
     await flush();
 
     const inboxRequest = requests.find((path) => path.startsWith("/v1/inbox?"));
-    expect(inboxRequest).toBe(`/v1/inbox?limit=100&classification=all&query=launch&accountId=${encodeURIComponent(demoAccount.id)}`);
+    expect(inboxRequest).toBe(`/v1/inbox?limit=100&classification=all&searchMode=metadata&query=launch&accountId=${encodeURIComponent(demoAccount.id)}`);
     expect(new URL(inboxRequest!, browserWindow.location.origin).searchParams.has("view")).toBe(false);
   });
 
@@ -559,4 +561,14 @@ describe("GlobalMailSearch interaction", () => {
     expect(button("Save View").disabled).toBe(true);
     expect(writes).toEqual([]);
   });
+});
+
+
+test("metadata requests are explicit and missing or full-body coverage cannot render as metadata results", async () => {
+  const response = await searchResponse().json();
+  expect(parseMetadataSearchResponse(response).search?.mode).toBe("metadata");
+  const { search, ...legacy } = response;
+  expect(() => parseMetadataSearchResponse(legacy)).toThrow("did not confirm metadata search coverage");
+  expect(() => parseMetadataSearchResponse({ ...response, search: { ...search, mode: "full" } })).toThrow();
+  expect(mailSearchRequest({ query: "needle", mailbox: "all", evidence: "all", accountId: null, collectionId: null, source: "/" })).toContain("searchMode=metadata");
 });
