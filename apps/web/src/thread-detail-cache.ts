@@ -105,7 +105,14 @@ export class ThreadDetailCache {
     }
 
     const generation = this.ensureGeneration(key);
-    const request = loader().then((detail) => {
+    let loaded: Promise<ThreadDetail>;
+    try {
+      loaded = loader();
+    } catch (error) {
+      this.pruneGeneration(key);
+      throw error;
+    }
+    const request = loaded.then((detail) => {
       if (this.generations.get(key) !== generation) return detail;
       this.details.delete(key);
       this.details.set(key, { detail, fetchedAt: Date.now(), version: requestedVersion, stale: false });

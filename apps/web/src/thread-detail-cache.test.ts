@@ -261,3 +261,23 @@ describe("thread generation lifecycle", () => {
     expect(retained(cache)).toEqual({ generations: 1, leases: 0, pending: 0 });
   });
 });
+
+
+test("synchronous loader failures retire unused identities without discarding a live lease", async () => {
+  const cache = new ThreadDetailCache();
+  const fail = () => { throw new Error("synchronous loader failure"); };
+  for (let i = 0; i < 100; i++) {
+    expect(() => cache.load({ accountId: "a", threadId: `fail-${i}` }, fail)).toThrow("synchronous loader failure");
+  }
+  expect(retained(cache)).toEqual({ generations: 0, leases: 0, pending: 0 });
+  const reference = { accountId: "a", threadId: "leased" };
+  const request = cache.load(reference, async () => detail(1));
+  const lease = cache.retainGeneration(reference);
+  await request;
+  cache.invalidate(reference);
+  expect(() => cache.load(reference, fail)).toThrow("synchronous loader failure");
+  expect(lease.isCurrent()).toBe(false);
+  expect(retained(cache)).toEqual({ generations: 1, leases: 1, pending: 0 });
+  lease.release();
+  expect(retained(cache)).toEqual({ generations: 0, leases: 0, pending: 0 });
+});
