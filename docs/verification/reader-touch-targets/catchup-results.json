@@ -1,0 +1,228 @@
+{
+  "revision": "head",
+  "syntheticOnly": true,
+  "browser": "154.0.8037.57",
+  "scenarios": [
+    {
+      "width": 1440,
+      "theme": "light",
+      "kind": "mixed",
+      "entry": "reader-card-catchup-57",
+      "readCalls": 1,
+      "anchorBefore": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "afterIncoming": 900,
+      "finalReadCalls": 1
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "kind": "read",
+      "entry": "reader-card-catchup-59",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "kind": "single",
+      "entry": "reader-card-first-message",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-first-message",
+        "offset": -458.328125
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-first-message",
+        "offset": -458.328125
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "kind": "mixed",
+      "entry": "reader-card-catchup-57",
+      "readCalls": 1,
+      "anchorBefore": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "afterIncoming": 900,
+      "finalReadCalls": 1
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "kind": "read",
+      "entry": "reader-card-catchup-59",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-6",
+        "offset": -8.328125
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "kind": "single",
+      "entry": "reader-card-first-message",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-first-message",
+        "offset": -458.328125
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-first-message",
+        "offset": -458.328125
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "kind": "mixed",
+      "entry": "reader-card-catchup-57",
+      "readCalls": 1,
+      "anchorBefore": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "afterIncoming": 900,
+      "finalReadCalls": 1
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "kind": "read",
+      "entry": "reader-card-catchup-59",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "kind": "single",
+      "entry": "reader-card-first-message",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-first-message",
+        "offset": -556.890625
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-first-message",
+        "offset": -556.890625
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "kind": "mixed",
+      "entry": "reader-card-catchup-57",
+      "readCalls": 1,
+      "anchorBefore": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "afterIncoming": 900,
+      "finalReadCalls": 1
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "kind": "read",
+      "entry": "reader-card-catchup-59",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-catchup-7",
+        "offset": -36.890625
+      },
+      "finalReadCalls": 0
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "kind": "single",
+      "entry": "reader-card-first-message",
+      "readCalls": 0,
+      "anchorBefore": {
+        "key": "reader-card-first-message",
+        "offset": -556.890625
+      },
+      "beforeReturn": 900,
+      "afterReturn": 900,
+      "anchorAfter": {
+        "key": "reader-card-first-message",
+        "offset": -556.890625
+      },
+      "finalReadCalls": 0
+    }
+  ],
+  "errors": []
+}
