@@ -1,0 +1,33 @@
+{
+  "baseCommit": "5baf7f3ea9e208001c607a7bc0f5c418fb056d58",
+  "testedExecutableCommit": "fc39756c4a120c5cb887b2381dfefbcac937494c",
+  "sha256": {
+    "COVERAGE.md": "fd2f37e04e35edefaf39a2d427b94b4f2e8e79ff34e8f28b4c90a34fb1682d83",
+    "README.md": "8ed6b44c29dc419fbfbd45220b4b97fe122d31b79dd67dbc10fe65b6d271bdab",
+    "fence-check.json": "0837c12a428a50a6fbf9eebd71300fd72e7e0afb7d97af307827b738bc2040c0",
+    "fence-check.ts": "56e90abe6407d2bcb96991aea0374ba97244e3bf7d4530ac47802eca51640db8",
+    "final-build.log": "6921d423048c5b3b63d3097533e4cf0300b1a171c61dc3c19cdda7ac7e00aac6",
+    "final-typecheck.log": "387425ae0ad612e19fbbd07a9dee3e68d75dd069a52aecd60717a7df6db6d71e",
+    "final-web-tests.log": "af1fc41fa0706d1c3c4e163d5bf4e5463e9a12a7745933add064cca0a4c89ada",
+    "independent-review.md": "d1ae6c0bcc357d5f9e6ca5618d504ea94d3c97eb179c6884486787417313e515",
+    "initial/1-control.json": "293bf67a891859a63730966c7c66de4dfe1d2ac2ce049b0ebf7d937c74520543",
+    "initial/2-stale.json": "54527cbac7310cb50452f42d3698ee703a57cf888d50378146e005e53a41b0ef",
+    "initial/3-stale.json": "6807481f7ae2426380fd9ef2b8881e4f77e527838e071134598ab2ed2df87912",
+    "initial/4-control.json": "2de6257e6936185e4604093d2c03ca8534a96af5d593f4bb82558ab0aebe265d",
+    "initial/cache-growth.ts": "3ff75c68b03dbcb2d5937ef08416a5bfc7b3fd543feafda8721703ca8f7ac66f",
+    "initial/run.py": "d0ab59cb2d93d90ceed998611a8d6b8e4952c400a340b0620388d91a0e1fea20",
+    "initial/runs.json": "200199e32600abfc0fe3f37f943e7a04e2ff983cb45c4e2df66d4ae35e8eb6e3",
+    "paired/1-base.json": "ea869daad966ad9cf242dc6ebd3760870c8f655890d2b2844afcced151ebdab7",
+    "paired/2-head.json": "0f52b7f6165e15b1add2fbf98e2371bb1516771ed17f30947eb414046755b833",
+    "paired/3-head.json": "00cb1ce778ea257923b786f28278514e9ce9e2b9f746bafffe28f7bd6293ec54",
+    "paired/4-base.json": "b1570fd65432080ec8e9a3f28afb6cc0c59f403ec671c21098e2b30fba74d72e",
+    "paired/cache-growth.ts": "76ef28a83bf8470ef071f511b48d0ecd6c959236e1b025faf3f8bbfbfc053124",
+    "paired/pins.json": "5ea17d059d874324e7eee99731f9e72c6d22a22a534ceb32dcc02525fd3217c3",
+    "paired/run.py": "5c1c64807fa7290fb841cd0921d75524709a0149cec04c45caa201350eb2537d",
+    "paired/runs.json": "58a550de8d6220c37d10f0c46c231288dd533639fbe4aade9857a9d84ba79e67",
+    "red-retention.log": "afae4031737affb6857978972a70d7aa0c1b89237f0c967ffd813687052008bf",
+    "retention-regression.test.ts": "14034e70fa233537963d1269f4edbeb3af5cc91e5a5c271c4201f4ce4ec3b9da",
+    "tests.log": "9951ee8d4a1d79d1c801d1d19f1e65852f55c1cfec85f4b79315aefad41ac873",
+    "web-tests.log": "74ed253ea7153c7445982a2b761fa1322e2a16ffa866774d8a99295223daad41"
+  }
+}
