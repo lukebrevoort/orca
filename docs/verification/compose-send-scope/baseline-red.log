@@ -1,0 +1,93 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/compose-send-lifecycle.test.tsx:
+69 |     await render();
+70 |     if (transition === "return") { account = "first"; await render(); }
+71 |     await edit("Keep active writing");
+72 |     const activeId = controller.draft.id;
+73 |     await act(async () => { held.release(); await result; });
+74 |     expect(controller.draft.accountId).toBe(account);
+                                            ^
+error: expect(received).toBe(expected)
+
+Expected: "second"
+Received: "first"
+
+      at <anonymous> (/workspace/orca-bug-20261017/apps/web/src/compose-send-lifecycle.test.tsx:74:40)
+(fail) account switch during create preserves the active writing and stops obsolete work [27.10ms]
+69 |     await render();
+70 |     if (transition === "return") { account = "first"; await render(); }
+71 |     await edit("Keep active writing");
+72 |     const activeId = controller.draft.id;
+73 |     await act(async () => { held.release(); await result; });
+74 |     expect(controller.draft.accountId).toBe(account);
+                                            ^
+error: expect(received).toBe(expected)
+
+Expected: "second"
+Received: "first"
+
+      at <anonymous> (/workspace/orca-bug-20261017/apps/web/src/compose-send-lifecycle.test.tsx:74:40)
+(fail) account switch during send preserves the active writing and stops obsolete work [5.49ms]
+70 |     if (transition === "return") { account = "first"; await render(); }
+71 |     await edit("Keep active writing");
+72 |     const activeId = controller.draft.id;
+73 |     await act(async () => { held.release(); await result; });
+74 |     expect(controller.draft.accountId).toBe(account);
+75 |     expect(controller.draft.id).toBe(activeId);
+                                     ^
+error: expect(received).toBe(expected)
+
+Expected: "24e970d3-9a10-4a2a-8999-793db6c50cfe"
+Received: "7f0a6f9f-0a26-4e4b-a0e4-41cf551d03c1"
+
+      at <anonymous> (/workspace/orca-bug-20261017/apps/web/src/compose-send-lifecycle.test.tsx:75:33)
+(fail) draft switch during create preserves the active writing and stops obsolete work [5.97ms]
+70 |     if (transition === "return") { account = "first"; await render(); }
+71 |     await edit("Keep active writing");
+72 |     const activeId = controller.draft.id;
+73 |     await act(async () => { held.release(); await result; });
+74 |     expect(controller.draft.accountId).toBe(account);
+75 |     expect(controller.draft.id).toBe(activeId);
+                                     ^
+error: expect(received).toBe(expected)
+
+Expected: "d12ffcc8-2a88-4b1f-8314-6cc95e388a37"
+Received: "418e1b55-4b47-42e2-9a48-a4b97cc27395"
+
+      at <anonymous> (/workspace/orca-bug-20261017/apps/web/src/compose-send-lifecycle.test.tsx:75:33)
+(fail) draft switch during send preserves the active writing and stops obsolete work [4.78ms]
+70 |     if (transition === "return") { account = "first"; await render(); }
+71 |     await edit("Keep active writing");
+72 |     const activeId = controller.draft.id;
+73 |     await act(async () => { held.release(); await result; });
+74 |     expect(controller.draft.accountId).toBe(account);
+75 |     expect(controller.draft.id).toBe(activeId);
+                                     ^
+error: expect(received).toBe(expected)
+
+Expected: "6115bc45-3959-486b-b8b5-2ff9f88525c1"
+Received: "f7375d40-f304-47ab-a0c8-32fc24b8922d"
+
+      at <anonymous> (/workspace/orca-bug-20261017/apps/web/src/compose-send-lifecycle.test.tsx:75:33)
+(fail) return switch during create preserves the active writing and stops obsolete work [9.36ms]
+70 |     if (transition === "return") { account = "first"; await render(); }
+71 |     await edit("Keep active writing");
+72 |     const activeId = controller.draft.id;
+73 |     await act(async () => { held.release(); await result; });
+74 |     expect(controller.draft.accountId).toBe(account);
+75 |     expect(controller.draft.id).toBe(activeId);
+                                     ^
+error: expect(received).toBe(expected)
+
+Expected: "b45f193a-86c4-418d-9356-8a3847e1199a"
+Received: "200093a2-638f-4d4d-9738-6a80feef3fc6"
+
+      at <anonymous> (/workspace/orca-bug-20261017/apps/web/src/compose-send-lifecycle.test.tsx:75:33)
+(fail) return switch during send preserves the active writing and stops obsolete work [15.94ms]
+(pass) unchanged scope still sends once and clears the completed draft [3.68ms]
+
+ 1 pass
+ 6 fail
+ 13 expect() calls
+Ran 7 tests across 1 file. [385.00ms]
