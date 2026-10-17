@@ -1,0 +1,124 @@
+{
+  "revision": "5baf7f3ea9e208001c607a7bc0f5c418fb056d58",
+  "runtime": "1.3.14",
+  "mode": "stale",
+  "loads": 20000,
+  "samples": [
+    {
+      "n": 0,
+      "details": 0,
+      "generations": 0,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 0,
+      "heap": {
+        "rss": 50958336,
+        "heapTotal": 1803264,
+        "heapUsed": 175406,
+        "external": 490465,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 4.180253999999991,
+      "cpu": {
+        "user": 256,
+        "system": 3771
+      }
+    },
+    {
+      "n": 100,
+      "details": 30,
+      "generations": 100,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 4290,
+      "heap": {
+        "rss": 52531200,
+        "heapTotal": 2065408,
+        "heapUsed": 175406,
+        "external": 606635,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 15.260205999999997,
+      "cpu": {
+        "user": 3425,
+        "system": 16874
+      }
+    },
+    {
+      "n": 1000,
+      "details": 30,
+      "generations": 1000,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 43890,
+      "heap": {
+        "rss": 60264448,
+        "heapTotal": 2245632,
+        "heapUsed": 175406,
+        "external": 682423,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 153.99773199999998,
+      "cpu": {
+        "user": 33433,
+        "system": 231685
+      }
+    },
+    {
+      "n": 5000,
+      "details": 30,
+      "generations": 5000,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 223890,
+      "heap": {
+        "rss": 90984448,
+        "heapTotal": 2737152,
+        "heapUsed": 175406,
+        "external": 867497,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 268.297246,
+      "cpu": {
+        "user": 97611,
+        "system": 300738
+      }
+    },
+    {
+      "n": 10000,
+      "details": 30,
+      "generations": 10000,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 448890,
+      "heap": {
+        "rss": 106057728,
+        "heapTotal": 3064832,
+        "heapUsed": 23572417,
+        "external": 1106422,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 324.347541,
+      "cpu": {
+        "user": 182893,
+        "system": 317688
+      }
+    }
+  ],
+  "resources": {
+    "userCPUTime": 218768,
+    "systemCPUTime": 363966,
+    "maxRSS": 103572,
+    "sharedMemorySize": 0,
+    "unsharedDataSize": 0,
+    "unsharedStackSize": 0,
+    "minorPageFault": 16105,
+    "majorPageFault": 0,
+    "swappedOut": 0,
+    "fsRead": 0,
+    "fsWrite": 24,
+    "ipcSent": 0,
+    "ipcReceived": 0,
+    "signalsCount": 0,
+    "voluntaryContextSwitches": 236,
+    "involuntaryContextSwitches": 28
+  },
+  "cpuMax": "200000 100000\n",
+  "cpuStat": "usage_usec 628653\nuser_usec 255150\nsystem_usec 373502\nnice_usec 0\nnr_periods 5\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+  "passed": true
+}

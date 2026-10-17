@@ -1,0 +1,856 @@
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+src/use-writing-preferences.test.tsx:
+(pass) no authenticated account or demo mode never reads personal preferences [32.43ms]
+(pass) loads user preferences using credentials without inventing an account query contract [6.41ms]
+(pass) account switch aborts previous request and rejects a late response even if fetch ignores abort [3.70ms]
+(pass) save invalidation discards stale reads and applies refreshed values to next draft only [6.55ms]
+(pass) late successful preference arrival never changes writing started during loading [3.85ms]
+(pass) 401 errors clear previous personal values and provide safe defaults [4.55ms]
+(pass) 403 errors clear previous personal values and provide safe defaults [3.04ms]
+(pass) 500 errors clear previous personal values and provide safe defaults [5.31ms]
+(pass) malformed response fails closed; disabling then re-enabling refetches [4.61ms]
+
+src/reader-loading.test.tsx:
+(pass) unknown loading conversation does not invent a subject or message count [10.56ms]
+(pass) known title stays visible even without a message preview [1.26ms]
+(pass) 1 loading previews retain count and body preview [6.12ms]
+(pass) 2 loading previews retain count and body preview [0.85ms]
+(pass) known subjectless preview remains distinguishable from unknown subject [0.84ms]
+(pass) a loaded subjectless conversation keeps its subjectless heading [11.76ms]
+
+src/mail-destinations.test.tsx:
+(pass) removal names exact space and default, cancel and Escape cause no writes [122.64ms]
+(pass) confirmed removal uses current revision/default, blocks duplicate writes, and announces success [57.61ms]
+(pass) default and legacy spaces cannot be removed [27.48ms]
+(pass) dirty Done asks before discard and preserves editing [53.24ms]
+(pass) dirty backdrop asks before discard and preserves editing [48.76ms]
+(pass) dirty Escape asks before discard and preserves editing [48.14ms]
+(pass) switching and collapsing editors preserves drafts; save clears dirty state and announces update [42.63ms]
+(pass) failed rename retains name and color for retry [53.75ms]
+(pass) blocked removal offers existing recovery routes and an explicit retry [57.18ms]
+(pass) create and rename reject whitespace, and new-space color changes are guarded [42.51ms]
+(pass) creating a space keeps another editor's draft until an explicit guarded navigation [51.27ms]
+(pass) color-only changes guard dismissal and Keep editing retains selection [35.56ms]
+
+src/unread-focus.test.tsx:
+(pass) unread Focus timeline > combines unread notify and focus, then interleaves read Focus with normal by date [1.38ms]
+(pass) unread Focus timeline > any unread message promotes the latest row without crossing account boundaries [0.23ms]
+(pass) unread Focus timeline > read, mark-unread and incoming-reply updates reorder a merged paginated source [0.32ms]
+(pass) unread Focus timeline > ties are deterministic and account-scoped for duplicate provider IDs [0.09ms]
+
+src/mailbox-revalidation.test.ts:
+(pass) visible mailbox revalidation > runs the same status, provider sync, inbox, status sequence used by the app [0.39ms]
+(pass) visible mailbox revalidation > uses the 15 second target and skips every trigger while the tab is hidden [0.50ms]
+(pass) visible mailbox revalidation > revalidates immediately when visible and coalesces focus, visibility, interval, and manual requests [0.43ms]
+(pass) visible mailbox revalidation > reports focus-to-fresh latency and releases the request slot after failures [0.51ms]
+
+src/compose-conflict.test.tsx:
+(pass) local: saves latest edits and attachment bytes as a distinct recoverable draft [515.45ms]
+(pass) server: saves latest edits and attachment bytes as a distinct recoverable draft [506.05ms]
+(pass) local: storage failure retains conflict and current editor [519.71ms]
+(pass) server: storage failure retains conflict and current editor [519.80ms]
+(pass) failed recovery creation retains conflict [520.12ms]
+(pass) edits while saving recovery cannot be replaced by the server [520.19ms]
+(pass) replacement conflict cannot be cleared by an older resolution [521.58ms]
+(pass) comparison shows live fields and both revisions without stale local text [506.33ms]
+(pass) failure checkpointing the selected version retains the original editor after recovery creation [505.54ms]
+(pass) duplicate resolution clicks create only one copy [507.03ms]
+(pass) local: recovery keeps inherited attachments from before deferred byte conversion [525.63ms]
+(pass) server: recovery keeps inherited attachments from before deferred byte conversion [524.16ms]
+
+src/organization-view-draft.test.ts:
+(pass) unrelated refinements preserve advanced scalar types, ordering and timestamp precision without a catalog [4.12ms]
+
+src/reply-brief.test.tsx:
+(pass) ReplyBriefPanel > generates only after explicit invocation and leaves the human composer blank [96.68ms]
+(pass) ReplyBriefPanel > keeps a perceivable loading phase when loaders resolve immediately [94.06ms]
+(pass) ReplyBriefPanel > keeps the ready brief short and decision-led [37.91ms]
+(pass) ReplyBriefPanel > requires an explicit choice when multiple calendar connections are available [34.65ms]
+(pass) ReplyBriefPanel > never renders a non-HTTP source URL as a link [30.81ms]
+(pass) ReplyBriefPanel > keeps a stable loading state and aborts it when dismissed [15.31ms]
+(pass) ReplyBriefPanel > renders model failure with deterministic facts and no response prose [7.34ms]
+(pass) ReplyBriefPanel > shows permission failure as unavailable without converting it into a recommendation [16.18ms]
+(pass) ReplyBriefPanel > labels stale context and exposes a retryable request error [16.60ms]
+(pass) ReplyBriefPanel > uses theme-safe labeled controls in light and dark modes [2.25ms]
+
+src/desktop-switch.interaction.test.tsx:
+(pass) AppSidebar mobile navigation > keeps every destination, account, Compose, and space management keyboard reachable [224.97ms]
+(pass) OrganizationStudio integration > shows proposed, simulated, active, and reverted Rule states across Tide Table and Glass Box [188.74ms]
+(pass) OrganizationStudio integration > keeps the interactive preview local while Tide Table remains demonstrably interactive [983.62ms]
+(pass) OrganizationStudio integration > renders the deterministic active review and every distinct operational-state label [98.21ms]
+(pass) OrganizationStudio integration > keeps every non-success release state free of applied evidence and mutation controls [127.13ms]
+(pass) OrganizationStudio integration > turns trace-fixture HTTP and network failures into retryable unavailable and error states [125.08ms]
+(pass) OrganizationStudio integration > treats an aborted trace-fixture fetch as lifecycle cleanup rather than an evidence error [32.13ms]
+(pass) OrganizationStudio integration > rebinds Views and Lanes after Rule compilation and every sibling Workspace mutation [249.28ms]
+(pass) OrganizationStudio integration > ignores a pre-compile View read after the shared authority snapshot refreshes [103.60ms]
+(pass) Customize tools reorders, hides and restores saved view shortcuts without mutation requests or rename [22.48ms]
+(pass) hidden saved-view Delete restores focus on Cancel/Escape and deletes only its row after confirmation [43.11ms]
+
+src/demo-store.test.ts:
+(pass) truthful sample sender preparation > Mom resolves her actual account and address, never the deploy fixture [3.45ms]
+(pass) truthful sample sender preparation > deduplicates senders and omits only real self messages [2.70ms]
+(pass) truthful sample sender preparation > rejects unavailable/mismatched references and mixed accounts [0.29ms]
+(pass) page-session canonical demo views > create/reopen/edit/switch returns current membership and explicit empty states [2.87ms]
+(pass) page-session canonical demo views > growth requires an explicit eligible target and preserves domains and other filters [2.61ms]
+(pass) page-session canonical demo views > missing metadata/account evidence produces unknown counts, not false zeroes [0.37ms]
+(pass) page-session canonical demo views > sender domains are ORed; sender/date/signal must share a message witness [0.96ms]
+(pass) page-session canonical demo views > missing classification is not invented to satisfy a filter [0.08ms]
+
+src/writing-preferences.test.ts:
+(pass) signature and format initialize exactly once, including after signature deletion and JSON recovery [0.12ms]
+(pass) no preference changes before hydration or after any edit, even typing then deleting [0.07ms]
+(pass) loading or another account never initializes a draft [0.03ms]
+(pass) unavailable preferences use safe plain defaults once without a stale signature [0.03ms]
+(pass) signature is before forwarded seed content; empty signatures add nothing [0.03ms]
+(pass) only primary reply uses the preference, and only for its authorized account [0.05ms]
+(pass) plain serialization is literal; rich serialization uses escaped existing renderer; legacy stays rich [0.35ms]
+
+src/reader-body.test.tsx:
+(pass) message body alternatives > keeps sanitized formatted content and destinations byte-for-byte on first render [20.24ms]
+(pass) message body alternatives > switches reversibly without deleting quotes, code, links, or footer [6.64ms]
+(pass) message body alternatives > scopes the selected alternative to the message identity [10.39ms]
+(pass) message body alternatives > keeps simultaneous message states separate across reordering and accounts [8.85ms]
+(pass) message body alternatives > recovers from an alternative disappearing on refresh [9.66ms]
+(pass) message body alternatives > does not offer invented alternatives or use a snippet as message content [2.21ms]
+(pass) message body alternatives > renders plain-text markup as text, never active HTML [2.01ms]
+(pass) reader content focus layout > preserves visible focus offset when body geometry changes [16.26ms]
+(pass) reader content focus layout > preserves offscreen no-scroll intent when body geometry changes [5.76ms]
+(pass) reader content focus layout > restored exact geometry needs no focus correction [6.50ms]
+(pass) reader content focus layout > keeps pointer display controls fast, then retains exact geometry through keyboard exit [39.67ms]
+(pass) reader content focus layout > covers quoted-history focus and resets for a new thread identity [7.44ms]
+
+src/context-relationships.test.ts:
+(pass) Thread Context relationship view model > keeps authoritative ordering, stable identities, row bounds, and complete detail [1.35ms]
+(pass) Thread Context relationship view model > renders empty, unknown, and retired Context states explicitly [0.13ms]
+(pass) Thread Context relationship view model > fails closed for cross-Account and mismatched typed references [0.05ms]
+(pass) Thread Context relationship view model > preserves unknown future direction as an explicit fallback [0.04ms]
+
+src/reader-navigation.test.ts:
+(pass) quiet jumps reflect the actual viewport without duplicating initial unread navigation [0.23ms]
+(pass) partial cards remain visible while clipped and collapsed cards remain targets [0.04ms]
+
+src/accessibility-states.test.ts:
+(pass) theme-safe semantic control states > separates programmatic route focus from interactive focus indicators [0.48ms]
+(pass) theme-safe semantic control states > uses selected and disabled tokens instead of compounding muted colors with opacity [1.44ms]
+(pass) theme-safe semantic control states > keeps the Gmail selected glyph on the shared surface, border, and ink treatment [0.41ms]
+(pass) theme-safe semantic control states > keeps the sentence controls readable when selected, focused, or busy [0.08ms]
+(pass) theme-safe semantic control states > keeps text at AA and visible state indicators above three-to-one in both themes [3.12ms]
+
+src/received-at.test.tsx:
+(pass) render-scoped received-at labels > constructs nothing for unused or invalid-only renders and lazily reuses each format [2.22ms]
+(pass) render-scoped received-at labels > matches legacy output across locale/calendar defaults and edge dates [23.39ms]
+(pass) render-scoped received-at labels > checks the current local day on each call, including midnight rollover [0.62ms]
+(pass) render-scoped received-at labels > resolves defaults afresh for later renders and standalone labels [1.55ms]
+(pass) render-scoped received-at labels > picks up system timezone changes between renders [1.45ms]
+(pass) render-scoped received-at labels > 50 synthetic rows preserve labels with two constructors instead of 50 [2.43ms]
+(pass) render-scoped received-at labels > 50-row InboxApp render uses only two row-date formatters, in both themes [71.57ms]
+(pass) render-scoped received-at labels > 500 synthetic rows preserve labels with two constructors instead of 500 [20.72ms]
+(pass) render-scoped received-at labels > 500-row InboxApp render uses only two row-date formatters, in both themes [1511.39ms]
+
+src/organization-views.interaction.test.tsx:
+(pass) external authoring preserves typed source metadata, unsupported blockers, removal Undo, and opaque return context [32.76ms]
+(pass) an explicit source replacement preserves the account and Undo restores the unsupported clause [51.98ms]
+(pass) BRE-385 latest Undo follows removal then filter, filter then removal, and repeated removals [69.86ms]
+(pass) BRE-385 latest Undo leaves native text undo to the input and keyboard draft Undo to the form [25.75ms]
+(pass) unmounted authoring suppresses a late successful commit callback without undoing the server write [33.50ms]
+(pass) shows the authoritative consequence when self messages were omitted from selected senders [33.42ms]
+(pass) create-mode external authoring preserves every prepared predicate through unsupported-clause Undo, preview, and commit [110.22ms]
+(pass) non-sender external preparation preserves its typed constraints through refinement and commit [47.41ms]
+(pass) external Search recovery retains edits and the exact commit retry after authority reconnect [75.63ms]
+(pass) external saved-view authoring carries prepared View identity and revision through preview and commit [26.57ms]
+(pass) a stale first preparation cannot replace a newer external authoring entry [26.64ms]
+(pass) a ready external draft cannot survive a replacement entry while its preparation is pending or failing [31.61ms]
+(pass) a stale commit response cannot use a replacement entry context or keep its saving state [45.33ms]
+(pass) an in-flight commit keeps its initiating context when an equal preparation gets a new return context [28.94ms]
+(pass) Cmd+Enter and duplicate form submissions share one in-flight external commit [25.05ms]
+(pass) BRE-378 Organization Views lifecycle interactions > reloads a durable saved View and opens a composite account/thread target [16.74ms]
+(pass) BRE-378 Organization Views lifecycle interactions > deduplicates saved continuation pages by account and Thread and discards stale generations [30.32ms]
+(pass) BRE-378 Organization Views lifecycle interactions > edits the selected definition and display metadata [32.55ms]
+(pass) BRE-378 Organization Views lifecycle interactions > round-trips every preserved revision-1 constraint and derives the draft summary from the complete definition [57.64ms]
+(pass) BRE-378 Organization Views lifecycle interactions > exposes named Context loading failure and retry without losing the saved selection [30.88ms]
+(pass) BRE-378 Organization Views lifecycle interactions > restricts Facet conditions and editors by value type, validates with shared rules, and names enum values [41.69ms]
+(pass) BRE-378 Organization Views lifecycle interactions > does not materialize or preview an incomplete numeric Facet predicate as equals zero [34.87ms]
+(pass) BRE-378 Organization Views lifecycle interactions > uses native input semantics compatible with display-name-enabled email Facets [39.50ms]
+(pass) BRE-378 Organization Views lifecycle interactions > starts with a readable default, suggests a name, and adds, edits, and removes named clauses [61.03ms]
+(pass) BRE-378 Organization Views lifecycle interactions > operates the Add filter menu with Arrow keys, Enter, and Escape [60.82ms]
+(pass) BRE-378 Organization Views lifecycle interactions > uses roving menu focus and closes Add filter on Tab, focus-out, and outside click [71.82ms]
+(pass) BRE-378 Organization Views lifecycle interactions > keeps the full changing scope out of aria-live while preserving concise save status [22.28ms]
+(pass) BRE-378 Organization Views lifecycle interactions > keeps every predicate family reachable while progressively disclosing infrequent filters [32.27ms]
+(pass) BRE-378 Organization Views lifecycle interactions > creates the exact existing wire envelope and labels validation and draft preview honestly [61.62ms]
+(pass) BRE-378 Organization Views lifecycle interactions > discards stale preview responses and only enables Save for the current draft generation [53.31ms]
+(pass) BRE-378 Organization Views lifecycle interactions > reuses one retry key after a commit failure [54.27ms]
+(pass) BRE-378 Organization Views lifecycle interactions > requires a second digest-bound confirmation before committing an exact zero preview [38.95ms]
+(pass) BRE-378 Organization Views lifecycle interactions > clears stale demo results after save and persistently names the unevaluated preview state [22.49ms]
+(pass) BRE-378 Organization Views lifecycle interactions > reorders Views deterministically while preserving selection [12.76ms]
+(pass) BRE-378 Organization Views lifecycle interactions > requires explicit destructive confirmation and selects a safe neighbor after removal [16.58ms]
+(pass) BRE-378 Organization Views lifecycle interactions > does not restore canned results when deletion selects an unevaluated demo neighbor [28.35ms]
+(pass) BRE-378 Organization Views lifecycle interactions > reloads canonical positions and shifted revisions after an authorized removal [29.52ms]
+(pass) BRE-378 Organization Views lifecycle interactions > keeps state unchanged and suppresses every later mutation after authority is denied [59.15ms]
+(pass) BRE-378 Organization Views lifecycle interactions > refetches and renders the edited View revision without a selection switch [48.56ms]
+(pass) BRE-378 Organization Views lifecycle interactions > loads continuation pages, appends without duplicates, and exposes the terminal disabled state [20.17ms]
+(pass) BRE-378 Organization Views lifecycle interactions > keeps a pending continuation disabled and discards it after the selection changes [29.38ms]
+(pass) BRE-378 Organization Views lifecycle interactions > keeps Load more retryable after a continuation error [20.39ms]
+(pass) BRE-385 saved editing keeps only the latest refinement undo and guards dirty cancel [37.11ms]
+(pass) BRE-385 correction uses complete census, blocks empty sets, replaces domains and undoes exact draft [82.61ms]
+(pass) Inbox visibility metadata > create previews and commits only the chosen Inbox flag without widening the definition [38.14ms]
+(pass) Inbox visibility metadata > edit previews and commits only the chosen Inbox flag without widening the definition [39.47ms]
+(pass) Inbox visibility metadata > an Inbox-only edit prompts before discard and restores the saved setting [52.67ms]
+(pass) BRE-413 chooser reviews additive senders and preserves draft through failed save and cancel [52.00ms]
+(pass) BRE-415 same-component View changes atomically reset header, results and edit target [45.90ms]
+(pass) BRE-415 stale initial loads cannot restore the previous View and revision mismatch retries locally [49.08ms]
+(pass) BRE-415 pending save locks navigation, failed save keeps guard, successful save releases it [77.68ms]
+(pass) BRE-417 routed live edit waits for the list and retries preparation for the requested ID [58.56ms]
+
+src/reader-rendering.test.ts:
+(pass) reader body rendering boundary > lets the browser skip offscreen layout without removing content [0.20ms]
+(pass) reader body rendering boundary > uses explicit full geometry after content takes focus [0.06ms]
+(pass) reader body rendering boundary > prints all message bodies without estimated heights [0.07ms]
+
+src/desktop-switch.test.ts:
+(pass) desktop application shell > exposes one named primary navigation landmark and one current destination [5.21ms]
+(pass) desktop application shell > keeps the sidebar in the viewport while the workspace owns long-page scrolling [23.04ms]
+(pass) desktop application shell > switches to complete, theme-safe mobile navigation only through 760px [1415.72ms]
+(pass) desktop application shell > reflows mobile message anatomy into content and 44px action bands [1322.22ms]
+(pass) desktop application shell > bounds Inbox heading actions to the desktop workspace at narrow and wide widths [909.15ms]
+(pass) desktop application shell > keeps compact Later evidence, attention, and reminder actions in separate bands [436.58ms]
+(pass) desktop application shell > keeps compact read and unread rows restrained, scannable, and aligned [1872.75ms]
+(pass) desktop application shell > renders the compact unread marker only in unread message markup [3.74ms]
+
+src/calendar-availability-panel.test.tsx:
+(pass) CalendarAvailabilityPanel > shows source-linked free, busy, unknown, scope, freshness, and human ownership [5.12ms]
+(pass) CalendarAvailabilityPanel > keeps interpreted requests visible without a calendar grant [1.79ms]
+
+src/compose-account-scope.test.tsx:
+(pass) recipient entry, autosave, update, inspection and send stay on the composed account [483.14ms]
+(pass) discard uses the draft owner account [478.01ms]
+(pass) draft paths encode identifiers and account scope independently [12.86ms]
+(pass) account changes isolate writing and ignore a late previous-account hydration [9.89ms]
+(pass) unmount and a new account identity never adopt the old account checkpoint [4.57ms]
+(pass) discard waits for an in-flight first autosave and deletes the created draft [475.65ms]
+(pass) late DELETE success cannot reset another account's draft [497.15ms]
+(pass) late DELETE failure cannot reset another account's draft [494.91ms]
+(pass) account change while first save is pending cancels discard without deleting the new account [493.60ms]
+(pass) failed DELETE keeps writing recoverable and permits another discard attempt [477.18ms]
+(pass) pending discard blocks a duplicate discard, send and edits, then cancels debounce [1422.91ms]
+(pass) failed first save does not become a false successful discard [477.98ms]
+(pass) a draft-list response begun before discard cannot restore the deleted draft [482.64ms]
+(pass) discard refuses to race a delivery already in flight [5.16ms]
+
+src/compose-autosave-interruption.test.tsx:
+(pass) latest body reaches API when drafts list does not interrupt autosave debounce [980.69ms]
+(pass) latest body reaches API when drafts list refreshes during autosave debounce [989.31ms]
+(pass) a locally checkpointed edit is saved remotely after controller remount [504.50ms]
+(pass) latest body is reported as saving until its actual remote acknowledgment [505.40ms]
+(pass) already-synced drafts-list refresh makes no duplicate mutation [487.32ms]
+
+src/view-management.interaction.test.tsx:
+(pass) hidden views can be edited without restoring; restore retains mixed tool order [20.41ms]
+(pass) saved-view semantics keep mixed order, active state and mobile management reachable [26.31ms]
+(pass) management entry opens Views directly without requiring the overview tab [21.45ms]
+(pass) blocked sender growth edits the selected saved view and returns with exact source selection [29.35ms]
+
+src/demo-views.interaction.test.tsx:
+An update to SavedOrganizationViewContent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+(pass) Mom creates a truthful sample view, reopens and edits canonically, switches to empty and back without API writes [58.10ms]
+
+src/facet-workflow.test.ts:
+(pass) Facet and Workflow UI integration seam > builds stable-ID row and detail models in schema order [0.58ms]
+(pass) Facet and Workflow UI integration seam > omits missing optional Facets without losing missing-filter identity [0.16ms]
+(pass) Facet and Workflow UI integration seam > keeps enum and workflow identity even when definitions are unavailable [0.07ms]
+
+src/saved-view-deletion.test.tsx:
+(pass) Cancel performs no mutation; confirmation explains Inbox exclusion and never email deletion [16.02ms]
+(pass) confirmed deletion binds canonical revisions and blocks duplicate clicks and cancel while pending [13.90ms]
+(pass) stale deletion requires refresh and explicit confirmation against new revisions [24.11ms]
+(pass) ambiguous failure retains its retry envelope after authority recovery [19.40ms]
+(pass) read-only authority never permits deletion [11.08ms]
+(pass) demo deletion is disabled so sample views cannot resurrect after a claimed permanent deletion [5.46ms]
+(pass) canonical absence after lost response reconciles without a second delete [15.61ms]
+(pass) partial view lists cannot authorize deletion or remove a shortcut [9.63ms]
+
+src/compose-transitions.test.tsx:
+(pass) demo delivery is labeled as simulation without verified Gmail access or provider IDs [40.56ms]
+(pass) pending To, Cc and Bcc survive panel/Zen remounts; invalid input prevents partial delivery [104.56ms]
+(pass) failed send preserves committed draft and retry does not duplicate recipients [36.40ms]
+(pass) pending-only draft has content and discard or scope change resets queries [29.44ms]
+(pass) controller rejects invalid hidden recipients before synthetic send [35.64ms]
+(pass) rapid send clicks run a single delivery [20.54ms]
+
+src/first-view-guidance.test.tsx:
+(pass) first invitation waits for canonical reads, dismisses durably and reopens without creating a View [110.27ms]
+(pass) a failed View list never becomes an invitation or empty-mail sample [73.61ms]
+(pass) empty mail offers only a noninteractive example and skipping never prepares or saves a View [49.25ms]
+(pass) selected mail starts production selection without writing preferences or a View [80.95ms]
+(pass) a dismissed user gets manual help without resetting their stored preference [72.28ms]
+(pass) failed dismissal stays locally hidden and explicitly retries persistence [72.52ms]
+(pass) manual help owns Escape and restores focus to Getting started [87.39ms]
+(pass) no invitation flashes while the canonical View list is still pending [93.74ms]
+(pass) a selected-mail invitation is consumed once instead of reselecting after later navigation [98.54ms]
+(pass) manual reopen refreshes empty mail readiness after real mail arrives [74.83ms]
+(pass) confirmed server completion clears a failed dismissal without another write [74.46ms]
+(pass) a late dismissal failure cannot revive an alert after confirmed completion [98.96ms]
+
+src/surface-history.test.ts:
+(pass) surface history contract > demo sender growth uses canonical metadata and preserves Back/Forward source entries [11.08ms]
+(pass) surface history contract > same-destination Views edits retain distinct Back/Forward entries and source mail context [8.65ms]
+(pass) surface history contract > reads legacy path links and keeps destination, query, and unknown parameters [0.96ms]
+(pass) surface history contract > seeds a clean in-app predecessor for an initial deep link [4.67ms]
+(pass) surface history contract > makes preference-driven Zen explicit in an initial Compose URL [7.03ms]
+(pass) surface history contract > nests reader, composer, and Zen so Back and Forward dismiss one owned surface [10.74ms]
+(pass) surface history contract > consumes reader return context exactly once without rewriting the destination entry [6.37ms]
+(pass) surface history contract > replaces stale surface parameters when an unowned deep link is closed [1.07ms]
+(pass) surface history contract > replaces an invalid custom-space surface with one clean fallback entry [1.23ms]
+(pass) surface history contract > captures the desktop scroll owner and restores focus only to a safe target [1.93ms]
+
+src/organization-authority.test.tsx:
+(pass) BRE-369 shared Organization authority > keeps loading geometry stable without presenting a premature recovery action [6.95ms]
+(pass) BRE-369 shared Organization authority > classifies offline, session expiry, no access, partial data, and generic errors distinctly [1.06ms]
+(pass) BRE-369 shared Organization authority > renders one coherent session_expired action and blocks mutation below the button [5.34ms]
+(pass) BRE-369 shared Organization authority > renders one coherent no_access action and blocks mutation below the button [8.72ms]
+(pass) BRE-369 shared Organization authority > renders one coherent error action and blocks mutation below the button [4.81ms]
+(pass) BRE-369 shared Organization authority > names empty account scope and offers exactly one connection action [4.72ms]
+(pass) BRE-369 shared Organization authority > treats a valid 206 authority snapshot as partial and read-only [8.63ms]
+(pass) BRE-369 shared Organization authority > applies no-access authority consistently to Views, Lanes, Tide Table, and lifecycle entry points [17.94ms]
+(pass) BRE-369 shared Organization authority > uses the same no-access recovery and mutation gate in Thread Lane controls [7.02ms]
+(pass) BRE-369 shared Organization authority > preserves the last reliable snapshot through a partial failure and retries coherently [12.10ms]
+(pass) BRE-369 shared Organization authority > reacts to connectivity truth without discarding reliable data [5.91ms]
+
+src/tide-table.test.tsx:
+(pass) TideTableEditor > authors accepted Orca v1 source and preserves located diagnostics [19.51ms]
+(pass) TideTableEditor > queues an edited generation behind a delayed create and appends to the returned Rule identity [13.37ms]
+(pass) TideTableEditor > retries a network-unknown compile with the byte-equivalent serialized request [6.30ms]
+(pass) TideTableEditor > retries a parseable 5xx with the old Workspace revision and idempotency identity intact [11.21ms]
+
+src/navigation.test.ts:
+(pass) shared desktop navigation contract > Views management and selected edit links retain the existing destination grammar [0.89ms]
+(pass) shared desktop navigation contract > leaving management clears edit intent while retaining unrelated URL context [0.59ms]
+(pass) shared desktop navigation contract > caps three-digit navigation counts without exposing the exact total [0.06ms]
+(pass) shared desktop navigation contract > legacy Organization links open sender management while saved-view authoring stays reachable [0.08ms]
+(pass) shared desktop navigation contract > parses one destination grammar and serializes stable production and preview URLs [0.22ms]
+(pass) shared desktop navigation contract > projects names, order, hidden state, counts, active destination, and offline health once for every shell [0.48ms]
+(pass) shared desktop navigation contract > round-trips account-scoped space preferences through the shared storage seam [0.40ms]
+(pass) shared desktop navigation contract > projects saved Views after locally managed spaces with their durable destination identity [0.29ms]
+(pass) catalog names and identity outrank stale local categories in every sidebar [0.30ms]
+(pass) saved sender views share mixed tool ordering and hide preferences [0.13ms]
+(pass) hydration, failed lists, new and absent views preserve device preferences across reload [0.54ms]
+
+src/collections-pins.test.ts:
+(pass) Collections/Pins frontend seam > preserves distinct meanings and visible Account context [0.27ms]
+(pass) Collections/Pins frontend seam > builds only typed Organization membership mutations [1.45ms]
+(pass) Collections/Pins frontend seam > normalizes typed success and recoverable operation errors [2.73ms]
+
+src/organization-views.test.tsx:
+(pass) BRE-378 Organization Views UI > renders an accepted live Views surface with a cross-Lane weekly review [1.70ms]
+(pass) BRE-378 Organization Views UI > keeps default, hover, focus, selected, and disabled controls readable in both themes [0.09ms]
+
+src/mail-preview.test.ts:
+(pass) decodes double-encoded apostrophes without unbounded decoding [0.18ms]
+
+src/contact-signature.test.ts:
+(pass) contact identity marks > derives a stable organization monogram from a structured domain [0.29ms]
+(pass) contact identity marks > uses the registrable label for country-code domains [0.07ms]
+(pass) contact identity marks > keeps personal mailbox contacts on the familiar initials mark [0.13ms]
+(pass) contact identity marks > falls back to the existing glyph when contact data is not usable [0.07ms]
+(pass) contact identity marks > does not invent organization identities for reserved or generic domains [0.03ms]
+
+src/attention-page.test.tsx:
+(pass) page saves actual sender routing, refreshes consumers, Undo restores prior explicit state, accounts isolated [545.83ms]
+(pass) shared chooser defaults to actual conversation, sender action is explicit, reset inherits, guarded Undo never overwrites newer intent [678.79ms]
+(pass) unknown committed response reloads canonical state without retry; failed reload locks last values [346.14ms]
+(pass) late account response cannot replace current account and discovery never creates sender rules [275.89ms]
+(pass) account-list failure remains visible after a successful routing reload; offline locks edits [258.12ms]
+(pass) write-only permission failure remains locked when GET succeeds until explicit recovery [388.74ms]
+(pass) mixed-case sender identity is normalized for shared chooser reads and writes [348.52ms]
+(pass) failed recovery read is not silently retried after an unknown save [359.86ms]
+(pass) filtered sender disappearance and Undo return focus to a useful heading [438.56ms]
+(pass) old Undo conflict completion preserves a later save receipt [483.50ms]
+(pass) old Undo success completion preserves a later save receipt [457.73ms]
+(pass) filtered sender attempted edit reconciles focus after committed ambiguous response [365.18ms]
+(pass) filtered sender attempted edit reconciles focus after rejected ambiguous response [354.52ms]
+(pass) filtered sender attempted edit reconciles focus after moved-focus ambiguous response [374.60ms]
+(pass) App routing refresh releases pending Inbox pagination and installs usable canonical cursor [2592.92ms]
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+(pass) App routing refresh releases pending Signals pagination and installs usable canonical cursor [2304.30ms]
+(pass) App ignores a pre-save background snapshot after Quiet save, retaining row, count and cursor truth [2206.08ms]
+(pass) App accepts final provider status after routing invalidates its completed background snapshot [2812.79ms]
+(pass) delayed successful old Undo response cannot replace a newer receipt [592.04ms]
+(pass) cancelled chooser reopening reads external routing before selecting or saving [434.05ms]
+(pass) App focus provider completion refreshes Quiet rows, count and cursor and rejects old pagination [2082.61ms]
+(pass) App interval provider completion refreshes Quiet rows, count and cursor and rejects old pagination [2199.28ms]
+(pass) App manual provider completion refreshes Quiet rows, count and cursor and rejects old pagination [2501.00ms]
+(pass) create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement rejects references safely [2205.24ms]
+(pass) destination URL survives reader open, close and history while canonical pages exceed first hundred [3046.32ms]
+(pass) same-destination refresh retains an open chooser and explicit unsaved choice [1073.70ms]
+(pass) opening unread mail updates the Inbox page and canonical catalog count [1017.06ms]
+(pass) opening unread mail updates the Quiet page and canonical catalog count [1092.66ms]
+(pass) destination switches clear hidden selections and actionable sender targets [962.29ms]
+(pass) custom destination cannot save its search as a fallback Inbox filter [586.85ms]
+(pass) rejected mark-read preserves canonical destination unread state without changing another account [762.23ms]
+(pass) App bulk move dedupes selected messages across accounts, refreshes counts/pages and retains root Undo [1359.21ms]
+(pass) App pending batch preserves attempted scope when refreshed rows prune every selected target [1304.01ms]
+(pass) App bulk rejected preserves choices and requires explicit recovery without fabricated Undo [1463.78ms]
+(pass) App bulk unconfirmed preserves choices and requires explicit recovery without fabricated Undo [1399.21ms]
+(pass) App bulk selection over 50 conversations is explicit and never silently truncated [1560.67ms]
+(pass) App late batch completion does not clear another view's selection or overwrite its newer receipt [1595.70ms]
+(pass) App committed-but-unconfirmed batch reloads canonical mail, prunes stale selection and never offers fabricated Undo [816.41ms]
+(pass) batch receipt cannot cross an account/session owner replacement, including late success [155.39ms]
+(pass) App query replacement releases old bulk refresh busy state without unlocking a newer pending move [913.71ms]
+(pass) App uncertain batch recovery survives Cancel and selection teardown until explicit mail reload succeeds [922.79ms]
+(pass) App repeated global recovery clicks share one attempt and failed recovery keeps new batch choosers locked [839.75ms]
+(pass) superseded mail snapshot cannot satisfy explicit recovery [166.19ms]
+(pass) bulk recovery releases its parent busy lease on unmount before the catalog completes [235.41ms]
+(pass) detached recovery completion cannot unlock a new move after a same-query remount [329.36ms]
+(pass) App Start over removes recovery and empty reselected recovery clears busy before rows return [1003.43ms]
+
+src/agent-event-ui.test.tsx:
+(pass) propagated agent event timeline > explains active estimates without presenting raw automated mail as human [6.33ms]
+(pass) propagated agent event timeline > renders bounded loading, error, and disabled control states [9.97ms]
+(pass) propagated agent event timeline > disables lifecycle writes across every card while preserving source navigation [29.34ms]
+(pass) propagated agent event timeline > keeps a busy Mute summary closed and out of keyboard focus [19.12ms]
+(pass) propagated agent event timeline > moves focus to source navigation before a Mute write closes its menu [17.91ms]
+(pass) propagated agent event timeline > keeps an in-flight quieted card and its failure announcement visible [33.51ms]
+(pass) propagated agent event timeline > keeps demo lifecycle actions durable and independent of the source assessment [1.92ms]
+
+src/reader-cards.integration.test.tsx:
+(pass) keeps the first-unread card visible and open after a same-thread read refresh [336.68ms]
+(pass) an all-read conversation initially opens its latest message [218.41ms]
+(pass) quiet controls move bulk actions into a labeled disclosure and retain card behavior [262.53ms]
+(pass) updates contextual navigation when preceding content grows without scrolling [47.43ms]
+(pass) entry unread count survives mark-read refresh and distinguishes incoming mail [335.52ms]
+(pass) leaving and returning restores card expansion and disclosure without changing unread flags [593.52ms]
+(pass) leaving during scrolling saves the delta-corrected anchor with a 0px viewport shift [30.28ms]
+(pass) leaving during scrolling saves the delta-corrected anchor with a 37px viewport shift [26.78ms]
+
+src/mobile-mail.test.tsx:
+(pass) native-inspired mobile mail > keeps the safe browser viewport for routes without edge-to-edge insets [2.50ms]
+(pass) native-inspired mobile mail > new compose entry passes the real trigger for focus restoration and stays repeatable [5.63ms]
+(pass) native-inspired mobile mail > desktop header is visually unchanged and phone controls have bounded sizing [15.80ms]
+(pass) native-inspired mobile mail > full cascade keeps normal and compact Inbox spacing and long-snippet clamps [558.25ms]
+(pass) native-inspired mobile mail > small viewports keep the delivery controls in scroll flow with safe-area support [2.06ms]
+
+src/organization-views.presentation.test.tsx:
+(pass) BRE-414 editor has one task heading, ordered groups, and plain mail separation [54.14ms]
+(pass) view color uses named presets and preserves an existing non-palette color until changed [91.19ms]
+(pass) BRE-417 consumes exact edit ID once and protects a dirty draft from replacement [99.63ms]
+(pass) BRE-417 missing edit ID offers recovery without editing a different view [24.32ms]
+(pass) BRE-414 saved empty view shows rules and Inbox policy with a working edit action [21.45ms]
+
+src/compose-writing-preferences.test.tsx:
+(pass) new hydrated draft initializes once and keeps plain format through mocked autosave and send [510.15ms]
+(pass) late preferences cannot overwrite typing, deletion, or pending-recipient interaction [19.35ms]
+(pass) discarded draft stays empty until the next writing session and uses refreshed settings [50.00ms]
+(pass) empty local recovered drafts are preserved even when preferences are ready [18.25ms]
+(pass) typing before hydration is preserved and a saved competing draft becomes a conflict [53.60ms]
+(pass) rich saved drafts keep their format and body while new settings request plain text [496.10ms]
+(pass) account switch rejects stale preferences and other-account saved drafts [19.81ms]
+(pass) rich new draft persists escaped HTML and signature only once across local recovery [475.11ms]
+(pass) plain defaults are retained when typing starts while preferences are loading [497.52ms]
+(pass) body typed then deleted stays empty after a late preference response [17.62ms]
+(pass) new reply seeds before preferences arrive, with no duplicate on settings refresh [14.58ms]
+(pass) typing while preferences load retains the once-only reply seed and skips late signature [15.85ms]
+(pass) canonical reply seed never replaces recovered recipients, subject or body [3.87ms]
+(pass) failed draft recovery never treats an unknown saved draft as new [3.46ms]
+
+src/organization-trace.test.tsx:
+(pass) Organization Glass Box Trace > starts with a scan-first rule summary and discloses each authority surface on request [47.93ms]
+(pass) Organization Glass Box Trace > explains a live production-failure evaluation and opens its complete deterministic Trace [97.96ms]
+(pass) Organization Glass Box Trace > renders exact Safety Lock provenance and links the losing Manual Override [175.46ms]
+(pass) Organization Glass Box Trace > announces the exact empty Trace state without retaining compile-only wording [58.94ms]
+(pass) Organization Glass Box Trace > announces the exact Trace error without retaining empty or success wording [43.29ms]
+(pass) Organization Glass Box Trace > keeps the current Thread and Trace wording when an older response resolves last [112.53ms]
+(pass) Organization Glass Box Trace > keeps the browser reviewer fixture identical to real evaluator output [12.48ms]
+(pass) Organization Glass Box Trace > defines labeled default, hover, focus, selected, disabled, and Trace states with theme-safe tokens [3.05ms]
+(pass) Organization Glass Box Trace > renders the compact When label at AA text contrast in both themes [38.99ms]
+
+src/organization-lanes.test.tsx:
+(pass) BRE-311 Organization Lane UI > renders stable Lane management and every policy default without provider deletion [2.04ms]
+(pass) BRE-311 Organization Lane UI > renders readable Thread Manual Override and evidence triggers [0.63ms]
+(pass) BRE-311 Organization Lane UI > uses the theme-safe surface, border, and ink treatment for selected and pressed controls [0.10ms]
+
+src/reader-quote-regression.test.ts:
+(pass) quote folding never hides an inline answer or forwarded prose [0.23ms]
+(pass) folding retains every character including CRLF and surrounding whitespace [0.20ms]
+
+src/writing-preferences.integration.test.tsx:
+(pass) primary Reply all sends the actual deduplicated group recipients into the draft; explicit Reply stays sender-only [1049.62ms]
+(pass) late preference arrival preserves an explicitly opened reply and its typed body [564.99ms]
+(pass) format choice is explicit, preserves literal text, and controls saved HTML [550.59ms]
+(pass) plain DOM soft breaks, paragraphs, blank lines and trailing spaces persist literally [573.11ms]
+(pass) rich soft breaks do not silently join visible words in saved text or HTML [537.85ms]
+(pass) literal plain text nodes retain Unicode spaces and all terminal newlines [2.58ms]
+
+src/App.interaction.test.tsx:
+(pass) OAuth login availability and recovery > enables every configured provider after checking the public contract [20.62ms]
+(pass) OAuth login availability and recovery > keeps an unavailable provider inert and gives one readable repair action [15.80ms]
+(pass) OAuth login availability and recovery > downgrades stale readiness after a provider-unavailable start and rechecks before enabling OAuth [19.55ms]
+(pass) OAuth login availability and recovery > does not let an availability recheck race an OAuth start [19.88ms]
+(pass) OAuth login availability and recovery > recovers a failed availability check and sanitizes a failed provider start [18.17ms]
+(pass) mobile authorization recovery > a cancelled pending login cookie returns to sign-in with the exact mobile request [20.49ms]
+(pass) mobile authorization recovery > requires an explicit action before replacing an abandoned request binding [14.47ms]
+(pass) Compose delivery validation > rejects a pending matching suggestion and keeps the invalid To input focused [22.62ms]
+(pass) Compose delivery validation > never drops a malformed token from otherwise valid visible recipient input [21.87ms]
+(pass) Compose delivery validation > rejects shared-schema-invalid To input maya@example.com> inline and restores field focus [18.54ms]
+(pass) Compose delivery validation > rejects shared-schema-invalid Cc input maya@example..com inline and restores field focus [27.47ms]
+(pass) Compose delivery validation > rejects shared-schema-invalid Bcc input maya@-example.com inline and restores field focus [20.01ms]
+(pass) Compose delivery validation > commits valid pending To, Cc, and Bcc input into the exact delivery payload [40.89ms]
+(pass) Compose delivery validation > blocks an empty reply, explains the policy, and returns focus to the message body [19.25ms]
+(pass) Compose delivery validation > allows an attachment-only reply and labels that delivery policy before sending [22.12ms]
+(pass) Settings recovery > retries the canonical preference read without ever PATCHing fallback values [73.07ms]
+(pass) Settings recovery > preserves newer edits across slow saves, failed saves, and PATCH retry [111.21ms]
+(pass) Settings recovery > gives session, account, agent, and sync read failures scoped recovery [61.81ms]
+(pass) Settings recovery > keeps edited account choices local when the session expires during save [70.30ms]
+(pass) Settings recovery > retries agent connections and sync status without reloading other Settings reads [72.31ms]
+(pass) Settings recovery > ignores a stale canonical GET after a newer preference read has completed [65.72ms]
+(pass) Write shortcut > opens writing with C and keeps modified keys available [153.82ms]
+(pass) Write shortcut > leaves native destination type-ahead and editable keys alone, including Zen preference [383.45ms]
+(pass) Write shortcut > starts writing in Zen mode when the preference is enabled [199.02ms]
+(pass) App top-layer contract > keeps reader, Compose, and Zen in one topmost Escape stack [354.27ms]
+(pass) App top-layer contract > gives Gmail permission the same focus, busy, and Escape behavior [31.79ms]
+(pass) App top-layer contract > suspends Compose and search shortcuts behind destination management and Pin Builder [213.71ms]
+(pass) App top-layer contract > restores the Compose trigger when default Zen and Compose close together [183.15ms]
+(pass) App top-layer contract > synthetic Zen send restores reader context and focus; new draft is usable (default Zen false) [447.82ms]
+(pass) App top-layer contract > synthetic Zen send restores reader context and focus; new draft is usable (default Zen true) [363.08ms]
+(pass) App top-layer contract > restores a stable visible app control when Remove pin deletes the opener [144.68ms]
+(pass) Inbox row action affordances > uses icon-first controls while keeping accessible names and states [122.90ms]
+(pass) Inbox row action affordances > presents thread saving as an immediate, accessible collection checklist [161.47ms]
+(pass) Desktop evidence and navigation > view mutation supersedes a delayed provider Inbox snapshot [283.27ms]
+(pass) Desktop evidence and navigation > view mutation refreshes Inbox messages and destination counts without provider sync [162.56ms]
+(pass) Desktop evidence and navigation > keeps evidence modal, closes the top layer with Escape, and restores trigger focus [287.17ms]
+(pass) Desktop evidence and navigation > preserves advanced Safety Lock without duplicate placement controls from the current Thread experience [275.79ms]
+(pass) Desktop evidence and navigation > contains Lane drawer focus in both directions and restores the trigger after Escape [331.52ms]
+(pass) Desktop evidence and navigation > writes stable destinations and follows browser history [169.64ms]
+(pass) Desktop evidence and navigation > returns from a Search result to Search, then restores the mounted source Reader [424.79ms]
+(pass) Desktop evidence and navigation > closes an invalid Search return to a synchronized Inbox fallback [216.91ms]
+(pass) Desktop evidence and navigation > preserves a production custom-space deep link until deferred collections select it [95.42ms]
+(pass) Desktop evidence and navigation > falls back only after production collections settle without the requested custom space [138.66ms]
+(pass) Desktop evidence and navigation > organization links reopen Organization sender management [79.09ms]
+(pass) Desktop evidence and navigation > attention links reopen Organization sender management [71.47ms]
+(pass) Desktop evidence and navigation > the internal authoring link reopens the Organization studio [608.62ms]
+(pass) Desktop evidence and navigation > Settings Organization navigation opens the sender workspace [99.81ms]
+(pass) Desktop evidence and navigation > Settings opens the same Customize tools workflow as the main sidebar [318.15ms]
+(pass) Desktop evidence and navigation > persists hidden workspace visibility across a reload [209.83ms]
+(pass) Desktop evidence and navigation > persists one absolute order when a drag crosses multiple rows [131.05ms]
+(pass) Desktop evidence and navigation > keeps Inbox and Settings on the same customized sidebar projection in both themes [261.64ms]
+(pass) Desktop evidence and navigation > reacts immediately to connectivity changes across Inbox and Settings in both themes [449.33ms]
+(pass) Desktop evidence and navigation > keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback [403.60ms]
+(pass) Drafts mailbox > opens the saved drafts view and reopens a selected draft [156.64ms]
+(pass) Drafts mailbox > keeps a new draft isolated through mounted close and reopen scope transitions [560.01ms]
+(pass) Drafts mailbox > does not let a deferred old save patch the newly selected draft [508.87ms]
+(pass) Drafts mailbox > moves between user-owned workflow spaces without reviving classification tabs [167.02ms]
+(pass) Pin navigation and bulk sender actions > lets a user-owned workflow space replace a temporary person filter [155.89ms]
+(pass) Pin navigation and bulk sender actions > opens a pinned thread from outside its current signal view [163.77ms]
+(pass) Pin navigation and bulk sender actions > lets keyboard users unpin a saved thread directly from the rail [115.18ms]
+(pass) Pin navigation and bulk sender actions > starts a saved search from the global no-results state [105.18ms]
+(pass) Pin navigation and bulk sender actions > announces a concise result status without making the message list live [63.78ms]
+(pass) Pin navigation and bulk sender actions > exposes the visible bulk-selection state as pressed [239.04ms]
+(pass) Pin navigation and bulk sender actions > sentence stays hidden until selection and Start over hides it and resets its destination [215.86ms]
+(pass) Pin navigation and bulk sender actions > selection disclosure dismisses before Escape exits selection and restores focus [192.87ms]
+(pass) Pin navigation and bulk sender actions > clicking outside More preserves selected mail and the local exit clears it [176.46ms]
+(pass) Pin navigation and bulk sender actions > hands the server only exact selected row identities for sender preparation [2.25ms]
+(pass) Pin navigation and bulk sender actions > keeps mixed-account row selection and blocks sender View preparation [82.30ms]
+(pass) Pin navigation and bulk sender actions > cancel returns to the selected rows, scroll position, and authoring trigger [183.49ms]
+(pass) Pin navigation and bulk sender actions > sender authoring tucks extra fields into Tune and guards dirty Escape before returning selection [272.77ms]
+(pass) Pin navigation and bulk sender actions > moves multiple selected senders to Quiet in one action [217.99ms]
+(pass) Pin navigation and bulk sender actions > changing search clears selection before selecting newly visible conversations [162.48ms]
+(pass) Pin navigation and bulk sender actions > reconciles mixed failure, keeps only the failed sender selected, and retries it [201.59ms]
+(pass) Pin navigation and bulk sender actions > retries a retryable exact sender target after its canonical state removes the row [210.58ms]
+(pass) Pin navigation and bulk sender actions > keeps paginated same-id messages distinct across accounts, restores the exact row, and retries the exact target [341.84ms]
+(pass) Pin navigation and bulk sender actions > disables every duplicate bulk submission path while saving [222.90ms]
+(pass) Inbox reader viewport restoration > keeps the selected message readable while an uncached conversation is opening [168.58ms]
+(pass) Inbox reader viewport restoration > opens a recently prefetched conversation without showing Reader loading [313.30ms]
+(pass) Inbox reader viewport restoration > revalidates an expired prefetch even when its mailbox version is unchanged [315.06ms]
+(pass) Inbox reader viewport restoration > revalidates a prefetched conversation when its mailbox version changes before opening [372.29ms]
+(pass) Inbox reader viewport restoration > does not let an older foreground detail overwrite a newer mailbox-version response [413.85ms]
+(pass) Inbox reader viewport restoration > keeps cached space geometry during revalidation and clears a recovered sync failure [204.99ms]
+(pass) Inbox reader viewport restoration > keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh [182.35ms]
+(pass) Inbox reader viewport restoration > refreshes changed active-thread content without replaying Reader loading or losing scroll [204.83ms]
+(pass) Inbox reader viewport restoration > hands an uncached loading Reader to the newer mailbox-version request [401.51ms]
+(pass) Inbox reader viewport restoration > retries a failed silent Reader refresh on a later same-version mailbox refresh [271.31ms]
+3443 |       const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
+3444 |       expect(retry?.textContent).toBe("Try again");
+3445 | 
+3446 |       await act(async () => retry.click());
+3447 |       for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-document:not(.reader-loading)"); index += 1) await waitFor(0);
+3448 |       expect(threadReads.filter((path) => path.includes(encodeURIComponent(failedMessage.threadId)))).toHaveLength(2);
+                                                                                                             ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 2
+Received length: 3
+
+      at <anonymous> (/workspace/orca-cache-lifecycle/apps/web/src/App.interaction.test.tsx:3448:103)
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread [352.30ms]
+(pass) Inbox reader viewport restoration > labels a direct and reloaded production Focus reader from its synchronized destination [317.29ms]
+(pass) Inbox reader viewport restoration > labels a deferred production custom-space reader after load, Forward, and reload [456.28ms]
+(pass) Inbox reader viewport restoration > keeps reader and composer in URL order across browser Back and Forward [479.13ms]
+(pass) Inbox reader viewport restoration > returns from a reader to the same shared custom-space destination [245.53ms]
+(pass) Inbox reader viewport restoration > cancels an animated Compose close when browser Back already revealed the reader [998.66ms]
+(pass) Inbox reader viewport restoration > reloads an initial deep link once and gives it a safe in-app Back target [248.30ms]
+(pass) Inbox reader viewport restoration > reconciles a bfcache pageshow with the current surface URL [163.13ms]
+(pass) Inbox reader viewport restoration > visible reader jump follows document scrolling after a mobile resize [325.40ms]
+(pass) Inbox reader viewport restoration > document scrolling exposes reader jump-to-top on mobile [210.81ms]
+(pass) Inbox reader viewport restoration > reader jump recomputes visibility when resizing between scroll containers [290.87ms]
+(pass) Inbox reader viewport restoration > observes and scrolls the desktop workspace for reader jump-to-top [307.45ms]
+(pass) Inbox reader viewport restoration > restores the desktop workspace and origin focus after Escape [219.91ms]
+(pass) Inbox reader viewport restoration > restores the selected row and workspace offsets after Inbox Back [327.98ms]
+(pass) Inbox reader viewport restoration > re-arms the list return point when Forward reopens a reader [559.95ms]
+(pass) Inbox reader viewport restoration > restores a reader row once without stealing focus after a fresh Compose closes [218.49ms]
+(pass) Inbox reader viewport restoration > opens a propagated event source and returns to the same signal position [178.60ms]
+(pass) Inbox reader viewport restoration > keeps a connected propagated-event origin through Back, Forward, and Back [170.26ms]
+(pass) Inbox reader viewport restoration > reveals and restores a quieted local signal without changing its source mail [277.78ms]
+(pass) Inbox reader viewport restoration > keeps broad mutes explicitly reversible before restoring the event [181.51ms]
+(pass) Inbox reader viewport restoration > cancels an old focus frame when a new reader opens before it runs [324.44ms]
+(pass) Inbox reader viewport restoration > refreshes the rail avatar when a changed photo returns from settings [75.77ms]
+(pass) Zen exit presence > keeps the canvas mounted with its exit state until Save & close finishes [732.82ms]
+(pass) Zen exit presence > uses the same closing lifecycle for Escape [935.91ms]
+(pass) Zen exit presence > returns straight to the inbox on Escape when Zen is the default [169.24ms]
+(pass) Zen exit presence > keeps Save & close returning to the panel when Zen is the default [137.54ms]
+(pass) Zen exit presence > returns immediately for reduced motion without delaying panel controls [243.93ms]
+(pass) BRE-386 guidance navigation > All Mail invitation disappears for attention and classification filter pins [118.97ms]
+(pass) BRE-386 guidance navigation > selected-mail start from organization-studio survives All Mail navigation and does not replay later [139.46ms]
+(pass) BRE-386 guidance navigation > selected-mail start from all survives All Mail navigation and does not replay later [104.02ms]
+(pass) BRE-413 saved-view growth entry > survives the mailbox selection reset [48.13ms]
+(pass) BRE-417 Views routes > skipped native animation readiness does not reject navigation or leave transition styling [105.88ms]
+(pass) BRE-417 Views routes > direct edit opens the requested view and management history restores the Views section [130.59ms]
+(pass) BRE-417 Views routes > missing saved-view recovery lands directly on Views [55.49ms]
+(pass) BRE-415 unsaved View navigation > shell Keep editing preserves the exact editor, URL, scroll and focus; Discard visits the requested view once [289.67ms]
+(pass) BRE-415 unsaved View navigation > Settings and Organization sections guard edits; reload warns only while dirty [296.25ms]
+(pass) BRE-418 canonical demo App journey > selected Mom create/save/open/Add senders/grow/reopen stays in-page with matching Inbox count [386.46ms]
+(pass) unread Focus Inbox contract > renders one compact timeline without attention headers in light [60.69ms]
+(pass) unread Focus Inbox contract > renders one compact timeline without attention headers in dark [54.04ms]
+(pass) unread Focus Inbox contract > opening unread Focus demotes it by date on return while retaining its Focus category [117.63ms]
+(pass) unread Focus Inbox contract > Focus demo membership matches Inbox, including latest sent replies but excluding archived threads [42.18ms]
+(pass) unread Focus Inbox contract > captures unread before mark-read and cancels abandoned entry (cancel=%s) [149.67ms]
+(pass) unread Focus Inbox contract > captures unread before mark-read and cancels abandoned entry (cancel=%s) [170.63ms]
+(pass) unread Focus Inbox contract > pending read mutation rejects older pages and preserves unread on failure (success=%s) [167.58ms]
+(pass) unread Focus Inbox contract > pending read mutation rejects older pages and preserves unread on failure (success=%s) [155.69ms]
+(pass) unread Focus Inbox contract > sidebar Focus lens opens Inbox intersection while a custom Focus Space keeps its own destination [375.35ms]
+(pass) unread Focus Inbox contract > Focus uses Inbox membership and view-specific pagination, never the wider mail cache [122.86ms]
+
+src/thread-detail-cache.test.ts:
+(pass) recent thread detail cache > prioritizes the 30 newest unique conversations [0.63ms]
+(pass) recent thread detail cache > deduplicates in-flight reads and serves the resolved detail from memory [0.37ms]
+(pass) recent thread detail cache > keeps only the hottest configured details [0.37ms]
+(pass) recent thread detail cache > invalidation supersedes an in-flight prefetch and blocks its completion from repopulating the cache [0.25ms]
+(pass) recent thread detail cache > consecutive mailbox versions each supersede the older pending read [0.33ms]
+(pass) recent thread detail cache > mailbox-version changes and explicit staleness both bypass freshness [0.21ms]
+(pass) recent thread detail cache > send and routing refresh generations keep the visible detail but force an authoritative read [0.25ms]
+(pass) thread generation lifecycle > refreshing distinct settled threads retains only the payload working set [2.22ms]
+(pass) thread generation lifecycle > an evicted success remains current through its consumer, then can be pruned [0.27ms]
+(pass) thread generation lifecycle > a current failure remains visible through catch and is pruned after release [0.34ms]
+(pass) thread generation lifecycle > supersede, prune and reload cannot resurrect a delayed success [0.31ms]
+(pass) thread generation lifecycle > a late failure cannot replace a newer success and does not release its lease [0.32ms]
+(pass) thread generation lifecycle > same thread IDs in different accounts keep independent leases [0.23ms]
+267 |   const cache = new ThreadDetailCache();
+268 |   const fail = () => { throw new Error("synchronous loader failure"); };
+269 |   for (let i = 0; i < 100; i++) {
+270 |     expect(() => cache.load({ accountId: "a", threadId: `fail-${i}` }, fail)).toThrow("synchronous loader failure");
+271 |   }
+272 |   expect(retained(cache)).toEqual({ generations: 0, leases: 0, pending: 0 });
+                                ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "generations": 0,
++   "generations": 100,
+    "leases": 0,
+    "pending": 0,
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/workspace/orca-cache-lifecycle/apps/web/src/thread-detail-cache.test.ts:272:27)
+(fail) synchronous loader failures retire unused identities without discarding a live lease [2.08ms]
+
+src/reader-session.test.ts:
+(pass) reading sessions are bounded, account scoped, and explicitly clearable [0.15ms]
+(pass) retained expansion metadata is bounded for extremely large threads [0.63ms]
+
+src/global-search.test.tsx:
+(pass) global mail search location contract > opens from Inbox, Reader, Organization, and Settings with a safe exact source [3.37ms]
+(pass) global mail search location contract > rejects cross-origin return targets and serializes an exact saved scope [7.68ms]
+(pass) global mail search location contract > nests a result Reader in SurfaceHistory and restores the serialized search on Back [3.87ms]
+(pass) global mail search location contract > reopens a saved Inbox scope through the API default mailbox semantics [1.89ms]
+(pass) GlobalMailSearch interaction > hands Search to the common View authoring surface without writing a pin and restores context on cancel [61.04ms]
+(pass) GlobalMailSearch interaction > keeps advanced scope controls collapsed and exposes one accessible close action [21.59ms]
+(pass) GlobalMailSearch interaction > keeps overflowing results in the shrinkable 1024px track when filters expand [35.69ms]
+(pass) GlobalMailSearch interaction > wraps a maximum-length no-result query inside the compact state [82.64ms]
+(pass) GlobalMailSearch interaction > includes the year only when a result is outside the current year [27.53ms]
+(pass) GlobalMailSearch interaction > moves from the query into results with ArrowDown and back with ArrowUp [47.18ms]
+(pass) GlobalMailSearch interaction > typing invalidates the old result generation before the debounced query runs [396.15ms]
+(pass) GlobalMailSearch interaction > pending input survives Mailbox change, late responses and source return [461.32ms]
+(pass) GlobalMailSearch interaction > pending input survives Evidence change, late responses and source return [435.62ms]
+(pass) GlobalMailSearch interaction > pending input survives Account change, late responses and source return [439.65ms]
+(pass) GlobalMailSearch interaction > pending input survives Space change, late responses and source return [413.40ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace new Search or its return snapshot [78.57ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace popstate or its return snapshot [71.63ms]
+(pass) GlobalMailSearch interaction > ignores a late prepared draft when the Search scope changes [58.77ms]
+(pass) GlobalMailSearch interaction > restores a saved Search snapshot, result anchor and scroll after loading [98.29ms]
+(pass) GlobalMailSearch interaction > requests a saved Inbox scope without the unsupported inbox view value [12.92ms]
+(pass) GlobalMailSearch interaction > a zero-result general search enters unsupported review without any persistence [47.31ms]
+
+src/App.test.tsx:
+(pass) App > checks for a session before rendering the inbox [1.15ms]
+(pass) App > surfaces saved drafts as a mailbox with a reopenable message [10.42ms]
+(pass) App > keeps provider authorization failures separate from expired Orca sessions [0.08ms]
+(pass) App > treats a cancelled pending OAuth cookie as sign-in required while preserving request conflicts [0.07ms]
+(pass) App > offers retry rather than reconnect for temporary sync failures [0.40ms]
+(pass) App > renders the Gmail reconnect action in the top sync alert [0.36ms]
+(pass) App > renders the Gmail and Outlook OAuth choices on auth routes [2.45ms]
+(pass) App > explains the read-only Gmail label migration while it loads [1.27ms]
+(pass) App > keeps adding another Gmail account discoverable in connection settings [0.85ms]
+(pass) App > renders scoped capability, reconnect, and label-import controls for every Gmail account [1.52ms]
+(pass) App > keeps stacked Gmail actions on existing account-aware routes [0.21ms]
+(pass) App > orients new users without making Gmail labels part of sign-in [1.00ms]
+(pass) App > keeps route announcement headings programmatically focusable but outside the tab order [10.28ms]
+(pass) App > defaults reader preferences to OS behavior and safely restores saved choices [0.48ms]
+(pass) App > renders accessible reading preference groups with selected labels intact [1.82ms]
+(pass) App > keeps Calm and Compact density choices explicit and selectable [2.21ms]
+(pass) App > gives every settings category a discoverable home and preserves legacy destinations [11.11ms]
+(pass) App > uses authenticated revocation endpoints for one or every agent connection [0.62ms]
+(pass) App > resumes Gmail sync until label migration data is ready [0.30ms]
+(pass) App > separates attention treatments into recoverable inbox views [0.11ms]
+(pass) App > keeps classification filtering server-owned and searches the rendered stream [0.29ms]
+(pass) App > renders all M5 classification views and keeps corrections account-scoped [1.41ms]
+(pass) App > uses the latest message as the mixed-thread row while retaining both classes [0.16ms]
+(pass) App > merges paginated messages by account and message identity [0.09ms]
+(pass) App > keeps classification tab counts and the controlled panel accessible [0.55ms]
+(pass) App > groups stream rows by local calendar date instead of read state [0.27ms]
+(pass) App > updates a resurfaced reminder in place when it is snoozed again [0.14ms]
+(pass) App > derives pinned people only from persisted sender pins [0.30ms]
+(pass) App > only exposes the fake inbox preview route during development [0.04ms]
+(pass) App > canonical routing cannot be masked by address-only or account-sender cache entries [0.22ms]
+(pass) App > orders and groups thread messages chronologically [0.41ms]
+(pass) App > scopes thread-detail requests to the selected message account [0.10ms]
+(pass) App > opens credential-free Reply Brief source paths without requiring query parameters [0.17ms]
+(pass) App > reveals the top jump after meaningful reader scrolling [0.04ms]
+(pass) App > keeps quoted history recoverable behind a closed disclosure [12.43ms]
+(pass) App > removes unsupported reader actions and truthfully explains attachment availability [3.35ms]
+(pass) App > keeps partial reader data and no-attachment states explicit without inventing actions [2.84ms]
+(pass) App > keeps reader return context available during failure and retry [0.60ms]
+(pass) App > keeps the unread divider from colliding with the date heading [9.11ms]
+(pass) App > prefers the formatted HTML alternative over plain text [1.82ms]
+(pass) App > keeps Attention available for every sender shown in the reader [2.47ms]
+(pass) App > renders a local organization mark without changing the sender's accessible label [1.95ms]
+(pass) App > normalizes realistic recipient paste and rejects incomplete addresses [0.74ms]
+(pass) App > keeps compose suggestions scoped to people in the active account inbox [0.08ms]
+(pass) App > restores a durable compose draft and falls back safely when storage is corrupt [0.28ms]
+(pass) App > retries a response-lost delivery without patching or changing its idempotency key [0.59ms]
+(pass) App > renders the write-first controls, delivery explanation, and labeled saved state [1.18ms]
+(pass) App > offers a deterministic, labeled recovery choice for stale drafts [1.27ms]
+(pass) App > sanitizes attachment names and enforces safe compose attachment limits [0.73ms]
+(pass) App > treats draft attachments as content and never restores binary attachments from storage [0.12ms]
+(pass) App > preserves server attachments while editing a reopened draft [0.15ms]
+(pass) App > keeps the new-draft and saved-draft storage scopes independent [0.10ms]
+(pass) App > renders attachment chips with labeled remove controls only when files are present [2.02ms]
+(pass) App > renders supported Markdown as semantic writing blocks [0.28ms]
+(pass) App > targets replies at the newest external sender and preserves an existing Re prefix [0.25ms]
+(pass) App > builds standards-aware reply-all and forward drafts [0.44ms]
+(pass) App > treats a SENT alias as owned when choosing reply recipients [0.18ms]
+(pass) message subject containment > keeps a long subject in the native title while truncating only its visual box [0.54ms]
+(pass) profile avatar > keeps the rail display-only while settings owns the photo picker [0.44ms]
+(pass) profile avatar > uses the connected provider photo without requiring a local upload [0.17ms]
+(pass) profile avatar > validates and namespaces locally stored photos per account [0.13ms]
+
+src/top-layer.test.tsx:
+(pass) shared top-layer contract > leaves interior native summary Tab to the browser (reverse=%s) [15.17ms]
+(pass) shared top-layer contract > leaves interior native summary Tab to the browser (reverse=%s) [6.04ms]
+(pass) shared top-layer contract > wraps through native summary boundaries and excludes closed nested details contents [19.81ms]
+(pass) shared top-layer contract > does not treat secondary or negative-tabindex summaries as native tab stops [17.40ms]
+(pass) shared top-layer contract > retains hidden, inert and disabled exclusions around summary boundaries [12.92ms]
+(pass) shared top-layer contract > stacks nested dialogs, traps Tab both ways, and restores each opener [17.51ms]
+(pass) shared top-layer contract > keeps focus inside a busy layer with no enabled actions and ignores Escape [4.47ms]
+(pass) shared top-layer contract > coalesces nested unregister restoration into one frame and restores the external opener [13.32ms]
+
+src/compose-delivery.integration.test.tsx:
+(pass) compose, autosave, pending recipients and send reach the chosen provider account once [701.99ms]
+(pass) invalid visible recipient preserves the draft and makes no delivery call [121.31ms]
+(pass) uncertain provider outcome retains content and replay never calls provider twice [211.00ms]
+(pass) read-only account offers no send action while preserving editable writing [127.73ms]
+
+src/calendar-settings.test.tsx:
+(pass) CalendarSettingsPage > fits Calendar scope into the human-owned, read-only settings flow [4.17ms]
+(pass) CalendarSettingsPage > surfaces the API's actionable consent setup error [1.19ms]
+
+src/styles.test.ts:
+(pass) compose panel surfaces > keeps every panel layer opaque without removing the backdrop blur [0.65ms]
+(pass) compose panel surfaces > keeps blocked delivery and invalid message states labeled in both themes [0.23ms]
+(pass) Zen canvas surface > uses the sand palette with a restrained flow while keeping writing ink themed [0.10ms]
+(pass) long message subjects > reserves the action rail and gives narrow rows a separate affordance band [0.36ms]
+(pass) M8 desktop presentation regressions > gives Later its own non-overlapping action rail [0.21ms]
+(pass) M8 desktop presentation regressions > keeps the reader return control in flow inside the reader surface [0.08ms]
+(pass) M8 desktop presentation regressions > uses a light theme scrim and preserves a darker Black scrim [0.02ms]
+(pass) profile avatar controls > keeps the rail clean and the settings picker theme-safe [0.33ms]
+(pass) OAuth login layout and provider states > reserves a brand row and keeps unavailable controls readable in both themes [0.30ms]
+(pass) primary mobile navigation > keeps Drafts selected states theme-safe and moves local feedback clear of the rail [0.35ms]
+(pass) propagated signal controls > keeps hover, focus, pressed, error, and disabled labels theme-safe [0.53ms]
+(pass) propagated signal controls > scopes and computes the phone mute-menu containment at 320, 375, and 390px [141.48ms]
+(pass) propagated signal controls > scopes and computes the inbox scrollport through the 860px boundary without changing readers [183.08ms]
+(pass) Calendar consent controls > keeps selection, focus, disabled, and motion states theme-safe [0.34ms]
+
+scripts/native-find-input-guard.test.ts:
+(pass) native Find input boundary > is self-contained when serialized into the page [1.03ms]
+(pass) native Find input boundary > blocks misdirected query shortcuts and Escape without calling app handlers [0.49ms]
+(pass) native Find input boundary > leaves browser Find accelerators and modifier keys unhandled [0.37ms]
+(pass) native Find input boundary > blocks beforeinput, resets attempt diagnostics and restores ordinary input after disposal [0.49ms]
+
+2 tests failed:
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread [352.30ms]
+(fail) synchronous loader failures retire unused identities without discarding a live lease [2.08ms]
+
+ 647 pass
+ 2 fail
+ 4979 expect() calls
+Ran 649 tests across 56 files. [121.79s]
+error: script "test" exited with code 1

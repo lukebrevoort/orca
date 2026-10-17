@@ -29,6 +29,8 @@ const cacheKey = ({ accountId, threadId }: ThreadReference) => JSON.stringify([a
 export class ThreadDetailCache {
   private readonly details = new Map<string, CachedThreadDetail>();
   private readonly generations = new Map<string, number>();
+  private nextGeneration = 1;
+  private readonly leases = new Map<string, number>();
   private readonly inFlight = new Map<string, InFlightThreadDetail>();
 
   constructor(private readonly capacity = 30) {}
@@ -56,6 +58,7 @@ export class ThreadDetailCache {
     const key = cacheKey(reference);
     this.supersede(key);
     this.details.delete(key);
+    this.pruneGeneration(key);
   }
 
   markStale(reference: ThreadReference) {
@@ -63,14 +66,27 @@ export class ThreadDetailCache {
     this.supersede(key);
     const cached = this.details.get(key);
     if (cached) cached.stale = true;
+    this.pruneGeneration(key);
   }
 
-  currentGeneration(reference: ThreadReference) {
-    return this.generations.get(cacheKey(reference)) ?? 0;
-  }
-
-  isCurrentGeneration(reference: ThreadReference, generation: number) {
-    return this.currentGeneration(reference) === generation;
+  /** Retain identity through a caller's success/error continuation, even after eviction.
+   * Acquire synchronously after load; release on completion or cancellation. */
+  retainGeneration(reference: ThreadReference) {
+    const key = cacheKey(reference);
+    const generation = this.ensureGeneration(key);
+    this.leases.set(key, (this.leases.get(key) ?? 0) + 1);
+    let released = false;
+    return {
+      isCurrent: () => !released && this.generations.get(key) === generation,
+      release: () => {
+        if (released) return;
+        released = true;
+        const remaining = this.leases.get(key)! - 1;
+        if (remaining === 0) this.leases.delete(key);
+        else this.leases.set(key, remaining);
+        this.pruneGeneration(key);
+      },
+    };
   }
 
   load(
@@ -88,19 +104,28 @@ export class ThreadDetailCache {
       return Promise.resolve(cached.detail);
     }
 
-    const generation = this.generations.get(key) ?? 0;
-    const request = loader().then((detail) => {
-      if ((this.generations.get(key) ?? 0) !== generation) return detail;
+    const generation = this.ensureGeneration(key);
+    let loaded: Promise<ThreadDetail>;
+    try {
+      loaded = loader();
+    } catch (error) {
+      this.pruneGeneration(key);
+      throw error;
+    }
+    const request = loaded.then((detail) => {
+      if (this.generations.get(key) !== generation) return detail;
       this.details.delete(key);
       this.details.set(key, { detail, fetchedAt: Date.now(), version: requestedVersion, stale: false });
       while (this.details.size > Math.max(1, this.capacity)) {
         const oldest = this.details.keys().next().value as string | undefined;
         if (oldest === undefined) break;
         this.details.delete(oldest);
+        this.pruneGeneration(oldest);
       }
       return detail;
     }).finally(() => {
       if (this.inFlight.get(key)?.promise === request) this.inFlight.delete(key);
+      this.pruneGeneration(key);
     });
     this.inFlight.set(key, { generation, promise: request, version: requestedVersion });
     return request;
@@ -127,8 +152,23 @@ export class ThreadDetailCache {
     await Promise.all(Array.from({ length: Math.min(concurrency, references.length) }, worker));
   }
 
+  private ensureGeneration(key: string) {
+    let generation = this.generations.get(key);
+    if (generation === undefined) {
+      generation = this.nextGeneration++;
+      this.generations.set(key, generation);
+    }
+    return generation;
+  }
+
+  private pruneGeneration(key: string) {
+    if (!this.details.has(key) && !this.inFlight.has(key) && !this.leases.has(key)) {
+      this.generations.delete(key);
+    }
+  }
+
   private supersede(key: string) {
-    this.generations.set(key, (this.generations.get(key) ?? 0) + 1);
+    this.generations.set(key, this.nextGeneration++);
     this.inFlight.delete(key);
   }
 }
