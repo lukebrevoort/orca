@@ -67,6 +67,11 @@ try {
  const client=createDatabaseClient(path); sqlite=client.sqlite; const db=client.db;
  migrate(db,{migrationsFolder:resolve(import.meta.dir,'../drizzle')});
  db.insert(schema.users).values([{id:'owner',email:'owner@example.com'},{id:'other',email:'other@example.com'}]).run();
+ // User triggers create random default lane IDs. Give each synthetic workspace
+ // a deterministic fallback before inserting threads so full response hashes
+ // can be compared across fresh processes without normalizing product output.
+ sqlite.run("insert into organization_lanes(workspace_id,id,name,position,default_policy_id) select workspace_id,'fixture-inbox','Fixture inbox',1,default_policy_id from organization_lanes where position=0");
+ sqlite.run("update organization_workspace_lane_settings set fallback_lane_id='fixture-inbox'");
  db.insert(schema.oauthAccounts).values([{id:'account',userId:'owner',provider:'gmail',providerId:'owner',providerEmail:'owner@example.com'},{id:'foreign',userId:'other',provider:'gmail',providerId:'other',providerEmail:'other@example.com'}]).run();
  const session=await createSession(db,'owner');
  const headers={cookie:`orca_session=${session.token}`};
