@@ -1,0 +1,16 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/agents/mcp-cost-budgets.test.ts:
+(pass) BRE-422 MCP numeric cost budgets > cost lookup returns numeric weights only for own tool names and preserves no-name metadata cost [0.17ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects invalid runtime costs before clock, sweep, keys, counters, or active leases are touched [1.82ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects unknown legacy tool names without admission and later enforces both budgets [110.67ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects unknown modern tool names without admission and later enforces both budgets [45.30ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects unknown payload tool names without admission and later enforces both budgets [21.68ms]
+(pass) BRE-422 MCP numeric cost budgets > preserves bearer challenges for unknown tools and unit-cost metadata admission [19.79ms]
+(pass) BRE-422 MCP numeric cost budgets > leaves missing tool names to SDK validation while retaining their unit request cost [13.99ms]
+(pass) BRE-422 MCP numeric cost budgets > modern headers cannot select a different dispatch tool or undercharge the body tool [1.23ms]
+(pass) BRE-422 MCP numeric cost budgets > payload copies and method headers cannot turn metadata into an uncharged tool dispatch [1.02ms]
+
+ 9 pass
+ 0 fail
+Ran 9 tests across 1 file. [533.00ms]

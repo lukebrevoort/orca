@@ -1,0 +1,1003 @@
+[
+  {
+    "name": "null-250",
+    "count": 250,
+    "bytesPerMessage": 0,
+    "payloadSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 18.9509415,
+        "range": [
+          11.798167000000149,
+          24.31467500000008
+        ]
+      },
+      "cpuMs": {
+        "median": 28.2875,
+        "range": [
+          12.032,
+          46.074
+        ]
+      },
+      "scanMs": {
+        "median": 0.42208250000226144,
+        "range": [
+          0.243326999997862,
+          1.5944459999991523
+        ]
+      },
+      "scanCalls": {
+        "median": 250.0,
+        "range": [
+          250,
+          250
+        ]
+      },
+      "scanBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerCalls": {
+        "median": 250.0,
+        "range": [
+          250,
+          250
+        ]
+      },
+      "providerInputBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        207.171875,
+        229.02734375
+      ],
+      "perProcessWallMedianMs": [
+        14.970152999999982,
+        20.71745749999991
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 16.444957499999987,
+        "range": [
+          11.737283999999931,
+          21.129257999999936
+        ]
+      },
+      "cpuMs": {
+        "median": 29.18,
+        "range": [
+          11.929,
+          40.663
+        ]
+      },
+      "scanMs": {
+        "median": 0.01083599999958551,
+        "range": [
+          0.010624999999663487,
+          0.011364999999955216
+        ]
+      },
+      "scanCalls": {
+        "median": 250.0,
+        "range": [
+          250,
+          250
+        ]
+      },
+      "scanBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerCalls": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerInputBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        214.67578125,
+        223.5625
+      ],
+      "perProcessWallMedianMs": [
+        16.362022499999966,
+        16.474406999999985
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 0.8513252641595597,
+      "range": [
+        0.6018983480513875,
+        1.2768983343520846
+      ],
+      "perOrderMedian": [
+        1.1105710309870362,
+        0.8242443330949552
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.8285094813626344,
+      1.3126119296423384
+    ],
+    "responseSha256": "62e07ad890a16dc22c7e5ab89826174c50cf4073fef37bea7504a81aeca1ec39",
+    "responseBytes": 211218
+  },
+  {
+    "name": "4KiB-250-noimg",
+    "count": 250,
+    "bytesPerMessage": 4096,
+    "payloadSha256": "c992f13cc3540241f5c1ff8637548265fb2180ee8cb7fbfc4e0af4e7c0cbe9dd",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 178.15955399999984,
+        "range": [
+          152.92943100000048,
+          199.61033099999986
+        ]
+      },
+      "cpuMs": {
+        "median": 197.3655,
+        "range": [
+          154.706,
+          287.738
+        ]
+      },
+      "scanMs": {
+        "median": 72.94161699999836,
+        "range": [
+          63.70214799999576,
+          83.89670099999648
+        ]
+      },
+      "scanCalls": {
+        "median": 250.0,
+        "range": [
+          250,
+          250
+        ]
+      },
+      "scanBytes": {
+        "median": 1024000.0,
+        "range": [
+          1024000,
+          1024000
+        ]
+      },
+      "providerCalls": {
+        "median": 250.0,
+        "range": [
+          250,
+          250
+        ]
+      },
+      "providerInputBytes": {
+        "median": 1024000.0,
+        "range": [
+          1024000,
+          1024000
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        265.71875,
+        386.46484375
+      ],
+      "perProcessWallMedianMs": [
+        178.15955399999984,
+        177.308444
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 90.37721599999998,
+        "range": [
+          81.70753600000012,
+          95.59296600000016
+        ]
+      },
+      "cpuMs": {
+        "median": 97.5055,
+        "range": [
+          90.061,
+          110.284
+        ]
+      },
+      "scanMs": {
+        "median": 0.2966819999993504,
+        "range": [
+          0.27340900000058355,
+          0.3413319999961004
+        ]
+      },
+      "scanCalls": {
+        "median": 250.0,
+        "range": [
+          250,
+          250
+        ]
+      },
+      "scanBytes": {
+        "median": 1024000.0,
+        "range": [
+          1024000,
+          1024000
+        ]
+      },
+      "providerCalls": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerInputBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        240.33984375,
+        293.3359375
+      ],
+      "perProcessWallMedianMs": [
+        90.81879000000004,
+        89.03063199999985
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 0.5043170223334998,
+      "range": [
+        0.4402992047540876,
+        0.6089991365464185
+      ],
+      "perOrderMedian": [
+        0.5043170223334998,
+        0.5034843726741101
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.8541848868533771,
+      1.1105581497403092
+    ],
+    "responseSha256": "32ecad0888e2a0730bf0bc7f89f7beb118eca6c5498d765017803bc25be3cc87",
+    "responseBytes": 1237730
+  },
+  {
+    "name": "100KiB-1-noimg",
+    "count": 1,
+    "bytesPerMessage": 102400,
+    "payloadSha256": "41912a6da7172c6614a2752a0ea10700da1090166e405b3ca96bbd9ea0b1d44c",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 26.078640499999892,
+        "range": [
+          21.29098999999951,
+          31.113851999999497
+        ]
+      },
+      "cpuMs": {
+        "median": 27.0805,
+        "range": [
+          21.487,
+          41.065
+        ]
+      },
+      "scanMs": {
+        "median": 6.278368999999657,
+        "range": [
+          5.811455000000024,
+          6.607634999999391
+        ]
+      },
+      "scanCalls": {
+        "median": 1.0,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "scanBytes": {
+        "median": 102400.0,
+        "range": [
+          102400,
+          102400
+        ]
+      },
+      "providerCalls": {
+        "median": 1.0,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "providerInputBytes": {
+        "median": 102400.0,
+        "range": [
+          102400,
+          102400
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        324.46484375,
+        396.87890625
+      ],
+      "perProcessWallMedianMs": [
+        22.814956999999595,
+        26.72098700000015
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 18.674798999999894,
+        "range": [
+          17.420415000000048,
+          20.09859000000006
+        ]
+      },
+      "cpuMs": {
+        "median": 20.093,
+        "range": [
+          17.912,
+          31.743
+        ]
+      },
+      "scanMs": {
+        "median": 0.026835500000061074,
+        "range": [
+          0.025227000000086264,
+          0.027492000000165717
+        ]
+      },
+      "scanCalls": {
+        "median": 1.0,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "scanBytes": {
+        "median": 102400.0,
+        "range": [
+          102400,
+          102400
+        ]
+      },
+      "providerCalls": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerInputBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        246.8671875,
+        295.734375
+      ],
+      "perProcessWallMedianMs": [
+        19.047958499999822,
+        18.536145499999975
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 0.7046389326356939,
+      "range": [
+        0.6058808096384294,
+        0.9439950890024617
+      ],
+      "perOrderMedian": [
+        0.8343607138786813,
+        0.6865597183780914
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.8310142055056358,
+      1.050719445913865
+    ],
+    "responseSha256": "f3b2c023833561ebf573bb45dcf8bb911e5e3dd3492ef8da30873b8d1127bda1",
+    "responseBytes": 103947
+  },
+  {
+    "name": "100KiB-50-noimg",
+    "count": 50,
+    "bytesPerMessage": 102400,
+    "payloadSha256": "41912a6da7172c6614a2752a0ea10700da1090166e405b3ca96bbd9ea0b1d44c",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 713.0098479999992,
+        "range": [
+          642.6243459999987,
+          868.5101780000005
+        ]
+      },
+      "cpuMs": {
+        "median": 775.473,
+        "range": [
+          674.994,
+          977.724
+        ]
+      },
+      "scanMs": {
+        "median": 323.6640245000026,
+        "range": [
+          298.5002300000069,
+          386.0547209999895
+        ]
+      },
+      "scanCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "scanBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "providerCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "providerInputBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        472.06640625,
+        850.08203125
+      ],
+      "perProcessWallMedianMs": [
+        708.3765764999994,
+        714.6803565
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 379.3367860000003,
+        "range": [
+          359.3918970000004,
+          412.20831200000066
+        ]
+      },
+      "cpuMs": {
+        "median": 422.161,
+        "range": [
+          391.506,
+          524.377
+        ]
+      },
+      "scanMs": {
+        "median": 1.3872969999999896,
+        "range": [
+          1.2569930000026943,
+          1.5343419999953767
+        ]
+      },
+      "scanCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "scanBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "providerCalls": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerInputBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        389.11328125,
+        570.37109375
+      ],
+      "perProcessWallMedianMs": [
+        374.47634800000014,
+        379.9541400000003
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 0.5391672304124773,
+      "range": [
+        0.4244557166260405,
+        0.6247111841267206
+      ],
+      "perOrderMedian": [
+        0.5367270540254852,
+        0.5468372108617205
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.9062856791689327,
+      1.2078092512584773
+    ],
+    "responseSha256": "9e2ec29ca10dc467b018c3c4f7108542190962ec4dd9b564bd9f68c58acfad16",
+    "responseBytes": 5163331
+  },
+  {
+    "name": "100KiB-50-tailimg",
+    "count": 50,
+    "bytesPerMessage": 102400,
+    "payloadSha256": "78974a213a40f61dd99835f10d4086ddbe9c4a24f0d7d652b657fea466867ce1",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 692.6605589999999,
+        "range": [
+          656.3943010000003,
+          818.0405659999997
+        ]
+      },
+      "cpuMs": {
+        "median": 736.486,
+        "range": [
+          667.04,
+          868.923
+        ]
+      },
+      "scanMs": {
+        "median": 313.27537899999516,
+        "range": [
+          300.0607309999941,
+          370.53461199998856
+        ]
+      },
+      "scanCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "scanBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "providerCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "providerInputBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        886.55078125,
+        1112.0703125
+      ],
+      "perProcessWallMedianMs": [
+        716.1406800000004,
+        671.919233999999
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 728.1379199999992,
+        "range": [
+          686.5742539999992,
+          777.8342709999997
+        ]
+      },
+      "cpuMs": {
+        "median": 803.597,
+        "range": [
+          734.702,
+          921.805
+        ]
+      },
+      "scanMs": {
+        "median": 334.7753094999953,
+        "range": [
+          316.3220549999969,
+          355.1792699999969
+        ]
+      },
+      "scanCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "scanBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "providerCalls": {
+        "median": 50.0,
+        "range": [
+          50,
+          50
+        ]
+      },
+      "providerInputBytes": {
+        "median": 5120000.0,
+        "range": [
+          5120000,
+          5120000
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        424.94140625,
+        715.81640625
+      ],
+      "perProcessWallMedianMs": [
+        724.4193495,
+        733.9162995000006
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 1.0421181430481148,
+      "range": [
+        0.8794365156214052,
+        1.1444731658459832
+      ],
+      "perOrderMedian": [
+        1.0179757827055447,
+        1.0682092103275553
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.889219171879607,
+      1.0980515261803894
+    ],
+    "responseSha256": "032284edd3421eb5f6bc8c2a8355d97758faa54fe5b4116b6b641257266bbbdf",
+    "responseBytes": 5163735
+  },
+  {
+    "name": "1MiB-1-noimg",
+    "count": 1,
+    "bytesPerMessage": 1048576,
+    "payloadSha256": "2f0190f859bbb5c87f766a40b336692a3498d116cdaef5842184a2c11b19bd30",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 152.66738249999798,
+        "range": [
+          139.1474240000025,
+          213.58677900000112
+        ]
+      },
+      "cpuMs": {
+        "median": 155.058,
+        "range": [
+          139.589,
+          370.33
+        ]
+      },
+      "scanMs": {
+        "median": 62.7460800000008,
+        "range": [
+          60.806314000001294,
+          75.48730799999976
+        ]
+      },
+      "scanCalls": {
+        "median": 1.0,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "scanBytes": {
+        "median": 1048576.0,
+        "range": [
+          1048576,
+          1048576
+        ]
+      },
+      "providerCalls": {
+        "median": 1.0,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "providerInputBytes": {
+        "median": 1048576.0,
+        "range": [
+          1048576,
+          1048576
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        663.50390625,
+        1132.265625
+      ],
+      "perProcessWallMedianMs": [
+        150.80100549999952,
+        158.8678704999984
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 84.14447250000012,
+        "range": [
+          76.0044080000007,
+          141.28365100000156
+        ]
+      },
+      "cpuMs": {
+        "median": 86.23400000000001,
+        "range": [
+          76.425,
+          229.874
+        ]
+      },
+      "scanMs": {
+        "median": 0.27336149999973713,
+        "range": [
+          0.2726910000019416,
+          0.4744680000003427
+        ]
+      },
+      "scanCalls": {
+        "median": 1.0,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "scanBytes": {
+        "median": 1048576.0,
+        "range": [
+          1048576,
+          1048576
+        ]
+      },
+      "providerCalls": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "providerInputBytes": {
+        "median": 0.0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        453.046875,
+        735.13671875
+      ],
+      "perProcessWallMedianMs": [
+        84.14447250000012,
+        84.77508499999931
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 0.561311329604036,
+      "range": [
+        0.3816990013656938,
+        0.891252932414788
+      ],
+      "perOrderMedian": [
+        0.564539943281616,
+        0.5528953939665707
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.7042519191068036,
+      1.519161891182983
+    ],
+    "responseSha256": "7174362f8148343d5dc3b77eba6db5d6351a4dd38f4d61eeb19561d278dcba18",
+    "responseBytes": 1050115
+  },
+  {
+    "name": "1MiB-10-tailimg",
+    "count": 10,
+    "bytesPerMessage": 1048576,
+    "payloadSha256": "3b96f5489a626422b50148a3ee85d7a837168edf634dba8640da131fc6109a67",
+    "baseline": {
+      "samples": 24,
+      "wallMs": {
+        "median": 1386.850118000002,
+        "range": [
+          1334.0427920000002,
+          1610.8964039999992
+        ]
+      },
+      "cpuMs": {
+        "median": 1447.784,
+        "range": [
+          1353.408,
+          1937.434
+        ]
+      },
+      "scanMs": {
+        "median": 636.345799499999,
+        "range": [
+          611.1085350000067,
+          747.5576400000064
+        ]
+      },
+      "scanCalls": {
+        "median": 10.0,
+        "range": [
+          10,
+          10
+        ]
+      },
+      "scanBytes": {
+        "median": 10485760.0,
+        "range": [
+          10485760,
+          10485760
+        ]
+      },
+      "providerCalls": {
+        "median": 10.0,
+        "range": [
+          10,
+          10
+        ]
+      },
+      "providerInputBytes": {
+        "median": 10485760.0,
+        "range": [
+          10485760,
+          10485760
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        1437.77734375,
+        1808.84375
+      ],
+      "perProcessWallMedianMs": [
+        1421.2740280000035,
+        1384.595018
+      ]
+    },
+    "candidate": {
+      "samples": 24,
+      "wallMs": {
+        "median": 1518.850345500001,
+        "range": [
+          1379.3569370000005,
+          1587.8285560000004
+        ]
+      },
+      "cpuMs": {
+        "median": 1719.4605000000001,
+        "range": [
+          1448.156,
+          1924.01
+        ]
+      },
+      "scanMs": {
+        "median": 700.0551239999968,
+        "range": [
+          620.0958819999978,
+          768.8864660000254
+        ]
+      },
+      "scanCalls": {
+        "median": 10.0,
+        "range": [
+          10,
+          10
+        ]
+      },
+      "scanBytes": {
+        "median": 10485760.0,
+        "range": [
+          10485760,
+          10485760
+        ]
+      },
+      "providerCalls": {
+        "median": 10.0,
+        "range": [
+          10,
+          10
+        ]
+      },
+      "providerInputBytes": {
+        "median": 10485760.0,
+        "range": [
+          10485760,
+          10485760
+        ]
+      },
+      "rssEndpointRangeMiB": [
+        888.45703125,
+        1551.31640625
+      ],
+      "perProcessWallMedianMs": [
+        1530.1745800000008,
+        1506.5606649999972
+      ]
+    },
+    "pairedCandidateBaselineRatio": {
+      "median": 1.0866269684801915,
+      "range": [
+        0.8641662204616869,
+        1.1894821219498048
+      ],
+      "perOrderMedian": [
+        1.0861078313544772,
+        1.0866269684801915
+      ]
+    },
+    "AARepeatRatioRange": [
+      0.9144995375267422,
+      1.1184970086206671
+    ],
+    "responseSha256": "48279d777f42ec1e1b4abc5f9f02a19cae47aa12866078467f089555119bcc0b",
+    "responseBytes": 10495011
+  }
+]
