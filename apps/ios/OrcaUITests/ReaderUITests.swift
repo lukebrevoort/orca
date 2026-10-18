@@ -85,6 +85,84 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
     }
 
+    func testImagesRequireExplicitLoadingAndResetOnReopen() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        let initialDownloads = try imageDownloadCount()
+        let app = try launchReader()
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let load = app.buttons["message.load-images"]
+        XCTAssertTrue(load.waitForExistence(timeout: 10))
+        for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads, "Opening a message must not contact image hosts")
+        screenshot("images-blocked-before-consent")
+        load.tap()
+        let status = app.staticTexts["message.images-status"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue(status.label.contains("1 image loaded."))
+        let landscape = app.images["Synthetic landscape"]
+        for _ in 0..<4 { if landscape.exists && landscape.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(landscape.exists && landscape.isHittable)
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 1)
+        screenshot("images-loaded-after-consent")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        row.tap()
+        XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 1, "Reopening must reset consent without another request")
+        screenshot("images-blocked-after-reopen")
+        try delayFixtureImageResponse()
+        let reopenedLoad = app.buttons["message.load-images"]
+        for _ in 0..<4 { if reopenedLoad.isHittable { break }; app.swipeUp() }
+        reopenedLoad.tap()
+        for _ in 0..<10 {
+            if try imageDownloadCount() == initialDownloads + 2 { break }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 2, "The delayed request must be in flight before navigating away")
+        XCTAssertFalse(reopenedLoad.isEnabled)
+        screenshot("images-loading-disabled")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        row.tap()
+        let lateResponse = expectation(description: "Delayed image response has finished")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { lateResponse.fulfill() }
+        wait(for: [lateResponse], timeout: 7)
+        XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["message.images-status"].exists, "A previous reader's response must not restore images")
+        screenshot("images-late-response-discarded")
+    }
+
+    private func delayFixtureImageResponse() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/image-delay")))
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + (environment["ORCA_FIXTURE_ACCESS_TOKEN"] ?? ""), forHTTPHeaderField: "Authorization")
+        let done = expectation(description: "Delay fixture image response")
+        var status: Int?
+        URLSession.shared.dataTask(with: request) { _, response, _ in status = (response as? HTTPURLResponse)?.statusCode; done.fulfill() }.resume()
+        wait(for: [done], timeout: 5)
+        XCTAssertEqual(status, 204)
+    }
+
+    private func imageDownloadCount() throws -> Int {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/image-downloads")))
+        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let done = expectation(description: "Fixture image request count")
+        var count: Int?
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            if let data, let value = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { count = value["count"] }
+            done.fulfill()
+        }.resume()
+        wait(for: [done], timeout: 5)
+        return try XCTUnwrap(count)
+    }
+
     private func launchReader(contentSize: String = "UICTContentSizeCategoryL") throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         let url = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])

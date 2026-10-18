@@ -40,6 +40,7 @@ struct ThreadMessage: Codable, Identifiable, Hashable {
     var id: String; var accountId: String; var provider: String; var providerMessageId: String; var from: MailContact
     var to: [MailContact]; var cc: [MailContact]; var bcc: [MailContact]; var subject: String; var snippet: String
     var receivedAt: String; var unread: Bool; var labels: [String]; var bodyText: String?; var bodyHtml: String?
+    var imageLoadAvailable: Bool?
     var internetMessageId: String?; var references: [String]; var humanSignal: Int?; var humanClassification: HumanClassification?
     var attachments: [MailAttachment]
 }
