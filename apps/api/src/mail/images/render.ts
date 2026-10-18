@@ -10,7 +10,14 @@ function candidate(image:ReturnType<typeof documentImages>["images"][number]) {
   for(const key of ["width","height"]) {const v=image.attribs[key];if(v && /^\d+(?:px)?$/.test(v) && parseInt(v)<=2)return null;}
   return remoteImageURL(image.attribs.src??"");
 }
-export function hasLoadableImages(html:string|null){return documentImages(html).images.some(candidate);}
+export function hasLoadableImages(html: string | null) {
+  // htmlparser2 recognizes img and the legacy image alias; tag names are not
+  // entity-decoded and the provider policy does not synthesize image tags.
+  // Use their common prefix only to prove absence. A match is just a hint:
+  // retain all sanitizer/URL/dimension checks, including malformed markup.
+  if (!html || !/<im/i.test(html)) return false;
+  return documentImages(html).images.some(candidate);
+}
 export function imageSourceHash(html:string|null){return createHash("sha256").update(sanitizeInboundHtml(html)??"").digest("hex");}
 export type ImageDownload = typeof downloadRemoteImage;
 /** The default read path never calls this. Only an authorized explicit POST may resolve images. */
