@@ -1,0 +1,133 @@
+Executable: c3517e80c53bc750e76cc99141123dbaaa42dfe1
+Commands: bun run typecheck; bun run test; bun run build
+typecheck.log
+@orca/shared typecheck: Exited with code 0
+@orca/api typecheck: Exited with code 0
+@orca/web typecheck: Exited with code 0
+full-tests.log
+@orca/shared test: (pass) Calendar availability -> Reply Brief privacy adapter > passes only flattened free/busy intervals into the model-facing envelope [0.43ms]
+@orca/shared test:  95 pass
+@orca/shared test:  0 fail
+@orca/shared test: Ran 95 tests across 18 files. [230.00ms]
+@orca/shared test: Exited with code 0
+@orca/api test: (pass) Gmail push routes > watch endpoint reports a coalesced renewal failure after preserving history progress [88.22ms]
+@orca/api test: (pass) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable [110.42ms]
+@orca/api test: outlook sync failed {
+@orca/api test: gmail sync failed {
+@orca/api test: (pass) Orca API > maps provider sync failures to a bounded public error response [67.50ms]
+@orca/web test: (pass) malformed response fails closed; disabling then re-enabling refetches [3.79ms]
+@orca/web test: (pass) propagated agent event timeline > keeps an in-flight quieted card and its failure announcement visible [30.43ms]
+@orca/web test: (pass) failed send preserves committed draft and retry does not duplicate recipients [44.82ms]
+@orca/web test: (pass) OAuth login availability and recovery > recovers a failed availability check and sanitizes a failed provider start [11.10ms]
+@orca/api test: (pass) failed reads cancel and release the reader [1.09ms]
+@orca/web test: (pass) Settings recovery > preserves newer edits across slow saves, failed saves, and PATCH retry [95.27ms]
+@orca/web test: (pass) Settings recovery > gives session, account, agent, and sync read failures scoped recovery [51.62ms]
+@orca/api test: (pass) on-demand Reply Brief service > preserves deterministic facts for runtime failure and marks old source context stale [0.22ms]
+@orca/api test: (pass) on-demand Reply Brief service > makes calendar permission failure explicit and never recommends an unchecked slot [0.87ms]
+@orca/api test: (pass) credentials failure preserves the delivery boundary and replay safety [174.04ms]
+@orca/api test: (pass) token_refresh failure preserves the delivery boundary and replay safety [104.03ms]
+@orca/api test: (pass) threading failure preserves the delivery boundary and replay safety [105.01ms]
+@orca/api test: (pass) mime failure preserves the delivery boundary and replay safety [116.61ms]
+@orca/api test: (pass) dispatch failure preserves the delivery boundary and replay safety [94.35ms]
+@orca/api test: (pass) a late draft mirror failure cannot change a sent receipt [88.46ms]
+@orca/api test: (pass) deterministic calendar comparison > merges overlapping calendars conservatively and fails unknown on a calendar error [0.18ms]
+@orca/api test: (pass) BRE-269 prompt-injection and provider-write safety > fails closed for wrong resource, scope escalation, revocation, and another account [0.17ms]
+@orca/api test: (pass) Orca agent boundary authorization > fails closed for a disabled integration or any non-contract action [0.04ms]
+@orca/api test: (pass) Orca scoped MCP server > fails closed when an Organization data source returns cross-scope attribution [51.21ms]
+@orca/api test: (pass) Orca scoped MCP server > fails closed with zero Organization writes when the persisted grant changes between preflight and the Lane transaction [252.66ms]
+@orca/api test: (pass) Orca scoped MCP server > fails a cached Context replay when persisted authority is revoked after bearer preflight but before replay lookup [133.77ms]
+@orca/api test: (pass) Orca scoped MCP server > rolls back first/middle/last multi-resource failures and appends one bounded redacted attempt each [360.04ms]
+@orca/web test: (pass) Pin navigation and bulk sender actions > reconciles mixed failure, keeps only the failed sender selected, and retries it [174.21ms]
+@orca/web test: (pass) Inbox reader viewport restoration > keeps cached space geometry during revalidation and clears a recovered sync failure [80.77ms]
+@orca/web test: (pass) Inbox reader viewport restoration > retries a failed silent Reader refresh on a later same-version mailbox refresh [111.70ms]
+@orca/api test: (pass) sender attention batch > marks permanent failures as non-retryable without losing canonical state [0.12ms]
+@orca/api test: (pass) mobile push scheduler > retries transient failures with backoff and succeeds later [58.18ms]
+@orca/api test: (pass) Organization module contract > fails closed when either authorization scope or filter names an unowned Account [0.29ms]
+@orca/web test: (pass) unread Focus Inbox contract > pending read mutation rejects older pages and preserves unread on failure (success=%s) [130.35ms]
+@orca/web test: (pass) unread Focus Inbox contract > pending read mutation rejects older pages and preserves unread on failure (success=%s) [177.27ms]
+@orca/api test: (pass) G0 runtime validation > fails closed instead of authorizing or throwing on malformed requests [0.40ms]
+@orca/api test: (pass) G0 runtime validation > fails closed on malformed trusted live state [0.17ms]
+@orca/api test: (pass) deep Facet and Workflow module > fails closed for out-of-scope Accounts and mismatched Thread ownership [0.11ms]
+@orca/web test: (pass) unknown committed response reloads canonical state without retry; failed reload locks last values [259.46ms]
+@orca/web test: (pass) account-list failure remains visible after a successful routing reload; offline locks edits [257.71ms]
+@orca/api test: (pass) Gmail periodic sync scheduler > keeps polling but reports and persists failure when watch setup fails [83.28ms]
+@orca/web test: (pass) write-only permission failure remains locked when GET succeeds until explicit recovery [258.96ms]
+@orca/api test: (pass) persists a combined history success and watch failure as a retryable partial failure [92.17ms]
+@orca/api test: (pass) Gmail batch persistence > rolls back mail and aggregate writes when a batch projection fails [55.14ms]
+@orca/web test: (pass) failed recovery read is not silently retried after an unknown save [326.05ms]
+@orca/api test: (pass) history provider failure after a committed batch preserves cursor and replays idempotently [75.90ms]
+@orca/api test: (pass) history lease failure after a committed batch preserves cursor and replays idempotently [75.87ms]
+@orca/api test: (pass) history ordering failure after a committed batch preserves cursor and replays idempotently [71.39ms]
+@orca/api test: (pass) failed legacy revalidation never certifies an ambiguous epoch [55.84ms]
+@orca/api test: (pass) syncGmailAccountPage > keeps a fresh Gmail grant on quota failure and still identifies missing permission [48.48ms]
+@orca/api test: (pass) Gmail push API client > surfaces Gmail HTTP failures without provider response details [0.31ms]
+@orca/api test: (pass) fetches history ordering metadata without payloads and preserves provider failures [0.41ms]
+@orca/api test: (pass) durable Gmail sync coordinator > requeues a partial failure with bounded backoff and recovers on restart [68.29ms]
+@orca/api test: (pass) post-normalization propagation service > isolates evaluator and storage failures and logs only safe metadata [1.50ms]
+@orca/api test: (pass) post-normalization propagation service > isolates evaluator failures from subsequent messages [0.37ms]
+@orca/api test: (pass) Gmail propagation boundary > a propagation write failure cannot fail sync or lose normalized mail [54.26ms]
+@orca/api test: (pass) deterministic agent propagation > outlook deploy failure produces timeline [0.13ms]
+@orca/api test: SQLiteError: injected access insert failure
+@orca/api test: (pass) Orca MCP OAuth 2.1 > rolls back authorization-code consumption when credential persistence fails [84.41ms]
+@orca/api test: SQLiteError: injected refresh insert failure
+@orca/api test: (pass) Orca MCP OAuth 2.1 > rolls back refresh consumption when replacement credential persistence fails [86.98ms]
+@orca/api test: (pass) Gmail auth routes > sanitizes callback failures when no browser redirect is configured [0.39ms]
+@orca/api test: (pass) BRE-385 census fails closed for overflow, multiple accounts, malformed senders and foreign targets [117.32ms]
+@orca/api test: (pass) BRE-313 independent View lifecycle verification > fails closed with zero writes when an authorized View envelope is tampered before commit [73.48ms]
+@orca/api test: (pass) evaluateOrcaRules > fails closed on crafted Event provenance and compiled classification metadata [0.59ms]
+@orca/api test: (pass) Rule Revision service > fails closed on stale Workspace, Rule Set, direct Rule, collateral snapshot, and reorder tamper [539.17ms]
+@orca/api test: (pass) Rule Revision service > does not persist failed compilation and rejects stale or cross-workspace edits [54.99ms]
+@orca/api test: (pass) compileOrcaRule > satisfies the shared compiler interface on success and failure [1.00ms]
+@orca/api test: (pass) compileOrcaRule > fails closed on case aliases, missing resources, and crafted labels while preserving stable IDs [0.33ms]
+@orca/api test: (pass) BRE-317 production-semantics historical Simulation > fails closed when the requested Workspace Schema revision is stale before reading history [0.68ms]
+@orca/api test: (pass) BRE-317 production-semantics historical Simulation > fails closed when stored source provenance is not bound to its immutable digest [0.41ms]
+@orca/api test: (pass) BRE-317 atomic Rule activation > fails with zero writes for stale binding, authority denial, Account isolation, and a mid-transaction SQLite abort [307.36ms]
+@orca/api test: (pass) BRE-317 atomic Rule activation > rolls back a forced Workflow projection failure and rejects an unsupported future winner before writes [144.13ms]
+@orca/api test: (pass) message.received Rule evaluation > fails closed before candidates when referenced Collections are missing or outside the Workspace [133.07ms]
+@orca/api test: (pass) message.received Rule evaluation > rolls back mail and organization state together when Trace persistence fails [62.39ms]
+@orca/web test: (pass) App repeated global recovery clicks share one attempt and failed recovery keeps new batch choosers locked [754.59ms]
+@orca/api test: (pass) Collections/Pins Organization module > fails closed for unauthorized Account scope and cross-Account membership [50.24ms]
+@orca/web test: (pass) visible mailbox revalidation > reports focus-to-fresh latency and releases the request slot after failures [0.23ms]
+@orca/api test:  763 pass
+@orca/api test:  0 fail
+@orca/api test: Ran 763 tests across 114 files. [57.96s]
+@orca/api test: Exited with code 0
+@orca/web test: (pass) failed rename retains name and color for retry [39.32ms]
+@orca/web test: (pass) a ready external draft cannot survive a replacement entry while its preparation is pending or failing [32.51ms]
+@orca/web test: (pass) BRE-378 Organization Views lifecycle interactions > exposes named Context loading failure and retry without losing the saved selection [35.37ms]
+@orca/web test: (pass) BRE-378 Organization Views lifecycle interactions > reuses one retry key after a commit failure [53.01ms]
+@orca/web test: (pass) BRE-413 chooser reviews additive senders and preserves draft through failed save and cancel [53.77ms]
+@orca/web test: (pass) BRE-415 pending save locks navigation, failed save keeps guard, successful save releases it [51.71ms]
+@orca/web test: (pass) local: storage failure retains conflict and current editor [527.22ms]
+@orca/web test: (pass) server: storage failure retains conflict and current editor [528.83ms]
+@orca/web test: (pass) failed recovery creation retains conflict [526.49ms]
+@orca/web test: (pass) failure checkpointing the selected version retains the original editor after recovery creation [504.91ms]
+@orca/web test: (pass) ReplyBriefPanel > renders model failure with deterministic facts and no response prose [4.56ms]
+@orca/web test: (pass) ReplyBriefPanel > shows permission failure as unavailable without converting it into a recommendation [9.39ms]
+@orca/web test: (pass) failed draft recovery never treats an unknown saved draft as new [1.72ms]
+@orca/web test: (pass) a failed View list never becomes an invitation or empty-mail sample [78.80ms]
+@orca/web test: (pass) failed dismissal stays locally hidden and explicitly retries persistence [74.52ms]
+@orca/web test: (pass) confirmed server completion clears a failed dismissal without another write [75.54ms]
+@orca/web test: (pass) a late dismissal failure cannot revive an alert after confirmed completion [97.89ms]
+@orca/web test: (pass) ambiguous failure retains its retry envelope after authority recovery [14.90ms]
+@orca/web test: (pass) OrganizationStudio integration > turns trace-fixture HTTP and network failures into retryable unavailable and error states [35.58ms]
+@orca/web test: (pass) hydration, failed lists, new and absent views preserve device preferences across reload [0.30ms]
+@orca/web test: (pass) Thread Context relationship view model > fails closed for cross-Account and mismatched typed references [0.05ms]
+@orca/web test: (pass) late DELETE failure cannot reset another account's draft [499.35ms]
+@orca/web test: (pass) failed DELETE keeps writing recoverable and permits another discard attempt [479.30ms]
+@orca/web test: (pass) failed first save does not become a false successful discard [507.33ms]
+@orca/web test: (pass) obsolete component send failure cannot close a newly selected draft [33.84ms]
+@orca/web test: (pass) BRE-369 shared Organization authority > preserves the last reliable snapshot through a partial failure and retries coherently [12.24ms]
+@orca/web test: (pass) native-inspired mobile mail > new compose entry passes the real trigger for focus restoration and stays repeatable [5.84ms]
+@orca/web test: (pass) App > keeps provider authorization failures separate from expired Orca sessions [0.11ms]
+@orca/web test: (pass) App > offers retry rather than reconnect for temporary sync failures [0.32ms]
+@orca/web test: (pass) App > keeps reader return context available during failure and retry [0.50ms]
+@orca/web test:  659 pass
+@orca/web test:  0 fail
+@orca/web test: Ran 659 tests across 57 files. [94.36s]
+@orca/web test: Exited with code 0
+build.log
+@orca/shared build: Exited with code 0
+@orca/api build: Exited with code 0
+@orca/web build: ✓ built in 1.92s
+@orca/web build: Exited with code 0

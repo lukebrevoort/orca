@@ -436,6 +436,11 @@ function readSavedComposeDraft(accountId: string, storage?: Pick<Storage, "getIt
   }
 }
 
+// An obsolete send may still finish remotely, but cannot own the active editor.
+class ComposeSendScopeChangedError extends Error {
+  constructor() { super("The compose scope changed while sending. Check Drafts for the original delivery status."); }
+}
+
 export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean, demoDraft?: MessageDraft, availableDrafts?: MessageDraft[] | null, writing?: ComposeWritingOptions): ComposeDraftController {
   const createNewDraft = (): ComposeDraft => ({ ...createEmptyComposeDraft(accountId), ...(writing ? { composeFormat: "plain" as const } : {}) });
   const scopeKey = `${accountId}:${scope}`;
@@ -474,6 +479,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const pollTimerRef = useRef<number | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
   const sendingRef = useRef(false);
+  const sendScopeEpochRef = useRef(0);
   const discardOperationRef = useRef<object | null>(null);
   const [isDiscarding, setIsDiscarding] = useState(false);
   const remoteSaveFailedRef = useRef(false);
@@ -488,6 +494,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      sendScopeEpochRef.current += 1;
       discardOperationRef.current = null;
       revokeComposeAttachments(attachmentsRef.current);
       if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
@@ -509,6 +516,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   useEffect(() => {
     if (storageScopeRef.current === scopeKey) return;
+    sendScopeEpochRef.current += 1;
+    sendingRef.current = false;
+    sendIdempotencyKeyRef.current = null;
     flushPendingDraft();
     discardOperationRef.current = null;
     setIsDiscarding(false);
@@ -930,6 +940,11 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }
 
   async function sendDraft(deliveryFields?: Partial<ComposeDraftFields>): Promise<DeliveryResult> {
+    const epoch = sendScopeEpochRef.current;
+    const isCurrent = () => mountedRef.current && sendScopeEpochRef.current === epoch && storageScopeRef.current === scopeKey;
+    const assertCurrent = () => { if (!isCurrent()) throw new ComposeSendScopeChangedError(); };
+    assertCurrent();
+    if (hydratedScope !== scopeKey) throw new Error("Wait for this draft to finish loading before sending.");
     if (discardOperationRef.current) throw new Error("Wait for this draft to finish discarding.");
     if (sendingRef.current) throw new Error("This draft is already being sent.");
     const deliveryDraft = { ...draftRef.current, ...deliveryFields, updatedAt: new Date().toISOString() };
@@ -967,6 +982,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     flushPendingDraft();
     try {
       await saveSequenceRef.current;
+      assertCurrent();
       if (pollTimerRef.current) {
         window.clearTimeout(pollTimerRef.current);
         pollTimerRef.current = null;
@@ -987,9 +1003,11 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
           size,
           contentBase64: await fileToBase64(file),
         })));
+        assertCurrent();
         content.attachments = mergeDraftAttachments(serverAttachmentsRef.current, localAttachments);
       }
       const idempotencyKeyFor = (draftId: string) => {
+        assertCurrent();
         const storageKey = `orca-compose-send:${accountId}:${scope}:${draftId}`;
         const key = sendIdempotencyKeyRef.current
           ?? window.localStorage.getItem(storageKey)
@@ -1004,35 +1022,50 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         content,
         idempotencyKeyFor,
       }, {
-        inspect: (draftId) => requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema),
+        inspect: async (draftId) => {
+          assertCurrent();
+          const saved = await requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema);
+          assertCurrent();
+          return saved;
+        },
         create: async (nextContent) => {
+          assertCurrent();
           const saved = await requestDraft(draftRequestPath(accountId), messageDraftSchema, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(nextContent),
           });
+          assertCurrent();
           serverIdRef.current = saved.id;
           serverRevisionRef.current = saved.revision;
           serverAttachmentsRef.current = saved.attachments;
           return saved;
         },
         update: async (draftId, revision, nextContent) => {
+          assertCurrent();
           const saved = await requestDraft(draftRequestPath(accountId, draftId), messageDraftSchema, {
             method: "PATCH",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ revision, ...nextContent }),
           });
+          assertCurrent();
           serverIdRef.current = saved.id;
           serverRevisionRef.current = saved.revision;
           serverAttachmentsRef.current = saved.attachments;
           return saved;
         },
-        send: (draftId, revision, idempotencyKey) => requestDraft(draftRequestPath(accountId, draftId, "send"), deliveryResultSchema, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ revision, idempotencyKey }),
-        }),
+        send: async (draftId, revision, idempotencyKey) => {
+          assertCurrent();
+          const result = await requestDraft(draftRequestPath(accountId, draftId, "send"), deliveryResultSchema, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ revision, idempotencyKey }),
+          });
+          assertCurrent();
+          return result;
+        },
       });
+      assertCurrent();
       serverIdRef.current = delivery.draft.id;
       serverRevisionRef.current = delivery.draft.revision;
       serverAttachmentsRef.current = delivery.draft.attachments;
@@ -1043,8 +1076,11 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         window.localStorage.removeItem(idempotencyStorageKey);
       }
       return result;
+    } catch (error) {
+      assertCurrent();
+      throw error;
     } finally {
-      sendingRef.current = false;
+      if (isCurrent()) sendingRef.current = false;
     }
   }
 
@@ -1341,6 +1377,10 @@ export function ComposeWorkspace({
         setDeliveryError("Sent, but Orca could not refresh the conversation. Refresh to see the delivered message.");
       }
     } catch (error) {
+      if (error instanceof ComposeSendScopeChangedError) {
+        setDeliveryStatus("idle");
+        return;
+      }
       setDeliveryStatus("error");
       setDeliveryError(error instanceof Error ? error.message : "Orca could not confirm delivery.");
     } finally {
