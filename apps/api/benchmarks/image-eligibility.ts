@@ -96,7 +96,7 @@ try {
    for(const label of pair%2===0?['A','B']:['B','A']){
     const r=await request(`/v1/threads/${w.name}?accountId=account`);
     assert.equal(r.status,200);assert.equal(r.scanCalls,w.count);assert.equal(r.scanBytes,w.count*Buffer.byteLength(w.html??''));
-    const expectedProviderCalls=role==='baseline'||w.name.includes('tailimg')?w.count:0;
+    const expectedProviderCalls: number=role==='baseline'||w.name.includes('tailimg')?w.count:0;
     assert.equal(r.providerCalls,expectedProviderCalls);
     assert.equal(r.providerInputBytes,expectedProviderCalls*Buffer.byteLength(w.html??''));
     const body=JSON.parse(r.body);assert.equal(body.messages.length,w.count);
