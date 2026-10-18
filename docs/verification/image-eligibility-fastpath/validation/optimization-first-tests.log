@@ -1,0 +1,47 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/mail/images/eligibility.test.ts:
+46 |     [`<image src="${src}">`, false],
+47 |     [`<div data-email-preheader="true"><img src="${src}"></div>`, false],
+48 |     ...["http://images.example.org/a", "javascript:alert(1)", "data:image/png;base64,AAAA", "cid:logo", "//images.example.org/a", "https://127.0.0.1/a", "https://user:pass@images.example.org/a", "https://images.example.org:8443/a", "https://images.example.org/a#fragment"].map(url => [`<img src="${url}">`, false] as [string, boolean]),
+49 |   ];
+50 |   for (const [html, expected] of cases) {
+51 |     expect(referenceEligibility(html)).toBe(expected);
+                                            ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/mail/images/eligibility.test.ts:51:40)
+(fail) eligibility retains positive images and rejects encoded markup, blocked URLs and declared trackers [31.73ms]
+63 |     (s: string) => `<div style="display:none;height:0">${s}</div>`,
+64 |     (s: string) => `<table role="presentation"><tr><td>${s}</td></tr></table>`,
+65 |   ];
+66 |   for (const tag of tags) for (const attr of attrs) for (const wrapper of wrap) {
+67 |     const html = wrapper(`<${tag}${attr}>`);
+68 |     expect(hasLoadableImages(html)).toBe(referenceEligibility(html));
+                                         ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/mail/images/eligibility.test.ts:68:37)
+(fail) malformed, entity, raw-text and nested HTML agrees with the pre-optimization policy [49.90ms]
+(pass) image-free eligibility avoids provider sanitizer work while possible tags still use its policy [0.84ms]
+124 |       expect(detail.messages).toHaveLength(50);
+125 |       for (const [index, message] of detail.messages.entries()) {
+126 |         expect(message.accountId).toBe("a");
+127 |         expect(message.imageLoadAvailable).toBe(index % 4 === 1);
+128 |         expect(message.bodyHtml).toBe(providerHtml.sanitizeInboundHtml(messages[index]!.bodyHtml));
+129 |         expect(message.bodyHtml).not.toMatch(/<img|<script|PRIVATE/);
+                                           ^
+error: Received value must be a string: null
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/mail/images/eligibility.test.ts:129:38)
+(fail) long-thread GET retains image availability, inert bodies and account isolation without consent or downloads [254.94ms]
+
+ 1 pass
+ 3 fail
+ 225 expect() calls
+Ran 4 tests across 1 file. [1147.00ms]

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/workspace/orca-oct18-optimization/summarize.py", line 14, in <module>
+    assert len({r['responseSha256'] for rows in by_run for r in rows})==1,(name,'output changed')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('null-250', 'output changed')
