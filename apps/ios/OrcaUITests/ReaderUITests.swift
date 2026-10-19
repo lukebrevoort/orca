@@ -153,12 +153,27 @@ final class ReaderUITests: XCTestCase {
         let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
         var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/image-downloads")))
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let traceID = UUID().uuidString
+        request.setValue(traceID, forHTTPHeaderField: "X-Orca-Fixture-Trace")
         let done = expectation(description: "Fixture image request count")
         var count: Int?
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        // Only generated IDs, timestamps and numeric transport facts are logged.
+        // Do not print the request, URL, token, payload or error description.
+        print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=created")
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=callback status=\((response as? HTTPURLResponse)?.statusCode ?? -1) error_code=\((error as NSError?)?.code ?? 0) bytes=\(data?.count ?? 0)")
             if let data, let value = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { count = value["count"] }
             done.fulfill()
-        }.resume()
+        }
+        task.resume()
+        print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=resumed")
+        let observation = DispatchSource.makeTimerSource(queue: .global())
+        observation.schedule(deadline: .now() + 4)
+        observation.setEventHandler {
+            print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=scheduler_probe state=\(task.state.rawValue) received=\(task.countOfBytesReceived)")
+        }
+        observation.resume()
+        defer { observation.cancel() }
         wait(for: [done], timeout: 5)
         return try XCTUnwrap(count)
     }

@@ -89,6 +89,27 @@ def export(work, evidence, connection, status):
                 raise ValueError('Credential detected in evidence; refusing publication')
     # Print only after the complete export passed its credential scan. Prefix
     # every line so synthetic log content cannot become a workflow command.
+    checks = evidence / 'checks.log'
+    native_times = re.findall(r'\[counter-native\] epoch_ms=(\d+)', checks.read_text() if checks.is_file() else '')
+    # xcresult export can finish minutes after the assertion. Anchor server
+    # liveness to the final native observation, not the later cleanup time.
+    heartbeat_cutoff = int(native_times[-1]) + 10000 if native_times else None
+    for name in ('checks.log', 'fixture.log'):
+        path = evidence / name
+        if not path.is_file():
+            continue
+        lines = path.read_text().splitlines()
+        events = [line for line in lines if '[counter-native]' in line or '[counter-server]' in line]
+        heartbeats = [line for line in lines if '[counter-heartbeat]' in line]
+        if heartbeat_cutoff is not None:
+            heartbeats = [line for line in heartbeats
+                          if (match := re.search(r'epoch_ms=(\d+)', line))
+                          and int(match[1]) <= heartbeat_cutoff]
+        # Keep the last minute of server liveness and latest80 request events.
+        # Also print on success so a non-reproduction still yields usable data.
+        for line in events[-80:] + heartbeats[-60:]:
+            line = line[:1000].replace('::', ': :').replace('##[', '# #[')
+            print(f'[fixture telemetry] {name}: {line}')
     if int(status) != 0 and (evidence / 'checks.log').is_file():
         print('Sanitized failure context (bounded; full log remains in artifact):')
         for line in failure_excerpt((evidence / 'checks.log').read_text()).splitlines():

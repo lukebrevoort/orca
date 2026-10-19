@@ -11,8 +11,12 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import type { ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
+import { fixtureCounterResponse } from "./fixture-counter.ts";
 
 const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI_TEST_SCOPE === "images";
+// A timestamp-only heartbeat distinguishes a live event loop from a stalled or
+// stopped fixture during a native request timeout. No mailbox data is emitted.
+if (imageFixture) setInterval(() => console.log(`[counter-heartbeat] epoch_ms=${Date.now()}`), 1000).unref();
 let imageDownloads = 0;
 let imageDelayMilliseconds = 0;
 const readOnly = process.argv.includes("--read-only");
@@ -151,8 +155,8 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     return new Response(null, { status: 204 });
   }
   if (url.pathname === "/__fixture/image-downloads") {
-    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
-    return Response.json({ count: imageDownloads });
+    return fixtureCounterResponse(request, credential.accessToken, imageDownloads,
+      imageFixture ? console.log : () => {});
   }
   if (url.pathname === "/__fixture/reader") {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
