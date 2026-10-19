@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/scripts/fixture-counter.test.ts:
+(pass) counter telemetry preserves response and authenticates without leaking request data [1.08ms]
+(pass) unauthorized requests retain401 and untrusted trace content is never echoed [0.24ms]
+
+ 2 pass
+ 0 fail
+ 10 expect() calls
+Ran 2 tests across 1 file. [51.00ms]
