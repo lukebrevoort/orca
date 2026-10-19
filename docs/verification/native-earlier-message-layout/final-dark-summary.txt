@@ -1,0 +1,19 @@
+Test Suite 'Selected tests' started at 2026-10-19 10:25:46.846.
+Test Suite 'OrcaUITests.xctest' started at 2026-10-19 10:25:46.846.
+Test Suite 'OrcaUITests' started at 2026-10-19 10:25:46.847.
+Test Case '-[OrcaUITests.OrcaUITests test37LongConversationOffersOffscreenUnreadAndLatestJumps]' started.
+Test Case '-[OrcaUITests.OrcaUITests test37LongConversationOffersOffscreenUnreadAndLatestJumps]' passed (29.792 seconds).
+Test Suite 'OrcaUITests' passed at 2026-10-19 10:26:16.641.
+	 Executed 1 test, with 0 failures (0 unexpected) in 29.792 (29.795) seconds
+Test Suite 'ReaderUITests' started at 2026-10-19 10:26:16.643.
+Test Case '-[OrcaUITests.ReaderUITests testEarlierMessagesRemainReadableAtAccessibilitySize]' started.
+Test Case '-[OrcaUITests.ReaderUITests testEarlierMessagesRemainReadableAtAccessibilitySize]' passed (14.038 seconds).
+Test Case '-[OrcaUITests.ReaderUITests testImagesRequireExplicitLoadingAndResetOnReopen]' started.
+Test Case '-[OrcaUITests.ReaderUITests testImagesRequireExplicitLoadingAndResetOnReopen]' passed (31.729 seconds).
+Test Suite 'ReaderUITests' passed at 2026-10-19 10:27:02.415.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 45.768 (45.772) seconds
+Test Suite 'OrcaUITests.xctest' passed at 2026-10-19 10:27:02.417.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 75.560 (75.571) seconds
+Test Suite 'Selected tests' passed at 2026-10-19 10:27:02.419.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 75.560 (75.574) seconds
+** TEST EXECUTE SUCCEEDED **

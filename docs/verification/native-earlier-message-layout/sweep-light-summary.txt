@@ -1,0 +1,25 @@
+Test Suite 'Selected tests' started at 2026-10-19 10:16:59.159.
+Test Suite 'OrcaUITests.xctest' started at 2026-10-19 10:16:59.160.
+Test Suite 'OrcaUITests' started at 2026-10-19 10:16:59.160.
+Test Case '-[OrcaUITests.OrcaUITests test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination]' started.
+Test Case '-[OrcaUITests.OrcaUITests test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination]' passed (43.151 seconds).
+Test Case '-[OrcaUITests.OrcaUITests test21MoveCatalogLoadCanBeCancelledAndReopened]' started.
+Test Case '-[OrcaUITests.OrcaUITests test21MoveCatalogLoadCanBeCancelledAndReopened]' passed (23.223 seconds).
+Test Case '-[OrcaUITests.OrcaUITests test38EarlierMessagesRemainReadableAtAccessibilitySize]' started.
+Test Case '-[OrcaUITests.OrcaUITests test38EarlierMessagesRemainReadableAtAccessibilitySize]' passed (12.108 seconds).
+Test Suite 'OrcaUITests' passed at 2026-10-19 10:18:17.645.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 78.481 (78.485) seconds
+Test Suite 'ReaderUITests' started at 2026-10-19 10:18:17.646.
+Test Case '-[OrcaUITests.ReaderUITests testHTMLAtAccessibilityTypeSize]' started.
+Test Case '-[OrcaUITests.ReaderUITests testHTMLAtAccessibilityTypeSize]' passed (61.666 seconds).
+Test Case '-[OrcaUITests.ReaderUITests testImagesRequireExplicitLoadingAndResetOnReopen]' started.
+Test Case '-[OrcaUITests.ReaderUITests testImagesRequireExplicitLoadingAndResetOnReopen]' passed (30.600 seconds).
+Test Case '-[OrcaUITests.ReaderUITests testLongHTMLScrollBackAndRepeatedOpen]' started.
+Test Case '-[OrcaUITests.ReaderUITests testLongHTMLScrollBackAndRepeatedOpen]' passed (47.673 seconds).
+Test Suite 'ReaderUITests' passed at 2026-10-19 10:20:37.592.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 139.938 (139.946) seconds
+Test Suite 'OrcaUITests.xctest' passed at 2026-10-19 10:20:37.594.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 218.419 (218.434) seconds
+Test Suite 'Selected tests' passed at 2026-10-19 10:20:37.595.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 218.419 (218.436) seconds
+** TEST EXECUTE SUCCEEDED **

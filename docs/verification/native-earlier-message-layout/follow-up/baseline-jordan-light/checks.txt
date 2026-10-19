@@ -1,0 +1,165 @@
+Command line invocation:
+    /Users/luke/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/luke/Documents/Codex/2026-10-16/task/ImageDerivedData/Build/Products/Orca_PR260_baseline-jordan-light.xctestrun -destination "platform=iOS Simulator,id=5942A64B-52E7-4BE4-BBA5-1FB72DA12EF0" -parallel-testing-enabled NO -resultBundlePath /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/baseline-jordan-light/results/Orca.xcresult "-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode"
+
+2026-10-19 15:16:24.517 xcodebuild[16980:3951680] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/baseline-jordan-light/results/Orca.xcresult
+
+2026-10-19 15:16:24.524 xcodebuild[16980:3951680] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:16:26.201 xcodebuild[16980:3951680] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:16:26.739 xcodebuild[16980:3951680] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:16:33.115372-0600 OrcaUITests-Runner[16999:3952009] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-10-19 15:16:34.446.
+Test Suite 'OrcaUITests.xctest' started at 2026-10-19 15:16:34.447.
+Test Suite 'OrcaUITests' started at 2026-10-19 15:16:34.447.
+Test Case '-[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode]' started.
+    t =     0.00s Start Test at 2026-10-19 15:16:34.449
+    t =     0.08s Set Up
+    t =     0.08s Open com.orca.mail
+    t =     0.08s     Launch com.orca.mail
+2026-10-19 15:16:34.915 xcodebuild[16980:3951680] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-19 15:16:34.915 xcodebuild[16980:3951680] [MT] IDELaunchParametersSnapshot: no debugger version
+objc[16999]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108c20310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x108130398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =     2.73s         Setting up automation session
+    t =     5.35s         Wait for com.orca.mail to idle
+    t =     7.64s Waiting 20.0s for "Inbox" NavigationBar to exist
+    t =     8.72s     Checking `Expect predicate `existsNoRetry == 1` for object "Inbox" NavigationBar`
+    t =     8.72s         Checking existence of `"Inbox" NavigationBar`
+    t =     9.18s Waiting 20.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    10.26s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    10.26s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    10.36s Checking existence of `"inbox.message.ios-fixture-message-2" Any`
+    t =    10.47s Checking existence of `"inbox.message.ios-fixture-message-2" Any`
+    t =    10.59s Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    10.69s Find the "Inbox" Button
+    t =    10.98s Added attachment named '01-light-inbox'
+    t =    10.99s Find the "inbox.message.ios-fixture-message-1" Any
+    t =    11.08s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    11.20s Waiting 10.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    12.27s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    12.28s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    12.35s Find the "inbox.message.ios-fixture-message-1" Any
+    t =    12.42s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    12.52s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    12.62s Find the "inbox.message.ios-fixture-message-1" Button
+INBOX_NAVIGATION_TARGET row=inbox.message.ios-fixture-message-1 type=9 frame=(0.0, 408.0, 402.0, 149.0) hittable=true enabled=true
+    t =    12.71s Tap "inbox.message.ios-fixture-message-1" Button
+    t =    12.71s     Wait for com.orca.mail to idle
+    t =    12.71s     Find the "inbox.message.ios-fixture-message-1" Button
+    t =    12.81s     Check for interrupting elements affecting "inbox.message.ios-fixture-message-1" Button
+    t =    12.93s     Synthesize event
+    t =    13.25s     Wait for com.orca.mail to idle
+    t =    14.49s Waiting 10.0s for "Conversation" NavigationBar to exist
+    t =    15.57s     Checking `Expect predicate `existsNoRetry == 1` for object "Conversation" NavigationBar`
+    t =    15.57s         Checking existence of `"Conversation" NavigationBar`
+INBOX_NAVIGATION_TIMING row=inbox.message.ios-fixture-message-1 tapSeconds=1.7920772083452903 navigationWaitSeconds=1.1316161249997094 opened=true
+    t =    15.63s Waiting 10.0s for "A quieter kind of inbox" StaticText to exist
+    t =    16.70s     Checking `Expect predicate `existsNoRetry == 1` for object "A quieter kind of inbox" StaticText`
+    t =    16.70s         Checking existence of `"A quieter kind of inbox" StaticText`
+    t =    16.74s Waiting 10.0s for "Maya Chen" StaticText to exist
+    t =    17.82s     Checking `Expect predicate `existsNoRetry == 1` for object "Maya Chen" StaticText`
+    t =    17.82s         Checking existence of `"Maya Chen" StaticText`
+    t =    17.86s Waiting 10.0s for StaticText (First Match) to exist
+    t =    18.93s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    18.93s         Checking existence of `StaticText (First Match)`
+    t =    19.11s Added attachment named '02-light-conversation'
+    t =    19.11s Waiting 5.0s for Button (First Match) to exist
+    t =    20.18s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    20.18s         Checking existence of `Button (First Match)`
+    t =    20.21s Tap Button (First Match)
+    t =    20.21s     Wait for com.orca.mail to idle
+    t =    20.21s     Find the Button (First Match)
+    t =    20.24s     Check for interrupting elements affecting "BackButton" Button
+    t =    20.30s     Synthesize event
+    t =    20.61s     Wait for com.orca.mail to idle
+    t =    21.45s Checking existence of `"inbox.search" SearchField`
+    t =    21.56s Waiting 10.0s for "Search mail" SearchField to exist
+    t =    22.63s     Checking `Expect predicate `existsNoRetry == 1` for object "Search mail" SearchField`
+    t =    22.64s         Checking existence of `"Search mail" SearchField`
+    t =    22.70s Tap "Search mail" SearchField
+    t =    22.70s     Wait for com.orca.mail to idle
+    t =    22.70s     Find the "Search mail" SearchField
+    t =    22.77s     Check for interrupting elements affecting "Search mail" SearchField
+    t =    22.84s     Synthesize event
+    t =    23.14s     Wait for com.orca.mail to idle
+    t =    23.86s Type 'Jordan' into "Search mail" SearchField
+    t =    23.86s     Wait for com.orca.mail to idle
+    t =    23.95s     Find the "Search mail" SearchField
+    t =    24.09s     Check for interrupting elements affecting "Search mail" SearchField
+    t =    24.18s     Synthesize event
+    t =    24.48s     Wait for com.orca.mail to idle
+    t =    24.71s Tap "Search" Button
+    t =    24.71s     Wait for com.orca.mail to idle
+    t =    24.73s     Find the "Search" Button
+    t =    24.86s     Check for interrupting elements affecting "Search" Button
+    t =    24.96s     Synthesize event
+    t =    25.27s     Wait for com.orca.mail to idle
+    t =    25.68s Waiting 10.0s for "inbox.message.ios-fixture-message-2" Any to exist
+    t =    26.75s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-2" Any`
+    t =    26.75s         Checking existence of `"inbox.message.ios-fixture-message-2" Any`
+    t =    26.80s Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    26.99s Added attachment named '03-light-search'
+    t =    26.99s Checking existence of `"inbox.search" SearchField`
+    t =    27.04s Waiting 5.0s for "Search mail" SearchField to exist
+    t =    28.11s     Checking `Expect predicate `existsNoRetry == 1` for object "Search mail" SearchField`
+    t =    28.11s         Checking existence of `"Search mail" SearchField`
+    t =    28.16s Tap "Clear text" Button
+    t =    28.16s     Wait for com.orca.mail to idle
+    t =    28.16s     Find the "Clear text" Button
+    t =    28.22s     Check for interrupting elements affecting "Clear text" Button
+    t =    28.27s     Synthesize event
+    t =    28.59s     Wait for com.orca.mail to idle
+    t =    28.68s Tap "Search" Button
+    t =    28.68s     Wait for com.orca.mail to idle
+    t =    28.69s     Find the "Search" Button
+    t =    28.84s     Check for interrupting elements affecting "Search" Button
+    t =    28.98s     Synthesize event
+    t =    29.00s         Scroll element to visible
+    t =    29.01s         Find the "Search" Button
+    t =    29.19s         Computed hit point {-1, -1} after scrolling to visible
+    t =    29.20s         Failed: Failed to scroll to visible (by AX action) Button, {{300.7, 1121.0}, {99.0, 54.0}}, identifier: 'Search', label: 'search', Disabled, error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351
+    t =    30.22s     Retrying `Tap "Search" Button` (attempt #2)
+    t =    30.22s         Wait for com.orca.mail to idle
+    t =    30.23s         Find the "Search" Button
+    t =    30.36s         Check for interrupting elements affecting "Search" Button
+    t =    30.47s         Synthesize event
+    t =    30.49s             Scroll element to visible
+    t =    30.49s             Find the "Search" Button
+    t =    30.64s             Computed hit point {-1, -1} after scrolling to visible
+    t =    30.64s             Failed: Failed to scroll to visible (by AX action) Button, {{300.7, 1121.0}, {99.0, 54.0}}, identifier: 'Search', label: 'search', Disabled, error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351
+    t =    31.66s     Retrying `Tap "Search" Button` (attempt #3)
+    t =    31.66s         Wait for com.orca.mail to idle
+    t =    31.67s         Find the "Search" Button
+    t =    31.74s         Check for interrupting elements affecting "Search" Button
+    t =    31.80s         Synthesize event
+    t =    31.81s             Scroll element to visible
+    t =    31.81s             Find the "Search" Button
+    t =    31.90s             Computed hit point {-1, -1} after scrolling to visible
+    t =    31.90s             Failed: Failed to scroll to visible (by AX action) Button, {{300.7, 1121.0}, {99.0, 54.0}}, identifier: 'Search', label: 'search', Disabled, error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351
+    t =    31.91s Requesting snapshot of accessibility hierarchy for app with pid 17019
+/Users/luke/Documents/Codex/2026-10-16/task/orca-pr260-baseline/apps/ios/OrcaUITests/OrcaUITests.swift:1344: error: -[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode] : Failed to failed to scroll to visible (by AX action) Button, {{300.7, 1121.0}, {99.0, 54.0}}, identifier: 'Search', label: 'search', Disabled, error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351. (Underlying Error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351)
+    t =    32.16s Tear Down
+Test Case '-[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode]' failed (32.467 seconds).
+Test Suite 'OrcaUITests' failed at 2026-10-19 15:17:06.916.
+	 Executed 1 test, with 1 failure (0 unexpected) in 32.467 (32.469) seconds
+Test Suite 'OrcaUITests.xctest' failed at 2026-10-19 15:17:06.917.
+	 Executed 1 test, with 1 failure (0 unexpected) in 32.467 (32.470) seconds
+Test Suite 'Selected tests' failed at 2026-10-19 15:17:06.918.
+	 Executed 1 test, with 1 failure (0 unexpected) in 32.467 (32.472) seconds
+2026-10-19 15:17:07.604 xcodebuild[16980:3951729]  IDETestOperationsObserverDebug: Failure collecting diagnostics from simulator: Process exited with error 72:
+ xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+2026-10-19 15:17:07.649 xcodebuild[16980:3951680] [MT] IDETestOperationsObserverDebug: 41.390 elapsed -- Testing started completed.
+2026-10-19 15:17:07.649 xcodebuild[16980:3951680] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-19 15:17:07.649 xcodebuild[16980:3951680] [MT] IDETestOperationsObserverDebug: 41.390 sec, +41.390 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/baseline-jordan-light/results/Orca.xcresult
+
+** TEST EXECUTE FAILED **
+
+Testing started
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 51FABAFA-C1B0-460B-B4CA-53FA5878FE77 (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/luke/Documents/Codex/2026-10-16/task/homebase-evidence/pr260-repro/baseline-jordan-light/final-screen.png

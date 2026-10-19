@@ -1,0 +1,14 @@
+Test Suite 'Selected tests' started at 2026-10-19 10:21:58.774.
+Test Suite 'OrcaUITests.xctest' started at 2026-10-19 10:21:58.776.
+Test Suite 'ReaderUITests' started at 2026-10-19 10:21:58.776.
+Test Case '-[OrcaUITests.ReaderUITests testEarlierMessagesRemainReadableAtAccessibilitySize]' started.
+/Users/luke/Documents/Codex/2026-10-16/task/orca-native-sweep/apps/ios/OrcaUITests/ReaderUITests.swift:19: error: -[OrcaUITests.ReaderUITests testEarlierMessagesRemainReadableAtAccessibilitySize] : XCTAssertGreaterThan failed: ("44.0") is not greater than ("63.599999999999994")
+Test Case '-[OrcaUITests.ReaderUITests testEarlierMessagesRemainReadableAtAccessibilitySize]' failed (9.789 seconds).
+Test Suite 'ReaderUITests' failed at 2026-10-19 10:22:08.567.
+	 Executed 1 test, with 1 failure (0 unexpected) in 9.789 (9.791) seconds
+Test Suite 'OrcaUITests.xctest' failed at 2026-10-19 10:22:08.569.
+	 Executed 1 test, with 1 failure (0 unexpected) in 9.789 (9.793) seconds
+Test Suite 'Selected tests' failed at 2026-10-19 10:22:08.570.
+	 Executed 1 test, with 1 failure (0 unexpected) in 9.789 (9.796) seconds
+ xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+** TEST EXECUTE FAILED **

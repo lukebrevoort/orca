@@ -13,6 +13,33 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_search_telemetry_is_redacted_bounded_and_keeps_full_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'private'; out = Path(directory) / 'public'
+            work.mkdir(); out.mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'accessToken': 'search-secret'}))
+            log = '[search-fixture] submitted-value=Jordan search-secret ::error::\n' * 100
+            (work / 'checks.log').write_text(log)
+            (work / 'fixture.log').write_text('[search-fixture-server] response_ready status=200\n')
+            output = io.StringIO()
+            with redirect_stdout(output): evidence.export(work, out, str(connection), 0)
+            self.assertEqual(output.getvalue().count('[search-fixture]'), 80)
+            self.assertIn('[search-fixture-server]', output.getvalue())
+            self.assertNotIn('search-secret', output.getvalue())
+            self.assertNotIn('::', output.getvalue())
+            self.assertEqual((out / 'checks.log').read_text().count('[search-fixture]'), 100)
+
+    def test_assertion_is_not_hidden_by_passing_summaries_or_runtime_noise(self):
+        text = ('Executed 14 tests, with 0 failures (0 unexpected)\n' * 25
+                + 'runtime error: process does not exist\n' * 25
+                + '/fixture/OrcaUITests.swift:907: error: -[OrcaUITests testSearch] : XCTAssertTrue failed\n'
+                + "Test Case '-[OrcaUITests testSearch]' failed (51 seconds).\n")
+        excerpt = evidence.failure_excerpt(text)
+        self.assertIn('OrcaUITests.swift:907:', excerpt)
+        self.assertIn("testSearch]' failed", excerpt)
+        self.assertLessEqual(len(excerpt.splitlines()), 61)
+
     def test_heartbeat_excerpt_is_anchored_before_delayed_cleanup(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory) / 'private'; out = Path(directory) / 'public'

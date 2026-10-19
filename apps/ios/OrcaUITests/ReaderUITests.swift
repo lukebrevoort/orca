@@ -3,6 +3,55 @@ import XCTest
 final class ReaderUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
+    func testEarlierMessagesRemainReadableAtAccessibilitySize() throws {
+        try setLongReader(true)
+        addTeardownBlock { try self.setLongReader(false) }
+        let app = try launchReader(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+        let row = app.buttons["inbox.message.ios-fixture-message-1"]
+        XCTAssertTrue(row.waitForExistence(timeout: 20))
+        row.tap()
+        let toggle = app.buttons["Show 21 earlier messages"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        let text = app.staticTexts["21 earlier messages"]
+        XCTAssertTrue(text.exists)
+        // The complete words need room to wrap, rather than one or two letters
+        // per line. Assert the actual text bounds, not just the hit target.
+        XCTAssertGreaterThan(text.frame.width, toggle.frame.width * 0.6)
+        XCTAssertLessThan(text.frame.height, text.frame.width)
+        for _ in 0..<6 {
+            if toggle.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(toggle.isHittable)
+        XCTAssertGreaterThanOrEqual(toggle.frame.height, 44)
+        screenshot( "earlier-messages-accessibility-collapsed")
+        toggle.tap()
+        let hide = app.buttons["Hide 21 earlier messages"]
+        XCTAssertTrue(hide.waitForExistence(timeout: 5))
+        XCTAssertEqual(hide.value as? String, "Expanded")
+        screenshot( "earlier-messages-accessibility-expanded")
+        hide.tap()
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertEqual(toggle.value as? String, "Collapsed")
+    }
+
+    private func setLongReader(_ enabled: Bool) throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/reader")))
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + (environment["ORCA_FIXTURE_ACCESS_TOKEN"] ?? ""), forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["enabled": enabled])
+        let done = expectation(description: "Configure synthetic long reader")
+        var status: Int?
+        URLSession.shared.dataTask(with: request) { _, response, _ in
+            status = (response as? HTTPURLResponse)?.statusCode; done.fulfill()
+        }.resume()
+        wait(for: [done], timeout: 5)
+        XCTAssertEqual(status, 204)
+    }
+
     func testLongHTMLScrollBackAndRepeatedOpen() throws {
         let app = try launchReader()
         for pass in 1...2 {
