@@ -1,0 +1,25 @@
+{
+  "final_executable": "e83278dc7af26114fce3260808187948cacc999c",
+  "files": {
+    "second-account-inbox.png": "0ac46ffe7e685914f6548b8882ab1de70c585fa0057efbf14a63686f72d22f34",
+    "final-fixture-state.json": "05397af2038fd5a8be31d3e6db9b677ea744eb7f817de251557e08dcad814ea0",
+    "independent-review.md": "4b016a36e1a0e5b3dce209fb56eb8706cd81c1df3db26575edefa3a7b1b39bc9",
+    "candidate-reader-label.png": "8203df0901e318e81eb2bb442267530df953b371afba050178a854222c6ea525",
+    "final-dark-summary.txt": "69e7771833c92965899241e1ddba60aaf6e901d819f7c9cae795bad449a61665",
+    "baseline-final-assertions.json": "67df1934e79b5deb30c5aacb2806efa8109aead96e74283739260b2cbbdfb09f",
+    "final-negative-summary.txt": "54252ec6f6b35bce9931b4c4ab95d5e1c22dc714c0c616a6ea468b979d750149",
+    "sweep-light-summary.txt": "d031956044c77a5bbcced36b75532245c071c997b2e20b09cadb74abece4c51b",
+    "baseline-earlier-visible.png": "ef0ad420f7989faba5492fbcfa7fcc6613a87610d7037767d545304b0f683be4",
+    "final-dark-earlier-readable.png": "4bee358e6742e9c3c74464ced2e1360e49ca62d739b3001bd7ab3be41e1a89e2",
+    "baseline-provenance.json": "760f9298b4a317b470e4ef9e6be6ab3a7e8aa48711a75af4e2a1e6f788922473",
+    "baseline-a11y-inbox.png": "f5c322c56ef9abe6d12810c90993238de0949927e05124070145c34c1e8ff370",
+    "README.md": "b8de05b49b5e32a57af3e29e2019814260992396aa3ac3e0f106d92cf9446add",
+    "final-light-summary.txt": "bdc35c836313c540268c54fe38e45e299f350af72a3afcce7151855ac071e3c2",
+    "final-restored-inbox.png": "064e232fe8e9689d24927bdff0fc2e78f568e01fa5f0d962e9b7f3568c6e6381",
+    "baseline-first-jump-settled.png": "9b60e13b5cae44b753f527c0496bccc016842080ae532d5ff4b0b7bc9da0f4a9",
+    "candidate-earlier.png": "c89774aa672a3e35beb58fd0e5ab231255baeb3a671e947ef1e2483423e86601",
+    "first-account-restored.png": "43794f14eca3d97fa71d60d68ffea6674e43de2490b91f383374f94d15311da4",
+    "installed-verification.json": "091dd0a0ea5aca047a6e8e70692bb73247408e5953affd458f2de4d834682d8c",
+    "final-provenance.json": "dc3ad7b1c2c1f18d72dd4abd9c84b7429607bcde6ee8d056d9631acd5a0ed325"
+  }
+}

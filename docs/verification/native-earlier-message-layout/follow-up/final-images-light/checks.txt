@@ -1,0 +1,143 @@
+Command line invocation:
+    /Users/luke/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/luke/Documents/Codex/2026-10-16/task/ImageDerivedData/Build/Products/Orca_PR260_final-images-light.xctestrun -destination "platform=iOS Simulator,id=5942A64B-52E7-4BE4-BBA5-1FB72DA12EF0" -parallel-testing-enabled NO -resultBundlePath /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-images-light/results/Orca.xcresult "-only-testing:OrcaUITests/ReaderUITests/testImagesRequireExplicitLoadingAndResetOnReopen"
+
+2026-10-19 15:23:03.384 xcodebuild[18138:3963801] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-images-light/results/Orca.xcresult
+
+2026-10-19 15:23:03.391 xcodebuild[18138:3963801] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:23:05.132 xcodebuild[18138:3963801] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:23:09.882197-0600 OrcaUITests-Runner[18147:3964091] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-10-19 15:23:11.801.
+Test Suite 'OrcaUITests.xctest' started at 2026-10-19 15:23:11.803.
+Test Suite 'ReaderUITests' started at 2026-10-19 15:23:11.803.
+Test Case '-[OrcaUITests.ReaderUITests testImagesRequireExplicitLoadingAndResetOnReopen]' started.
+    t =     0.00s Start Test at 2026-10-19 15:23:11.805
+    t =     0.09s Set Up
+[counter-native] epoch_ms=1792444991906 id=5D79747A-D0C2-4711-BA74-580E43BB3F4D event=created
+[counter-native] epoch_ms=1792444991934 id=5D79747A-D0C2-4711-BA74-580E43BB3F4D event=resumed
+[counter-native] epoch_ms=1792444992307 id=5D79747A-D0C2-4711-BA74-580E43BB3F4D event=callback status=200 error_code=0 bytes=11
+    t =     0.52s Open com.orca.mail
+    t =     0.52s     Launch com.orca.mail
+2026-10-19 15:23:12.782 xcodebuild[18138:3963801] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-19 15:23:12.782 xcodebuild[18138:3963801] [MT] IDELaunchParametersSnapshot: no debugger version
+objc[18147]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10b1c8310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10a9ec398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =     2.72s         Setting up automation session
+    t =     5.41s         Wait for com.orca.mail to idle
+    t =     7.64s Waiting 20.0s for "Inbox" NavigationBar to exist
+    t =     8.70s     Checking `Expect predicate `existsNoRetry == 1` for object "Inbox" NavigationBar`
+    t =     8.70s         Checking existence of `"Inbox" NavigationBar`
+    t =     9.07s Waiting 10.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    10.14s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    10.14s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    10.36s Tap "inbox.message.ios-fixture-message-1" Any
+    t =    10.36s     Wait for com.orca.mail to idle
+    t =    10.37s     Find the "inbox.message.ios-fixture-message-1" Any
+    t =    10.61s     Check for interrupting elements affecting "inbox.message.ios-fixture-message-1" Button
+    t =    10.80s     Synthesize event
+    t =    11.14s     Wait for com.orca.mail to idle
+    t =    12.99s Waiting 10.0s for "message.load-images" Button to exist
+    t =    14.06s     Checking `Expect predicate `existsNoRetry == 1` for object "message.load-images" Button`
+    t =    14.06s         Checking existence of `"message.load-images" Button`
+    t =    14.17s Find the "message.load-images" Button
+[counter-native] epoch_ms=1792445006079 id=609C9CA9-BD85-4C02-A248-366DC77BD712 event=created
+[counter-native] epoch_ms=1792445006080 id=609C9CA9-BD85-4C02-A248-366DC77BD712 event=resumed
+[counter-native] epoch_ms=1792445006093 id=609C9CA9-BD85-4C02-A248-366DC77BD712 event=callback status=200 error_code=0 bytes=11
+    t =    14.54s Added attachment named 'images-blocked-before-consent'
+    t =    14.55s Tap "message.load-images" Button
+    t =    14.55s     Wait for com.orca.mail to idle
+    t =    14.56s     Find the "message.load-images" Button
+    t =    14.66s     Check for interrupting elements affecting "message.load-images" Button
+    t =    14.76s     Synthesize event
+    t =    15.10s     Wait for com.orca.mail to idle
+    t =    15.11s Waiting 10.0s for "message.images-status" StaticText to exist
+    t =    16.17s     Checking `Expect predicate `existsNoRetry == 1` for object "message.images-status" StaticText`
+    t =    16.17s         Checking existence of `"message.images-status" StaticText`
+    t =    16.32s Find the "message.images-status" StaticText
+    t =    16.39s Checking existence of `"Synthetic landscape" Image`
+    t =    16.46s Find the "Synthetic landscape" Image
+    t =    16.61s Checking existence of `"Synthetic landscape" Image`
+    t =    16.70s Find the "Synthetic landscape" Image
+[counter-native] epoch_ms=1792445008615 id=6EA6E983-8011-44D4-9BDA-5297A28932E3 event=created
+[counter-native] epoch_ms=1792445008615 id=6EA6E983-8011-44D4-9BDA-5297A28932E3 event=resumed
+[counter-native] epoch_ms=1792445008619 id=6EA6E983-8011-44D4-9BDA-5297A28932E3 event=callback status=200 error_code=0 bytes=11
+    t =    17.03s Added attachment named 'images-loaded-after-consent'
+    t =    17.03s Tap Button (First Match)
+    t =    17.03s     Wait for com.orca.mail to idle
+    t =    17.04s     Find the Button (First Match)
+    t =    17.09s     Check for interrupting elements affecting "BackButton" Button
+    t =    17.18s     Synthesize event
+    t =    17.51s     Wait for com.orca.mail to idle
+    t =    18.33s Waiting 10.0s for "Inbox" NavigationBar to exist
+    t =    19.40s     Checking `Expect predicate `existsNoRetry == 1` for object "Inbox" NavigationBar`
+    t =    19.40s         Checking existence of `"Inbox" NavigationBar`
+    t =    19.51s Tap "inbox.message.ios-fixture-message-1" Button
+    t =    19.51s     Wait for com.orca.mail to idle
+    t =    19.52s     Find the "inbox.message.ios-fixture-message-1" Button
+    t =    19.87s     Check for interrupting elements affecting "inbox.message.ios-fixture-message-1" Button
+    t =    20.15s     Synthesize event
+    t =    20.49s     Wait for com.orca.mail to idle
+    t =    21.45s Waiting 10.0s for "message.load-images" Button to exist
+    t =    22.53s     Checking `Expect predicate `existsNoRetry == 1` for object "message.load-images" Button`
+    t =    22.53s         Checking existence of `"message.load-images" Button`
+[counter-native] epoch_ms=1792445014430 id=32D85880-00EC-49FD-AC50-A02AAB631270 event=created
+[counter-native] epoch_ms=1792445014430 id=32D85880-00EC-49FD-AC50-A02AAB631270 event=resumed
+[counter-native] epoch_ms=1792445014434 id=32D85880-00EC-49FD-AC50-A02AAB631270 event=callback status=200 error_code=0 bytes=11
+    t =    22.87s Added attachment named 'images-blocked-after-reopen'
+    t =    22.87s Find the "message.load-images" Button
+    t =    22.99s Tap "message.load-images" Button
+    t =    22.99s     Wait for com.orca.mail to idle
+    t =    23.00s     Find the "message.load-images" Button
+    t =    23.09s     Check for interrupting elements affecting "message.load-images" Button
+    t =    23.19s     Synthesize event
+    t =    23.52s     Wait for com.orca.mail to idle
+[counter-native] epoch_ms=1792445015326 id=279B961F-3BEA-46BC-90E7-D20384F8F95E event=created
+[counter-native] epoch_ms=1792445015326 id=279B961F-3BEA-46BC-90E7-D20384F8F95E event=resumed
+[counter-native] epoch_ms=1792445015330 id=279B961F-3BEA-46BC-90E7-D20384F8F95E event=callback status=200 error_code=0 bytes=11
+[counter-native] epoch_ms=1792445015331 id=A97B5741-B88E-4DDE-BDDC-FE6AF3BDF21C event=created
+[counter-native] epoch_ms=1792445015331 id=A97B5741-B88E-4DDE-BDDC-FE6AF3BDF21C event=resumed
+[counter-native] epoch_ms=1792445015335 id=A97B5741-B88E-4DDE-BDDC-FE6AF3BDF21C event=callback status=200 error_code=0 bytes=11
+    t =    23.53s Find the "message.load-images" Button
+    t =    24.38s Added attachment named 'images-loading-disabled'
+    t =    24.38s Tap Button (First Match)
+    t =    24.38s     Wait for com.orca.mail to idle
+    t =    24.39s     Find the Button (First Match)
+    t =    24.45s     Check for interrupting elements affecting "BackButton" Button
+    t =    24.60s     Synthesize event
+    t =    24.93s     Wait for com.orca.mail to idle
+    t =    25.67s Waiting 10.0s for "Inbox" NavigationBar to exist
+    t =    26.74s     Checking `Expect predicate `existsNoRetry == 1` for object "Inbox" NavigationBar`
+    t =    26.74s         Checking existence of `"Inbox" NavigationBar`
+    t =    26.81s Tap "inbox.message.ios-fixture-message-1" Button
+    t =    26.81s     Wait for com.orca.mail to idle
+    t =    26.81s     Find the "inbox.message.ios-fixture-message-1" Button
+    t =    26.99s     Check for interrupting elements affecting "inbox.message.ios-fixture-message-1" Button
+    t =    27.13s     Synthesize event
+    t =    27.44s     Wait for com.orca.mail to idle
+    t =    33.42s Waiting 10.0s for "message.load-images" Button to exist
+    t =    34.49s     Checking `Expect predicate `existsNoRetry == 1` for object "message.load-images" Button`
+    t =    34.49s         Checking existence of `"message.load-images" Button`
+    t =    34.56s Checking existence of `"message.images-status" StaticText`
+    t =    34.70s Added attachment named 'images-late-response-discarded'
+    t =    34.70s Tear Down
+Test Case '-[OrcaUITests.ReaderUITests testImagesRequireExplicitLoadingAndResetOnReopen]' passed (35.037 seconds).
+Test Suite 'ReaderUITests' passed at 2026-10-19 15:23:46.844.
+	 Executed 1 test, with 0 failures (0 unexpected) in 35.037 (35.041) seconds
+Test Suite 'OrcaUITests.xctest' passed at 2026-10-19 15:23:46.845.
+	 Executed 1 test, with 0 failures (0 unexpected) in 35.037 (35.042) seconds
+Test Suite 'Selected tests' passed at 2026-10-19 15:23:46.846.
+	 Executed 1 test, with 0 failures (0 unexpected) in 35.037 (35.045) seconds
+2026-10-19 15:23:47.276 xcodebuild[18138:3963801] [MT] IDETestOperationsObserverDebug: 42.140 elapsed -- Testing started completed.
+2026-10-19 15:23:47.276 xcodebuild[18138:3963801] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-19 15:23:47.276 xcodebuild[18138:3963801] [MT] IDETestOperationsObserverDebug: 42.140 sec, +42.140 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-images-light/results/Orca.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 51FABAFA-C1B0-460B-B4CA-53FA5878FE77 (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/luke/Documents/Codex/2026-10-16/task/homebase-evidence/pr260-repro/final-images-light/final-screen.png

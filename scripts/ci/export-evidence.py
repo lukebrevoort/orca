@@ -20,8 +20,15 @@ def redact(text, tokens):
 def failure_excerpt(text):
     """Keep early XCTest assertions visible even when later tests fill the tail."""
     lines = text.splitlines()
+    # Prefer actionable test/compiler failures to simulator noise and successful
+    # summaries such as "0 failures". Full sanitized logs remain in the artifact.
+    primary = [index for index, line in enumerate(lines)
+               if re.search(r'(?i)(:\d+(?::\d+)?: error:|Test Case .+ failed|'
+                            r'XCTAssert\w*.*failed|Asynchronous wait failed|'
+                            r'Testing failed:|\*\* TEST.*FAILED)', line)]
     matches = [index for index, line in enumerate(lines)
-               if re.search(r'(?i)\b(error:|failed|failure|XCTAssert\w*)', line)]
+               if re.search(r'(?i)\b(error:|failed\b|failure\b|XCTAssert\w*)', line)]
+    matches = primary + [index for index in matches if index not in primary]
     if not matches:
         return 'No failure marker found; inspect the sanitized log tail/artifact.'
     selected = set()
@@ -99,7 +106,8 @@ def export(work, evidence, connection, status):
         if not path.is_file():
             continue
         lines = path.read_text().splitlines()
-        events = [line for line in lines if '[counter-native]' in line or '[counter-server]' in line]
+        events = [line for line in lines if any(marker in line for marker in
+                  ('[counter-native]', '[counter-server]', '[search-fixture]', '[search-fixture-server]'))]
         heartbeats = [line for line in lines if '[counter-heartbeat]' in line]
         if heartbeat_cutoff is not None:
             heartbeats = [line for line in heartbeats
