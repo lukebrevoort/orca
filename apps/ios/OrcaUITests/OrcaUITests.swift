@@ -1008,16 +1008,62 @@ final class OrcaUITests: XCTestCase {
 
     /// Run under both actual simulator appearances, not launch-default overrides.
     func test04StyledHTMLUsesReadableCanvas() throws {
-        let app = try launchApp()
+        let environment = ProcessInfo.processInfo.environment
+        guard let rawURL = environment["ORCA_FIXTURE_API_URL"], let url = URL(string: rawURL),
+              url.scheme == "http", ["127.0.0.1", "localhost"].contains(url.host ?? "") else {
+            throw TestConfigurationError.missingFixtureEnvironment
+        }
+        let app = try launchApp(htmlDiagnostics: true)
         assertInboxLoaded(in: app)
         openConversation(subject: Fixture.htmlSubject, in: app)
         let foreground = app.staticTexts["Explicit dark foreground stays readable."]
         let background = app.staticTexts["Explicit pale background keeps readable inherited text."]
-        XCTAssertTrue(foreground.waitForExistence(timeout: 10))
-        XCTAssertTrue(background.waitForExistence(timeout: 10))
-        XCTAssertTrue(foreground.isHittable)
-        XCTAssertTrue(background.isHittable)
+        let foregroundExists = foreground.waitForExistence(timeout: 10)
+        if !foregroundExists { captureStyledHTMLFailure(in: app, stage: "foreground") }
+        XCTAssertTrue(foregroundExists)
+        let backgroundExists = background.waitForExistence(timeout: 10)
+        if !backgroundExists { captureStyledHTMLFailure(in: app, stage: "background") }
+        XCTAssertTrue(backgroundExists)
+        let foregroundHittable = foreground.isHittable
+        if !foregroundHittable { captureStyledHTMLFailure(in: app, stage: "foreground-hittable") }
+        XCTAssertTrue(foregroundHittable)
+        let backgroundHittable = background.isHittable
+        if !backgroundHittable { captureStyledHTMLFailure(in: app, stage: "background-hittable") }
+        XCTAssertTrue(backgroundHittable)
         attachScreenshot(named: "13-styled-html-readable")
+    }
+
+    private func captureStyledHTMLFailure(in app: XCUIApplication, stage: String) {
+        attachScreenshot(named: "13-styled-html-failure-" + stage)
+        // Deliberately omit debugDescription, labels and values: they can contain
+        // body text and URLs. Preserve only bounded XCTest structure/geometry.
+        var lines = ["[styled-html-fixture] stage=\(stage)"]
+        func visit(_ element: XCUIElement, depth: Int) {
+            guard lines.count < 120, depth < 14 else { return }
+            lines.append("depth=\(depth) type=\(element.elementType.rawValue) frame=\(element.frame)")
+            for child in element.children(matching: .any).allElementsBoundByIndex.prefix(30) {
+                visit(child, depth: depth + 1)
+            }
+        }
+        // Prioritize WebView metadata before a potentially large hierarchy.
+        for webView in app.webViews.allElementsBoundByIndex.prefix(4) {
+            let identifier = webView.identifier
+            if identifier.hasPrefix("fixture-html-state ") {
+                lines.append(String(identifier.prefix(300)))
+                // Start below the wrapper-depth limit so body structure is
+                // represented even in a deeply nested SwiftUI container.
+                lines.append("webview-subtree (relative depth starts at 10)")
+                visit(webView, depth: 10)
+            }
+        }
+        lines.append("app-structure")
+        visit(app, depth: 0)
+        let diagnostic = String(lines.joined(separator: "\n").prefix(16_000))
+        print(diagnostic)
+        let attachment = XCTAttachment(string: diagnostic)
+        attachment.name = "styled-html-fixture-state"
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     func test05ReadOnlyAccountKeepsDraftEditable() throws {
@@ -1255,7 +1301,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
     }
 
-    private func launchApp(contentSize: String = "UICTContentSizeCategoryL") throws -> XCUIApplication {
+    private func launchApp(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false) throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
             XCTFail("Set ORCA_FIXTURE_API_URL to the isolated fixture API URL before running OrcaUITests.")
@@ -1274,6 +1320,7 @@ final class OrcaUITests: XCTestCase {
             "-AppleLocale", "en_US",
             "-UIPreferredContentSizeCategoryName", contentSize,
         ]
+        if htmlDiagnostics { app.launchArguments.append("--fixture-html-diagnostics") }
         app.launch()
         return app
     }
