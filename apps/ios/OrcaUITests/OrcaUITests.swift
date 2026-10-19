@@ -1089,6 +1089,38 @@ final class OrcaUITests: XCTestCase {
         restoredInbox.tap()
     }
 
+    func test38EarlierMessagesRemainReadableAtAccessibilitySize() throws {
+        _ = try composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": true])
+        addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": false]) }
+        let app = try launchApp(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+        let row = app.buttons["inbox.message.ios-fixture-message-1"]
+        XCTAssertTrue(row.waitForExistence(timeout: 20))
+        row.tap()
+        let toggle = app.buttons["Show 21 earlier messages"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        let text = app.staticTexts["21 earlier messages"]
+        XCTAssertTrue(text.exists)
+        // The complete words need room to wrap, rather than one or two letters
+        // per line. Assert the actual text bounds, not just the hit target.
+        XCTAssertGreaterThan(text.frame.width, app.frame.width * 0.5)
+        XCTAssertLessThan(text.frame.height, text.frame.width)
+        for _ in 0..<6 {
+            if toggle.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(toggle.isHittable)
+        XCTAssertGreaterThanOrEqual(toggle.frame.height, 44)
+        attachScreenshot(named: "earlier-messages-accessibility-collapsed")
+        toggle.tap()
+        let hide = app.buttons["Hide 21 earlier messages"]
+        XCTAssertTrue(hide.waitForExistence(timeout: 5))
+        XCTAssertEqual(hide.value as? String, "Expanded")
+        attachScreenshot(named: "earlier-messages-accessibility-expanded")
+        hide.tap()
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertEqual(toggle.value as? String, "Collapsed")
+    }
+
     func test37LongConversationOffersOffscreenUnreadAndLatestJumps() throws {
         _ = try composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": true])
         addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/reader", method: "POST", body: ["enabled": false]) }
