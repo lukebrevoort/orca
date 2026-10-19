@@ -232,6 +232,11 @@ try {
   await scope.getByRole('textbox',{name:'Message body',exact:true}).fill(latestBody);
   await scope.locator('input[type=file]').setInputFiles([{name:'conflict-remove.txt',mimeType:'text/plain',buffer:Buffer.from('removed')},{name:'conflict-keep.txt',mimeType:'text/plain',buffer:Buffer.from('kept conflict bytes')}]);
   await scope.getByRole('button',{name:'Remove conflict-remove.txt',exact:true}).click();
+  const formattingBox = await scope.getByRole('toolbar', {name:'Formatting'}).boundingBox();
+  const conflictBox = await scope.getByRole('alert', {name:'Draft recovery choice'}).boundingBox();
+  assert(formattingBox && conflictBox, 'Formatting and recovery notice must have layout boxes');
+  assert(formattingBox.y + formattingBox.height <= conflictBox.y,
+    'Formatting toolbar must not obscure draft recovery text');
   await screenshot(page,`${theme}-conflict-latest-writing`);
   await scope.getByRole('button',{name:'Keep mine as a new draft',exact:true}).click();
   await scope.getByRole('alert',{name:'Draft recovery choice'}).waitFor({state:'hidden'});

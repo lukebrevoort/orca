@@ -5012,6 +5012,9 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .compose-subject-label { color: var(--orca-muted); font-size: 12px; font-weight: 600; }
 .compose-subject-field input { font-family: var(--orca-font-body); font-size: 14px; font-weight: 500; letter-spacing: 0; padding: 16px 0; }
 .compose-writing-field { min-height: 0; }
+/* Keep the editor and toolbar in flow when draft recovery adds a tall notice.
+   The panel body owns scrolling when their combined height exceeds the viewport. */
+.compose-workspace-panel .compose-writing-field { flex: 1 0 auto; }
 .compose-writing-area { font-family: var(--orca-font-reader); font-size: 18px; line-height: 1.55; min-height: 240px; order: 1; padding-top: 22px; }
 .compose-formatting { border: 0; margin-top: auto; order: 3; padding: 8px 0; }
 .compose-formatting > span { display: none; }
