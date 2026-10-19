@@ -1102,7 +1102,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(text.exists)
         // The complete words need room to wrap, rather than one or two letters
         // per line. Assert the actual text bounds, not just the hit target.
-        XCTAssertGreaterThan(text.frame.width, app.frame.width * 0.5)
+        XCTAssertGreaterThan(text.frame.width, toggle.frame.width * 0.6)
         XCTAssertLessThan(text.frame.height, text.frame.width)
         for _ in 0..<6 {
             if toggle.isHittable { break }
