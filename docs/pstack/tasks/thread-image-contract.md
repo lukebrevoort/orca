@@ -1,7 +1,7 @@
 # Thread image metadata regression investigation
 
 - Intent / playbook: bug-fix investigation; reproduce the reported strict reader validation error and make only an evidence-backed change.
-- Status: **blocked** for user-incident resolution; reviewed test-only draft coverage is complete locally.
+- Status: **running** for CI diagnostic verification; Luke confirmed the stale loaded web build caused the email-opening incident and that incident is resolved.
 - Updated: 2026-10-19 UTC.
 - Owner: `/root`; independent reviewer: `/root/review_diagnosis` (model identity not separately exposed).
 - Base: `0a9ecd6f9db027ce0cf6ede004311b2567e197fe`; branch `fix/thread-image-load-schema`; worktree `/workspace/orca-image-schema`.
@@ -10,6 +10,18 @@
 - Acceptance: a verified current-source failure and narrow repair, or honest diagnosis if current source already accepts the payload. No current-source runtime defect was found; no runtime repair is claimed.
 
 ## Findings
+
+### October 19 follow-up: preserve the actual native failure assertion
+
+The initial investigation below is historical. Luke subsequently confirmed the stale loaded web build, so no further user-session investigation is needed. PR262's remaining failure is the dark compose suite in run `39289592093`, job `118186455894`: 16 tests, one failure, exit 65. The exact failed test remains unidentified; `test36SentRecoveryStatusAtAccessibilitySize` explicitly passed. Artifact `12206618685` was prepared successfully but its bytes could not be downloaded here. Supported Library transfer also failed. No denied route was bypassed.
+
+Baseline job `118148632271` in run `39278581139` passed on `0a9ecd6f9db027ce0cf6ede004311b2567e197fe`, with the same reported macOS image and Xcode path. Native app/tests, API fixtures and CI sources were unchanged between that baseline and PR262's `0ba3b7b84e2e7a1076143a74bf1968b19f8f37d1`. This is existing-run comparison, not proof of flakiness or attribution to this patch.
+
+The bounded exporter excerpt matched passing `0 failures` summaries and WebKit noise before reaching real XCTest failures. Its 20-marker budget omitted 265 later markers. Reuse only the assertion-priority hunk and its focused regression test from PR260 executable `ee0ee866d14d199d0d6986e5c1f8a05649cf55cb`, after that owner's final head `92839bd81ebe7df0b97e62560cf25585cb2a5a6a` reached all-green CI and the parent authorized this exact subset. Native helper corrections, search telemetry, reader product changes and workflow changes are excluded.
+
+The diagnostic change prioritizes actual assertions/compiler errors while preserving redaction, the 20-marker budget, line-length limits, full sanitized logs, application assertions and test timeouts. The new regression fails against the prior exporter (11 pass / 1 fail), and all 12 exporter tests pass with the change. See [red](../../verification/thread-image-contract/diagnostic-red.log) and [green](../../verification/thread-image-contract/diagnostic-green.log). Independent review by `/root/review_diagnosis` recommended this minimal subset. This fixes evidence selection only: a subsequent green native run would not identify or prove a fix for the original failure.
+
+No local native execution: this Linux executor has no Xcode; PR260's owner retains exclusive Homebase/native ownership. One push will trigger the existing checks; no manual dispatch or duplicate rerun. Final immutable revision review and automatic CI results are recorded in the draft PR body to avoid a documentation-only push restarting those checks.
 
 The reported error is `unrecognized_keys`, key `imageLoadAvailable`, path `messages[0]`. The source at main accepts the optional boolean in `normalizedMessageSchema` (`packages/shared/src/schemas.ts:346`); `threadDetailMessageSchema` inherits it. Web `fetchJson` parses the thread response with `threadDetailSchema`. API `readThreadDetailSnapshot` both emits the flag and parses its returned response with the same schema. The shared package exports raw TypeScript; there is no checked-in generated schema to update.
 

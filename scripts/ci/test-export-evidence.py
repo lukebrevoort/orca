@@ -13,6 +13,16 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_assertion_is_not_hidden_by_passing_summaries_or_runtime_noise(self):
+        text = ('Executed 14 tests, with 0 failures (0 unexpected)\n' * 25
+                + 'runtime error: process does not exist\n' * 25
+                + '/fixture/OrcaUITests.swift:907: error: -[OrcaUITests testSearch] : XCTAssertTrue failed\n'
+                + "Test Case '-[OrcaUITests testSearch]' failed (51 seconds).\n")
+        excerpt = evidence.failure_excerpt(text)
+        self.assertIn('OrcaUITests.swift:907:', excerpt)
+        self.assertIn("testSearch]' failed", excerpt)
+        self.assertLessEqual(len(excerpt.splitlines()), 61)
+
     def test_heartbeat_excerpt_is_anchored_before_delayed_cleanup(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory) / 'private'; out = Path(directory) / 'public'
