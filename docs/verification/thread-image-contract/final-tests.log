@@ -1,0 +1,161 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/shared/src/mail-destinations.test.ts:
+(pass) destination contracts normalize names and strictly guard writes [35.12ms]
+(pass) colors accept validated hex and historic lane snapshots receive a neutral default [3.07ms]
+
+packages/shared/src/reply-brief.test.ts:
+(pass) M6 Reply Brief runtime and data boundary > selects the external read-only MCP runtime without an Orca-held OpenAI credential [0.58ms]
+(pass) M6 Reply Brief runtime and data boundary > processes the redacted scheduling fixture through the deterministic fallback [2.31ms]
+(pass) M6 Reply Brief runtime and data boundary > rejects context that was not explicitly requested by the user [0.83ms]
+(pass) M6 Reply Brief runtime and data boundary > allows only credential-free, query-free HTTP(S) source links [5.45ms]
+(pass) M6 Reply Brief runtime and data boundary > rejects a model response that includes draft copy [2.37ms]
+(pass) M6 Reply Brief runtime and data boundary > rejects a response that attempts to invoke a provider write action [1.64ms]
+(pass) M6 Reply Brief runtime and data boundary > ships disclosure copy for content egress, retention, and opt-out [0.12ms]
+
+packages/shared/src/reply-brief-human-ownership.test.ts:
+(pass) human-owned Reply Brief contract > renders the scheduling contract with sourced guidance and connected read-only context [0.85ms]
+(pass) human-owned Reply Brief contract > rejects every draft, reply-body, suggested-copy, recipient, and send field [7.37ms]
+(pass) human-owned Reply Brief contract > rejects unsourced claims and labels missing information as unknown [1.31ms]
+(pass) human-owned Reply Brief contract > rejects contradictory availability context payloads [6.60ms]
+(pass) human-owned Reply Brief contract > keeps prompt injection inside untrusted mail data and cannot expose tools [2.54ms]
+(pass) human-owned Reply Brief contract > represents unavailable, stale, and empty states without relaxing authorship [7.09ms]
+
+packages/shared/src/calendar-availability.test.ts:
+(pass) calendar availability contract > accepts a provider-neutral multi-calendar request [0.34ms]
+(pass) calendar availability contract > allows only HTTP(S) source links rendered by the availability UI [0.73ms]
+(pass) calendar availability contract > requires ambiguity to stay explicit rather than guessing a time [0.69ms]
+(pass) calendar availability contract > distinguishes unknown stale availability from free [2.19ms]
+
+packages/shared/src/schemas.test.ts:
+(pass) shared API schemas > validates attachment base64 bytes against declared and aggregate size [5.45ms]
+(pass) shared API schemas > parses the fixture inbox response shape [11.47ms]
+(pass) shared API schemas > keeps the M5 fixture matrix provider- and account-attributed [5.05ms]
+(pass) shared API schemas > accepts the opt-in classification count contract alongside the legacy shape [0.42ms]
+(pass) shared API schemas > accepts a durable mailbox freshness token without rewriting legacy responses [6.89ms]
+(pass) shared API schemas > rejects blank inbox cursors [0.87ms]
+(pass) shared API schemas > coerces bounded inbox limits [0.51ms]
+(pass) shared API schemas > validates bounded stored-mail search scope [0.16ms]
+(pass) shared API schemas > normalizes unique batch sender changes and preserves canonical per-sender outcomes [1.85ms]
+(pass) shared API schemas > defines an explainable, bounded Human Signal contract [1.90ms]
+(pass) shared API schemas > requires an authenticated user when the session is authenticated [1.95ms]
+(pass) shared API schemas > accepts an older authenticated session response without onboarding state [0.07ms]
+(pass) shared API schemas > keeps nullable body fields and attachment metadata in reader payloads [5.16ms]
+(pass) shared API schemas > validates organization inputs without move semantics [4.40ms]
+(pass) shared API schemas > normalizes outbound recipients and requires a revision to update drafts [2.05ms]
+
+packages/shared/src/attention-preferences.test.ts:
+(pass) sender addresses normalize before duplicate validation [1.78ms]
+(pass) preferences reject invalid addresses, unsafe revisions, and more than 1000 senders [17.61ms]
+
+packages/shared/src/orca-simulation.test.ts:
+(pass) BRE-317 historical Simulation contracts > binds one compiled Rule Revision, Workspace Schema revision, and bounded Account scope [2.18ms]
+(pass) BRE-317 historical Simulation contracts > requires historical impact, representative Threads, conflicts, losing Rules, risk, and attention estimates [11.32ms]
+(pass) BRE-317 activation and compensating revert contracts > requires exact successful Simulation and expected revisions before activation [1.92ms]
+(pass) BRE-317 activation and compensating revert contracts > requires the original Change Set and fresh Workspace revision for revert [0.93ms]
+
+packages/shared/src/agent-contract.test.ts:
+(pass) M6 agent contract > ships the required propagated, suppressed, feedback, update, retraction, and retry examples [0.29ms]
+(pass) M6 agent contract > keeps propagation separate from Human Signal, attention, and provider state [0.30ms]
+(pass) M6 agent contract > represents conservative suppression without inventing a timeline event [0.14ms]
+(pass) M6 agent contract > validates reversible lifecycle states and snooze requirements [1.19ms]
+(pass) M6 agent contract > does not persist suppressed assessments as events [0.51ms]
+(pass) M6 agent contract > uses stable account-scoped deduplication across retries [0.28ms]
+(pass) M6 agent contract > keeps the MCP tool catalog read-only [0.18ms]
+(pass) M6 agent contract > preserves the pre-M6 inbox response contract [0.50ms]
+
+packages/shared/src/organization-facets.test.ts:
+(pass) typed Facet and Workflow contracts > represents every initial Facet type with stable schema and enum-option identities [25.03ms]
+(pass) typed Facet and Workflow contracts > makes bounded lists explicit and rejects ambiguous or unbounded cardinality [1.15ms]
+(pass) typed Facet and Workflow contracts > requires a typed default before a required Facet can enter the Workspace schema [0.24ms]
+(pass) typed Facet and Workflow contracts > uses explicit null only as a clear request while missing actions remain untouched [25.21ms]
+(pass) typed Facet and Workflow contracts > accepts stable-ID Facet and Workflow filters without provider vocabulary [4.37ms]
+(pass) typed Facet and Workflow contracts > does not admit send, delete, or provider-specific actions [3.99ms]
+
+packages/shared/src/attention-routing.test.ts:
+(pass) routing contracts require explicit scope and revision, normalize exact addresses, and preserve advanced sender choices [2.30ms]
+(pass) account queries and bounded search validate independently of notification intent [2.23ms]
+
+packages/shared/src/orca-language.test.ts:
+(pass) Orca Rule revision history contract > defaults and caps the public page size while bounding cursors [0.95ms]
+(pass) Orca Rule Set order contract > accepts bounded partial reorder semantics and rejects ambiguous duplicate IDs or positions [1.03ms]
+(pass) Orca Rule Set order contract > exposes the persisted aggregate revision, digest, count, and canonical positions [0.87ms]
+(pass) Orca Event contracts > shares one stable four-family vocabulary across compiled Rules and evaluation Trace [0.51ms]
+(pass) Orca Event contracts > binds every Event family to authoritative cause and subject provenance [2.81ms]
+(pass) Orca Event contracts > rejects crafted Action capability and risk downgrades at the shared revision seam [8.60ms]
+(pass) Orca Predicate semantic binding > recursively re-binds every graph form and supported leaf/operator to authoritative field and Facet semantics [9.43ms]
+
+packages/shared/src/organization-contexts.test.ts:
+(pass) Context Organization contracts > preserves stable typed identities for a Thread related to a project and customer [9.02ms]
+(pass) Context Organization contracts > keeps create IDs server-derived and bounds relationship fan-out [11.18ms]
+(pass) Context Organization contracts > provides typed stable-identity filters without stringly joins [2.56ms]
+
+packages/shared/src/organization-views.test.ts:
+(pass) BRE-313 live View contracts > composes every accepted Thread predicate without persisted membership [2.24ms]
+(pass) BRE-313 live View contracts > keeps result execution bounded and cursor-based [1.55ms]
+(pass) BRE-313 live View contracts > requires valid date bounds and unique stable identifiers [0.14ms]
+(pass) BRE-313 live View contracts > requires a complete, uniquely positioned optimistic reorder set [1.26ms]
+(pass) BRE-381 reviewed View draft contracts > accepts typed adapter output without interpreting search or selection input [3.83ms]
+(pass) BRE-381 reviewed View draft contracts > accepts authoritative selected-message references without client-supplied senders [1.19ms]
+(pass) BRE-381 reviewed View draft contracts > rejects empty, duplicate, oversized, or client-enriched selected-message references [2.98ms]
+(pass) BRE-381 reviewed View draft contracts > distinguishes match-all definitions from filtered zero-result definitions [0.75ms]
+(pass) BRE-381 reviewed View draft contracts > rejects structurally empty predicate objects instead of treating them as filters [0.35ms]
+(pass) BRE-381 reviewed View draft contracts > summarizes every maximum-size valid definition within the response contract [2.26ms]
+(pass) BRE-381 reviewed View draft contracts > binds reviewed drafts and zero-match confirmation to a definition digest [3.42ms]
+(pass) BRE-381 reviewed View draft contracts > binds prepared update identity to the saved View revision [0.53ms]
+(pass) Inbox exclusion metadata defaults off and stays outside predicates [0.15ms]
+(pass) BRE-413 additive sender growth > deduplicates exact addresses while preserving domain OR and every other predicate [0.25ms]
+(pass) BRE-413 additive sender growth > does not silently narrow unfiltered senders or expand account scope [0.63ms]
+
+packages/shared/src/organization-collections-pins.test.ts:
+(pass) Organization Collections/Pins contract > provides a clean-reset fixture with explicit membership and stable shortcut identity [2.43ms]
+(pass) Organization Collections/Pins contract > keeps Collection membership distinct from live query shortcuts [0.49ms]
+(pass) Organization Collections/Pins contract > requires Pins to use stable resource or query identity [1.16ms]
+(pass) Organization Collections/Pins contract > round-trips every compatibility-representable saved-query selection [11.19ms]
+(pass) Organization Collections/Pins contract > preserves exact stored-mail account and custom-space scope [0.41ms]
+(pass) Organization Collections/Pins contract > expresses auditable membership and shortcut changes without mail authority [3.37ms]
+
+packages/shared/src/reply-brief-calendar.test.ts:
+(pass) Calendar availability -> Reply Brief privacy adapter > passes only flattened free/busy intervals into the model-facing envelope [0.70ms]
+(pass) Calendar availability -> Reply Brief privacy adapter > preserves unavailable as unavailable when no grant exists [1.12ms]
+
+packages/shared/src/auth-provider-availability.test.ts:
+(pass) auth provider availability > accepts only the public configured and configuration-required states [3.39ms]
+
+packages/shared/src/organization-view-search.test.ts:
+(pass) Search to live View translation > preserves account and effective evidence without materializing message membership [0.31ms]
+(pass) Search to live View translation > blocks every unrepresentable clause without silently retaining only supported parts [0.67ms]
+(pass) Search to live View translation > omits only no-op clauses and keeps future account scope dynamic [0.64ms]
+
+packages/shared/src/thread-image-contract.test.ts:
+(pass) thread reader image wire contract > accepts imageLoadAvailable=true without changing message identity or body [4.91ms]
+(pass) thread reader image wire contract > accepts imageLoadAvailable=false without changing message identity or body [0.12ms]
+(pass) thread reader image wire contract > accepts an older response without image metadata [1.99ms]
+(pass) thread reader image wire contract > rejects malformed image metadata and unrelated unknown keys [1.46ms]
+
+packages/shared/src/organization-lanes.test.ts:
+(pass) BRE-311 Lane contracts > keeps Lane Policy defaults typed and categorically excludes provider deletion [1.72ms]
+(pass) BRE-311 Lane contracts > requires Account-qualified, revision-checked Manual Overrides [1.14ms]
+
+apps/api/src/mail/images/images.test.ts:
+(pass) public-only image URLs reject local, alternate, credential and redirect-style inputs [3.43ms]
+(pass) raster validation rejects pixels, huge decoded dimensions and non-raster data [1.58ms]
+(pass) mixed private/public DNS answers are rejected before a socket opens [3.43ms]
+(pass) socket uses validated address without rebinding, credentials, redirects or pooled reuse [12.38ms]
+(pass) redirects, compressed payloads, MIME mismatch and streamed oversize are rejected [3.12ms]
+(pass) default sanitization blocks images; explicit partial loading preserves safe HTML and blocks pixels/resources [60.53ms]
+(pass) image count and total byte budgets bound sender requests [89.78ms]
+(pass) native POST resolves only an authenticated user's stored message, before any image request [310.05ms]
+(pass) failed downloads spend their allowance and a partly used budget is never overrun [68.40ms]
+(pass) global cancellation interrupts DNS before any socket is opened [1.40ms]
+
+apps/api/src/mail/images/eligibility.test.ts:
+(pass) eligibility retains positive images and rejects encoded markup, blocked URLs and declared trackers [6.89ms]
+(pass) malformed, entity, raw-text and nested HTML agrees with the pre-optimization policy [341.50ms]
+(pass) image-free eligibility avoids provider sanitizer work while possible tags still use its policy [23.52ms]
+(pass) long-thread GET retains image availability, inert bodies and account isolation without consent or downloads [726.42ms]
+
+ 113 pass
+ 0 fail
+ 1639 expect() calls
+Ran 113 tests across 21 files. [3.27s]

@@ -1,0 +1,75 @@
+bun test v1.3.14 (0d9b296a)
+
+../orca-image-historical/packages/shared/src/thread-image-contract.test.ts:
+ 8 |         throw new core.$ZodAsyncError();
+ 9 |     }
+10 |     if (result.issues.length) {
+11 |         const e = new (_params?.Err ?? _Err)(result.issues.map((iss) => util.finalizeIssue(iss, ctx, core.config())));
+12 |         util.captureStackTrace(e, _params?.callee);
+13 |         throw e;
+                   ^
+ZodError: [
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "imageLoadAvailable"
+    ],
+    "path": [
+      "messages",
+      0
+    ],
+    "message": "Unrecognized key: \"imageLoadAvailable\""
+  }
+]
+      at <anonymous> (/workspace/orca-image-schema/node_modules/zod/v4/core/parse.js:13:15)
+      at <anonymous> (/workspace/orca-image-historical/packages/shared/src/thread-image-contract.test.ts:33:41)
+(fail) thread reader image wire contract > accepts imageLoadAvailable=true without changing message identity or body [9.44ms]
+ 8 |         throw new core.$ZodAsyncError();
+ 9 |     }
+10 |     if (result.issues.length) {
+11 |         const e = new (_params?.Err ?? _Err)(result.issues.map((iss) => util.finalizeIssue(iss, ctx, core.config())));
+12 |         util.captureStackTrace(e, _params?.callee);
+13 |         throw e;
+                   ^
+ZodError: [
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "imageLoadAvailable"
+    ],
+    "path": [
+      "messages",
+      0
+    ],
+    "message": "Unrecognized key: \"imageLoadAvailable\""
+  }
+]
+      at <anonymous> (/workspace/orca-image-schema/node_modules/zod/v4/core/parse.js:13:15)
+      at <anonymous> (/workspace/orca-image-historical/packages/shared/src/thread-image-contract.test.ts:33:41)
+(fail) thread reader image wire contract > accepts imageLoadAvailable=false without changing message identity or body [1.85ms]
+(pass) thread reader image wire contract > accepts an older response without image metadata [0.17ms]
+43 | 
+44 |   test("rejects malformed image metadata and unrelated unknown keys", () => {
+45 |     for (const value of [null, "true", 1, {}, []]) {
+46 |       const result = threadDetailSchema.safeParse(responseWith({ imageLoadAvailable: value }));
+47 |       expect(result.success).toBe(false);
+48 |       if (!result.success) expect(result.error.issues[0]!.path).toEqual(["messages", 0, "imageLoadAvailable"]);
+                                                                     ^
+error: expect(received).toEqual(expected)
+
+  [
+    "messages",
+    0,
+-   "imageLoadAvailable",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/orca-image-historical/packages/shared/src/thread-image-contract.test.ts:48:65)
+(fail) thread reader image wire contract > rejects malformed image metadata and unrelated unknown keys [2.22ms]
+
+ 1 pass
+ 3 fail
+ 3 expect() calls
+Ran 4 tests across 1 file. [349.00ms]
