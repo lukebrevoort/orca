@@ -44,7 +44,7 @@ function result(accounts: MailAccount[]) {
   return { accounts, messages, nextCursor: null, counts: { attention: { focus: 0, normal: messages.length, quiet: 0, hidden: 0, all: messages.length }, classification: { likely_human: messages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: messages.length } } };
 }
 function options(index = 2) { return [...browser.document.querySelectorAll(".global-mail-search-filters select")[index]!.querySelectorAll("option")].map(o => o.value); }
-async function selectAccount(value: string) { const select = browser.document.querySelectorAll(".global-mail-search-filters select")[2]!; await act(async () => { select.value = value; select.dispatchEvent(new browser.Event("change", { bubbles: true })); }); await flush(); }
+async function selectAccount(value: string) { const select = browser.document.querySelector(".global-mail-search-filters")!.querySelectorAll("select")[2]!; await act(async () => { select.value = value; select.dispatchEvent(new browser.Event("change", { bubbles: true })); }); await flush(); }
 const collectionResponse = { workspaceId: "workspace", accountIds: [first.id, second.id], collections: [space], pins: [], queries: [] };
 
 for (const order of ["accounts-first", "search-first"]) test(`full account choices survive scoped results in ${order} response order`, async () => {
