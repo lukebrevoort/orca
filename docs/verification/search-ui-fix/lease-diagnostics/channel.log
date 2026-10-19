@@ -1,0 +1,16 @@
+bun test v1.3.14 (0d9b296a)
+mcp-lease-abort {"stage":"starting-first-exchange","searchCalls":0}
+mcp-lease-abort {"stage":"waiting-for-tool-entry","searchCalls":0}
+mcp-lease-abort {"stage":"tool-entered","searchCalls":1}
+mcp-lease-abort {"stage":"aborting-first-exchange","searchCalls":1}
+mcp-lease-abort {"stage":"waiting-for-message-channel","searchCalls":1}
+mcp-lease-abort {"stage":"first-exchange-resolved","searchCalls":1,"status":499}
+
+apps/api/src/agents/g2-request-guards.test.ts:
+(fail) BRE-319 MCP exhaustion guards > releases an admitted MCP lease when the live HTTP exchange is aborted inside a deferred tool [5000.01ms]
+  ^ this test timed out after 5000ms.
+
+ 0 pass
+ 8 filtered out
+ 1 fail
+Ran 1 test across 1 file. [5.37s]
