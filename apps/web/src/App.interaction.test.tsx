@@ -3409,53 +3409,131 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
-  test("fetches fresh detail after explicit Retry and after selecting another thread", async () => {
-    const originalFetch = globalThis.fetch;
-    const failedMessage = inboxFixture[0]!;
-    const nextMessage: InboxMessage = {
-      ...failedMessage,
-      id: `${failedMessage.id}-next`,
-      threadId: `${failedMessage.threadId}-next`,
-      providerMessageId: `${failedMessage.providerMessageId}-next`,
-      subject: "A different selected conversation",
-      from: { name: "Next Reader", email: "next-reader@example.com" },
+  // Reuse PR252's reviewed Retry isolation cases; its silent-refresh work stays separate.
+  // Hold only the reader's 100 ms prefetch scheduler, not React/DOM work. Use
+  // real timer handles so production cleanup cancels superseded callbacks.
+  // Every caller must explicitly run a queued prefetch and restore the clock.
+  function controlReaderPrefetch() {
+    const schedule = globalThis.setTimeout;
+    const cancel = globalThis.clearTimeout;
+    const queued = new Map<ReturnType<typeof setTimeout>, () => void>();
+    globalThis.setTimeout = ((callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+      if (delay !== 100) return schedule(callback, delay, ...args);
+      const handle = schedule(() => {}, 2_147_483_647);
+      handle.unref();
+      queued.set(handle, () => callback(...args));
+      return handle;
+    }) as typeof setTimeout;
+    globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
+      queued.delete(handle);
+      cancel(handle);
+    }) as typeof clearTimeout;
+    return {
+      async run() {
+        expect(queued.size).toBeGreaterThan(0);
+        const callbacks = [...queued.entries()];
+        queued.clear();
+        await act(async () => {
+          for (const [handle, callback] of callbacks) { cancel(handle); callback(); }
+        });
+      },
+      restore() {
+        for (const handle of queued.keys()) cancel(handle);
+        queued.clear();
+        globalThis.setTimeout = schedule;
+        globalThis.clearTimeout = cancel;
+      },
     };
-    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [failedMessage, nextMessage] });
-    const threadReads: string[] = [];
-    let failFirstDetail = true;
+  }
 
-    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(failedMessage.threadId)}&accountId=${encodeURIComponent(failedMessage.accountId)}`);
-    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      const url = new URL(String(input), browserWindow.location.href);
-      if (url.pathname.startsWith("/v1/threads/") && !url.pathname.endsWith("/read")) {
-        threadReads.push(`${url.pathname}${url.search}`);
-        if (failFirstDetail) {
-          failFirstDetail = false;
-          return apiError(503, "temporarily_unavailable", "Reader detail is temporarily unavailable");
+  async function readerSettles(check: () => boolean) {
+    for (let i = 0; i < 40 && !check(); i++) await waitFor(0);
+    expect(check()).toBe(true);
+  }
+
+  async function selectReaderFromHistory(message: InboxMessage) {
+    await act(async () => {
+      browserWindow.history.pushState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`);
+      browserWindow.dispatchEvent(new browserWindow.Event("popstate"));
+    });
+  }
+
+  for (const prefetchState of ["held", "completed", "in-flight"] as const) {
+    test(`fetches fresh detail after explicit Retry and after selecting another thread (${prefetchState} prefetch)`, async () => {
+      const originalFetch = globalThis.fetch;
+      const prefetch = controlReaderPrefetch();
+      const failedMessage = { ...inboxFixture[0]!, unread: false };
+      const nextMessage: InboxMessage = {
+        ...failedMessage, id: `${failedMessage.id}-next`, threadId: `${failedMessage.threadId}-next`,
+        providerMessageId: `${failedMessage.providerMessageId}-next`, subject: "A different selected conversation",
+        from: { name: "Next Reader", email: "next-reader@example.com" },
+      };
+      const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [failedMessage, nextMessage] });
+      const threadReads: string[] = [];
+      let primaryInboxReads = 0;
+      let resolvePrefetch!: (response: Response) => void;
+      const pendingPrefetch = new Promise<Response>(resolve => { resolvePrefetch = resolve; });
+      const selectedPath = `/v1/threads/${encodeURIComponent(failedMessage.threadId)}`;
+      const selectedReads = () => threadReads.filter(path => new URL(path, browserWindow.location.href).pathname === selectedPath);
+      browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+      globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(String(input), browserWindow.location.href);
+        if (url.pathname === "/v1/inbox" && url.searchParams.get("limit") === "100" && !url.searchParams.has("destinationId")) primaryInboxReads++;
+        if (url.pathname.startsWith("/v1/threads/") && !url.pathname.endsWith("/read")) {
+          expect(url.searchParams.get("accountId")).toBe(failedMessage.accountId);
+          threadReads.push(`${url.pathname}${url.search}`);
+          if (url.pathname === selectedPath) {
+            if (selectedReads().length === 1) return apiError(503, "temporarily_unavailable", "Reader detail is temporarily unavailable");
+            if (selectedReads().length === 2 && prefetchState === "in-flight") return pendingPrefetch;
+          }
         }
+        return baseFetch(input, init);
+      }) as typeof fetch;
+      try {
+        await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+        await readerSettles(() => primaryInboxReads === 2 && Boolean(browserWindow.document.querySelector(".message-row")));
+        await selectReaderFromHistory(failedMessage);
+        await readerSettles(() => Boolean(browserWindow.document.querySelector(".reader-state button")));
+        const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
+        expect(retry?.textContent).toBe("Try again");
+        expect(selectedReads()).toHaveLength(1);
+        if (prefetchState !== "held") {
+          // Model a user dwelling on the error until prefetch starts/completes,
+          // without relying on a wall-clock sleep racing React's act scheduler.
+          await prefetch.run();
+          expect(selectedReads()).toHaveLength(2);
+          expect(isSameNode(browserWindow.document.querySelector(".reader-state button"), retry)).toBe(true);
+        }
+        const beforeRetry = selectedReads().length;
+        await act(async () => retry.click());
+        await readerSettles(() => Boolean(browserWindow.document.querySelector(".reader-document:not(.reader-loading)")));
+        expect(selectedReads()).toHaveLength(beforeRetry + 1);
+        expect(selectedReads()).toHaveLength(prefetchState === "held" ? 2 : 3);
+        expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(failedMessage.subject);
+        expect(browserWindow.document.querySelector(".reader-state")).toBeNull();
+        if (prefetchState === "in-flight") {
+          const stale = await (await baseFetch(`${selectedPath}?accountId=${encodeURIComponent(failedMessage.accountId)}`)).json() as ThreadDetail;
+          await act(async () => resolvePrefetch(jsonResponse({ ...stale, thread: { ...stale.thread, subject: "Stale prefetch must not win" } })));
+          expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(failedMessage.subject);
+          expect(selectedReads()).toHaveLength(3);
+        }
+        if (prefetchState === "held") {
+          await prefetch.run();
+          expect(selectedReads()).toHaveLength(2);
+        }
+        await goBackToInbox();
+        await act(async () => messageRow(nextMessage.from.name ?? nextMessage.from.email).click());
+        await readerSettles(() => browserWindow.document.querySelector("#reader-title")?.textContent === nextMessage.subject);
+        expect(threadReads.filter(path => new URL(path, browserWindow.location.href).pathname === `/v1/threads/${encodeURIComponent(nextMessage.threadId)}`)).toEqual([
+          `/v1/threads/${encodeURIComponent(nextMessage.threadId)}?accountId=${encodeURIComponent(nextMessage.accountId)}`,
+        ]);
+        expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(nextMessage.subject);
+      } finally {
+        prefetch.restore();
+        globalThis.fetch = originalFetch;
       }
-      return baseFetch(input, init);
-    }) as typeof fetch;
-
-    try {
-      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
-      for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-state button"); index += 1) await waitFor(0);
-      const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
-      expect(retry?.textContent).toBe("Try again");
-
-      await act(async () => retry.click());
-      for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-document:not(.reader-loading)"); index += 1) await waitFor(0);
-      expect(threadReads.filter((path) => path.includes(encodeURIComponent(failedMessage.threadId)))).toHaveLength(2);
-
-      await goBackToInbox();
-      await act(async () => messageRow(nextMessage.from.name ?? nextMessage.from.email).click());
-      for (let index = 0; index < 20 && browserWindow.document.querySelector("#reader-title")?.textContent !== nextMessage.subject; index += 1) await waitFor(0);
-      expect(threadReads.some((path) => path.includes(encodeURIComponent(nextMessage.threadId)) && path.includes(`accountId=${encodeURIComponent(nextMessage.accountId)}`))).toBe(true);
-      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(nextMessage.subject);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
+    });
+  }
 
   test("labels a direct and reloaded production Focus reader from its synchronized destination", async () => {
     const originalFetch = globalThis.fetch;
