@@ -904,7 +904,15 @@ final class OrcaUITests: XCTestCase {
 
         navigateBack(in: app)
         search(for: "Jordan", in: app)
-        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"].waitForExistence(timeout: 10))
+        let searchResult = app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"]
+        let searchResultAppeared = searchResult.waitForExistence(timeout: 10)
+        if !searchResultAppeared {
+            attachScreenshot(named: "03-light-search-missing-result")
+            // This suite only launches the isolated synthetic fixture. Keep the
+            // failure state in the redacted log when hosted artifacts are unavailable.
+            print("[search-fixture] missing-result-ui=\(app.debugDescription.prefix(20000))")
+        }
+        XCTAssertTrue(searchResultAppeared)
         XCTAssertFalse(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists)
         attachScreenshot(named: "03-light-search")
 
@@ -1333,6 +1341,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         search.tap()
         search.typeText(query)
+        print("[search-fixture] submitted-value=\(String(describing: search.value))")
+        XCTAssertEqual(search.value as? String, query, "The search field must contain the requested synthetic query")
         app.keyboards.buttons["Search"].tap()
     }
 
@@ -1341,7 +1351,10 @@ final class OrcaUITests: XCTestCase {
         let search = identified.exists ? identified : app.searchFields["Search mail"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.buttons["Clear text"].tap()
-        app.keyboards.buttons["Search"].tap()
+        // Clearing triggers InboxView's empty-search reload immediately. iOS
+        // disables the keyboard Search key for an empty field, so submitting
+        // again is neither a valid user action nor required to restore mail.
+        XCTAssertFalse(search.buttons["Clear text"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 10))
     }
 
