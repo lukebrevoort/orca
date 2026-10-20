@@ -1,0 +1,2930 @@
+{
+  "sourceCommit": "91c51488d3a029a93981c897a03a92f0d4b633bf",
+  "harnessSha256": "0d5c6e96865255c1ee2867f6960acb5e11f384e2fb9391e5de0c7d0e912914d1",
+  "browser": "154.0.8037.57",
+  "syntheticOnly": true,
+  "mode": "candidate",
+  "scenarios": [
+    {
+      "width": 320,
+      "theme": "light",
+      "longAccount": false,
+      "id": "320-light",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 249.828125,
+          "right": 308,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 148.25,
+          "right": 241.0625,
+          "top": 119.5,
+          "bottom": 157.5,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "rgb(8, 116, 97) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 248.0625,
+          "right": 308,
+          "top": 118,
+          "bottom": 159,
+          "width": 59.9375,
+          "height": 41,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 156,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 164,
+          "right": 308,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 12,
+          "right": 156,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 164,
+          "right": 308,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 320,
+          "top": 340,
+          "bottom": 412,
+          "width": 320,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 276,
+          "right": 308,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "longAccount": false,
+      "id": "320-dark",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 249.828125,
+          "right": 308,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 148.25,
+          "right": 241.0625,
+          "top": 119.5,
+          "bottom": 157.5,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "rgb(106, 169, 245) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 248.0625,
+          "right": 308,
+          "top": 118,
+          "bottom": 159,
+          "width": 59.9375,
+          "height": 41,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 156,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 164,
+          "right": 308,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 12,
+          "right": 156,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 164,
+          "right": 308,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 320,
+          "top": 340,
+          "bottom": 412,
+          "width": 320,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 276,
+          "right": 308,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "longAccount": false,
+      "id": "390-light",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 298.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 254.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 319.828125,
+          "right": 378,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 204.375,
+          "right": 297.1875,
+          "top": 118,
+          "bottom": 156,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "rgb(8, 116, 97) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 304.1875,
+          "right": 378,
+          "top": 118,
+          "bottom": 156,
+          "width": 73.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 191,
+          "top": 192,
+          "bottom": 230,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 199,
+          "right": 378,
+          "top": 192,
+          "bottom": 230,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 12,
+          "right": 191,
+          "top": 253,
+          "bottom": 291,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 199,
+          "right": 378,
+          "top": 253,
+          "bottom": 291,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 390,
+          "top": 337,
+          "bottom": 409,
+          "width": 390,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 346,
+          "right": 378,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 298.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 254.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "longAccount": false,
+      "id": "390-dark",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 390,
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "viewport": 390
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 298.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 254.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 319.828125,
+          "right": 378,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 204.375,
+          "right": 297.1875,
+          "top": 118,
+          "bottom": 156,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "rgb(106, 169, 245) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 304.1875,
+          "right": 378,
+          "top": 118,
+          "bottom": 156,
+          "width": 73.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 191,
+          "top": 192,
+          "bottom": 230,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 199,
+          "right": 378,
+          "top": 192,
+          "bottom": 230,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 12,
+          "right": 191,
+          "top": 253,
+          "bottom": 291,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 199,
+          "right": 378,
+          "top": 253,
+          "bottom": 291,
+          "width": 179,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 390,
+          "top": 337,
+          "bottom": 409,
+          "width": 390,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 346,
+          "right": 378,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 298.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 254.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 760,
+      "theme": "light",
+      "longAccount": false,
+      "id": "760-light",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 668.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 624.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 689.828125,
+          "right": 748,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 563.3125,
+          "right": 656.125,
+          "top": 118,
+          "bottom": 156,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "rgb(8, 116, 97) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 663.125,
+          "right": 748,
+          "top": 118,
+          "bottom": 156,
+          "width": 84.875,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 376,
+          "top": 192,
+          "bottom": 230,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 384,
+          "right": 748,
+          "top": 192,
+          "bottom": 230,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 12,
+          "right": 376,
+          "top": 253,
+          "bottom": 291,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 384,
+          "right": 748,
+          "top": 253,
+          "bottom": 291,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 760,
+          "top": 337,
+          "bottom": 409,
+          "width": 760,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 716,
+          "right": 748,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 668.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 624.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 760,
+      "theme": "dark",
+      "longAccount": false,
+      "id": "760-dark",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 760,
+          "clientWidth": 760,
+          "scrollWidth": 760,
+          "viewport": 760
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 668.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 624.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 689.828125,
+          "right": 748,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 563.3125,
+          "right": 656.125,
+          "top": 118,
+          "bottom": 156,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "rgb(106, 169, 245) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 663.125,
+          "right": 748,
+          "top": 118,
+          "bottom": 156,
+          "width": 84.875,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 376,
+          "top": 192,
+          "bottom": 230,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 384,
+          "right": 748,
+          "top": 192,
+          "bottom": 230,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 12,
+          "right": 376,
+          "top": 253,
+          "bottom": 291,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 384,
+          "right": 748,
+          "top": 253,
+          "bottom": 291,
+          "width": 364,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 760,
+          "top": 337,
+          "bottom": 409,
+          "width": 760,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 716,
+          "right": 748,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 668.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 624.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 1024,
+      "theme": "light",
+      "longAccount": false,
+      "id": "1024-light",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 132,
+          "right": 892,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 179.640625,
+          "right": 747.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 818.828125,
+          "right": 877,
+          "top": 129,
+          "bottom": 177,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 692.3125,
+          "right": 785.125,
+          "top": 187,
+          "bottom": 225,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "rgb(8, 116, 97) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 792.125,
+          "right": 877,
+          "top": 187,
+          "bottom": 225,
+          "width": 84.875,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 147,
+          "right": 323.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 331.5,
+          "right": 508,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 516,
+          "right": 692.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 700.5,
+          "right": 877,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 133,
+          "right": 891,
+          "top": 345,
+          "bottom": 413,
+          "width": 758,
+          "height": 68,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 847,
+          "right": 879,
+          "top": 75,
+          "bottom": 107,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 179.640625,
+          "right": 747.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 1024,
+      "theme": "dark",
+      "longAccount": false,
+      "id": "1024-dark",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 132,
+          "right": 892,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 133,
+          "right": 891,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1024
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 179.640625,
+          "right": 747.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 818.828125,
+          "right": 877,
+          "top": 129,
+          "bottom": 177,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 692.3125,
+          "right": 785.125,
+          "top": 187,
+          "bottom": 225,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "rgb(106, 169, 245) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 792.125,
+          "right": 877,
+          "top": 187,
+          "bottom": 225,
+          "width": 84.875,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 147,
+          "right": 323.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 331.5,
+          "right": 508,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 516,
+          "right": 692.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 700.5,
+          "right": 877,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 133,
+          "right": 891,
+          "top": 345,
+          "bottom": 413,
+          "width": 758,
+          "height": 68,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 847,
+          "right": 879,
+          "top": 75,
+          "bottom": 107,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 179.640625,
+          "right": 747.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "longAccount": false,
+      "id": "1440-light",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 340,
+          "right": 1100,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 387.640625,
+          "right": 955.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 1026.828125,
+          "right": 1085,
+          "top": 129,
+          "bottom": 177,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 900.3125,
+          "right": 993.125,
+          "top": 187,
+          "bottom": 225,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "rgb(8, 116, 97) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 1000.125,
+          "right": 1085,
+          "top": 187,
+          "bottom": 225,
+          "width": 84.875,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 355,
+          "right": 531.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 539.5,
+          "right": 716,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 724,
+          "right": 900.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 908.5,
+          "right": 1085,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 341,
+          "right": 1099,
+          "top": 345,
+          "bottom": 413,
+          "width": 758,
+          "height": 68,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 1055,
+          "right": 1087,
+          "top": 75,
+          "bottom": 107,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 387.640625,
+          "right": 955.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "longAccount": false,
+      "id": "1440-dark",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "first@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 340,
+          "right": 1100,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 341,
+          "right": 1099,
+          "clientWidth": 758,
+          "scrollWidth": 758,
+          "viewport": 1440
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 387.640625,
+          "right": 955.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 1026.828125,
+          "right": 1085,
+          "top": 129,
+          "bottom": 177,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 900.3125,
+          "right": 993.125,
+          "top": 187,
+          "bottom": 225,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "rgb(106, 169, 245) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 1000.125,
+          "right": 1085,
+          "top": 187,
+          "bottom": 225,
+          "width": 84.875,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 355,
+          "right": 531.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 539.5,
+          "right": 716,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountfirst@example.comsecond@example.com",
+          "left": 724,
+          "right": 900.5,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 908.5,
+          "right": 1085,
+          "top": 261,
+          "bottom": 299,
+          "width": 176.5,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 341,
+          "right": 1099,
+          "top": 345,
+          "bottom": 413,
+          "width": 758,
+          "height": 68,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 1055,
+          "right": 1087,
+          "top": 75,
+          "bottom": 107,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 387.640625,
+          "right": 955.734375,
+          "top": 142,
+          "bottom": 164,
+          "width": 568.09375,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "longAccount": true,
+      "id": "320-light-long",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "synthetic-long-account-name-for-filter-layout@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 249.828125,
+          "right": 308,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 158.75,
+          "right": 251.5625,
+          "top": 119.5,
+          "bottom": 157.5,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "rgb(8, 116, 97) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 258.5625,
+          "right": 308,
+          "top": 118,
+          "bottom": 159,
+          "width": 49.4375,
+          "height": 41,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 156,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 164,
+          "right": 308,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountsynthetic-long-account-name-for-filter-layout@example.comsecond@example.com",
+          "left": 12,
+          "right": 156,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 164,
+          "right": 308,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(16, 16, 16)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 320,
+          "top": 340,
+          "bottom": 412,
+          "width": 320,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 276,
+          "right": 308,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(8, 116, 97)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(16, 37, 34)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "longAccount": true,
+      "id": "320-dark-long",
+      "requests": [
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first",
+        "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second"
+      ],
+      "accountOptions": [
+        {
+          "value": "",
+          "text": "Every connected account"
+        },
+        {
+          "value": "first",
+          "text": "synthetic-long-account-name-for-filter-layout@example.com"
+        },
+        {
+          "value": "second",
+          "text": "second@example.com"
+        }
+      ],
+      "geometry": [
+        {
+          "className": "global-mail-search",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-heading",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-form",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-toolbar",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-filters",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "className": "global-mail-search-results",
+          "left": 0,
+          "right": 320,
+          "clientWidth": 320,
+          "scrollWidth": 320,
+          "viewport": 320
+        }
+      ],
+      "keyboard": [
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "2",
+          "tag": "BUTTON",
+          "label": "Search",
+          "left": 249.828125,
+          "right": 308,
+          "top": 62,
+          "bottom": 110,
+          "width": 58.171875,
+          "height": 48,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "3",
+          "tag": "BUTTON",
+          "label": "≡ Filters1",
+          "left": 158.75,
+          "right": 251.5625,
+          "top": 119.5,
+          "bottom": 157.5,
+          "width": 92.8125,
+          "height": 38,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "rgb(106, 169, 245) 0px -2px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "4",
+          "tag": "BUTTON",
+          "label": "Save as View",
+          "left": 258.5625,
+          "right": 308,
+          "top": 118,
+          "bottom": 159,
+          "width": 49.4375,
+          "height": 41,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "5",
+          "tag": "SELECT",
+          "label": "All mailInboxFocusQuietHidden",
+          "left": 12,
+          "right": 156,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "6",
+          "tag": "SELECT",
+          "label": "Any evidenceLikely humanAutomated or bulkNeeds review",
+          "left": 164,
+          "right": 308,
+          "top": 195,
+          "bottom": 233,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "7",
+          "tag": "SELECT",
+          "label": "Every connected accountsynthetic-long-account-name-for-filter-layout@example.comsecond@example.com",
+          "left": 12,
+          "right": 156,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "8",
+          "tag": "SELECT",
+          "label": "Every space",
+          "left": 164,
+          "right": 308,
+          "top": 256,
+          "bottom": 294,
+          "width": 144,
+          "height": 38,
+          "outlineStyle": "auto",
+          "outlineColor": "rgb(238, 238, 238)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "9",
+          "tag": "A",
+          "label": "MayaOct 19first account conversationCould you send me your latest writing notes?Likely human",
+          "left": 0,
+          "right": 320,
+          "top": 340,
+          "bottom": 412,
+          "width": 320,
+          "height": 72,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px inset",
+          "clippedBy": []
+        },
+        {
+          "index": "0",
+          "tag": "BUTTON",
+          "label": "Close Search mail and return to Inbox",
+          "left": 276,
+          "right": 308,
+          "top": 10,
+          "bottom": 42,
+          "width": 32,
+          "height": 32,
+          "outlineStyle": "solid",
+          "outlineColor": "rgb(106, 169, 245)",
+          "boxShadow": "none",
+          "clippedBy": []
+        },
+        {
+          "index": "1",
+          "tag": "INPUT",
+          "label": "Search stored mail",
+          "left": 44.640625,
+          "right": 228.828125,
+          "top": 75,
+          "bottom": 97,
+          "width": 184.1875,
+          "height": 22,
+          "outlineStyle": "none",
+          "outlineColor": "rgb(244, 243, 239)",
+          "boxShadow": "none",
+          "clippedBy": []
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com"
+  ],
+  "status": "passed"
+}

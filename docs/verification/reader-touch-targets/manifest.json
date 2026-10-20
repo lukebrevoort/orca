@@ -1,0 +1,298 @@
+{
+  "base": "5baf7f3ea9e208001c607a7bc0f5c418fb056d58",
+  "executable": "2ecf31dc99f7751e4cbc1a29a431a00e62b229a4",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "6823cd306410eb4663ae31c1c9ddfa1136bcac52276f64e644914f24f86074a6"
+    },
+    {
+      "path": "after/results.json",
+      "sha256": "80a5e0831ecd8933a2de20f512fa6e5c6eb348f2456af6ab6ee818a9181f4fda"
+    },
+    {
+      "path": "after/touch-dark-original-default.png",
+      "sha256": "f57acc4e5c044017695280c6b01b18d7bc82f8336a006ad9a1df2fb4004487c1"
+    },
+    {
+      "path": "after/touch-dark-original-focus.png",
+      "sha256": "af941e98bbcbf96f64723896bef84a7d59ebcd2419030a26de726c801c7edb99"
+    },
+    {
+      "path": "after/touch-dark-original-hover.png",
+      "sha256": "1b875fcf4edb7b6e65f437e7f399cfec842581cfc8dbe12026dff726f1b4fa68"
+    },
+    {
+      "path": "after/touch-dark-original-selected.png",
+      "sha256": "be36dba6e7479570d8ca557a593d89b821b61112b4c1ef08e7ff695475053514"
+    },
+    {
+      "path": "after/touch-dark-reminder-default.png",
+      "sha256": "07cf97103e4b8e05f4ed964f26523e0ed5a5ef3639f01dbd6864d548a96e7860"
+    },
+    {
+      "path": "after/touch-dark-reminder-focus.png",
+      "sha256": "ec02402dacef5b3c13adadac5ac5c47fee1d14773e3476c45c63cf4dc3f32900"
+    },
+    {
+      "path": "after/touch-dark-reminder-hover.png",
+      "sha256": "b7f7a6b77257a25623308e764d293df11360a4f4fbe4a50c0172abe5529a1c01"
+    },
+    {
+      "path": "after/touch-dark-safety-default.png",
+      "sha256": "5599dbd8db10f65ca2106135d79193878953a4603e551cf490dd019b7798321f"
+    },
+    {
+      "path": "after/touch-dark-safety-expanded.png",
+      "sha256": "248f970768285f76f7558eb4ab3ab6ed7c691bd139241676eb168e3abb340067"
+    },
+    {
+      "path": "after/touch-dark-safety-focus.png",
+      "sha256": "7304ba0bf9fae705f5c45948049194981279b9827890ff3ca63322341ca5c655"
+    },
+    {
+      "path": "after/touch-dark-safety-hover.png",
+      "sha256": "f3d73c2a3bb22498e0781474ef8df61fe2dbe917434684d2d47516f0b9e2b804"
+    },
+    {
+      "path": "after/touch-dark-why-default.png",
+      "sha256": "37ed618e5820f5fd271d13dc1b326490be23508e5560eed583386617dfe515eb"
+    },
+    {
+      "path": "after/touch-dark-why-disabled.png",
+      "sha256": "094a02c4afc4eba84a03b4474a99c8c576b0f4109e7b8d5bfbd871ad7506faf3"
+    },
+    {
+      "path": "after/touch-dark-why-expanded.png",
+      "sha256": "51683509034a4d0a6e05f87c10b1e7c761d6eff733424de319f2ee11d8d30308"
+    },
+    {
+      "path": "after/touch-dark-why-focus.png",
+      "sha256": "057b15ddc3991a76aa4618da9d60dd6f2e44983f891a00159bffd1d058169114"
+    },
+    {
+      "path": "after/touch-dark-why-hover.png",
+      "sha256": "c2381d3d88d2bf203094bc9b1adf465c61769004d7bbf36ba1ba002e153be787"
+    },
+    {
+      "path": "after/touch-light-original-default.png",
+      "sha256": "1ab351cacb1b3aa7fb4d290b12ec201741bb05f35dc57304f26a6b403158d540"
+    },
+    {
+      "path": "after/touch-light-original-focus.png",
+      "sha256": "317d1c6cf688ffecb6e1188868865eecc68836a76f3aea5da9bbf0d325482c7e"
+    },
+    {
+      "path": "after/touch-light-original-hover.png",
+      "sha256": "79ddf78e458933146342a2d6052ed99c63adae4f3ed543d490f364947de448b4"
+    },
+    {
+      "path": "after/touch-light-original-selected.png",
+      "sha256": "298dd091368ec8a0e16d043c6eb8473dc4d976453c0c8b9841f22c9e501cd14f"
+    },
+    {
+      "path": "after/touch-light-reminder-default.png",
+      "sha256": "082e051d8e205d3b0285186c28242e1314d9fd15fdbc87121856320f684be768"
+    },
+    {
+      "path": "after/touch-light-reminder-focus.png",
+      "sha256": "a065b016bb0122511a80814cee82253f2f2c5ae2d09f294bab701456300245a1"
+    },
+    {
+      "path": "after/touch-light-reminder-hover.png",
+      "sha256": "51844f11880216438b4086756979920b21f20f537691298a16e2602ac86ae9bc"
+    },
+    {
+      "path": "after/touch-light-safety-default.png",
+      "sha256": "48d7f24ed25f67c603881fea40166066381f9d73aea5819c484b06b7bc17962f"
+    },
+    {
+      "path": "after/touch-light-safety-expanded.png",
+      "sha256": "cc5f5b90ea64e5bdb29f23d24020ebec053d6d7e9e0b0934dc23e1b43fa80c16"
+    },
+    {
+      "path": "after/touch-light-safety-focus.png",
+      "sha256": "46382ca20a229b71bcb7d1f26e19a61b401592ec9031b1eb0ffc2399ae61a005"
+    },
+    {
+      "path": "after/touch-light-safety-hover.png",
+      "sha256": "306e16c01f2331c4a8a0b23ff123562f1e04e5a9a9b5234629ae413a17e1964b"
+    },
+    {
+      "path": "after/touch-light-why-default.png",
+      "sha256": "b322ffe2a030d2e60eac9d49569e5bfb08df72d91214a0262b7a04d66b5b82a6"
+    },
+    {
+      "path": "after/touch-light-why-disabled.png",
+      "sha256": "2616837a81b855cf5e8f83b9ded03acc44d7f5356e9459780f5560cc1f2b1e60"
+    },
+    {
+      "path": "after/touch-light-why-expanded.png",
+      "sha256": "b91a7e642934ad2a33642de4a8621a1d47b522dd732c5a7856eb4597f2da417d"
+    },
+    {
+      "path": "after/touch-light-why-focus.png",
+      "sha256": "4c875d7226d2d7c69cf481f787a68c3df05b705e7f01380a2f2bfe475fdc034d"
+    },
+    {
+      "path": "after/touch-light-why-hover.png",
+      "sha256": "3324942bc9a28b4cc15479a128117913b8a63fac96b7c41d7b67c30f39a1ef09"
+    },
+    {
+      "path": "before/failing-check.log",
+      "sha256": "e61812eec62daa5130401de455eb03bbd0d315f4db4c076a6056c11ed2f9c65d"
+    },
+    {
+      "path": "before/results.json",
+      "sha256": "1df5a1806221c0f95bb76329382362e718f83b07e84f910e5d66f7a83a86de4c"
+    },
+    {
+      "path": "before/touch-dark-original-default.png",
+      "sha256": "63c673d7c766aca33bda2ba5e45f634356072974de75a162b9aeded685704831"
+    },
+    {
+      "path": "before/touch-dark-original-focus.png",
+      "sha256": "7104e75ce7f327f41a17e0f64dace48fb9624a69e4d5f44305ee4fa42908b8c9"
+    },
+    {
+      "path": "before/touch-dark-original-hover.png",
+      "sha256": "7f0d9038ab413534fbfcca759201f74cc9dc9376e15bdff96b2331526a40e5bd"
+    },
+    {
+      "path": "before/touch-dark-original-selected.png",
+      "sha256": "46f8477c794e6e64294bc0f2b3ee046cff9ecb731bbaa7a0fff613beda7a4533"
+    },
+    {
+      "path": "before/touch-dark-reminder-default.png",
+      "sha256": "0ba276b9408a0fc434f03b6a29b48d242a593461a733ffe98876d33ef1791b56"
+    },
+    {
+      "path": "before/touch-dark-reminder-focus.png",
+      "sha256": "e8f7ea4eda2ce4a068067f751e990bea8d4cf19e436d6dd66a49af029346661d"
+    },
+    {
+      "path": "before/touch-dark-reminder-hover.png",
+      "sha256": "548a22d651e62cc5168553a35e5bc46ed88bf4acb06721442b4b2a17bb5a56e9"
+    },
+    {
+      "path": "before/touch-dark-safety-default.png",
+      "sha256": "ee7e3f3e0310d5cc2e6b7b0be43fc9795243b914325081af2f5cf4321d13077a"
+    },
+    {
+      "path": "before/touch-dark-safety-expanded.png",
+      "sha256": "b57b590c39c6893f19bb89f86623a2d8af59a48e762b4590260a3d1296c9f413"
+    },
+    {
+      "path": "before/touch-dark-safety-focus.png",
+      "sha256": "58c5b85906877b137560bc09e1cfdc6563a03b99092daa275ee953b92eb1e75f"
+    },
+    {
+      "path": "before/touch-dark-safety-hover.png",
+      "sha256": "e7e54a26ade427b54b0f3b77f3b0e762f1eb1fd246a1f31e84e994d051200eab"
+    },
+    {
+      "path": "before/touch-dark-why-default.png",
+      "sha256": "adb44c27e6c7f839f8ab41bdd1b15050dcc1e0a35d37e03893542e4ad8727b1b"
+    },
+    {
+      "path": "before/touch-dark-why-disabled.png",
+      "sha256": "f2b7f45cad790130eda23fb1eb3dcad344190c6555460bd6d08a5c681c80051c"
+    },
+    {
+      "path": "before/touch-dark-why-expanded.png",
+      "sha256": "56bfc6aec871baf90a64d685a9e6057cc5a62044c9298faef88776ab5d873126"
+    },
+    {
+      "path": "before/touch-dark-why-focus.png",
+      "sha256": "0bca69d8a4b548dceb0fb326737637b5d0023bbebdaae8ae38f15ed9c8882a4c"
+    },
+    {
+      "path": "before/touch-dark-why-hover.png",
+      "sha256": "eb0da337675abe3fb6afb258cfd8ed55dcff075e77a0879e153d73db6f26223d"
+    },
+    {
+      "path": "before/touch-light-original-default.png",
+      "sha256": "e1eacd91a56fee005e3f4b72509282b873b43dc5f48f045e5ade3193723374bf"
+    },
+    {
+      "path": "before/touch-light-original-focus.png",
+      "sha256": "0f338681167759ae35c3cf87032d7bbc23acc7947ff162771b78cace8e12d666"
+    },
+    {
+      "path": "before/touch-light-original-hover.png",
+      "sha256": "fab303e06c4ab4a3e40a52a8502b90f42e5b8d9b113fe4474761ba11919129de"
+    },
+    {
+      "path": "before/touch-light-original-selected.png",
+      "sha256": "5990982bc44d4b14c663a20f2e24eb0fe1d6ac400bc715efca53591c2b38d394"
+    },
+    {
+      "path": "before/touch-light-reminder-default.png",
+      "sha256": "69e4655d0b8c73f91a2edc7712d05cb1256d3daf1cee987e0409c4af12e66a7d"
+    },
+    {
+      "path": "before/touch-light-reminder-focus.png",
+      "sha256": "d61469a063ed152e699b415ef4ea39d3254ab78facd53594485932c5d77e5a25"
+    },
+    {
+      "path": "before/touch-light-reminder-hover.png",
+      "sha256": "56d7b94e0c90a445dd169addfeda5b1d056d02e1c5fbb256cb8b3774ef364d74"
+    },
+    {
+      "path": "before/touch-light-safety-default.png",
+      "sha256": "c5805238087a95f5f0884d15b9477f0aa8478abead4c65ea3c65a4aab007ff8a"
+    },
+    {
+      "path": "before/touch-light-safety-expanded.png",
+      "sha256": "18b3965eef5412e2ca765c1e9a77fe9df95f94a0abcc9901ae18996664e454eb"
+    },
+    {
+      "path": "before/touch-light-safety-focus.png",
+      "sha256": "77caa70aabc7a7a3c7f358c4b15adb09d5bb09f70f1c17e2438e50d2f8dea7ce"
+    },
+    {
+      "path": "before/touch-light-safety-hover.png",
+      "sha256": "1a966e183f1af342fd51df6e22a9e3e47a5d34f521b03d4ca2c0d8d13cfb277c"
+    },
+    {
+      "path": "before/touch-light-why-default.png",
+      "sha256": "1f4efa9c0dbbbbf969b055ebf31036f72a0df53834f578bfea25389ec891857d"
+    },
+    {
+      "path": "before/touch-light-why-disabled.png",
+      "sha256": "89ff5ab9d5dc19143aa4b9e48290f25ecf83cc553cf11fdf68afb0ccd0da1742"
+    },
+    {
+      "path": "before/touch-light-why-expanded.png",
+      "sha256": "7050563ef50823214f6a55894c6402a38bcead4cc1e5e803e3966de732f68c55"
+    },
+    {
+      "path": "before/touch-light-why-focus.png",
+      "sha256": "4cdc993ec0786ef2109a8073eab4beb936cb2ae5fe21a12e60c51a492bff6b2c"
+    },
+    {
+      "path": "before/touch-light-why-hover.png",
+      "sha256": "f28d68963d5150b3646ecdb70e791bf4bfb10dae0f8ce1d3ef998ea0f12a43b1"
+    },
+    {
+      "path": "build.log",
+      "sha256": "cc055b0610e9dd44275b517eb7e2784c9b7680db4bf8224a07fcd00a0d7a660e"
+    },
+    {
+      "path": "catchup-results.json",
+      "sha256": "81deb8f495d716304d988aab394cc678e1e772827be2ca9b4d2307926fb5e530"
+    },
+    {
+      "path": "independent-review.md",
+      "sha256": "ce5e24acac7ef1564af3aabbab436ca8892451c0534b63aa30036e78b1c1fcc5"
+    },
+    {
+      "path": "typecheck.log",
+      "sha256": "387425ae0ad612e19fbbd07a9dee3e68d75dd069a52aecd60717a7df6db6d71e"
+    },
+    {
+      "path": "unit.log",
+      "sha256": "d9e9665b5a3f6211abfd6e81553e88689dc4dcd4041b623b9078ecc0446b405a"
+    }
+  ]
+}

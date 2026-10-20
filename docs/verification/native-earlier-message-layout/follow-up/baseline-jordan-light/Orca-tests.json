@@ -1,0 +1,59 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "5942A64B-52E7-4BE4-BBA5-1FB72DA12EF0",
+      "deviceName" : "Orca Homebase Verification",
+      "modelName" : "iPhone 17",
+      "osBuildNumber" : "23E254a",
+      "osVersion" : "26.4.1",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:1344: Failed to failed to scroll to visible (by AX action) Button, {{300.7, 1121.0}, {99.0, 54.0}}, identifier: 'Search', label: 'search', Disabled, error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351. (Underlying Error: Error kAXErrorCannotComplete performing AXAction kAXScrollToVisibleAction on element AX element pid: 17019, elementOrHash.elementID: 4691315600.351)",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "32s",
+                  "durationInSeconds" : 32.46695899963379,
+                  "name" : "test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode()",
+                  "nodeIdentifier" : "OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "OrcaUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "OrcaUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "Orca",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}

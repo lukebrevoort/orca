@@ -1,0 +1,33 @@
+{
+  "purpose": "Same immutable cache, paired control versus unique-key stale refresh; not candidate speedup",
+  "runs": [
+    {
+      "index": 1,
+      "mode": "control",
+      "exit": 0,
+      "elapsedSeconds": 18.861539335999993
+    },
+    {
+      "index": 2,
+      "mode": "stale",
+      "exit": 0,
+      "elapsedSeconds": 12.464595459999998
+    },
+    {
+      "index": 3,
+      "mode": "stale",
+      "exit": 0,
+      "elapsedSeconds": 17.77649030500001
+    },
+    {
+      "index": 4,
+      "mode": "control",
+      "exit": 0,
+      "elapsedSeconds": 17.026120934000005
+    }
+  ],
+  "cpus": 2,
+  "memory": "512m",
+  "network": "none",
+  "timeoutSeconds": 30
+}

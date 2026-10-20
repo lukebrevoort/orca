@@ -1,0 +1,15 @@
+bun test v1.3.14 (0d9b296a)
+
+thread-detail-cache.test.ts:
+(pass) recent thread detail cache > prioritizes the 30 newest unique conversations [2.98ms]
+(pass) recent thread detail cache > deduplicates in-flight reads and serves the resolved detail from memory [0.52ms]
+(pass) recent thread detail cache > keeps only the hottest configured details [0.49ms]
+(pass) recent thread detail cache > invalidation supersedes an in-flight prefetch and blocks its completion from repopulating the cache [0.61ms]
+(pass) recent thread detail cache > consecutive mailbox versions each supersede the older pending read [0.28ms]
+(pass) recent thread detail cache > mailbox-version changes and explicit staleness both bypass freshness [0.28ms]
+(pass) recent thread detail cache > send and routing refresh generations keep the visible detail but force an authoritative read [0.30ms]
+
+ 7 pass
+ 0 fail
+ 27 expect() calls
+Ran 7 tests across 1 file. [20.00ms]

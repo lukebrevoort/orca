@@ -1,0 +1,245 @@
+Command line invocation:
+    /Users/luke/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/luke/Documents/Codex/2026-10-16/task/ImageDerivedData/Build/Products/Orca_PR260_final-jordan-light.xctestrun -destination "platform=iOS Simulator,id=5942A64B-52E7-4BE4-BBA5-1FB72DA12EF0" -parallel-testing-enabled NO -resultBundlePath /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-jordan-light/results/Orca.xcresult "-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode"
+
+2026-10-19 15:20:19.517 xcodebuild[17674:3958577] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-jordan-light/results/Orca.xcresult
+
+2026-10-19 15:20:19.527 xcodebuild[17674:3958577] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:20:21.365 xcodebuild[17674:3958577] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-10-19 15:20:26.806107-0600 OrcaUITests-Runner[17689:3958933] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-10-19 15:20:28.300.
+Test Suite 'OrcaUITests.xctest' started at 2026-10-19 15:20:28.302.
+Test Suite 'OrcaUITests' started at 2026-10-19 15:20:28.302.
+Test Case '-[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode]' started.
+    t =     0.00s Start Test at 2026-10-19 15:20:28.304
+    t =     0.07s Set Up
+    t =     0.08s Open com.orca.mail
+    t =     0.08s     Launch com.orca.mail
+2026-10-19 15:20:28.801 xcodebuild[17674:3958577] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-19 15:20:28.801 xcodebuild[17674:3958577] [MT] IDELaunchParametersSnapshot: no debugger version
+objc[17689]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10745c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1068b0398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =     2.84s         Setting up automation session
+    t =     5.61s         Wait for com.orca.mail to idle
+    t =     7.89s Waiting 20.0s for "Inbox" NavigationBar to exist
+    t =     8.96s     Checking `Expect predicate `existsNoRetry == 1` for object "Inbox" NavigationBar`
+    t =     8.96s         Checking existence of `"Inbox" NavigationBar`
+    t =     9.27s Waiting 20.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    10.34s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    10.34s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    10.41s Checking existence of `"inbox.message.ios-fixture-message-2" Any`
+    t =    10.48s Checking existence of `"inbox.message.ios-fixture-message-2" Any`
+    t =    10.55s Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    10.62s Find the "Inbox" Button
+    t =    10.84s Added attachment named '01-light-inbox'
+    t =    10.84s Find the "inbox.message.ios-fixture-message-1" Any
+    t =    10.92s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    11.02s Waiting 10.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    12.09s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    12.09s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    12.16s Find the "inbox.message.ios-fixture-message-1" Any
+    t =    12.23s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    12.32s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    12.41s Find the "inbox.message.ios-fixture-message-1" Button
+INBOX_NAVIGATION_TARGET row=inbox.message.ios-fixture-message-1 type=9 frame=(0.0, 408.0, 402.0, 149.0) hittable=true enabled=true
+    t =    12.49s Tap "inbox.message.ios-fixture-message-1" Button
+    t =    12.49s     Wait for com.orca.mail to idle
+    t =    12.49s     Find the "inbox.message.ios-fixture-message-1" Button
+    t =    12.58s     Check for interrupting elements affecting "inbox.message.ios-fixture-message-1" Button
+    t =    12.67s     Synthesize event
+    t =    12.98s     Wait for com.orca.mail to idle
+    t =    14.18s Waiting 10.0s for "Conversation" NavigationBar to exist
+    t =    15.26s     Checking `Expect predicate `existsNoRetry == 1` for object "Conversation" NavigationBar`
+    t =    15.26s         Checking existence of `"Conversation" NavigationBar`
+INBOX_NAVIGATION_TIMING row=inbox.message.ios-fixture-message-1 tapSeconds=1.6972772083245218 navigationWaitSeconds=1.145735958358273 opened=true
+    t =    15.33s Waiting 10.0s for "A quieter kind of inbox" StaticText to exist
+    t =    16.40s     Checking `Expect predicate `existsNoRetry == 1` for object "A quieter kind of inbox" StaticText`
+    t =    16.40s         Checking existence of `"A quieter kind of inbox" StaticText`
+    t =    16.44s Waiting 10.0s for "Maya Chen" StaticText to exist
+    t =    17.52s     Checking `Expect predicate `existsNoRetry == 1` for object "Maya Chen" StaticText`
+    t =    17.52s         Checking existence of `"Maya Chen" StaticText`
+    t =    17.55s Waiting 10.0s for StaticText (First Match) to exist
+    t =    18.63s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    18.63s         Checking existence of `StaticText (First Match)`
+    t =    18.79s Added attachment named '02-light-conversation'
+    t =    18.79s Waiting 5.0s for Button (First Match) to exist
+    t =    19.86s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    19.86s         Checking existence of `Button (First Match)`
+    t =    19.89s Tap Button (First Match)
+    t =    19.89s     Wait for com.orca.mail to idle
+    t =    19.89s     Find the Button (First Match)
+    t =    19.92s     Check for interrupting elements affecting "BackButton" Button
+    t =    19.95s     Synthesize event
+    t =    20.26s     Wait for com.orca.mail to idle
+    t =    21.00s Checking existence of `"inbox.search" SearchField`
+    t =    21.11s Waiting 10.0s for "Search mail" SearchField to exist
+    t =    22.18s     Checking `Expect predicate `existsNoRetry == 1` for object "Search mail" SearchField`
+    t =    22.18s         Checking existence of `"Search mail" SearchField`
+    t =    22.25s Tap "Search mail" SearchField
+    t =    22.25s     Wait for com.orca.mail to idle
+    t =    22.25s     Find the "Search mail" SearchField
+    t =    22.32s     Check for interrupting elements affecting "Search mail" SearchField
+    t =    22.39s     Synthesize event
+    t =    22.69s     Wait for com.orca.mail to idle
+    t =    23.41s Type 'Jordan' into "Search mail" SearchField
+    t =    23.41s     Wait for com.orca.mail to idle
+    t =    23.52s     Find the "Search mail" SearchField
+    t =    23.75s     Check for interrupting elements affecting "Search mail" SearchField
+    t =    23.93s     Synthesize event
+    t =    24.26s     Wait for com.orca.mail to idle
+    t =    24.60s Find the "Search mail" SearchField
+[search-fixture] submitted-value=Optional(Jordan)
+    t =    24.85s Find the "Search mail" SearchField
+    t =    25.06s Tap "Search" Button
+    t =    25.07s     Wait for com.orca.mail to idle
+    t =    25.07s     Find the "Search" Button
+    t =    25.24s     Check for interrupting elements affecting "Search" Button
+    t =    25.40s     Synthesize event
+    t =    25.71s     Wait for com.orca.mail to idle
+    t =    26.11s Waiting 10.0s for "inbox.message.ios-fixture-message-2" Any to exist
+    t =    27.18s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-2" Any`
+    t =    27.19s         Checking existence of `"inbox.message.ios-fixture-message-2" Any`
+    t =    27.25s Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    27.44s Added attachment named '03-light-search'
+    t =    27.44s Checking existence of `"inbox.search" SearchField`
+    t =    27.49s Waiting 5.0s for "Search mail" SearchField to exist
+    t =    28.55s     Checking `Expect predicate `existsNoRetry == 1` for object "Search mail" SearchField`
+    t =    28.55s         Checking existence of `"Search mail" SearchField`
+    t =    28.61s Tap "Clear text" Button
+    t =    28.61s     Wait for com.orca.mail to idle
+    t =    28.62s     Find the "Clear text" Button
+    t =    28.69s     Check for interrupting elements affecting "Clear text" Button
+    t =    28.76s     Synthesize event
+    t =    29.08s     Wait for com.orca.mail to idle
+    t =    29.16s Checking existence of `"Clear text" Button`
+    t =    29.33s Waiting 10.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    30.38s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    30.38s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    30.47s Waiting 10.0s for "inbox.message.ios-fixture-message-1" Any to exist
+    t =    31.54s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.message.ios-fixture-message-1" Any`
+    t =    31.54s         Checking existence of `"inbox.message.ios-fixture-message-1" Any`
+    t =    31.63s Find the "inbox.message.ios-fixture-message-1" Any
+    t =    31.72s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    31.84s Find the "inbox.message.ios-fixture-message-1" Button
+    t =    31.98s Find the "inbox.message.ios-fixture-message-1" Button
+INBOX_NAVIGATION_TARGET row=inbox.message.ios-fixture-message-1 type=9 frame=(0.0, 354.0, 402.0, 149.0) hittable=true enabled=true
+    t =    32.10s Tap "inbox.message.ios-fixture-message-1" Button
+    t =    32.10s     Wait for com.orca.mail to idle
+    t =    32.10s     Find the "inbox.message.ios-fixture-message-1" Button
+    t =    32.22s     Check for interrupting elements affecting "inbox.message.ios-fixture-message-1" Button
+    t =    32.32s     Synthesize event
+    t =    32.63s     Wait for com.orca.mail to idle
+    t =    33.76s Waiting 10.0s for "Conversation" NavigationBar to exist
+    t =    34.83s     Checking `Expect predicate `existsNoRetry == 1` for object "Conversation" NavigationBar`
+    t =    34.84s         Checking existence of `"Conversation" NavigationBar`
+INBOX_NAVIGATION_TIMING row=inbox.message.ios-fixture-message-1 tapSeconds=1.6700736666680314 navigationWaitSeconds=1.1547131666447967 opened=true
+    t =    34.92s Waiting 10.0s for "A quieter kind of inbox" StaticText to exist
+    t =    35.98s     Checking `Expect predicate `existsNoRetry == 1` for object "A quieter kind of inbox" StaticText`
+    t =    35.98s         Checking existence of `"A quieter kind of inbox" StaticText`
+    t =    36.04s Waiting 10.0s for "Reply" Button to exist
+    t =    37.12s     Checking `Expect predicate `existsNoRetry == 1` for object "Reply" Button`
+    t =    37.12s         Checking existence of `"Reply" Button`
+    t =    37.17s Tap "Reply" Button
+    t =    37.17s     Wait for com.orca.mail to idle
+    t =    37.17s     Find the "Reply" Button
+    t =    37.23s     Check for interrupting elements affecting "Reply" Button
+    t =    37.28s     Synthesize event
+    t =    37.59s     Wait for com.orca.mail to idle
+    t =    37.73s Waiting 10.0s for "compose.body" TextView to exist
+    t =    38.81s     Checking `Expect predicate `existsNoRetry == 1` for object "compose.body" TextView`
+    t =    38.81s         Checking existence of `"compose.body" TextView`
+    t =    38.94s Tap "compose.body" TextView
+    t =    38.94s     Wait for com.orca.mail to idle
+    t =    38.95s     Find the "compose.body" TextView
+    t =    39.03s     Check for interrupting elements affecting "compose.body" TextView
+    t =    39.11s     Synthesize event
+    t =    39.44s     Wait for com.orca.mail to idle
+    t =    39.70s Type 'Thank you, Maya. T...' into "compose.body" TextView
+    t =    39.71s     Wait for com.orca.mail to idle
+    t =    39.72s     Find the "compose.body" TextView
+    t =    39.85s     Check for interrupting elements affecting "compose.body" TextView
+    t =    39.96s     Synthesize event
+    t =    41.24s     Wait for com.orca.mail to idle
+    t =    42.25s Waiting 5.0s for "compose.save-status" Any to exist
+    t =    43.27s     Checking `Expect predicate `existsNoRetry == 1` for object "compose.save-status" Any`
+    t =    43.27s         Checking existence of `"compose.save-status" Any`
+    t =    43.46s Added attachment named '04-light-reply-saved'
+    t =    43.46s Waiting 5.0s for Button (First Match) to exist
+    t =    44.52s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    44.53s         Checking existence of `Button (First Match)`
+    t =    44.58s Tap Button (First Match)
+    t =    44.58s     Wait for com.orca.mail to idle
+    t =    44.59s     Find the Button (First Match)
+    t =    44.70s     Check for interrupting elements affecting "BackButton" Button
+    t =    44.76s     Synthesize event
+    t =    45.10s     Wait for com.orca.mail to idle
+    t =    46.06s Waiting 5.0s for Button (First Match) to exist
+    t =    47.11s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    47.11s         Checking existence of `Button (First Match)`
+    t =    47.16s Tap Button (First Match)
+    t =    47.16s     Wait for com.orca.mail to idle
+    t =    47.17s     Find the Button (First Match)
+    t =    47.24s     Check for interrupting elements affecting "BackButton" Button
+    t =    47.33s     Synthesize event
+    t =    47.67s     Wait for com.orca.mail to idle
+    t =    48.35s Tap "Drafts" Button
+    t =    48.35s     Wait for com.orca.mail to idle
+    t =    48.36s     Find the "Drafts" Button
+    t =    48.49s     Check for interrupting elements affecting "doc.text" Button
+    t =    48.59s     Synthesize event
+    t =    48.90s     Wait for com.orca.mail to idle
+    t =    50.64s Waiting 10.0s for Any (First Match) to exist
+    t =    51.69s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =    51.69s         Checking existence of `Any (First Match)`
+    t =    51.76s Tap Any (First Match)
+    t =    51.76s     Wait for com.orca.mail to idle
+    t =    51.77s     Find the Any (First Match)
+    t =    51.83s     Check for interrupting elements affecting "draft.E5F0A87B-62F1-4FA7-8949-3BE5841CA331" Button
+    t =    51.93s     Synthesize event
+    t =    52.24s     Wait for com.orca.mail to idle
+    t =    53.23s Waiting 5.0s for "Reply" NavigationBar to exist
+    t =    54.29s     Checking `Expect predicate `existsNoRetry == 1` for object "Reply" NavigationBar`
+    t =    54.29s         Checking existence of `"Reply" NavigationBar`
+    t =    54.36s Waiting 10.0s for "compose.body" TextView to exist
+    t =    55.42s     Checking `Expect predicate `existsNoRetry == 1` for object "compose.body" TextView`
+    t =    55.42s         Checking existence of `"compose.body" TextView`
+    t =    55.46s Find the "compose.body" TextView
+    t =    55.50s Waiting 5.0s for "compose.to" TextField to exist
+    t =    56.54s     Checking `Expect predicate `existsNoRetry == 1` for object "compose.to" TextField`
+    t =    56.54s         Checking existence of `"compose.to" TextField`
+    t =    56.59s Find the "compose.to" TextField
+    t =    56.81s Added attachment named '05-light-reply-reopened'
+    t =    56.81s Find the "Send" Button
+    t =    56.86s Tap "compose.send" Button
+    t =    56.86s     Wait for com.orca.mail to idle
+    t =    56.87s     Find the "compose.send" Button
+    t =    56.92s     Check for interrupting elements affecting "compose.send" Button
+    t =    56.98s     Synthesize event
+    t =    57.31s     Wait for com.orca.mail to idle
+    t =    57.32s Waiting 15.0s for "Drafts" NavigationBar to exist
+    t =    58.37s     Checking `Expect predicate `existsNoRetry == 1` for object "Drafts" NavigationBar`
+    t =    58.38s         Checking existence of `"Drafts" NavigationBar`
+    t =    58.47s Checking existence of `"draft.E5F0A87B-62F1-4FA7-8949-3BE5841CA331" Button`
+    t =    58.92s Added attachment named '06-light-sent'
+    t =    58.93s Tear Down
+Test Case '-[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode]' passed (59.386 seconds).
+Test Suite 'OrcaUITests' passed at 2026-10-19 15:21:27.691.
+	 Executed 1 test, with 0 failures (0 unexpected) in 59.386 (59.389) seconds
+Test Suite 'OrcaUITests.xctest' passed at 2026-10-19 15:21:27.695.
+	 Executed 1 test, with 0 failures (0 unexpected) in 59.386 (59.394) seconds
+Test Suite 'Selected tests' passed at 2026-10-19 15:21:27.696.
+	 Executed 1 test, with 0 failures (0 unexpected) in 59.386 (59.396) seconds
+2026-10-19 15:21:28.205 xcodebuild[17674:3958577] [MT] IDETestOperationsObserverDebug: 66.835 elapsed -- Testing started completed.
+2026-10-19 15:21:28.205 xcodebuild[17674:3958577] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-19 15:21:28.205 xcodebuild[17674:3958577] [MT] IDETestOperationsObserverDebug: 66.835 sec, +66.835 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-jordan-light/results/Orca.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 51FABAFA-C1B0-460B-B4CA-53FA5878FE77 (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/luke/Documents/Codex/2026-10-16/task/homebase-evidence/pr260-repro/final-jordan-light/final-screen.png

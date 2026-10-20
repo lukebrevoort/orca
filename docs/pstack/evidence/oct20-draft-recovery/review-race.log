@@ -1,0 +1,28 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/oct20-review-race.test.ts:
+{"updates":["deleted-copy","deleted-copy"],"creates":["replacement-1","replacement-2"],"finalProviderDraftId":"replacement-2","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+71 |     console.log(JSON.stringify({ updates, creates, finalProviderDraftId: final.providerDraftId,
+72 |       finalRevision: final.revision, finalSubject: final.subject, finalSyncStatus: final.providerSyncStatus }));
+73 |     assert.equal(final.providerSyncStatus, "synced", "newest revision completes provider synchronization");
+74 |     assert.equal(final.revision, 1);
+75 |     assert.equal(final.subject, "Revision one");
+76 |     assert.equal(creates.length, 1, "recovery must not orphan a provider draft when writing advances");
+                ^
+AssertionError: recovery must not orphan a provider draft when writing advances
+
+2 !== 1
+
+ generatedMessage: false,
+     actual: 2,
+   expected: 1,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/orca-oct20-sweep/apps/api/src/oct20-review-race.test.ts:76:12
+      at processTicksAndRejections (native:7:39)
+(fail) editing during missing-copy recovery must reuse the replacement provider draft [216.02ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [704.00ms]

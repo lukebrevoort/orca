@@ -85,3 +85,10 @@ extension APIClient {
     func registerDevice(installationId: String, token: String, environment: String, selection: NotificationSelection) async throws -> PushRegistration { struct Body: Encodable { var token: String; var environment: String; var notificationSelection: NotificationSelection }; return try await request("v1/mobile/devices/\(installationId)", method: "PUT", body: Body(token: token, environment: environment, notificationSelection: selection)) }
     func unregisterDevice(installationId: String) async throws { let _: EmptyResponse = try await request("v1/mobile/devices/\(installationId)", method: "DELETE") }
 }
+
+struct LoadedMessageImages: Decodable { var bodyHtml: String; var sourceHash: String; var loaded: Int; var blocked: Int }
+extension APIClient {
+    func loadMessageImages(_ id: String, accountId: String) async throws -> LoadedMessageImages {
+        try await request("v1/messages", pathSuffix: [id, "images"], method: "POST", query: [.init(name: "accountId", value: accountId)])
+    }
+}

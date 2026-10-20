@@ -1,0 +1,69 @@
+iOS fixture API: http://127.0.0.1:58068
+Synthetic connection details: /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/baseline-images-light/orca-ios-fixture-RoSGzf/connection.json
+Only fixture data is used. Provider send and draft operations are simulated.
+[counter-heartbeat] epoch_ms=1792444644761
+[counter-heartbeat] epoch_ms=1792444645763
+[counter-heartbeat] epoch_ms=1792444646765
+[counter-heartbeat] epoch_ms=1792444647768
+[counter-heartbeat] epoch_ms=1792444648771
+[counter-heartbeat] epoch_ms=1792444649775
+[counter-heartbeat] epoch_ms=1792444650783
+[counter-heartbeat] epoch_ms=1792444651786
+[counter-heartbeat] epoch_ms=1792444652789
+[counter-heartbeat] epoch_ms=1792444653791
+[counter-heartbeat] epoch_ms=1792444654795
+[counter-heartbeat] epoch_ms=1792444655798
+[counter-server] epoch_ms=1792444656687 id=4D1910FA-E39C-4D01-A008-98F8BCE33CAC event=received
+[counter-server] epoch_ms=1792444656691 id=4D1910FA-E39C-4D01-A008-98F8BCE33CAC event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792444656801
+[counter-heartbeat] epoch_ms=1792444657819
+[counter-heartbeat] epoch_ms=1792444658823
+[counter-heartbeat] epoch_ms=1792444659828
+[counter-heartbeat] epoch_ms=1792444660832
+[counter-heartbeat] epoch_ms=1792444661836
+[counter-heartbeat] epoch_ms=1792444662840
+[counter-heartbeat] epoch_ms=1792444663844
+[counter-heartbeat] epoch_ms=1792444664846
+[counter-heartbeat] epoch_ms=1792444665971
+[counter-heartbeat] epoch_ms=1792444666975
+[counter-heartbeat] epoch_ms=1792444667975
+[counter-heartbeat] epoch_ms=1792444668978
+[counter-heartbeat] epoch_ms=1792444669982
+[counter-heartbeat] epoch_ms=1792444671023
+[counter-heartbeat] epoch_ms=1792444672026
+[counter-heartbeat] epoch_ms=1792444673026
+[counter-server] epoch_ms=1792444673220 id=27101BF5-0212-4D51-93E6-1B32E08D623E event=received
+[counter-server] epoch_ms=1792444673221 id=27101BF5-0212-4D51-93E6-1B32E08D623E event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792444674028
+[counter-heartbeat] epoch_ms=1792444675029
+[counter-heartbeat] epoch_ms=1792444676032
+[counter-server] epoch_ms=1792444676124 id=F681A7B4-3080-47B4-9631-7A3BB546F71B event=received
+[counter-server] epoch_ms=1792444676124 id=F681A7B4-3080-47B4-9631-7A3BB546F71B event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792444677038
+[counter-heartbeat] epoch_ms=1792444678040
+[counter-heartbeat] epoch_ms=1792444679042
+[counter-heartbeat] epoch_ms=1792444680044
+[counter-heartbeat] epoch_ms=1792444681045
+[counter-server] epoch_ms=1792444681604 id=7506CF3C-5233-428D-A1E6-6B1D4B4F1A09 event=received
+[counter-server] epoch_ms=1792444681604 id=7506CF3C-5233-428D-A1E6-6B1D4B4F1A09 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792444682048
+[counter-server] epoch_ms=1792444682513 id=312D7924-0A4C-4782-B730-E69D76DE3052 event=received
+[counter-server] epoch_ms=1792444682513 id=312D7924-0A4C-4782-B730-E69D76DE3052 event=response_ready status=200
+[counter-server] epoch_ms=1792444682516 id=9D22EA2B-DF61-4F98-B292-B128487A5D72 event=received
+[counter-server] epoch_ms=1792444682517 id=9D22EA2B-DF61-4F98-B292-B128487A5D72 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792444683048
+[counter-heartbeat] epoch_ms=1792444684054
+[counter-heartbeat] epoch_ms=1792444685055
+[counter-heartbeat] epoch_ms=1792444686058
+[counter-heartbeat] epoch_ms=1792444687059
+[counter-heartbeat] epoch_ms=1792444688062
+[counter-heartbeat] epoch_ms=1792444689062
+[counter-heartbeat] epoch_ms=1792444690063
+[counter-heartbeat] epoch_ms=1792444691065
+[counter-heartbeat] epoch_ms=1792444692067
+[counter-heartbeat] epoch_ms=1792444693068
+[counter-heartbeat] epoch_ms=1792444694071
+[counter-heartbeat] epoch_ms=1792444695073
+[counter-heartbeat] epoch_ms=1792444696076
+[counter-heartbeat] epoch_ms=1792444697079
+[counter-heartbeat] epoch_ms=1792444698083

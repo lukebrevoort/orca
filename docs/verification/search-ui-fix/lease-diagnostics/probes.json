@@ -1,0 +1,32 @@
+[
+  {
+    "case": "entry",
+    "exit": 1,
+    "wall": 5.505373374999181,
+    "expectedStage": "waiting-for-tool-entry"
+  },
+  {
+    "case": "channel",
+    "exit": 1,
+    "wall": 5.393312402997253,
+    "expectedStage": "waiting-for-message-channel"
+  },
+  {
+    "case": "second",
+    "exit": 1,
+    "wall": 5.449106924999796,
+    "expectedStage": "waiting-for-second-exchange"
+  },
+  {
+    "case": "cleanup",
+    "exit": 1,
+    "wall": 5.862066343001061,
+    "expectedStage": "waiting-for-first-exchange-cleanup"
+  },
+  {
+    "case": "abort-assertion",
+    "exit": 1,
+    "wall": 0.9602694889981649,
+    "expectedStage": "checking-abort-settlement"
+  }
+]

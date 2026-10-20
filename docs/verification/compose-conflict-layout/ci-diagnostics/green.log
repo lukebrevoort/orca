@@ -1,0 +1,9 @@
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.081s
+
+OK
+Sanitized failure context (bounded; full log remains in artifact):
+[fixture failure] No failure marker found; inspect the sanitized log tail/artifact.
+Synthetic checks exit code: 1; sanitized evidence: /tmp/tmpdtx9t6t7/public
+Synthetic checks exit code: 0; sanitized evidence: /tmp/tmpssfsp3el/public

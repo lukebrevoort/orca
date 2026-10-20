@@ -1,0 +1,19 @@
+# Explicit iOS message image loading
+
+- Intent/playbook: feature; let a person load remote email images explicitly for the current message while retaining default blocking and WebView network isolation.
+- Acceptance: no image request on open; explicit warning/action; authenticated account-scoped resolution; HTTPS public-address pinned connections; bounded PNG/JPEG payloads/dimensions; redirects/private addresses/obvious pixels remain blocked; partial failure usable; no remembered consent or cached resolved HTML; stale responses discarded; synthetic native before/after evidence in light/dark.
+- Owner: Homebase execution owner; independent reviewer `/root/verification_review` (model identity not exposed).
+- Status: **running**.
+- Base: `5baf7f3ea9e208001c607a7bc0f5c418fb056d58`; branch `feat/ios-private-image-loading`.
+- Scope: API image route/downloader/sanitized rendering, shared availability flag, iOS explicit image action and regression tests. PR253 diagnostics, PR252 web reader isolation and PR235 search excluded.
+- Before: API sanitizer removes every image including CID; iOS CSP permits local data/CID but forbids remote resources. Private fixture separately removed source resources; private bridge is demo-only and excluded from this PR.
+- Privacy: all committed fixtures synthetic; private mail/assets/mappings outside Git. Explicit loading may reveal opening to the sender despite pixel filtering. No persistent sender policy; no arbitrary remote WKWebView access. PNG/JPEG only initially; CID/GIF/WebP remain blocked.
+- Final executable commit: `edcc10f0d9ff3d5566c26ed4daacc5bd75fa8d2a`; subsequent commit contains documentation and synthetic screenshots only.
+- Verification: API image/provider HTML tests 20 passed / 122 assertions at `2ef0240` (same API code); final three-workspace typecheck passed; Xcode 26.4.1 build-for-testing passed; image consent regression passed light v4 and dark v5 on iOS 26.4.1, one test each, zero failures/skips. Tests use a local synthetic downloader, never live image hosts.
+- Assertions: no request on open/reopen; one request after consent; loaded raster visible; second delayed request confirmed started; loading button disabled; navigation/reopen discards previous response. Existing accessibility reader method also passed in v3 before a later method timed out.
+- Independent review: `/root/verification_review` reviewed original base through final executable head. Aggregate transfer-budget finding fixed, DNS cancellation improved, delayed-request precondition strengthened; no remaining blocking source finding. Review is independent-agent review, not model-diversity evidence.
+- UI evidence: [synthetic screenshots](../evidence/ios-images/README.md), visually inspected in both themes. No private mail or approved private image bundle is committed.
+- Retained failure: v3 image method exceeded 180 seconds while inspecting loaded status and was interrupted during stalled diagnostics. That binary was `2ef0240`; it never reached delayed-response assertions. Dark v4 reported a pass but omitted the new loading capture, so dark v5 was rerun and confirms it. Keep these distinct from final passing lanes.
+- Hosted checks: pending draft PR publication; next action is follow automatically triggered runs to terminal results or concrete blockers. No duplicate workflow dispatch.
+- Limits: PNG/JPEG signature/header-dimension checks are not comprehensive decoder validation. Sender tracking remains possible after explicit consent. CID/GIF/WebP unsupported. Full native suite is not green: baseline Focus-contract cases 10/11 and refresh-idle case13 remain independently owned; this patch does not fix them. Physical device/live sender verification was not run.
+- Cleanup: fixture processes stop after each lane; retained sanitized local evidence and private xcresults remain outside Git. No merge/release/deployment.

@@ -1,0 +1,33 @@
+$ bun --filter '*' build
+@orca/shared build: Exited with code 0
+@orca/api build: Exited with code 0
+@orca/web build: vite v7.3.6 building client environment for production...
+@orca/web build: transforming...
+@orca/web build: ✓ 192 modules transformed.
+@orca/web build: rendering chunks...
+@orca/web build: computing gzip size...
+@orca/web build: dist/index.html                                1.78 kB │ gzip:   0.76 kB
+@orca/web build: dist/assets/organization-views-HiJWHDLt.css    4.69 kB │ gzip:   1.19 kB
+@orca/web build: dist/assets/index-BlR92KbC.css               408.51 kB │ gzip:  61.90 kB
+@orca/web build: dist/assets/organization-views-C_-TlV6P.js   121.70 kB │ gzip:  35.07 kB
+@orca/web build: dist/assets/react-vendor-CQc3Zyh3.js         192.36 kB │ gzip:  60.30 kB
+@orca/web build: dist/assets/mail-contracts-BJO4ACGC.js       205.77 kB │ gzip:  50.98 kB
+@orca/web build: dist/assets/index-rhXrsNM4.js                477.84 kB │ gzip: 136.32 kB
+@orca/web build: ✓ built in 2.32s
+@orca/web build: Exited with code 0
+/tmp/orca-conflict-0szd0hq8/raw/orca-compose-fixture-9u30WP/connection.json
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Formatting toolbar overlaps draft conflict notice
+    at file:///workspace/scratch/bug-sweep-20261019/visual-followup/probe.mjs:103:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

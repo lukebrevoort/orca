@@ -3,7 +3,7 @@
  * or calls a mail provider. Stop with Ctrl-C; its temporary mailbox is removed.
  * Run: bun apps/api/scripts/mobile-fixture.ts
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -11,7 +11,14 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import type { ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
+import { fixtureCounterResponse } from "./fixture-counter.ts";
 
+const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI_TEST_SCOPE === "images";
+// A timestamp-only heartbeat distinguishes a live event loop from a stalled or
+// stopped fixture during a native request timeout. No mailbox data is emitted.
+if (imageFixture) setInterval(() => console.log(`[counter-heartbeat] epoch_ms=${Date.now()}`), 1000).unref();
+let imageDownloads = 0;
+let imageDelayMilliseconds = 0;
 const readOnly = process.argv.includes("--read-only");
 const directory = mkdtempSync(join(tmpdir(), "orca-ios-fixture-"));
 process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
@@ -84,6 +91,7 @@ for (const [name, threadId] of [["Hub notifications", "ios-fixture-thread-2"], [
   } });
 }
 const credential = createMobileSession(db, userId);
+if (imageFixture) db.update(emails).set({ bodyHtml: '<p>A synthetic image stays blocked until you choose to load it.</p><img alt="Synthetic landscape" src="https://images.example.invalid/landscape.png"><p>End of image example.</p>' }).where(eq(emails.id, "ios-fixture-message-1")).run();
 sqlite.close();
 
 const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
@@ -91,6 +99,13 @@ let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
 const app = createApp({
+  downloadMessageImage: async (url, signal) => {
+    if (!imageFixture || url.href !== "https://images.example.invalid/landscape.png") throw new Error("Fixture image unavailable");
+    imageDownloads++;
+    if (imageDelayMilliseconds) await new Promise(resolve => setTimeout(resolve, imageDelayMilliseconds));
+    signal.throwIfAborted();
+    return readFileSync(resolve(import.meta.dir, "../src/mail/images/fixtures/landscape.png"));
+  },
   dbFactory: () => createDatabaseClient(),
   providerRegistry: new ProviderRegistry([{
     ...gmailProvider,
@@ -134,6 +149,15 @@ let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
 // Keep the connection alive until each gate’s explicit safety release.
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname === "/__fixture/image-delay" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    imageDelayMilliseconds = 4000;
+    return new Response(null, { status: 204 });
+  }
+  if (url.pathname === "/__fixture/image-downloads") {
+    return fixtureCounterResponse(request, credential.accessToken, imageDownloads,
+      imageFixture ? console.log : () => {});
+  }
   if (url.pathname === "/__fixture/reader") {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     if (request.method !== "POST") return new Response(null, { status: 405 });
@@ -335,9 +359,25 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
     return response;
   }
+  if (request.method === "GET" && ["/v1/inbox", "/v1/destinations"].includes(url.pathname)) {
+    const trace = crypto.randomUUID();
+    // Only the synthetic search inputs and result identifiers are emitted.
+    // Never log authorization headers, response bodies or connection metadata.
+    console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "received", epoch_ms: Date.now(), path: url.pathname, query: url.searchParams.get("query")?.slice(0, 200) ?? null, view: url.searchParams.get("view") })}`);
+    const response = await app.fetch(request);
+    let messageIds: string[] | undefined;
+    if (url.pathname === "/v1/inbox" && response.ok) {
+      try {
+        const body = await response.clone().json() as { messages?: Array<{ id?: string }> };
+        messageIds = body.messages?.map(message => message.id).filter((id): id is string => typeof id === "string");
+      } catch { /* Diagnostics must preserve the original response on malformed JSON. */ }
+    }
+    console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "response_ready", epoch_ms: Date.now(), path: url.pathname, status: response.status, messageIds })}`);
+    return response;
+  }
   return app.fetch(request);
 } });
-const metadata = { readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
+const metadata = { imageFixture, readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
 const metadataPath = join(directory, "connection.json");
 writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
 console.log(`iOS fixture API: ${metadata.apiURL}`);

@@ -1,0 +1,4 @@
+tested_sha=3918aa01b770a79ece3e1511d2538bd0a9ee6c66
+proxy_enabled=True
+selected_scope=compose
+theme=light

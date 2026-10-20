@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/agents/g2-request-guards.test.ts:
+(pass) BRE-319 MCP exhaustion guards > rejects declared and streamed oversized bodies before dispatch with a typed 413 [12.02ms]
+(pass) BRE-319 MCP exhaustion guards > preserves an accepted body byte-for-byte for the authenticated MCP handler [2.26ms]
+(pass) BRE-319 MCP exhaustion guards > enforces fair connection/workspace cost and in-flight bounds with deterministic recovery [0.70ms]
+(pass) BRE-319 MCP exhaustion guards > releases an in-flight lease after a rate-window rollover without poisoning later windows [0.13ms]
+(pass) BRE-319 MCP exhaustion guards > evicts expired connection and Workspace keys within a bounded sweep while preserving an old active lease [3.69ms]
+mcp-lease-abort {"stage":"starting-first-exchange","searchCalls":0}
+mcp-lease-abort {"stage":"waiting-for-tool-entry","searchCalls":0}
+mcp-lease-abort {"stage":"tool-entered","searchCalls":1}
+mcp-lease-abort {"stage":"aborting-first-exchange","searchCalls":1}
+mcp-lease-abort {"stage":"waiting-for-message-channel","searchCalls":1}
+mcp-lease-abort {"stage":"first-exchange-resolved","searchCalls":1,"status":499}
+mcp-lease-abort {"stage":"checking-abort-settlement","searchCalls":1,"firstSettled":true}
+mcp-lease-abort {"stage":"waiting-for-second-exchange","searchCalls":1}
+mcp-lease-abort {"stage":"tool-entered","searchCalls":2}
+mcp-lease-abort {"stage":"checking-second-exchange","searchCalls":2,"status":200}
+mcp-lease-abort {"stage":"releasing-deferred-work","searchCalls":2}
+mcp-lease-abort {"stage":"waiting-for-first-exchange-cleanup","searchCalls":2}
+mcp-lease-abort {"stage":"deferred-work-released","searchCalls":2}
+mcp-lease-abort {"stage":"cleanup-complete","searchCalls":2}
+(pass) BRE-319 MCP exhaustion guards > releases an admitted MCP lease when the live HTTP exchange is aborted inside a deferred tool [114.76ms]
+(pass) BRE-319 MCP exhaustion guards > exports every stable BRE-319 denial and exhaustion error code [0.27ms]
+(pass) BRE-319 MCP exhaustion guards > runs payload admission before bearer verification and rate admission before MCP dispatch [75.13ms]
+(pass) BRE-319 MCP exhaustion guards > rejects JSON-RPC batches before authorization or partial tool execution [0.52ms]
+
+ 9 pass
+ 0 fail
+Ran 9 tests across 1 file. [749.00ms]

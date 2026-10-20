@@ -1,5 +1,15 @@
 # iOS UI failure investigation and patch
 
+## October 20 integration
+
+The diagnostic implementation and its regression tests are already on main via commit `743d8ffbec4e87ce39d9aeefcb6acd7c04ec23d9`, which reused the exact PR #253 files. Main also contains assertion prioritization from `ee0ee866d14d199d0d6986e5c1f8a05649cf55cb` and newer fixture telemetry. The #262 exporter changes are therefore already present in main as well; its native changes remain separate.
+
+Refreshed against main `6fa05f9cd6891a58a986fc922ebc4d94b3ac5efe`, this PR adds only the seven historical task/evidence files. Every pre-existing main blob is preserved; no exporter, test, workflow or application code is replaced. The original logs are unchanged. The sections below describe the October 16 checkpoint, not fresh execution or a fix for the unidentified original UI failure.
+
+Current review/check status is maintained in [PR #253](https://github.com/lukebrevoort/orca/pull/253). #263 merged before this refresh; #253 remains held for parent sequencing. The cloud executor is unavailable during this refresh; repository comparison and integration use GitHub's supported APIs. No local test execution is claimed.
+
+## Historical October 16 checkpoint
+
 - Playbook: bug-fix with runtime-forensics diagnostic prerequisite.
 - Status: running; diagnosis checkpoint before hosted native execution.
 - Base: `5baf7f3ea9e208001c607a7bc0f5c418fb056d58`; isolated branch `fix/ios-fixture-diagnostics`, worktree `/workspace/orca-ios-patch`.

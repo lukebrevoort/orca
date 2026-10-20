@@ -1,0 +1,40 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/global-search-accounts.test.tsx:
+(pass) full account choices survive scoped results in accounts-first response order [120.63ms]
+(pass) full account choices survive scoped results in search-first response order [44.83ms]
+(pass) collection failure does not discard successful full account choices [25.12ms]
+(pass) account failure preserves collections and uses only the latest search fallback [36.95ms]
+(pass) a successful empty full account list is authoritative over scoped metadata [22.83ms]
+(pass) closing and reopening clears old lists and ignores aborted account and collection responses [47.85ms]
+(pass) reopening with failed metadata cannot retain a previous successful full list [40.26ms]
+(pass) late scoped search metadata cannot overwrite the current fallback after account metadata fails [22.79ms]
+(pass) invalid account metadata falls back without discarding valid collections [22.67ms]
+
+apps/web/src/global-search.test.tsx:
+(pass) global mail search location contract > opens from Inbox, Reader, Organization, and Settings with a safe exact source [2.56ms]
+(pass) global mail search location contract > rejects cross-origin return targets and serializes an exact saved scope [4.34ms]
+(pass) global mail search location contract > nests a result Reader in SurfaceHistory and restores the serialized search on Back [4.46ms]
+(pass) global mail search location contract > reopens a saved Inbox scope through the API default mailbox semantics [1.41ms]
+(pass) GlobalMailSearch interaction > hands Search to the common View authoring surface without writing a pin and restores context on cancel [76.63ms]
+(pass) GlobalMailSearch interaction > keeps advanced scope controls collapsed and exposes one accessible close action [20.00ms]
+(pass) GlobalMailSearch interaction > keeps overflowing results in the shrinkable 1024px track when filters expand [44.37ms]
+(pass) GlobalMailSearch interaction > wraps a maximum-length no-result query inside the compact state [33.64ms]
+(pass) GlobalMailSearch interaction > includes the year only when a result is outside the current year [22.12ms]
+(pass) GlobalMailSearch interaction > moves from the query into results with ArrowDown and back with ArrowUp [19.57ms]
+(pass) GlobalMailSearch interaction > typing invalidates the old result generation before the debounced query runs [381.24ms]
+(pass) GlobalMailSearch interaction > pending input survives Mailbox change, late responses and source return [423.84ms]
+(pass) GlobalMailSearch interaction > pending input survives Evidence change, late responses and source return [415.72ms]
+(pass) GlobalMailSearch interaction > pending input survives Account change, late responses and source return [409.96ms]
+(pass) GlobalMailSearch interaction > pending input survives Space change, late responses and source return [412.69ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace new Search or its return snapshot [87.21ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace popstate or its return snapshot [65.15ms]
+(pass) GlobalMailSearch interaction > ignores a late prepared draft when the Search scope changes [51.92ms]
+(pass) GlobalMailSearch interaction > restores a saved Search snapshot, result anchor and scroll after loading [108.65ms]
+(pass) GlobalMailSearch interaction > requests a saved Inbox scope without the unsupported inbox view value [13.47ms]
+(pass) GlobalMailSearch interaction > a zero-result general search enters unsupported review without any persistence [42.60ms]
+
+ 30 pass
+ 0 fail
+ 233 expect() calls
+Ran 30 tests across 2 files. [3.51s]

@@ -1,0 +1,8 @@
+START 1-baseline
+DONE 1-baseline seconds 46.278
+START 2-candidate
+DONE 2-candidate seconds 40.649
+START 3-candidate
+DONE 3-candidate seconds 40.056
+START 4-baseline
+DONE 4-baseline seconds 46.515

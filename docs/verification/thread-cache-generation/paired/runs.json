@@ -1,0 +1,33 @@
+{
+  "purpose": "Immutable main/candidate paired stale refresh; bookkeeping bound only, not latency or heap improvement",
+  "runs": [
+    {
+      "index": 1,
+      "mode": "base",
+      "exit": 0,
+      "elapsedSeconds": 8.496023464000018
+    },
+    {
+      "index": 2,
+      "mode": "head",
+      "exit": 0,
+      "elapsedSeconds": 10.68212501500011
+    },
+    {
+      "index": 3,
+      "mode": "head",
+      "exit": 0,
+      "elapsedSeconds": 13.682999495999866
+    },
+    {
+      "index": 4,
+      "mode": "base",
+      "exit": 0,
+      "elapsedSeconds": 14.77345111600016
+    }
+  ],
+  "cpus": 2,
+  "memory": "512m",
+  "network": "none",
+  "timeoutSeconds": 30
+}

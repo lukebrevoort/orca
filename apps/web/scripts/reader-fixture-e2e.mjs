@@ -12,6 +12,7 @@ import { pathToFileURL } from 'node:url';
 import { profileReaderInteractions } from './reader-interaction-profile.mjs';
 import { checkReaderScroll } from './reader-scroll-regression.mjs';
 import { checkReaderFocus } from './reader-focus-regression.mjs';
+import { checkReaderTouchTargets } from './reader-touch-target-regression.mjs';
 
 assert(process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true', 'Reader browser checks run only in hosted CI; do not run against a local browser');
 const [connectionFile, outputDirectory] = process.argv.slice(2);
@@ -255,6 +256,7 @@ try {
   await browser.close();
   browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
   results.responsiveMatrixBrowser = { mode: 'headless', version: browser.version() };
+  results.readerTouchTargets = await checkReaderTouchTargets({ browser, origin, out, screenshots: results.screenshots });
   results.readerFocus = await checkReaderFocus({ browser, origin, out, screenshots: results.screenshots });
   try { results.readerScroll = await checkReaderScroll({ browser, origin, out, screenshots: results.screenshots }); }
   catch (error) { results.readerScroll = error.readerScrollResult; throw error; }

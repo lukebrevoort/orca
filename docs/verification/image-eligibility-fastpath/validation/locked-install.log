@@ -1,0 +1,8 @@
+bun install v1.3.14 (0d9b296a)
+
++ @types/node@24.13.2
++ axe-core@4.13.0
++ playwright@1.62.1
++ typescript@5.9.3
+
+172 packages installed [8.72s]

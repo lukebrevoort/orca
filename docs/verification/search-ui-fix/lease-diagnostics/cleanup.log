@@ -1,0 +1,23 @@
+bun test v1.3.14 (0d9b296a)
+mcp-lease-abort {"stage":"starting-first-exchange","searchCalls":0}
+mcp-lease-abort {"stage":"waiting-for-tool-entry","searchCalls":0}
+mcp-lease-abort {"stage":"tool-entered","searchCalls":1}
+mcp-lease-abort {"stage":"aborting-first-exchange","searchCalls":1}
+mcp-lease-abort {"stage":"waiting-for-message-channel","searchCalls":1}
+mcp-lease-abort {"stage":"first-exchange-resolved","searchCalls":1,"status":499}
+mcp-lease-abort {"stage":"checking-abort-settlement","searchCalls":1,"firstSettled":true}
+mcp-lease-abort {"stage":"waiting-for-second-exchange","searchCalls":1}
+mcp-lease-abort {"stage":"tool-entered","searchCalls":2}
+mcp-lease-abort {"stage":"checking-second-exchange","searchCalls":2,"status":200}
+mcp-lease-abort {"stage":"releasing-deferred-work","searchCalls":2}
+mcp-lease-abort {"stage":"waiting-for-first-exchange-cleanup","searchCalls":2}
+mcp-lease-abort {"stage":"deferred-work-released","searchCalls":2}
+
+apps/api/src/agents/g2-request-guards.test.ts:
+(fail) BRE-319 MCP exhaustion guards > releases an admitted MCP lease when the live HTTP exchange is aborted inside a deferred tool [5000.01ms]
+  ^ this test timed out after 5000ms.
+
+ 0 pass
+ 8 filtered out
+ 1 fail
+Ran 1 test across 1 file. [5.85s]
