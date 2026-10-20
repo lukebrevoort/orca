@@ -11,7 +11,7 @@ import { oauthAccounts, users } from "../../db/schema.ts";
 import { GmailApiError, type GmailTransportClient } from "./client.ts";
 import { createGmailTransport, GmailTransportError } from "./transport.ts";
 
-for (const status of [404, 401, 403, 429, 500]) {
+for (const status of [404, 401, 403, 429, 500, "network"] as const) {
   test(`draft mirror recovers only a missing provider copy (update status ${status})`, async () => {
     const previousKey = process.env.TOKEN_ENCRYPTION_KEY;
     const key = Buffer.alloc(32, 38).toString("base64");
@@ -37,7 +37,7 @@ for (const status of [404, 401, 403, 429, 500]) {
       const updates: Parameters<GmailTransportClient["updateDraft"]>[0][] = [];
       const creates: Parameters<GmailTransportClient["createDraft"]>[0][] = [];
       const transport = createGmailTransport({
-        async updateDraft(input) { updates.push(input); throw new GmailApiError("Synthetic update failure", status); },
+        async updateDraft(input) { updates.push(input); throw typeof status === "number" ? new GmailApiError("Synthetic update failure", status) : new Error("Synthetic connection failure"); },
         async createDraft(input) { creates.push(input); return { id: "replacement", message: { id: "new-message", threadId: "provider-thread" } }; },
         async deleteDraft() { assert.fail("Recovery must not delete mail"); },
         async sendMessage() { assert.fail("Recovery must not send mail"); },
