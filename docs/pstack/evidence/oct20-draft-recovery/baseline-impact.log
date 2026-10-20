@@ -1,0 +1,9 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/oct20-baseline-impact.test.ts:
+{"updates":["deleted-copy","deleted-copy"],"localBody":"Latest writing","localSubject":"Revision one","revision":1,"deliveryStatus":"draft","mirrorStatus":"failed","mirrorError":"Gmail rejected this message"}
+(pass) baseline missing provider copy preserves local writing across subsequent edits [158.80ms]
+
+ 1 pass
+ 0 fail
+Ran 1 test across 1 file. [546.00ms]

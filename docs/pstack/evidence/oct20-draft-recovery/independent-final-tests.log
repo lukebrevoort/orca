@@ -1,0 +1,23 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/draft-mirror-delivery.test.ts:
+(pass) a late draft mirror success cannot change a sent receipt [153.49ms]
+(pass) a late draft mirror failure cannot change a sent receipt [113.44ms]
+
+apps/api/src/draft-mirror-recovery.test.ts:
+{"updates":["replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID null) [143.82ms]
+{"updates":["deleted-copy","replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID deleted-copy) [134.36ms]
+
+apps/api/src/providers/gmail/draft-recovery.test.ts:
+(pass) draft mirror recovers only a missing provider copy (update status 404) [79.39ms]
+(pass) draft mirror recovers only a missing provider copy (update status 401) [68.96ms]
+(pass) draft mirror recovers only a missing provider copy (update status 403) [66.31ms]
+(pass) draft mirror recovers only a missing provider copy (update status 429) [68.04ms]
+(pass) draft mirror recovers only a missing provider copy (update status 500) [59.06ms]
+(pass) draft mirror recovers only a missing provider copy (update status network) [52.13ms]
+
+ 10 pass
+ 0 fail
+Ran 10 tests across 3 files. [1365.00ms]

@@ -1,0 +1,12 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/App.interaction.test.tsx:
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (held prefetch) [533.51ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (completed prefetch) [374.92ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (in-flight prefetch) [348.45ms]
+
+ 3 pass
+ 132 filtered out
+ 0 fail
+ 57 expect() calls
+Ran 3 tests across 1 file. [1.69s]

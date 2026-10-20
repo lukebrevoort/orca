@@ -159,6 +159,12 @@ describe("BRE-319 MCP exhaustion guards", () => {
     let releaseDeferred!: () => void;
     const deferredWork = new Promise<void>((resolve) => { releaseDeferred = resolve; });
     let searchCalls = 0;
+    // Keep the original awaits, assertions and 5s runner timeout. A timeout alone
+    // cannot distinguish dispatch, transport abort, retry, or cleanup stalls.
+    // Only fixed stage labels and synthetic status/count fields enter CI logs.
+    const trace = (stage: string, details: Record<string, string | number | boolean> = {}) => {
+      console.info("mcp-lease-abort", JSON.stringify({ stage, searchCalls, ...details }));
+    };
     const unavailable = () => { throw new Error("unexpected tool dispatch"); };
     const dataSource: OrcaMcpDataSource = {
       getCurrentAccountIds: () => ["account"],
@@ -169,9 +175,11 @@ describe("BRE-319 MCP exhaustion guards", () => {
       revertOrganization: unavailable,
       async searchMail() {
         searchCalls += 1;
+        trace("tool-entered");
         if (searchCalls === 1) {
           enterDeferred();
           await deferredWork;
+          trace("deferred-work-released");
         }
         return {
           messages: [],
@@ -245,16 +253,20 @@ describe("BRE-319 MCP exhaustion guards", () => {
       },
     });
     const controller = new AbortController();
+    trace("starting-first-exchange");
     const firstExchange = handler.fetch(new Request(resource, { method: "POST", headers, body, signal: controller.signal }));
     let firstSettled = false;
     const observedFirstExchange = firstExchange.then(
-      (response) => { firstSettled = true; return response; },
-      (error: unknown) => { firstSettled = true; return error; },
+      (response) => { firstSettled = true; trace("first-exchange-resolved", { status: response.status }); return response; },
+      (error: unknown) => { firstSettled = true; trace("first-exchange-rejected", { errorType: error instanceof Error ? error.name : typeof error }); return error; },
     );
 
     try {
+      trace("waiting-for-tool-entry");
       await enteredDeferred;
+      trace("aborting-first-exchange");
       controller.abort();
+      trace("waiting-for-message-channel");
       await new Promise<void>((resolve) => {
         const channel = new MessageChannel();
         channel.port1.onmessage = () => {
@@ -264,14 +276,20 @@ describe("BRE-319 MCP exhaustion guards", () => {
         };
         channel.port2.postMessage(null);
       });
+      trace("checking-abort-settlement", { firstSettled });
       assert.equal(firstSettled, true, "aborting the admitted HTTP exchange must settle it before deferred tool work completes");
 
+      trace("waiting-for-second-exchange");
       const second = await handler.fetch(new Request(resource, { method: "POST", headers, body: body.replace('"id":1', '"id":2') }));
+      trace("checking-second-exchange", { status: second.status });
       assert.equal(second.status, 200, "the aborted exchange must release its only in-flight connection lease");
       assert.equal(searchCalls, 2);
     } finally {
+      trace("releasing-deferred-work");
       releaseDeferred();
+      trace("waiting-for-first-exchange-cleanup");
       await observedFirstExchange;
+      trace("cleanup-complete");
     }
   });
 

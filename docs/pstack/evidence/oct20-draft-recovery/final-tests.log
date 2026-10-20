@@ -1,0 +1,44 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/delivery-preparation.test.ts:
+(pass) credentials failure preserves the delivery boundary and replay safety [237.41ms]
+(pass) token_refresh failure preserves the delivery boundary and replay safety [190.81ms]
+(pass) threading failure preserves the delivery boundary and replay safety [171.33ms]
+(pass) mime failure preserves the delivery boundary and replay safety [192.89ms]
+(pass) dispatch failure preserves the delivery boundary and replay safety [141.72ms]
+
+apps/api/src/draft-mirror-delivery.test.ts:
+(pass) a late draft mirror success cannot change a sent receipt [157.94ms]
+(pass) a late draft mirror failure cannot change a sent receipt [140.15ms]
+
+apps/api/src/mobile-drafts.test.ts:
+(pass) explicit draft account scopes reads, writes and delivery without falling back to another account [394.87ms]
+
+apps/api/src/draft-mirror-recovery.test.ts:
+{"updates":["replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID null) [133.61ms]
+{"updates":["deleted-copy","replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID deleted-copy) [123.63ms]
+
+apps/api/src/providers/gmail/mime.test.ts:
+(pass) Gmail MIME > adds RFC threading headers to replies and keeps forwards independent [0.64ms]
+(pass) Gmail MIME > encodes attachment bytes in a multipart message [0.43ms]
+(pass) Gmail MIME > quotes ASCII display names and encodes Unicode names safely [0.30ms]
+(pass) Gmail MIME > folds long recipient and References headers below the RFC hard limit [0.95ms]
+(pass) Gmail MIME > rejects CRLF media-type injection and sanitizes unstructured headers [0.62ms]
+
+apps/api/src/providers/gmail/transport.test.ts:
+(pass) Gmail transport threading metadata > fetches missing Message-ID and References for a pre-migration reply target [0.23ms]
+(pass) Gmail transport threading metadata > does not fetch when stored threading metadata is already present [0.07ms]
+
+apps/api/src/providers/gmail/draft-recovery.test.ts:
+(pass) draft mirror recovers only a missing provider copy (update status 404) [64.40ms]
+(pass) draft mirror recovers only a missing provider copy (update status 401) [54.91ms]
+(pass) draft mirror recovers only a missing provider copy (update status 403) [57.08ms]
+(pass) draft mirror recovers only a missing provider copy (update status 429) [56.41ms]
+(pass) draft mirror recovers only a missing provider copy (update status 500) [52.39ms]
+(pass) draft mirror recovers only a missing provider copy (update status network) [55.75ms]
+
+ 23 pass
+ 0 fail
+Ran 23 tests across 7 files. [2.66s]

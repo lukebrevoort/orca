@@ -106,7 +106,8 @@ def export(work, evidence, connection, status):
         if not path.is_file():
             continue
         lines = path.read_text().splitlines()
-        events = [line for line in lines if '[counter-native]' in line or '[counter-server]' in line]
+        events = [line for line in lines if any(marker in line for marker in
+                  ('[counter-native]', '[counter-server]', '[search-fixture]', '[search-fixture-server]'))]
         heartbeats = [line for line in lines if '[counter-heartbeat]' in line]
         if heartbeat_cutoff is not None:
             heartbeats = [line for line in heartbeats

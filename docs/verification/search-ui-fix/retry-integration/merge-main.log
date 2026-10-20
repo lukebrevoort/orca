@@ -1,0 +1,182 @@
+Merge made by the 'ort' strategy.
+ apps/api/scripts/mobile-fixture.ts                 |  16 ++
+ apps/ios/Orca/Mail/ThreadView.swift                |  11 +-
+ apps/ios/OrcaUITests/OrcaUITests.swift             |  17 +-
+ apps/ios/OrcaUITests/ReaderUITests.swift           |  49 +++++
+ docs/pstack/tasks/native-earlier-message-layout.md |  24 ++
+ .../native-earlier-message-layout/README.md        |  44 ++++
+ .../baseline-a11y-inbox.png                        | Bin 0 -> 267176 bytes
+ .../baseline-earlier-visible.png                   | Bin 0 -> 226040 bytes
+ .../baseline-final-assertions.json                 |  17 ++
+ .../baseline-first-jump-settled.png                | Bin 0 -> 335888 bytes
+ .../baseline-provenance.json                       |  64 ++++++
+ .../candidate-earlier.png                          | Bin 0 -> 362329 bytes
+ .../candidate-reader-label.png                     | Bin 0 -> 325156 bytes
+ .../final-dark-earlier-readable.png                | Bin 0 -> 277400 bytes
+ .../final-dark-summary.txt                         |  19 ++
+ .../final-fixture-state.json                       |   6 +
+ .../final-light-summary.txt                        |  12 +
+ .../final-negative-summary.txt                     |  14 ++
+ .../final-provenance.json                          |  51 +++++
+ .../final-restored-inbox.png                       | Bin 0 -> 296479 bytes
+ .../first-account-restored.png                     | Bin 0 -> 297333 bytes
+ .../follow-up/README.md                            |  34 +++
+ .../baseline-images-light/Orca-summary.json        |  42 ++++
+ .../baseline-images-light/Orca-tests.json          |  53 +++++
+ .../baseline-images-light/build-provenance.json    | 103 +++++++++
+ .../follow-up/baseline-images-light/checks.txt     | 143 ++++++++++++
+ .../follow-up/baseline-images-light/fixture.txt    |  69 ++++++
+ .../follow-up/baseline-images-light/identity.txt   |   4 +
+ .../baseline-images-light/transport.jsonl          |   0
+ .../baseline-jordan-light/Orca-summary.json        |  49 +++++
+ .../baseline-jordan-light/Orca-tests.json          |  59 +++++
+ .../baseline-jordan-light/build-provenance.json    | 103 +++++++++
+ .../follow-up/baseline-jordan-light/checks.txt     | 165 ++++++++++++++
+ .../clear-search-failure-ax.txt                    |   3 +
+ .../follow-up/baseline-jordan-light/fixture.txt    |   3 +
+ .../follow-up/baseline-jordan-light/identity.txt   |   4 +
+ .../baseline-jordan-light/submitted-jordan.png     | Bin 0 -> 265038 bytes
+ .../baseline-jordan-light/transport.jsonl          |  22 ++
+ .../follow-up/final-images-dark/Orca-summary.json  |  42 ++++
+ .../follow-up/final-images-dark/Orca-tests.json    |  53 +++++
+ .../final-images-dark/build-provenance.json        | 103 +++++++++
+ .../follow-up/final-images-dark/checks.txt         | 143 ++++++++++++
+ .../follow-up/final-images-dark/fixture.txt        |  88 ++++++++
+ .../follow-up/final-images-dark/identity.txt       |   4 +
+ .../follow-up/final-images-dark/images-loaded.png  | Bin 0 -> 190035 bytes
+ .../follow-up/final-images-light/Orca-summary.json |  42 ++++
+ .../follow-up/final-images-light/Orca-tests.json   |  53 +++++
+ .../final-images-light/build-provenance.json       | 103 +++++++++
+ .../follow-up/final-images-light/checks.txt        | 143 ++++++++++++
+ .../follow-up/final-images-light/fixture.txt       |  91 ++++++++
+ .../follow-up/final-images-light/identity.txt      |   4 +
+ .../follow-up/final-images-light/images-loaded.png | Bin 0 -> 210272 bytes
+ .../follow-up/final-jordan-dark/Orca-summary.json  |  42 ++++
+ .../follow-up/final-jordan-dark/Orca-tests.json    |  53 +++++
+ .../final-jordan-dark/build-provenance.json        | 103 +++++++++
+ .../follow-up/final-jordan-dark/checks.txt         | 245 +++++++++++++++++++++
+ .../follow-up/final-jordan-dark/fixture.txt        |  33 +++
+ .../follow-up/final-jordan-dark/identity.txt       |   4 +
+ .../final-jordan-dark/submitted-jordan.png         | Bin 0 -> 226178 bytes
+ .../follow-up/final-jordan-dark/transport.jsonl    |   0
+ .../follow-up/final-jordan-light/Orca-summary.json |  42 ++++
+ .../follow-up/final-jordan-light/Orca-tests.json   |  53 +++++
+ .../final-jordan-light/build-provenance.json       | 103 +++++++++
+ .../follow-up/final-jordan-light/checks.txt        | 245 +++++++++++++++++++++
+ .../follow-up/final-jordan-light/fixture.txt       |  33 +++
+ .../follow-up/final-jordan-light/identity.txt      |   4 +
+ .../final-jordan-light/submitted-jordan.png        | Bin 0 -> 266341 bytes
+ .../follow-up/final-jordan-light/transport.jsonl   |   0
+ .../follow-up/head-images-light/Orca-summary.json  |  42 ++++
+ .../follow-up/head-images-light/Orca-tests.json    |  53 +++++
+ .../follow-up/head-images-light/checks.txt         | 144 ++++++++++++
+ .../follow-up/head-images-light/fixture.txt        |  69 ++++++
+ .../follow-up/head-images-light/identity.txt       |   4 +
+ .../follow-up/head-images-light/transport.jsonl    |   0
+ .../follow-up/head-jordan-light/Orca-summary.json  |  49 +++++
+ .../follow-up/head-jordan-light/Orca-tests.json    |  59 +++++
+ .../head-jordan-light/build-provenance.json        | 102 +++++++++
+ .../follow-up/head-jordan-light/checks.txt         | 164 ++++++++++++++
+ .../head-jordan-light/clear-search-failure-ax.txt  |   3 +
+ .../follow-up/head-jordan-light/fixture.txt        |   3 +
+ .../follow-up/head-jordan-light/identity.txt       |   4 +
+ .../head-jordan-light/submitted-jordan.png         | Bin 0 -> 264649 bytes
+ .../follow-up/head-jordan-light/transport.jsonl    |  22 ++
+ .../follow-up/manifest.json                        |  66 ++++++
+ .../follow-up/prior-hosted-compose-new-excerpt.txt |  43 ++++
+ .../follow-up/review.md                            |   1 +
+ .../independent-review.md                          |  14 ++
+ .../installed-verification.json                    |   6 +
+ .../native-earlier-message-layout/manifest.json    |  25 +++
+ .../second-account-inbox.png                       | Bin 0 -> 207242 bytes
+ .../sweep-light-summary.txt                        |  25 +++
+ scripts/ci/export-evidence.py                      |  12 +-
+ scripts/ci/test-export-evidence.py                 |  27 +++
+ 93 files changed, 3960 insertions(+), 6 deletions(-)
+ create mode 100644 docs/pstack/tasks/native-earlier-message-layout.md
+ create mode 100644 docs/verification/native-earlier-message-layout/README.md
+ create mode 100644 docs/verification/native-earlier-message-layout/baseline-a11y-inbox.png
+ create mode 100644 docs/verification/native-earlier-message-layout/baseline-earlier-visible.png
+ create mode 100644 docs/verification/native-earlier-message-layout/baseline-final-assertions.json
+ create mode 100644 docs/verification/native-earlier-message-layout/baseline-first-jump-settled.png
+ create mode 100644 docs/verification/native-earlier-message-layout/baseline-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/candidate-earlier.png
+ create mode 100644 docs/verification/native-earlier-message-layout/candidate-reader-label.png
+ create mode 100644 docs/verification/native-earlier-message-layout/final-dark-earlier-readable.png
+ create mode 100644 docs/verification/native-earlier-message-layout/final-dark-summary.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/final-fixture-state.json
+ create mode 100644 docs/verification/native-earlier-message-layout/final-light-summary.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/final-negative-summary.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/final-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/final-restored-inbox.png
+ create mode 100644 docs/verification/native-earlier-message-layout/first-account-restored.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/README.md
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-images-light/transport.jsonl
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/clear-search-failure-ax.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/submitted-jordan.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/baseline-jordan-light/transport.jsonl
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-dark/images-loaded.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-images-light/images-loaded.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/submitted-jordan.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-dark/transport.jsonl
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/submitted-jordan.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/final-jordan-light/transport.jsonl
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-images-light/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-images-light/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-images-light/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-images-light/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-images-light/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-images-light/transport.jsonl
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/Orca-summary.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/Orca-tests.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/build-provenance.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/checks.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/clear-search-failure-ax.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/fixture.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/identity.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/submitted-jordan.png
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/head-jordan-light/transport.jsonl
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/manifest.json
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/prior-hosted-compose-new-excerpt.txt
+ create mode 100644 docs/verification/native-earlier-message-layout/follow-up/review.md
+ create mode 100644 docs/verification/native-earlier-message-layout/independent-review.md
+ create mode 100644 docs/verification/native-earlier-message-layout/installed-verification.json
+ create mode 100644 docs/verification/native-earlier-message-layout/manifest.json
+ create mode 100644 docs/verification/native-earlier-message-layout/second-account-inbox.png
+ create mode 100644 docs/verification/native-earlier-message-layout/sweep-light-summary.txt

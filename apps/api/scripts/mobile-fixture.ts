@@ -359,6 +359,22 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
     return response;
   }
+  if (request.method === "GET" && ["/v1/inbox", "/v1/destinations"].includes(url.pathname)) {
+    const trace = crypto.randomUUID();
+    // Only the synthetic search inputs and result identifiers are emitted.
+    // Never log authorization headers, response bodies or connection metadata.
+    console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "received", epoch_ms: Date.now(), path: url.pathname, query: url.searchParams.get("query")?.slice(0, 200) ?? null, view: url.searchParams.get("view") })}`);
+    const response = await app.fetch(request);
+    let messageIds: string[] | undefined;
+    if (url.pathname === "/v1/inbox" && response.ok) {
+      try {
+        const body = await response.clone().json() as { messages?: Array<{ id?: string }> };
+        messageIds = body.messages?.map(message => message.id).filter((id): id is string => typeof id === "string");
+      } catch { /* Diagnostics must preserve the original response on malformed JSON. */ }
+    }
+    console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "response_ready", epoch_ms: Date.now(), path: url.pathname, status: response.status, messageIds })}`);
+    return response;
+  }
   return app.fetch(request);
 } });
 const metadata = { imageFixture, readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };

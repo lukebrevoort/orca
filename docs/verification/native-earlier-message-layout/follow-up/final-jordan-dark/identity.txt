@@ -1,0 +1,4 @@
+tested_sha=ee0ee866d14d199d0d6986e5c1f8a05649cf55cb
+proxy_enabled=False
+selected_scope=compose
+theme=dark

@@ -2225,9 +2225,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           ))
             .returning({ id: messageDrafts.id }).get();
           if (!updated) {
-            // A newer local revision arrived while the provider was creating the
-            // provider draft. Carry that provider ID forward so the next job
-            // updates the same provider draft instead of creating an orphan.
+            // A newer local revision arrived while the provider was creating or
+            // replacing its copy. Carry the ID forward only if the stored ID
+            // still matches this job's copy, so the next job reuses it.
             // A delivery reservation owns the provider message/thread IDs from
             // that point on, even when this mirror was already in flight.
             db.update(messageDrafts).set({
@@ -2236,7 +2236,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               providerThreadId: mirrored.providerThreadId ?? null,
             }).where(and(
               eq(messageDrafts.id, draft.id),
-              isNull(messageDrafts.providerDraftId),
+              draft.providerDraftId === null
+                ? isNull(messageDrafts.providerDraftId)
+                : eq(messageDrafts.providerDraftId, draft.providerDraftId),
               eq(messageDrafts.deliveryStatus, "draft"),
               isNull(messageDrafts.sendIdempotencyKey),
             )).run();

@@ -1,0 +1,164 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/global-search-accounts.test.tsx:
+58 |   expect(options()).toEqual(["", first.id, second.id]);
+59 |   expect(browser.document.querySelector(".global-mail-result-list")?.textContent).toContain("first conversation");
+60 |   await selectAccount(second.id);
+61 |   const next = take("/v1/inbox?"); expect(next.url).toBe("/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second");
+62 |   await respond(next, result([second]));
+63 |   expect(options()).toEqual(["", first.id, second.id]);
+                         ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "first",
+    "second",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:63:21)
+(fail) full account choices survive scoped results in accounts-first response order [125.63ms]
+58 |   expect(options()).toEqual(["", first.id, second.id]);
+59 |   expect(browser.document.querySelector(".global-mail-result-list")?.textContent).toContain("first conversation");
+60 |   await selectAccount(second.id);
+61 |   const next = take("/v1/inbox?"); expect(next.url).toBe("/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second");
+62 |   await respond(next, result([second]));
+63 |   expect(options()).toEqual(["", first.id, second.id]);
+                         ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "first",
+    "second",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:63:21)
+(fail) full account choices survive scoped results in search-first response order [62.46ms]
+67 | 
+68 | test("collection failure does not discard successful full account choices", async () => {
+69 |   await mount(); await respond(take("/v1/accounts"), { items: [first, second], nextCursor: null });
+70 |   await respond(take("/v1/organization/collections-pins/query"), {}, 503);
+71 |   await respond(take("/v1/inbox?"), result([first]));
+72 |   expect(options()).toEqual(["", first.id, second.id]); expect(options(3)).toEqual([""]);
+                         ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+    "first",
+-   "second",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:72:21)
+(fail) collection failure does not discard successful full account choices [24.86ms]
+74 | 
+75 | test("account failure preserves collections and uses only the latest search fallback", async () => {
+76 |   await mount(); await respond(take("/v1/accounts"), {}, 503);
+77 |   await respond(take("/v1/organization/collections-pins/query"), collectionResponse);
+78 |   await respond(take("/v1/inbox?"), result([first]));
+79 |   expect(options()).toEqual(["", first.id]); expect(options(3)).toEqual(["", space.id]);
+                                                                     ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "first-space",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:79:65)
+(fail) account failure preserves collections and uses only the latest search fallback [22.30ms]
+84 | 
+85 | test("a successful empty full account list is authoritative over scoped metadata", async () => {
+86 |   await mount(); await respond(take("/v1/accounts"), { items: [], nextCursor: null });
+87 |   await respond(take("/v1/organization/collections-pins/query"), collectionResponse);
+88 |   await respond(take("/v1/inbox?"), result([first]));
+89 |   expect(options()).toEqual([""]);
+                         ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
++   "first",
+  ]
+
+- Expected  - 0
++ Received  + 1
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:89:21)
+(fail) a successful empty full account list is authoritative over scoped metadata [24.44ms]
+93 |   await mount(); const oldAccounts = take("/v1/accounts"), oldCollections = take("/v1/organization/collections-pins/query"), oldSearch = take("/v1/inbox?");
+94 |   await respond(oldSearch, result([first]));
+95 |   await act(async () => (browser.document.querySelector('.global-mail-search-heading > button') as unknown as HTMLButtonElement).click()); await flush();
+96 |   expect(oldAccounts.signal.aborted).toBe(true); expect(oldCollections.signal.aborted).toBe(true);
+97 |   await act(async () => openMailSearch("second")); await flush();
+98 |   expect(options()).toEqual([""]); expect(options(3)).toEqual([""]);
+                         ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
++   "first",
+  ]
+
+- Expected  - 0
++ Received  + 1
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:98:21)
+(fail) closing and reopening clears old lists and ignores aborted account and collection responses [37.37ms]
+105 | test("reopening with failed metadata cannot retain a previous successful full list", async () => {
+106 |   await mount(); await respond(take("/v1/accounts"), { items: [first, second], nextCursor: null }); await respond(take("/v1/organization/collections-pins/query"), collectionResponse); await respond(take("/v1/inbox?"), result([first]));
+107 |   await act(async () => (browser.document.querySelector('.global-mail-search-heading > button') as unknown as HTMLButtonElement).click()); await flush();
+108 |   await act(async () => openMailSearch("second")); await flush();
+109 |   await respond(take("/v1/accounts"), {}, 503); await respond(take("/v1/organization/collections-pins/query"), {}, 503); await respond(take("/v1/inbox?"), result([second]));
+110 |   expect(options()).toEqual(["", second.id]); expect(options(3)).toEqual([""]);
+                                                                       ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
++   "first-space",
+  ]
+
+- Expected  - 0
++ Received  + 1
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:110:66)
+(fail) reopening with failed metadata cannot retain a previous successful full list [42.40ms]
+(pass) late scoped search metadata cannot overwrite the current fallback after account metadata fails [33.27ms]
+122 | 
+123 | test("invalid account metadata falls back without discarding valid collections", async () => {
+124 |   await mount(); await respond(take("/v1/accounts"), { items: [{ id: "invalid" }], nextCursor: null });
+125 |   await respond(take("/v1/organization/collections-pins/query"), collectionResponse);
+126 |   await respond(take("/v1/inbox?"), result([first]));
+127 |   expect(options()).toEqual(["", first.id]); expect(options(3)).toEqual(["", space.id]);
+                                                                      ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "first-space",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/orca-web-sweep-oct19/apps/web/src/global-search-accounts.test.tsx:127:65)
+(fail) invalid account metadata falls back without discarding valid collections [27.15ms]
+
+ 1 pass
+ 8 fail
+ 57 expect() calls
+Ran 9 tests across 1 file. [849.00ms]

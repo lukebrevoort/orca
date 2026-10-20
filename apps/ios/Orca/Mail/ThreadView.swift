@@ -33,17 +33,24 @@ struct ThreadView: View {
                     let firstIndex = messages.firstIndex(where: { $0.id == entry?.id }) ?? 0
                     if firstIndex > 0 {
                         HStack(spacing: 12) {
-                            Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            }
                             Button { showEarlier.toggle() } label: {
                                 HStack(spacing: 8) {
                                     Text("\(firstIndex) earlier messages")
+                                        .fixedSize(horizontal: false, vertical: true)
                                     Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
                                 }.font(OrcaTheme.ui(12)).frame(minHeight: 44).padding(.horizontal, 8).contentShape(Rectangle())
                             }
+                            // Decorative separators must yield width to readable words.
+                            .layoutPriority(1)
                             .buttonStyle(.plain).foregroundStyle(OrcaTheme.ink)
                             .accessibilityLabel("\(showEarlier ? "Hide" : "Show") \(firstIndex) earlier messages")
                             .accessibilityValue(showEarlier ? "Expanded" : "Collapsed")
-                            Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            }
                         }
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, item in
