@@ -1,0 +1,21 @@
+{
+  "base": "6fa05f9cd6891a58a986fc922ebc4d94b3ac5efe",
+  "candidateExecutable": "98933664b47598bc85667af54d94336844ef1a03",
+  "originalPR252": "43b76349eb829b2e37abda008ec58a25ef63512e",
+  "blocks": {
+    "main": {
+      "helperSHA256": "93993cdd107ce4b89bf73d6451174e5db0891f643b788fd7589b262f755fc712",
+      "retrySHA256": "a8d82cd1267eae6ddc0c576d87a2fc1a72a67ccc4086f82fac904779b5927dea"
+    },
+    "candidate": {
+      "helperSHA256": "93993cdd107ce4b89bf73d6451174e5db0891f643b788fd7589b262f755fc712",
+      "retrySHA256": "a8d82cd1267eae6ddc0c576d87a2fc1a72a67ccc4086f82fac904779b5927dea"
+    },
+    "originalPR252": {
+      "helperSHA256": "93993cdd107ce4b89bf73d6451174e5db0891f643b788fd7589b262f755fc712",
+      "retrySHA256": "a8d82cd1267eae6ddc0c576d87a2fc1a72a67ccc4086f82fac904779b5927dea"
+    }
+  },
+  "onlyExecutableDelta": "silent-refresh test",
+  "allOtherMainSourcePreserved": true
+}
