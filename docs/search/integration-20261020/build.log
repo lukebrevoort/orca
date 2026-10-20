@@ -1,0 +1,17 @@
+$ bun --filter '*' build
+@orca/shared build: Exited with code 0
+@orca/api build: Exited with code 0
+@orca/web build: vite v7.3.6 building client environment for production...
+@orca/web build: transforming...
+@orca/web build: ✓ 192 modules transformed.
+@orca/web build: rendering chunks...
+@orca/web build: computing gzip size...
+@orca/web build: dist/index.html                                1.78 kB │ gzip:   0.76 kB
+@orca/web build: dist/assets/organization-views-HiJWHDLt.css    4.69 kB │ gzip:   1.19 kB
+@orca/web build: dist/assets/index-CTESt-9u.css               408.76 kB │ gzip:  61.96 kB
+@orca/web build: dist/assets/organization-views-0BnuZ9Uv.js   121.70 kB │ gzip:  35.07 kB
+@orca/web build: dist/assets/react-vendor-CQc3Zyh3.js         192.36 kB │ gzip:  60.30 kB
+@orca/web build: dist/assets/mail-contracts-BZdDPYUz.js       206.08 kB │ gzip:  51.11 kB
+@orca/web build: dist/assets/index-DxvjkiWk.js                478.23 kB │ gzip: 136.41 kB
+@orca/web build: ✓ built in 2.78s
+@orca/web build: Exited with code 0
