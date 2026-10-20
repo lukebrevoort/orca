@@ -3,6 +3,11 @@
 .mobile-mail-header { display: none; }
 
 @media (max-width: 760px) {
+  .mobile-mail-shell .reader-top-actions .thread-lane-trigger,
+  .mobile-mail-shell .reader-top-actions .thread-lane-why { min-width: 44px; min-height: 44px; }
+  .mobile-mail-shell .reader-top-actions .remind-control > button {
+    min-width: 44px; min-height: 44px; width: 44px; height: 44px; flex-basis: 44px;
+  }
   /* Keyboard scrolling must clear the sticky mail header and the fixed reader
      jumps/nav (latest jump ends 156px above the safe area and is 44px tall).
      Gate on the active route: the reader stays mounted when hidden.

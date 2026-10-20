@@ -1,0 +1,9 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/agents/g2-request-guards.test.ts:
+(pass) BRE-319 MCP exhaustion guards > releases an admitted MCP lease when the live HTTP exchange is aborted inside a deferred tool [97.39ms]
+
+ 1 pass
+ 8 filtered out
+ 0 fail
+Ran 1 test across 1 file. [413.00ms]

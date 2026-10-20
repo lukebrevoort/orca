@@ -1,0 +1,30 @@
+{
+  "baseCommit": "5baf7f3ea9e208001c607a7bc0f5c418fb056d58",
+  "headCommit": "fc39756c4a120c5cb887b2381dfefbcac937494c",
+  "sourcePath": "apps/web/src/thread-detail-cache.ts",
+  "sequence": [
+    "base",
+    "head",
+    "head",
+    "base"
+  ],
+  "operationsPerChild": {
+    "uniqueThreadReferences": 10000,
+    "loaderCalls": 20000,
+    "markStale": 10000,
+    "capacity": 30
+  },
+  "limits": {
+    "cpu": 2,
+    "memoryMiB": 512,
+    "network": "none",
+    "timeoutSeconds": 30,
+    "killGraceSeconds": 5,
+    "outerTimeoutSeconds": 40
+  },
+  "interpretation": "Resource counts only. Timers include workload/forced GC. Bun heap observations unreliable; not browser heap/latency claim. No concurrent benchmark/test/build/container workload allowed.",
+  "sourceSha256": {
+    "base": "97e5cc5485a635f0420b38588d2d5a655b3de149d57ecb011d5df2065232cdd0",
+    "head": "7911ad9c5f7abd5f3bae30e8a60aab910f5d0aa6ecc19d010a4913da0066bf9b"
+  }
+}

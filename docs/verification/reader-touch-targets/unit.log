@@ -1,0 +1,20 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/reader-body.test.tsx:
+(pass) message body alternatives > keeps sanitized formatted content and destinations byte-for-byte on first render [39.20ms]
+(pass) message body alternatives > switches reversibly without deleting quotes, code, links, or footer [21.68ms]
+(pass) message body alternatives > scopes the selected alternative to the message identity [9.04ms]
+(pass) message body alternatives > keeps simultaneous message states separate across reordering and accounts [14.87ms]
+(pass) message body alternatives > recovers from an alternative disappearing on refresh [7.60ms]
+(pass) message body alternatives > does not offer invented alternatives or use a snippet as message content [8.95ms]
+(pass) message body alternatives > renders plain-text markup as text, never active HTML [5.03ms]
+(pass) reader content focus layout > preserves visible focus offset when body geometry changes [11.44ms]
+(pass) reader content focus layout > preserves offscreen no-scroll intent when body geometry changes [10.54ms]
+(pass) reader content focus layout > restored exact geometry needs no focus correction [6.14ms]
+(pass) reader content focus layout > keeps pointer display controls fast, then retains exact geometry through keyboard exit [8.31ms]
+(pass) reader content focus layout > covers quoted-history focus and resets for a new thread identity [5.22ms]
+
+ 12 pass
+ 0 fail
+ 54 expect() calls
+Ran 12 tests across 1 file. [663.00ms]

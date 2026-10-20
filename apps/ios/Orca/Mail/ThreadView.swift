@@ -1,4 +1,5 @@
 import SwiftUI
+import CryptoKit
 
 struct ThreadView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -32,17 +33,24 @@ struct ThreadView: View {
                     let firstIndex = messages.firstIndex(where: { $0.id == entry?.id }) ?? 0
                     if firstIndex > 0 {
                         HStack(spacing: 12) {
-                            Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            }
                             Button { showEarlier.toggle() } label: {
                                 HStack(spacing: 8) {
                                     Text("\(firstIndex) earlier messages")
+                                        .fixedSize(horizontal: false, vertical: true)
                                     Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
                                 }.font(OrcaTheme.ui(12)).frame(minHeight: 44).padding(.horizontal, 8).contentShape(Rectangle())
                             }
+                            // Decorative separators must yield width to readable words.
+                            .layoutPriority(1)
                             .buttonStyle(.plain).foregroundStyle(OrcaTheme.ink)
                             .accessibilityLabel("\(showEarlier ? "Hide" : "Show") \(firstIndex) earlier messages")
                             .accessibilityValue(showEarlier ? "Expanded" : "Collapsed")
-                            Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            }
                         }
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, item in
@@ -73,7 +81,8 @@ struct ThreadView: View {
                                 if !item.cc.isEmpty { Text("Cc: " + item.cc.map(\.email).joined(separator: ", ")) }
                                 if !item.bcc.isEmpty { Text("Bcc: " + item.bcc.map(\.email).joined(separator: ", ")) }
                             }.font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
-                            NativeReaderBody(html: item.bodyHtml, text: item.bodyText)
+                            MessageImageBody(item: item, accountId: accountId)
+                                .id(state.ownerScope + "|" + accountId + "|" + item.id + "|" + (item.bodyHtml ?? ""))
                             ForEach(item.attachments) { attachment in
                                 Button { Task { await download(attachment) } } label: {
                                     Label("\(attachment.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(attachment.size), countStyle: .file))", systemImage: "paperclip").font(OrcaTheme.ui(12))
@@ -293,3 +302,51 @@ enum ReaderNavigationVisibility {
     }
 }
 
+
+
+/// Image consent and bytes live only in this message's visible reader, never in the mail cache.
+private struct MessageImageBody: View {
+    @EnvironmentObject var state: AppState
+    let item: ThreadMessage
+    let accountId: String
+    @State private var html: String?
+    @State private var status: String?
+    @State private var loading = false
+    @State private var request: Task<Void, Never>?
+    @State private var generation = UUID()
+    private var sourceHash: String { SHA256.hash(data: Data((item.bodyHtml ?? "").utf8)).map { String(format: "%02x", $0) }.joined() }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if item.imageLoadAvailable == true {
+                if html == nil {
+                    Text("Images are blocked. Loading may tell the sender you opened this message.")
+                        .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                    Button(loading ? "Loading images…" : "Load images") { load() }
+                        .buttonStyle(.bordered).tint(OrcaTheme.accent).disabled(loading)
+                        .accessibilityIdentifier("message.load-images")
+                }
+                if let status { Text(status).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("message.images-status") }
+            }
+            NativeReaderBody(html: html ?? item.bodyHtml, text: item.bodyText)
+        }
+        .onDisappear { request?.cancel(); generation = UUID(); html = nil; status = nil; loading = false }
+    }
+    private func load() {
+        guard !loading, let client = state.client, state.selectedAccount?.id == accountId else { return }
+        let owner = state.ownerScope, revision = sourceHash, attempt = UUID()
+        generation = attempt; loading = true; status = nil
+        request = Task { @MainActor in
+            do {
+                let result = try await client.loadMessageImages(item.id, accountId: accountId)
+                guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                guard result.sourceHash == revision else { status = "Message changed. Reopen it before loading images."; loading = false; return }
+                if result.loaded > 0 { html = result.bodyHtml }
+                status = result.loaded > 0 ? "\(result.loaded) image\(result.loaded == 1 ? "" : "s") loaded." + (result.blocked > 0 ? " \(result.blocked) remain blocked." : "") : "Images could not be loaded. You can try again."
+            } catch {
+                guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                status = "Images could not be loaded. You can try again."
+            }
+            loading = false
+        }
+    }
+}

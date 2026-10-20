@@ -17,6 +17,29 @@ def redact(text, tokens):
     return text
 
 
+def failure_excerpt(text):
+    """Keep early XCTest assertions visible even when later tests fill the tail."""
+    lines = text.splitlines()
+    # Prefer actionable test/compiler failures to simulator noise and successful
+    # summaries such as "0 failures". Full sanitized logs remain in the artifact.
+    primary = [index for index, line in enumerate(lines)
+               if re.search(r'(?i)(:\d+(?::\d+)?: error:|Test Case .+ failed|'
+                            r'XCTAssert\w*.*failed|Asynchronous wait failed|'
+                            r'Testing failed:|\*\* TEST.*FAILED)', line)]
+    matches = [index for index, line in enumerate(lines)
+               if re.search(r'(?i)\b(error:|failed\b|failure\b|XCTAssert\w*)', line)]
+    matches = primary + [index for index in matches if index not in primary]
+    if not matches:
+        return 'No failure marker found; inspect the sanitized log tail/artifact.'
+    selected = set()
+    for index in matches[:20]:
+        selected.update(range(max(0, index - 1), min(len(lines), index + 2)))
+    result = [f'{index + 1}: {lines[index][:1000]}' for index in sorted(selected)]
+    if len(matches) > 20:
+        result.append(f'Additional failure markers omitted: {len(matches) - 20}; inspect artifact.')
+    return '\n'.join(result)
+
+
 def export(work, evidence, connection, status):
     tokens = []
     if connection:
@@ -71,6 +94,35 @@ def export(work, evidence, connection, status):
             data = path.read_bytes()
             if any(token.encode() in data or quote(token, safe='').encode() in data for token in tokens):
                 raise ValueError('Credential detected in evidence; refusing publication')
+    # Print only after the complete export passed its credential scan. Prefix
+    # every line so synthetic log content cannot become a workflow command.
+    checks = evidence / 'checks.log'
+    native_times = re.findall(r'\[counter-native\] epoch_ms=(\d+)', checks.read_text() if checks.is_file() else '')
+    # xcresult export can finish minutes after the assertion. Anchor server
+    # liveness to the final native observation, not the later cleanup time.
+    heartbeat_cutoff = int(native_times[-1]) + 10000 if native_times else None
+    for name in ('checks.log', 'fixture.log'):
+        path = evidence / name
+        if not path.is_file():
+            continue
+        lines = path.read_text().splitlines()
+        events = [line for line in lines if any(marker in line for marker in
+                  ('[counter-native]', '[counter-server]', '[search-fixture]', '[search-fixture-server]'))]
+        heartbeats = [line for line in lines if '[counter-heartbeat]' in line]
+        if heartbeat_cutoff is not None:
+            heartbeats = [line for line in heartbeats
+                          if (match := re.search(r'epoch_ms=(\d+)', line))
+                          and int(match[1]) <= heartbeat_cutoff]
+        # Keep the last minute of server liveness and latest80 request events.
+        # Also print on success so a non-reproduction still yields usable data.
+        for line in events[-80:] + heartbeats[-60:]:
+            line = line[:1000].replace('::', ': :').replace('##[', '# #[')
+            print(f'[fixture telemetry] {name}: {line}')
+    if int(status) != 0 and (evidence / 'checks.log').is_file():
+        print('Sanitized failure context (bounded; full log remains in artifact):')
+        for line in failure_excerpt((evidence / 'checks.log').read_text()).splitlines():
+            line = line.replace('::', ': :').replace('##[', '# #[')
+            print(f'[fixture failure] {line}')
     print(f'Synthetic checks exit code: {status}; sanitized evidence: {evidence}')
 
 

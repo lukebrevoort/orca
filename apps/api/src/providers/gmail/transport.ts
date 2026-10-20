@@ -51,9 +51,20 @@ export function createGmailTransport(gmailClient: GmailThreadingClient = createG
         const accessToken = await token(db, accountId);
         const threadedDraft = await withThreadingHeaders(draft, accessToken);
         const input = { accessToken, raw: encodeGmailMessage(threadedDraft), threadId: threadId(threadedDraft) };
-        const response = draft.providerDraftId
-          ? await gmailClient.updateDraft({ ...input, draftId: draft.providerDraftId })
-          : await gmailClient.createDraft(input);
+        let response;
+        if (draft.providerDraftId) {
+          try {
+            response = await gmailClient.updateDraft({ ...input, draftId: draft.providerDraftId });
+          } catch (error) {
+            // A copy removed in Gmail no longer has an ID we can update.
+            // Recreate only on a confirmed miss; uncertain failures must not
+            // produce a second provider draft.
+            if (!(error instanceof GmailApiError) || error.status !== 404) throw error;
+            response = await gmailClient.createDraft(input);
+          }
+        } else {
+          response = await gmailClient.createDraft(input);
+        }
         return {
           providerDraftId: response.id,
           providerMessageId: response.message.id,

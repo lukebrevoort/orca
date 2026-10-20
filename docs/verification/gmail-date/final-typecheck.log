@@ -1,0 +1,8 @@
+Tested executable commit: c970faf7cb4caea9b389de1bd5c35d4e65fba45e
+Command: bun run typecheck
+$ bun --filter '*' typecheck
+@orca/shared typecheck: Exited with code 0
+@orca/api typecheck: Exited with code 0
+@orca/web typecheck: Exited with code 0
+
+Exit: 0

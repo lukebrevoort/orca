@@ -1,0 +1,25 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/mail/images/eligibility.test.ts:
+(pass) eligibility retains positive images and rejects encoded markup, blocked URLs and declared trackers [17.30ms]
+(pass) malformed, entity, raw-text and nested HTML agrees with the pre-optimization policy [146.89ms]
+80 |   const sanitize = providerHtml.sanitizeProviderHtml;
+81 |   let calls = 0;
+82 |   const spy = spyOn(providerHtml, "sanitizeProviderHtml").mockImplementation(html => { calls++; return sanitize(html); });
+83 |   try {
+84 |     for (const html of [null, "", "<p>ordinary text</p>".repeat(6000), "&lt;im&#103;&gt;"]) expect(hasLoadableImages(html)).toBe(false);
+85 |     expect(calls).toBe(0);
+                       ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 4
+
+      at <anonymous> (/workspace/orca-oct18-base/apps/api/src/mail/images/eligibility.test.ts:85:19)
+(fail) image-free eligibility avoids provider sanitizer work while possible tags still use its policy [19.31ms]
+(pass) long-thread GET retains image availability, inert bodies and account isolation without consent or downloads [233.31ms]
+
+ 3 pass
+ 1 fail
+ 1432 expect() calls
+Ran 4 tests across 1 file. [797.00ms]

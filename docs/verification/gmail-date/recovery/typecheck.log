@@ -1,0 +1,8 @@
+$ bun --filter '*' typecheck
+@orca/shared typecheck: Exited with code 0
+@orca/api typecheck: src/providers/gmail/sync.ts(844,31): error TS2339: Property 'providerInternalDate' does not exist on type '{ id: string; accountId: string; provider: "gmail" | "outlook"; providerMessageId: string; threadId: string; from: { name: string | null; email: string; }; receivedAt: string; labels: string[]; ... 12 more ...; classificationEvidence?: { ...; } | undefined; }'.
+@orca/api typecheck: src/providers/gmail/sync.ts(844,87): error TS2339: Property 'providerInternalDate' does not exist on type '{ id: string; accountId: string; provider: "gmail" | "outlook"; providerMessageId: string; threadId: string; from: { name: string | null; email: string; }; receivedAt: string; labels: string[]; ... 12 more ...; classificationEvidence?: { ...; } | undefined; }'.
+@orca/api typecheck: Exited with code 2
+@orca/web typecheck: ../api/src/providers/gmail/sync.ts(844,31): error TS2339: Property 'providerInternalDate' does not exist on type '{ provider: "gmail" | "outlook"; id: string; accountId: string; providerMessageId: string; threadId: string; from: { name: string | null; email: string; }; receivedAt: string; labels: string[]; ... 12 more ...; classificationEvidence?: { ...; } | undefined; }'.
+@orca/web typecheck: ../api/src/providers/gmail/sync.ts(844,87): error TS2339: Property 'providerInternalDate' does not exist on type '{ provider: "gmail" | "outlook"; id: string; accountId: string; providerMessageId: string; threadId: string; from: { name: string | null; email: string; }; receivedAt: string; labels: string[]; ... 12 more ...; classificationEvidence?: { ...; } | undefined; }'.
+@orca/web typecheck: Exited with code 2

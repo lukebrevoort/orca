@@ -1,0 +1,1415 @@
+bun test v1.3.14 (0d9b296a)
+
+src/agent-events.routes.test.ts:
+(pass) agent-event routes list and mutate only the authenticated user's local projection [241.36ms]
+
+src/smoke.test.ts:
+(pass) first-slice API smoke test > authenticates a seeded user, triggers Gmail sync, and returns their inbox [168.91ms]
+
+src/body-admission.test.ts:
+(pass) every protected JSON family rejects unauthenticated requests before reading their stream [14.95ms]
+(pass) enabled OAuth endpoints cancel undeclared and deceptive-length oversized streams with their stable errors [8.49ms]
+(pass) disabled OAuth endpoints do not consume bodies; public mobile readers retain public errors and cancel overflow [9.59ms]
+(pass) public feedback and verified push readers stream-admit before JSON parsing [53.11ms]
+(pass) authenticated admission preserves ordinary JSON, exact OAuth JSON/form limits, and 25 MiB attachment delivery [1314.45ms]
+
+src/thread-detail.test.ts:
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "origin": "number",
+    "code": "too_small",
+    "minimum": 0,
+    "inclusive": true,
+    "path": [
+      "thread",
+      "messageCount"
+    ],
+    "message": "Too small: expected number to be >=0"
+  }
+]
+      at <anonymous> (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "origin": "number",
+    "code": "too_small",
+    "minimum": 0,
+    "inclusive": true,
+    "path": [
+      "messages",
+      0,
+      "attachments",
+      0,
+      "size"
+    ],
+    "message": "Too small: expected number to be >=0"
+  }
+]
+      at <anonymous> (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "messages",
+      0,
+      "references",
+      0
+    ],
+    "message": "Invalid input: expected string, received number"
+  }
+]
+      at <anonymous> (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "extra"
+    ],
+    "path": [
+      "thread",
+      "participants",
+      1
+    ],
+    "message": "Unrecognized key: \"extra\""
+  },
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "extra"
+    ],
+    "path": [
+      "messages",
+      0,
+      "to",
+      0
+    ],
+    "message": "Unrecognized key: \"extra\""
+  }
+]
+      at <anonymous> (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+(pass) thread detail loads bodies once while preserving multi-message labels, attachments and isolation [288.01ms]
+
+src/reply-brief-route.test.ts:
+(pass) POST /v1/threads/:threadId/reply-brief > requires explicit invocation, preserves the selected calendar among multiple connections, and never changes a draft [133.23ms]
+
+src/gmail-push-route.test.ts:
+(pass) Gmail push routes > accepts a verified Pub/Sub push and runs history sync without a user session [134.34ms]
+(pass) Gmail push routes > rejects unverified pushes and keeps the watch endpoint session-protected [73.03ms]
+(pass) Gmail push routes > watch endpoint establishes a cursor before backfilling a new account [135.94ms]
+(pass) Gmail push routes > watch endpoint preserves renewal intent when a history push is already active [143.67ms]
+(pass) Gmail push routes > watch endpoint reports a coalesced renewal failure after preserving history progress [119.51ms]
+(pass) Gmail push routes > full resync clears legacy checkpoints, rebuilds mail, and re-establishes the watch [118.20ms]
+
+src/draft-mirror-delivery.test.ts:
+(pass) a late draft mirror success cannot change a sent receipt [133.95ms]
+(pass) a late draft mirror failure cannot change a sent receipt [131.98ms]
+
+src/delivery-preparation.test.ts:
+(pass) credentials failure preserves the delivery boundary and replay safety [165.59ms]
+(pass) token_refresh failure preserves the delivery boundary and replay safety [157.37ms]
+(pass) threading failure preserves the delivery boundary and replay safety [152.91ms]
+(pass) mime failure preserves the delivery boundary and replay safety [151.70ms]
+(pass) dispatch failure preserves the delivery boundary and replay safety [123.12ms]
+
+src/mobile-session-policy.test.ts:
+(pass) push eligibility requires the original live session and user, including exact expiry [69.15ms]
+
+src/index.test.ts:
+(pass) Orca API > requires a session before returning auth state [3.03ms]
+(pass) Orca API > requires a session before returning an account [0.26ms]
+(pass) Orca API > lists every connected provider and disconnects only owned accounts with local data [152.94ms]
+(pass) Orca API > keeps Gmail-only routes on Gmail when Outlook was connected first [205.43ms]
+(pass) Orca API > requires a session before returning inbox data [0.29ms]
+(pass) Orca API > persists account-level writing and reminder preferences [103.16ms]
+(pass) Orca API > BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings [178.85ms]
+(pass) Orca API > persists onboarding completion and exposes it on later session checks [101.41ms]
+(pass) Orca API > creates account-owned drafts with revisions and a safe delivery boundary [203.01ms]
+(pass) Orca API > persists Gmail drafts and sends exactly once after reserving the idempotency key [123.98ms]
+(pass) Orca API > marks an unconfirmed Gmail send as ambiguous instead of retrying it [101.58ms]
+(pass) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable [180.30ms]
+(pass) Orca API > dispatches account lifecycle through a partial custom registry [182.32ms]
+outlook sync failed {
+  userId: "outlook_user",
+  error: 12 | export const outlookProvider: MailProviderAdapter = {
+13 |   provider: "outlook",
+14 |   createOAuthApp: createOutlookAuthApp,
+15 |   detectCapabilities: detectOutlookCapabilities,
+16 |   async syncPage() {
+17 |     throw new ProviderNotImplementedError("outlook", "sync");
+               ^
+ProviderNotImplementedError: outlook sync is not implemented
+  provider: "outlook",
+ operation: "sync",
+
+      at syncPage (/workspace/orca-search-ui-fix/apps/api/src/providers/outlook/provider.ts:17:11)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/index.ts:2600:47)
+      at dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/index.test.ts:757:42)
+,
+}
+(pass) Orca API > dispatches a registered Outlook account and keeps unsupported sync explicit [96.10ms]
+(pass) Orca API > rejects blank inbox cursors [0.91ms]
+(pass) Orca API > returns an account-scoped, chronological reader snapshot with sanitized HTML [157.27ms]
+(pass) Orca API > filters and deterministically sorts explainable attention views [157.95ms]
+(pass) Orca API > merges two owned accounts with account-local attention rules, metadata, and cursors [291.26ms]
+(pass) Orca API > filters effective Human Inbox and Tideline classes before pagination without crossing accounts or filter modes [203.39ms]
+(pass) Orca API > serves the shared M5 matrix across providers with counts, cursors, overrides, and mixed threads [189.04ms]
+(pass) Orca API > resolves classification for a mailbox-sized page with account overrides loaded once [144.43ms]
+(pass) Orca API > keeps collections additive, orders pins deterministically, and deletes only organization metadata [286.48ms]
+(pass) Orca API > imports selected Gmail labels once, supports skip, and handles accounts with no user labels [241.00ms]
+(pass) Orca API > schedules, resurfaces, completes, and cancels thread reminders with a controllable clock [165.24ms]
+(pass) Orca API > upgrades a database at migration 0003 with the reader storage migrations [77.71ms]
+(pass) Orca API > runs the manual Gmail sync endpoint for an authenticated user [141.08ms]
+(pass) Orca API > runs manual Gmail sync against the selected stacked account [163.61ms]
+(pass) Orca API > serializes manual Gmail sync behind existing account work [226.27ms]
+(pass) Orca API > reports per-account sync status and last successful sync time [122.75ms]
+gmail sync failed {
+  userId: "user_1",
+  error: 1836 | 
+1837 |       const session = await createSession(db, "user_1");
+1838 |       const testApp = createApp({
+1839 |         dbFactory: () => createDatabaseClient(dbPath),
+1840 |         syncPage: async () => {
+1841 |           throw new GmailSyncError("raw upstream detail acct_1", "provider_error");
+                       ^
+GmailSyncError: raw upstream detail acct_1
+ code: "provider_error"
+
+      at syncPage (/workspace/orca-search-ui-fix/apps/api/src/index.test.ts:1841:17)
+      at syncIncrementalPages (/workspace/orca-search-ui-fix/apps/api/src/providers/gmail/sync-runtime.ts:224:26)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/providers/gmail/sync-runtime.ts:179:29)
+      at drainOwned (/workspace/orca-search-ui-fix/apps/api/src/providers/gmail/sync-coordinator.ts:232:32)
+      at drainAccount (/workspace/orca-search-ui-fix/apps/api/src/providers/gmail/sync-coordinator.ts:214:19)
+,
+}
+(pass) Orca API > maps provider sync failures to a bounded public error response [143.39ms]
+(pass) Orca API > persists account-scoped sender rules, resolves precedence, and resets to the next rule [211.81ms]
+(pass) Orca API > validates, authorizes, and canonically reconciles account-scoped batch sender attention changes [178.69ms]
+(pass) Orca API > persists presentation independently of attention behavior [105.07ms]
+(pass) Orca API > keeps local human classification overrides account-scoped and resolves precedence without provider mutations [355.14ms]
+(pass) Orca API > resolves a large message batch from one preloaded classification override map [1.90ms]
+(pass) Orca API > marks entire thread as read including all emails [103.02ms]
+
+src/request-body.test.ts:
+(pass) actual byte overflow cancels without consuming the tail (Content-Length=undefined) [0.68ms]
+(pass) actual byte overflow cancels without consuming the tail (Content-Length=1) [0.28ms]
+(pass) actual byte overflow cancels without consuming the tail (Content-Length=nonsense) [0.10ms]
+(pass) declared oversized body cancels without any read [0.24ms]
+(pass) byte boundary preserves multibyte UTF-8 split across chunks and parser semantics [0.98ms]
+(pass) failed reads cancel and release the reader [1.19ms]
+
+src/feedback.test.ts:
+Feedback received {
+  id: "feedback-test-1",
+  projectId: "orca",
+  title: "The button feels quiet",
+  route: "/dev/inbox",
+  receivedAt: "2026-08-01T22:01:00.000Z",
+}
+(pass) feedback receipt handler > accepts same-origin reports, redacts state, and returns a receipt [1.04ms]
+Feedback received {
+  id: "feedback-test-delivery-1",
+  projectId: "orca",
+  title: "The button feels quiet",
+  route: "/dev/inbox",
+  receivedAt: "2026-10-19T16:49:05.397Z",
+}
+(pass) feedback receipt handler > returns the external delivery link when a report handler provides one [0.82ms]
+(pass) feedback receipt handler > rejects cross-origin and malformed reports [0.47ms]
+
+src/mobile-drafts.test.ts:
+(pass) explicit draft account scopes reads, writes and delivery without falling back to another account [363.01ms]
+
+src/draft-list-payload.test.ts:
+draft-list synthetic fixture: 200 sent + 5 unresolved; 16 KiB text + 8 KiB HTML + 48 KiB attachment per record {"legacy":{"responseBytes":18596791,"selectedRows":205,"selectedBytes":18550256,"selectCount":1,"elapsedMs":185.76},"projected":{"responseBytes":553391,"selectedRows":205,"selectedBytes":503256,"selectCount":1,"elapsedMs":35.68}}
+(pass) draft list can omit sent content without losing delivery reconciliation or unresolved writing [804.99ms]
+
+src/reminder-account-scope.test.ts:
+(pass) reminders create against the thread's owned Gmail account, including the second account [274.47ms]
+(pass) reminders list and resurface both owned Gmail accounts without touching other accounts [223.28ms]
+(pass) second-account reminders can be snoozed, completed, and cancelled by their owner [156.09ms]
+(pass) reminder mutations reject foreign, unsupported-provider, missing, and unauthenticated targets without writes [209.60ms]
+
+src/reply-brief.test.ts:
+(pass) on-demand Reply Brief service > deterministically interprets an exact sourced window and leaves ambiguous timezones unknown [5.90ms]
+(pass) on-demand Reply Brief service > returns source-linked guidance and authorized free/busy without any draft or write capability [3.20ms]
+(pass) on-demand Reply Brief service > keeps confirmed free/busy visible when another requested window remains unknown [1.67ms]
+(pass) on-demand Reply Brief service > treats prompt-injection text as untrusted content that cannot unlock tools or draft a response [0.83ms]
+(pass) on-demand Reply Brief service > labels missing or ambiguous scheduling facts instead of guessing [0.63ms]
+(pass) on-demand Reply Brief service > does not turn a non-scheduling message into a calendar availability request [0.59ms]
+(pass) on-demand Reply Brief service > preserves deterministic facts for runtime failure and marks old source context stale [0.65ms]
+(pass) on-demand Reply Brief service > makes calendar permission failure explicit and never recommends an unchecked slot [1.68ms]
+(pass) on-demand Reply Brief service > rejects background-shaped or cross-account requests before reading guidance [0.85ms]
+
+scripts/fixture-counter.test.ts:
+(pass) counter telemetry preserves response and authenticates without leaking request data [0.47ms]
+(pass) unauthorized requests retain401 and untrusted trace content is never echoed [0.15ms]
+
+src/mail/provider-html.test.ts:
+(pass) inbound readable formatting and privacy > normalizes responsive newsletters without restoring sender CSS [6.30ms]
+(pass) inbound readable formatting and privacy > does not flatten data tables, mislabelled headers, captions, or spans [1.87ms]
+(pass) inbound readable formatting and privacy > nested data tables keep width/header semantics inside layout [0.61ms]
+(pass) inbound readable formatting and privacy > strips sender classes and rejects forged renderer markers [0.54ms]
+(pass) inbound readable formatting and privacy > all images are inert, alt text is escaped, and no sender executable content survives [1.31ms]
+(pass) inbound readable formatting and privacy > unrelated ordinary message markup stays readable and outbound images are unchanged [0.33ms]
+(pass) inbound readable formatting and privacy > linked images without alt text retain a visible, accessible destination [0.16ms]
+(pass) inbound readable formatting and privacy > deep sender markup cannot exhaust the DOM serializer stack or lose text [141.51ms]
+(pass) inbound readable formatting and privacy > hosted native newsletter fixture is the exact production sanitizer output [3.13ms]
+(pass) inbound readable formatting and privacy > structured fallback preserves paragraphs, destinations, table rows, and code whitespace [0.58ms]
+
+src/mailbox/read.test.ts:
+(pass) bounded mailbox reader > projects one keyset page while SQL aggregates the complete mailbox counts [149.51ms]
+(pass) bounded mailbox reader > rejects stale cursors after attention, classification, label, and concurrent email mutations [133.39ms]
+(pass) bounded mailbox reader > owns mutable account metadata and revision in one snapshot [101.53ms]
+(pass) bounded mailbox reader > merges two index-backed account pages without duplicates or omissions [199.26ms]
+(pass) bounded mailbox reader > reports high-association enrichment separately and projects one effective override per message row [104.46ms]
+(pass) empty attention page pruning > uses zero snapshot aggregates to skip scans across two authorized accounts [132.05ms]
+(pass) empty attention page pruning > keeps notify rows, including combined notify/focus counts [74.33ms]
+(pass) empty attention page pruning > keeps focus rows, including combined notify/focus counts [78.03ms]
+(pass) empty attention page pruning > keeps normal rows, including combined notify/focus counts [78.18ms]
+(pass) empty attention page pruning > keeps quiet rows, including combined notify/focus counts [70.16ms]
+(pass) empty attention page pruning > keeps hidden rows, including combined notify/focus counts [71.53ms]
+(pass) empty attention page pruning > keeps a nonempty group in either account and honors effective attention precedence [83.08ms]
+(pass) empty attention page pruning > preserves timestamp and ID ties across accounts and empty ranks on later pages [95.99ms]
+(pass) empty attention page pruning > retains collection, destination, and account scope checks even for empty filters [79.31ms]
+(pass) empty attention page pruning > applies Inbox skip rules to both the aggregate proof and page predicates [78.67ms]
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [79.77ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [77.49ms]
+(pass) Inbox unread Focus timeline > read Focus returns to chronological Inbox; unread Notify and Focus share one newest-first promotion [78.26ms]
+(pass) Inbox unread Focus timeline > latest representative uses any-message unread and repromotes after mark unread; stale cursors rejected [81.94ms]
+(pass) Inbox unread Focus timeline > cursor pages equal complete ordering across accounts and read/promotion boundaries [141.86ms]
+(pass) Gmail archive excludes the whole thread from Inbox and Focus without deleting All Mail [94.82ms]
+(pass) a newly synced unread reply repromotes a read Focus conversation once, at latest date [77.73ms]
+(pass) Inbox search matches earlier thread content but returns its latest representative [78.04ms]
+(pass) Focus pages traverse combined unread and read ranks across accounts and reject old cursor format [234.15ms]
+
+src/db/config.test.ts:
+(pass) anchors relative database paths to the API workspace [0.21ms]
+
+src/db/client.test.ts:
+(pass) createDatabaseClient > enables SQLite foreign key enforcement [68.98ms]
+(pass) createDatabaseClient > rejects oauth accounts that reference missing users [63.49ms]
+(pass) createDatabaseClient > enforces account-scoped, retry-safe agent event storage without message bodies [71.92ms]
+
+src/db/first-view-guidance.test.ts:
+(pass) BRE-386 migration retires existing human Views without a GET mutation or resetting writing preferences [82.46ms]
+
+src/integrations/linear.test.ts:
+(pass) Linear feedback integration > does nothing when the API key is absent [0.07ms]
+(pass) Linear feedback integration > creates a correctly filed issue and returns its link [1.87ms]
+(pass) Linear feedback integration > surfaces Linear validation details [0.53ms]
+
+src/attention/routing.test.ts:
+(pass) public routing persists to mailbox, thread reader and Organization after reopen, including future matching mail [194.70ms]
+(pass) conversation > exact sender > advanced domain > explicit default > Inbox; resets and Undo restore inheritance [345.91ms]
+(pass) unknown and foreign account/thread reject; normalized sender choices stay account-scoped [241.17ms]
+(pass) stale first-create and update across connections reject; legacy CRUD/batch invalidate guarded saves [221.40ms]
+(pass) bounded known-sender search isolates accounts, normalizes duplicates and never writes rules [120.62ms]
+(pass) SQL counts/filter/pagination apply conversation and default before limiting; reset invalidates cursors [311.60ms]
+(pass) lookup bounds response, escapes search literals, and returns only the chosen account [127.61ms]
+(pass) conversation override covers all senders and future replies; reset exposes each message's inherited rule [191.49ms]
+(pass) reader canonical sender orders missing dates after epoch-zero and pre-epoch mail [155.10ms]
+
+src/attention/batch.test.ts:
+(pass) sender attention batch > returns canonical success for every sender [0.50ms]
+(pass) sender attention batch > keeps canonical successes explicit and retries only the unresolved exact target [0.42ms]
+(pass) sender attention batch > marks permanent failures as non-retryable without losing canonical state [0.19ms]
+(pass) sender attention batch > reports success when fallback resolution proves the requested state persisted [0.24ms]
+
+src/attention/preferences.test.ts:
+(pass) preferences persist after reopen, normalize senders, and isolate account ownership [81.48ms]
+(pass) stale first-create and update revisions cannot overwrite preferences across connections [68.63ms]
+(pass) invalid and case-insensitive duplicate addresses reject atomically [67.38ms]
+(pass) HTTP requires authentication, checks account ownership, and reports revision conflicts [125.16ms]
+
+src/providers/registry.test.ts:
+(pass) provider registry > registers Gmail and Outlook adapters [0.10ms]
+(pass) provider registry > rejects duplicate registrations [0.11ms]
+(pass) provider registry > allows intentionally partial registries and reports missing providers [0.11ms]
+(pass) provider registry > Gmail delegates capability detection to the existing implementation [0.08ms]
+(pass) provider registry > Outlook exposes read capabilities while sync remains an explicit stub [0.21ms]
+
+src/agents/mcp-cost-budgets.test.ts:
+(pass) BRE-422 MCP numeric cost budgets > cost lookup returns numeric weights only for own tool names and preserves no-name metadata cost [0.35ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects invalid runtime costs before clock, sweep, keys, counters, or active leases are touched [0.94ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects unknown legacy tool names without admission and later enforces both budgets [86.81ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects unknown modern tool names without admission and later enforces both budgets [55.00ms]
+(pass) BRE-422 MCP numeric cost budgets > rejects unknown payload tool names without admission and later enforces both budgets [37.57ms]
+(pass) BRE-422 MCP numeric cost budgets > preserves bearer challenges for unknown tools and unit-cost metadata admission [26.31ms]
+(pass) BRE-422 MCP numeric cost budgets > leaves missing tool names to SDK validation while retaining their unit request cost [13.95ms]
+(pass) BRE-422 MCP numeric cost budgets > modern headers cannot select a different dispatch tool or undercharge the body tool [1.64ms]
+(pass) BRE-422 MCP numeric cost budgets > payload copies and method headers cannot turn metadata into an uncharged tool dispatch [1.70ms]
+
+src/agents/m6-validation.test.ts:
+(pass) BRE-269 M6 evaluation catalog > names every required usefulness and edge-case scenario once [0.44ms]
+(pass) BRE-269 M6 evaluation catalog > proves the local M6 slice has no OpenAI credential or model dependency [0.16ms]
+(pass) BRE-269 M6 evaluation catalog > observes the conservative release, CI, security, receipt, travel, and bulk outcomes [4.30ms]
+(pass) BRE-269 M6 evaluation catalog > keeps direct-human and uncertain mail in their existing authorship surfaces [0.89ms]
+(pass) BRE-269 prompt-injection and provider-write safety > keeps tool authority fixed when hostile instructions arrive as email content [1.23ms]
+(pass) BRE-269 prompt-injection and provider-write safety > redacts bodies, provider credentials, OAuth artifacts, and API keys from diagnostics [0.35ms]
+(pass) BRE-269 prompt-injection and provider-write safety > fails closed for wrong resource, scope escalation, revocation, and another account [0.32ms]
+
+src/agents/mcp.test.ts:
+(pass) Orca scoped MCP server > get_thread preserves multiple messages with label and attachment fan-out [198.69ms]
+(pass) Orca scoped MCP server > maps the public OAuth scopes to only their resource capabilities [0.11ms]
+(pass) Orca scoped MCP server > requires the enabled resource to receive an OAuth verifier [0.13ms]
+(pass) Orca scoped MCP server > rejects hostile Host and Origin headers before bearer dispatch [120.54ms]
+(pass) Orca scoped MCP server > authenticates then rejects oversized Organization route bodies with typed 413 before route dispatch [106.85ms]
+(pass) Orca scoped MCP server > prevents DNS rebinding against a loopback MCP resource [106.87ms]
+(pass) Orca scoped MCP server > publishes protected-resource metadata and standards-compliant bearer challenges [96.74ms]
+(pass) Orca scoped MCP server > keeps the bearer gate closed through the live Node server adapter [102.72ms]
+(pass) Orca scoped MCP server > initializes with stable metadata and lists only the bounded annotated tools [130.90ms]
+(pass) Orca scoped MCP server > accepts and forwards stable typed Context filters through query_organization [20.10ms]
+(pass) Orca scoped MCP server > fails closed when an Organization data source returns cross-scope attribution [79.92ms]
+(pass) Orca scoped MCP server > keeps every tool and source link inside the live user/account intersection [425.17ms]
+(pass) Orca scoped MCP server > runs the canonical fixture journey with mail-metadata plus Organization control and preserves read-only describe/query [1330.06ms]
+(pass) Orca scoped MCP server > fails closed with zero Organization writes when the persisted grant changes between preflight and the Lane transaction [320.51ms]
+(pass) Orca scoped MCP server > denies guessed cross-Account resource IDs and replayed cross-Workspace credentials through the real MCP mutation seam [142.12ms]
+(pass) Orca scoped MCP server > fails a cached Context replay when persisted authority is revoked after bearer preflight but before replay lookup [164.65ms]
+(pass) Orca scoped MCP server > rolls back first/middle/last multi-resource failures and appends one bounded redacted attempt each [449.25ms]
+
+src/agents/boundary.test.ts:
+(pass) Orca agent boundary configuration > stays disabled unless the exact feature flag is enabled [0.30ms]
+(pass) Orca agent boundary configuration > requires credential-free HTTPS URLs, except loopback development [0.19ms]
+(pass) Orca agent boundary authorization > authorizes the Organization tool matrix for control-only and legacy read-only grants [0.26ms]
+(pass) Orca agent boundary authorization > authorizes a contract read tool with the live account intersection [0.06ms]
+(pass) Orca agent boundary authorization > fails closed for a disabled integration or any non-contract action [0.05ms]
+(pass) Orca agent boundary authorization > rejects missing scopes and injected scope escalation [0.06ms]
+(pass) Orca agent boundary authorization > pins issuer, resource, user, and current account ownership [0.17ms]
+(pass) Orca agent boundary authorization > rejects expired, overlong, future-issued, and revoked grants [0.17ms]
+(pass) Orca agent boundary redaction and projection > redacts secret keys and credential-like values recursively [0.12ms]
+(pass) Orca agent boundary redaction and projection > preserves repeated non-circular values while still rejecting cycles [0.11ms]
+(pass) Orca agent boundary redaction and projection > projects metadata through an allowlist and marks email content untrusted [0.17ms]
+(pass) Orca agent boundary redaction and projection > projects only plain text for content and rejects a cross-account projection [0.61ms]
+(pass) Orca agent boundary redaction and projection > projects events without owner ids or signed source URL parameters [0.23ms]
+(pass) Orca agent boundary redaction and projection > projects connection identity without provider write capabilities [0.08ms]
+
+src/agents/m6-latency.test.ts:
+BRE-269 latency observation {
+  targetMs: 2000,
+  pushMs: 6.52,
+  fallbackMs: 2.76,
+}
+(pass) BRE-269 sync-to-propagation latency > records push and fallback-sync commit latency without provider or model calls [74.51ms]
+
+src/agents/g2-request-guards.test.ts:
+(pass) BRE-319 MCP exhaustion guards > rejects declared and streamed oversized bodies before dispatch with a typed 413 [0.94ms]
+(pass) BRE-319 MCP exhaustion guards > preserves an accepted body byte-for-byte for the authenticated MCP handler [0.42ms]
+(pass) BRE-319 MCP exhaustion guards > enforces fair connection/workspace cost and in-flight bounds with deterministic recovery [0.37ms]
+(pass) BRE-319 MCP exhaustion guards > releases an in-flight lease after a rate-window rollover without poisoning later windows [0.10ms]
+(pass) BRE-319 MCP exhaustion guards > evicts expired connection and Workspace keys within a bounded sweep while preserving an old active lease [2.92ms]
+(pass) BRE-319 MCP exhaustion guards > releases an admitted MCP lease when the live HTTP exchange is aborted inside a deferred tool [29.20ms]
+(pass) BRE-319 MCP exhaustion guards > exports every stable BRE-319 denial and exhaustion error code [0.12ms]
+(pass) BRE-319 MCP exhaustion guards > runs payload admission before bearer verification and rate admission before MCP dispatch [23.66ms]
+(pass) BRE-319 MCP exhaustion guards > rejects JSON-RPC batches before authorization or partial tool execution [0.79ms]
+
+src/agents/config.test.ts:
+(pass) M6 agent feature flags > keeps propagation and MCP off by default for backward compatibility [0.06ms]
+(pass) M6 agent feature flags > enables each additive surface independently [0.04ms]
+(pass) M6 agent feature flags > rejects ambiguous flag values [0.26ms]
+
+src/mobile-push/apns.test.ts:
+(pass) APNs configuration and response handling > disables delivery without throwing for absent, partial, or malformed credentials [0.41ms]
+(pass) APNs configuration and response handling > accepts a complete token-auth configuration and bounds scheduler settings [0.10ms]
+(pass) APNs configuration and response handling > distinguishes retryable, permanent, and token-invalidating APNs responses [0.15ms]
+
+src/mobile-push/payload.test.ts:
+(pass) notification preview contains sender, subject and snippet with unchanged conversation routing [0.41ms]
+(pass) missing content uses sender address, plain-text fallback, then readable placeholders [0.10ms]
+(pass) preview normalizes whitespace and control characters without interpreting plain text as HTML [0.31ms]
+(pass) Gmail snippet entities decode once before normalization and truncation [1.54ms]
+(pass) entity-only snippet whitespace falls back without decoding literal body or header text [0.38ms]
+(pass) long Unicode previews remain valid and fit Apple's 4096-byte payload limit [1.24ms]
+
+src/mobile-push/migration.test.ts:
+(pass) mobile push commit-order migration replays from the earliest unprocessed sequence [74.93ms]
+
+src/mobile-push/scheduler.test.ts:
+(pass) mobile push scheduler > isolates users, suppresses registration backfill, and deduplicates repeated scans [89.85ms]
+(pass) mobile push scheduler > uses actual Inbox routing instead of provider labels or Human Signal [100.08ms]
+(pass) mobile push scheduler > notifies selected Spaces outside Inbox, ignores unselected Spaces, and deduplicates overlap [132.55ms]
+(pass) mobile push scheduler > rechecks current mail and Space eligibility under the delivery lease [102.77ms]
+(pass) mobile push scheduler > delivers only each device's selected destinations, with one preview per matching message [127.76ms]
+(pass) mobile push scheduler > deselecting one Space suppresses its queued and future alerts while another remains enabled [143.98ms]
+(pass) mobile push scheduler > retries transient failures with backoff and succeeds later [82.06ms]
+(pass) mobile push scheduler > disables invalid tokens but cannot disable a concurrently refreshed registration [81.05ms]
+(pass) mobile push scheduler > removes stale registrations and their outbox rows [76.63ms]
+(pass) mobile push scheduler > suppresses queued and future pushes after the bound session is revoked or expired [73.66ms]
+(pass) mobile push scheduler > preference changes invalidate queued alerts, including off then on before delivery [72.75ms]
+(pass) mobile push scheduler > uses the production mobile session checker before scan and queued delivery [75.01ms]
+(pass) mobile push scheduler > atomically reassigns a token on account switch and removes the former owner's outbox [69.49ms]
+(pass) mobile push scheduler > uses a fresh lease timestamp for every serial delivery claim [74.12ms]
+(pass) mobile push scheduler > does not let a stale lease owner overwrite the current owner's completion [74.70ms]
+(pass) mobile push scheduler > scans newly committed mail by insertion order across accounts [74.71ms]
+
+src/mobile-push/routes.test.ts:
+(pass) mobile push routes > requires authentication and keeps installation registrations isolated per user [203.40ms]
+(pass) mobile push routes > reports a clear disabled state when APNs credentials are absent [76.71ms]
+
+src/classification/backfill.test.ts:
+(pass) Human Signal backfill > an all-current account checks only a covering index and does not hydrate evidence [76.32ms]
+(pass) Human Signal backfill > hydrates at most limit+1 stale IDs and processes received_at,id order across versions [72.37ms]
+(pass) Human Signal backfill > caps an oversized request at 500 and hydrates only 501 candidates [206.23ms]
+(pass) Human Signal backfill > retries candidates changed between ID selection and hydration without overwriting sync [77.99ms]
+(pass) Human Signal backfill > upgrades a pre-index database without changing stored mail [69.48ms]
+(pass) Human Signal backfill > is account-scoped, bounded, version-aware, and idempotent without provider access [69.71ms]
+(pass) Human Signal backfill > retains account-scoped user corrections while automatic fields are reclassified [71.05ms]
+(pass) Human Signal backfill > reclassifies persisted m5-v1 rows when metadata semantics change [67.71ms]
+(pass) Human Signal backfill > does not overwrite a sync refresh that lands after a batch row was selected [69.15ms]
+
+src/classification/evidence.test.ts:
+(pass) Human Signal evidence > does not mistake Auto-Submitted: no or X-Auto-Response-Suppress for sender automation [0.28ms]
+(pass) Human Signal evidence > keeps actual automatic-submission declarations as explainable evidence [0.05ms]
+
+src/classification/human-signal.test.ts:
+(pass) Human Signal classifier > classifies direct correspondence and replies as a likely-human estimate [0.15ms]
+(pass) Human Signal classifier > classifies no-reply transactional and list mail without reading message content [0.39ms]
+(pass) Human Signal classifier > returns uncertain for conflicting evidence and unclassified for missing or unknown input [0.10ms]
+(pass) Human Signal classifier > is deterministic for the same provider-neutral evidence [0.11ms]
+(pass) Human Signal classifier > runs Gmail and Outlook normalized fixtures through the same deterministic rules [0.31ms]
+(pass) Human Signal classifier > covers every M5 state, provider, account, and mixed thread [0.46ms]
+(pass) Human Signal classifier > covers every M5 precedence and auto-response header reason branch [0.15ms]
+
+src/destinations/latest-index.test.ts:
+(pass) latest destination index preserves deterministic sender ordering on fresh initialization [96.10ms]
+(pass) latest destination index preserves deterministic sender ordering on 0042 upgrade [74.05ms]
+
+src/destinations/destinations.test.ts:
+(pass) fresh catalog is Inbox only; GET is read-only; stable names, collision validation, ordering and notification intent [142.09ms]
+(pass) sender destination applies to current/future mail, SQL pages/counts, reader and Organization across accounts [151.72ms]
+(pass) legacy conversation beats new sender; reset reveals inheritance; guarded Undo and legacy writes invalidate [244.96ms]
+(pass) ownership, retired targets and safe retirement reject references without deleting mail [142.97ms]
+(pass) explicit sender beats advanced placement; safety lock freezes actual effective destination [174.50ms]
+(pass) lock preserves advanced candidate across sender reset, database reopen and unlock [162.32ms]
+(pass) manual reset apply and replay match canonical sender destination reads [176.10ms]
+(pass) manual reset apply and replay match canonical account destination reads [181.47ms]
+(pass) destination filtering paginates beyond 100 and rejects changed filters or stale concurrent writes [250.10ms]
+(pass) SQL resolution and inherited selection agree through account, sender, conversation and legacy transitions [211.18ms]
+(pass) populated pre-0042 upgrade preserves custom fallback identity and legacy conversation choices [79.14ms]
+(pass) HTTP destination mutations return affected stable ID and enforce validation/authentication [223.34ms]
+(pass) destination color persists through authority, stale writes, rename/reorder and database reopen [145.79ms]
+(pass) batch conversation move dedupes across accounts, uses one command, preserves sender scope and atomically undoes mixed prior choices [234.25ms]
+(pass) batch rejects any invalid target without placement, revision or audit writes; Undo is all-or-nothing after intervening writes [329.30ms]
+(pass) batch accepts the exact 50-conversation authority bound and applies a single atomic Undo [444.40ms]
+(pass) Focus is attention, while explicit custom destinations, archive, safety, and Quiet remain authoritative [181.65ms]
+(pass) 0051 upgrades derived Focus routing without rewriting stored placements or explicit protections [73.97ms]
+(pass) Inbox catalog count uses the same thread, unread and provider-archive membership as Inbox rows [93.02ms]
+
+src/attachments/routes.test.ts:
+(pass) attachment downloads enforce ownership, bound payloads, and force safe private downloads [154.39ms]
+
+src/config/server.test.ts:
+(pass) server config > uses the local defaults when env vars are absent [0.23ms]
+(pass) server config > validates the port [0.21ms]
+(pass) server config > validates the web origin [0.20ms]
+(pass) server config > normalizes web origin values to a bare origin [0.04ms]
+
+src/auth/auth.test.ts:
+(pass) auth foundation > keeps sessions for 30 days and renews them during active use [72.75ms]
+(pass) auth foundation > does not renew invalidated or expired sessions [75.78ms]
+(pass) auth foundation > renews through auth middleware and keeps the token out of auth context [75.70ms]
+(pass) auth foundation > rejects a renewal that did not update a live session and honors the exact renewal boundary [74.20ms]
+(pass) auth foundation > encrypts and decrypts provider tokens [0.53ms]
+(pass) auth foundation > persists encrypted provider tokens instead of plaintext [65.87ms]
+(pass) auth foundation > creates, resolves, and invalidates sessions [76.15ms]
+(pass) auth foundation > auth middleware resolves the current user from the session cookie [74.52ms]
+(pass) auth foundation > auth middleware returns unauthorized when the cookie is missing [0.46ms]
+(pass) auth foundation > adds secure session cookie attributes by default [0.20ms]
+(pass) auth foundation > allows opting out of secure cookies for local HTTP development [0.05ms]
+(pass) auth foundation > validates missing auth configuration clearly [0.13ms]
+
+src/auth/mail-oauth-security.test.ts:
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > login rejects transplanted callbacks (new@example.com) before exchange and preserves the victim [132.01ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > login rejects transplanted callbacks (attacker@example.com) before exchange and preserves the victim [131.84ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > connect rejects transplanted callbacks (new@example.com) before exchange and preserves the victim [125.44ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > connect rejects transplanted callbacks (attacker@example.com) before exchange and preserves the victim [124.55ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > connect requires the exact initiating session even for the same user [124.28ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > login rejects a different session belonging to the same pending user [118.03ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > legitimate login survives a new service instance, uses private PKCE, and rejects replay [130.10ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > expiry and provider mismatch reject before exchange [103.61ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > simultaneous callbacks consume a transaction only once [107.28ms]
+Gmail authorization was not completed {
+  code: "provider_error",
+  diagnostic: "Google returned an OAuth error: access_denied.",
+}
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > provider denial consumes the transaction without persisting a grant [106.81ms]
+(pass) gmail server-side OAuth transactions > returning login preserves account ID, cached mail, and a usable rotated session [134.57ms]
+(pass) gmail server-side OAuth transactions > session renewal retains binding and mobile bearer connect remains supported [135.26ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) gmail server-side OAuth transactions > a completed pending user is rejected before exchange and cannot be deleted by promotion [118.74ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "The pending login is no longer available.",
+}
+(pass) gmail server-side OAuth transactions > rejects pending_completed during exchange before grant persistence [114.20ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "The pending login is no longer available.",
+}
+(pass) gmail server-side OAuth transactions > rejects session_revoked during exchange before grant persistence [108.16ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > login rejects transplanted callbacks (new@example.com) before exchange and preserves the victim [151.25ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > login rejects transplanted callbacks (attacker@example.com) before exchange and preserves the victim [133.28ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > connect rejects transplanted callbacks (new@example.com) before exchange and preserves the victim [125.16ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > connect rejects transplanted callbacks (attacker@example.com) before exchange and preserves the victim [114.56ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > connect requires the exact initiating session even for the same user [134.17ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > login rejects a different session belonging to the same pending user [125.70ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > legitimate login survives a new service instance, uses private PKCE, and rejects replay [138.55ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > expiry and provider mismatch reject before exchange [97.66ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > simultaneous callbacks consume a transaction only once [109.18ms]
+Outlook authorization was not completed {
+  code: "provider_error",
+  diagnostic: "Microsoft did not grant Outlook permission.",
+}
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > provider denial consumes the transaction without persisting a grant [101.17ms]
+(pass) outlook server-side OAuth transactions > returning login preserves account ID, cached mail, and a usable rotated session [143.75ms]
+(pass) outlook server-side OAuth transactions > session renewal retains binding and mobile bearer connect remains supported [134.18ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) outlook server-side OAuth transactions > a completed pending user is rejected before exchange and cannot be deleted by promotion [108.73ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "The pending login is no longer available.",
+}
+(pass) outlook server-side OAuth transactions > rejects pending_completed during exchange before grant persistence [110.66ms]
+Outlook authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "The pending login is no longer available.",
+}
+(pass) outlook server-side OAuth transactions > rejects session_revoked during exchange before grant persistence [113.66ms]
+(pass) Gmail returning-login scope reporting > preserves compose permission when Google omits scope [124.95ms]
+(pass) Gmail returning-login scope reporting > honors Google's explicit current scope when it removes compose permission [130.16ms]
+
+src/organization/g2-authority-concurrency.test.ts:
+(pass) BRE-319 authority and concurrency > serializes a human-winner two-connection human-v-agent race as an explicit revision conflict [496.96ms]
+(pass) BRE-319 authority and concurrency > serializes a agent-winner two-connection human-v-agent race as an explicit revision conflict [506.34ms]
+(pass) BRE-319 authority and concurrency > returns one identical result for the same concurrent agent key/body and rejects reordered reuse [594.72ms]
+
+src/organization/facet-workflow.test.ts:
+(pass) deep Facet and Workflow module > defines stable schemas and independently applies typed values and Workflow State [0.75ms]
+(pass) deep Facet and Workflow module > validates every scalar type and cardinality at one actionable Organization seam [2.97ms]
+(pass) deep Facet and Workflow module > enforces single/multi and optional/missing semantics without partial state [0.92ms]
+(pass) deep Facet and Workflow module > renames, reorders, and retires by stable identity while rejecting retired assignments [0.51ms]
+(pass) deep Facet and Workflow module > renames, reorders, and retires Workflow States independently of Thread Facets [0.38ms]
+(pass) deep Facet and Workflow module > fails closed for out-of-scope Accounts and mismatched Thread ownership [0.19ms]
+(pass) deep Facet and Workflow module > validates query operators and values against the referenced schema while keeping retired history queryable [0.26ms]
+
+src/organization/mutation-attempt-audit.test.ts:
+(pass) BRE-319 bounded mutation-attempt audit > retains only the newest 1,000 redacted records in one Workspace without pruning another tenant [106.96ms]
+(pass) BRE-319 bounded mutation-attempt audit > serializes two Worker retention attempts so both newest IDs survive and both oldest IDs are pruned [567.11ms]
+
+src/organization/g2-migration.test.ts:
+(pass) BRE-319 G2 migration > is journal-ordered, fresh/0032-upgrade safe, replay-safe, bounded-schema, and foreign-key clean [98.83ms]
+
+src/organization/replay-authorization.test.ts:
+(pass) BRE-318 transaction-live agent replay authorization > View preview rechecks the live agent grant and every query resource inside each transaction [72.58ms]
+(pass) BRE-318 transaction-live agent replay authorization > View duplicate return reauthorizes after another connection commits and revokes between preflight and transaction entry [75.10ms]
+(pass) BRE-318 transaction-live agent replay authorization > View replay is identical and write-free only while the exact persisted grant remains live [75.47ms]
+(pass) BRE-318 transaction-live agent replay authorization > Collection/Pin replay is identical and write-free only while the exact persisted grant remains live [119.12ms]
+(pass) BRE-318 transaction-live agent replay authorization > Collection/Pin transaction duplicate rejects cached authority committed by another Actor [84.17ms]
+(pass) BRE-318 transaction-live agent replay authorization > Context replay is identical and write-free only while the exact persisted grant remains live [86.44ms]
+
+src/organization/sqlite-repository.test.ts:
+(pass) SQLite Organization repository > loads provider-neutral Thread records inside the requested Account set [92.70ms]
+
+src/organization/module.test.ts:
+(pass) Organization module contract > describes the revision-4 schema without advertising an uninstalled apply adapter [2.05ms]
+(pass) Organization module contract > queries Thread organization across authorized Accounts and applies Account as a filter [1.26ms]
+(pass) Organization module contract > reads definitions and Thread projections from one coherent repository snapshot [2.11ms]
+(pass) Organization module contract > bounds mailbox Context projection to the requested Thread page [10.08ms]
+(pass) Organization module contract > limits first-party apply to humans and binds every typed action field into authority [2.92ms]
+(pass) Organization module contract > derives advertised agent mutations from the exact live persisted grant [0.59ms]
+(pass) Organization module contract > fails closed when either authorization scope or filter names an unowned Account [0.29ms]
+(pass) Organization module contract > applies classification to the returned Thread aggregate, not older message evidence [0.84ms]
+(pass) Organization module contract > round-trips a bounded cursor for a many-Account scope [1.22ms]
+(pass) Organization module contract > reuses one ranked snapshot while a mailbox-sized result is paged [12.19ms]
+(pass) Organization module contract > discovers implemented simulate, revert, and correction per REST/MCP surface without send or delete authority [0.34ms]
+
+src/organization/facet-workflow.routes.test.ts:
+(pass) Facet and Workflow Organization REST adapter > applies and queries a cross-Account typed change set without partial writes [381.52ms]
+
+src/organization/authority.test.ts:
+(pass) G0 Actor identity and operation matrix > keeps system revert ineligible while capability-gating all five human and agent operations [0.59ms]
+(pass) G0 Actor identity and operation matrix > binds Actor type as well as ID into the live Capability identity [0.14ms]
+(pass) G0 runtime validation > fails closed instead of authorizing or throwing on malformed requests [0.43ms]
+(pass) G0 runtime validation > fails closed on malformed trusted live state [0.24ms]
+(pass) G0 live Capability, Workspace, and Account isolation > allows all and only explicitly requested live and granted Accounts [0.32ms]
+(pass) G0 live Capability, Workspace, and Account isolation > denies guessed, stale, or cross-Workspace scope instead of narrowing silently [0.25ms]
+(pass) G0 live Capability, Workspace, and Account isolation > rejects stale and revoked Capability snapshot replay [0.17ms]
+(pass) G0 command binding and bounded authority > derives resource, action, and risk from the exact command instead of caller metadata [0.24ms]
+(pass) G0 command binding and bounded authority > binds the allowed execution context to a server-computed command digest [0.77ms]
+(pass) G0 command binding and bounded authority > rejects operation/intent mismatch and hard-excludes send or provider deletion [0.51ms]
+(pass) G0 revision and idempotency execution preconditions > rejects stale or missing Workspace and resource revisions [0.77ms]
+(pass) G0 revision and idempotency execution preconditions > rejects missing or already-reserved idempotency keys [0.20ms]
+(pass) G0 Trace evidence > records the bound command and requested families on allow and deny [0.40ms]
+
+src/organization/thread-aggregate.test.ts:
+(pass) Organization Thread aggregate sync adapter > refreshes aggregate truth only inside the explicit Account scope [68.83ms]
+
+src/organization/routes.test.ts:
+(pass) Organization REST read adapter > describes and queries only the session Workspace Accounts [540.71ms]
+(pass) Organization REST read adapter > requires authentication and keeps simulate/revert routes disabled [96.41ms]
+
+src/calendar/availability.test.ts:
+(pass) deterministic calendar comparison > marks a window busy when any selected calendar overlaps, including an all-day interval [1.49ms]
+(pass) deterministic calendar comparison > merges overlapping calendars conservatively and fails unknown on a calendar error [0.29ms]
+(pass) deterministic calendar comparison > uses only selected calendars [0.20ms]
+(pass) deterministic calendar comparison > never calls an ambiguous natural-language window free [0.24ms]
+(pass) deterministic calendar comparison > treats stale data and expired grants as unknown [0.36ms]
+(pass) deterministic calendar comparison > formats timezones across daylight-saving transitions [0.87ms]
+
+src/calendar/google-client.test.ts:
+(pass) Google Calendar read-only client > lists only allowlisted calendar metadata and paginates [1.11ms]
+(pass) Google Calendar read-only client > posts only calendar IDs and returns busy ranges without event content [0.78ms]
+(pass) Google Calendar read-only client > maps an expired grant without exposing provider response bodies [0.50ms]
+
+src/mail/images/images.test.ts:
+(pass) public-only image URLs reject local, alternate, credential and redirect-style inputs [1.01ms]
+(pass) raster validation rejects pixels, huge decoded dimensions and non-raster data [0.66ms]
+(pass) mixed private/public DNS answers are rejected before a socket opens [0.76ms]
+(pass) socket uses validated address without rebinding, credentials, redirects or pooled reuse [2.38ms]
+(pass) redirects, compressed payloads, MIME mismatch and streamed oversize are rejected [1.72ms]
+(pass) default sanitization blocks images; explicit partial loading preserves safe HTML and blocks pixels/resources [5.58ms]
+(pass) image count and total byte budgets bound sender requests [60.59ms]
+(pass) native POST resolves only an authenticated user's stored message, before any image request [97.77ms]
+(pass) failed downloads spend their allowance and a partly used budget is never overrun [27.87ms]
+(pass) global cancellation interrupts DNS before any socket is opened [10.40ms]
+
+src/mail/images/eligibility.test.ts:
+(pass) eligibility retains positive images and rejects encoded markup, blocked URLs and declared trackers [3.42ms]
+(pass) malformed, entity, raw-text and nested HTML agrees with the pre-optimization policy [154.77ms]
+(pass) image-free eligibility avoids provider sanitizer work while possible tags still use its policy [0.86ms]
+(pass) long-thread GET retains image availability, inert bodies and account isolation without consent or downloads [246.28ms]
+
+src/providers/gmail/push.test.ts:
+(pass) Gmail push sync > stores watch history and renews only when the watch is close to expiry [70.18ms]
+(pass) Gmail push sync > drains pending history before replacing the cursor during watch renewal [72.14ms]
+(pass) Gmail push sync > records freshness when an incremental notification is already at the stored cursor [62.31ms]
+(pass) Gmail push sync > advances the cursor when a changed message disappears before fetch [66.97ms]
+(pass) Gmail push sync > syncs history changes and advances the cursor only after message persistence [76.32ms]
+(pass) Gmail push sync > backfills existing messages when the first push arrives without a stored history cursor [74.89ms]
+(pass) Gmail push sync > falls back to an existing-message backfill when Gmail history has expired [70.06ms]
+(pass) Gmail push sync > removes deleted history messages and empty local threads [68.92ms]
+(pass) Gmail push sync > requires a verified Pub/Sub token and parses the Gmail notification envelope [0.54ms]
+(pass) history persists bounded batches in global date/id order and counts distinct identities [777.00ms]
+(pass) history provider failure after a committed batch preserves cursor and replays idempotently [94.06ms]
+(pass) history lease failure after a committed batch preserves cursor and replays idempotently [99.57ms]
+(pass) history ordering failure after a committed batch preserves cursor and replays idempotently [95.03ms]
+(pass) history byte budget flushes large bodies before the count limit [122.86ms]
+(pass) history reconciles pages and metadata/body 404s, deletes in bounded fenced batches, and replays after lease loss [187.16ms]
+
+src/providers/gmail/normalizer-date-persistence.test.ts:
+(pass) malformed dates do not abort a batch or overwrite another account's matching provider IDs [76.02ms]
+
+src/providers/gmail/sync-coordinator-migration.test.ts:
+(pass) BRE-368 migration upgrades existing mail with durable coordinator tables [65.84ms]
+
+src/providers/gmail/scheduler.test.ts:
+(pass) Gmail periodic sync scheduler > backfills a new account, establishes a watch, and reports per-account success [101.29ms]
+(pass) Gmail periodic sync scheduler > continues to use the periodic fallback when Pub/Sub is not configured [122.71ms]
+(pass) Gmail periodic sync scheduler > full-backfills an existing account when its first push watch is established [98.59ms]
+(pass) Gmail periodic sync scheduler > keeps polling but reports and persists failure when watch setup fails [95.97ms]
+
+src/providers/gmail/sync-coordinator.test.ts:
+(pass) durable Gmail sync coordinator > collapses duplicate queued requests and runs the highest history cursor once [95.45ms]
+(pass) durable Gmail sync coordinator > coalesces concurrent manual and fallback triggers while preserving a newer push [107.83ms]
+(pass) durable Gmail sync coordinator > allows only one lease owner across coordinator instances [81.62ms]
+(pass) durable Gmail sync coordinator > allows only one active worker across Bun processes [317.03ms]
+(pass) durable Gmail sync coordinator > takes over a stale lease after a crash and fences the old owner [95.38ms]
+(pass) durable Gmail sync coordinator > requeues a partial failure with bounded backoff and recovers on restart [96.07ms]
+(pass) durable Gmail sync coordinator > keeps account leases isolated [107.91ms]
+(pass) durable Gmail sync coordinator > records queue depth, coalescing, and end-to-end freshness from publish time [82.79ms]
+
+src/providers/gmail/drafts.test.ts:
+(pass) Gmail draft mirroring > encodes a URL-safe MIME message without leaking header newlines [0.45ms]
+(pass) Gmail draft mirroring > creates, updates, and deletes the same Gmail draft ID [0.69ms]
+
+src/providers/gmail/sync-persistence.test.ts:
+(pass) Gmail batch persistence > writes 25 changed messages in bounded batches and skips an unchanged replay [79.20ms]
+(pass) Gmail batch persistence > rolls back mail and aggregate writes when a batch projection fails [74.17ms]
+
+src/providers/gmail/sync-runtime.test.ts:
+(pass) combined queued push and fallback runs history then renews the Gmail watch [102.26ms]
+(pass) persists a combined history success and watch failure as a retryable partial failure [121.22ms]
+(pass) stale takeover runs recovered push history and fallback watch through the default runtime [103.95ms]
+
+src/providers/gmail/normalizer.test.ts:
+(pass) Gmail normalizer > uses the missing-date fallback for malformed or out-of-range internal dates [0.37ms]
+(pass) Gmail normalizer > treats non-string provider date values as unknown without aborting normalization [0.14ms]
+(pass) Gmail normalizer > preserves valid numeric and date-string internal dates [0.23ms]
+(pass) Gmail normalizer > maps Gmail messages to normalized Orca messages [0.13ms]
+(pass) Gmail normalizer > reduces Gmail list headers and categories to safe classifier evidence [0.12ms]
+(pass) Gmail normalizer > keeps the M5 Gmail category cases aligned with adapter evidence [0.20ms]
+(pass) Gmail normalizer > maps Gmail labels to normalized labels [0.04ms]
+(pass) Gmail normalizer > accepts an angle-bracket address without a display name [0.05ms]
+(pass) Gmail normalizer > extracts attachment metadata without fetching attachment content [0.07ms]
+(pass) Gmail normalizer > maps normalized messages to a normalized thread [0.11ms]
+
+src/providers/gmail/mime.test.ts:
+(pass) Gmail MIME > adds RFC threading headers to replies and keeps forwards independent [0.58ms]
+(pass) Gmail MIME > encodes attachment bytes in a multipart message [0.23ms]
+(pass) Gmail MIME > quotes ASCII display names and encodes Unicode names safely [0.27ms]
+(pass) Gmail MIME > folds long recipient and References headers below the RFC hard limit [0.75ms]
+(pass) Gmail MIME > rejects CRLF media-type injection and sanitizes unstructured headers [0.28ms]
+
+src/providers/gmail/transport.test.ts:
+(pass) Gmail transport threading metadata > fetches missing Message-ID and References for a pre-migration reply target [0.44ms]
+(pass) Gmail transport threading metadata > does not fetch when stored threading metadata is already present [0.12ms]
+
+src/providers/gmail/sync.test.ts:
+(pass) syncGmailAccountPage > refreshes an expired access token before syncing and persists rotated credentials [77.80ms]
+(pass) syncGmailAccountPage > refreshes and retries a sync once after Gmail rejects an access token [75.24ms]
+(pass) syncGmailAccountPage > surfaces reconnect only when Google rejects the refresh token [66.75ms]
+(pass) syncGmailAccountPage > keeps a fresh Gmail grant on quota failure and still identifies missing permission [68.93ms]
+(pass) syncGmailAccountPage > coalesces concurrent refreshes for one Gmail account [72.07ms]
+(pass) syncGmailAccountPage > rejects malformed refresh responses without replacing credentials [68.36ms]
+(pass) syncGmailAccountPage > refreshes legacy Gmail credentials with the OAUTH_TOKEN_ENCRYPTION_KEY alias [66.08ms]
+(pass) syncGmailAccountPage > persists paginated Gmail inbox data and remains safe to rerun [78.36ms]
+(pass) syncGmailAccountPage > reuses the original sync window when resuming a later page [76.09ms]
+(pass) syncGmailAccountPage > removes stale email label joins when Gmail labels change [77.95ms]
+
+src/providers/gmail/sync-evaluation.test.ts:
+(pass) persistGmailMessages Event snapshots > evaluates same-Thread Events against immutable historical aggregates [105.67ms]
+
+src/providers/gmail/client.test.ts:
+(pass) Gmail push API client > requests a watch and parses history changes across all change types [1.35ms]
+(pass) Gmail push API client > surfaces Gmail HTTP failures without provider response details [1.30ms]
+(pass) Gmail push API client > overlaps incremental message queries at the local checkpoint boundary [1.26ms]
+(pass) fetches history ordering metadata without payloads and preserves provider failures [1.17ms]
+(pass) Gmail authorization classification > classifies 403 rateLimitExceeded without discarding Google's reason [0.82ms]
+(pass) Gmail authorization classification > classifies 403 userRateLimitExceeded without discarding Google's reason [0.12ms]
+(pass) Gmail authorization classification > classifies 403 accessNotConfigured without discarding Google's reason [0.04ms]
+(pass) Gmail authorization classification > classifies 403 insufficientPermissions without discarding Google's reason [0.05ms]
+(pass) Gmail authorization classification > classifies 403 authError without discarding Google's reason [0.04ms]
+
+src/providers/gmail/push-config.test.ts:
+(pass) Gmail push configuration > uses safe polling and backfill defaults when push is disabled [0.06ms]
+(pass) Gmail push configuration > requires a full Pub/Sub topic resource name and parses bounded overrides [0.28ms]
+
+src/providers/gmail/date-recovery.test.ts:
+(pass) empty incremental page revisits unknown dates without changing mail or another account [81.21ms]
+(pass) history 101 revisits unknown dates without delta IDs [75.36ms]
+(pass) history 100 revisits unknown dates without delta IDs [74.27ms]
+(pass) genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed [80.52ms]
+(pass) bounded retries rotate past invalid and unavailable messages even with an unchanged clock [112.78ms]
+(pass) recovery rejects provider identity mismatch and supports clients without metadata [84.02ms]
+(pass) date-only repair preserves attachments, labels, thread flags and Organization values [74.82ms]
+(pass) recovery rejects another account's lease and never writes after lease loss [73.31ms]
+(pass) an in-flight recovery cannot overwrite a concurrent successful normalization [80.01ms]
+(pass) failed legacy revalidation never certifies an ambiguous epoch [78.64ms]
+(pass) multi-page backfill shares one twenty-message recovery budget [95.09ms]
+(pass) legacy null internal date with a real received date is not treated as fallback mail [74.06ms]
+(pass) coordinator incremental pagination shares one recovery budget [127.00ms]
+(pass) watch renewal and fallback share the primary recovery budget (push=false) [121.49ms]
+(pass) watch renewal and fallback share the primary recovery budget (push=true) [130.31ms]
+
+src/providers/outlook/outlook.test.ts:
+(pass) Outlook provider > lists Graph messages, follows opaque pagination, and gets a message [1.59ms]
+(pass) Outlook provider > maps 401 authorization errors without leaking provider response bodies [0.30ms]
+(pass) Outlook provider > maps 403 authorization errors without leaking provider response bodies [0.05ms]
+(pass) Outlook provider > does not replay a cursor with a different account token [0.56ms]
+(pass) Outlook provider > rejects cursors outside the exact inbox route: another user's inbox [0.23ms]
+(pass) Outlook provider > rejects cursors outside the exact inbox route: a non-inbox folder [0.05ms]
+(pass) Outlook provider > rejects cursors outside the exact inbox route: the mailbox message collection [0.07ms]
+(pass) Outlook provider > rejects cursors outside the exact inbox route: a different Graph path [0.03ms]
+(pass) Outlook provider > rejects cursors outside the exact inbox route: a different origin [0.03ms]
+(pass) Outlook provider > rejects malformed cursors: empty [0.10ms]
+(pass) Outlook provider > rejects malformed cursors: plain text [0.02ms]
+(pass) Outlook provider > rejects malformed cursors: unsupported version [0.02ms]
+(pass) Outlook provider > rejects malformed cursors: missing signature [0.01ms]
+(pass) Outlook provider > rejects malformed cursors: invalid base64url [0.02ms]
+(pass) Outlook provider > rejects malformed cursors: extra segment [0.01ms]
+(pass) Outlook provider > normalizes a Graph message into the shared provider model [0.43ms]
+(pass) Outlook provider > reduces Outlook headers and categories to provider-neutral classifier evidence [0.11ms]
+(pass) Outlook provider > normalizes missing optional fields deterministically [0.06ms]
+
+src/agents/propagation/deterministic.test.ts:
+(pass) deterministic agent propagation > gmail testflight release produces timeline [0.88ms]
+(pass) deterministic agent propagation > gmail routine newsletter produces none [0.64ms]
+(pass) deterministic agent propagation > gmail account security alert produces timeline [0.18ms]
+(pass) deterministic agent propagation > outlook deploy failure produces timeline [0.11ms]
+(pass) deterministic agent propagation > outlook payment receipt produces timeline [0.08ms]
+(pass) deterministic agent propagation > outlook travel change produces timeline [0.06ms]
+(pass) deterministic agent propagation > uses the canonical account-scoped SHA-256 idempotency tuple [0.18ms]
+(pass) deterministic agent propagation > applies a local category policy without changing Human Signal [0.25ms]
+(pass) deterministic agent propagation > derives bounded event copy without copying the message body [0.18ms]
+
+src/agents/propagation/gmail-integration.test.ts:
+(pass) Gmail propagation boundary > a duplicate history push creates one event and performs no provider write [79.04ms]
+(pass) Gmail propagation boundary > a propagation write failure cannot fail sync or lose normalized mail [72.51ms]
+
+src/agents/propagation/store.test.ts:
+(pass) SQLite agent event store > deduplicates retries and updates meaningful same-message changes in place [71.97ms]
+(pass) SQLite agent event store > keeps new provider-message follow-ups as distinct immutable source events [70.20ms]
+(pass) SQLite agent event store > prevents cross-account create, read, and mutation [76.14ms]
+(pass) SQLite agent event store > rejects a concurrent stale lifecycle writer instead of returning the winner's transition [69.16ms]
+(pass) SQLite agent event store > resolves account policy and reversible mutes without provider writes [66.64ms]
+
+src/agents/propagation/service.test.ts:
+(pass) post-normalization propagation service > isolates evaluator and storage failures and logs only safe metadata [1.46ms]
+(pass) post-normalization propagation service > suppresses matching sender/category mutes before persistence [0.47ms]
+(pass) post-normalization propagation service > reports created, updated, and duplicate outcomes for diagnostics [1.08ms]
+(pass) post-normalization propagation service > isolates evaluator failures from subsequent messages [0.65ms]
+
+src/auth/mobile/routes.test.ts:
+(pass) mobile native authentication > requires explicit consent, exchanges PKCE once, and authenticates a user-scoped bearer [118.02ms]
+(pass) mobile native authentication > rejects a grant from a different web user and rejects cross-site confirmation [96.82ms]
+(pass) mobile native authentication > rejects expired authorization codes [95.78ms]
+(pass) mobile native authentication > does not grant pending login identities [78.32ms]
+(pass) mobile native authentication > revokes only the presented mobile session and leaves the desktop cookie valid [111.14ms]
+(pass) mobile native authentication > rejects weak inputs and a silently changed browser request binding [90.23ms]
+(pass) mobile native authentication > explicitly cancels a consent request and permits a fresh start in the same browser [107.00ms]
+(pass) mobile native authentication > deliberately restarts after native cancellation without allowing request substitution [124.15ms]
+(pass) mobile native authentication > expires the browser binding with its request and explicitly restarts after pruning [94.77ms]
+(pass) mobile native authentication > bounds start payloads, pending capacity, and prunes expired requests [89.20ms]
+(pass) mobile native authentication > limits starts per transport client while retaining a separate overload ceiling [158.58ms]
+(pass) mobile native authentication > selects a trusted forwarded client from the right and ignores spoofed leftmost entries [66.03ms]
+
+src/auth/gmail/capabilities.test.ts:
+(pass) Gmail capabilities > treats a legacy null scope as the original read-only grant [0.12ms]
+(pass) Gmail capabilities > keeps a read-only connection unable to draft or send [0.02ms]
+(pass) Gmail capabilities > maps the minimum compose grant to draft and send capabilities [0.06ms]
+(pass) Gmail capabilities > recognizes send-only and broader legacy grants without requesting them [0.07ms]
+
+src/auth/gmail/oauth-accounts.test.ts:
+(pass) DatabaseOAuthAccountStore > upgrades in place while preserving sync state and the latest refresh token [84.51ms]
+(pass) DatabaseOAuthAccountStore > a later callback without a refresh token cannot erase a newer refresh token [74.95ms]
+
+src/auth/gmail/routes.test.ts:
+Gmail authorization is unavailable because its server configuration is incomplete {
+  operation: "login",
+  configurationIssues: [ "GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "SESSION_SECRET" ],
+}
+(pass) Gmail auth routes > publishes a safe sign-in availability contract without configuration identifiers [1.22ms]
+Gmail authorization was not completed {
+  code: "missing_state",
+  diagnostic: "Missing OAuth state.",
+}
+(pass) Gmail auth routes > sanitizes callback failures when no browser redirect is configured [0.57ms]
+(pass) Gmail auth routes > sends returning users to their workspace while retaining callback status [0.05ms]
+(pass) Gmail auth routes > connect returns a Google authorization URL [0.63ms]
+(pass) Gmail auth routes > authenticated connects retain the first Gmail account when a second Google identity is added [80.69ms]
+(pass) Gmail auth routes > reconnect carries the selected stacked account through OAuth [1.21ms]
+(pass) Gmail auth routes > uses one configured database for the login session and OAuth account [98.39ms]
+(pass) Gmail auth routes > rejects legacy signed state even with a valid server signature [0.60ms]
+(pass) Gmail auth routes > merges returning users onto the existing account and rotates a usable session [123.71ms]
+(pass) Gmail auth routes > callback exchanges code, encrypts tokens, and upserts an oauth account record [1.24ms]
+(pass) Gmail auth routes > callback ignores cross-origin returnTo values and falls back to the configured redirect [0.78ms]
+Gmail authorization was not completed {
+  code: "provider_error",
+  diagnostic: "Google returned an OAuth error: access_denied.",
+}
+(pass) Gmail auth routes > callback redirects with a clear error state when Google denies access [0.60ms]
+(pass) Gmail auth routes > upgrade requests only gmail.compose and identifies the existing account [0.77ms]
+Gmail authorization was not completed {
+  code: "provider_error",
+  diagnostic: "Google returned an OAuth error: access_denied.",
+}
+(pass) Gmail auth routes > denied upgrade leaves the existing read-only grant untouched [0.62ms]
+Gmail authorization was not completed {
+  code: "account_mismatch",
+  diagnostic: "Choose the same Google account that is already connected to Orca. Reading access was not changed.",
+}
+(pass) Gmail auth routes > upgrade rejects a different Google account without creating or replacing a connection [0.69ms]
+(pass) Gmail auth routes > successful upgrade merges capabilities and preserves the refresh grant [1.04ms]
+Gmail authorization was not completed {
+  code: "compose_not_granted",
+  diagnostic: "Google did not grant Gmail compose access. Reading access was not changed.",
+}
+(pass) Gmail auth routes > treats granular consent without gmail.compose as a recoverable denial [0.68ms]
+(pass) Gmail auth routes > trusts Google's returned scope set when an upgrade changes the current grant [0.81ms]
+(pass) Gmail auth routes > falls back to existing plus requested scopes when Google omits scope [0.82ms]
+(pass) Gmail auth routes > targets an explicitly selected account for multi-account users [0.49ms]
+Gmail authorization was not completed {
+  code: "invalid_state",
+  diagnostic: "Could not verify OAuth state.",
+}
+(pass) Gmail auth routes > a replayed callback is rejected before another token exchange [0.83ms]
+
+src/auth/mcp/oauth.test.ts:
+(pass) Orca MCP OAuth 2.1 > publishes discovery and completes stateful authorization code + S256 PKCE [126.72ms]
+(pass) Orca MCP OAuth 2.1 > issues an explicit account-scoped Organization-control grant with truthful consent [113.57ms]
+(pass) Orca MCP OAuth 2.1 > registers protected-resource metadata at the full configured resource path [67.00ms]
+(pass) Orca MCP OAuth 2.1 > carries issued OAuth grants through /mcp and enforces live revocation and disconnect [239.34ms]
+(pass) Orca MCP OAuth 2.1 > rotates refresh tokens, detects replay, and immediately revokes the connection [122.91ms]
+346 |         const committed = db.transaction((tx) => {
+347 |           const consumed = tx.update(mcpAuthorizationCodes).set({ consumedAt: exchangeAt }).where(and(eq(mcpAuthorizationCodes.id, record.id), isNull(mcpAuthorizationCodes.consumedAt), gt(mcpAuthorizationCodes.expiresAt, exchangeAt))).returning({ id: mcpAuthorizationCodes.id }).get();
+348 |           if (!consumed) return false;
+349 |           tx.insert(mcpConnections).values({ id: connectionId, userId: record.userId, clientId, resource, scopes: record.scopes, createdAt: exchangeAt, updatedAt: exchangeAt }).run();
+350 |           tx.insert(mcpConnectionAccounts).values(activeAccountIds.map((accountId) => ({ id: crypto.randomUUID(), connectionId, accountId, createdAt: exchangeAt }))).run();
+351 |           tx.insert(mcpAccessTokens).values(pair.accessRecord).run();
+                                                                     ^
+SQLiteError: injected access insert failure
+      errno: 1811,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_TRIGGER"
+
+      at #run (bun:sqlite:185:20)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/mcp/routes.ts:351:64)
+      at <anonymous> (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/mcp/routes.ts:346:30)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/hono-base.js:306:31)
+
+(pass) Orca MCP OAuth 2.1 > rolls back authorization-code consumption when credential persistence fails [120.07ms]
+203 |         .where(and(eq(mcpRefreshTokens.id, existing.id), isNull(mcpRefreshTokens.consumedAt), isNull(mcpRefreshTokens.revokedAt)))
+204 |         .returning({ id: mcpRefreshTokens.id })
+205 |         .get();
+206 |       if (!consumed) throw new RefreshReplayError();
+207 |       tx.insert(mcpAccessTokens).values(pair.accessRecord).run();
+208 |       tx.insert(mcpRefreshTokens).values(pair.refreshRecord).run();
+                                                                   ^
+SQLiteError: injected refresh insert failure
+      errno: 1811,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_TRIGGER"
+
+      at #run (bun:sqlite:185:20)
+      at <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/mcp/tokens.ts:208:62)
+      at <anonymous> (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-search-ui-fix/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at rotateMcpRefreshToken (/workspace/orca-search-ui-fix/apps/api/src/auth/mcp/tokens.ts:200:8)
+      at async <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/mcp/routes.ts:360:28)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-search-ui-fix/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/workspace/orca-search-ui-fix/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-search-ui-fix/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/workspace/orca-search-ui-fix/apps/api/src/auth/mcp/oauth.test.ts:354:25)
+
+(pass) Orca MCP OAuth 2.1 > rolls back refresh consumption when replacement credential persistence fails [123.56ms]
+(pass) Orca MCP OAuth 2.1 > bounds dynamic registration and rejects untrusted callback origins [81.33ms]
+(pass) Orca MCP OAuth 2.1 > retains consumed refresh tokens for replay detection, then garbage-collects them [119.09ms]
+(pass) Orca MCP OAuth 2.1 > keeps grants account-scoped and supports per-connection and all-connection revocation [164.99ms]
+(pass) Orca MCP OAuth 2.1 > removes disconnected accounts from live authorization and cascades connections on user deletion [127.11ms]
+(pass) Orca MCP OAuth 2.1 > keeps the entire OAuth surface off until explicitly enabled [69.21ms]
+(pass) Orca MCP OAuth 2.1 > provides a standards-discoverable 401 hook for the MCP resource [69.42ms]
+(pass) Orca MCP OAuth 2.1 > refuses write scopes before consent [88.16ms]
+
+src/auth/mcp/config.test.ts:
+(pass) MCP OAuth config > is default-off with local development identifiers [0.27ms]
+(pass) MCP OAuth config > caps token lifetimes at the architecture boundary [0.16ms]
+(pass) MCP OAuth config > accepts only configured exact redirect URIs [0.07ms]
+(pass) MCP OAuth config > keeps disabled MCP from blocking production startup [0.03ms]
+(pass) MCP OAuth config > requires HTTPS identifiers when MCP is enabled in production [0.18ms]
+(pass) MCP OAuth config > derives protected-resource discovery from the full MCP resource identifier [0.02ms]
+(pass) MCP OAuth config > requires a distinct 256-bit MCP signing key when enabled [0.10ms]
+
+src/auth/calendar/config.test.ts:
+(pass) Calendar OAuth configuration > keeps the fixed scope allowlist separate from Gmail and event writes [0.12ms]
+(pass) Calendar OAuth configuration > reuses Orca's existing Google OAuth client without sharing the Gmail grant [0.20ms]
+(pass) Calendar OAuth configuration > prefers dedicated Calendar OAuth overrides when they are configured [0.05ms]
+
+src/auth/calendar/routes.test.ts:
+(pass) read-only Calendar routes > uses separate least-privilege consent, explicit selection, free/busy only, and revocation [159.50ms]
+(pass) read-only Calendar routes > turns an expired refresh grant into Unknown instead of guessed availability [73.06ms]
+
+src/auth/outlook/oauth.test.ts:
+(pass) Outlook OAuth > uses read-first Microsoft scopes and persists encrypted tokens [1.10ms]
+(pass) Outlook OAuth > rejects a tampered state before exchanging tokens [0.34ms]
+
+src/auth/outlook/routes.test.ts:
+(pass) Outlook auth routes > preserves a returning user's mobile authorization destination [0.04ms]
+Outlook authorization is unavailable because its server configuration is incomplete {
+  operation: "login",
+  configurationIssues: [ "OUTLOOK_CLIENT_ID", "OUTLOOK_CLIENT_SECRET", "SESSION_SECRET" ],
+}
+(pass) Outlook auth routes > publishes safe configured and unavailable sign-in states [0.77ms]
+(pass) Outlook auth routes > merges a returning user onto the existing account and rotates the session [129.30ms]
+
+src/organization/rules/migration.test.ts:
+(pass) BRE-314 Rule Revision migration > is journal ordered and makes persisted revisions append-only [69.18ms]
+(pass) BRE-314 Rule Revision migration > upgrades 0026 through Views and Rules, replays safely, and remains foreign-key clean [66.71ms]
+
+src/organization/rules/correction.test.ts:
+(pass) production user.corrected seam > revalidates the live agent Capability before returning an exact correction receipt [96.75ms]
+(pass) production user.corrected seam > persists one complete correction Trace and audited projection, replays exactly, and exposes the authenticated REST seam [134.13ms]
+
+src/organization/rules/ordering-migration.test.ts:
+(pass) BRE-315 migration 0030 upgrades Rule order canonically and bootstraps the revisioned Rule Set [68.41ms]
+
+src/organization/rules/evaluation-integration.test.ts:
+(pass) message.received Rule evaluation > upgrades exact BRE-315 persisted Trace JSON deterministically at replay and latest-read boundaries [107.63ms]
+(pass) message.received Rule evaluation > rejects a Lane introduced after the compiled Workspace Schema revision with zero writes [95.06ms]
+(pass) message.received Rule evaluation > rejects schema-tampered compiled IR with zero projection, Change Set, or Trace writes [101.27ms]
+(pass) message.received Rule evaluation > bounds referenced live catalogs before exhausted evaluation and performs zero writes [278.37ms]
+(pass) message.received Rule evaluation > bounds live Collection query inputs across many owned Accounts [98.75ms]
+(pass) message.received Rule evaluation > fails closed before candidates when referenced Collections are missing or outside the Workspace [201.93ms]
+(pass) message.received Rule evaluation > atomically organizes a production-failure Thread and persists its complete Glass Box Trace [97.55ms]
+(pass) message.received Rule evaluation > rolls back projection and Trace evidence when the live system Capability is denied [93.88ms]
+(pass) message.received Rule evaluation > does not overwrite a concurrent authoritative human Lane write from a stale evaluation snapshot [97.51ms]
+(pass) message.received Rule evaluation > denies live Collection add and remove across Accounts without mutating foreign membership [100.51ms]
+(pass) message.received Rule evaluation > applies a live Collection remove within the Thread Account [98.00ms]
+(pass) message.received Rule evaluation > preserves lower Rule placement while Manual Override remains the effective winner [107.88ms]
+(pass) message.received Rule evaluation > keeps a Safety-Locked Lane and provenance immutable across matching and nonmatching live replay, reload, Manual Override, and unlock [132.87ms]
+(pass) message.received Rule evaluation > persists attention, retention, and deletion proposals in evaluation evidence without forbidden live projections [104.98ms]
+(pass) message.received Rule evaluation > does not reinterpret an identical provider-message replay as thread.updated [87.67ms]
+(pass) message.received Rule evaluation > makes persisted Rule position authoritative for conflicting winners across reorder and reload [133.39ms]
+(pass) message.received Rule evaluation > rolls back mail and organization state together when Trace persistence fails [87.94ms]
+
+src/organization/rules/simulation.test.ts:
+(pass) BRE-317 production-semantics historical Simulation > recompiles through the production compiler, evaluates with production precedence, and never mutates its repository or snapshots [6.13ms]
+(pass) BRE-317 production-semantics historical Simulation > fails closed when the requested Workspace Schema revision is stale before reading history [0.86ms]
+(pass) BRE-317 production-semantics historical Simulation > fails closed when stored source provenance is not bound to its immutable digest [0.79ms]
+
+src/organization/rules/evaluator.test.ts:
+(pass) evaluateOrcaRules > matches each canonical Event family without allowing evaluator-origin recursion [7.86ms]
+(pass) evaluateOrcaRules > rejects Event kind, cause, subject, and crafted provenance mismatches before Rule matching [0.91ms]
+(pass) evaluateOrcaRules > combines compatible Actions, selects exact exclusive winners, and returns a complete deterministic Trace [4.27ms]
+(pass) evaluateOrcaRules > produces one byte-stable semantic result and Trace for equivalent fresh invocation order [3.06ms]
+(pass) evaluateOrcaRules > reports the authoritative Safety Lock reason when it wins over a Manual Override and matching Rule [1.59ms]
+(pass) evaluateOrcaRules > keeps the top-level reason aligned with the deterministic Lane winner across the precedence matrix [8.16ms]
+(pass) evaluateOrcaRules > enforces Safety Lock then Manual Override before ordered Rule, Lane Policy, and Workspace fallback [3.79ms]
+(pass) evaluateOrcaRules > records missing data and capability denial without activating unsafe behavior [1.73ms]
+(pass) evaluateOrcaRules > denies Collection add and remove candidates bound to a different Account [1.33ms]
+(pass) evaluateOrcaRules > resists evaluator-origin event loops and stops fan-out graphs at explicit deterministic budgets [0.91ms]
+(pass) evaluateOrcaRules > caps caller-requested evaluator budgets at the authoritative shared maxima [3.66ms]
+(pass) evaluateOrcaRules > preflights large Rule collections without observing entries beyond the authoritative boundary [4.00ms]
+(pass) evaluateOrcaRules > does not project an earlier matching Rule after a later Rule exhausts the evaluation budget [1.12ms]
+(pass) evaluateOrcaRules > caps high-fan-out Action evaluation at the exact candidate budget [0.83ms]
+(pass) evaluateOrcaRules > fails closed on crafted Event provenance and compiled classification metadata [0.58ms]
+(pass) evaluateOrcaRules > re-binds compiled Actions to the exact Workspace Schema snapshot before candidate generation [1.99ms]
+
+src/organization/rules/compiler.test.ts:
+(pass) compileOrcaRule > reports exact deterministic compiler budget counters through the public result [0.40ms]
+(pass) compileOrcaRule > rejects control and bidirectional source characters before semantic compilation [0.61ms]
+(pass) compileOrcaRule > rejects ambiguous non-ASCII grammar whitespace while preserving quoted Unicode text [0.50ms]
+(pass) compileOrcaRule > satisfies the shared compiler interface on success and failure [3.37ms]
+(pass) compileOrcaRule > authors the same four canonical Event families accepted by evaluation Trace [0.60ms]
+(pass) compileOrcaRule > compiles one Event, reusable predicates, and ordered actions to stable IDs [0.70ms]
+(pass) compileOrcaRule > returns actionable located diagnostics for malformed and multiply-triggered source [0.26ms]
+(pass) compileOrcaRule > makes Optional values false-on-missing unless explicitly tested [0.29ms]
+(pass) compileOrcaRule > binds Facet comparisons and values to authoritative types and constraints [2.01ms]
+(pass) compileOrcaRule > accepts and rejects the full authoritative Facet scalar matrix [6.11ms]
+(pass) compileOrcaRule > stores stable Facet and enum IDs across schema renames [0.68ms]
+(pass) compileOrcaRule > rejects recursive named predicates and bounded-depth abuse [0.43ms]
+(pass) compileOrcaRule > bounds repeated named-predicate fan-out by the dependency graph [0.74ms]
+(pass) compileOrcaRule > enforces source-size bounds before parsing [0.18ms]
+(pass) compileOrcaRule > stops oversized source at the byte preflight without scanning later compiler units [1.17ms]
+(pass) compileOrcaRule > reports each compiler resource limit independently through bounded adversarial source [3.80ms]
+(pass) compileOrcaRule > keeps ambient capabilities, general loops, dynamic evaluation, and undeclared Workspace data unrepresentable [0.76ms]
+(pass) compileOrcaRule > fails closed on case aliases, missing resources, and crafted labels while preserving stable IDs [0.46ms]
+(pass) compileOrcaRule > bounds aggregate expression AST nodes independently of lines and tokens [1.54ms]
+(pass) compileOrcaRule > classifies destructive proposals without executing them [0.40ms]
+(pass) compileOrcaRule > resource renames do not alter an already compiled revision [0.52ms]
+
+src/organization/rules/routes.test.ts:
+(pass) Rule Revision REST adapter > authenticates before enforcing a byte-exact streamed compile envelope without opening the Rule service database [134.38ms]
+(pass) Rule Revision REST adapter > compiles, lists immutable revisions, reports diagnostics, and isolates Workspaces [276.38ms]
+
+src/organization/rules/service.test.ts:
+(pass) Rule Revision service > reauthorizes exact agent Rule replays transactionally and rejects agent reorder replays [141.83ms]
+(pass) Rule Revision service > denies a direct external-agent compile without an explicit Capability source [69.05ms]
+(pass) Rule Revision service > rejects a Rule revision transaction duplicate committed by another Actor and Capability [81.00ms]
+(pass) Rule Revision service > paginates a large immutable history with a canonical Rule/head-bound keyset cursor [79.15ms]
+(pass) Rule Revision service > appends in constant-history work without parsing old revision blobs or materializing Workspace idempotency keys [80.70ms]
+(pass) Rule Revision service > rejects destructive compiled IR substituted behind an authentic authorization anchor without writes [69.44ms]
+(pass) Rule Revision service > rejects every persistence-intent mutation behind an authentic anchor without writes [206.60ms]
+(pass) Rule Revision service > rejects a forged authorization envelope before any Rule transaction write [68.07ms]
+(pass) Rule Revision service > consumes one-shot Rule authorization only after transaction entry and never restores it on rollback [74.93ms]
+(pass) Rule Revision service > replays an exact duplicate create and rejects conflicting Rule/idempotency reuse atomically [71.71ms]
+(pass) Rule Revision service > creates and edits by appending immutable typed revisions [74.97ms]
+(pass) Rule Revision service > keeps G1-passing compiled revisions inactive until the later Simulation activation gate [72.52ms]
+(pass) Rule Revision service > fails closed on stale Workspace, Rule Set, direct Rule, collateral snapshot, and reorder tamper [725.04ms]
+(pass) Rule Revision service > keeps 101-Rule create and reorder authority/audit evidence below 100 intents and actions [845.39ms]
+(pass) Rule Revision service > does not persist failed compilation and rejects stale or cross-workspace edits [77.00ms]
+
+src/organization/rules/simulation-sqlite.test.ts:
+(pass) BRE-317 SQLite historical Simulation adapter > evaluates persisted historical mail and leaves every mail, projection, revision, and audit row unchanged [133.31ms]
+(pass) BRE-317 atomic Rule activation > rejects an arbitrary self-asserted Capability with zero writes [102.73ms]
+(pass) BRE-317 atomic Rule activation > denies stale, revoked, missing, and mis-scoped live authority with zero writes [213.27ms]
+(pass) BRE-317 atomic Rule activation > projects a winning Workflow State action and increments the Thread revision [121.12ms]
+(pass) BRE-317 atomic Rule activation > projects Collection and Context winners in evaluator order and compensates them [117.33ms]
+(pass) BRE-317 atomic Rule activation > keeps the BRE-317 planner exhaustive over every production evaluator Action kind [0.20ms]
+(pass) BRE-317 atomic Rule activation > applies one exact successful Simulation atomically and replays the same idempotency key [117.62ms]
+(pass) BRE-317 atomic Rule activation > serializes persisted grant revocation behind a normal cached activation replay [5137.76ms]
+(pass) BRE-317 atomic Rule activation > denies an exact activation replay when the authoritative Capability was removed after commit [123.57ms]
+(pass) BRE-317 atomic Rule activation > revalidates every activation replay Capability dimension before returning stored lifecycle evidence [160.39ms]
+(pass) BRE-317 atomic Rule activation > fails with zero writes for stale binding, authority denial, Account isolation, and a mid-transaction SQLite abort [417.94ms]
+(pass) BRE-317 atomic Rule activation > rolls back a forced Workflow projection failure and rejects an unsupported future winner before writes [206.17ms]
+(pass) BRE-317 atomic Rule activation > reports a newer Thread revision conflict instead of compensating Workflow state [109.16ms]
+(pass) BRE-317 compensating Rule Change Set revert > rejects forged and transaction-revoked revert authority with zero writes [131.82ms]
+(pass) BRE-317 compensating Rule Change Set revert > appends an idempotent compensating Change Set and restores projections without erasing audit history [118.02ms]
+(pass) BRE-317 compensating Rule Change Set revert > serializes persisted grant revocation behind a normal cached revert replay [5136.52ms]
+(pass) BRE-317 compensating Rule Change Set revert > revalidates every revert replay Capability dimension before returning stored lifecycle evidence [161.86ms]
+(pass) BRE-317 compensating Rule Change Set revert > reverts pre-fix Lane and Facet Change Sets without disturbing projections absent from legacy evidence [113.46ms]
+(pass) BRE-317 compensating Rule Change Set revert > reports exact newer-state compensation conflicts and performs no partial revert [110.91ms]
+(pass) BRE-317 compensating Rule Change Set revert > preserves newer unrelated human intent while compensating only the original touched resources [116.70ms]
+(pass) BRE-319 cached Change Set replay authority > denies an outer apply replay when a separate connection revokes authority after preflight [113.73ms]
+(pass) BRE-319 cached Change Set replay authority > denies an outer revert replay when a separate connection revokes authority after preflight [125.14ms]
+(pass) BRE-319 cached Change Set replay authority > denies an inner apply duplicate committed by a separate connection after the outer replay miss [112.04ms]
+(pass) BRE-319 cached Change Set replay authority > denies an inner agent replay when another connection owns the winner's durable approval [118.09ms]
+(pass) BRE-319 cached Change Set replay authority > denies an inner revert duplicate committed by a separate connection after the outer replay miss [114.64ms]
+(pass) BRE-317 historical production-failure REST lifecycle > simulates, approves, applies, explains, and reverts through authenticated production adapters [186.63ms]
+
+src/organization/rules/evaluation-migration.test.ts:
+(pass) BRE-315 Trace migration is ordered, Account-bound, Event-idempotent, and immutable [70.10ms]
+
+src/organization/lanes/migration.test.ts:
+(pass) BRE-311 Lane migration > is journal-ordered, provisions one Fallback Lane, and assigns every new Thread [65.95ms]
+
+src/organization/lanes/module.test.ts:
+(pass) BRE-311 Lane module > keeps Lane identity stable across rename/reorder and keeps Policy identity separate [0.84ms]
+(pass) BRE-311 Lane module > moves unresolved Threads when the one Workspace Fallback Lane changes [0.50ms]
+(pass) BRE-311 Lane module > Safety Lock keeps an unresolved Thread in place when the Workspace Fallback changes [0.43ms]
+(pass) BRE-311 Lane module > Fallback changes do not outrank Rule Revision placements whether unlocked or Safety-Locked [0.73ms]
+(pass) BRE-311 Lane module > routes across authorized Accounts while preserving Account-qualified Thread identity [0.91ms]
+(pass) BRE-311 Lane module > Safety Lock blocks Manual Override until the human explicitly unlocks [0.78ms]
+(pass) BRE-311 Lane module > cannot retire the Fallback Lane or a Lane with routed Threads [1.30ms]
+
+src/organization/contexts/migration.test.ts:
+(pass) BRE-312 Context migration > is journal-ordered, fresh-safe, and foreign-key clean [61.82ms]
+(pass) BRE-312 Context migration > upgrades 0024, replays safely, and rejects cross-Workspace and mismatched typed edges [68.21ms]
+
+src/organization/contexts/module.test.ts:
+(pass) Context Organization module > pages relationships first and returns their complete stable-identity closure [1.64ms]
+(pass) Context Organization module > relates one production-incident Thread to a project and customer without duplicating the Thread [139.31ms]
+(pass) Context Organization module > rejects unauthorized, missing, retired, cyclic, and excessive links without partial writes [142.36ms]
+(pass) Context Organization module > replays identical idempotent changes and causally reverts a rename [108.13ms]
+(pass) Context Organization module > revalidates the exact typed action payload inside the SQLite transaction [99.32ms]
+(pass) Context Organization module > rejects a forged authority Trace before any Context transaction write [72.05ms]
+(pass) Context Organization module > rejects every mutated authorization-envelope family without partial writes [152.06ms]
+(pass) Context Organization module > rejects forged revert authorization before audit or state changes [81.92ms]
+(pass) Context Organization module > rejects a fully rebound authorization envelope for another authenticated Workspace [70.96ms]
+(pass) Context Organization module > rejects same-scope apply command substitution and consumes the anchor for a competing retry [69.64ms]
+(pass) Context Organization module > rejects same-scope revert target substitution without reverting either change [91.12ms]
+
+src/organization/contexts/routes.test.ts:
+(pass) Context Organization REST adapter > describes, applies, queries, audits, and reverts authenticated Context relationships [295.45ms]
+(pass) Context Organization REST adapter > requires authentication [3.49ms]
+
+src/organization/views/migration.test.ts:
+(pass) BRE-313 Views migration > stores definitions without membership and installs supporting query indexes [66.02ms]
+(pass) Inbox policy upgrades old views default-off and persists opt-in across reopen [58.83ms]
+
+src/organization/views/search-equivalence.test.ts:
+(pass) BRE-384 production mailbox / live View equivalence > uses the mailbox's exact override normalization, including non-space whitespace [99.61ms]
+(pass) BRE-384 production mailbox / live View equivalence > preserves override precedence, same-account isolation, cross-page conversation grouping and future matches [157.92ms]
+(pass) BRE-384 production mailbox / live View equivalence > unsupported and blank drafts cannot commit; zero and foreign scopes remain explicit [76.62ms]
+(pass) BRE-384 production mailbox / live View equivalence > omitted account scope includes accounts connected later while explicit scope stays fixed [81.37ms]
+
+src/organization/views/verification.test.ts:
+(pass) BRE-386 real human commit completes guidance atomically and tutorial provenance cannot persist [212.44ms]
+(pass) BRE-385 correction census covers complete authorized matching messages and proves row witnesses [196.56ms]
+(pass) BRE-385 census fails closed for overflow, multiple accounts, malformed senders and foreign targets [169.20ms]
+(pass) commits a View once while invalidating owned mailbox cursors through revision triggers [118.14ms]
+(pass) BRE-313 independent View lifecycle verification > prepares exact selected-message From addresses only after validating every reference [273.51ms]
+(pass) BRE-313 independent View lifecycle verification > prepares and commits a saved View with its exact update identity and revision [124.31ms]
+(pass) BRE-313 independent View lifecycle verification > previews and commits one reviewed definition with no preview writes and saved-page parity [176.81ms]
+(pass) BRE-313 independent View lifecycle verification > distinguishes blank and filtered zero drafts and binds zero confirmation to the reviewed digest [164.57ms]
+(pass) BRE-313 independent View lifecycle verification > replays a committed draft before mutable zero-match evaluation and conflicts on changed payload [130.07ms]
+(pass) BRE-313 independent View lifecycle verification > keeps unlimited View ordering behind one bounded aggregate authority resource [244.12ms]
+(pass) BRE-313 independent View lifecycle verification > edits definitions, reorders atomically, and removes with optimistic revisions [205.95ms]
+(pass) BRE-313 independent View lifecycle verification > keeps one canonical Workspace ordering across arbitrary positions and partial reorder [192.49ms]
+(pass) BRE-313 independent View lifecycle verification > CAS-protects every collateral View revision and position before lifecycle canonicalization with zero command writes [1134.28ms]
+(pass) BRE-313 independent View lifecycle verification > routes every View lifecycle mutation through one atomic Organization authority change set [159.96ms]
+(pass) BRE-313 independent View lifecycle verification > fails closed with zero writes when an authorized View envelope is tampered before commit [103.45ms]
+(pass) BRE-313 independent View lifecycle verification > rejects every foreign stable resource family without persisting or revising a View [213.98ms]
+(pass) BRE-313 independent View lifecycle verification > validates owned Facet filters authoritatively while accepting repeated multi-value filters [132.87ms]
+(pass) BRE-313 independent View lifecycle verification > rejects malformed but correctly fingerprinted cursor fields at the HTTP boundary with zero mutation [423.70ms]
+(pass) BRE-313 independent View lifecycle verification > rejects non-canonical base64url cursors before query binding [150.38ms]
+(pass) BRE-313 independent View lifecycle verification > matches subject and Facet contains predicates as LIKE literals [197.57ms]
+(pass) BRE-313 independent View lifecycle verification > uses exact indexed stable ordering through timestamp ties and null latest timestamps [141.16ms]
+(pass) skipInbox roundtrips, excludes whole matching threads before pagination and preserves All Mail [109.46ms]
+(pass) skipInbox preparation, toggle-only commits, replay binding and audit preserve authority [152.69ms]
+(pass) skipInbox overlap, off, delete and scope edits restore only eligible mail without routing writes [240.81ms]
+(pass) skipInbox manual Inbox and safety locks win, clearing overrides resumes the policy [124.02ms]
+(pass) skipInbox uses same-message predicates for future mail across owned accounts [130.32ms]
+(pass) skipInbox dynamic facet/workflow/context predicates track membership and invalidate cursors [302.11ms]
+(pass) skipInbox honors catalog normal mapping without hiding other destinations or capping views [133.90ms]
+(pass) BRE-413 grows authoritative selected senders with preview, revision checks, domain OR, and skipInbox preserved [275.40ms]
+
+src/organization/views/routes.test.ts:
+(pass) BRE-313 live Views REST adapter > creates unlimited definitions, evaluates them live across authorized Accounts, and paginates stably [312.77ms]
+(pass) BRE-313 live Views REST adapter > requires authentication [6.43ms]
+
+src/organization/collections-pins/migration.test.ts:
+(pass) BRE-309 clean M8 migration > backfills legacy filter Pins with stable saved-query identity without discarding their definition [4.26ms]
+(pass) BRE-309 clean M8 migration > upgrades a database already at 0023 through the complete journal [79.99ms]
+
+src/organization/collections-pins/module.test.ts:
+(pass) Collections/Pins Organization module > describes an empty connected-Account scope without inventing data [63.93ms]
+(pass) Collections/Pins Organization module > queries explicit Collection membership across authorized Accounts with Account context [70.35ms]
+(pass) Collections/Pins Organization module > fails closed for unauthorized Account scope and cross-Account membership [71.15ms]
+(pass) Collections/Pins Organization module > applies and reverts membership changes with immutable audit entries [84.30ms]
+(pass) Collections/Pins Organization module > creates a query Pin by stable identity and can compensate its removal [91.91ms]
+(pass) Collections/Pins Organization module > atomically creates and reverts a stable query identity with its shortcut [81.36ms]
+(pass) Collections/Pins Organization module > audits and reverts Collection and Pin metadata updates [94.35ms]
+(pass) Collections/Pins Organization module > preserves every legacy mailbox and attention shortcut meaning [69.46ms]
+(pass) Collections/Pins Organization module > returns exact sequential idempotent replays and rejects key reuse for another command [73.01ms]
+(pass) Collections/Pins Organization module > refuses to revert Collection changes after same-ID recreation [151.13ms]
+(pass) Collections/Pins Organization module > refuses to revert membership after remove and re-add [85.03ms]
+(pass) Collections/Pins Organization module > refuses to revert saved-query changes after same-ID recreation [151.40ms]
+(pass) Collections/Pins Organization module > refuses to revert Pin changes after same-ID recreation [148.35ms]
+(pass) Collections/Pins Organization module > describes only Organization authority and distinct meanings [63.87ms]
+(pass) Collections/Pins Organization module > rejects a repository adapter that swaps an authorized apply or revert request [83.20ms]
+
+src/organization/collections-pins/routes.test.ts:
+(pass) Collections/Pins Organization REST adapter > queries, applies, audits, and reverts through authenticated Organization operations [421.37ms]
+(pass) Collections/Pins Organization REST adapter > requires authentication and validates mutation bodies [3.49ms]
+
+ 779 pass
+ 0 fail
+ 3044 expect() calls
+Ran 779 tests across 117 files. [77.88s]

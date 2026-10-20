@@ -3326,54 +3326,6 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
-  // Hold only the reader's 100 ms prefetch scheduler, not React/DOM work. Use
-  // real timer handles so production cleanup cancels superseded callbacks.
-  // Every caller must explicitly run a queued prefetch and restore the clock.
-  function controlReaderPrefetch() {
-    const schedule = globalThis.setTimeout;
-    const cancel = globalThis.clearTimeout;
-    const queued = new Map<ReturnType<typeof setTimeout>, () => void>();
-    globalThis.setTimeout = ((callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
-      if (delay !== 100) return schedule(callback, delay, ...args);
-      const handle = schedule(() => {}, 2_147_483_647);
-      handle.unref();
-      queued.set(handle, () => callback(...args));
-      return handle;
-    }) as typeof setTimeout;
-    globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
-      queued.delete(handle);
-      cancel(handle);
-    }) as typeof clearTimeout;
-    return {
-      async run() {
-        expect(queued.size).toBeGreaterThan(0);
-        const callbacks = [...queued.entries()];
-        queued.clear();
-        await act(async () => {
-          for (const [handle, callback] of callbacks) { cancel(handle); callback(); }
-        });
-      },
-      restore() {
-        for (const handle of queued.keys()) cancel(handle);
-        queued.clear();
-        globalThis.setTimeout = schedule;
-        globalThis.clearTimeout = cancel;
-      },
-    };
-  }
-
-  async function readerSettles(check: () => boolean) {
-    for (let i = 0; i < 40 && !check(); i++) await waitFor(0);
-    expect(check()).toBe(true);
-  }
-
-  async function selectReaderFromHistory(message: InboxMessage) {
-    await act(async () => {
-      browserWindow.history.pushState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`);
-      browserWindow.dispatchEvent(new browserWindow.Event("popstate"));
-    });
-  }
-
   test("retries a failed silent Reader refresh on a later same-version mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
     const prefetch = controlReaderPrefetch();
@@ -3448,6 +3400,54 @@ describe("Inbox reader viewport restoration", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  // Hold only the reader's 100 ms prefetch scheduler, not React/DOM work. Use
+  // real timer handles so production cleanup cancels superseded callbacks.
+  // Every caller must explicitly run a queued prefetch and restore the clock.
+  function controlReaderPrefetch() {
+    const schedule = globalThis.setTimeout;
+    const cancel = globalThis.clearTimeout;
+    const queued = new Map<ReturnType<typeof setTimeout>, () => void>();
+    globalThis.setTimeout = ((callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+      if (delay !== 100) return schedule(callback, delay, ...args);
+      const handle = schedule(() => {}, 2_147_483_647);
+      handle.unref();
+      queued.set(handle, () => callback(...args));
+      return handle;
+    }) as typeof setTimeout;
+    globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
+      queued.delete(handle);
+      cancel(handle);
+    }) as typeof clearTimeout;
+    return {
+      async run() {
+        expect(queued.size).toBeGreaterThan(0);
+        const callbacks = [...queued.entries()];
+        queued.clear();
+        await act(async () => {
+          for (const [handle, callback] of callbacks) { cancel(handle); callback(); }
+        });
+      },
+      restore() {
+        for (const handle of queued.keys()) cancel(handle);
+        queued.clear();
+        globalThis.setTimeout = schedule;
+        globalThis.clearTimeout = cancel;
+      },
+    };
+  }
+
+  async function readerSettles(check: () => boolean) {
+    for (let i = 0; i < 40 && !check(); i++) await waitFor(0);
+    expect(check()).toBe(true);
+  }
+
+  async function selectReaderFromHistory(message: InboxMessage) {
+    await act(async () => {
+      browserWindow.history.pushState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`);
+      browserWindow.dispatchEvent(new browserWindow.Event("popstate"));
+    });
+  }
 
   for (const prefetchState of ["held", "completed", "in-flight"] as const) {
     test(`fetches fresh detail after explicit Retry and after selecting another thread (${prefetchState} prefetch)`, async () => {

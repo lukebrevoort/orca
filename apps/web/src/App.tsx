@@ -2062,20 +2062,21 @@ export function InboxApp({
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
       { refresh: true, version: selectedThreadVersion },
     );
-    const requestGeneration = cache.currentGeneration(reference);
+    const requestGeneration = cache.retainGeneration(reference);
     request
       .then((detail) => {
-        if (!active || !cache.isCurrentGeneration(reference, requestGeneration)) return;
+        if (!active || !requestGeneration.isCurrent()) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
         markOpenedThreadRead(detail);
       })
       .catch((error) => {
-        if (!active || cached || !cache.isCurrentGeneration(reference, requestGeneration)) return;
+        if (!active || cached || !requestGeneration.isCurrent()) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
-      });
-    return () => { active = false; };
+      })
+      .finally(() => { requestGeneration.release(); });
+    return () => { active = false; requestGeneration.release(); };
   }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
 
   useEffect(() => {
@@ -2106,25 +2107,27 @@ export function InboxApp({
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
       { refresh: true, version: selectedThreadVersion },
     );
-    const requestGeneration = cache.currentGeneration(reference);
+    const requestGeneration = cache.retainGeneration(reference);
     detailRequest
       .then((detail) => {
-        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration)) return;
+        if (!active || readerSilentRequestRef.current !== request || !requestGeneration.isCurrent()) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
         markOpenedThreadRead(detail);
         readerMailboxSnapshotRef.current = request;
       })
       .catch((error) => {
-        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration) || hasVisibleDetail) return;
+        if (!active || readerSilentRequestRef.current !== request || !requestGeneration.isCurrent() || hasVisibleDetail) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
       })
       .finally(() => {
+        requestGeneration.release();
         if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
       });
     return () => {
       active = false;
+      requestGeneration.release();
       if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
     };
   }, [demoMode, mailboxRefreshGeneration, readerAccountId, readerStatus, selectedThreadId, selectedThreadVersion, threadDetail]);

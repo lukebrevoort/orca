@@ -1,0 +1,43 @@
+966: 2026-10-19 16:41:29.101 xcodebuild[9786:33060] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+967: 2026-10-19 16:42:08.343630+0000 Orca[11333:38165] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+968: 2026-10-19 16:42:08.643761+0000 Orca[11333:38163] [General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
+969: Test Suite 'All tests' started at 2026-10-19 16:42:12.015.
+1258: Test Case '-[OrcaTests.SafeHTMLOverflowTests testActualAPINewsletterOutputRemainsReadable]' started.
+1259: 2026-10-19 16:42:42.235259+0000 Orca[11333:40667] [default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: 8630D9BA-9D68-4AEA-889C-4133AD50CC0D])
+1260: 2026-10-19 16:42:42.531807+0000 Orca[11333:37261] [Process] GPU process (0x11a0f81e0) took 1.096782 seconds to launch
+1261: 2026-10-19 16:42:43.601264+0000 Orca[11333:37261] [ResourceLoadStatistics] Failed to request storage access quirks from WebPrivacy.
+1262: 2026-10-19 16:42:43.602094+0000 Orca[11333:37261] [ResourceLoadStatistics] Failed to request known fingerprinting scripts from WebPrivacy: Error Domain=WebPrivacyErrorDomain Code=1001 "List data not found" UserInfo={NSLocalizedDescription=List data not found}
+1263: 2026-10-19 16:42:43.602199+0000 Orca[11333:37261] [ResourceLoadStatistics] Failed to request storage access user agent string quirks from WebPrivacy.
+1264: 2026-10-19 16:42:44.020122+0000 Orca[11333:37261] [ResourceLoadStatistics] Failed to request query parameters from WebPrivacy.
+1265: 2026-10-19 16:42:45.499421+0000 Orca[11333:41547] [ResourceLoadStatistics] WebContent[13053] Unable to filter tracking query parameters (missing data)
+1266: 2026-10-19 16:42:45.511929+0000 Orca[11333:41547] [ResourceLoadStatistics] WebContent[13053] Unable to hide query parameters from script (missing data)
+1267: 2026-10-19 16:42:45.587449+0000 Orca[11333:37261] [ResourceLoadStatistics] Failed to request allowed query parameters from WebPrivacy.
+1268: 2026-10-19 16:42:45.595078+0000 Orca[11333:37261] [ResourceLoadStatistics] Failed to request restricted opener domains from WebPrivacy
+1269: NATIVE_READER_OVERFLOW width=272.0 size=22.0 theme=light metrics=["minimumLayoutCellWidth": 272, "cells": <__NSArrayM 0x13e012010>(
+1309: 2026-10-19 16:42:47.948221+0000 Orca[11333:38164] [assertion] Error acquiring assertion: <Error Domain=RBSAssertionErrorDomain Code=2 "Specified target process 13053 does not exist" UserInfo={NSLocalizedFailureReason=Specified target process 13053 does not exist}>
+1310: 2026-10-19 16:42:47.949364+0000 Orca[11333:38164] [ProcessSuspension] 0x11a130600 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'WebProcess NearSuspended Assertion' for process with PID=13053, error: (null)
+1311: 2026-10-19 16:42:47.954031+0000 Orca[11333:38164] [assertion] Error acquiring assertion: <Error Domain=RBSAssertionErrorDomain Code=2 "Specified target process 13058 does not exist" UserInfo={NSLocalizedFailureReason=Specified target process 13058 does not exist}>
+1312: 2026-10-19 16:42:47.955239+0000 Orca[11333:38164] [ProcessSuspension] 0x11a1306c0 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'XPCConnectionTerminationWatchdog' for process with PID=13058, error: (null)
+1313: 2026-10-19 16:42:48.010445+0000 Orca[11333:41437] [default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: E7645386-AB88-4BF7-9B8A-DE36EA3D9A63])
+1314: 2026-10-19 16:42:49.101768+0000 Orca[11333:41547] [ResourceLoadStatistics] WebContent[13324] Unable to hide query parameters from script (missing data)
+1354: 2026-10-19 16:42:49.319011+0000 Orca[11333:41193] [assertion] Error acquiring assertion: <Error Domain=RBSAssertionErrorDomain Code=2 "Specified target process 13372 does not exist" UserInfo={NSLocalizedFailureReason=Specified target process 13372 does not exist}>
+1355: 2026-10-19 16:42:49.319568+0000 Orca[11333:41193] [ProcessSuspension] 0x11a130780 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'XPCConnectionTerminationWatchdog' for process with PID=13372, error: (null)
+1356: 2026-10-19 16:42:49.873840+0000 Orca[11333:41437] [default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: F72DE3B3-88ED-42FE-B57B-7AF428B25A41])
+1357: 2026-10-19 16:42:50.908775+0000 Orca[11333:37261] [Process] Networking process (0x11a138190) took 1.037484 seconds to launch
+1398: 2026-10-19 16:42:51.425010+0000 Orca[11333:41193] [assertion] Error acquiring assertion: <Error Domain=RBSAssertionErrorDomain Code=2 "Specified target process 13418 does not exist" UserInfo={NSLocalizedFailureReason=Specified target process 13418 does not exist}>
+1399: 2026-10-19 16:42:51.425753+0000 Orca[11333:41193] [ProcessSuspension] 0x11a1309c0 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'XPCConnectionTerminationWatchdog' for process with PID=13418, error: (null)
+1400: 2026-10-19 16:42:52.655926+0000 Orca[11333:37261] [Process] WebContent process (0x11a0a8640) took 1.277994 seconds to launch
+1401: 2026-10-19 16:42:52.664724+0000 Orca[11333:38164] [default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: C9437A32-CED3-4941-8C84-CFE34FB16E60])
+1402: NATIVE_READER_OVERFLOW width=272.0 size=44.0 theme=dark metrics=["minimumLayoutCellWidth": 272, "cells": <__NSArrayM 0x13e093f90>(
+1441: 2026-10-19 16:42:53.953637+0000 Orca[11333:41193] [assertion] Error acquiring assertion: <Error Domain=RBSAssertionErrorDomain Code=2 "Specified target process 13432 does not exist" UserInfo={NSLocalizedFailureReason=Specified target process 13432 does not exist}>
+1442: 2026-10-19 16:42:53.953949+0000 Orca[11333:41193] [ProcessSuspension] 0x11a130b40 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'XPCConnectionTerminationWatchdog' for process with PID=13432, error: (null)
+1443: 2026-10-19 16:42:54.713852+0000 Orca[11333:40667] [default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: F89A04B7-AFEC-4CBC-AC11-CFB01561EE05])
+2710:     t =    49.49s     Requesting snapshot of accessibility hierarchy for app with pid 17728
+2711: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:907: error: -[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode] : XCTAssertTrue failed
+2712:     t =    51.40s Tear Down
+2713: Test Case '-[OrcaUITests.OrcaUITests test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode]' failed (51.775 seconds).
+2714: Test Case '-[OrcaUITests.OrcaUITests test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade]' started.
+4834: 
+4835: ** TEST EXECUTE FAILED **
+4836: 
+Additional failure markers omitted: 276; inspect artifact.

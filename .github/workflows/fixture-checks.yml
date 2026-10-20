@@ -34,6 +34,7 @@ jobs:
           node-version: '24'
       - run: bun install --frozen-lockfile
       - run: python3 scripts/ci/test-export-evidence.py
+      - run: python3 scripts/pstack/test_verify.py
       - run: bun run build
       - run: bun run test:smoke
       - run: bunx --no-install playwright install --with-deps chromium

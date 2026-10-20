@@ -1,0 +1,63 @@
+bun test v1.3.14 (0d9b296a)
+RETRY_READ 1 /v1/threads/thread_local_1?accountId=acct_local_gmail Error: synthetic request source
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.interaction.test.tsx:3432:87)
+    at fetchJson (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:6938:26)
+    at load (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:110:16)
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:2060:27)
+    at react_stack_bottom_frame (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+    at runWithFiberInDEV (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+    at commitHookEffectListMount (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+    at commitHookPassiveMountEffects (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:13336:11)
+    at commitPassiveMountOnFiber (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:15484:13)
+    at recursivelyTraversePassiveMountEffects (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:15439:11)
+RETRY_ERROR_VISIBLE
+RETRY_READ 2 /v1/threads/thread_local_1-next?accountId=acct_local_gmail Error: synthetic request source
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.interaction.test.tsx:3432:87)
+    at fetchJson (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:6938:26)
+    at load (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:110:16)
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:146:22)
+    at from (native:1:11)
+    at prefetch (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:152:29)
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:2009:42)
+RETRY_READ 3 /v1/threads/thread_local_1?accountId=acct_local_gmail Error: synthetic request source
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.interaction.test.tsx:3432:87)
+    at fetchJson (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:6938:26)
+    at load (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:110:16)
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:146:22)
+    at from (native:1:11)
+    at prefetch (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:152:29)
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:2009:42)
+RETRY_CLICK ["/v1/threads/thread_local_1?accountId=acct_local_gmail","/v1/threads/thread_local_1-next?accountId=acct_local_gmail","/v1/threads/thread_local_1?accountId=acct_local_gmail"]
+RETRY_READ 4 /v1/threads/thread_local_1?accountId=acct_local_gmail Error: synthetic request source
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.interaction.test.tsx:3432:87)
+    at fetchJson (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:6938:26)
+    at load (/workspace/orca-retry-diagnosis/apps/web/src/thread-detail-cache.ts:110:16)
+    at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.tsx:2060:27)
+    at react_stack_bottom_frame (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+    at runWithFiberInDEV (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+    at commitHookEffectListMount (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+    at commitHookPassiveMountEffects (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:13336:11)
+    at commitPassiveMountOnFiber (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:15484:13)
+    at recursivelyTraversePassiveMountEffects (/workspace/orca-search-ui-fix/node_modules/react-dom/cjs/react-dom-client.development.js:15439:11)
+
+apps/web/src/App.interaction.test.tsx:
+3447 |       console.info("RETRY_ERROR_VISIBLE");
+3448 |       await waitFor(150);
+3449 |       console.info("RETRY_CLICK", JSON.stringify(threadReads));
+3450 |       await act(async () => retry.click());
+3451 |       for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-document:not(.reader-loading)"); index += 1) await waitFor(0);
+3452 |       expect(threadReads.filter((path) => path.includes(encodeURIComponent(failedMessage.threadId)))).toHaveLength(2);
+                                                                                                             ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 2
+Received length: 4
+
+      at <anonymous> (/workspace/orca-retry-diagnosis/apps/web/src/App.interaction.test.tsx:3452:103)
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread [476.13ms]
+
+ 0 pass
+ 132 filtered out
+ 1 fail
+ 2 expect() calls
+Ran 1 test across 1 file. [1013.00ms]

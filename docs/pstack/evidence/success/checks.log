@@ -1,0 +1,124 @@
+$ bun --filter '*' build
+@orca/shared build: Exited with code 0
+@orca/api build: Exited with code 0
+@orca/web build: vite v7.3.6 building client environment for production...
+@orca/web build: transforming...
+@orca/web build: ✓ 191 modules transformed.
+@orca/web build: rendering chunks...
+@orca/web build: computing gzip size...
+@orca/web build: dist/index.html                                1.78 kB │ gzip:   0.76 kB
+@orca/web build: dist/assets/organization-views-HiJWHDLt.css    4.69 kB │ gzip:   1.19 kB
+@orca/web build: dist/assets/index-siVqjr8N.css               406.91 kB │ gzip:  61.69 kB
+@orca/web build: dist/assets/organization-views-D3f1x6AO.js   121.70 kB │ gzip:  35.07 kB
+@orca/web build: dist/assets/react-vendor-CQc3Zyh3.js         192.36 kB │ gzip:  60.30 kB
+@orca/web build: dist/assets/mail-contracts-DgkX7763.js       205.74 kB │ gzip:  50.97 kB
+@orca/web build: dist/assets/index-Bxft8s19.js                471.77 kB │ gzip: 134.36 kB
+@orca/web build: ✓ built in 2.28s
+@orca/web build: Exited with code 0
+launch
+doctor
+{
+  "browserVersion": "154.0.8037.57",
+  "scenarios": [
+    {
+      "theme": "light",
+      "name": "delayed-account-and-draft-recovery-close-discard",
+      "status": "passed",
+      "seededDraftId": "23dc9ae3-a22e-48f3-8fa6-cceb986c03b3"
+    },
+    {
+      "theme": "light",
+      "name": "new-compose-reload-recipients-attachment-removal-double-send",
+      "status": "passed",
+      "account": "first",
+      "draftId": "e3c8a33d-5d8b-408f-b23d-fc2824dcbf8f"
+    },
+    {
+      "theme": "light",
+      "name": "second-account-reply-double-send",
+      "status": "passed",
+      "account": "second",
+      "draftId": "ac63278d-5764-4cd4-b0c9-4158ba1bf71b"
+    },
+    {
+      "theme": "light",
+      "name": "invalid-pending-recipient-no-dispatch",
+      "status": "passed"
+    },
+    {
+      "theme": "light",
+      "name": "conflict-copy-latest-writing-removed-attachment-original-preserved",
+      "status": "passed",
+      "originalId": "22d3a5da-e45e-4649-b7a7-385fc33e1054",
+      "copyId": "fb85f6f0-1944-40cd-8a0e-c1422ddfc7e7"
+    },
+    {
+      "theme": "light",
+      "name": "discard-awaits-first-autosave-then-deletes",
+      "status": "passed",
+      "draftId": "811efbcb-493b-441c-8af5-df188966b752"
+    },
+    {
+      "theme": "light",
+      "name": "uncertain-delivery-retains-content-replay-no-provider-repeat",
+      "status": "passed",
+      "draftId": "fc27758e-1053-429c-a6e9-fb312c3ca15b"
+    },
+    {
+      "theme": "light",
+      "name": "session-rejection-removes-writing-surface",
+      "status": "passed"
+    },
+    {
+      "theme": "dark",
+      "name": "delayed-account-and-draft-recovery-close-discard",
+      "status": "passed",
+      "seededDraftId": "dfa31fda-15dc-4ea2-9e0a-13225daf41ea"
+    },
+    {
+      "theme": "dark",
+      "name": "new-compose-reload-recipients-attachment-removal-double-send",
+      "status": "passed",
+      "account": "first",
+      "draftId": "c819006d-49c3-4a00-9c6f-a3b85cd4f900"
+    },
+    {
+      "theme": "dark",
+      "name": "second-account-reply-double-send",
+      "status": "passed",
+      "account": "second",
+      "draftId": "830a5657-cfb9-4d21-a5bb-b958ab802d42"
+    },
+    {
+      "theme": "dark",
+      "name": "invalid-pending-recipient-no-dispatch",
+      "status": "passed"
+    },
+    {
+      "theme": "dark",
+      "name": "conflict-copy-latest-writing-removed-attachment-original-preserved",
+      "status": "passed",
+      "originalId": "ab3c7465-9dbe-4cd6-a6c3-d172a382a6f0",
+      "copyId": "51dff9c1-aebc-40ec-a992-3b1d85413cf5"
+    },
+    {
+      "theme": "dark",
+      "name": "discard-awaits-first-autosave-then-deletes",
+      "status": "passed",
+      "draftId": "849da2c5-0866-419c-bce3-d3238abe5d53"
+    },
+    {
+      "theme": "dark",
+      "name": "uncertain-delivery-retains-content-replay-no-provider-repeat",
+      "status": "passed",
+      "draftId": "a66f9adb-ff44-43b6-8b86-58492b084bf4"
+    },
+    {
+      "theme": "dark",
+      "name": "session-rejection-removes-writing-surface",
+      "status": "passed"
+    }
+  ],
+  "pageErrors": []
+}
+drive

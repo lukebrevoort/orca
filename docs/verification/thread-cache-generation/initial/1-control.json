@@ -1,0 +1,124 @@
+{
+  "revision": "5baf7f3ea9e208001c607a7bc0f5c418fb056d58",
+  "runtime": "1.3.14",
+  "mode": "control",
+  "loads": 20000,
+  "samples": [
+    {
+      "n": 0,
+      "details": 0,
+      "generations": 0,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 0,
+      "heap": {
+        "rss": 51085312,
+        "heapTotal": 1803264,
+        "heapUsed": 175406,
+        "external": 490467,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 2.051241999999988,
+      "cpu": {
+        "user": 2646,
+        "system": 0
+      }
+    },
+    {
+      "n": 100,
+      "details": 30,
+      "generations": 0,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 0,
+      "heap": {
+        "rss": 52527104,
+        "heapTotal": 1999872,
+        "heapUsed": 175406,
+        "external": 600043,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 7.34544799999999,
+      "cpu": {
+        "user": 10284,
+        "system": 0
+      }
+    },
+    {
+      "n": 1000,
+      "details": 30,
+      "generations": 0,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 0,
+      "heap": {
+        "rss": 59867136,
+        "heapTotal": 2081792,
+        "heapUsed": 175406,
+        "external": 628888,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 64.20213999999999,
+      "cpu": {
+        "user": 24233,
+        "system": 47259
+      }
+    },
+    {
+      "n": 5000,
+      "details": 30,
+      "generations": 0,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 0,
+      "heap": {
+        "rss": 88764416,
+        "heapTotal": 2393088,
+        "heapUsed": 175406,
+        "external": 630034,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 210.43431199999998,
+      "cpu": {
+        "user": 43705,
+        "system": 189061
+      }
+    },
+    {
+      "n": 10000,
+      "details": 30,
+      "generations": 0,
+      "inFlight": 0,
+      "generationKeyUtf8Bytes": 0,
+      "heap": {
+        "rss": 99250176,
+        "heapTotal": 2491392,
+        "heapUsed": 21125008,
+        "external": 634390,
+        "arrayBuffers": 0
+      },
+      "elapsedMs": 281.724675,
+      "cpu": {
+        "user": 104322,
+        "system": 228196
+      }
+    }
+  ],
+  "resources": {
+    "userCPUTime": 178341,
+    "systemCPUTime": 282202,
+    "maxRSS": 96924,
+    "sharedMemorySize": 0,
+    "unsharedDataSize": 0,
+    "unsharedStackSize": 0,
+    "minorPageFault": 14447,
+    "majorPageFault": 0,
+    "swappedOut": 0,
+    "fsRead": 0,
+    "fsWrite": 0,
+    "ipcSent": 0,
+    "ipcReceived": 0,
+    "signalsCount": 0,
+    "voluntaryContextSwitches": 318,
+    "involuntaryContextSwitches": 10
+  },
+  "cpuMax": "200000 100000\n",
+  "cpuStat": "usage_usec 515036\nuser_usec 206373\nsystem_usec 308663\nnice_usec 0\nnr_periods 4\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+  "passed": true
+}

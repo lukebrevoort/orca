@@ -293,7 +293,11 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
   const [draft, setDraft] = useState(state?.query ?? "");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [messages, setMessages] = useState<InboxMessage[]>([]);
-  const [accounts, setAccounts] = useState<MailAccount[]>(() => isDemoSearch() ? [demoAccount] : []);
+  // Full connected-account choices are independent of the current search scope.
+  // null means metadata is unavailable; an authenticated empty list is authoritative.
+  const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[] | null>(null);
+  const [resultAccounts, setResultAccounts] = useState<MailAccount[]>(() => isDemoSearch() ? [demoAccount] : []);
+  const accounts = connectedAccounts ?? resultAccounts;
   const [collections, setCollections] = useState<Collection[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -336,18 +340,24 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
 
 
   useEffect(() => {
+    setConnectedAccounts(null);
+    setCollections([]);
     if (!state || isDemoSearch()) return;
     const controller = new AbortController();
-    void Promise.all([
-      fetch("/v1/accounts", { credentials: "include", signal: controller.signal }).then(readJson).then((value) => mailAccountPageSchema.parse(value).items),
-      fetch("/v1/organization/collections-pins/query", { credentials: "include", signal: controller.signal }).then(readJson).then((value) => organizationCollectionPinQueryResponseSchema.parse(value).collections),
-    ]).then(([nextAccounts, nextCollections]) => {
-      if (controller.signal.aborted) return;
-      setAccounts(nextAccounts);
-      setCollections(nextCollections);
-    }).catch(() => {
-      // Search itself remains useful if optional filter metadata is unavailable.
-    });
+    void fetch("/v1/accounts", { credentials: "include", signal: controller.signal })
+      .then(readJson).then((value) => mailAccountPageSchema.parse(value).items)
+      .then((nextAccounts) => {
+        if (!controller.signal.aborted) setConnectedAccounts(nextAccounts);
+      }).catch(() => {
+        // Fall back to the latest search response, never an accumulated account list.
+      });
+    void fetch("/v1/organization/collections-pins/query", { credentials: "include", signal: controller.signal })
+      .then(readJson).then((value) => organizationCollectionPinQueryResponseSchema.parse(value).collections)
+      .then((nextCollections) => {
+        if (!controller.signal.aborted) setCollections(nextCollections);
+      }).catch(() => {
+        // A collection failure must not discard independently loaded account choices.
+      });
     return () => controller.abort();
   }, [Boolean(state)]);
 
@@ -356,6 +366,7 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     loadMoreControllerRef.current?.abort();
     loadMoreControllerRef.current = null;
     setLoadingMore(false);
+    setResultAccounts([]);
     if (!state || !hasMailSearchConstraint(state)) {
       setStatus("idle");
       setMessages([]);
@@ -370,7 +381,7 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     if (isDemoSearch()) {
       const matches = demoMessages.filter((message) => matchesDemoSearch(message, state));
       setMessages(matches);
-      setAccounts([demoAccount]);
+      setResultAccounts([demoAccount]);
       setStatus("ready");
       return;
     }
@@ -380,7 +391,7 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
       .then((value) => inboxClassificationResponseSchema.parse(value))
       .then((result) => {
         if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
-        setAccounts(result.accounts);
+        setResultAccounts(result.accounts);
         setMessages(result.messages);
         setNextCursor(result.nextCursor);
         setStatus("ready");

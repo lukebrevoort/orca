@@ -76,7 +76,7 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
             {hasHtml ? <p className="reader-display-note">Text version. Some formatting may be missing.</p> : null}
             <div className="reader-body reader-body-plain">{showOriginal ? text : plainBody.current}</div>
             {!showOriginal && plainBody.quoted ? <details className="reader-quoted"><summary>Show quoted history</summary><div>{plainBody.quoted}</div></details> : null}
-            <button type="button" aria-pressed={showOriginal} onClick={() => setShowOriginal(!showOriginal)}>{showOriginal ? "Return to reading view" : "Show complete original text"}</button>
+            <button className="reader-original-toggle" type="button" aria-pressed={showOriginal} onClick={() => setShowOriginal(!showOriginal)}>{showOriginal ? "Return to reading view" : "Show complete original text"}</button>
           </>
         ) : null}
       </div>

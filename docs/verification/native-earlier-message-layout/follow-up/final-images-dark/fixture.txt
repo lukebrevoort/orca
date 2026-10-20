@@ -1,0 +1,88 @@
+iOS fixture API: http://127.0.0.1:58141
+Synthetic connection details: /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-images-dark/orca-ios-fixture-FBLJQv/connection.json
+Only fixture data is used. Provider send and draft operations are simulated.
+[counter-heartbeat] epoch_ms=1792445034101
+[counter-heartbeat] epoch_ms=1792445035103
+[counter-heartbeat] epoch_ms=1792445036106
+[counter-heartbeat] epoch_ms=1792445037108
+[counter-heartbeat] epoch_ms=1792445038111
+[counter-heartbeat] epoch_ms=1792445039114
+[counter-heartbeat] epoch_ms=1792445040123
+[counter-heartbeat] epoch_ms=1792445041127
+[counter-heartbeat] epoch_ms=1792445042131
+[counter-heartbeat] epoch_ms=1792445043135
+[counter-heartbeat] epoch_ms=1792445044140
+[counter-heartbeat] epoch_ms=1792445045143
+[counter-server] epoch_ms=1792445045882 id=ACBF4E4B-11DD-47D7-BD45-B5ACC55FB840 event=received
+[counter-server] epoch_ms=1792445045884 id=ACBF4E4B-11DD-47D7-BD45-B5ACC55FB840 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445046145
+[counter-heartbeat] epoch_ms=1792445047149
+[counter-heartbeat] epoch_ms=1792445048151
+[counter-heartbeat] epoch_ms=1792445049153
+[counter-heartbeat] epoch_ms=1792445050154
+[counter-heartbeat] epoch_ms=1792445051155
+[counter-heartbeat] epoch_ms=1792445052155
+[search-fixture-server] {"trace":"5b953e4c-38e4-4ca9-9427-96f2c9e111b8","event":"received","epoch_ms":1792445052534,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"5b953e4c-38e4-4ca9-9427-96f2c9e111b8","event":"response_ready","epoch_ms":1792445052562,"path":"/v1/destinations","status":200}
+[counter-heartbeat] epoch_ms=1792445053156
+[search-fixture-server] {"trace":"418d0173-dc49-49b3-aba3-d0a496c54c8c","event":"received","epoch_ms":1792445053191,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"418d0173-dc49-49b3-aba3-d0a496c54c8c","event":"response_ready","epoch_ms":1792445053213,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"d513c2cf-f957-47b9-8f33-f6b3c16f6809","event":"received","epoch_ms":1792445053214,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"d513c2cf-f957-47b9-8f33-f6b3c16f6809","event":"response_ready","epoch_ms":1792445053254,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445054158
+[counter-heartbeat] epoch_ms=1792445055161
+[counter-heartbeat] epoch_ms=1792445056163
+[counter-heartbeat] epoch_ms=1792445057166
+[counter-heartbeat] epoch_ms=1792445058168
+[counter-heartbeat] epoch_ms=1792445059170
+[counter-server] epoch_ms=1792445059490 id=B49A99B6-C2A2-4B76-94B7-9E18B87BA3CA event=received
+[counter-server] epoch_ms=1792445059490 id=B49A99B6-C2A2-4B76-94B7-9E18B87BA3CA event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445060172
+[counter-heartbeat] epoch_ms=1792445061174
+[counter-heartbeat] epoch_ms=1792445062176
+[counter-server] epoch_ms=1792445062207 id=4B78846C-B971-43BF-A677-44853F6B7EB1 event=received
+[counter-server] epoch_ms=1792445062207 id=4B78846C-B971-43BF-A677-44853F6B7EB1 event=response_ready status=200
+[search-fixture-server] {"trace":"aaebc6b8-5f07-4a5f-b859-8e811609c4fa","event":"received","epoch_ms":1792445062837,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"aaebc6b8-5f07-4a5f-b859-8e811609c4fa","event":"response_ready","epoch_ms":1792445062871,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"c23a1ff8-8e2e-4fe7-9eb1-64c580e1cc26","event":"received","epoch_ms":1792445062989,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"c23a1ff8-8e2e-4fe7-9eb1-64c580e1cc26","event":"response_ready","epoch_ms":1792445063011,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445063179
+[counter-heartbeat] epoch_ms=1792445064181
+[counter-heartbeat] epoch_ms=1792445065181
+[search-fixture-server] {"trace":"d251479b-d387-468e-8745-aabd7cd266cf","event":"received","epoch_ms":1792445065956,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"d251479b-d387-468e-8745-aabd7cd266cf","event":"response_ready","epoch_ms":1792445065987,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"a766f468-d562-4515-8981-8e430dd50a43","event":"received","epoch_ms":1792445066075,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"a766f468-d562-4515-8981-8e430dd50a43","event":"response_ready","epoch_ms":1792445066119,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445066186
+[counter-heartbeat] epoch_ms=1792445067188
+[counter-server] epoch_ms=1792445068131 id=CA4473F6-84B9-423B-80A7-FD5A2D76066C event=received
+[counter-server] epoch_ms=1792445068132 id=CA4473F6-84B9-423B-80A7-FD5A2D76066C event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445068191
+[counter-server] epoch_ms=1792445069023 id=7C1D1198-1B06-409C-B570-9369FA2D66C6 event=received
+[counter-server] epoch_ms=1792445069023 id=7C1D1198-1B06-409C-B570-9369FA2D66C6 event=response_ready status=200
+[counter-server] epoch_ms=1792445069027 id=74C8F460-1407-4A68-BF48-BA88D2C9BAE4 event=received
+[counter-server] epoch_ms=1792445069027 id=74C8F460-1407-4A68-BF48-BA88D2C9BAE4 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445069191
+[search-fixture-server] {"trace":"c4c5b861-302a-45b9-8657-8f285df4df87","event":"received","epoch_ms":1792445069741,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"c4c5b861-302a-45b9-8657-8f285df4df87","event":"response_ready","epoch_ms":1792445069766,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"69f05d69-bfa4-403d-922d-4ee90afe3eec","event":"received","epoch_ms":1792445069877,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"69f05d69-bfa4-403d-922d-4ee90afe3eec","event":"response_ready","epoch_ms":1792445069909,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445070194
+[counter-heartbeat] epoch_ms=1792445071197
+[counter-heartbeat] epoch_ms=1792445072199
+[search-fixture-server] {"trace":"6dd9e48c-6008-4f1a-9379-78b42a674689","event":"received","epoch_ms":1792445072563,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"6dd9e48c-6008-4f1a-9379-78b42a674689","event":"response_ready","epoch_ms":1792445072587,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"c203a3ac-7240-4a56-9163-42fba7c517ae","event":"received","epoch_ms":1792445072598,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"c203a3ac-7240-4a56-9163-42fba7c517ae","event":"response_ready","epoch_ms":1792445072626,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445073199
+[counter-heartbeat] epoch_ms=1792445074201
+[counter-heartbeat] epoch_ms=1792445075203
+[counter-heartbeat] epoch_ms=1792445076203
+[counter-heartbeat] epoch_ms=1792445077206
+[counter-heartbeat] epoch_ms=1792445078208
+[counter-heartbeat] epoch_ms=1792445079209
+[counter-heartbeat] epoch_ms=1792445080211
+[counter-heartbeat] epoch_ms=1792445081213
+[counter-heartbeat] epoch_ms=1792445082215
+[counter-heartbeat] epoch_ms=1792445083218
+[counter-heartbeat] epoch_ms=1792445084221

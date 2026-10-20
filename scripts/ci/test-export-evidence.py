@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import importlib.util
 import json
+import io
+from contextlib import redirect_stdout
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +13,83 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_search_telemetry_is_redacted_bounded_and_keeps_full_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'private'; out = Path(directory) / 'public'
+            work.mkdir(); out.mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'accessToken': 'search-secret'}))
+            log = '[search-fixture] submitted-value=Jordan search-secret ::error::\n' * 100
+            (work / 'checks.log').write_text(log)
+            (work / 'fixture.log').write_text('[search-fixture-server] response_ready status=200\n')
+            output = io.StringIO()
+            with redirect_stdout(output): evidence.export(work, out, str(connection), 0)
+            self.assertEqual(output.getvalue().count('[search-fixture]'), 80)
+            self.assertIn('[search-fixture-server]', output.getvalue())
+            self.assertNotIn('search-secret', output.getvalue())
+            self.assertNotIn('::', output.getvalue())
+            self.assertEqual((out / 'checks.log').read_text().count('[search-fixture]'), 100)
+
+    def test_assertion_is_not_hidden_by_passing_summaries_or_runtime_noise(self):
+        text = ('Executed 14 tests, with 0 failures (0 unexpected)\n' * 25
+                + 'runtime error: process does not exist\n' * 25
+                + '/fixture/OrcaUITests.swift:907: error: -[OrcaUITests testSearch] : XCTAssertTrue failed\n'
+                + "Test Case '-[OrcaUITests testSearch]' failed (51 seconds).\n")
+        excerpt = evidence.failure_excerpt(text)
+        self.assertIn('OrcaUITests.swift:907:', excerpt)
+        self.assertIn("testSearch]' failed", excerpt)
+        self.assertLessEqual(len(excerpt.splitlines()), 61)
+
+    def test_heartbeat_excerpt_is_anchored_before_delayed_cleanup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'private'; out = Path(directory) / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'checks.log').write_text('[counter-native] epoch_ms=100000 id=x event=created\n')
+            (work / 'fixture.log').write_text(''.join(
+                f'[counter-heartbeat] epoch_ms={i * 1000}\n' for i in range(200)))
+            output = io.StringIO()
+            with redirect_stdout(output):
+                evidence.export(work, out, '', 65)
+            self.assertIn('[counter-heartbeat] epoch_ms=100000', output.getvalue())
+            self.assertNotIn('[counter-heartbeat] epoch_ms=199000', output.getvalue())
+            self.assertEqual(output.getvalue().count('[counter-heartbeat]'), 60)
+
+    def test_counter_telemetry_survives_long_logs_on_success_and_failure(self):
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory) / 'private'; out = Path(directory) / 'public'
+                work.mkdir(); out.mkdir()
+                connection = work / 'connection.json'
+                connection.write_text(json.dumps({'accessToken': 'counter-secret'}))
+                (work / 'checks.log').write_text('[counter-native] started counter-secret ::error::\n' + 'noise\n' * 300)
+                (work / 'fixture.log').write_text(
+                    '[counter-server] received counter-secret\n' +
+                    ''.join(f'[counter-heartbeat] epoch_ms={i}\n' for i in range(200)) +
+                    '[counter-server] response_ready\n')
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    evidence.export(work, out, str(connection), status)
+                text = output.getvalue()
+                self.assertIn('[counter-native] started', text)
+                self.assertIn('[counter-server] received', text)
+                self.assertIn('[counter-server] response_ready', text)
+                self.assertIn('[counter-heartbeat] epoch_ms=199', text)
+                self.assertNotIn('counter-secret', text)
+                self.assertNotIn('::', text)
+                self.assertLessEqual(text.count('[counter-heartbeat]'), 60)
+                self.assertEqual(json.loads((out / 'outcome.json').read_text())['exitCode'], status)
+
+    def test_counter_events_are_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'private'; out = Path(directory) / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'checks.log').write_text(('[counter-native] ' + 'x' * 5000 + '\n') * 1000)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                evidence.export(work, out, '', 0)
+            self.assertEqual(output.getvalue().count('[fixture telemetry]'), 80)
+            self.assertLess(len(output.getvalue()), 85000)
+
     def test_redacts_known_bearer_and_cookie(self):
         result = evidence.redact('token a+b/c Bearer other-secret orca_session=session-value; rest', ['a+b/c'])
         self.assertEqual(result, 'token [REDACTED] Bearer [REDACTED] orca_session=[REDACTED]; rest')
@@ -49,6 +128,58 @@ class EvidenceTests(unittest.TestCase):
             self.assertNotIn('ephemeral-test-token', (out / 'reader-results.json').read_text())
             self.assertNotIn('ephemeral-test-token', (out / 'reader-failure-dom.txt').read_text())
             self.assertEqual({p.name for p in (out / 'screenshots').iterdir()}, {'light.png', 'reader-light.png'})
+
+    def test_early_failure_is_visible_redacted_and_cannot_issue_workflow_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'accessToken': 'fixture-secret'}))
+            (work / 'checks.log').write_text(
+                "Test Case 'testEarly' started.\n"
+                "::error::##[add-mask]XCTAssertTrue failed fixture-secret Bearer another-secret orca_session=cookie-secret;\n"
+                "Test Case 'testEarly' failed.\n" + "later successful output\n" * 200)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                evidence.export(work, out, str(connection), 65)
+            text = output.getvalue()
+            self.assertIn("testEarly", text)
+            self.assertIn("XCTAssertTrue failed", text)
+            for secret in ('fixture-secret', 'another-secret', 'cookie-secret'):
+                self.assertNotIn(secret, text)
+            self.assertNotIn('::', text)
+            self.assertNotIn('##[', text)
+            self.assertEqual(json.loads((out / 'outcome.json').read_text())['exitCode'], 65)
+
+    def test_failure_excerpt_is_bounded_and_handles_missing_markers(self):
+        output = evidence.failure_excerpt(('error: ' + 'x' * 5000 + '\n') * 1000)
+        self.assertLess(len(output), 65000)
+        self.assertIn('Additional failure markers omitted: 980', output)
+        self.assertIn('No failure marker found', evidence.failure_excerpt('ordinary output'))
+
+    def test_success_does_not_print_failure_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'checks.log').write_text('expected failure in a passing negative test')
+            output = io.StringIO()
+            with redirect_stdout(output):
+                evidence.export(work, out, '', 0)
+            self.assertNotIn('[fixture failure]', output.getvalue())
+
+    def test_credential_scan_failure_does_not_print_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); work = root / 'private'; out = root / 'public'
+            work.mkdir(); out.mkdir(); (work / 'browser').mkdir()
+            connection = work / 'connection.json'
+            connection.write_text(json.dumps({'token': 'private-fixture-secret'}))
+            (work / 'checks.log').write_text('error: private-fixture-secret')
+            (work / 'fixture.log').write_text('[counter-server] received private-fixture-secret')
+            (work / 'browser' / 'image.png').write_bytes(b'private-fixture-secret')
+            output = io.StringIO()
+            with redirect_stdout(output), self.assertRaises(ValueError):
+                evidence.export(work, out, str(connection), 65)
+            self.assertEqual(output.getvalue(), '')
 
     def test_rejects_connection_outside_owned_workspace(self):
         with tempfile.TemporaryDirectory() as directory:
