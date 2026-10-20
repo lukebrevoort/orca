@@ -20,6 +20,7 @@ type NormalizeOptions = {
 
 export type NormalizedGmailMessage = NormalizedMessage & {
   attachments: MailAttachment[];
+  providerInternalDate: string | null;
 };
 
 export function normalizeGmailMessage(
@@ -28,7 +29,8 @@ export function normalizeGmailMessage(
 ): NormalizedGmailMessage {
   const headers = getHeaders(message.payload);
   const subject = headers.get("subject") ?? "(No subject)";
-  const receivedAt = normalizeInternalDate(message.internalDate);
+  const providerDate = parseGmailInternalDate(message.internalDate);
+  const receivedAt = (providerDate ?? new Date(0)).toISOString();
   const labelIds = message.labelIds ?? [];
   const from = parseContact(headers.get("from"));
   const to = parseContactList(headers.get("to"));
@@ -48,6 +50,7 @@ export function normalizeGmailMessage(
     subject,
     snippet: message.snippet ?? "",
     receivedAt,
+    providerInternalDate: providerDate?.toISOString() ?? null,
     unread: labelIds.includes("UNREAD"),
     labels: labelIds,
     bodyText: findBodyPart(message.payload, "text/plain"),
@@ -153,13 +156,12 @@ function getHeaders(payload: GmailMessagePart | undefined): Map<string, string> 
   );
 }
 
-function normalizeInternalDate(internalDate: string | undefined): string {
-  if (!internalDate) {
-    return new Date(0).toISOString();
-  }
-
+/** Keep unknown provider dates distinct from a genuine epoch timestamp. */
+export function parseGmailInternalDate(internalDate: string | undefined): Date | null {
+  if (typeof internalDate !== "string" || !internalDate.trim()) return null;
   const timestamp = Number(internalDate);
-  return new Date(Number.isFinite(timestamp) ? timestamp : Date.parse(internalDate)).toISOString();
+  const date = new Date(Number.isFinite(timestamp) ? timestamp : Date.parse(internalDate));
+  return Number.isFinite(date.getTime()) ? date : null;
 }
 
 function findBodyPart(part: GmailMessagePart | undefined, mimeType: string): string | null {

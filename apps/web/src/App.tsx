@@ -1,3 +1,6 @@
+import { ReaderSessions } from "./reader-session";
+import { readerNavigationVisibility } from "./reader-navigation";
+import { decodeMailPreview } from "./mail-preview";
 import { installViewNavigationHistory, requestViewNavigation } from "./view-navigation-guard";
 import { BulkSpaceMove, conversationKey, selectedConversations } from "./bulk-space-move";
 import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
@@ -1398,6 +1401,7 @@ export function InboxApp({
   });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [readMutationRefreshKey, setReadMutationRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && readSurfaceLocation(window.location).composer ? "compose" : null);
@@ -1405,6 +1409,10 @@ export function InboxApp({
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
   const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
+  const readingSessions = useMemo(() => new ReaderSessions(), [account?.id, demoMode, status === "signedout"]);
+  useEffect(() => () => readingSessions.clear(), [readingSessions]);
+  const pendingReaderRead = useRef<InboxMessage | null>(null);
+  useEffect(() => { pendingReaderRead.current = null; }, [account?.id, status === "signedout"]);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
@@ -1703,7 +1711,7 @@ export function InboxApp({
       abortController.abort();
       if (gmailBackgroundRefreshRef.current === refreshGmailInBackground) gmailBackgroundRefreshRef.current = null;
     };
-  }, [classificationView, demoMode, refreshKey, viewMutationRefreshKey]);
+  }, [classificationView, demoMode, refreshKey, viewMutationRefreshKey, readMutationRefreshKey]);
 
   useEffect(() => {
     if (demoMode || status !== "ready") return;
@@ -1831,17 +1839,20 @@ export function InboxApp({
   }, [messages, status]);
 
   const destinationSurface = !organizationStudioOpen && (Boolean(activeDestinationId) || (!activeCollectionId && !activeSavedViewId && ["inbox", "quiet", "focus", "signals", "hidden"].includes(activeMailbox)));
-  const legacyBehavior = activeMailbox === "inbox" ? "normal" : activeMailbox === "signals" ? "notify" : activeMailbox === "quiet" || activeMailbox === "focus" || activeMailbox === "hidden" ? activeMailbox : null;
+  const legacyBehavior = activeMailbox === "inbox" || activeMailbox === "focus" ? "normal" : activeMailbox === "signals" ? "notify" : activeMailbox === "quiet" || activeMailbox === "hidden" ? activeMailbox : null;
   const requestedDestinationId = activeDestinationId ?? (destinationSurface && legacyBehavior ? catalog.data?.legacyDestinationIds[legacyBehavior] ?? null : null);
+  const destinationView = !activeDestinationId && activeMailbox === "focus" ? "focus" : "all";
+  const destinationPageIdentity = `${requestedDestinationId ?? ""}:${destinationView}:${classificationView}`;
+  const inboxTimeline = !activeCollectionId && !activeSavedViewId && (activeMailbox === "inbox" || activeMailbox === "focus") && (!activeDestinationId || activeDestinationId === catalog.data?.legacyDestinationIds.normal);
   const selectedDestination = catalog.data?.destinations.find(item => item.id === requestedDestinationId);
-  const destinationKeyRef = useRef(requestedDestinationId);
-  destinationKeyRef.current = requestedDestinationId;
+  const destinationKeyRef = useRef(destinationPageIdentity);
+  destinationKeyRef.current = destinationPageIdentity;
   useEffect(() => {
     const owner = ++destinationRequest.current;
     const controller = new AbortController();
     const epoch = mailboxSnapshotEpochRef.current;
     setIsLoadingMoreMessages(false);
-    const queryKey = `${requestedDestinationId ?? ""}:${classificationView}`;
+    const queryKey = destinationPageIdentity;
     if (destinationQueryKey.current !== queryKey || !selectedDestination || selectedDestination.retiredAt) {
       setDestinationPage(null);
       destinationPageKey.current = "";
@@ -1850,15 +1861,15 @@ export function InboxApp({
     setDestinationError(null);
     if (!requestedDestinationId || !selectedDestination || selectedDestination.retiredAt || demoMode) { setDestinationLoading(false); return; }
     setDestinationLoading(true);
-    void fetchJson(`/v1/inbox?view=all&classification=${classificationView}&limit=100&destinationId=${encodeURIComponent(requestedDestinationId)}`, inboxClassificationResponseSchema, controller.signal).then(page => {
+    void fetchJson(`/v1/inbox?view=${destinationView}&classification=${classificationView}&limit=100&destinationId=${encodeURIComponent(requestedDestinationId)}`, inboxClassificationResponseSchema, controller.signal).then(page => {
       if (controller.signal.aborted || owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current) return;
-      destinationPageKey.current = requestedDestinationId;
+      destinationPageKey.current = destinationPageIdentity;
       setDestinationPage(page);
       setAllMailMessages(current => mergeMessages(current, page.messages));
     }).catch(error => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted && owner === destinationRequest.current) setDestinationLoading(false); });
     return () => { controller.abort(); ++destinationRequest.current; };
-  }, [classificationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision, viewMutationRefreshKey]);
+  }, [classificationView, destinationView, requestedDestinationId, selectedDestination?.retiredAt, Boolean(selectedDestination), demoMode, mailboxRefreshGeneration, destinationRetry, catalog.data?.revision, viewMutationRefreshKey]);
   useEffect(() => { if (mailboxRefreshGeneration) void refreshDestinations().catch(() => {}); }, [mailboxRefreshGeneration]);
 
   const demoSkippedInboxThreads = useMemo(() => {
@@ -1870,45 +1881,53 @@ export function InboxApp({
     }
     return skipped;
   }, [demoMode, savedViews, allMailMessages]);
-  const demoInboxSource = useMemo(() => demoMode ? messages.filter(message => !demoSkippedInboxThreads.has(JSON.stringify([message.accountId, message.threadId]))) : messages, [demoMode, messages, demoSkippedInboxThreads]);
-  const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "all");
+  const demoInboxSource = useMemo(() => {
+    if (!demoMode) return messages;
+    const inboxThreads = new Set(allMailMessages.filter(message => message.labels.includes("INBOX")).map(message => accountScopedIdentityKey(message.accountId, message.threadId)));
+    return allMailMessages.filter(message => inboxThreads.has(accountScopedIdentityKey(message.accountId, message.threadId)) && !demoSkippedInboxThreads.has(accountScopedIdentityKey(message.accountId, message.threadId)));
+  }, [demoMode, messages, allMailMessages, demoSkippedInboxThreads]);
+  const isClassificationMailbox = (demoMode || !requestedDestinationId) && (activeMailbox === "inbox" || activeMailbox === "focus" || activeMailbox === "all");
   const mailboxMessages = useMemo(
     () => {
       const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
-      return destinationSurface && !demoMode ? (destinationPageKey.current === requestedDestinationId ? destinationPage?.messages ?? [] : []) : activeCollection
+      return destinationSurface && !demoMode ? (destinationPageKey.current === destinationPageIdentity ? destinationPage?.messages ?? [] : []) : activeCollection
         ? allMailMessages.filter((message) => activeCollection.threadIds.includes(message.threadId))
         : isClassificationMailbox
-          ? getMessagesForMailbox(activeMailbox === "inbox" ? demoInboxSource : messages, activeMailbox, attentionByAddress)
+          ? getMessagesForMailbox((activeMailbox === "inbox" || activeMailbox === "focus") ? getLatestThreadRows(demoInboxSource) : messages, activeMailbox, attentionByAddress)
           : activeMailbox === "later"
             ? allMailMessages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
             : getMessagesForMailbox(allMailMessages, activeMailbox, attentionByAddress);
     },
-    [destinationSurface, requestedDestinationId, destinationPage, activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, demoInboxSource, isClassificationMailbox, messages, reminders],
+    [destinationSurface, destinationPageIdentity, requestedDestinationId, destinationPage, activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, demoInboxSource, isClassificationMailbox, messages, reminders],
   );
 
   const visibleMessages = useMemo(() => {
+    const rows = inboxTimeline ? getLatestThreadRows(mailboxMessages) : mailboxMessages;
     let filtered = personFilter
-      ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
-      : mailboxMessages;
+      ? rows.filter((message) => messageIncludesPerson(message, personFilter))
+      : rows;
     if (!activeCollectionId && isClassificationMailbox) {
       filtered = filtered.filter((message) => classificationMatchesView(message, classificationView));
-      const latestRows = new Set(getLatestThreadRows(allMailMessages).map(messageIdentityKey));
-      filtered = filtered.filter((message) => latestRows.has(messageIdentityKey(message)));
+      if (!inboxTimeline) {
+        const latestRows = new Set(getLatestThreadRows(allMailMessages).map(messageIdentityKey));
+        filtered = filtered.filter(message => latestRows.has(messageIdentityKey(message)));
+      }
     }
     if (!activeCollectionId && activeMailbox === "inbox" && inboxFilter !== "all") {
       filtered = filtered.filter((message) => {
         const behavior = getMessageAttentionBehavior(message, attentionByAddress);
-        return behavior === inboxFilter;
+        return inboxFilter === "focus" ? behavior === "focus" || behavior === "notify" : behavior === inboxFilter;
       });
     }
-    return sortMessagesByAttention(filtered, attentionByAddress).map((message) => ({
+    return (inboxTimeline ? sortMessagesByAttention(filtered, attentionByAddress) : sortMessagesByLegacyAttention(filtered, attentionByAddress)).map((message) => ({
       ...message,
       attentionBehavior: getMessageAttentionBehavior(message, attentionByAddress),
     }));
-  }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
+  }, [activeCollectionId, activeMailbox, inboxTimeline, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
   const activeDesktopDestination: DesktopDestination = organizationStudioOpen
     ? organizationStudioOpen
+    : !activeDestinationId && activeMailbox === "focus" ? "focus"
     : requestedDestinationId
       ? `destination:${requestedDestinationId}`
     : activeSavedViewId
@@ -1952,7 +1971,7 @@ export function InboxApp({
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
-    : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+    : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;
@@ -2013,7 +2032,9 @@ export function InboxApp({
     };
 
     if (demoMode) {
-      setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
+      const detail = createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages);
+      setThreadDetail(detail);
+      markOpenedThreadRead(detail);
       setReaderStatus("ready");
       setReaderError(null);
       return;
@@ -2021,7 +2042,8 @@ export function InboxApp({
 
     const reference = { accountId: readerAccountId, threadId: selectedThreadId };
     const cache = threadDetailCacheRef.current!;
-    const cached = cache.peek(reference);
+    // An expired/version-mismatched payload cannot establish unread-at-entry.
+    const cached = cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion) ? cache.peek(reference) : null;
     let active = true;
     if (cached) {
       setThreadDetail(cached.detail);
@@ -2031,25 +2053,30 @@ export function InboxApp({
       setReaderStatus("loading");
     }
     setReaderError(null);
-    if (cached && cache.isFresh(reference, threadDetailFreshnessMs, Date.now(), selectedThreadVersion)) return;
+    if (cached) {
+      markOpenedThreadRead(cached.detail);
+      return;
+    }
     const request = cache.load(
       reference,
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
-      { refresh: Boolean(cached), version: selectedThreadVersion },
+      { refresh: true, version: selectedThreadVersion },
     );
-    const requestGeneration = cache.currentGeneration(reference);
+    const requestGeneration = cache.retainGeneration(reference);
     request
       .then((detail) => {
-        if (!active || !cache.isCurrentGeneration(reference, requestGeneration)) return;
+        if (!active || !requestGeneration.isCurrent()) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
+        markOpenedThreadRead(detail);
       })
       .catch((error) => {
-        if (!active || cached || !cache.isCurrentGeneration(reference, requestGeneration)) return;
+        if (!active || cached || !requestGeneration.isCurrent()) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
-      });
-    return () => { active = false; };
+      })
+      .finally(() => { requestGeneration.release(); });
+    return () => { active = false; requestGeneration.release(); };
   }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
 
   useEffect(() => {
@@ -2080,24 +2107,27 @@ export function InboxApp({
       () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
       { refresh: true, version: selectedThreadVersion },
     );
-    const requestGeneration = cache.currentGeneration(reference);
+    const requestGeneration = cache.retainGeneration(reference);
     detailRequest
       .then((detail) => {
-        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration)) return;
+        if (!active || readerSilentRequestRef.current !== request || !requestGeneration.isCurrent()) return;
         setThreadDetail(detail);
         setReaderStatus("ready");
+        markOpenedThreadRead(detail);
         readerMailboxSnapshotRef.current = request;
       })
       .catch((error) => {
-        if (!active || readerSilentRequestRef.current !== request || !cache.isCurrentGeneration(reference, requestGeneration) || hasVisibleDetail) return;
+        if (!active || readerSilentRequestRef.current !== request || !requestGeneration.isCurrent() || hasVisibleDetail) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
       })
       .finally(() => {
+        requestGeneration.release();
         if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
       });
     return () => {
       active = false;
+      requestGeneration.release();
       if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
     };
   }, [demoMode, mailboxRefreshGeneration, readerAccountId, readerStatus, selectedThreadId, selectedThreadVersion, threadDetail]);
@@ -2211,14 +2241,14 @@ export function InboxApp({
     })) ?? null,
     [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
-  const activeMailboxLabel = requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
+  const activeMailboxLabel = !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
       ?? allMailMessages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
       ?? activePin?.label
       ?? personFilter
     : null;
-  const inboxTitle = personFilterName ?? activeCollection?.name ?? (requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? (!activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? classificationViewLabel(classificationView)).toLowerCase()}`
     : activeCollection
@@ -2232,6 +2262,7 @@ export function InboxApp({
   }
 
   function synchronizeSurfaceLocation(location: SurfaceLocation) {
+    pendingReaderRead.current = null;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(readerFocusFrameRef.current);
@@ -2351,6 +2382,7 @@ export function InboxApp({
       return;
     }
 
+    pendingReaderRead.current = message;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(readerFocusFrameRef.current);
@@ -2365,22 +2397,51 @@ export function InboxApp({
       setSelectedThreadAccountId(message.accountId);
     });
 
+  }
+
+  function markOpenedThreadRead(detail: ThreadDetail) {
+    const message = pendingReaderRead.current;
+    if (!message || message.accountId !== detail.account.id || message.threadId !== detail.thread.id) return;
+    pendingReaderRead.current = null;
     if (message.unread) {
-      if (!demoMode) {
-        void fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read?accountId=${encodeURIComponent(message.accountId)}`, { method: "PATCH", credentials: "include" }).finally(() => {
-          setDestinationRetry(value => value + 1);
-          void refreshDestinations().catch(() => {});
-        }).catch(() => {});
-      } else {
+      const markLocallyRead = () => {
+        const update = (m: InboxMessage) => m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m;
+        setMessages(prev => prev.map(update));
+        setAllMailMessages(prev => prev.map(update));
+        setDestinationPage(current => current ? { ...current, messages: current.messages.map(update), nextCursor: null } : current);
+      };
+      if (demoMode) {
         writeDemoReadState(message.threadId);
+        markLocallyRead();
+      } else {
+        // A read changes timeline position. Invalidate older snapshots at both
+        // boundaries so pending pages cannot undo the acknowledged read state.
+        const invalidateSnapshots = () => {
+          mailboxSnapshotEpochRef.current += 1;
+          destinationRequest.current += 1;
+          classificationRequestRef.current += 1;
+          classificationPageRequestRef.current += 1;
+          allMailPageRequestRef.current += 1;
+          setIsLoadingMoreMessages(false);
+          setDestinationLoading(false);
+          setClassificationLoading(false);
+        };
+        invalidateSnapshots();
+        void fetchNoContent(`/v1/threads/${encodeURIComponent(message.threadId)}/read?accountId=${encodeURIComponent(message.accountId)}`, { method: "PATCH" })
+          .then(() => {
+            invalidateSnapshots();
+            markLocallyRead();
+          })
+          .catch(error => {
+            invalidateSnapshots();
+            setClassificationActionError(`Could not mark “${message.subject || "this conversation"}” as read. ${getErrorMessage(error)}`);
+          })
+          .finally(() => {
+            setReadMutationRefreshKey(value => value + 1);
+            setDestinationRetry(value => value + 1);
+            void refreshDestinations().catch(() => {});
+          });
       }
-      setMessages((prev) =>
-        prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
-      );
-      setAllMailMessages((prev) =>
-        prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
-      );
-      setDestinationPage(current => current ? { ...current, messages: current.messages.map(m => m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m) } : current);
     }
   }
 
@@ -2495,6 +2556,7 @@ export function InboxApp({
   }
 
   function closeThread() {
+    pendingReaderRead.current = null;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(readerFocusFrameRef.current);
@@ -2627,7 +2689,7 @@ export function InboxApp({
     runUiTransition("content", () => {
       setActiveDestinationId(null);
       setActiveMailbox(mailbox);
-      if (mailbox === "inbox") setClassificationView("all");
+      if (mailbox === "inbox" || mailbox === "focus") setClassificationView("all");
       if (mailbox === "all") setClassificationView("all");
       setActiveCollectionId(null);
       setInboxFilter("all");
@@ -2662,15 +2724,16 @@ export function InboxApp({
 
   async function loadMoreMessages() {
     if (requestedDestinationId && !demoMode) {
-      if (!destinationPage?.nextCursor || destinationPageKey.current !== requestedDestinationId || isLoadingMoreMessages || destinationLoading) return;
+      if (!destinationPage?.nextCursor || destinationPageKey.current !== destinationPageIdentity || isLoadingMoreMessages || destinationLoading) return;
       const owner = ++destinationRequest.current;
       const epoch = mailboxSnapshotEpochRef.current;
       const key = requestedDestinationId;
+      const identity = destinationPageIdentity;
       setIsLoadingMoreMessages(true);
       try {
-        const page = await fetchJson(`/v1/inbox?view=all&classification=${classificationView}&limit=100&destinationId=${encodeURIComponent(key)}&cursor=${encodeURIComponent(destinationPage.nextCursor)}`, inboxClassificationResponseSchema);
-        if (owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current || key !== destinationKeyRef.current) return;
-        setDestinationPage(current => ({ ...page, messages: mergeMessages(current?.messages ?? [], page.messages) }));
+        const page = await fetchJson(`/v1/inbox?view=${destinationView}&classification=${classificationView}&limit=100&destinationId=${encodeURIComponent(key)}&cursor=${encodeURIComponent(destinationPage.nextCursor)}`, inboxClassificationResponseSchema);
+        if (owner !== destinationRequest.current || epoch !== mailboxSnapshotEpochRef.current || identity !== destinationKeyRef.current) return;
+        setDestinationPage(current => ({ ...page, messages: inboxTimeline ? mergeInboxThreadRows(current?.messages ?? [], page.messages) : mergeMessages(current?.messages ?? [], page.messages) }));
         setAllMailMessages(current => mergeMessages(current, page.messages));
       } catch (error) { if (owner === destinationRequest.current) setDestinationError(getErrorMessage(error)); }
       finally { if (owner === destinationRequest.current) setIsLoadingMoreMessages(false); }
@@ -3252,7 +3315,7 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={!activeDestinationId && activeMailbox === "focus" && !organizationStudioOpen ? "Focus" : requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
@@ -3265,7 +3328,7 @@ export function InboxApp({
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
             {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
-              key={requestedDestinationId ? `destination:${requestedDestinationId}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
+              key={requestedDestinationId ? `destination:${destinationPageIdentity}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
               onOpenSavedView={id => navigateDesktop(`view:${id}`)}
@@ -3280,7 +3343,7 @@ export function InboxApp({
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
-              destinationName={destinationSurface ? selectedDestination?.name ?? null : null}
+              destinationName={destinationSurface ? activeMailboxLabel : null}
               destinationFilterUnsupported={destinationSurface && Boolean(selectedDestination && !selectedDestination.isFallback)}
               originLabel={activeCollection?.name ?? activeMailboxLabel}
               classificationView={classificationView}
@@ -3336,12 +3399,15 @@ export function InboxApp({
           </div>
           <div style={{ display: selectedThreadId ? undefined : "none" }}>
             <MessageReader
+              key={account?.id ?? "signedout"}
+              sessions={readingSessions}
+              active={Boolean(selectedThreadId)}
               detail={threadDetail}
               contacts={composeContacts}
               demoMode={demoMode}
               error={readerError}
               fallbackMessages={selectedThreadMessages}
-              fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
+              fallbackTitle={selectedThreadLatestMessage ? selectedThreadLatestMessage.subject || "(no subject)" : null}
               originLabel={readerOriginLabel}
               onAttentionChange={updateSenderAttention}
               onClassificationChange={correctClassification}
@@ -4970,10 +5036,6 @@ function InboxView({
   useEffect(() => setPinZeroMatchConfirmed(false), [pinFilter]);
   const selectedPinPerson = pinPeople.find((person) => person.email === pinFilter.person) ?? null;
   const pinFilterDisplayLabel = pinFilterLabel(pinFilter, selectedPinPerson?.name);
-  const streamSectionLabels = useMemo(() => {
-    const now = new Date();
-    return displayMessages.map((message) => getStreamSectionLabel(message.receivedAt, now));
-  }, [displayMessages]);
   const formatInboxReceivedAt = createReceivedAtFormatter();
   const unreadCount = displayMessages.filter((message) => message.unread).length;
   const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
@@ -5452,7 +5514,7 @@ function InboxView({
 
         {status === "ready" && displayMessages.length > 0 ? (
           <ol className="message-list">
-            {displayMessages.map((message, index) => {
+            {displayMessages.map((message) => {
               const signature = getContactSignature(message.from);
               const isReply = message.subject.trim().toLowerCase().startsWith("re:");
               const senderAddress = message.from.email.trim().toLowerCase();
@@ -5462,7 +5524,6 @@ function InboxView({
 
               return (
                 <li key={messageIdentityKey(message)}>
-                  {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
                   <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
                       aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
@@ -5499,7 +5560,7 @@ function InboxView({
                           <span>{formatInboxReceivedAt(message.receivedAt)}</span>
                         </div>
                         <MessageSubject subject={message.subject} unread={message.unread} />
-                        <p>{message.snippet}</p>
+                        <p>{decodeMailPreview(message.snippet)}</p>
                       </div>
                   </button>
                     <button className="message-initial-select" aria-label={`${selected ? "Deselect" : "Select"} conversation from ${senderName}: ${message.subject || "(no subject)"}`} aria-pressed={selected} disabled={bulkAttentionStatus === "saving" || bulkSpaceBusy} onClick={() => toggleSelection(message)} type="button" title={selected ? "Deselect conversation" : "Select conversation"}><span aria-hidden="true">{selected ? "✓" : "+"}</span></button>
@@ -5539,7 +5600,7 @@ function InboxView({
         ) : null}
         {laterError ? <p className="later-error" role="alert">{laterError}</p> : null}
         {hasMoreMessages ? <div className="classification-load-more"><button disabled={isLoadingMoreMessages} onClick={onLoadMoreMessages} type="button">{isLoadingMoreMessages ? "Loading more…" : searchQuery.trim() ? "Load more messages to search" : "Load more messages"}</button></div> : null}
-        {evidenceMessage ? <DesktopDrawer ariaLabel="Why here?" className="message-evidence-drawer" onClose={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); }}><header><div><span>Message evidence</span><h2>Why here?</h2></div><button aria-label="Close evidence" onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); }} type="button">×</button></header><section><span>Open workspace</span><h3>{originLabel}</h3><p>This message was opened from {originLabel}. Orca did not receive an authoritative placement trace with this inbox response, so it cannot name a winning rule or claim that safety and manual overrides were absent.</p></section><section><span>Current attention preference</span><h3>{evidenceMessage.attentionBehavior === "notify" ? "Notify me" : evidenceMessage.attentionBehavior === "focus" ? "Keep in Focus" : evidenceMessage.attentionBehavior === "quiet" ? "Quiet" : evidenceMessage.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</h3><p>This is the current sender/thread attention treatment. It is not proof of the rule that placed the message in this workspace.</p></section><section><span>Human Signal · evidence</span><h3>{evidenceMessage.humanSignal === null ? "No confident estimate" : `Supportive evidence · ${(evidenceMessage.humanSignal > 1 ? evidenceMessage.humanSignal / 10 : evidenceMessage.humanSignal).toFixed(2)}`}</h3><p>Conversational and sender signals may inform ranking. They never decide the space alone.</p></section><footer><button onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); onOpenThread(evidenceMessage); }} type="button">Open thread</button><button className="message-evidence-trace" onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); onRetry(); }} type="button">Retry evidence</button><button disabled type="button">Full trace unavailable</button></footer></DesktopDrawer> : null}
+        {evidenceMessage ? <DesktopDrawer ariaLabel="Why here?" className="message-evidence-drawer" onClose={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); }}><header><div><span>Message evidence</span><h2>Why here?</h2></div><button aria-label="Close evidence" onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); }} type="button">×</button></header><section><span>Open workspace</span><h3>{originLabel}</h3><p>This message was opened from {originLabel}. Orca did not receive an authoritative placement trace with this inbox response, so it cannot name a winning rule or claim that safety and manual overrides were absent.</p></section><section><span>Current attention preference</span><h3>{evidenceMessage.attentionBehavior === "notify" ? "Notify me" : evidenceMessage.attentionBehavior === "focus" ? "Keep in Focus" : evidenceMessage.attentionBehavior === "quiet" ? "Quiet" : evidenceMessage.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</h3><p>This is the current sender/thread attention treatment. It is not proof of the rule that placed the message in this workspace.</p></section><section><span>Human Signal · evidence</span><h3>{evidenceMessage.humanSignal === null ? "No confident estimate" : `Supportive evidence · ${(evidenceMessage.humanSignal > 1 ? evidenceMessage.humanSignal / 10 : evidenceMessage.humanSignal).toFixed(2)}`}</h3><p>{!destinationFilterUnsupported && (viewMode === "inbox" || viewMode === "focus") ? "Unread Focus conversations appear first, newest first. Read Focus stays in the timeline by date. Human Signal does not change this order." : "Human Signal is supporting evidence. It does not decide the space alone."}</p></section><footer><button onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); onOpenThread(evidenceMessage); }} type="button">Open thread</button><button className="message-evidence-trace" onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); onRetry(); }} type="button">Retry evidence</button><button disabled type="button">Full trace unavailable</button></footer></DesktopDrawer> : null}
         </section>
 
       </div>
@@ -5600,7 +5661,7 @@ export function DraftsView({ drafts, status = "ready", error = null, onRetry = (
           ))}
         </ol>
       ) : (
-        <InboxStatusState description="Open Write to start something human. Orca saves drafts here as you work." eyebrow="Nothing waiting" title="No drafts yet" />
+        <InboxStatusState description="Choose Compose to start something human. Orca saves drafts here as you work." eyebrow="Nothing waiting" title="No drafts yet" />
       )}
     </section>
   );
@@ -5658,6 +5719,8 @@ export function shouldShowReaderJumpToTop(scrollY: number, viewportHeight: numbe
 }
 
 export function MessageReader({
+  sessions,
+  active = true,
   detail,
   contacts = [],
   error,
@@ -5676,11 +5739,13 @@ export function MessageReader({
   notifyByDefault = false,
   demoMode = false,
 }: {
+  sessions?: ReaderSessions;
+  active?: boolean;
   detail: ThreadDetail | null;
   contacts?: MailContact[];
   error: string | null;
   fallbackMessages: InboxMessage[];
-  fallbackTitle: string;
+  fallbackTitle: string | null;
   originLabel?: string;
   onBack: () => void;
   onRetry: () => void;
@@ -5695,16 +5760,134 @@ export function MessageReader({
   demoMode?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const entrySnapshot = useRef<{ identity: string; seen: Set<string>; unread: number } | null>(null);
+  if (!active || status !== "ready") entrySnapshot.current = null;
+  if (active && status === "ready" && detail && entrySnapshot.current?.identity !== accountScopedIdentityKey(detail.account.id, detail.thread.id)) {
+    entrySnapshot.current = { identity: accountScopedIdentityKey(detail.account.id, detail.thread.id), seen: new Set(detail.messages.map(messageIdentityKey)), unread: detail.messages.filter(message => message.unread).length };
+  }
+  const threadMenuRef = useRef<HTMLDetailsElement>(null);
+  const [navigationVisibility, setNavigationVisibility] = useState({ unread: false, latest: false });
   const messageRefs = useRef(new Map<string, HTMLElement>());
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
+  const accessibleDates = useMemo(() => new Map(messages.map(message => [messageIdentityKey(message), formatFullReceivedAt(message.receivedAt)])), [messages]);
 
   const newestMessage = messages[messages.length - 1];
-  const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
-  const firstUnreadMessage = messages.find((message) => message.unread);
-  const jumpTarget = newestUnreadMessage ?? newestMessage;
-  const title = detail?.thread.subject || fallbackTitle;
+  const currentFirstUnread = messages.find((message) => message.unread);
+  const jumpTarget = newestMessage;
+  const readerIdentity = detail ? accountScopedIdentityKey(detail.account.id, detail.thread.id) : "";
+  const [cards, setCards] = useState<{ identity: string; open: Set<string>; earlier: boolean; entry: string | null; unreadEntry: string | null; restored?: boolean } | null>(null);
+  const firstUnreadMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.unreadEntry) : undefined) ?? currentFirstUnread;
+  const initialMessage = (cards?.identity === readerIdentity ? messages.find(message => messageIdentityKey(message) === cards.entry) : undefined) ?? firstUnreadMessage ?? newestMessage;
+  const openCards = cards?.identity === readerIdentity ? cards.open : new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []);
+  const showEarlier = cards?.identity === readerIdentity && cards.earlier;
+  const entryIndex = initialMessage ? messages.indexOf(initialMessage) : 0;
+  const entryUnreadCount = entrySnapshot.current?.unread ?? 0;
+  const newUnreadCount = messages.filter(message => message.unread && !entrySnapshot.current?.seen.has(messageIdentityKey(message))).length;
+  function updateCards(open: Set<string>, earlier = Boolean(showEarlier)) { setCards({ identity: readerIdentity, restored: cards?.restored, open, earlier, entry: initialMessage ? messageIdentityKey(initialMessage) : null, unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null }); }
+  function jumpToMessage(message: ThreadDetailMessage | undefined) {
+    if (!message) return;
+    const key = messageIdentityKey(message);
+    updateCards(new Set([...openCards, key]), true);
+    requestAnimationFrame(() => {
+      const node = messageRefs.current.get(key);
+      node?.scrollIntoView?.({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
+      node?.focus({ preventScroll: true });
+    });
+  }
+  const latestCards = useRef(cards);
+  latestCards.current = cards;
+  useLayoutEffect(() => {
+    if (!active || status !== "ready") { setCards(null); return; }
+    if (!detail || !initialMessage) return;
+    const saved = sessions?.get(detail.account.id, detail.thread.id);
+    const validKeys = new Set(messages.map(messageIdentityKey));
+    const restored = saved && saved.entry && validKeys.has(saved.entry) ? saved : null;
+    setCards(restored ? { ...restored, unreadEntry: currentFirstUnread ? messageIdentityKey(currentFirstUnread) : null, restored: true, identity: readerIdentity, open: new Set(restored.open.filter(key => validKeys.has(key))) } : { identity: readerIdentity, open: new Set([messageIdentityKey(initialMessage)]), earlier: false, entry: messageIdentityKey(initialMessage), unreadEntry: firstUnreadMessage ? messageIdentityKey(firstUnreadMessage) : null });
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    let isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
+    const contained = () => isContained;
+    const viewportTop = () => contained() ? scrollport!.getBoundingClientRect().top : Math.max(0, document.querySelector(".desktop-workspace-header")?.getBoundingClientRect().bottom ?? 0);
+    let position = { top: restored?.top ?? 0, anchor: restored?.anchor ?? null, offset: restored?.offset ?? 0 };
+    let initialized = false;
+    let capturedViewportTop = 0;
+    let captureTimer: ReturnType<typeof setTimeout> | undefined;
+    const capture = () => {
+      if (!initialized) return;
+      const top = contained() ? scrollport!.scrollTop : window.scrollY;
+      const visibleTop = viewportTop();
+      capturedViewportTop = visibleTop;
+      let anchor: string | null = null;
+      let offset = 0;
+      for (const [key, node] of messageRefs.current) {
+        const bounds = node.getBoundingClientRect();
+        if (bounds.height > 0 && bounds.bottom > visibleTop) { anchor = key; offset = bounds.top - visibleTop; break; }
+      }
+      position = { top, anchor, offset };
+    };
+    const trackScroll = (event: Event) => {
+      if (!initialized || (event.target !== document && event.target !== scrollport)) return;
+      const top = contained() ? scrollport!.scrollTop : window.scrollY;
+      // Refresh just the retained anchor at the start of a burst: header/font
+      // layout may have moved it since the last capture. Subsequent events use
+      // scroll deltas, without repeatedly measuring cards during scrolling.
+      const anchor = captureTimer === undefined && position.anchor ? messageRefs.current.get(position.anchor) : null;
+      if (anchor) {
+        const bounds = anchor.getBoundingClientRect();
+        if (bounds.height > 0) {
+          capturedViewportTop = viewportTop();
+          position = { ...position, top, offset: bounds.top - capturedViewportTop };
+        } else capture();
+      } else position = { ...position, top, offset: position.offset - (top - position.top) };
+      clearTimeout(captureTimer);
+      captureTimer = setTimeout(() => { captureTimer = undefined; capture(); }, 120);
+    };
+    const resize = () => {
+      isContained = Boolean(scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY));
+      clearTimeout(captureTimer);
+      captureTimer = undefined;
+      capture();
+    };
+    // Allow the restored card layout and document scrollport to settle before
+    // measuring. A user gesture cancels this one-time positioning.
+    const removePositioningListeners = () => { for (const type of ["pointerdown", "wheel", "touchstart", "keydown"]) window.removeEventListener(type, cancelPositioning); };
+    const cancelPositioning = () => { window.cancelAnimationFrame(frame); removePositioningListeners(); initialized = true; capture(); };
+    for (const type of ["pointerdown", "wheel", "touchstart", "keydown"]) window.addEventListener(type, cancelPositioning, { passive: true, once: true });
+    let frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+      const node = restored?.anchor ? messageRefs.current.get(restored.anchor) : messages.length > 1 ? messageRefs.current.get(messageIdentityKey(initialMessage)) : null;
+      const currentTop = contained() ? scrollport!.scrollTop : window.scrollY;
+      const top = node ? currentTop + node.getBoundingClientRect().top - viewportTop() - (restored?.offset ?? 12) : restored?.top ?? 0;
+      node?.focus({ preventScroll: true });
+      if (contained()) scrollport!.scrollTop = top;
+      else window.scrollTo({ top, behavior: "instant" });
+      removePositioningListeners();
+      initialized = true;
+      capture();
+      });
+    });
+    window.addEventListener("scroll", trackScroll, { passive: true, capture: true });
+    window.addEventListener("resize", resize);
+    // Quotes, attachments and images can change the anchor without a scroll.
+    const positionObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(capture);
+    const list = messageRefs.current.values().next().value?.closest(".reader-message-list");
+    if (list) positionObserver?.observe(list);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      removePositioningListeners();
+      window.removeEventListener("scroll", trackScroll, true);
+      window.removeEventListener("resize", resize);
+      clearTimeout(captureTimer);
+      positionObserver?.disconnect();
+      // The mobile header can become sticky during the last scroll burst.
+      // Account for its changed edge once when leaving, without per-event layout.
+      if (initialized) position.offset += capturedViewportTop - viewportTop();
+      const current = latestCards.current;
+      if (current?.identity === readerIdentity) sessions?.set(detail.account.id, detail.thread.id, { open: [...current.open], earlier: current.earlier, entry: current.entry, unreadEntry: current.unreadEntry, ...position });
+    };
+  }, [active, readerIdentity, status, sessions]);
+  const title = detail?.thread.subject || fallbackTitle || "(no subject)";
 
   useEffect(() => {
     if (status === "ready") headingRef.current?.focus({ preventScroll: true });
@@ -5713,24 +5896,67 @@ export function MessageReader({
   useEffect(() => {
     if (status !== "ready") return;
     const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
-    if (!scrollport) return;
-    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(scrollport.scrollTop, scrollport.clientHeight));
+    const updateJumpToTop = () => {
+      const contained = scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY);
+      setShowJumpToTop(shouldShowReaderJumpToTop(contained ? scrollport.scrollTop : window.scrollY, contained ? scrollport.clientHeight : window.innerHeight));
+    };
     updateJumpToTop();
-    scrollport.addEventListener("scroll", updateJumpToTop, { passive: true });
-    return () => scrollport.removeEventListener("scroll", updateJumpToTop);
+    // Mobile scrolls the document. Capture element scrolls too, and recheck
+    // the active scroll container when a resize crosses the layout breakpoint.
+    window.addEventListener("scroll", updateJumpToTop, { passive: true, capture: true });
+    window.addEventListener("resize", updateJumpToTop);
+    return () => {
+      window.removeEventListener("scroll", updateJumpToTop, true);
+      window.removeEventListener("resize", updateJumpToTop);
+    };
   }, [status]);
 
-  function jumpToNewest() {
-    if (!jumpTarget) return;
-    const node = messageRefs.current.get(messageIdentityKey(jumpTarget));
-    node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
-    node?.focus({ preventScroll: true });
+  useEffect(() => {
+    if (status !== "ready") return;
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    let frame = 0;
+    const update = () => {
+      const contained = scrollport && /^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY);
+      const viewport = contained ? scrollport.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      const bounds = (message: ThreadDetailMessage | undefined) => message ? messageRefs.current.get(messageIdentityKey(message))?.getBoundingClientRect() ?? null : null;
+      const offset = contained ? scrollport.scrollTop : window.scrollY;
+      const next = readerNavigationVisibility(bounds(firstUnreadMessage), bounds(newestMessage), viewport, offset > 40 || Boolean(showEarlier));
+      if (next.unread && firstUnreadMessage === newestMessage) next.latest = false;
+      setNavigationVisibility(previous => previous.unread === next.unread && previous.latest === next.latest ? previous : next);
+    };
+    const schedule = () => { window.cancelAnimationFrame(frame); frame = window.requestAnimationFrame(update); };
+    update();
+    // Capture both document scrolling on mobile and the desktop scrollport.
+    window.addEventListener("scroll", schedule, { passive: true, capture: true });
+    window.addEventListener("resize", schedule);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+    // Earlier quotes/images can move a target without resizing the target itself.
+    const messageList = newestMessage && messageRefs.current.get(messageIdentityKey(newestMessage))?.closest(".reader-message-list");
+    if (messageList) observer?.observe(messageList);
+    for (const message of [firstUnreadMessage, newestMessage]) {
+      const node = message && messageRefs.current.get(messageIdentityKey(message));
+      if (node) observer?.observe(node);
+    }
+    return () => { window.removeEventListener("scroll", schedule, true); window.removeEventListener("resize", schedule); window.cancelAnimationFrame(frame); observer?.disconnect(); };
+  }, [readerIdentity, status, cards, firstUnreadMessage, newestMessage, showEarlier]);
+
+  function setAllCards(expand: boolean) {
+    updateCards(expand ? new Set(messages.map(messageIdentityKey)) : new Set(initialMessage ? [messageIdentityKey(initialMessage)] : []), expand);
+    if (threadMenuRef.current) {
+      threadMenuRef.current.open = false;
+      threadMenuRef.current.querySelector("summary")?.focus();
+    }
   }
+
+  function jumpToNewest() { jumpToMessage(jumpTarget); }
 
   function jumpToTop() {
     headingRef.current?.focus({ preventScroll: true });
     const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
-    if (!scrollport) return;
+    if (!scrollport || !/^(auto|scroll)$/.test(window.getComputedStyle(scrollport).overflowY)) {
+      window.scrollTo({ top: 0, behavior: shouldReduceMotion() ? "auto" : "smooth" });
+      return;
+    }
     if (typeof scrollport.scrollTo === "function") {
       scrollport.scrollTo({ top: 0, behavior: shouldReduceMotion() ? "auto" : "smooth" });
     } else {
@@ -5757,6 +5983,15 @@ export function MessageReader({
         <span aria-hidden="true">↑</span>
       </button>
 
+      {/* Keep fixed navigation outside the transformed entrance-animation container. */}
+      {status === "ready" ? (
+          <nav className="reader-context-jumps" aria-label="Conversation navigation">
+            <span className="reader-catchup-count" role="status" title="Message unread flags captured before opening marks this thread read. This is not a remaining-to-read count.">{entryUnreadCount} unread at entry{newUnreadCount ? ` · ${newUnreadCount} new unread` : ""}</span>
+            <button type="button" hidden={!navigationVisibility.unread} disabled={!firstUnreadMessage} title="First unread when this conversation opened" onClick={() => jumpToMessage(firstUnreadMessage)}>Jump to unread</button>
+            <button type="button" hidden={!navigationVisibility.latest} disabled={!jumpTarget} onClick={jumpToNewest}>Jump to latest <span aria-hidden="true">↓</span></button>
+          </nav>
+      ) : null}
+
       {status === "loading" || status === "idle" ? <ReaderLoading title={fallbackTitle} messages={fallbackMessages} /> : null}
       {status === "error" ? (
         <section className="reader-state" role="alert">
@@ -5770,21 +6005,27 @@ export function MessageReader({
         <div className="reader-document">
           <header className="reader-heading">
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
+            <p className="reader-attention-label">Attention: {(detail.thread.attention.attentionBehavior ?? "normal").replace(/^./, letter => letter.toUpperCase())}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
-            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
+            <div className="reader-heading-actions">
+              <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
+              <details className="reader-thread-menu" ref={threadMenuRef} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+                <summary role="button" aria-label="Conversation actions" title="Conversation actions">···</summary>
+                <div className="reader-thread-menu-items">
+                  <button type="button" onClick={() => setAllCards(true)}>Expand all</button>
+                  <button type="button" onClick={() => setAllCards(false)}>Reset message view</button>
+                </div>
+              </details>
+            </div>
           </header>
 
-          {messages.length >= 5 && jumpTarget ? (
-            <button className="reader-jump" onClick={jumpToNewest} type="button">
-              <span>{newestUnreadMessage ? "Jump to newest unread" : "Jump to newest"}</span>
-              <span aria-hidden="true">↓</span>
-            </button>
-          ) : null}
 
-          <ReaderMessageList key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
+          {entryIndex > 0 ? <div className="reader-earlier-divider"><button className="reader-earlier" type="button" aria-label={`${showEarlier ? "Hide" : "Show"} ${entryIndex} earlier messages`} aria-expanded={Boolean(showEarlier)} onClick={() => updateCards(openCards, !showEarlier)}>{entryIndex} earlier messages<span aria-hidden="true">{showEarlier ? "⌃" : "⌄"}</span></button></div> : null}
+
+          <ReaderMessageList restorePosition={Boolean(cards?.identity === readerIdentity && cards.restored)} key={accountScopedIdentityKey(detail.account.id, detail.thread.id)}>
             {messageGroups.map((group) => (
-              <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
+              <section className="reader-day-group" hidden={!showEarlier && group.messages.every(message => messages.indexOf(message) < entryIndex)} key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
                 <ol>
                   {group.messages.map((message, index) => {
@@ -5793,8 +6034,9 @@ export function MessageReader({
                     const isNewest = newestMessage ? messageKey === messageIdentityKey(newestMessage) : false;
                     const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
+                    const isOpen = openCards.has(messageKey);
                     return (
-                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={messageKey}>
+                      <li className={`reader-message${!isOpen ? " reader-message-compact" : ""}${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
@@ -5804,11 +6046,16 @@ export function MessageReader({
                           }}
                           tabIndex={-1}
                         >
+                    <button className={`reader-card-toggle${!isOpen ? " reader-card-compact" : ""}`} type="button" aria-label={`${isOpen ? "Collapse" : "Expand"} message from ${message.from.name ?? message.from.email}`} aria-expanded={isOpen} aria-describedby={`reader-date-${message.id}`} aria-controls={`reader-card-${message.id}`} onClick={() => { const next = new Set(openCards); if (next.has(messageKey)) next.delete(messageKey); else next.add(messageKey); updateCards(next); }}>
+                      <MessageMark contact={message.from} signature={signature} unread={message.unread} /><strong>{message.from.name ?? message.from.email}</strong><time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time><span className="sr-only" id={`reader-date-${message.id}`}>{accessibleDates.get(messageKey)}</span><span aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                      {!isOpen ? <span className="reader-card-preview">{decodeMailPreview(message.snippet)}</span> : null}
+                      {!isOpen ? <small>To {formatRecipientAddresses(message.to)}{message.cc.length ? ` · Cc ${formatRecipientAddresses(message.cc)}` : ""}</small> : null}
+                    </button>
+                    <div id={`reader-card-${message.id}`} hidden={!isOpen}>
                     <header className="reader-sender">
-                      <MessageMark contact={message.from} signature={signature} unread={message.unread} />
                       <div className="reader-sender-copy">
                         <div className="reader-sender-line">
-                          <h3 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
+                          <h3 className="sr-only" id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
                           {message.unread ? <span className="reader-status-label">Unread</span> : null}
                           {isNewest ? <span className="reader-status-label">Newest</span> : null}
                         </div>
@@ -5835,6 +6082,7 @@ export function MessageReader({
                         <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
                       </section>
                     ) : null}
+                    </div>
                         </article>
                       </li>
                     );
@@ -6043,19 +6291,19 @@ function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish
   );
 }
 
-function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
+function ReaderLoading({ title, messages }: { title: string | null; messages: InboxMessage[] }) {
   const preview = messages[messages.length - 1] ?? null;
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite">
     <header className="reader-heading">
-      <p className="reader-kicker">Opening conversation · {messages.length || 1} {messages.length === 1 ? "message" : "messages"}</p>
-      <h1 id="reader-title">{title}</h1>
+      <p className="reader-kicker">Opening conversation{messages.length > 0 ? ` · ${messages.length} ${messages.length === 1 ? "message" : "messages"}` : ""}</p>
+      <h1 id="reader-title">{title ?? "Loading conversation"}</h1>
       {preview ? <p className="reader-participants">{preview.from.name ?? preview.from.email} · {formatReceivedAt(preview.receivedAt)}</p> : null}
     </header>
     {preview ? <div className="reader-loading-preview">
       <div className="reader-loading-status"><span aria-hidden="true" />Fetching the full conversation</div>
       <p>{preview.snippet || "The message preview is ready. Its full contents are still loading."}</p>
     </div> : <><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /></>}
-    <span className="visually-hidden">Loading {messages.length || 1} message conversation</span>
+    <span className="visually-hidden">{messages.length > 0 ? `Loading ${messages.length} message conversation` : "Loading conversation"}</span>
   </section>;
 }
 
@@ -6567,14 +6815,16 @@ function shouldApplyClassificationTarget(
 
 export function getLatestThreadRows(messages: InboxMessage[]) {
   const latest = new Map<string, InboxMessage>();
+  const unread = new Set<string>();
   for (const message of messages) {
     const threadKey = accountScopedIdentityKey(message.accountId, message.threadId);
+    if (message.unread) unread.add(threadKey);
     const current = latest.get(threadKey);
     if (!current || message.receivedAt.localeCompare(current.receivedAt) > 0 || (message.receivedAt === current.receivedAt && message.id.localeCompare(current.id) > 0)) {
       latest.set(threadKey, message);
     }
   }
-  return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || messageIdentityKey(a).localeCompare(messageIdentityKey(b)));
+  return [...latest.entries()].map(([key, message]) => ({ ...message, unread: unread.has(key) })).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || messageIdentityKey(a).localeCompare(messageIdentityKey(b)));
 }
 
 function sameMailAccount(left: MailAccount, right: MailAccount) {
@@ -6599,6 +6849,15 @@ export function messageIdentityKey(message: Pick<InboxMessage, "accountId" | "id
 export function mergeMessages(existing: InboxMessage[], incoming: InboxMessage[]) {
   const merged = new Map(existing.map((message) => [messageIdentityKey(message), message]));
   for (const message of incoming) merged.set(messageIdentityKey(message), message);
+  return [...merged.values()];
+}
+
+// Inbox responses contain authoritative thread representatives, not individual messages.
+// Replace overlapping pages by thread identity so an older unread representative
+// cannot override a newer server read state or survive beside a newer reply.
+export function mergeInboxThreadRows(existing: InboxMessage[], incoming: InboxMessage[]) {
+  const merged = new Map(existing.map(message => [accountScopedIdentityKey(message.accountId, message.threadId), message]));
+  for (const message of incoming) merged.set(accountScopedIdentityKey(message.accountId, message.threadId), message);
   return [...merged.values()];
 }
 
@@ -6643,6 +6902,16 @@ export function applySenderAttention(messages: InboxMessage[], attentionByAddres
 }
 
 export function sortMessagesByAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
+  const promoted = (message: InboxMessage) => {
+    const behavior = getMessageAttentionBehavior(message, attentionByAddress);
+    return message.unread && (behavior === "focus" || behavior === "notify");
+  };
+  return [...messages].sort((a, b) => Number(promoted(b)) - Number(promoted(a))
+    || b.receivedAt.localeCompare(a.receivedAt)
+    || messageIdentityKey(a).localeCompare(messageIdentityKey(b)));
+}
+
+function sortMessagesByLegacyAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
   const rank: Record<AttentionBehavior, number> = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 };
   return messages
     .map((message) => ({ message }))
@@ -7132,3 +7401,4 @@ function replySubject(subject: string) {
 
   return trimmed.toLowerCase().startsWith("re:") ? trimmed : `Re: ${trimmed}`;
 }
+

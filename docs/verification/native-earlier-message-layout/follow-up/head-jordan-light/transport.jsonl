@@ -1,0 +1,22 @@
+{"event": "request", "epoch_ms": 1792444442741, "path": "/v1/destinations", "query": {}}
+{"event": "response", "epoch_ms": 1792444442761, "request_epoch_ms": 1792444442741, "path": "/v1/destinations", "status": 200, "bytes": 1150}
+{"event": "request", "epoch_ms": 1792444443171, "path": "/v1/destinations", "query": {}}
+{"event": "response", "epoch_ms": 1792444443184, "request_epoch_ms": 1792444443171, "path": "/v1/destinations", "status": 200, "bytes": 1150}
+{"event": "request", "epoch_ms": 1792444443192, "path": "/v1/inbox", "query": {"view": ["all"], "limit": ["30"], "destinationId": ["707d9ade-46d5-4307-adf4-6c0a191d8101"]}}
+{"event": "response", "epoch_ms": 1792444443229, "request_epoch_ms": 1792444443192, "path": "/v1/inbox", "status": 200, "bytes": 5101, "message_ids": ["ios-fixture-message-1", "ios-fixture-message-2", "ios-fixture-message-3", "ios-fixture-message-4", "ios-fixture-message-5"]}
+{"event": "request", "epoch_ms": 1792444448114, "path": "/v1/destinations", "query": {}}
+{"event": "response", "epoch_ms": 1792444448141, "request_epoch_ms": 1792444448114, "path": "/v1/destinations", "status": 200, "bytes": 1150}
+{"event": "request", "epoch_ms": 1792444448173, "path": "/v1/inbox", "query": {"view": ["all"], "limit": ["30"], "destinationId": ["707d9ade-46d5-4307-adf4-6c0a191d8101"]}}
+{"event": "response", "epoch_ms": 1792444448194, "request_epoch_ms": 1792444448173, "path": "/v1/inbox", "status": 200, "bytes": 5102, "message_ids": ["ios-fixture-message-1", "ios-fixture-message-2", "ios-fixture-message-3", "ios-fixture-message-4", "ios-fixture-message-5"]}
+{"event": "request", "epoch_ms": 1792444454819, "path": "/v1/destinations", "query": {}}
+{"event": "response", "epoch_ms": 1792444454844, "request_epoch_ms": 1792444454819, "path": "/v1/destinations", "status": 200, "bytes": 1150}
+{"event": "request", "epoch_ms": 1792444454895, "path": "/v1/inbox", "query": {"view": ["all"], "limit": ["30"], "destinationId": ["707d9ade-46d5-4307-adf4-6c0a191d8101"]}}
+{"event": "response", "epoch_ms": 1792444454910, "request_epoch_ms": 1792444454895, "path": "/v1/inbox", "status": 200, "bytes": 5102, "message_ids": ["ios-fixture-message-1", "ios-fixture-message-2", "ios-fixture-message-3", "ios-fixture-message-4", "ios-fixture-message-5"]}
+{"event": "request", "epoch_ms": 1792444459443, "path": "/v1/destinations", "query": {}}
+{"event": "response", "epoch_ms": 1792444459456, "request_epoch_ms": 1792444459443, "path": "/v1/destinations", "status": 200, "bytes": 1150}
+{"event": "request", "epoch_ms": 1792444459505, "path": "/v1/inbox", "query": {"view": ["all"], "limit": ["30"], "query": ["Jordan"], "destinationId": ["707d9ade-46d5-4307-adf4-6c0a191d8101"]}}
+{"event": "response", "epoch_ms": 1792444459525, "request_epoch_ms": 1792444459505, "path": "/v1/inbox", "status": 200, "bytes": 2239, "message_ids": ["ios-fixture-message-2", "ios-fixture-message-5"]}
+{"event": "request", "epoch_ms": 1792444462621, "path": "/v1/destinations", "query": {}}
+{"event": "response", "epoch_ms": 1792444462667, "request_epoch_ms": 1792444462621, "path": "/v1/destinations", "status": 200, "bytes": 1150}
+{"event": "request", "epoch_ms": 1792444462675, "path": "/v1/inbox", "query": {"view": ["all"], "limit": ["30"], "destinationId": ["707d9ade-46d5-4307-adf4-6c0a191d8101"]}}
+{"event": "response", "epoch_ms": 1792444462696, "request_epoch_ms": 1792444462675, "path": "/v1/inbox", "status": 200, "bytes": 5102, "message_ids": ["ios-fixture-message-1", "ios-fixture-message-2", "ios-fixture-message-3", "ios-fixture-message-4", "ios-fixture-message-5"]}

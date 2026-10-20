@@ -1,0 +1,4 @@
+$ bun --filter '*' typecheck
+@orca/shared typecheck: Exited with code 0
+@orca/api typecheck: Exited with code 0
+@orca/web typecheck: Exited with code 0

@@ -1,0 +1,3 @@
+iOS fixture API: http://127.0.0.1:57957
+Synthetic connection details: /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/head-jordan-light/orca-ios-fixture-4acA8d/connection.json
+Only fixture data is used. Provider send and draft operations are simulated.

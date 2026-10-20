@@ -1,0 +1,26 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/draft-recovery.test.ts:
+115 |     return new GmailTransportError("Gmail token refresh is temporarily unavailable", "ambiguous", true);
+116 |   }
+117 |   if (error instanceof GmailApiError) {
+118 |     if (error.status === 401 || error.status === 403) return new GmailTransportError("Gmail authorization was revoked or no longer permits this action", "auth", false);
+119 |     if (error.status === 429) return new GmailTransportError("Gmail is rate limiting delivery; retry later", "rate_limit", true);
+120 |     if (error.status >= 400 && error.status < 500) return new GmailTransportError("Gmail rejected this message", "rejected", false);
+                                                                ^
+GmailTransportError: Gmail rejected this message
+      kind: "rejected",
+ retryable: false,
+
+      at normalizeTransportError (/workspace/orca-oct20-sweep/apps/api/src/providers/gmail/transport.ts:120:59)
+      at saveDraft (/workspace/orca-oct20-sweep/apps/api/src/providers/gmail/transport.ts:62:31)
+      at async <anonymous> (/workspace/orca-oct20-sweep/apps/api/src/providers/gmail/draft-recovery.test.ts:46:40)
+(fail) draft mirror recovers only a missing provider copy (update status 404) [75.75ms]
+(pass) draft mirror recovers only a missing provider copy (update status 401) [53.76ms]
+(pass) draft mirror recovers only a missing provider copy (update status 403) [50.68ms]
+(pass) draft mirror recovers only a missing provider copy (update status 429) [48.01ms]
+(pass) draft mirror recovers only a missing provider copy (update status 500) [48.96ms]
+
+ 4 pass
+ 1 fail
+Ran 5 tests across 1 file. [551.00ms]

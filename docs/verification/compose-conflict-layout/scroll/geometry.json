@@ -1,0 +1,349 @@
+{
+  "measurements": [
+    {
+      "theme": "light",
+      "state": "ordinary",
+      "toolbar": {
+        "x": 914,
+        "y": 847.8125,
+        "width": 492,
+        "height": 50,
+        "bottom": 897.8125,
+        "right": 1406
+      },
+      "notice": null,
+      "overlap": 0,
+      "buttons": [
+        {
+          "label": "Bold, Command B",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 914,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 948
+          }
+        },
+        {
+          "label": "Italic, Command I",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 951,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 985
+          }
+        },
+        {
+          "label": "Bulleted list",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 988,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 1022
+          }
+        },
+        {
+          "label": "Quote",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 1025,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 1059
+          }
+        },
+        {
+          "label": "Attach files",
+          "disabled": false,
+          "hit": true,
+          "rect": {
+            "x": 1062,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 1096
+          }
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "state": "conflict",
+      "toolbar": {
+        "x": 914,
+        "y": 663,
+        "width": 492,
+        "height": 50,
+        "bottom": 713,
+        "right": 1406
+      },
+      "notice": {
+        "x": 914,
+        "y": 725,
+        "width": 492,
+        "height": 210.953125,
+        "bottom": 935.953125,
+        "right": 1406
+      },
+      "overlap": 0,
+      "buttons": [
+        {
+          "label": "Bold, Command B",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 914,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 948
+          }
+        },
+        {
+          "label": "Italic, Command I",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 951,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 985
+          }
+        },
+        {
+          "label": "Bulleted list",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 988,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 1022
+          }
+        },
+        {
+          "label": "Quote",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 1025,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 1059
+          }
+        },
+        {
+          "label": "Attach files",
+          "disabled": false,
+          "hit": true,
+          "rect": {
+            "x": 1062,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 1096
+          }
+        }
+      ],
+      "attachUsable": true,
+      "shortViewportFooterReachable": true,
+      "recoveryUsable": true
+    },
+    {
+      "theme": "dark",
+      "state": "ordinary",
+      "toolbar": {
+        "x": 914,
+        "y": 847.8125,
+        "width": 492,
+        "height": 50,
+        "bottom": 897.8125,
+        "right": 1406
+      },
+      "notice": null,
+      "overlap": 0,
+      "buttons": [
+        {
+          "label": "Bold, Command B",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 914,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 948
+          }
+        },
+        {
+          "label": "Italic, Command I",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 951,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 985
+          }
+        },
+        {
+          "label": "Bulleted list",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 988,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 1022
+          }
+        },
+        {
+          "label": "Quote",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 1025,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 1059
+          }
+        },
+        {
+          "label": "Attach files",
+          "disabled": false,
+          "hit": true,
+          "rect": {
+            "x": 1062,
+            "y": 855.8125,
+            "width": 34,
+            "height": 34,
+            "bottom": 889.8125,
+            "right": 1096
+          }
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "state": "conflict",
+      "toolbar": {
+        "x": 914,
+        "y": 663,
+        "width": 492,
+        "height": 50,
+        "bottom": 713,
+        "right": 1406
+      },
+      "notice": {
+        "x": 914,
+        "y": 725,
+        "width": 492,
+        "height": 210.953125,
+        "bottom": 935.953125,
+        "right": 1406
+      },
+      "overlap": 0,
+      "buttons": [
+        {
+          "label": "Bold, Command B",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 914,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 948
+          }
+        },
+        {
+          "label": "Italic, Command I",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 951,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 985
+          }
+        },
+        {
+          "label": "Bulleted list",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 988,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 1022
+          }
+        },
+        {
+          "label": "Quote",
+          "disabled": true,
+          "hit": true,
+          "rect": {
+            "x": 1025,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 1059
+          }
+        },
+        {
+          "label": "Attach files",
+          "disabled": false,
+          "hit": true,
+          "rect": {
+            "x": 1062,
+            "y": 671,
+            "width": 34,
+            "height": 34,
+            "bottom": 705,
+            "right": 1096
+          }
+        }
+      ],
+      "attachUsable": true,
+      "shortViewportFooterReachable": true,
+      "recoveryUsable": true
+    }
+  ],
+  "pageErrors": []
+}

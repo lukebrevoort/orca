@@ -1,0 +1,11 @@
+{
+  "baseline": {
+    "oldTokenAccepted": false,
+    "oldPayloadCached": false
+  },
+  "negativeControl": {
+    "oldTokenAccepted": true,
+    "oldPayloadCached": true
+  },
+  "passed": true
+}

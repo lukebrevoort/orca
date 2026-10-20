@@ -1,0 +1,24 @@
+bun test v1.3.14 (0d9b296a)
+
+../scratch/bug-sweep-expanded-2026-10-17/lifecycle-baseline.test.tsx:
+142 |   }) as typeof fetch;
+143 |   const send = () => [...browser.document.querySelectorAll("button")].find(button => button.textContent === "Send")!;
+144 |   await act(async () => { send().click(); await held.started; });
+145 |   scope = "draft:another"; await render(); await edit("Keep selected draft");
+146 |   await act(async () => { held.release(); await new Promise(resolve => setTimeout(resolve, 0)); });
+147 |   expect(sentNotices).toBe(0);
+                            ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/workspace/scratch/bug-sweep-expanded-2026-10-17/lifecycle-baseline.test.tsx:147:23)
+(fail) obsolete component send success cannot close a newly selected draft [105.24ms]
+(pass) obsolete component send failure cannot close a newly selected draft [31.05ms]
+
+ 1 pass
+ 15 filtered out
+ 1 fail
+ 5 expect() calls
+Ran 2 tests across 1 file. [464.00ms]

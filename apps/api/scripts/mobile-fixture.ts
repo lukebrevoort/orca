@@ -3,14 +3,22 @@
  * or calls a mail provider. Stop with Ctrl-C; its temporary mailbox is removed.
  * Run: bun apps/api/scripts/mobile-fixture.ts
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
+import type { ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
+import { fixtureCounterResponse } from "./fixture-counter.ts";
 
+const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI_TEST_SCOPE === "images";
+// A timestamp-only heartbeat distinguishes a live event loop from a stalled or
+// stopped fixture during a native request timeout. No mailbox data is emitted.
+if (imageFixture) setInterval(() => console.log(`[counter-heartbeat] epoch_ms=${Date.now()}`), 1000).unref();
+let imageDownloads = 0;
+let imageDelayMilliseconds = 0;
 const readOnly = process.argv.includes("--read-only");
 const directory = mkdtempSync(join(tmpdir(), "orca-ios-fixture-"));
 process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
@@ -83,6 +91,7 @@ for (const [name, threadId] of [["Hub notifications", "ios-fixture-thread-2"], [
   } });
 }
 const credential = createMobileSession(db, userId);
+if (imageFixture) db.update(emails).set({ bodyHtml: '<p>A synthetic image stays blocked until you choose to load it.</p><img alt="Synthetic landscape" src="https://images.example.invalid/landscape.png"><p>End of image example.</p>' }).where(eq(emails.id, "ios-fixture-message-1")).run();
 sqlite.close();
 
 const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
@@ -90,6 +99,13 @@ let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
 const app = createApp({
+  downloadMessageImage: async (url, signal) => {
+    if (!imageFixture || url.href !== "https://images.example.invalid/landscape.png") throw new Error("Fixture image unavailable");
+    imageDownloads++;
+    if (imageDelayMilliseconds) await new Promise(resolve => setTimeout(resolve, imageDelayMilliseconds));
+    signal.throwIfAborted();
+    return readFileSync(resolve(import.meta.dir, "../src/mail/images/fixtures/landscape.png"));
+  },
   dbFactory: () => createDatabaseClient(),
   providerRegistry: new ProviderRegistry([{
     ...gmailProvider,
@@ -118,13 +134,103 @@ type RefreshGate = {
   pending: boolean;
 };
 let refreshGate: RefreshGate | undefined;
+// A single held create request reproduces Back/reopen while the server draft
+// identity is not yet known to the app. Synthetic loopback mailbox only.
+let draftLifecycleCreateGate: RefreshGate | undefined;
+let draftLifecycleHeldDraftId: string | undefined;
+let draftLifecycleCreateRequests = 0;
+let draftLifecycleCreateExpired = false;
+let draftLifecycleCreateReleased = false;
 // Inbox recovery controls are scoped to this authenticated, disposable server.
+let longReaderFixture = false;
 let emptyInboxOnce = false;
 let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
-// Read gates last up to 20 seconds; Bun’s default 10-second idle timeout
-// would sever the synthetic connection before the explicit safety release.
+// Read gates last up to 20 seconds and draft creation gates up to 25 seconds.
+// Keep the connection alive until each gate’s explicit safety release.
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname === "/__fixture/image-delay" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    imageDelayMilliseconds = 4000;
+    return new Response(null, { status: 204 });
+  }
+  if (url.pathname === "/__fixture/image-downloads") {
+    return fixtureCounterResponse(request, credential.accessToken, imageDownloads,
+      imageFixture ? console.log : () => {});
+  }
+  if (url.pathname === "/__fixture/reader") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method !== "POST") return new Response(null, { status: 405 });
+    longReaderFixture = (await request.json()).enabled === true;
+    return new Response(null, { status: 204 });
+  }
+  if (longReaderFixture && request.method === "GET" && url.pathname === "/v1/threads/ios-fixture-thread-1") {
+    const response = await app.fetch(request);
+    if (!response.ok) return response;
+    const detail = await response.json() as ThreadDetail;
+    const template = detail.messages[0]!;
+    detail.messages = Array.from({ length: 24 }, (_, i) => ({
+      ...template, id: `reader-message-${i + 1}`, providerMessageId: `reader-provider-${i + 1}`,
+      from: { name: `Reader sender ${i + 1}`, email: `reader${i + 1}@example.com` },
+      receivedAt: new Date(now.getTime() - (24 - i) * 3_600_000).toISOString(), unread: i >= 21,
+      snippet: `Conversation message ${i + 1}.`, bodyHtml: null,
+      bodyText: `Message ${i + 1} begins here.\n\n` + Array.from({ length: 14 }, (_, paragraph) =>
+        `Paragraph ${paragraph + 1}: This synthetic conversation makes offscreen navigation testable.`).join("\n\n") +
+        "\n\n> Earlier quoted context remains recoverable.", attachments: [],
+    }));
+    detail.thread.messageCount = 24;
+    return Response.json(detail);
+  }
+  if (request.method === "POST" && url.pathname === "/v1/drafts") draftLifecycleCreateRequests += 1;
+  if (url.pathname.startsWith("/__fixture/draft-lifecycle/")) {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method === "POST" && url.pathname.endsWith("/arm-create")) {
+      draftLifecycleCreateGate?.release();
+      let markStarted!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => { markStarted = resolve; });
+      const released = new Promise<void>((resolve) => { release = resolve; });
+      draftLifecycleCreateGate = { started, markStarted, released, release, pending: false };
+      draftLifecycleHeldDraftId = undefined;
+      draftLifecycleCreateExpired = false;
+      draftLifecycleCreateReleased = false;
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === "POST" && url.pathname.endsWith("/release-create")) {
+      draftLifecycleCreateReleased = true;
+      draftLifecycleCreateGate?.release();
+      return new Response(null, { status: 204 });
+    }
+    if (request.method === "GET" && url.pathname.endsWith("/wait-create")) {
+      const gate = draftLifecycleCreateGate;
+      if (!gate) return new Response(null, { status: 409 });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([gate.started, new Promise<void>((resolve) => { timer = setTimeout(resolve, 5_000); })]);
+        return new Response(null, { status: gate.pending ? 204 : 408 });
+      } finally { clearTimeout(timer); }
+    }
+    if (request.method === "GET" && url.pathname.endsWith("/state")) {
+      return Response.json({ heldDraftId: draftLifecycleHeldDraftId ?? null, pending: draftLifecycleCreateGate?.pending ?? false, released: draftLifecycleCreateReleased, expired: draftLifecycleCreateExpired, createRequests: draftLifecycleCreateRequests, deliveries: sent.length, sendRequests });
+    }
+    return new Response(null, { status: 404 });
+  }
+  if (request.method === "POST" && url.pathname === "/v1/drafts" && draftLifecycleCreateGate && !draftLifecycleCreateGate.pending) {
+    const gate = draftLifecycleCreateGate;
+    gate.pending = true;
+    gate.markStarted();
+    const timer = setTimeout(() => { draftLifecycleCreateExpired = true; gate.release(); }, 25_000);
+    try {
+      await gate.released;
+      const response = await app.fetch(request);
+      const body = await response.clone().json() as { id?: string };
+      draftLifecycleHeldDraftId = body.id;
+      return response;
+    } finally {
+      clearTimeout(timer);
+      if (draftLifecycleCreateGate === gate) draftLifecycleCreateGate = undefined;
+    }
+  }
   if (url.pathname.startsWith("/__fixture/inbox-recovery/")) {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     const action = url.pathname.slice("/__fixture/inbox-recovery/".length);
@@ -253,9 +359,25 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
     return response;
   }
+  if (request.method === "GET" && ["/v1/inbox", "/v1/destinations"].includes(url.pathname)) {
+    const trace = crypto.randomUUID();
+    // Only the synthetic search inputs and result identifiers are emitted.
+    // Never log authorization headers, response bodies or connection metadata.
+    console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "received", epoch_ms: Date.now(), path: url.pathname, query: url.searchParams.get("query")?.slice(0, 200) ?? null, view: url.searchParams.get("view") })}`);
+    const response = await app.fetch(request);
+    let messageIds: string[] | undefined;
+    if (url.pathname === "/v1/inbox" && response.ok) {
+      try {
+        const body = await response.clone().json() as { messages?: Array<{ id?: string }> };
+        messageIds = body.messages?.map(message => message.id).filter((id): id is string => typeof id === "string");
+      } catch { /* Diagnostics must preserve the original response on malformed JSON. */ }
+    }
+    console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "response_ready", epoch_ms: Date.now(), path: url.pathname, status: response.status, messageIds })}`);
+    return response;
+  }
   return app.fetch(request);
 } });
-const metadata = { readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
+const metadata = { imageFixture, readOnly, apiURL: `http://127.0.0.1:${server.port}`, accessToken: credential.accessToken, userId, accountId, directory };
 const metadataPath = join(directory, "connection.json");
 writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
 console.log(`iOS fixture API: ${metadata.apiURL}`);

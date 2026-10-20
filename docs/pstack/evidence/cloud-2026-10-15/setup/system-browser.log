@@ -1,0 +1,14 @@
+bun install v1.3.14 (0d9b296a)
+
+1 package installed [81.00ms]
+{
+  "bun": "1.3.14",
+  "node": "v24.19.0",
+  "git": "git version 2.52.0",
+  "chromiumExecutable": "/usr/bin/chromium",
+  "testedCommit": "bcba1318c167d2bef5ce1c20df2df9a4c083b55c",
+  "lockSha256": "ed608305f7dd563306ebfcd889a002a3dbceaeadcf9d54c3d6c6aed6d166b06f",
+  "python": "3.12.14"
+}
+Chromium launch and synthetic page: passed
+Setup passed. Activate in each shell: eval "$(bash scripts/pstack/cloud.sh env)"

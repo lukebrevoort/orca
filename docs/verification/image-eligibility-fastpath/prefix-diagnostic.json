@@ -1,0 +1,243 @@
+{
+  "baseline": "e9f928258479aa7b46f7489c6e3e100c254a064f",
+  "candidate": "a2c7940b987df63d944d2218d5fcb7333b9dadac",
+  "description": "same-process alternating real helper on positive tail fixtures,5calls/sample,1discardedwarmuppair,8pairs; separate200repetition regex diagnostic; asserts inside timing; not end-to-end API",
+  "rows": [
+    {
+      "size": 102400,
+      "pair": 0,
+      "role": "baseline",
+      "wallMs": 6.632707600000003,
+      "cpuMs": 10.8466
+    },
+    {
+      "size": 102400,
+      "pair": 0,
+      "role": "candidate",
+      "wallMs": 7.556468199999995,
+      "cpuMs": 10.6618
+    },
+    {
+      "size": 102400,
+      "pair": 1,
+      "role": "candidate",
+      "wallMs": 8.232138399999997,
+      "cpuMs": 13.341
+    },
+    {
+      "size": 102400,
+      "pair": 1,
+      "role": "baseline",
+      "wallMs": 7.376220599999999,
+      "cpuMs": 13.5292
+    },
+    {
+      "size": 102400,
+      "pair": 2,
+      "role": "baseline",
+      "wallMs": 7.002233000000001,
+      "cpuMs": 9.0736
+    },
+    {
+      "size": 102400,
+      "pair": 2,
+      "role": "candidate",
+      "wallMs": 6.819404800000006,
+      "cpuMs": 6.8998
+    },
+    {
+      "size": 102400,
+      "pair": 3,
+      "role": "candidate",
+      "wallMs": 7.133682799999997,
+      "cpuMs": 7.34
+    },
+    {
+      "size": 102400,
+      "pair": 3,
+      "role": "baseline",
+      "wallMs": 6.04173780000001,
+      "cpuMs": 6.0432
+    },
+    {
+      "size": 102400,
+      "pair": 4,
+      "role": "baseline",
+      "wallMs": 6.335136599999987,
+      "cpuMs": 6.4526
+    },
+    {
+      "size": 102400,
+      "pair": 4,
+      "role": "candidate",
+      "wallMs": 7.133468600000015,
+      "cpuMs": 7.9404
+    },
+    {
+      "size": 102400,
+      "pair": 5,
+      "role": "candidate",
+      "wallMs": 6.497620600000005,
+      "cpuMs": 6.5482
+    },
+    {
+      "size": 102400,
+      "pair": 5,
+      "role": "baseline",
+      "wallMs": 7.142647599999987,
+      "cpuMs": 7.4104
+    },
+    {
+      "size": 102400,
+      "pair": 6,
+      "role": "baseline",
+      "wallMs": 6.345570399999997,
+      "cpuMs": 8.2
+    },
+    {
+      "size": 102400,
+      "pair": 6,
+      "role": "candidate",
+      "wallMs": 7.052474999999982,
+      "cpuMs": 7.177
+    },
+    {
+      "size": 102400,
+      "pair": 7,
+      "role": "candidate",
+      "wallMs": 6.898455000000013,
+      "cpuMs": 7.1014
+    },
+    {
+      "size": 102400,
+      "pair": 7,
+      "role": "baseline",
+      "wallMs": 7.156162999999992,
+      "cpuMs": 8.0868
+    },
+    {
+      "size": 102400,
+      "role": "prefix-only",
+      "repetitions": 200,
+      "wallMs": 0.027638519999999858
+    },
+    {
+      "size": 1048576,
+      "pair": 0,
+      "role": "baseline",
+      "wallMs": 69.97034260000001,
+      "cpuMs": 81.9996
+    },
+    {
+      "size": 1048576,
+      "pair": 0,
+      "role": "candidate",
+      "wallMs": 81.32138759999998,
+      "cpuMs": 94.9376
+    },
+    {
+      "size": 1048576,
+      "pair": 1,
+      "role": "candidate",
+      "wallMs": 78.47223039999999,
+      "cpuMs": 90.3494
+    },
+    {
+      "size": 1048576,
+      "pair": 1,
+      "role": "baseline",
+      "wallMs": 70.69151039999997,
+      "cpuMs": 84.2314
+    },
+    {
+      "size": 1048576,
+      "pair": 2,
+      "role": "baseline",
+      "wallMs": 68.99886719999995,
+      "cpuMs": 81.8344
+    },
+    {
+      "size": 1048576,
+      "pair": 2,
+      "role": "candidate",
+      "wallMs": 77.4943292,
+      "cpuMs": 79.7594
+    },
+    {
+      "size": 1048576,
+      "pair": 3,
+      "role": "candidate",
+      "wallMs": 75.73985400000001,
+      "cpuMs": 89.5828
+    },
+    {
+      "size": 1048576,
+      "pair": 3,
+      "role": "baseline",
+      "wallMs": 66.5086213999999,
+      "cpuMs": 82.2258
+    },
+    {
+      "size": 1048576,
+      "pair": 4,
+      "role": "baseline",
+      "wallMs": 67.52217400000009,
+      "cpuMs": 76.3326
+    },
+    {
+      "size": 1048576,
+      "pair": 4,
+      "role": "candidate",
+      "wallMs": 74.03530979999996,
+      "cpuMs": 76.1502
+    },
+    {
+      "size": 1048576,
+      "pair": 5,
+      "role": "candidate",
+      "wallMs": 76.49182240000009,
+      "cpuMs": 79.254
+    },
+    {
+      "size": 1048576,
+      "pair": 5,
+      "role": "baseline",
+      "wallMs": 68.29583359999997,
+      "cpuMs": 82.1476
+    },
+    {
+      "size": 1048576,
+      "pair": 6,
+      "role": "baseline",
+      "wallMs": 68.89792419999995,
+      "cpuMs": 84.1752
+    },
+    {
+      "size": 1048576,
+      "pair": 6,
+      "role": "candidate",
+      "wallMs": 73.09933239999991,
+      "cpuMs": 79.4384
+    },
+    {
+      "size": 1048576,
+      "pair": 7,
+      "role": "candidate",
+      "wallMs": 71.75796040000004,
+      "cpuMs": 79.9922
+    },
+    {
+      "size": 1048576,
+      "pair": 7,
+      "role": "baseline",
+      "wallMs": 63.83857040000002,
+      "cpuMs": 76.0614
+    },
+    {
+      "size": 1048576,
+      "role": "prefix-only",
+      "repetitions": 200,
+      "wallMs": 0.28064030499999715
+    }
+  ]
+}

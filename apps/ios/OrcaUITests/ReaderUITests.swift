@@ -3,6 +3,55 @@ import XCTest
 final class ReaderUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
+    func testEarlierMessagesRemainReadableAtAccessibilitySize() throws {
+        try setLongReader(true)
+        addTeardownBlock { try self.setLongReader(false) }
+        let app = try launchReader(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+        let row = app.buttons["inbox.message.ios-fixture-message-1"]
+        XCTAssertTrue(row.waitForExistence(timeout: 20))
+        row.tap()
+        let toggle = app.buttons["Show 21 earlier messages"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        let text = app.staticTexts["21 earlier messages"]
+        XCTAssertTrue(text.exists)
+        // The complete words need room to wrap, rather than one or two letters
+        // per line. Assert the actual text bounds, not just the hit target.
+        XCTAssertGreaterThan(text.frame.width, toggle.frame.width * 0.6)
+        XCTAssertLessThan(text.frame.height, text.frame.width)
+        for _ in 0..<6 {
+            if toggle.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(toggle.isHittable)
+        XCTAssertGreaterThanOrEqual(toggle.frame.height, 44)
+        screenshot( "earlier-messages-accessibility-collapsed")
+        toggle.tap()
+        let hide = app.buttons["Hide 21 earlier messages"]
+        XCTAssertTrue(hide.waitForExistence(timeout: 5))
+        XCTAssertEqual(hide.value as? String, "Expanded")
+        screenshot( "earlier-messages-accessibility-expanded")
+        hide.tap()
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertEqual(toggle.value as? String, "Collapsed")
+    }
+
+    private func setLongReader(_ enabled: Bool) throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/reader")))
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + (environment["ORCA_FIXTURE_ACCESS_TOKEN"] ?? ""), forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["enabled": enabled])
+        let done = expectation(description: "Configure synthetic long reader")
+        var status: Int?
+        URLSession.shared.dataTask(with: request) { _, response, _ in
+            status = (response as? HTTPURLResponse)?.statusCode; done.fulfill()
+        }.resume()
+        wait(for: [done], timeout: 5)
+        XCTAssertEqual(status, 204)
+    }
+
     func testLongHTMLScrollBackAndRepeatedOpen() throws {
         let app = try launchReader()
         for pass in 1...2 {
@@ -85,6 +134,99 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
     }
 
+    func testImagesRequireExplicitLoadingAndResetOnReopen() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        let initialDownloads = try imageDownloadCount()
+        let app = try launchReader()
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let load = app.buttons["message.load-images"]
+        XCTAssertTrue(load.waitForExistence(timeout: 10))
+        for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads, "Opening a message must not contact image hosts")
+        screenshot("images-blocked-before-consent")
+        load.tap()
+        let status = app.staticTexts["message.images-status"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue(status.label.contains("1 image loaded."))
+        let landscape = app.images["Synthetic landscape"]
+        for _ in 0..<4 { if landscape.exists && landscape.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(landscape.exists && landscape.isHittable)
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 1)
+        screenshot("images-loaded-after-consent")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        row.tap()
+        XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 1, "Reopening must reset consent without another request")
+        screenshot("images-blocked-after-reopen")
+        try delayFixtureImageResponse()
+        let reopenedLoad = app.buttons["message.load-images"]
+        for _ in 0..<4 { if reopenedLoad.isHittable { break }; app.swipeUp() }
+        reopenedLoad.tap()
+        for _ in 0..<10 {
+            if try imageDownloadCount() == initialDownloads + 2 { break }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        XCTAssertEqual(try imageDownloadCount(), initialDownloads + 2, "The delayed request must be in flight before navigating away")
+        XCTAssertFalse(reopenedLoad.isEnabled)
+        screenshot("images-loading-disabled")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        row.tap()
+        let lateResponse = expectation(description: "Delayed image response has finished")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { lateResponse.fulfill() }
+        wait(for: [lateResponse], timeout: 7)
+        XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["message.images-status"].exists, "A previous reader's response must not restore images")
+        screenshot("images-late-response-discarded")
+    }
+
+    private func delayFixtureImageResponse() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/image-delay")))
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + (environment["ORCA_FIXTURE_ACCESS_TOKEN"] ?? ""), forHTTPHeaderField: "Authorization")
+        let done = expectation(description: "Delay fixture image response")
+        var status: Int?
+        URLSession.shared.dataTask(with: request) { _, response, _ in status = (response as? HTTPURLResponse)?.statusCode; done.fulfill() }.resume()
+        wait(for: [done], timeout: 5)
+        XCTAssertEqual(status, 204)
+    }
+
+    private func imageDownloadCount() throws -> Int {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: base + "/__fixture/image-downloads")))
+        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let traceID = UUID().uuidString
+        request.setValue(traceID, forHTTPHeaderField: "X-Orca-Fixture-Trace")
+        let done = expectation(description: "Fixture image request count")
+        var count: Int?
+        // Only generated IDs, timestamps and numeric transport facts are logged.
+        // Do not print the request, URL, token, payload or error description.
+        print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=created")
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=callback status=\((response as? HTTPURLResponse)?.statusCode ?? -1) error_code=\((error as NSError?)?.code ?? 0) bytes=\(data?.count ?? 0)")
+            if let data, let value = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { count = value["count"] }
+            done.fulfill()
+        }
+        task.resume()
+        print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=resumed")
+        let observation = DispatchSource.makeTimerSource(queue: .global())
+        observation.schedule(deadline: .now() + 4)
+        observation.setEventHandler {
+            print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=scheduler_probe state=\(task.state.rawValue) received=\(task.countOfBytesReceived)")
+        }
+        observation.resume()
+        defer { observation.cancel() }
+        wait(for: [done], timeout: 5)
+        return try XCTUnwrap(count)
+    }
+
     private func launchReader(contentSize: String = "UICTContentSizeCategoryL") throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         let url = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
@@ -121,12 +263,19 @@ final class ReaderUITests: XCTestCase {
             if isVisible(text, in: app) { return }
             let top = app.navigationBars["Conversation"].frame.maxY
             let bottom = app.buttons["Reply"].frame.minY - 12
+            // Contextual jumps can cover the center drag origin at large
+            // text sizes. Start in scroll content, above every visible jump,
+            // so the gesture tests scrolling rather than dragging a Button.
+            let jumps = ["thread.jump-unread", "thread.jump-latest"]
+                .map { app.buttons[$0] }.filter { $0.exists && $0.isHittable }
+            let gestureBottom = jumps.reduce(bottom) { min($0, $1.frame.minY - 12) }
+            XCTAssertGreaterThan(gestureBottom - top, 80, "Reader needs an unobscured scroll gesture area")
             let frame = text.frame
-            let step = max(40, (bottom - top) * 0.5)
+            let step = max(40, (gestureBottom - top) * 0.5)
             let distance = frame.minY < top
                 ? -min(top - frame.minY + 8, step)
                 : min(max(frame.maxY - bottom + 8, 30), step)
-            let startY = distance > 0 ? bottom - 20 : top + 20
+            let startY = distance > 0 ? gestureBottom - 20 : top + 20
             let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
             let start = origin.withOffset(CGVector(dx: app.frame.width / 2, dy: startY))
             let end = origin.withOffset(CGVector(dx: app.frame.width / 2, dy: startY - distance))

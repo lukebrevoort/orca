@@ -1,0 +1,20 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/date-recovery.test.ts:
+(pass) empty incremental page revisits unknown dates without changing mail or another account [94.17ms]
+(pass) history 101 revisits unknown dates without delta IDs [61.90ms]
+(pass) history 100 revisits unknown dates without delta IDs [57.85ms]
+(pass) genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed [64.50ms]
+(pass) bounded retries rotate past invalid and unavailable messages even with an unchanged clock [85.14ms]
+(pass) recovery rejects provider identity mismatch and supports clients without metadata [60.20ms]
+(pass) date-only repair preserves attachments, labels, thread flags and Organization values [59.10ms]
+(pass) recovery rejects another account's lease and never writes after lease loss [55.98ms]
+(pass) an in-flight recovery cannot overwrite a concurrent successful normalization [56.79ms]
+(pass) failed legacy revalidation never certifies an ambiguous epoch [59.96ms]
+(pass) multi-page backfill shares one twenty-message recovery budget [72.55ms]
+(pass) legacy null internal date with a real received date is not treated as fallback mail [56.65ms]
+(pass) coordinator incremental pagination shares one recovery budget [100.50ms]
+
+ 13 pass
+ 0 fail
+Ran 13 tests across 1 file. [1104.00ms]

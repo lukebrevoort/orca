@@ -1,4 +1,6 @@
 import { metadataSearchReceipt } from "@orca/shared";
+import { registerMessageImageRoutes } from "./mail/images/routes.ts";
+import { hasLoadableImages } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
@@ -7,14 +9,14 @@ import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit, ordinaryJsonBodyBytes, readBoundedRequestBody } from "./request-body.ts";
 import { validator } from "hono/validator";
-import sanitizeHtml from "sanitize-html";
+import { sanitizeProviderHtml, sanitizeInboundHtml, readableHtmlText } from "./mail/provider-html.ts";
 import {
   type AttentionBehavior,
   type ResolvedSenderAttention,
@@ -182,6 +184,7 @@ const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
 
 type CreateAppOptions = {
+  downloadMessageImage?: import("./mail/images/render.ts").ImageDownload;
   dbFactory?: typeof createDatabaseClient;
   syncPage?: typeof syncGmailAccountPage;
   gmailTransport?: GmailTransport;
@@ -281,6 +284,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerAttentionRoutingRoutes(app, { dbFactory });
   registerDestinationRoutes(app, { dbFactory });
   registerAttachmentRoutes(app, { dbFactory });
+  registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage });
   app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
   registerMobilePushRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
@@ -1945,10 +1949,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/reminders", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-      if (!account) return noConnectedAccount(c);
-      resurfaceDueReminders(db, account.id, now());
-      const records = db.select().from(threadReminders).where(eq(threadReminders.accountId, account.id)).orderBy(asc(threadReminders.scheduledFor), asc(threadReminders.id)).all();
+      const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+      if (accountIds.length === 0) return noConnectedAccount(c);
+      const currentTime = now();
+      for (const accountId of accountIds) resurfaceDueReminders(db, accountId, currentTime);
+      const records = db.select().from(threadReminders).where(inArray(threadReminders.accountId, accountIds)).orderBy(asc(threadReminders.scheduledFor), asc(threadReminders.id)).all();
       return c.json(records.map(toReminder));
     } finally { sqlite.close(); }
   });
@@ -1960,16 +1965,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-      if (!account) return noConnectedAccount(c);
+      const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+      if (accountIds.length === 0) return noConnectedAccount(c);
       const input = c.req.valid("json");
       const scheduledFor = validateReminderTime(c, input.scheduledFor, input.timezone, now());
       if (!scheduledFor) return c.json({ error: { code: "validation_error", message: "Choose a future time in a valid timezone" } }, 400);
-      const thread = db.select().from(threads).where(and(eq(threads.id, input.threadId), eq(threads.accountId, account.id))).get();
+      const thread = db.select().from(threads).where(and(eq(threads.id, input.threadId), inArray(threads.accountId, accountIds))).get();
       if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
-      const existing = db.select().from(threadReminders).where(and(eq(threadReminders.accountId, account.id), eq(threadReminders.threadId, input.threadId), eq(threadReminders.status, "scheduled"))).get();
+      const existing = db.select().from(threadReminders).where(and(eq(threadReminders.accountId, thread.accountId), eq(threadReminders.threadId, input.threadId), eq(threadReminders.status, "scheduled"))).get();
       const id = existing?.id ?? `reminder:${crypto.randomUUID()}`;
-      db.insert(threadReminders).values({ id, accountId: account.id, threadId: input.threadId, scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled" })
+      db.insert(threadReminders).values({ id, accountId: thread.accountId, threadId: input.threadId, scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled" })
         .onConflictDoUpdate({ target: threadReminders.id, set: { scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, updatedAt: now() } }).run();
       return jsonWithSchema(c, reminderSchema, toReminder(db.select().from(threadReminders).where(eq(threadReminders.id, id)).get()!));
     } finally { sqlite.close(); }
@@ -1982,9 +1987,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-      if (!account) return noConnectedAccount(c);
-      const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, c.req.param("id")), eq(threadReminders.accountId, account.id))).get();
+      const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+      if (accountIds.length === 0) return noConnectedAccount(c);
+      const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, c.req.param("id")), inArray(threadReminders.accountId, accountIds))).get();
       if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
       const input = c.req.valid("json");
       const timezone = input.timezone ?? record.timezone;
@@ -2221,9 +2226,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           ))
             .returning({ id: messageDrafts.id }).get();
           if (!updated) {
-            // A newer local revision arrived while the provider was creating the
-            // provider draft. Carry that provider ID forward so the next job
-            // updates the same provider draft instead of creating an orphan.
+            // A newer local revision arrived while the provider was creating or
+            // replacing its copy. Carry the ID forward only if the stored ID
+            // still matches this job's copy, so the next job reuses it.
             // A delivery reservation owns the provider message/thread IDs from
             // that point on, even when this mirror was already in flight.
             db.update(messageDrafts).set({
@@ -2232,7 +2237,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               providerThreadId: mirrored.providerThreadId ?? null,
             }).where(and(
               eq(messageDrafts.id, draft.id),
-              isNull(messageDrafts.providerDraftId),
+              draft.providerDraftId === null
+                ? isNull(messageDrafts.providerDraftId)
+                : eq(messageDrafts.providerDraftId, draft.providerDraftId),
               eq(messageDrafts.deliveryStatus, "draft"),
               isNull(messageDrafts.sendIdempotencyKey),
             )).run();
@@ -2901,11 +2908,11 @@ function updateReminderTerminal(
 ) {
   const { db, sqlite } = dbFactory();
   try {
-    const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-    if (!account) return noConnectedAccount(c);
+    const accountIds = getConnectedAccounts(db, c.get("auth").userId).map((account) => account.id);
+    if (accountIds.length === 0) return noConnectedAccount(c);
     const reminderId = c.req.param("id");
     if (!reminderId) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
-    const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, reminderId), eq(threadReminders.accountId, account.id))).get();
+    const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, reminderId), inArray(threadReminders.accountId, accountIds))).get();
     if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
     if (record.status !== status) {
       const timestamp = now();
@@ -3163,12 +3170,13 @@ function readThreadDetailSnapshot(
   const routing = loadAttentionRouting(db, account.id);
   const destination = readThreadDestination(db, db.select({userId:oauthAccounts.userId}).from(oauthAccounts).where(eq(oauthAccounts.id,account.id)).get()!.userId, account.id, thread.id) ?? undefined;
   const messages = messageRows.map((message) => {
-    const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
+    const bodyHtml = sanitizeInboundHtml(message.bodyHtml);
     const humanClassification = resolveHumanClassification(message, resolveClassification);
     return {
       id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
       from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
       to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
+      imageLoadAvailable: hasLoadableImages(message.bodyHtml),
       subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
       unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
       internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
@@ -3584,111 +3592,13 @@ function selectConnectedAccounts(
     .orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id))
     .all() as ConnectedAccount[];
 }
-const providerHtmlPolicy: sanitizeHtml.IOptions = {
-  allowedTags: [
-    "a", "abbr", "address", "article", "aside", "b", "blockquote", "br", "caption",
-    "cite", "code", "col", "colgroup", "dd", "del", "details", "div", "dl", "dt",
-    "em", "fieldset", "figcaption", "figure", "footer", "h1", "h2", "h3", "h4",
-    "h5", "h6", "header", "hr", "i", "img", "ins", "legend", "li", "main", "mark",
-    "nav", "ol", "p", "pre", "s", "section", "small", "span", "strong", "sub",
-    "summary", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "time", "tr",
-    "u", "ul",
-  ],
-  allowedAttributes: {
-    a: ["href", "title", "target", "rel", "name"],
-    img: ["src", "alt", "width", "height", "title"],
-    td: ["colspan", "rowspan", "align", "valign", "width", "height", "style"],
-    th: ["colspan", "rowspan", "align", "valign", "width", "height", "style"],
-    table: ["border", "cellpadding", "cellspacing", "width", "align", "style"],
-    col: ["width", "style"],
-    colgroup: ["width", "span", "style"],
-    tr: ["align", "valign", "style"],
-    div: ["align", "style", "data-email-preheader"],
-    p: ["align", "style"],
-    span: ["style"],
-    "*": ["class", "style"],
-  },
-  allowedSchemes: ["http", "https", "mailto", "cid"],
-  disallowedTagsMode: "discard",
-  exclusiveFilter: (frame) => {
-    if (frame.tag !== "div") return false;
-    if (frame.attribs["data-email-preheader"] === "true") return true;
-    const style = frame.attribs.style ?? "";
-    const hasHiddenStyle = /(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0)/i.test(style);
-    const hasZeroSize = /(?:height|max-height|width|max-width)\s*:\s*0(?:px)?/i.test(style);
-    return hasHiddenStyle && hasZeroSize;
-  },
-  allowedStyles: {
-    "*": {
-      "margin": [/.*/],
-      "margin-top": [/.*/],
-      "margin-right": [/.*/],
-      "margin-bottom": [/.*/],
-      "margin-left": [/.*/],
-      "padding": [/.*/],
-      "padding-top": [/.*/],
-      "padding-right": [/.*/],
-      "padding-bottom": [/.*/],
-      "padding-left": [/.*/],
-      "width": [/.*/],
-      "height": [/.*/],
-      "max-width": [/.*/],
-      "max-height": [/.*/],
-      "min-width": [/.*/],
-      "min-height": [/.*/],
-      "text-align": [/.*/],
-      "visibility": [/.*/],
-      "opacity": [/.*/],
-      "overflow": [/.*/],
-      "overflow-x": [/.*/],
-      "overflow-y": [/.*/],
-      "vertical-align": [/.*/],
-      "font-family": [/.*/],
-      "font-size": [/.*/],
-      "font-weight": [/.*/],
-      "font-style": [/.*/],
-      "line-height": [/.*/],
-      "letter-spacing": [/.*/],
-      "text-decoration": [/.*/],
-      "text-transform": [/.*/],
-      "border": [/.*/],
-      "border-top": [/.*/],
-      "border-right": [/.*/],
-      "border-bottom": [/.*/],
-      "border-left": [/.*/],
-      "border-radius": [/.*/],
-      "border-collapse": [/.*/],
-      "border-spacing": [/.*/],
-      "display": [/.*/],
-      "float": [/.*/],
-      "white-space": [/.*/],
-      "word-break": [/.*/],
-      "overflow-wrap": [/.*/],
-      "table-layout": [/.*/],
-    },
-  },
-  transformTags: {
-    a: (_tagName, attributes) => ({
-      tagName: "a",
-      attribs: { ...attributes, target: "_blank", rel: "noopener noreferrer" },
-    }),
-  },
-};
-
-function sanitizeProviderHtml(value: string | null) {
-  return value === null ? null : sanitizeHtml(value, providerHtmlPolicy) || null;
-}
 
 function sanitizeOutboundHtml(value: string | null) {
   return sanitizeProviderHtml(value);
 }
 
 function htmlToText(value: string | null) {
-  if (value === null) return null;
-  const visibleHtml = sanitizeProviderHtml(value);
-  if (visibleHtml === null) return null;
-  const text = sanitizeHtml(visibleHtml, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim();
-  return text || null;
+  return readableHtmlText(value);
 }
 
 function parseContacts(value: string | null) {

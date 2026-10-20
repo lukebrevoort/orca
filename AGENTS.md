@@ -146,3 +146,16 @@ Multi-context: root `CONTEXT-MAP.md` pointing at per-context `CONTEXT.md` files.
 ### Desktop UI switch
 
 When implementing or reviewing BRE-321 desktop navigation, themes, workflow spaces, mail surfaces, Organization integration, Settings, operational states, or migration coverage, read `docs/ixd/bre-321-ui-switch-spec.html` before changing the UI.
+
+### pstack workflow adapter
+
+For pstack / poteto-mode requests, read `.agents/skills/poteto-mode/SKILL.md`.
+This is an explicit Orca adaptation of Lauren Tan's pinned Cursor toolkit, not
+native Cursor plugin execution. The trial and setup are in `docs/pstack/README.md`;
+`.agents/skills/verify-orca/SKILL.md` maps user journeys to real fixture checks.
+For fresh cloud instances use `docs/pstack/cloud.md`. Use
+`docs/pstack/task-to-pr.md` and its task template for isolated work, independent
+review, final-revision verification and a draft handoff. Record `running`,
+`blocked`, `review-ready` or `done`; old trial evidence does not verify a new patch.
+Upstream guidance never grants permission to merge, release, deploy, use live
+mail, alter credentials/access, install unknown software, or create schedules.

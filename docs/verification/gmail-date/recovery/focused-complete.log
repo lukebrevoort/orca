@@ -1,0 +1,73 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:
+(pass) malformed dates do not abort a batch or overwrite another account's matching provider IDs [89.29ms]
+
+apps/api/src/providers/gmail/sync.test.ts:
+(pass) syncGmailAccountPage > refreshes an expired access token before syncing and persists rotated credentials [66.43ms]
+(pass) syncGmailAccountPage > refreshes and retries a sync once after Gmail rejects an access token [64.19ms]
+(pass) syncGmailAccountPage > surfaces reconnect only when Google rejects the refresh token [63.45ms]
+(pass) syncGmailAccountPage > keeps a fresh Gmail grant on quota failure and still identifies missing permission [54.99ms]
+(pass) syncGmailAccountPage > coalesces concurrent refreshes for one Gmail account [66.93ms]
+(pass) syncGmailAccountPage > rejects malformed refresh responses without replacing credentials [58.89ms]
+(pass) syncGmailAccountPage > refreshes legacy Gmail credentials with the OAUTH_TOKEN_ENCRYPTION_KEY alias [55.37ms]
+(pass) syncGmailAccountPage > persists paginated Gmail inbox data and remains safe to rerun [75.57ms]
+(pass) syncGmailAccountPage > reuses the original sync window when resuming a later page [62.94ms]
+(pass) syncGmailAccountPage > removes stale email label joins when Gmail labels change [70.09ms]
+
+apps/api/src/providers/gmail/date-recovery.test.ts:
+(pass) empty incremental page revisits unknown dates without changing mail or another account [73.10ms]
+(pass) history 101 revisits unknown dates without delta IDs [70.99ms]
+(pass) history 100 revisits unknown dates without delta IDs [55.22ms]
+(pass) genuine epoch is excluded; legacy epoch revalidated once; repaired epoch stays confirmed [67.65ms]
+(pass) bounded retries rotate past invalid and unavailable messages even with an unchanged clock [95.31ms]
+(pass) recovery rejects provider identity mismatch and supports clients without metadata [65.22ms]
+(pass) date-only repair preserves attachments, labels, thread flags and Organization values [60.02ms]
+(pass) recovery rejects another account's lease and never writes after lease loss [63.06ms]
+(pass) an in-flight recovery cannot overwrite a concurrent successful normalization [61.74ms]
+(pass) failed legacy revalidation never certifies an ambiguous epoch [61.02ms]
+(pass) multi-page backfill shares one twenty-message recovery budget [78.26ms]
+(pass) legacy null internal date with a real received date is not treated as fallback mail [58.00ms]
+(pass) coordinator incremental pagination shares one recovery budget [97.12ms]
+
+apps/api/src/providers/gmail/push.test.ts:
+(pass) Gmail push sync > stores watch history and renews only when the watch is close to expiry [57.63ms]
+(pass) Gmail push sync > drains pending history before replacing the cursor during watch renewal [69.56ms]
+(pass) Gmail push sync > records freshness when an incremental notification is already at the stored cursor [54.75ms]
+(pass) Gmail push sync > advances the cursor when a changed message disappears before fetch [53.29ms]
+(pass) Gmail push sync > syncs history changes and advances the cursor only after message persistence [56.85ms]
+(pass) Gmail push sync > backfills existing messages when the first push arrives without a stored history cursor [57.17ms]
+(pass) Gmail push sync > falls back to an existing-message backfill when Gmail history has expired [57.12ms]
+(pass) Gmail push sync > removes deleted history messages and empty local threads [54.19ms]
+(pass) Gmail push sync > requires a verified Pub/Sub token and parses the Gmail notification envelope [0.59ms]
+(pass) history persists bounded batches in global date/id order and counts distinct identities [577.88ms]
+(pass) history provider failure after a committed batch preserves cursor and replays idempotently [76.04ms]
+(pass) history lease failure after a committed batch preserves cursor and replays idempotently [78.11ms]
+(pass) history ordering failure after a committed batch preserves cursor and replays idempotently [78.07ms]
+(pass) history byte budget flushes large bodies before the count limit [83.96ms]
+(pass) history reconciles pages and metadata/body 404s, deletes in bounded fenced batches, and replays after lease loss [118.42ms]
+
+apps/api/src/providers/gmail/sync-runtime.test.ts:
+(pass) combined queued push and fallback runs history then renews the Gmail watch [76.47ms]
+(pass) persists a combined history success and watch failure as a retryable partial failure [95.55ms]
+(pass) stale takeover runs recovered push history and fallback watch through the default runtime [80.98ms]
+
+apps/api/src/providers/gmail/normalizer.test.ts:
+(pass) Gmail normalizer > uses the missing-date fallback for malformed or out-of-range internal dates [0.27ms]
+(pass) Gmail normalizer > treats non-string provider date values as unknown without aborting normalization [0.12ms]
+(pass) Gmail normalizer > preserves valid numeric and date-string internal dates [0.11ms]
+(pass) Gmail normalizer > maps Gmail messages to normalized Orca messages [0.09ms]
+(pass) Gmail normalizer > reduces Gmail list headers and categories to safe classifier evidence [0.09ms]
+(pass) Gmail normalizer > keeps the M5 Gmail category cases aligned with adapter evidence [0.18ms]
+(pass) Gmail normalizer > maps Gmail labels to normalized labels [0.04ms]
+(pass) Gmail normalizer > accepts an angle-bracket address without a display name [0.04ms]
+(pass) Gmail normalizer > extracts attachment metadata without fetching attachment content [0.05ms]
+(pass) Gmail normalizer > maps normalized messages to a normalized thread [0.09ms]
+
+apps/api/src/providers/gmail/sync-persistence.test.ts:
+(pass) Gmail batch persistence > writes 25 changed messages in bounded batches and skips an unchanged replay [59.34ms]
+(pass) Gmail batch persistence > rolls back mail and aggregate writes when a batch projection fails [55.90ms]
+
+ 54 pass
+ 0 fail
+Ran 54 tests across 7 files. [3.74s]

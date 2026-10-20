@@ -1,0 +1,44 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/reader-cards.integration.test.tsx:
+20 | const detail: ThreadDetail = {
+21 |   account,
+22 |   thread: { id: source.threadId, provider: "gmail", providerThreadId: "provider-thread", subject: "Group note", latestReceivedAt: source.receivedAt, messageCount: 1, labels: [], participants: [source.from], readState: "read", attention: { hasUnread: false, hasStarred: false, hasDraft: false, humanSignal: 10 } },
+23 |   messages: [{ ...source, subject: "Group note", accountId: account.id, to: [{ name: null, email: account.email }, { name: "Dana", email: "dana@example.com" }], cc: [{ name: "Anika", email: "anika@example.com" }, { name: "Duplicate", email: "DANA@example.com" }], bcc: [], bodyText: "Original group note", bodyHtml: null, internetMessageId: "<group@example.com>", references: [], attachments: [] }],
+24 | };
+25 | function button(name: string) { const found = [...browser.document.querySelectorAll("button")].find(button => button.textContent?.trim() === name); expect(found).toBeDefined(); return found!; }
+                                                                                                                                                                       ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at button (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:25:163)
+      at <anonymous> (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:26:60)
+      at <anonymous> (/workspace/orca/node_modules/react/cjs/react.development.js:814:22)
+      at click (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:26:44)
+      at <anonymous> (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:69:9)
+(fail) keeps the first-unread card visible and open after a same-thread read refresh [1023.07ms]
+(pass) an all-read conversation initially opens its latest message [450.58ms]
+20 | const detail: ThreadDetail = {
+21 |   account,
+22 |   thread: { id: source.threadId, provider: "gmail", providerThreadId: "provider-thread", subject: "Group note", latestReceivedAt: source.receivedAt, messageCount: 1, labels: [], participants: [source.from], readState: "read", attention: { hasUnread: false, hasStarred: false, hasDraft: false, humanSignal: 10 } },
+23 |   messages: [{ ...source, subject: "Group note", accountId: account.id, to: [{ name: null, email: account.email }, { name: "Dana", email: "dana@example.com" }], cc: [{ name: "Anika", email: "anika@example.com" }, { name: "Duplicate", email: "DANA@example.com" }], bcc: [], bodyText: "Original group note", bodyHtml: null, internetMessageId: "<group@example.com>", references: [], attachments: [] }],
+24 | };
+25 | function button(name: string) { const found = [...browser.document.querySelectorAll("button")].find(button => button.textContent?.trim() === name); expect(found).toBeDefined(); return found!; }
+                                                                                                                                                                       ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at button (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:25:163)
+      at <anonymous> (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:26:60)
+      at <anonymous> (/workspace/orca/node_modules/react/cjs/react.development.js:814:22)
+      at click (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:26:44)
+      at <anonymous> (/workspace/orca-collapse/apps/web/src/reader-cards.integration.test.tsx:99:9)
+(fail) quiet controls move bulk actions into a labeled disclosure and retain card behavior [512.81ms]
+(pass) updates contextual navigation when preceding content grows without scrolling [103.46ms]
+
+ 2 pass
+ 2 fail
+ 30 expect() calls
+Ran 4 tests across 1 file. [5.55s]

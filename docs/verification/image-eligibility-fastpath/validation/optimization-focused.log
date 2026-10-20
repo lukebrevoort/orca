@@ -1,0 +1,180 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/thread-detail.test.ts:
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "origin": "number",
+    "code": "too_small",
+    "minimum": 0,
+    "inclusive": true,
+    "path": [
+      "thread",
+      "messageCount"
+    ],
+    "message": "Too small: expected number to be >=0"
+  }
+]
+      at <anonymous> (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-oct18-perf/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-oct18-perf/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "origin": "number",
+    "code": "too_small",
+    "minimum": 0,
+    "inclusive": true,
+    "path": [
+      "messages",
+      0,
+      "attachments",
+      0,
+      "size"
+    ],
+    "message": "Too small: expected number to be >=0"
+  }
+]
+      at <anonymous> (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-oct18-perf/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-oct18-perf/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "messages",
+      0,
+      "references",
+      0
+    ],
+    "message": "Invalid input: expected string, received number"
+  }
+]
+      at <anonymous> (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-oct18-perf/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-oct18-perf/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+30 |   }
+31 |   transaction(transaction, config = {}) {
+32 |     const tx = new SQLiteBunTransaction("sync", this.dialect, this, this.schema);
+33 |     let result;
+34 |     const nativeTx = this.client.transaction(() => {
+35 |       result = transaction(tx);
+                    ^
+ZodError: [
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "extra"
+    ],
+    "path": [
+      "thread",
+      "participants",
+      1
+    ],
+    "message": "Unrecognized key: \"extra\""
+  },
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "extra"
+    ],
+    "path": [
+      "messages",
+      0,
+      "to",
+      0
+    ],
+    "message": "Unrecognized key: \"extra\""
+  }
+]
+      at <anonymous> (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:35:16)
+      at transaction (bun:sqlite:416:27)
+      at transaction (/workspace/orca-oct18-perf/node_modules/drizzle-orm/bun-sqlite/session.js:37:33)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/index.ts:2383:25)
+      at dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/orca-oct18-perf/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/orca-oct18-perf/node_modules/hono/dist/validator/validator.js:81:18)
+      at async dispatch (/workspace/orca-oct18-perf/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/orca-oct18-perf/node_modules/hono/dist/middleware/cors/index.js:76:11)
+
+(pass) thread detail loads bodies once while preserving multi-message labels, attachments and isolation [277.91ms]
+
+apps/api/src/mail/provider-html.test.ts:
+(pass) inbound readable formatting and privacy > normalizes responsive newsletters without restoring sender CSS [8.30ms]
+(pass) inbound readable formatting and privacy > does not flatten data tables, mislabelled headers, captions, or spans [0.94ms]
+(pass) inbound readable formatting and privacy > nested data tables keep width/header semantics inside layout [0.40ms]
+(pass) inbound readable formatting and privacy > strips sender classes and rejects forged renderer markers [0.40ms]
+(pass) inbound readable formatting and privacy > all images are inert, alt text is escaped, and no sender executable content survives [1.45ms]
+(pass) inbound readable formatting and privacy > unrelated ordinary message markup stays readable and outbound images are unchanged [0.44ms]
+(pass) inbound readable formatting and privacy > linked images without alt text retain a visible, accessible destination [0.23ms]
+(pass) inbound readable formatting and privacy > deep sender markup cannot exhaust the DOM serializer stack or lose text [95.74ms]
+(pass) inbound readable formatting and privacy > hosted native newsletter fixture is the exact production sanitizer output [2.17ms]
+(pass) inbound readable formatting and privacy > structured fallback preserves paragraphs, destinations, table rows, and code whitespace [0.30ms]
+
+apps/api/src/mail/images/eligibility.test.ts:
+(pass) eligibility retains positive images and rejects encoded markup, blocked URLs and declared trackers [5.41ms]
+(pass) malformed, entity, raw-text and nested HTML agrees with the pre-optimization policy [152.42ms]
+(pass) image-free eligibility avoids provider sanitizer work while possible tags still use its policy [0.43ms]
+(pass) long-thread GET retains image availability, inert bodies and account isolation without consent or downloads [236.85ms]
+
+apps/api/src/mail/images/images.test.ts:
+(pass) public-only image URLs reject local, alternate, credential and redirect-style inputs [0.34ms]
+(pass) raster validation rejects pixels, huge decoded dimensions and non-raster data [0.34ms]
+(pass) mixed private/public DNS answers are rejected before a socket opens [0.69ms]
+(pass) socket uses validated address without rebinding, credentials, redirects or pooled reuse [2.90ms]
+(pass) redirects, compressed payloads, MIME mismatch and streamed oversize are rejected [0.91ms]
+(pass) default sanitization blocks images; explicit partial loading preserves safe HTML and blocks pixels/resources [1.94ms]
+(pass) image count and total byte budgets bound sender requests [24.09ms]
+(pass) native POST resolves only an authenticated user's stored message, before any image request [93.13ms]
+(pass) failed downloads spend their allowance and a partly used budget is never overrun [16.58ms]
+(pass) global cancellation interrupts DNS before any socket is opened [0.48ms]
+
+ 25 pass
+ 0 fail
+ 1558 expect() calls
+Ran 25 tests across 4 files. [1345.00ms]

@@ -10,6 +10,9 @@ import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { profileReaderInteractions } from './reader-interaction-profile.mjs';
+import { checkReaderScroll } from './reader-scroll-regression.mjs';
+import { checkReaderFocus } from './reader-focus-regression.mjs';
+import { checkReaderTouchTargets } from './reader-touch-target-regression.mjs';
 
 assert(process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true', 'Reader browser checks run only in hosted CI; do not run against a local browser');
 const [connectionFile, outputDirectory] = process.argv.slice(2);
@@ -155,7 +158,14 @@ async function checkQuotes(page, body, entry, name) {
   await current.waitFor();
   assert((await current.innerText()).includes(entry.plainCurrentMarker), 'Current reply text is missing');
   const quote = body.locator('.reader-quoted');
-  if (entry.quoteMarker) {
+  if (entry.id === 'github-notification') {
+    // Unique unquoted footer text follows this quote: keep the whole message
+    // visible rather than treating that footer as expendable quoted history.
+    assert.equal(await quote.count(), 0, 'Mixed quoted and unique text must stay visible');
+    assert.equal(await current.textContent(), entry.bodyText, 'Mixed quoted history must preserve every character');
+    assert((await current.innerText()).includes(entry.quoteMarker));
+    assert((await current.innerText()).includes(entry.endMarker));
+  } else if (entry.quoteMarker) {
     assert.equal(await quote.count(), 1, 'Quoted history must have a disclosure');
     assert.equal(await quote.evaluate(node => node.open), false, 'Quoted history starts collapsed');
     const summary = quote.locator('summary');
@@ -246,6 +256,10 @@ try {
   await browser.close();
   browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE || undefined, args: ['--disable-background-networking'] });
   results.responsiveMatrixBrowser = { mode: 'headless', version: browser.version() };
+  results.readerTouchTargets = await checkReaderTouchTargets({ browser, origin, out, screenshots: results.screenshots });
+  results.readerFocus = await checkReaderFocus({ browser, origin, out, screenshots: results.screenshots });
+  try { results.readerScroll = await checkReaderScroll({ browser, origin, out, screenshots: results.screenshots }); }
+  catch (error) { results.readerScroll = error.readerScrollResult; throw error; }
   for (const { width, theme, textSize, entry, smoke } of matrix) {
     const name = `${entry.id}-${width}-${theme}-${textSize}${smoke ? '-smoke' : ''}`;
     const scenario = { name, case: entry.id, viewport: { width, height: width <= 760 ? 844 : 1000 }, theme, textSize, smoke, status: 'running', substitutedResponses: 0, containment: [], controls: [] };

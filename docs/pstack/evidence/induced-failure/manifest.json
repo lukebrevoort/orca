@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "testedCommit": "149a2777876eb62ad2538344d25455d8baadd0b9",
+  "testedTree": "86c3c989b3f09f1b1f0f1e8f9fe38fa56024674a",
+  "driverSha256": "cf377b385e1b2c4865f4ec96b0286b87a989bb690305639ec71866aeae79a4c9",
+  "dependencyLockSha256": "ed608305f7dd563306ebfcd889a002a3dbceaeadcf9d54c3d6c6aed6d166b06f",
+  "dependencies": "copy of preinstalled dependencies; no install performed",
+  "syntheticOnly": true,
+  "exitCode": 1,
+  "cleanupComplete": true,
+  "nativeChecks": "not run locally; existing hosted Fixture Checks owns iOS",
+  "files": {
+    "checks.log": "3c40d8624740755948517f5832069096bb232947579e9e2c15b10420377a7113",
+    "fixture.log": "88eb4a0f4650ba285772778c8c4386923f1294aaf2f8117aca110096e6deb65a",
+    "identity.log": "ef9d33442a8fd739b053d84c0e966226e2d7b1f30127df991530394ec5227565",
+    "outcome.json": "2a76c9742850721064723a7ae8690d8408b3522a1bbf20781a28e16b4a32e55c"
+  }
+}

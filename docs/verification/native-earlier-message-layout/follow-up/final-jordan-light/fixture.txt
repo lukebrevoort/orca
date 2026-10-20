@@ -1,0 +1,33 @@
+iOS fixture API: http://127.0.0.1:58098
+Synthetic connection details: /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-jordan-light/orca-ios-fixture-vFMc3L/connection.json
+Only fixture data is used. Provider send and draft operations are simulated.
+[search-fixture-server] {"trace":"a1eb7b76-b56c-4143-b2cf-335b4e1dbbd4","event":"received","epoch_ms":1792444836323,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"a1eb7b76-b56c-4143-b2cf-335b4e1dbbd4","event":"response_ready","epoch_ms":1792444836351,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"3c516fb0-842d-4e6c-9574-cd858b9e1a8b","event":"received","epoch_ms":1792444836921,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"3c516fb0-842d-4e6c-9574-cd858b9e1a8b","event":"response_ready","epoch_ms":1792444836939,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"82bbf3e5-9077-4d0d-951d-64c6ce9e3c75","event":"received","epoch_ms":1792444836939,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"82bbf3e5-9077-4d0d-951d-64c6ce9e3c75","event":"response_ready","epoch_ms":1792444836972,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[search-fixture-server] {"trace":"1794a49c-90c4-48f1-a648-a9cbaa924b9e","event":"received","epoch_ms":1792444841719,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"1794a49c-90c4-48f1-a648-a9cbaa924b9e","event":"response_ready","epoch_ms":1792444841756,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"1b50abac-77d7-4412-9bc7-a54c751e6721","event":"received","epoch_ms":1792444841809,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"1b50abac-77d7-4412-9bc7-a54c751e6721","event":"response_ready","epoch_ms":1792444841841,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[search-fixture-server] {"trace":"5fade30d-253f-4b3e-be96-da245584cc5a","event":"received","epoch_ms":1792444848407,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"5fade30d-253f-4b3e-be96-da245584cc5a","event":"response_ready","epoch_ms":1792444848428,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"1af47637-4ab7-41f1-a9af-da42c1116d97","event":"received","epoch_ms":1792444848500,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"1af47637-4ab7-41f1-a9af-da42c1116d97","event":"response_ready","epoch_ms":1792444848518,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[search-fixture-server] {"trace":"6c843eb3-ab23-4211-9ee7-d6fac40a41a9","event":"received","epoch_ms":1792444853896,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"6c843eb3-ab23-4211-9ee7-d6fac40a41a9","event":"response_ready","epoch_ms":1792444853931,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"f292facb-2d51-4f7b-8ab7-5ce2cd2a450a","event":"received","epoch_ms":1792444854012,"path":"/v1/inbox","query":"Jordan","view":"all"}
+[search-fixture-server] {"trace":"f292facb-2d51-4f7b-8ab7-5ce2cd2a450a","event":"response_ready","epoch_ms":1792444854043,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-2","ios-fixture-message-5"]}
+[search-fixture-server] {"trace":"78a6a8cf-50ec-4889-96b3-8bc9d9f6df1b","event":"received","epoch_ms":1792444857368,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"78a6a8cf-50ec-4889-96b3-8bc9d9f6df1b","event":"response_ready","epoch_ms":1792444857438,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"06141d17-8d1c-4575-b2c6-d45ac7170bc0","event":"received","epoch_ms":1792444857456,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"06141d17-8d1c-4575-b2c6-d45ac7170bc0","event":"response_ready","epoch_ms":1792444857487,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[search-fixture-server] {"trace":"1d10e160-c6b0-4181-b6d5-d59815eb99e7","event":"received","epoch_ms":1792444861308,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"1d10e160-c6b0-4181-b6d5-d59815eb99e7","event":"response_ready","epoch_ms":1792444861416,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"b6c80ea1-876c-439c-bfd4-648ffc2656e3","event":"received","epoch_ms":1792444861476,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"b6c80ea1-876c-439c-bfd4-648ffc2656e3","event":"response_ready","epoch_ms":1792444861515,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[search-fixture-server] {"trace":"4cbc578d-5aa6-41d6-b560-dae23d0f8698","event":"received","epoch_ms":1792444875830,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"4cbc578d-5aa6-41d6-b560-dae23d0f8698","event":"response_ready","epoch_ms":1792444875855,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"cfb7bbe7-12c8-400a-b9e9-baf4ecc5d691","event":"received","epoch_ms":1792444876050,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"cfb7bbe7-12c8-400a-b9e9-baf4ecc5d691","event":"response_ready","epoch_ms":1792444876083,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}

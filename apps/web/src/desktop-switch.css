@@ -343,6 +343,7 @@
   max-height: calc(100dvh - clamp(48px,14vh,128px));
   display: grid;
   grid-template-areas: "heading" "coverage" "form" "toolbar" "filters" "actions" "results";
+  grid-template-columns: minmax(0,1fr);
   grid-template-rows: auto auto auto auto auto auto minmax(0,1fr);
   overflow: hidden;
   border: 1px solid var(--desktop-border-strong);

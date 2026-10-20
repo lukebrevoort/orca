@@ -56,6 +56,7 @@ export function createDefaultGmailSyncCoordinator(options: {
           if (config.topicName && config.verificationToken) {
             try {
               watch = await ensureGmailWatch(db, {
+                skipDateRecovery: true,
                 accountId: claim.accountId,
                 gmailClient,
                 config,
@@ -126,6 +127,7 @@ export function createDefaultGmailSyncCoordinator(options: {
           if (shouldEnsureWatch) {
             try {
               watch = await ensureGmailWatch(db, {
+                skipDateRecovery: true,
                 accountId: claim.accountId,
                 gmailClient,
                 config,
@@ -144,6 +146,7 @@ export function createDefaultGmailSyncCoordinator(options: {
         const current = getGmailAccount(db, claim.accountId);
         if (fallback && ((!current.lastSyncedAt && !current.syncCursor) || forceBackfill)) {
           const backfill = await backfillGmailAccount(db, {
+            skipDateRecovery: Boolean(history),
             accountId: claim.accountId,
             gmailClient,
             now: now(),
@@ -223,6 +226,7 @@ async function syncIncrementalPages(input: {
       gmailClient: input.gmailClient,
       now: input.now,
       pageSize: input.pageSize,
+      skipDateRecovery: pages > 0,
       leaseGuard: input.claim.lease,
       metrics: input.metrics,
     });

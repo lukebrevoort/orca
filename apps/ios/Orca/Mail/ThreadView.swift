@@ -1,49 +1,152 @@
 import SwiftUI
+import CryptoKit
 
 struct ThreadView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; let accountId: String; let threadId: String; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
+    @State private var expanded: Set<String> = []
+    @State private var showEarlier = false
+    @State private var entryID: String?
+    @State private var unreadEntryID: String?
+    @State private var messageFrames: [String: CGRect] = [:]
+    private var visibleMessageIDs: Set<String> { Set(messageFrames.filter { ReaderNavigationVisibility.isVisible($0.value, viewportHeight: viewportHeight) }.map(\.key)) }
+    @State private var viewportHeight: CGFloat = 0
+    @State private var headerOffset: CGFloat = 0
+    @AccessibilityFocusState private var focusedMessage: String?
     init(message: InboxMessage) { accountId = message.accountId; threadId = message.threadId }
     init(accountId: String, threadId: String) { self.accountId = accountId; self.threadId = threadId }
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             if let detail {
                 LazyVStack(alignment: .leading, spacing: 28) {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("CONVERSATION").font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.5).foregroundStyle(OrcaTheme.accent)
+                        DisclosureGroup("Attention: " + (detail.thread.attention.attentionBehavior ?? "normal").capitalized) {
+                            Text("Unread Focus and Notify conversations appear first in Inbox, newest first. Read conversations return to date order and keep their attention setting. Focus filters the same Inbox without moving mail. The winning rule is unavailable in this response.").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                        }.font(OrcaTheme.ui(12))
                         Text(detail.thread.subject.isEmpty ? "(No subject)" : detail.thread.subject).font(OrcaTheme.reader(34)).tracking(-0.6).foregroundStyle(OrcaTheme.ink).fixedSize(horizontal: false, vertical: true)
                     }
                     if let error { Label(error, systemImage: "info.circle").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("thread.status") }
-                    // The API is oldest-first. Reverse only the reading order so
-                    // opening a conversation shows the latest reply immediately.
-                    // Keep the original detail for Reply / Reply all / Forward.
-                    ForEach(detail.messages.reversed()) { item in
-                        VStack(alignment: .leading, spacing: 22) {
-                            HStack(spacing: 12) {
-                                ContactGlyph(contact: item.from)
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(item.from.name ?? item.from.email).font(OrcaTheme.ui(13, weight: .semibold)).foregroundStyle(OrcaTheme.ink)
-                                    Text(MailDate.full(item.receivedAt)).font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted)
-                                }
+                    let messages = detail.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
+                    let entry = messages.first(where: { $0.id == entryID }) ?? messages.first(where: \.unread) ?? messages.last
+                    let firstIndex = messages.firstIndex(where: { $0.id == entry?.id }) ?? 0
+                    if firstIndex > 0 {
+                        HStack(spacing: 12) {
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
                             }
-                            if let html = item.bodyHtml, !html.isEmpty { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) }
-                            else { Text(item.bodyText ?? item.snippet).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled) }
+                            Button { showEarlier.toggle() } label: {
+                                HStack(spacing: 8) {
+                                    Text("\(firstIndex) earlier messages")
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
+                                }.font(OrcaTheme.ui(12)).frame(minHeight: 44).padding(.horizontal, 8).contentShape(Rectangle())
+                            }
+                            // Decorative separators must yield width to readable words.
+                            .layoutPriority(1)
+                            .buttonStyle(.plain).foregroundStyle(OrcaTheme.ink)
+                            .accessibilityLabel("\(showEarlier ? "Hide" : "Show") \(firstIndex) earlier messages")
+                            .accessibilityValue(showEarlier ? "Expanded" : "Collapsed")
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
+                            }
+                        }
+                    }
+                    ForEach(Array(messages.enumerated()), id: \.element.id) { index, item in
+                        if showEarlier || index >= firstIndex {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Button {
+                                if expanded.contains(item.id) { expanded.remove(item.id) } else { expanded.insert(item.id) }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        ContactGlyph(contact: item.from)
+                                        Text(item.from.name ?? item.from.email).font(OrcaTheme.ui(13, weight: .semibold))
+                                        Spacer()
+                                        Image(systemName: expanded.contains(item.id) ? "chevron.up" : "chevron.down")
+                                    }
+                                    Text(MailDate.full(item.receivedAt)).font(OrcaTheme.ui(11))
+                                    Text("To " + item.to.map { $0.name ?? $0.email }.joined(separator: ", ")).font(OrcaTheme.ui(12))
+                                    if item.unread { Text("Unread").font(OrcaTheme.ui(11, weight: .semibold)) }
+                                    if !expanded.contains(item.id) { Text(MailPreview.decode(item.snippet)).font(OrcaTheme.ui(13)).lineLimit(2) }
+                                }.foregroundStyle(OrcaTheme.ink).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                                .accessibilityValue(expanded.contains(item.id) ? "Expanded" : "Collapsed")
+                                .accessibilityFocused($focusedMessage, equals: item.id)
+                            if expanded.contains(item.id) {
+                            DisclosureGroup("Message details") {
+                                Text("From: " + item.from.email)
+                                Text("To: " + item.to.map(\.email).joined(separator: ", "))
+                                if !item.cc.isEmpty { Text("Cc: " + item.cc.map(\.email).joined(separator: ", ")) }
+                                if !item.bcc.isEmpty { Text("Bcc: " + item.bcc.map(\.email).joined(separator: ", ")) }
+                            }.font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                            MessageImageBody(item: item, accountId: accountId)
+                                .id(state.ownerScope + "|" + accountId + "|" + item.id + "|" + (item.bodyHtml ?? ""))
                             ForEach(item.attachments) { attachment in
                                 Button { Task { await download(attachment) } } label: {
                                     Label("\(attachment.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(attachment.size), countStyle: .file))", systemImage: "paperclip").font(OrcaTheme.ui(12))
                                 }.buttonStyle(.bordered)
                             }
-                            Rectangle().fill(OrcaTheme.border).frame(height: 1)
+                            }
+                        }.padding(16).background(OrcaTheme.surface, in: RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(OrcaTheme.border)).id(item.id)
+                            .background(GeometryReader { geometry in
+                                Color.clear.preference(key: ReaderMessageFramesKey.self, value: [item.id: geometry.frame(in: .named("threadViewport"))])
+                            })
                         }
                     }
                 }.padding(24)
+                .onGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.frame(in: .named("threadViewport")).minY
+                } action: { headerOffset = $0 }
             } else if let error {
                 ContentUnavailableView("Conversation unavailable", systemImage: "exclamationmark.bubble", description: Text(error))
                 Button("Try again") { Task { await load() } }
             } else { ProgressView("Getting conversation").padding(.top, 80) }
         }.background(OrcaTheme.paper)
+        .coordinateSpace(name: "threadViewport")
+        // Observe the scroll viewport directly. A background PreferenceKey can
+        // resolve to its zero default here, suppressing every contextual jump.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
+        .onPreferenceChange(ReaderMessageFramesKey.self) { frames in
+            messageFrames = frames
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let detail, viewportHeight > 0 {
+                let messages = detail.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
+                let unread = messages.first(where: { $0.id == unreadEntryID }) ?? messages.first(where: \.unread)
+                let showUnread = unread.map { !visibleMessageIDs.contains($0.id) && (headerOffset < -40 || showEarlier) } ?? false
+                HStack(spacing: 8) {
+                    if let unread, showUnread {
+                        Button("Jump to unread") { jump(unread.id, proxy: proxy) }
+                            .accessibilityIdentifier("thread.jump-unread")
+                    }
+                    if let newest = messages.last, !visibleMessageIDs.contains(newest.id), !(showUnread && newest.id == unread?.id) {
+                        Button("Jump to latest") { jump(newest.id, proxy: proxy) }
+                            .accessibilityIdentifier("thread.jump-latest")
+                    }
+                }
+                .font(OrcaTheme.ui(12)).buttonStyle(ReaderJumpButtonStyle())
+                .padding(12)
+            }
+        }
+        }
         .navigationTitle("Conversation").navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let detail {
+                    Menu {
+                        Button("Expand all") { expanded = Set(detail.messages.map(\.id)); showEarlier = true }
+                        Button("Collapse all") { expanded = Set(entryID.map { [$0] } ?? []); showEarlier = false }
+                    } label: {
+                        Image(systemName: "ellipsis").frame(width: 44, height: 44).contentShape(Rectangle())
+                    }.accessibilityLabel("Conversation actions").accessibilityIdentifier("thread.actions")
+                        .foregroundStyle(OrcaTheme.ink)
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             if let detail {
                 replyActions(detail).font(OrcaTheme.ui(12)).padding(.horizontal, 20).padding(.vertical, 12).background(OrcaTheme.paper)
@@ -87,6 +190,24 @@ struct ThreadView: View {
         }
     }
 
+    private func accept(_ loaded: ThreadDetail) {
+        if detail == nil {
+            let ordered = loaded.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
+            unreadEntryID = ordered.first(where: \.unread)?.id
+            entryID = (ordered.first(where: \.unread) ?? ordered.last)?.id
+            expanded = Set(entryID.map { [$0] } ?? [])
+        }
+        detail = loaded
+    }
+    private func jump(_ id: String, proxy: ScrollViewProxy) {
+        expanded.insert(id)
+        // Scroll after the expanded card participates in layout.
+        DispatchQueue.main.async {
+            proxy.scrollTo(id, anchor: .top)
+            focusedMessage = id
+        }
+    }
+
     func load() async {
         guard !state.demoMode else { error = "Demo conversations are list-only."; return }
         guard let client = state.client, state.selectedAccount?.id == accountId else { return }
@@ -94,12 +215,12 @@ struct ThreadView: View {
         func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == accountId }
         do {
             let loaded = try await client.thread(threadId, accountId: accountId)
-            guard identityIsCurrent() else { return }; detail = loaded; error = nil
+            guard identityIsCurrent() else { return }; accept(loaded); error = nil
             try? await state.cache.save(loaded, key: key)
-            guard identityIsCurrent() else { return }; try? await client.markRead(threadId, accountId: accountId)
+            guard identityIsCurrent() else { return }; try? await state.markThreadRead(threadId, accountID: accountId)
         } catch {
             guard identityIsCurrent() else { return }
-            if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; detail = cached; self.error = "Offline — showing saved conversation" }
+            if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
             else { self.error = error.localizedDescription }
         }
     }
@@ -124,3 +245,108 @@ struct ThreadView: View {
 }
 struct ShareSheet: UIViewControllerRepresentable { let items: [Any]; func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }; func updateUIViewController(_ controller: UIActivityViewController, context: Context) {} }
 
+
+private struct NativeReaderBody: View {
+    let html: String?
+    let text: String?
+    @State private var original = false
+    @State private var plain: Bool?
+    var body: some View {
+        let showPlain = plain ?? (text.map { ReaderQuoteParts.split($0).quoted != nil } ?? false)
+        VStack(alignment: .leading, spacing: 12) {
+            if let html, !html.isEmpty, !showPlain { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) }
+            else if let text {
+                let parts = ReaderQuoteParts.split(text)
+                Text(original ? text : parts.current).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled)
+                if !original, let quote = parts.quoted {
+                    DisclosureGroup("Show quoted history") { Text(quote).font(OrcaTheme.reader(20)).textSelection(.enabled) }
+                }
+                Button(original ? "Return to reading view" : "Show complete original text") { original.toggle() }.font(OrcaTheme.ui(12))
+            } else { Text("Readable body unavailable").foregroundStyle(OrcaTheme.muted) }
+            if let text, !text.isEmpty, let html, !html.isEmpty {
+                Button(showPlain ? "Formatted message" : "Plain text") { plain = !showPlain }.font(OrcaTheme.ui(12))
+            }
+        }
+    }
+}
+
+enum ReaderQuoteParts {
+    static func split(_ body: String) -> (current: String, quoted: String?) {
+        // Only a trailing marker followed entirely by quoted/blank lines folds.
+        // Keep offsets into the original String so CRLF and whitespace survive.
+        let pattern = #"(?im)^[ \t]*On .+wrote:[ \t]*\r?\n(?:[ \t]*>[^\r\n]*(?:\r?\n|$)|[ \t]*\r?\n)+\z"#
+        guard let expression = try? NSRegularExpression(pattern: pattern),
+              let match = expression.firstMatch(in: body, range: NSRange(body.startIndex..., in: body)),
+              match.range.location > 0,
+              let range = Range(match.range, in: body) else { return (body, nil) }
+        return (String(body[..<range.lowerBound]), String(body[range]))
+    }
+}
+
+
+private struct ReaderJumpButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.padding(.horizontal, 14).frame(minWidth: 44, minHeight: 44)
+            .foregroundStyle(OrcaTheme.ink)
+            .background(configuration.isPressed ? OrcaTheme.paper : OrcaTheme.surface, in: Capsule())
+            .overlay(Capsule().stroke(OrcaTheme.border))
+    }
+}
+private struct ReaderMessageFramesKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
+}
+enum ReaderNavigationVisibility {
+    static func isVisible(_ frame: CGRect, viewportHeight: CGFloat) -> Bool {
+        viewportHeight > 0 && frame.height > 0 && frame.maxY > 0 && frame.minY < viewportHeight
+    }
+}
+
+
+
+/// Image consent and bytes live only in this message's visible reader, never in the mail cache.
+private struct MessageImageBody: View {
+    @EnvironmentObject var state: AppState
+    let item: ThreadMessage
+    let accountId: String
+    @State private var html: String?
+    @State private var status: String?
+    @State private var loading = false
+    @State private var request: Task<Void, Never>?
+    @State private var generation = UUID()
+    private var sourceHash: String { SHA256.hash(data: Data((item.bodyHtml ?? "").utf8)).map { String(format: "%02x", $0) }.joined() }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if item.imageLoadAvailable == true {
+                if html == nil {
+                    Text("Images are blocked. Loading may tell the sender you opened this message.")
+                        .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                    Button(loading ? "Loading images…" : "Load images") { load() }
+                        .buttonStyle(.bordered).tint(OrcaTheme.accent).disabled(loading)
+                        .accessibilityIdentifier("message.load-images")
+                }
+                if let status { Text(status).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("message.images-status") }
+            }
+            NativeReaderBody(html: html ?? item.bodyHtml, text: item.bodyText)
+        }
+        .onDisappear { request?.cancel(); generation = UUID(); html = nil; status = nil; loading = false }
+    }
+    private func load() {
+        guard !loading, let client = state.client, state.selectedAccount?.id == accountId else { return }
+        let owner = state.ownerScope, revision = sourceHash, attempt = UUID()
+        generation = attempt; loading = true; status = nil
+        request = Task { @MainActor in
+            do {
+                let result = try await client.loadMessageImages(item.id, accountId: accountId)
+                guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                guard result.sourceHash == revision else { status = "Message changed. Reopen it before loading images."; loading = false; return }
+                if result.loaded > 0 { html = result.bodyHtml }
+                status = result.loaded > 0 ? "\(result.loaded) image\(result.loaded == 1 ? "" : "s") loaded." + (result.blocked > 0 ? " \(result.blocked) remain blocked." : "") : "Images could not be loaded. You can try again."
+            } catch {
+                guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                status = "Images could not be loaded. You can try again."
+            }
+            loading = false
+        }
+    }
+}

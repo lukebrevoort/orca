@@ -1,0 +1,22 @@
+bun test v1.3.14 (0d9b296a)
+
+perf-20261017/retention-regression.test.ts:
+ 5 |  for(let i=0;i<100;i++){
+ 6 |   const ref={accountId:'synthetic',threadId:`thread-${i}`};
+ 7 |   const loader=async()=>({thread:{id:ref.threadId},messages:[]}) as any;
+ 8 |   await cache.load(ref,loader);cache.markStale(ref);await cache.load(ref,loader);
+ 9 |  }
+10 |  expect((cache as any).generations.size).toBe(3);
+                                              ^
+error: expect(received).toBe(expected)
+
+Expected: 3
+Received: 100
+
+      at <anonymous> (/workspace/perf-20261017/retention-regression.test.ts:10:42)
+(fail) settled stale refreshes retain only the payload working set [6.10ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [40.00ms]

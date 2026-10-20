@@ -1,0 +1,12 @@
+@orca/shared test:  95 pass
+@orca/shared test:  0 fail
+@orca/shared test: Ran 95 tests across 18 files. [430.00ms]
+@orca/shared test: Exited with code 0
+@orca/api test:  744 pass
+@orca/api test:  0 fail
+@orca/api test: Ran 744 tests across 112 files. [99.57s]
+@orca/api test: Exited with code 0
+@orca/web test:  630 pass
+@orca/web test:  0 fail
+@orca/web test: Ran 630 tests across 55 files. [173.41s]
+@orca/web test: Exited with code 0

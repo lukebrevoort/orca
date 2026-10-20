@@ -1,0 +1,41 @@
+Sanitized failure context (bounded; full log remains in artifact):
+[fixture failure] No failure marker found; inspect the sanitized log tail/artifact.
+Synthetic checks exit code: 1; sanitized evidence: /tmp/tmpdgo60ubb/public
+Synthetic checks exit code: 0; sanitized evidence: /tmp/tmprll4fn35/public
+.FFF...F....
+======================================================================
+FAIL: test_counter_events_are_bounded (__main__.EvidenceTests.test_counter_events_are_bounded)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmp4yl4v5v6/test-export-evidence.py", line 63, in test_counter_events_are_bounded
+    self.assertEqual(output.getvalue().count('[fixture telemetry]'), 80)
+AssertionError: 0 != 80
+
+======================================================================
+FAIL: test_counter_telemetry_survives_long_logs_on_success_and_failure (__main__.EvidenceTests.test_counter_telemetry_survives_long_logs_on_success_and_failure) (status=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmp4yl4v5v6/test-export-evidence.py", line 46, in test_counter_telemetry_survives_long_logs_on_success_and_failure
+    self.assertIn('[counter-native] started', text)
+AssertionError: '[counter-native] started' not found in 'Synthetic checks exit code: 0; sanitized evidence: /tmp/tmp35gw2xxc/public\n'
+
+======================================================================
+FAIL: test_counter_telemetry_survives_long_logs_on_success_and_failure (__main__.EvidenceTests.test_counter_telemetry_survives_long_logs_on_success_and_failure) (status=65)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmp4yl4v5v6/test-export-evidence.py", line 47, in test_counter_telemetry_survives_long_logs_on_success_and_failure
+    self.assertIn('[counter-server] received', text)
+AssertionError: '[counter-server] received' not found in 'Sanitized failure context (bounded; full log remains in artifact):\n[fixture failure] 1: [counter-native] started [REDACTED] : :error: :\n[fixture failure] 2: noise\nSynthetic checks exit code: 65; sanitized evidence: /tmp/tmphj3tp9mr/public\n'
+
+======================================================================
+FAIL: test_heartbeat_excerpt_is_anchored_before_delayed_cleanup (__main__.EvidenceTests.test_heartbeat_excerpt_is_anchored_before_delayed_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmp4yl4v5v6/test-export-evidence.py", line 26, in test_heartbeat_excerpt_is_anchored_before_delayed_cleanup
+    self.assertIn('[counter-heartbeat] epoch_ms=100000', output.getvalue())
+AssertionError: '[counter-heartbeat] epoch_ms=100000' not found in 'Sanitized failure context (bounded; full log remains in artifact):\n[fixture failure] No failure marker found; inspect the sanitized log tail/artifact.\nSynthetic checks exit code: 65; sanitized evidence: /tmp/tmpnsimoxri/public\n'
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.092s
+
+FAILED (failures=4)

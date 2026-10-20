@@ -630,6 +630,13 @@ function syncNoop(path: string) {
 for (const mailbox of ["Inbox", "Signals"]) {
   test(`App routing refresh releases pending ${mailbox} pagination and installs usable canonical cursor`, async () => {
     seedPages(mailbox === "Signals");
+    if (mailbox === "Signals") {
+      // Notify is an attention preference, not an implicit move to this Space.
+      const catalog = await (await request("/v1/destinations")).json();
+      const current = await state();
+      await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "sender", address: "extra@example.com" }, destinationId: catalog.legacyDestinationIds.notify }) });
+      await refreshDestinations();
+    }
     const gate = deferred();
     let held = false;
     let delayedRoutingRead = false;
@@ -1091,7 +1098,7 @@ test("custom destination cannot save its search as a fallback Inbox filter", asy
   expect(document.querySelector(".pin-builder")).not.toBeNull();
 });
 
-test("rejected mark-read restores canonical destination unread state without changing another account", async () => {
+test("rejected mark-read preserves canonical destination unread state without changing another account", async () => {
   const readGate = deferred();
   let readRequested = false;
   intercept = async path => {
@@ -1103,7 +1110,7 @@ test("rejected mark-read restores canonical destination unread state without cha
   await act(async () => findRow("Mail a").click());
   await settle();
   expect(readRequested).toBe(true);
-  expect(findRow("Mail a").classList.contains("message-row-unread")).toBe(false);
+  expect(findRow("Mail a").classList.contains("message-row-unread")).toBe(true);
   expect(findRow("Mail b").classList.contains("message-row-unread")).toBe(true);
   await act(async () => readGate.release());
   for (let i = 0; i < 30 && !findRow("Mail a")?.classList.contains("message-row-unread"); i++) await settle();
@@ -1488,3 +1495,4 @@ test("App Start over removes recovery and empty reselected recovery clears busy 
   expect(document.querySelectorAll(".message-row")).toHaveLength(2);
   expect([...document.querySelectorAll<HTMLButtonElement>(".message-initial-select")].every(button => !button.disabled)).toBe(true);
 });
+

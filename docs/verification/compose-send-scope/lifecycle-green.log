@@ -1,0 +1,25 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/compose-send-lifecycle.test.tsx:
+(pass) account switch during create preserves the active writing and stops obsolete work [35.96ms]
+(pass) account switch during inspect preserves the active writing and stops obsolete work [492.41ms]
+(pass) account switch during update preserves the active writing and stops obsolete work [492.21ms]
+(pass) account switch during send preserves the active writing and stops obsolete work [16.03ms]
+(pass) draft switch during create preserves the active writing and stops obsolete work [16.10ms]
+(pass) draft switch during inspect preserves the active writing and stops obsolete work [490.55ms]
+(pass) draft switch during update preserves the active writing and stops obsolete work [490.99ms]
+(pass) draft switch during send preserves the active writing and stops obsolete work [16.19ms]
+(pass) return switch during create preserves the active writing and stops obsolete work [16.18ms]
+(pass) return switch during inspect preserves the active writing and stops obsolete work [490.69ms]
+(pass) return switch during update preserves the active writing and stops obsolete work [490.77ms]
+(pass) return switch during send preserves the active writing and stops obsolete work [16.24ms]
+(pass) unchanged scope still sends once and clears the completed draft [3.45ms]
+(pass) a send waiting for autosave cannot start delivery after scope changes [490.75ms]
+(pass) obsolete send completion cannot unlock a newer pending send [4.58ms]
+(pass) obsolete component send success cannot close a newly selected draft [68.79ms]
+(pass) obsolete component send failure cannot close a newly selected draft [40.58ms]
+
+ 17 pass
+ 0 fail
+ 78 expect() calls
+Ran 17 tests across 1 file. [4.04s]

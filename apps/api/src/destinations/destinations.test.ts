@@ -440,3 +440,76 @@ test("batch accepts the exact 50-conversation authority bound and applies a sing
     expect(s.batch(result.undo).state.destinations.find(d => d.id === clients.id)?.counts.total).toBe(0);
     f.sqlite.close();
 });
+
+test("Focus is attention, while explicit custom destinations, archive, safety, and Quiet remain authoritative", async () => {
+    const f = await setup(), s = service(f), inbox = s.list().fallbackDestinationId, archive = add(f, "Archive");
+    f.db.insert(senderAttentionRules).values({ id: "focus-only", accountId: "a", scope: "address", value: "maya@example.com", behavior: "focus", source: "user_choice" }).run();
+    expect(readThreadDestination(f.db, "owner", "a", "m1")?.destinationId).toBe(inbox);
+    expect(s.read("a", conversation).selection.effective.destinationId).toBe(inbox);
+    expect(s.read("a", sender).senders).toEqual([]);
+    const reader = createMailboxReader(f.sqlite);
+    const read = (view?: "focus") => reader.read({ authorization: { userId: "owner", accountIds: ["a"] }, query: { view, limit: 30 } }).response.messages;
+    expect(read("focus").map(m => m.id)).toEqual(["m2", "m1"]);
+    route(f, conversation, archive.id);
+    expect(read("focus").map(m => m.id)).toEqual(["m2"]);
+    expect(read().some(m => m.id === "m1")).toBe(false);
+    expect(reader.read({ authorization: { userId: "owner", accountIds: ["a"] }, query: { view: "all", limit: 30 } }).response.messages.some(m => m.id === "m1")).toBe(true);
+    route(f, sender, archive.id);
+    f.sqlite.query("UPDATE sender_attention_rules SET behavior='notify' WHERE id='focus-only'").run();
+    expect(s.read("a", sender).selection.effective.destinationId).toBe(archive.id);
+    expect(read("focus")).toEqual([]);
+    route(f, sender, null);
+    await f.save(conversation, "quiet");
+    expect(s.read("a", conversation).selection.effective.destinationId).not.toBe(inbox);
+    f.sqlite.close();
+});
+
+test("0051 upgrades derived Focus routing without rewriting stored placements or explicit protections", () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-focus-upgrade-")); folders.push(directory);
+    const oldFolder = join(directory, "migrations"), source = resolve(import.meta.dir, "../../drizzle");
+    mkdirSync(join(oldFolder, "meta"), { recursive: true });
+    const journal = JSON.parse(readFileSync(join(source, "meta/_journal.json"), "utf8"));
+    journal.entries = journal.entries.filter((e: { idx: number }) => e.idx < 51);
+    writeFileSync(join(oldFolder, "meta/_journal.json"), JSON.stringify(journal));
+    for (const e of journal.entries) copyFileSync(join(source, e.tag + ".sql"), join(oldFolder, e.tag + ".sql"));
+    const f = createDatabaseClient(join(directory, "upgrade.sqlite")); migrate(f.db, { migrationsFolder: oldFolder });
+    f.db.insert(users).values({ id: "owner", email: "owner@example.com" }).run();
+    f.db.insert(oauthAccounts).values({ id: "a", userId: "owner", provider: "gmail", providerId: "a", providerEmail: "a@example.com" }).run();
+    for (const id of ["implicit", "manual", "locked", "rule"]) {
+      f.db.insert(threads).values({ id, accountId: "a", providerThreadId: id }).run();
+      f.db.insert(emails).values({ id, accountId: "a", threadId: id, providerMessageId: id, fromAddress: "maya@example.com" }).run();
+    }
+    f.db.insert(senderAttentionRules).values({ id: "legacy-focus", accountId: "a", scope: "domain", value: "example.com", behavior: "focus", source: "user_choice" }).run();
+    const legacy = ":orca-compat:focus";
+    expect(readThreadDestination(f.db, "owner", "a", "implicit")?.destinationId).toBe(legacy);
+    f.sqlite.query("UPDATE organization_thread_lane_states SET manual_override_lane_id=? WHERE thread_id='manual'").run(legacy);
+    f.sqlite.query("UPDATE organization_thread_lane_states SET safety_locked=1,safety_lock_lane_id=? WHERE thread_id='locked'").run(legacy);
+    f.sqlite.query("UPDATE organization_thread_lane_states SET primary_lane_id=?,placement_source='rule_revision' WHERE thread_id='rule'").run(legacy);
+    const before = f.sqlite.query("SELECT * FROM organization_thread_lane_states ORDER BY thread_id").all();
+    migrate(f.db, { migrationsFolder: source });
+    expect(f.sqlite.query("SELECT * FROM organization_thread_lane_states ORDER BY thread_id").all()).toEqual(before);
+    const fallback = createDestinations(f.db, "owner").list().fallbackDestinationId;
+    expect(readThreadDestination(f.db, "owner", "a", "implicit")?.destinationId).toBe(fallback);
+    for (const id of ["manual", "locked", "rule"]) expect(readThreadDestination(f.db, "owner", "a", id)?.destinationId).toBe(legacy);
+    expect(f.sqlite.query("SELECT behavior FROM sender_attention_rules").get()).toEqual({ behavior: "focus" });
+    expect(f.sqlite.query("PRAGMA foreign_key_check").all()).toEqual([]);
+    f.sqlite.close();
+});
+
+test("Inbox catalog count uses the same thread, unread and provider-archive membership as Inbox rows", async () => {
+  const f = await setup(), s = service(f), inbox = s.list().fallbackDestinationId;
+  f.message("m6", "a", "maya@example.com", "m1");
+  f.sqlite.query("UPDATE emails SET is_read=1 WHERE id='m6'").run();
+  const reader = createMailboxReader(f.sqlite);
+  const read = () => reader.read({ authorization: { userId: "owner", accountIds: ["a", "b"] }, query: { limit: 30 } }).response.messages;
+  expect(s.list().destinations.find(d => d.id === inbox)?.counts).toEqual({ total: read().length, unread: read().filter(m => m.unread).length });
+  expect(read().find(m => m.id === "m6")?.unread).toBe(true);
+  f.sqlite.query("INSERT INTO labels(id,account_id,provider_label_id,name,type) VALUES ('inbox-a','a','INBOX','INBOX','system')").run();
+  // The old message, not the latest representative, holds INBOX membership.
+  f.sqlite.query("INSERT INTO email_labels(id,email_id,label_id) VALUES ('link-m1','m1','inbox-a')").run();
+  expect(read().map(m => m.id).sort()).toEqual(["m4", "m6"]);
+  expect(s.list().destinations.find(d => d.id === inbox)?.counts).toEqual({ total: 2, unread: 2 });
+  f.sqlite.query("DELETE FROM email_labels WHERE id='link-m1'").run();
+  expect(s.list().destinations.find(d => d.id === inbox)?.counts).toEqual({ total: 1, unread: 1 });
+  f.sqlite.close();
+});

@@ -1,0 +1,91 @@
+iOS fixture API: http://127.0.0.1:58131
+Synthetic connection details: /Users/luke/Documents/Codex/2026-10-16/task/homebase-private/pr260-repro/final-images-light/orca-ios-fixture-aEx4kj/connection.json
+Only fixture data is used. Provider send and draft operations are simulated.
+[counter-heartbeat] epoch_ms=1792444979876
+[counter-heartbeat] epoch_ms=1792444980879
+[counter-heartbeat] epoch_ms=1792444981882
+[counter-heartbeat] epoch_ms=1792444982885
+[counter-heartbeat] epoch_ms=1792444983888
+[counter-heartbeat] epoch_ms=1792444984890
+[counter-heartbeat] epoch_ms=1792444985892
+[counter-heartbeat] epoch_ms=1792444986908
+[counter-heartbeat] epoch_ms=1792444987911
+[counter-heartbeat] epoch_ms=1792444988914
+[counter-heartbeat] epoch_ms=1792444989918
+[counter-heartbeat] epoch_ms=1792444990921
+[counter-heartbeat] epoch_ms=1792444991925
+[counter-server] epoch_ms=1792444992291 id=5D79747A-D0C2-4711-BA74-580E43BB3F4D event=received
+[counter-server] epoch_ms=1792444992295 id=5D79747A-D0C2-4711-BA74-580E43BB3F4D event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792444992927
+[counter-heartbeat] epoch_ms=1792444993931
+[counter-heartbeat] epoch_ms=1792444994940
+[counter-heartbeat] epoch_ms=1792444995947
+[counter-heartbeat] epoch_ms=1792444996951
+[counter-heartbeat] epoch_ms=1792444997954
+[counter-heartbeat] epoch_ms=1792444998958
+[search-fixture-server] {"trace":"658e09c8-ba08-42d0-a7c8-341613076209","event":"received","epoch_ms":1792444999317,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"658e09c8-ba08-42d0-a7c8-341613076209","event":"response_ready","epoch_ms":1792444999349,"path":"/v1/destinations","status":200}
+[counter-heartbeat] epoch_ms=1792444999960
+[search-fixture-server] {"trace":"dc171f77-758c-4160-bd90-4846d348a19b","event":"received","epoch_ms":1792445000044,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"dc171f77-758c-4160-bd90-4846d348a19b","event":"response_ready","epoch_ms":1792445000066,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"cc1ce33c-46c1-4c26-a756-a0901a7e79b1","event":"received","epoch_ms":1792445000067,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"cc1ce33c-46c1-4c26-a756-a0901a7e79b1","event":"response_ready","epoch_ms":1792445000118,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445000964
+[counter-heartbeat] epoch_ms=1792445001967
+[counter-heartbeat] epoch_ms=1792445002971
+[counter-heartbeat] epoch_ms=1792445003971
+[search-fixture-server] {"trace":"6bdf6520-51f6-4b84-9fc8-506491c89643","event":"received","epoch_ms":1792445004053,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"6bdf6520-51f6-4b84-9fc8-506491c89643","event":"response_ready","epoch_ms":1792445004097,"path":"/v1/destinations","status":200}
+[counter-heartbeat] epoch_ms=1792445004976
+[counter-heartbeat] epoch_ms=1792445005980
+[counter-server] epoch_ms=1792445006091 id=609C9CA9-BD85-4C02-A248-366DC77BD712 event=received
+[counter-server] epoch_ms=1792445006091 id=609C9CA9-BD85-4C02-A248-366DC77BD712 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445006982
+[counter-heartbeat] epoch_ms=1792445007986
+[counter-server] epoch_ms=1792445008619 id=6EA6E983-8011-44D4-9BDA-5297A28932E3 event=received
+[counter-server] epoch_ms=1792445008619 id=6EA6E983-8011-44D4-9BDA-5297A28932E3 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445008988
+[search-fixture-server] {"trace":"41a9f23c-a3b8-45ac-bdef-5a552a5c6b2b","event":"received","epoch_ms":1792445009179,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"41a9f23c-a3b8-45ac-bdef-5a552a5c6b2b","event":"response_ready","epoch_ms":1792445009208,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"17b555ba-a1c6-4834-817b-0c30c0335b86","event":"received","epoch_ms":1792445009330,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"17b555ba-a1c6-4834-817b-0c30c0335b86","event":"response_ready","epoch_ms":1792445009355,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445009992
+[counter-heartbeat] epoch_ms=1792445010994
+[counter-heartbeat] epoch_ms=1792445011998
+[search-fixture-server] {"trace":"eb95a616-a500-45fa-9f1e-b80d111736e0","event":"received","epoch_ms":1792445012462,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"eb95a616-a500-45fa-9f1e-b80d111736e0","event":"response_ready","epoch_ms":1792445012508,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"f6a4b40a-5059-467d-9647-7298e641ee9f","event":"received","epoch_ms":1792445012587,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"f6a4b40a-5059-467d-9647-7298e641ee9f","event":"response_ready","epoch_ms":1792445012623,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445013006
+[counter-heartbeat] epoch_ms=1792445014010
+[counter-server] epoch_ms=1792445014433 id=32D85880-00EC-49FD-AC50-A02AAB631270 event=received
+[counter-server] epoch_ms=1792445014434 id=32D85880-00EC-49FD-AC50-A02AAB631270 event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445015011
+[counter-server] epoch_ms=1792445015329 id=279B961F-3BEA-46BC-90E7-D20384F8F95E event=received
+[counter-server] epoch_ms=1792445015329 id=279B961F-3BEA-46BC-90E7-D20384F8F95E event=response_ready status=200
+[counter-server] epoch_ms=1792445015333 id=A97B5741-B88E-4DDE-BDDC-FE6AF3BDF21C event=received
+[counter-server] epoch_ms=1792445015333 id=A97B5741-B88E-4DDE-BDDC-FE6AF3BDF21C event=response_ready status=200
+[counter-heartbeat] epoch_ms=1792445016015
+[search-fixture-server] {"trace":"25f87c6f-0765-4a2b-b981-4f979e7bc56e","event":"received","epoch_ms":1792445016573,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"25f87c6f-0765-4a2b-b981-4f979e7bc56e","event":"response_ready","epoch_ms":1792445016595,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"dcb02e82-a139-4b27-9636-bb088b73e0b7","event":"received","epoch_ms":1792445016709,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"dcb02e82-a139-4b27-9636-bb088b73e0b7","event":"response_ready","epoch_ms":1792445016734,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445017019
+[counter-heartbeat] epoch_ms=1792445018023
+[counter-heartbeat] epoch_ms=1792445019026
+[search-fixture-server] {"trace":"40f6038b-b4e5-4c44-bf74-4565bcb3dfda","event":"received","epoch_ms":1792445019314,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"40f6038b-b4e5-4c44-bf74-4565bcb3dfda","event":"response_ready","epoch_ms":1792445019340,"path":"/v1/destinations","status":200}
+[search-fixture-server] {"trace":"002ced35-1f12-4a93-b825-3cbfec75bccc","event":"received","epoch_ms":1792445019407,"path":"/v1/inbox","query":null,"view":"all"}
+[search-fixture-server] {"trace":"002ced35-1f12-4a93-b825-3cbfec75bccc","event":"response_ready","epoch_ms":1792445019438,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+[counter-heartbeat] epoch_ms=1792445020028
+[counter-heartbeat] epoch_ms=1792445021033
+[counter-heartbeat] epoch_ms=1792445022035
+[counter-heartbeat] epoch_ms=1792445023039
+[counter-heartbeat] epoch_ms=1792445024044
+[counter-heartbeat] epoch_ms=1792445025046
+[counter-heartbeat] epoch_ms=1792445026049
+[counter-heartbeat] epoch_ms=1792445027051
+[counter-heartbeat] epoch_ms=1792445028054
+[counter-heartbeat] epoch_ms=1792445029057
+[counter-heartbeat] epoch_ms=1792445030060
+[counter-heartbeat] epoch_ms=1792445031063

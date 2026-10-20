@@ -232,6 +232,11 @@ try {
   await scope.getByRole('textbox',{name:'Message body',exact:true}).fill(latestBody);
   await scope.locator('input[type=file]').setInputFiles([{name:'conflict-remove.txt',mimeType:'text/plain',buffer:Buffer.from('removed')},{name:'conflict-keep.txt',mimeType:'text/plain',buffer:Buffer.from('kept conflict bytes')}]);
   await scope.getByRole('button',{name:'Remove conflict-remove.txt',exact:true}).click();
+  const formattingBox = await scope.getByRole('toolbar', {name:'Formatting'}).boundingBox();
+  const conflictBox = await scope.getByRole('alert', {name:'Draft recovery choice'}).boundingBox();
+  assert(formattingBox && conflictBox, 'Formatting and recovery notice must have layout boxes');
+  assert(formattingBox.y + formattingBox.height <= conflictBox.y,
+    'Formatting toolbar must not obscure draft recovery text');
   await screenshot(page,`${theme}-conflict-latest-writing`);
   await scope.getByRole('button',{name:'Keep mine as a new draft',exact:true}).click();
   await scope.getByRole('alert',{name:'Draft recovery choice'}).waitFor({state:'hidden'});
@@ -270,6 +275,44 @@ try {
   await page.getByRole('button',{name:/^Compose(?:\s+C)?$/}).first().waitFor();
   scope=await newCompose(page);
   assert.equal(await scope.getByRole('textbox',{name:'Subject',exact:true}).inputValue(),'');
+  // Hold the first create acknowledgment while the user discards. The real
+  // synthetic API commits first; the controller cannot know its ID until release.
+  let releaseCreate, createStarted;
+  const createGate=new Promise(resolve=>{releaseCreate=resolve;});
+  const createRequested=new Promise(resolve=>{createStarted=resolve;});
+  let createdForDiscard;
+  const holdCreate=async route=>{
+   if(route.request().method()!=='POST') return route.continue();
+   const response=await route.fetch();
+   createdForDiscard=await response.json();
+   createStarted(); await createGate;
+   await route.fulfill({response});
+  };
+  await page.route('**/v1/drafts?*',holdCreate);
+  await scope.getByRole('textbox',{name:'Subject',exact:true}).fill(prefix+' discard during first save');
+  await scope.getByRole('textbox',{name:'Message body',exact:true}).fill('Synthetic writing to discard, never deliver.');
+  await createRequested;
+  const discard=scope.getByRole('button',{name:'Discard',exact:true});
+  await screenshot(page,`${theme}-discard-ready`);
+  await discard.hover(); await screenshot(page,`${theme}-discard-hover`);
+  await discard.focus(); await screenshot(page,`${theme}-discard-focus`);
+  page.once('dialog',dialog=>dialog.accept());
+  await discard.click();
+  const pendingDiscard=scope.getByRole('button',{name:'Discarding…',exact:true});
+  await pendingDiscard.waitFor();
+  assert(await pendingDiscard.isDisabled(),'Discard is single-flight');
+  assert(await scope.getByRole('button',{name:'Send',exact:true}).isDisabled(),'Send cannot overlap discard');
+  assert.equal(await scope.locator('[inert]').count(),1,'Writing is inert during discard');
+  await screenshot(page,`${theme}-discard-pending`);
+  releaseCreate();
+  await scope.waitFor({state:'hidden'});
+  await page.unroute('**/v1/drafts?*',holdCreate);
+  assert(!(await drafts(context,'first')).some(draft=>draft.id===createdForDiscard.id),'Discarded first save must be deleted remotely');
+  results.scenarios.push({theme,name:'discard-awaits-first-autosave-then-deletes',status:'passed',draftId:createdForDiscard.id});
+  scope=await newCompose(page);
+  assert.equal(await scope.getByRole('textbox',{name:'Subject',exact:true}).inputValue(),'');
+  // Chromium represents an empty contenteditable block as a line break.
+  assert.equal((await scope.getByRole('textbox',{name:'Message body',exact:true}).innerText()).trim(),'');
   const uncertainSubject=prefix+' uncertain'; const uncertainBody='Synthetic lost response.\n\nDo not deliver twice.';
   await scope.getByRole('textbox',{name:'Subject',exact:true}).fill(uncertainSubject);
   await scope.getByRole('textbox',{name:'Message body',exact:true}).fill(uncertainBody);
@@ -309,7 +352,7 @@ try {
  results.providerInvocations=results.deliveries.length;
  assert.equal(results.providerInvocations,8);
  results.finishedAt=new Date().toISOString();
- assert.equal(results.scenarios.length,14);
+ assert.equal(results.scenarios.length,16);
  await writeFile(join(out,'results.json'),JSON.stringify(results,null,2)+'\n');
  console.log(JSON.stringify({browserVersion:results.browserVersion,scenarios:results.scenarios,pageErrors:results.pageErrors},null,2));
 } catch(error) {

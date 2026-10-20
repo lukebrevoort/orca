@@ -47,6 +47,15 @@ struct SafeHTMLView: UIViewRepresentable {
             table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important;font:inherit}
             col,colgroup,th,td{width:auto!important;min-width:0!important;max-width:100%!important}
             th,td{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
+            /* Only API-validated presentation tables receive these classes.
+               Direct-child selectors leave nested data tables semantic. The
+               relative size follows the same Dynamic Type scale as body. */
+            .orca-mail-formatted{font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;font-size:0.8181818182em;line-height:1.55}
+            .orca-mail-formatted p{margin:0 0 0.85em}
+            .orca-mail-formatted h1,.orca-mail-formatted h2,.orca-mail-formatted h3{font-size:1.2em;line-height:1.3;margin:0.8em 0 0.5em}
+            table.orca-mail-layout,table.orca-mail-layout>tbody,table.orca-mail-layout>thead,table.orca-mail-layout>tfoot,table.orca-mail-layout>tr,table.orca-mail-layout>tbody>tr,table.orca-mail-layout>thead>tr,table.orca-mail-layout>tfoot>tr,table.orca-mail-layout>tr>td,table.orca-mail-layout>tbody>tr>td,table.orca-mail-layout>thead>tr>td,table.orca-mail-layout>tfoot>tr>td{display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important}
+            table.orca-mail-layout>tr>td,table.orca-mail-layout>tbody>tr>td,table.orca-mail-layout>thead>tr>td,table.orca-mail-layout>tfoot>tr>td{padding:0 0 0.5em!important}
+            .orca-mail-image-note{display:block;font-size:0.9em;line-height:1.4;margin:0.3em 0 0.65em;overflow-wrap:anywhere}
             </style>
             """ + html
             view.loadHTMLString(shell, baseURL: nil)

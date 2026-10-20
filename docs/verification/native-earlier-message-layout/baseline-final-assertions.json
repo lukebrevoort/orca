@@ -1,0 +1,17 @@
+{
+  "commit": "0a9ecd6f9db027ce0cf6ede004311b2567e197fe",
+  "text_frame": {
+    "y": 31.666666666666742,
+    "height": 385.66666666666663,
+    "width": 44,
+    "x": 156.16666666666666
+  },
+  "button_frame": {
+    "y": 32.33333333333337,
+    "height": 385.66666666666663,
+    "width": 106,
+    "x": 148
+  },
+  "text_majority_of_button": false,
+  "text_wider_than_tall": false
+}

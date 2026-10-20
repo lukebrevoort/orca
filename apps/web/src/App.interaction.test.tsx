@@ -1722,7 +1722,7 @@ describe("Desktop evidence and navigation", () => {
     const focus = navButtons.find((button) => button.textContent?.includes("Focus"))!;
     const custom = navButtons.find((button) => button.textContent?.includes("Orca launch"))!;
     await act(async () => { focus.click(); });
-    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("destination:focus");
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("focus");
     await act(async () => { custom.click(); });
     expect(new URL(browserWindow.location.href).searchParams.get("destination")).toStartWith("space:");
     await act(async () => {
@@ -2847,11 +2847,45 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
+  test("revalidates an expired prefetch even when its mailbox version is unchanged", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalNow = Date.now;
+    const selectedMessage = { ...inboxFixture[0]!, unread: false };
+    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [selectedMessage] });
+    let threadReadCount = 0;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) threadReadCount += 1;
+      return baseFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 20 && !browserWindow.document.querySelector("button.message-row"); index += 1) await waitFor(0);
+      await waitFor(150);
+      for (let index = 0; index < 20 && threadReadCount < 1; index += 1) await waitFor(0);
+      expect(threadReadCount).toBe(1);
+
+      const advanced = Date.now() + 31_000;
+      Date.now = () => advanced;
+      const row = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+      await act(async () => row.click());
+
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(selectedMessage.subject);
+      expect(threadReadCount).toBe(2);
+    } finally {
+      Date.now = originalNow;
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("revalidates a prefetched conversation when its mailbox version changes before opening", async () => {
     const originalFetch = globalThis.fetch;
     const selectedMessage = { ...inboxFixture[0]!, unread: false };
     const updatedMessage = {
       ...selectedMessage,
+      unread: true,
       subject: `${selectedMessage.subject} — new reply`,
       snippet: `${selectedMessage.snippet} A new reply arrived.`,
     };
@@ -2884,6 +2918,7 @@ describe("Inbox reader viewport restoration", () => {
             thread: { ...detail.thread, subject: updatedMessage.subject },
             messages: detail.messages.map((message) => ({
               ...message,
+              unread: true,
               subject: updatedMessage.subject,
               snippet: updatedMessage.snippet,
               bodyText: updatedMessage.snippet,
@@ -2915,6 +2950,7 @@ describe("Inbox reader viewport restoration", () => {
       expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
       for (let index = 0; index < 30 && browserWindow.document.querySelector("#reader-title")?.textContent !== updatedMessage.subject; index += 1) await waitFor(0);
       expect(threadReadCount).toBe(2);
+      expect(browserWindow.document.querySelector(".reader-catchup-count")?.textContent).toBe("1 unread at entry");
       expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedMessage.subject);
     } finally {
       globalThis.fetch = originalFetch;
@@ -2979,7 +3015,7 @@ describe("Inbox reader viewport restoration", () => {
       for (let index = 0; index < 30 && (updatedInboxReads < 1 || refreshButton().disabled); index += 1) await waitFor(0);
       await act(async () => (browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement).click());
       for (let index = 0; index < 30 && threadReadCount < 2; index += 1) await waitFor(0);
-      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      expect(browserWindow.document.querySelector(".reader-loading")).not.toBeNull();
       expect(threadReadCount).toBe(2);
 
       mailboxVersion = 2;
@@ -3374,53 +3410,131 @@ describe("Inbox reader viewport restoration", () => {
     }
   });
 
-  test("fetches fresh detail after explicit Retry and after selecting another thread", async () => {
-    const originalFetch = globalThis.fetch;
-    const failedMessage = inboxFixture[0]!;
-    const nextMessage: InboxMessage = {
-      ...failedMessage,
-      id: `${failedMessage.id}-next`,
-      threadId: `${failedMessage.threadId}-next`,
-      providerMessageId: `${failedMessage.providerMessageId}-next`,
-      subject: "A different selected conversation",
-      from: { name: "Next Reader", email: "next-reader@example.com" },
+  // Reuse PR252's reviewed Retry isolation cases; its silent-refresh work stays separate.
+  // Hold only the reader's 100 ms prefetch scheduler, not React/DOM work. Use
+  // real timer handles so production cleanup cancels superseded callbacks.
+  // Every caller must explicitly run a queued prefetch and restore the clock.
+  function controlReaderPrefetch() {
+    const schedule = globalThis.setTimeout;
+    const cancel = globalThis.clearTimeout;
+    const queued = new Map<ReturnType<typeof setTimeout>, () => void>();
+    globalThis.setTimeout = ((callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+      if (delay !== 100) return schedule(callback, delay, ...args);
+      const handle = schedule(() => {}, 2_147_483_647);
+      handle.unref();
+      queued.set(handle, () => callback(...args));
+      return handle;
+    }) as typeof setTimeout;
+    globalThis.clearTimeout = ((handle: ReturnType<typeof setTimeout>) => {
+      queued.delete(handle);
+      cancel(handle);
+    }) as typeof clearTimeout;
+    return {
+      async run() {
+        expect(queued.size).toBeGreaterThan(0);
+        const callbacks = [...queued.entries()];
+        queued.clear();
+        await act(async () => {
+          for (const [handle, callback] of callbacks) { cancel(handle); callback(); }
+        });
+      },
+      restore() {
+        for (const handle of queued.keys()) cancel(handle);
+        queued.clear();
+        globalThis.setTimeout = schedule;
+        globalThis.clearTimeout = cancel;
+      },
     };
-    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [failedMessage, nextMessage] });
-    const threadReads: string[] = [];
-    let failFirstDetail = true;
+  }
 
-    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(failedMessage.threadId)}&accountId=${encodeURIComponent(failedMessage.accountId)}`);
-    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      const url = new URL(String(input), browserWindow.location.href);
-      if (url.pathname.startsWith("/v1/threads/") && !url.pathname.endsWith("/read")) {
-        threadReads.push(`${url.pathname}${url.search}`);
-        if (failFirstDetail) {
-          failFirstDetail = false;
-          return apiError(503, "temporarily_unavailable", "Reader detail is temporarily unavailable");
+  async function readerSettles(check: () => boolean) {
+    for (let i = 0; i < 40 && !check(); i++) await waitFor(0);
+    expect(check()).toBe(true);
+  }
+
+  async function selectReaderFromHistory(message: InboxMessage) {
+    await act(async () => {
+      browserWindow.history.pushState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`);
+      browserWindow.dispatchEvent(new browserWindow.Event("popstate"));
+    });
+  }
+
+  for (const prefetchState of ["held", "completed", "in-flight"] as const) {
+    test(`fetches fresh detail after explicit Retry and after selecting another thread (${prefetchState} prefetch)`, async () => {
+      const originalFetch = globalThis.fetch;
+      const prefetch = controlReaderPrefetch();
+      const failedMessage = { ...inboxFixture[0]!, unread: false };
+      const nextMessage: InboxMessage = {
+        ...failedMessage, id: `${failedMessage.id}-next`, threadId: `${failedMessage.threadId}-next`,
+        providerMessageId: `${failedMessage.providerMessageId}-next`, subject: "A different selected conversation",
+        from: { name: "Next Reader", email: "next-reader@example.com" },
+      };
+      const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [failedMessage, nextMessage] });
+      const threadReads: string[] = [];
+      let primaryInboxReads = 0;
+      let resolvePrefetch!: (response: Response) => void;
+      const pendingPrefetch = new Promise<Response>(resolve => { resolvePrefetch = resolve; });
+      const selectedPath = `/v1/threads/${encodeURIComponent(failedMessage.threadId)}`;
+      const selectedReads = () => threadReads.filter(path => new URL(path, browserWindow.location.href).pathname === selectedPath);
+      browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+      globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(String(input), browserWindow.location.href);
+        if (url.pathname === "/v1/inbox" && url.searchParams.get("limit") === "100" && !url.searchParams.has("destinationId")) primaryInboxReads++;
+        if (url.pathname.startsWith("/v1/threads/") && !url.pathname.endsWith("/read")) {
+          expect(url.searchParams.get("accountId")).toBe(failedMessage.accountId);
+          threadReads.push(`${url.pathname}${url.search}`);
+          if (url.pathname === selectedPath) {
+            if (selectedReads().length === 1) return apiError(503, "temporarily_unavailable", "Reader detail is temporarily unavailable");
+            if (selectedReads().length === 2 && prefetchState === "in-flight") return pendingPrefetch;
+          }
         }
+        return baseFetch(input, init);
+      }) as typeof fetch;
+      try {
+        await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+        await readerSettles(() => primaryInboxReads === 2 && Boolean(browserWindow.document.querySelector(".message-row")));
+        await selectReaderFromHistory(failedMessage);
+        await readerSettles(() => Boolean(browserWindow.document.querySelector(".reader-state button")));
+        const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
+        expect(retry?.textContent).toBe("Try again");
+        expect(selectedReads()).toHaveLength(1);
+        if (prefetchState !== "held") {
+          // Model a user dwelling on the error until prefetch starts/completes,
+          // without relying on a wall-clock sleep racing React's act scheduler.
+          await prefetch.run();
+          expect(selectedReads()).toHaveLength(2);
+          expect(isSameNode(browserWindow.document.querySelector(".reader-state button"), retry)).toBe(true);
+        }
+        const beforeRetry = selectedReads().length;
+        await act(async () => retry.click());
+        await readerSettles(() => Boolean(browserWindow.document.querySelector(".reader-document:not(.reader-loading)")));
+        expect(selectedReads()).toHaveLength(beforeRetry + 1);
+        expect(selectedReads()).toHaveLength(prefetchState === "held" ? 2 : 3);
+        expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(failedMessage.subject);
+        expect(browserWindow.document.querySelector(".reader-state")).toBeNull();
+        if (prefetchState === "in-flight") {
+          const stale = await (await baseFetch(`${selectedPath}?accountId=${encodeURIComponent(failedMessage.accountId)}`)).json() as ThreadDetail;
+          await act(async () => resolvePrefetch(jsonResponse({ ...stale, thread: { ...stale.thread, subject: "Stale prefetch must not win" } })));
+          expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(failedMessage.subject);
+          expect(selectedReads()).toHaveLength(3);
+        }
+        if (prefetchState === "held") {
+          await prefetch.run();
+          expect(selectedReads()).toHaveLength(2);
+        }
+        await goBackToInbox();
+        await act(async () => messageRow(nextMessage.from.name ?? nextMessage.from.email).click());
+        await readerSettles(() => browserWindow.document.querySelector("#reader-title")?.textContent === nextMessage.subject);
+        expect(threadReads.filter(path => new URL(path, browserWindow.location.href).pathname === `/v1/threads/${encodeURIComponent(nextMessage.threadId)}`)).toEqual([
+          `/v1/threads/${encodeURIComponent(nextMessage.threadId)}?accountId=${encodeURIComponent(nextMessage.accountId)}`,
+        ]);
+        expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(nextMessage.subject);
+      } finally {
+        prefetch.restore();
+        globalThis.fetch = originalFetch;
       }
-      return baseFetch(input, init);
-    }) as typeof fetch;
-
-    try {
-      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
-      for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-state button"); index += 1) await waitFor(0);
-      const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
-      expect(retry?.textContent).toBe("Try again");
-
-      await act(async () => retry.click());
-      for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-document:not(.reader-loading)"); index += 1) await waitFor(0);
-      expect(threadReads.filter((path) => path.includes(encodeURIComponent(failedMessage.threadId)))).toHaveLength(2);
-
-      await goBackToInbox();
-      await act(async () => messageRow(nextMessage.from.name ?? nextMessage.from.email).click());
-      for (let index = 0; index < 20 && browserWindow.document.querySelector("#reader-title")?.textContent !== nextMessage.subject; index += 1) await waitFor(0);
-      expect(threadReads.some((path) => path.includes(encodeURIComponent(nextMessage.threadId)) && path.includes(`accountId=${encodeURIComponent(nextMessage.accountId)}`))).toBe(true);
-      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(nextMessage.subject);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
+    });
+  }
 
   test("labels a direct and reloaded production Focus reader from its synchronized destination", async () => {
     const originalFetch = globalThis.fetch;
@@ -3609,10 +3723,75 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Launch notes for Orca Mail");
   });
 
+  test("visible reader jump follows document scrolling after a mobile resize", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    workspace.style.overflowY = "auto";
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
+    workspace.scrollTop = 600;
+    await act(async () => { workspace.dispatchEvent(new browserWindow.Event("scroll") as unknown as Event); });
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(jump.hidden).toBe(false);
+    workspace.style.overflowY = "visible";
+    workspace.scrollTop = 0;
+    scrollPosition.y = 600;
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.Event("resize")); flushAnimationFrames(); });
+    await act(async () => jump.click());
+    expect(scrollPosition.y).toBe(0);
+    expect(browserWindow.document.activeElement?.id).toBe("reader-title");
+  });
+
+  test("document scrolling exposes reader jump-to-top on mobile", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    workspace.style.overflowY = "visible";
+    Object.defineProperty(browserWindow, "innerHeight", { configurable: true, value: 844 });
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 2400 });
+    workspace.scrollTop = 0;
+    scrollPosition.y = 600;
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.Event("scroll"));
+      flushAnimationFrames();
+    });
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(browserWindow.getComputedStyle(workspace as never).overflowY).toBe("visible");
+    expect(jump.hidden).toBe(false);
+    await act(async () => jump.click());
+    expect(scrollPosition.y).toBe(0);
+    expect(browserWindow.document.activeElement?.id).toBe("reader-title");
+  });
+
+  test("reader jump recomputes visibility when resizing between scroll containers", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    workspace.style.overflowY = "visible";
+    Object.defineProperty(browserWindow, "innerHeight", { configurable: true, value: 844 });
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
+    scrollPosition.y = 600;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("resize")));
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(jump.hidden).toBe(false);
+    workspace.style.overflowY = "auto";
+    workspace.scrollTop = 0;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("resize")));
+    expect(jump.hidden).toBe(true);
+    workspace.scrollTop = 600;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("resize")));
+    expect(jump.hidden).toBe(false);
+    // Mobile document position must not determine visibility on desktop.
+    scrollPosition.y = 0;
+    await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("scroll")));
+    expect(jump.hidden).toBe(false);
+  });
+
   test("observes and scrolls the desktop workspace for reader jump-to-top", async () => {
     await renderApp();
     await openMessage("Luke Brevoort");
     const workspace = desktopWorkspace();
+    workspace.style.overflowY = "auto";
     Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
     Object.defineProperty(workspace, "scrollTo", {
       configurable: true,
@@ -4310,5 +4489,185 @@ describe("BRE-418 canonical demo App journey", () => {
     await press("Inbox", ".desktop-sidebar-item"); await press("Family sample", ".desktop-sidebar-item");
     expect(browserWindow.document.querySelector("#saved-view-title")?.textContent).toBe("Family sample");
     expect(demoStore.getView(view.id)?.revision).toBe(2);
+  });
+});
+
+
+describe("unread Focus Inbox contract", () => {
+  beforeEach(installDom);
+  afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } restoreDom(); });
+  const fixture = (id: string, day: number, behavior: InboxMessage["attentionBehavior"], unread: boolean): InboxMessage => ({ ...demoMessages[0]!, id, threadId: id, subject: id, receivedAt: `2026-10-${String(day).padStart(2, "0")}T12:00:00.000Z`, attentionBehavior: behavior, unread, from: { name: id, email: `${id}@example.com` } });
+  const subjects = () => [...browserWindow.document.querySelectorAll("button.message-row h2")].map(node => node.textContent?.trim());
+
+  test.each(["light", "dark"] as const)("renders one compact timeline without attention headers in %s", async theme => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    const messages = [fixture("read-focus", 2, "focus", false), fixture("notify-old", 1, "notify", true), fixture("normal-new", 10, "normal", false), fixture("focus-new", 4, "focus", true)];
+    await renderApp(defaultReaderPreferences, false, { theme, initialDemoMessages: messages });
+    expect(subjects()).toEqual(["focus-new", "notify-old", "normal-new", "read-focus"]);
+    expect(browserWindow.document.querySelector(".stream-attention-label")).toBeNull();
+    expect(browserWindow.document.querySelectorAll(".attention-badge")).toHaveLength(4);
+  });
+
+  test("opening unread Focus demotes it by date on return while retaining its Focus category", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    await renderApp(defaultReaderPreferences, false, { initialDemoMessages: [fixture("focus-old", 2, "focus", true), fixture("normal-new", 10, "normal", false)], theme: "light" });
+    expect(subjects()).toEqual(["focus-old", "normal-new"]);
+    await openMessage("focus-old");
+    await goBackToInbox();
+    expect(subjects()).toEqual(["normal-new", "focus-old"]);
+    const row = messageRow("focus-old");
+    expect(row.classList.contains("message-row-unread")).toBe(false);
+    expect(row.querySelector(".attention-badge")?.textContent).toBe("Keep in focus");
+  });
+
+  test("Focus demo membership matches Inbox, including latest sent replies but excluding archived threads", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=focus");
+    const inbox = fixture("inbox-focus", 2, "focus", true);
+    const sentReply = { ...fixture("latest-sent", 5, "focus", false), threadId: inbox.threadId, labels: ["SENT"] };
+    const archived = { ...fixture("archived-focus", 10, "focus", true), labels: [] };
+    const olderFocus = fixture("old-focus-now-normal", 1, "focus", true);
+    const latestNormal = { ...fixture("latest-normal", 8, "normal", false), threadId: olderFocus.threadId };
+    await renderApp(defaultReaderPreferences, false, { initialDemoMessages: [inbox, sentReply, archived, olderFocus, latestNormal, fixture("quiet", 6, "quiet", true), fixture("hidden", 7, "hidden", true)], theme: "light" });
+    expect(subjects()).toEqual(["latest-sent"]);
+    expect(messageRow("latest-sent").classList.contains("message-row-unread")).toBe(true);
+  });
+
+  test.each([false, true])("captures unread before mark-read and cancels abandoned entry (cancel=%s)", async cancelled => {
+    browserWindow.history.replaceState({}, "", "/?destination=inbox");
+    const message = { ...fixture("catchup-race", 2, "normal", true), accountId: accountFixture.id };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] });
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const events: string[] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname.endsWith("/read")) { events.push("mark-read"); return new Response(null, { status: 204 }); }
+      if (url.pathname === `/v1/threads/${message.threadId}`) {
+        await gate;
+        const response = await base(input, init);
+        const detail = await response.json() as ThreadDetail;
+        events.push("detail");
+        return jsonResponse({ ...detail, messages: [0,1,2].map(i => ({ ...detail.messages[0]!, id: `race-${i}`, unread: i > 0, receivedAt: new Date(Date.UTC(2026,9,2,i)).toISOString() })) });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i=0;i<30 && !browserWindow.document.querySelector("button.message-row");i++) await waitFor(0);
+    await openMessage("catchup-race");
+    expect(events).toEqual([]);
+    if (cancelled) await goBackToInbox();
+    await act(async () => release());
+    for (let i=0;i<30 && !events.includes("mark-read");i++) await waitFor(0);
+    if (cancelled) { expect(events).not.toContain("mark-read"); return; }
+    expect(events.slice(0,2)).toEqual(["detail", "mark-read"]);
+    expect(browserWindow.document.querySelector(".reader-catchup-count")?.textContent).toBe("2 unread at entry");
+    expect(browserWindow.document.querySelector('[aria-controls="reader-card-race-1"]')?.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  test.each([true, false])("pending read mutation rejects older pages and preserves unread on failure (success=%s)", async succeeded => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    const focus = { ...fixture("focus-old", 2, "focus", true), accountId: accountFixture.id };
+    const normal = { ...fixture("normal-new", 10, "normal", false), accountId: accountFixture.id };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [focus, normal] });
+    let releasePage!: () => void, releaseRead!: () => void;
+    const pageGate = new Promise<void>(resolve => { releasePage = resolve; });
+    const readGate = new Promise<void>(resolve => { releaseRead = resolve; });
+    let readStarted = false, readSettled = false, pageStarted = false, canonicalReloads = 0;
+    const response = (messages: InboxMessage[], nextCursor: string | null) => jsonResponse({ accounts: [accountFixture], messages, nextCursor, counts: { attention: { focus: 1, normal: 1, quiet: 0, hidden: 0, all: 2 }, classification: { likely_human: 2, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 2 } } });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname.endsWith("/read") && init?.method === "PATCH") {
+        readStarted = true;
+        await readGate;
+        readSettled = true;
+        return succeeded ? new Response(null, { status: 204 }) : jsonResponse({ error: "Read update failed" }, 503);
+      }
+      if (url.pathname === "/v1/inbox") {
+        if (url.searchParams.has("cursor")) { pageStarted = true; await pageGate; return response([focus], null); }
+        if (readSettled) { if (!url.searchParams.has("destinationId")) canonicalReloads += 1; return jsonResponse({ error: "Canonical reload unavailable" }, 503); }
+        return response([focus, normal], "older-page");
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i = 0; i < 20 && !subjects().includes("focus-old"); i++) await waitFor(0);
+    const loadMore = [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent === "Load more messages")!;
+    await act(async () => loadMore.click());
+    expect(pageStarted).toBe(true);
+    await openMessage("focus-old");
+    expect(readStarted).toBe(true);
+    await act(async () => releasePage());
+    await waitFor(0);
+    await act(async () => releaseRead());
+    await waitFor(0);
+    await goBackToInbox();
+    expect(canonicalReloads).toBeGreaterThan(0);
+    expect(messageRow("focus-old").classList.contains("message-row-unread")).toBe(!succeeded);
+    expect(subjects()).toEqual(succeeded ? ["normal-new", "focus-old"] : ["focus-old", "normal-new"]);
+  });
+
+  test("sidebar Focus lens opens Inbox intersection while a custom Focus Space keeps its own destination", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    const focus = { ...fixture("inbox-focus", 4, "focus", true), accountId: accountFixture.id };
+    const custom = { ...fixture("custom-space-mail", 10, "normal", false), accountId: accountFixture.id };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [focus, custom] });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/destinations") {
+        const catalog = destinationCatalogFixture([focus, custom]);
+        catalog.destinations = catalog.destinations.map(item => item.id === "focus" ? { ...item, name: "Focus (legacy)" } : item);
+        catalog.destinations.push({ ...catalog.destinations[1]!, id: "manual-focus", name: "Focus", position: 9 });
+        return jsonResponse(catalog);
+      }
+      if (url.pathname === "/v1/inbox") {
+        const messages = url.searchParams.get("destinationId") === "manual-focus" ? [custom] : url.searchParams.get("destinationId") === "inbox" ? [focus] : [];
+        return jsonResponse({ accounts: [accountFixture], messages, nextCursor: null, counts: { attention: { focus: 1, normal: 0, quiet: 0, hidden: 0, all: 1 }, classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 } } });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    await waitFor(0);
+    const focusButtons = () => [...browserWindow.document.querySelectorAll(".desktop-sidebar-content .desktop-sidebar-item")].filter(button => [...button.querySelectorAll("span")].some(span => span.textContent === "Focus"));
+    expect(focusButtons()).toHaveLength(2);
+    await act(async () => (focusButtons()[0] as unknown as HTMLButtonElement).click());
+    await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("focus");
+    expect(subjects()).toEqual(["inbox-focus"]);
+    await act(async () => (focusButtons()[1] as unknown as HTMLButtonElement).click());
+    await waitFor(0);
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("destination:manual-focus");
+    expect(subjects()).toEqual(["custom-space-mail"]);
+  });
+
+  test("Focus uses Inbox membership and view-specific pagination, never the wider mail cache", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=focus");
+    const focus = { ...fixture("focus-inbox", 4, "focus", true), accountId: accountFixture.id };
+    const notify = { ...fixture("notify-inbox", 3, "notify", true), accountId: accountFixture.id };
+    const archived = { ...fixture("archived-focus", 10, "focus", true), accountId: accountFixture.id, labels: [] };
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [focus, notify, archived] });
+    const queries: URL[] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/inbox") {
+        queries.push(url);
+        const scopedFocus = url.searchParams.get("destinationId") === "inbox" && url.searchParams.get("view") === "focus";
+        const messages = scopedFocus ? (url.searchParams.has("cursor") ? [{ ...focus, id: "focus-updated", unread: false }, notify] : [focus]) : [archived];
+        return jsonResponse({ accounts: [accountFixture], messages, nextCursor: scopedFocus && !url.searchParams.has("cursor") ? "focus-page-2" : null, counts: { attention: { focus: 2, normal: 0, quiet: 0, hidden: 0, all: 2 }, classification: { likely_human: 2, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 2 } } });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i = 0; i < 20 && !subjects().includes("focus-inbox"); i++) await waitFor(0);
+    expect(subjects()).toEqual(["focus-inbox"]);
+    expect(queries.some(url => url.searchParams.get("view") === "focus" && url.searchParams.get("destinationId") === "inbox")).toBe(true);
+    const loadMore = [...browserWindow.document.querySelectorAll("button")].find(button => button.textContent?.includes("Load more"));
+    expect(loadMore).toBeDefined();
+    await act(async () => loadMore!.click());
+    await waitFor(0);
+    expect(subjects()).toEqual(["notify-inbox", "focus-inbox"]);
+    const page = queries.find(url => url.searchParams.has("cursor"));
+    expect(page?.searchParams.get("view")).toBe("focus");
+    expect(page?.searchParams.get("destinationId")).toBe("inbox");
+    expect(subjects()).not.toContain("archived-focus");
   });
 });
