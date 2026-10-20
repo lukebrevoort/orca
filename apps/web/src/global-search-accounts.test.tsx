@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { inboxFixture, type MailAccount, type OrganizationCollection } from "@orca/shared";
+import { inboxFixture, metadataSearchReceipt, type MailAccount, type OrganizationCollection } from "@orca/shared";
 import { demoAccount } from "./demo-data";
 import { GlobalMailSearch, openMailSearch, openMailSearchFilter } from "./global-search";
 import { TopLayerProvider } from "./top-layer";
@@ -41,7 +41,7 @@ function take(path: string) { const i = pending.findIndex(r => r.url.startsWith(
 async function respond(request: Pending, body: unknown, status = 200) { await act(async () => request.resolve(Response.json(body, { status }))); await flush(); }
 function result(accounts: MailAccount[]) {
   const messages = accounts.map(account => ({ ...inboxFixture[0]!, id: `message-${account.id}`, threadId: `thread-${account.id}`, accountId: account.id, subject: `${account.id} conversation` }));
-  return { accounts, messages, nextCursor: null, counts: { attention: { focus: 0, normal: messages.length, quiet: 0, hidden: 0, all: messages.length }, classification: { likely_human: messages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: messages.length } } };
+  return { search: metadataSearchReceipt, accounts, messages, nextCursor: null, counts: { attention: { focus: 0, normal: messages.length, quiet: 0, hidden: 0, all: messages.length }, classification: { likely_human: messages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: messages.length } } };
 }
 function options(index = 2) { return [...browser.document.querySelectorAll(".global-mail-search-filters select")[index]!.querySelectorAll("option")].map(o => o.value); }
 async function selectAccount(value: string) { const select = browser.document.querySelector(".global-mail-search-filters")!.querySelectorAll("select")[2]!; await act(async () => { select.value = value; select.dispatchEvent(new browser.Event("change", { bubbles: true })); }); await flush(); }
@@ -50,7 +50,7 @@ const collectionResponse = { workspaceId: "workspace", accountIds: [first.id, se
 for (const order of ["accounts-first", "search-first"]) test(`full account choices survive scoped results in ${order} response order`, async () => {
   await mount(first.id);
   const accounts = take("/v1/accounts"), search = take("/v1/inbox?");
-  expect(search.url).toBe("/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first");
+  expect(search.url).toBe("/v1/inbox?limit=100&classification=all&searchMode=metadata&view=all&query=conversation&accountId=first");
   if (order === "accounts-first") await respond(accounts, { items: [first, second], nextCursor: null });
   await respond(search, result([first]));
   if (order === "search-first") await respond(accounts, { items: [first, second], nextCursor: null });
@@ -58,7 +58,7 @@ for (const order of ["accounts-first", "search-first"]) test(`full account choic
   expect(options()).toEqual(["", first.id, second.id]);
   expect(browser.document.querySelector(".global-mail-result-list")?.textContent).toContain("first conversation");
   await selectAccount(second.id);
-  const next = take("/v1/inbox?"); expect(next.url).toBe("/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second");
+  const next = take("/v1/inbox?"); expect(next.url).toBe("/v1/inbox?limit=100&classification=all&searchMode=metadata&view=all&query=conversation&accountId=second");
   await respond(next, result([second]));
   expect(options()).toEqual(["", first.id, second.id]);
   expect(browser.document.querySelector(".global-mail-result-list")?.textContent).toContain("second conversation");
