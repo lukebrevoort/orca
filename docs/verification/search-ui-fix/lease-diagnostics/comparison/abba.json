@@ -1,0 +1,30 @@
+[
+  {
+    "case": 0,
+    "revision": "base",
+    "exit": 0,
+    "wall": 0.6714149800000087,
+    "log": "/tmp/orca-pr261-lease/0-base.log"
+  },
+  {
+    "case": 1,
+    "revision": "head",
+    "exit": 0,
+    "wall": 0.48454160000028423,
+    "log": "/tmp/orca-pr261-lease/1-head.log"
+  },
+  {
+    "case": 2,
+    "revision": "head",
+    "exit": 0,
+    "wall": 0.42447105399969587,
+    "log": "/tmp/orca-pr261-lease/2-head.log"
+  },
+  {
+    "case": 3,
+    "revision": "base",
+    "exit": 0,
+    "wall": 0.4807404879998103,
+    "log": "/tmp/orca-pr261-lease/3-base.log"
+  }
+]
