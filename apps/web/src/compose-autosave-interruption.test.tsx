@@ -154,3 +154,25 @@ test("untouched new empty composer does not create a remote draft", async () => 
   expect(controller.draft.body).toBe("");
   expect(mutations).toHaveLength(0);
 });
+
+for (const revision of [1, 2]) test(`empty checkpoint cannot erase a different draft at revision ${revision}`, async () => {
+  server = { ...server, revision }; available = [server];
+  await render();
+  const originalId = controller.draft.id;
+  await act(async () => controller.updateDraft({ to: [], cc: [], bcc: [], subject: "", body: "" }));
+  await act(async () => root.unmount());
+  // Another device removes the original; the list returns unrelated writing
+  // whose revision is equal to or older than the original checkpoint.
+  server = { ...server, id: "different-draft", revision: 1, subject: "Other writing", body: { text: "Other draft must survive", html: null } };
+  available = [server];
+  root = createRoot(browser.document.createElement("div") as unknown as Element);
+  await render(); await waitSave();
+  expect(server.body.text).toBe("Other draft must survive");
+  expect(mutations).toHaveLength(0);
+  expect(controller.draft.id).toBe(originalId);
+  expect(controller.draft.body).toBe("");
+  expect(controller.conflict?.server.id).toBe("different-draft");
+  available = [{ ...server }]; await render(); await waitSave();
+  expect(mutations).toHaveLength(0);
+  expect(server.subject).toBe("Other writing");
+});
