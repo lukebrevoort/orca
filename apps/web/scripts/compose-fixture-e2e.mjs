@@ -156,6 +156,8 @@ try {
   assert.equal((await page.getByRole('textbox',{name:'Message body',exact:true}).innerText()).trim(),'');
   assert.equal(await page.getByRole('button',{name:'Remove maya@example.com from To',exact:true}).count(),0);
   await screenshot(page,`${theme}-cleared-draft-after-reload`);
+  // Empty drafts have no Discard control; make cleanup explicit through the UI.
+  await earlySubject.fill(recoveredSubject);
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Discard',exact:true}).click();
   await page.locator('.compose-workspace-panel').waitFor({state:'hidden'});

@@ -1,0 +1,42 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/compose-autosave-interruption.test.tsx:
+(pass) latest body reaches API when drafts list does not interrupt autosave debounce [1004.46ms]
+(pass) latest body reaches API when drafts list refreshes during autosave debounce [985.13ms]
+(pass) a locally checkpointed edit is saved remotely after controller remount [503.70ms]
+(pass) latest body is reported as saving until its actual remote acknowledgment [502.20ms]
+(pass) already-synced drafts-list refresh makes no duplicate mutation [483.90ms]
+134 |   available = [{ ...server }]; await render();
+135 |   available = [{ ...server }]; await render();
+136 |   expect(controller.draft.body).toBe("");
+137 |   expect(controller.conflict).toBeNull();
+138 |   await waitSave();
+139 |   expect(server.body.text).toBe("");
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: ""
+Received: "Initial saved writing"
+
+      at <anonymous> (/workspace/orca-oct21/apps/web/src/compose-autosave-interruption.test.tsx:139:28)
+(fail) clearing all saved writing persists after repeated list refresh [485.41ms]
+131 |     await act(async () => root.unmount());
+132 |     root = createRoot(browser.document.createElement("div") as unknown as Element);
+133 |   }
+134 |   available = [{ ...server }]; await render();
+135 |   available = [{ ...server }]; await render();
+136 |   expect(controller.draft.body).toBe("");
+                                      ^
+error: expect(received).toBe(expected)
+
+Expected: ""
+Received: "Initial saved writing"
+
+      at <anonymous> (/workspace/orca-oct21/apps/web/src/compose-autosave-interruption.test.tsx:136:33)
+(fail) clearing all saved writing persists after interrupted debounce and remount [4.46ms]
+(pass) untouched new empty composer does not create a remote draft [482.92ms]
+
+ 6 pass
+ 2 fail
+ 39 expect() calls
+Ran 8 tests across 1 file. [4.77s]
