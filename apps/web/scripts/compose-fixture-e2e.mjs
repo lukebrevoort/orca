@@ -139,6 +139,23 @@ try {
   await page.locator('.compose-workspace-panel').waitFor({state:'hidden'});
   await newCompose(page);
   assert.equal(await earlySubject.inputValue(),recoveredSubject);
+  // Clearing a saved draft is an edit, including when Close interrupts debounce.
+  await earlySubject.fill('');
+  await page.getByRole('button',{name:'Remove maya@example.com from To',exact:true}).click();
+  await page.getByRole('textbox',{name:'Message body',exact:true}).fill('');
+  await page.getByRole('button',{name:'Close panel',exact:true}).click();
+  await newCompose(page);
+  await poll(async()=> {
+   const empty=await api(context,`/v1/drafts/${seeded.id}?accountId=first`);
+   return empty.subject==='' && empty.body.text==='' && empty.to.length===0 && empty.providerSyncStatus==='synced';
+  },'Cleared saved draft was not persisted');
+  await page.reload();
+  await page.locator('.compose-workspace-panel').waitFor();
+  await page.getByText('Saved to Orca and Gmail',{exact:true}).waitFor();
+  assert.equal(await earlySubject.inputValue(),'');
+  assert.equal((await page.getByRole('textbox',{name:'Message body',exact:true}).innerText()).trim(),'');
+  assert.equal(await page.getByRole('button',{name:'Remove maya@example.com from To',exact:true}).count(),0);
+  await screenshot(page,`${theme}-cleared-draft-after-reload`);
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Discard',exact:true}).click();
   await page.locator('.compose-workspace-panel').waitFor({state:'hidden'});
