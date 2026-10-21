@@ -123,3 +123,34 @@ test("already-synced drafts-list refresh makes no duplicate mutation", async () 
   expect(mutations).toHaveLength(0);
   expect(controller.saveMessage).toBe("Saved to Orca and Gmail");
 });
+
+for (const remount of [false, true]) test(`clearing all saved writing persists after ${remount ? "interrupted debounce and remount" : "repeated list refresh"}`, async () => {
+  await render();
+  await act(async () => controller.updateDraft({ to: [], cc: [], bcc: [], subject: "", body: "" }));
+  if (remount) {
+    await act(async () => root.unmount());
+    root = createRoot(browser.document.createElement("div") as unknown as Element);
+  }
+  available = [{ ...server }]; await render();
+  available = [{ ...server }]; await render();
+  expect(controller.draft.body).toBe("");
+  expect(controller.conflict).toBeNull();
+  await waitSave();
+  expect(server.body.text).toBe("");
+  expect(server.subject).toBe("");
+  expect(server.to).toEqual([]);
+  expect(mutations.map(item => item.method)).toEqual(["PATCH"]);
+  expect(controller.saveMessage).toBe("Saved to Orca and Gmail");
+  await act(async () => root.unmount());
+  root = createRoot(browser.document.createElement("div") as unknown as Element);
+  available = [{ ...server }]; await render(); await waitSave();
+  expect(controller.draft.body).toBe("");
+  expect(mutations).toHaveLength(1);
+});
+
+test("untouched new empty composer does not create a remote draft", async () => {
+  available = [];
+  await render(); await waitSave();
+  expect(controller.draft.body).toBe("");
+  expect(mutations).toHaveLength(0);
+});
