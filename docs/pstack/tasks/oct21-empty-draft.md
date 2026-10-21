@@ -10,3 +10,7 @@
 - Baseline regression: test-only e007d04 (full SHA recorded in final evidence). Two failures, six passes. [Retained log](../../verification/oct21-empty-draft/baseline-regression.log).
 - Privacy: synthetic example.com recipients, fresh loopback fixture/database/browser; no real mail. No API/schema/native/UI styling change.
 - Next: focused and aggregate checks, exact committed browser trial, independent review, draft publication and hosted checks. No merge/deploy.
+
+## Verified checkpoint
+
+Final executable: `e863e1358358fba87afa1aee2f9480c511ea6d7a`. Independent reviewer `/root/review` approved this exact diff; 8 independent tests/53 assertions. Owner 34 focused tests/195 assertions, all workspace typechecks/build and exact-commit browser trial passed. See [evidence](../../verification/oct21-empty-draft/README.md) for failures, screenshots, limits and review dispositions. Initial aggregate had one unchanged Undo-test failure; baseline/candidate isolated suites both passed 46/46. Fresh aggregate and hosted checks pending; status remains running. No held work modified.
