@@ -1,0 +1,44 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/compose-autosave-interruption.test.tsx:
+(pass) latest body reaches API when drafts list does not interrupt autosave debounce [1002.62ms]
+(pass) latest body reaches API when drafts list refreshes during autosave debounce [986.30ms]
+(pass) a locally checkpointed edit is saved remotely after controller remount [503.41ms]
+(pass) latest body is reported as saving until its actual remote acknowledgment [502.58ms]
+(pass) already-synced drafts-list refresh makes no duplicate mutation [483.90ms]
+(pass) clearing all saved writing persists after repeated list refresh [967.46ms]
+(pass) clearing all saved writing persists after interrupted debounce and remount [967.67ms]
+(pass) untouched new empty composer does not create a remote draft [483.78ms]
+165 |   // whose revision is equal to or older than the original checkpoint.
+166 |   server = { ...server, id: "different-draft", revision: 1, subject: "Other writing", body: { text: "Other draft must survive", html: null } };
+167 |   available = [server];
+168 |   root = createRoot(browser.document.createElement("div") as unknown as Element);
+169 |   await render(); await waitSave();
+170 |   expect(server.body.text).toBe("Other draft must survive");
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: "Other draft must survive"
+Received: ""
+
+      at <anonymous> (/workspace/orca-oct21/apps/web/src/compose-autosave-interruption.test.tsx:170:28)
+(fail) empty checkpoint cannot erase a different draft at revision 1 [502.53ms]
+165 |   // whose revision is equal to or older than the original checkpoint.
+166 |   server = { ...server, id: "different-draft", revision: 1, subject: "Other writing", body: { text: "Other draft must survive", html: null } };
+167 |   available = [server];
+168 |   root = createRoot(browser.document.createElement("div") as unknown as Element);
+169 |   await render(); await waitSave();
+170 |   expect(server.body.text).toBe("Other draft must survive");
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: "Other draft must survive"
+Received: ""
+
+      at <anonymous> (/workspace/orca-oct21/apps/web/src/compose-autosave-interruption.test.tsx:170:28)
+(fail) empty checkpoint cannot erase a different draft at revision 2 [501.64ms]
+
+ 8 pass
+ 2 fail
+ 55 expect() calls
+Ran 10 tests across 1 file. [7.24s]

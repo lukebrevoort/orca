@@ -14,3 +14,7 @@
 ## Verified checkpoint
 
 Final executable: `e863e1358358fba87afa1aee2f9480c511ea6d7a`. Independent reviewer `/root/review` approved this exact diff; 8 independent tests/53 assertions. Owner 34 focused tests/195 assertions, all workspace typechecks/build and exact-commit browser trial passed. See [evidence](../../verification/oct21-empty-draft/README.md) for failures, screenshots, limits and review dispositions. Initial aggregate had one unchanged Undo-test failure; baseline/candidate isolated suites both passed 46/46. Fresh aggregate and hosted checks pending; status remains running. No held work modified.
+
+## Additional review gate
+
+User subsequently authorized merging #264 only after an additional independent review. Fresh reviewer `/root/additional_review` found and reproduced cross-draft erasure at 77bec66; merge held. Test-only `4e65052eab114a5b4818f0d29ba17f792c65e1d4` reproduces two failures. Corrected executable `9a51fec7927071419533c557c178702179f422fc` requires conflict for different IDs with different contents; fresh reviewer approved after independent regression checks. [Additional evidence](../../verification/oct21-empty-draft/additional-review/README.md). Status running pending final hosted checks; no merge yet at this checkpoint. PR metadata will retain final merge/check results without a redundant evidence-only CI push.
