@@ -601,7 +601,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         attachmentsDirtyRef.current = false;
         serverAttachmentsRef.current = latest.attachments;
         lastRemoteSignatureRef.current = remoteContentSignature(serverDraft);
-        if (remoteContentSignature(local) !== lastRemoteSignatureRef.current && (local.revision === null || latest.revision > local.revision)) {
+        // Revisions order edits only within one draft. A same-scope fallback
+        // with another ID must never silently replace its writing with ours.
+        if (remoteContentSignature(local) !== lastRemoteSignatureRef.current && (local.id !== latest.id || local.revision === null || latest.revision > local.revision)) {
           setConflict({ server: latest, local });
           setSaveStatus("failed");
           setSaveMessage("Another version was saved — choose which one to keep");
