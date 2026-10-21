@@ -123,3 +123,56 @@ test("already-synced drafts-list refresh makes no duplicate mutation", async () 
   expect(mutations).toHaveLength(0);
   expect(controller.saveMessage).toBe("Saved to Orca and Gmail");
 });
+
+for (const remount of [false, true]) test(`clearing all saved writing persists after ${remount ? "interrupted debounce and remount" : "repeated list refresh"}`, async () => {
+  await render();
+  await act(async () => controller.updateDraft({ to: [], cc: [], bcc: [], subject: "", body: "" }));
+  if (remount) {
+    await act(async () => root.unmount());
+    root = createRoot(browser.document.createElement("div") as unknown as Element);
+  }
+  available = [{ ...server }]; await render();
+  available = [{ ...server }]; await render();
+  expect(controller.draft.body).toBe("");
+  expect(controller.conflict).toBeNull();
+  await waitSave();
+  expect(server.body.text).toBe("");
+  expect(server.subject).toBe("");
+  expect(server.to).toEqual([]);
+  expect(mutations.map(item => item.method)).toEqual(["PATCH"]);
+  expect(controller.saveMessage).toBe("Saved to Orca and Gmail");
+  await act(async () => root.unmount());
+  root = createRoot(browser.document.createElement("div") as unknown as Element);
+  available = [{ ...server }]; await render(); await waitSave();
+  expect(controller.draft.body).toBe("");
+  expect(mutations).toHaveLength(1);
+});
+
+test("untouched new empty composer does not create a remote draft", async () => {
+  available = [];
+  await render(); await waitSave();
+  expect(controller.draft.body).toBe("");
+  expect(mutations).toHaveLength(0);
+});
+
+for (const revision of [1, 2]) test(`empty checkpoint cannot erase a different draft at revision ${revision}`, async () => {
+  server = { ...server, revision }; available = [server];
+  await render();
+  const originalId = controller.draft.id;
+  await act(async () => controller.updateDraft({ to: [], cc: [], bcc: [], subject: "", body: "" }));
+  await act(async () => root.unmount());
+  // Another device removes the original; the list returns unrelated writing
+  // whose revision is equal to or older than the original checkpoint.
+  server = { ...server, id: "different-draft", revision: 1, subject: "Other writing", body: { text: "Other draft must survive", html: null } };
+  available = [server];
+  root = createRoot(browser.document.createElement("div") as unknown as Element);
+  await render(); await waitSave();
+  expect(server.body.text).toBe("Other draft must survive");
+  expect(mutations).toHaveLength(0);
+  expect(controller.draft.id).toBe(originalId);
+  expect(controller.draft.body).toBe("");
+  expect(controller.conflict?.server.id).toBe("different-draft");
+  available = [{ ...server }]; await render(); await waitSave();
+  expect(mutations).toHaveLength(0);
+  expect(server.subject).toBe("Other writing");
+});

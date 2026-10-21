@@ -576,7 +576,10 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       const requestedDraft = requestedDraftId ? editableDrafts.find((item) => item.id === requestedDraftId) : null;
       const latest = requestedDraft ?? sameDraft ?? editableDrafts.find((item) => draftMatchesScope(item, scope)) ?? null;
       if (latest) isNewDraftRef.current = false;
-      if (!hasComposeContent(local) && !hasWritingEditsRef.current && latest) {
+      // A versioned local checkpoint may intentionally contain no writing.
+      // Recover it like any other edit, rather than restoring deleted fields.
+      const hasLocalDraft = hasComposeContent(local) || local.revision !== null || hasWritingEditsRef.current;
+      if (!hasLocalDraft && latest) {
         const restored = fromMessageDraft(latest);
         serverIdRef.current = latest.id;
         serverRevisionRef.current = latest.revision;
@@ -588,7 +591,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         setDraft(restored);
         setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
         setSaveMessage(providerSaveMessage(latest));
-      } else if ((hasComposeContent(local) || hasWritingEditsRef.current) && latest) {
+      } else if (hasLocalDraft && latest) {
         const serverDraft = fromMessageDraft(latest);
         // Legacy local drafts predate format persistence; absence of metadata
         // alone is not a content conflict with an otherwise identical server copy.
@@ -598,7 +601,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         attachmentsDirtyRef.current = false;
         serverAttachmentsRef.current = latest.attachments;
         lastRemoteSignatureRef.current = remoteContentSignature(serverDraft);
-        if (remoteContentSignature(local) !== lastRemoteSignatureRef.current && (local.revision === null || latest.revision > local.revision)) {
+        // Revisions order edits only within one draft. A same-scope fallback
+        // with another ID must never silently replace its writing with ours.
+        if (remoteContentSignature(local) !== lastRemoteSignatureRef.current && (local.id !== latest.id || local.revision === null || latest.revision > local.revision)) {
           setConflict({ server: latest, local });
           setSaveStatus("failed");
           setSaveMessage("Another version was saved — choose which one to keep");
@@ -663,7 +668,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   const persistRemote = useCallback(async (snapshot: ComposeDraft, force = false, expectedScopeKey = scopeKey) => {
     if (storageScopeRef.current !== expectedScopeKey || saveScopeRef.current !== expectedScopeKey) return;
-    if (!hasComposeContent(snapshot) || conflictRef.current || resolvingRef.current) return;
+    if ((!hasComposeContent(snapshot) && !serverIdRef.current) || conflictRef.current || resolvingRef.current) return;
     const signature = remoteContentSignature(snapshot);
     if (!force && signature === lastRemoteSignatureRef.current && serverIdRef.current) return;
     setSaveStatus("saving");
@@ -717,7 +722,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     if (hydratedScope !== scopeKey) return;
     if (sendingRef.current || discardOperationRef.current) return;
     const serialized = JSON.stringify(persistableDraft(draft));
-    const needsRemoteSave = !demoMode && hasComposeContent(draft) && (
+    const needsRemoteSave = !demoMode && (hasComposeContent(draft) || serverIdRef.current !== null) && (
       !serverIdRef.current
       || remoteContentSignature(draft) !== lastRemoteSignatureRef.current
       || retryToken !== processedRetryTokenRef.current
@@ -743,7 +748,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       } else if (demoMode && hasComposeContent(draft)) {
         setSaveStatus("saved");
         setSaveMessage("Saved on this device");
-      } else if (!hasComposeContent(draft)) {
+      } else if (!hasComposeContent(draft) && !serverIdRef.current) {
         setSaveStatus("saved");
         setSaveMessage("Not saved yet");
       }

@@ -1,0 +1,48 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/compose-autosave-interruption.test.tsx:
+(pass) latest body reaches API when drafts list does not interrupt autosave debounce [1006.35ms]
+(pass) latest body reaches API when drafts list refreshes during autosave debounce [985.08ms]
+(pass) a locally checkpointed edit is saved remotely after controller remount [502.61ms]
+(pass) latest body is reported as saving until its actual remote acknowledgment [501.59ms]
+(pass) already-synced drafts-list refresh makes no duplicate mutation [483.65ms]
+(pass) clearing all saved writing persists after repeated list refresh [969.19ms]
+(pass) clearing all saved writing persists after interrupted debounce and remount [970.41ms]
+(pass) untouched new empty composer does not create a remote draft [484.54ms]
+(pass) empty checkpoint cannot erase a different draft at revision 1 [972.93ms]
+(pass) empty checkpoint cannot erase a different draft at revision 2 [972.46ms]
+
+apps/web/src/compose-conflict.test.tsx:
+(pass) local: saves latest edits and attachment bytes as a distinct recoverable draft [511.63ms]
+(pass) server: saves latest edits and attachment bytes as a distinct recoverable draft [516.73ms]
+(pass) local: storage failure retains conflict and current editor [556.94ms]
+(pass) server: storage failure retains conflict and current editor [528.41ms]
+(pass) failed recovery creation retains conflict [547.88ms]
+(pass) edits while saving recovery cannot be replaced by the server [533.09ms]
+(pass) replacement conflict cannot be cleared by an older resolution [524.02ms]
+(pass) comparison shows live fields and both revisions without stale local text [541.05ms]
+(pass) failure checkpointing the selected version retains the original editor after recovery creation [506.78ms]
+(pass) duplicate resolution clicks create only one copy [506.27ms]
+(pass) local: recovery keeps inherited attachments from before deferred byte conversion [521.26ms]
+(pass) server: recovery keeps inherited attachments from before deferred byte conversion [523.29ms]
+
+apps/web/src/compose-account-scope.test.tsx:
+(pass) recipient entry, autosave, update, inspection and send stay on the composed account [481.07ms]
+(pass) discard uses the draft owner account [479.53ms]
+(pass) draft paths encode identifiers and account scope independently [4.16ms]
+(pass) account changes isolate writing and ignore a late previous-account hydration [13.29ms]
+(pass) unmount and a new account identity never adopt the old account checkpoint [9.34ms]
+(pass) discard waits for an in-flight first autosave and deletes the created draft [482.37ms]
+(pass) late DELETE success cannot reset another account's draft [493.78ms]
+(pass) late DELETE failure cannot reset another account's draft [497.63ms]
+(pass) account change while first save is pending cancels discard without deleting the new account [498.39ms]
+(pass) failed DELETE keeps writing recoverable and permits another discard attempt [482.35ms]
+(pass) pending discard blocks a duplicate discard, send and edits, then cancels debounce [1419.56ms]
+(pass) failed first save does not become a false successful discard [476.70ms]
+(pass) a draft-list response begun before discard cannot restore the deleted draft [476.58ms]
+(pass) discard refuses to race a delivery already in flight [5.33ms]
+
+ 36 pass
+ 0 fail
+ 209 expect() calls
+Ran 36 tests across 3 files. [20.34s]
