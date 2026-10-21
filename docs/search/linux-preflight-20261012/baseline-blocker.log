@@ -1,0 +1,28 @@
+67 | }
+68 | try {
+69 |   migrate(client.db, { migrationsFolder: join(root, "apps/api/drizzle") });
+70 |   assert.deepEqual(client.sqlite.query("PRAGMA journal_mode").get(), { journal_mode: "wal" });
+71 |   const synchronous = client.sqlite.query("PRAGMA synchronous").get();
+72 |   assert.deepEqual(synchronous, { synchronous: mode === "head" ? 2 : 1 });
+              ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
++   synchronous: 2
+-   synchronous: 1
+  }
+
+ generatedMessage: true,
+     actual: {
+  synchronous: 2,
+},
+   expected: {
+  synchronous: 1,
+},
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /workspace/pr235/apps/api/benchmarks/search-stage.ts:72:10
+
+Bun v1.3.14 (Linux x64)

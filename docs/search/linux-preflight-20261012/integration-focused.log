@@ -1,0 +1,152 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/index.test.ts:
+(pass) Orca API > requires a session before returning auth state [45.36ms]
+(pass) Orca API > requires a session before returning an account [0.87ms]
+(pass) Orca API > lists every connected provider and disconnects only owned accounts with local data [685.36ms]
+(pass) Orca API > keeps Gmail-only routes on Gmail when Outlook was connected first [633.02ms]
+(pass) Orca API > requires a session before returning inbox data [1.60ms]
+(pass) Orca API > persists account-level writing and reminder preferences [367.56ms]
+(pass) Orca API > BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings [595.56ms]
+(pass) Orca API > persists onboarding completion and exposes it on later session checks [359.34ms]
+(pass) Orca API > creates account-owned drafts with revisions and a safe delivery boundary [810.69ms]
+(pass) Orca API > persists Gmail drafts and sends exactly once after reserving the idempotency key [511.49ms]
+(pass) Orca API > marks an unconfirmed Gmail send as ambiguous instead of retrying it [370.91ms]
+(pass) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable [485.45ms]
+(pass) Orca API > dispatches account lifecycle through a partial custom registry [533.55ms]
+outlook sync failed {
+  userId: "outlook_user",
+  error: 12 | export const outlookProvider: MailProviderAdapter = {
+13 |   provider: "outlook",
+14 |   createOAuthApp: createOutlookAuthApp,
+15 |   detectCapabilities: detectOutlookCapabilities,
+16 |   async syncPage() {
+17 |     throw new ProviderNotImplementedError("outlook", "sync");
+               ^
+ProviderNotImplementedError: outlook sync is not implemented
+  provider: "outlook",
+ operation: "sync",
+
+      at syncPage (/workspace/pr235-integration/apps/api/src/providers/outlook/provider.ts:17:11)
+      at <anonymous> (/workspace/pr235-integration/apps/api/src/index.ts:2605:47)
+      at dispatch (/workspace/pr235-integration/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/workspace/pr235-integration/apps/api/src/auth/middleware.ts:100:13)
+      at async dispatch (/workspace/pr235-integration/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/workspace/pr235-integration/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/workspace/pr235-integration/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/workspace/pr235-integration/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/workspace/pr235-integration/apps/api/src/index.test.ts:757:42)
+,
+}
+(pass) Orca API > dispatches a registered Outlook account and keeps unsupported sync explicit [285.06ms]
+(pass) Orca API > rejects blank inbox cursors [1.81ms]
+(pass) Orca API > returns an account-scoped, chronological reader snapshot with sanitized HTML [561.49ms]
+(pass) Orca API > filters and deterministically sorts explainable attention views [486.82ms]
+(pass) Orca API > merges two owned accounts with account-local attention rules, metadata, and cursors [925.01ms]
+(pass) Orca API > filters effective Human Inbox and Tideline classes before pagination without crossing accounts or filter modes [695.84ms]
+(pass) Orca API > serves the shared M5 matrix across providers with counts, cursors, overrides, and mixed threads [459.29ms]
+(pass) Orca API > resolves classification for a mailbox-sized page with account overrides loaded once [517.01ms]
+(pass) Orca API > keeps collections additive, orders pins deterministically, and deletes only organization metadata [842.57ms]
+(pass) Orca API > imports selected Gmail labels once, supports skip, and handles accounts with no user labels [716.52ms]
+(pass) Orca API > schedules, resurfaces, completes, and cancels thread reminders with a controllable clock [336.93ms]
+(pass) Orca API > upgrades a database at migration 0003 with the reader storage migrations [146.48ms]
+(pass) Orca API > runs the manual Gmail sync endpoint for an authenticated user [254.19ms]
+(pass) Orca API > runs manual Gmail sync against the selected stacked account [353.84ms]
+(pass) Orca API > serializes manual Gmail sync behind existing account work [438.97ms]
+(pass) Orca API > reports per-account sync status and last successful sync time [458.24ms]
+gmail sync failed {
+  userId: "user_1",
+  error: 1823 | 
+1824 |       const session = await createSession(db, "user_1");
+1825 |       const testApp = createApp({
+1826 |         dbFactory: () => createDatabaseClient(dbPath),
+1827 |         syncPage: async () => {
+1828 |           throw new GmailSyncError("raw upstream detail acct_1", "provider_error");
+                       ^
+GmailSyncError: raw upstream detail acct_1
+ code: "provider_error"
+
+      at syncPage (/workspace/pr235-integration/apps/api/src/index.test.ts:1828:17)
+      at syncIncrementalPages (/workspace/pr235-integration/apps/api/src/providers/gmail/sync-runtime.ts:221:26)
+      at <anonymous> (/workspace/pr235-integration/apps/api/src/providers/gmail/sync-runtime.ts:176:29)
+      at drainOwned (/workspace/pr235-integration/apps/api/src/providers/gmail/sync-coordinator.ts:232:32)
+      at drainAccount (/workspace/pr235-integration/apps/api/src/providers/gmail/sync-coordinator.ts:214:19)
+,
+}
+(pass) Orca API > maps provider sync failures to a bounded public error response [394.96ms]
+(pass) Orca API > persists account-scoped sender rules, resolves precedence, and resets to the next rule [655.87ms]
+(pass) Orca API > validates, authorizes, and canonically reconciles account-scoped batch sender attention changes [524.39ms]
+(pass) Orca API > persists presentation independently of attention behavior [329.58ms]
+(pass) Orca API > keeps local human classification overrides account-scoped and resolves precedence without provider mutations [1751.53ms]
+(pass) Orca API > resolves a large message batch from one preloaded classification override map [14.23ms]
+(pass) Orca API > marks entire thread as read including all emails [954.64ms]
+
+apps/web/src/global-search.test.tsx:
+(pass) global mail search location contract > opens from Inbox, Reader, Organization, and Settings with a safe exact source [103.18ms]
+(pass) global mail search location contract > rejects cross-origin return targets and serializes an exact saved scope [47.36ms]
+(pass) global mail search location contract > nests a result Reader in SurfaceHistory and restores the serialized search on Back [37.27ms]
+(pass) global mail search location contract > reopens a saved Inbox scope through the API default mailbox semantics [22.23ms]
+(pass) GlobalMailSearch interaction > hands Search to the common View authoring surface without writing a pin and restores context on cancel [2115.64ms]
+(pass) GlobalMailSearch interaction > keeps advanced scope controls collapsed and exposes one accessible close action [306.50ms]
+(pass) GlobalMailSearch interaction > keeps overflowing results in the shrinkable 1024px track when filters expand [339.18ms]
+(pass) GlobalMailSearch interaction > wraps a maximum-length no-result query inside the compact state [531.26ms]
+(pass) GlobalMailSearch interaction > includes the year only when a result is outside the current year [104.02ms]
+(pass) GlobalMailSearch interaction > moves from the query into results with ArrowDown and back with ArrowUp [705.91ms]
+(pass) GlobalMailSearch interaction > typing invalidates the old result generation before the debounced query runs [961.61ms]
+(pass) GlobalMailSearch interaction > pending input survives Mailbox change, late responses and source return [1241.13ms]
+(pass) GlobalMailSearch interaction > pending input survives Evidence change, late responses and source return [810.02ms]
+(pass) GlobalMailSearch interaction > pending input survives Account change, late responses and source return [2031.47ms]
+(pass) GlobalMailSearch interaction > pending input survives Space change, late responses and source return [1359.78ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace new Search or its return snapshot [1243.33ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace popstate or its return snapshot [500.37ms]
+(pass) GlobalMailSearch interaction > ignores a late prepared draft when the Search scope changes [361.33ms]
+(pass) GlobalMailSearch interaction > restores a saved Search snapshot, result anchor and scroll after loading [226.02ms]
+(pass) GlobalMailSearch interaction > requests a saved Inbox scope without the unsupported inbox view value [266.12ms]
+(pass) GlobalMailSearch interaction > a zero-result general search enters unsupported review without any persistence [1454.10ms]
+(pass) metadata requests are explicit and missing or full-body coverage cannot render as metadata results [11.53ms]
+
+packages/shared/src/schemas.test.ts:
+(pass) shared API schemas > validates attachment base64 bytes against declared and aggregate size [10.59ms]
+(pass) shared API schemas > parses the fixture inbox response shape [3.32ms]
+(pass) shared API schemas > keeps the M5 fixture matrix provider- and account-attributed [32.24ms]
+(pass) shared API schemas > accepts the opt-in classification count contract alongside the legacy shape [0.97ms]
+(pass) shared API schemas > accepts a durable mailbox freshness token without rewriting legacy responses [0.41ms]
+(pass) shared API schemas > rejects blank inbox cursors [1.04ms]
+(pass) shared API schemas > coerces bounded inbox limits [3.91ms]
+(pass) shared API schemas > validates bounded stored-mail search scope [0.68ms]
+(pass) shared API schemas > normalizes unique batch sender changes and preserves canonical per-sender outcomes [3.51ms]
+(pass) shared API schemas > defines an explainable, bounded Human Signal contract [2.48ms]
+(pass) shared API schemas > requires an authenticated user when the session is authenticated [3.46ms]
+(pass) shared API schemas > accepts an older authenticated session response without onboarding state [0.35ms]
+(pass) shared API schemas > keeps nullable body fields and attachment metadata in reader payloads [1.78ms]
+(pass) shared API schemas > validates organization inputs without move semantics [3.85ms]
+(pass) shared API schemas > normalizes outbound recipients and requires a revision to update drafts [4.02ms]
+
+apps/api/src/mailbox/search-contract.test.ts:
+(pass) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [3083.23ms]
+(pass) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [887.60ms]
+(pass) canonical metadata reflects updates/deletes and cannot reuse a cursor across an account incarnation [792.35ms]
+
+apps/api/src/mailbox/read.test.ts:
+(pass) bounded mailbox reader > projects one keyset page while SQL aggregates the complete mailbox counts [701.30ms]
+(pass) bounded mailbox reader > rejects stale cursors after attention, classification, label, and concurrent email mutations [533.23ms]
+(pass) bounded mailbox reader > owns mutable account metadata and revision in one snapshot [464.20ms]
+(pass) bounded mailbox reader > merges two index-backed account pages without duplicates or omissions [829.96ms]
+(pass) bounded mailbox reader > reports high-association enrichment separately and projects one effective override per message row [624.94ms]
+(pass) empty attention page pruning > uses zero snapshot aggregates to skip scans across two authorized accounts [2368.99ms]
+(pass) empty attention page pruning > keeps notify rows, including combined notify/focus counts [1735.87ms]
+(pass) empty attention page pruning > keeps focus rows, including combined notify/focus counts [1506.25ms]
+(pass) empty attention page pruning > keeps normal rows, including combined notify/focus counts [267.93ms]
+(pass) empty attention page pruning > keeps quiet rows, including combined notify/focus counts [1014.92ms]
+(pass) empty attention page pruning > keeps hidden rows, including combined notify/focus counts [344.07ms]
+(pass) empty attention page pruning > keeps a nonempty group in either account and honors effective attention precedence [457.17ms]
+(pass) empty attention page pruning > preserves timestamp and ID ties across accounts and empty ranks on later pages [835.21ms]
+(pass) empty attention page pruning > retains collection, destination, and account scope checks even for empty filters [200.12ms]
+(pass) empty attention page pruning > applies Inbox skip rules to both the aggregate proof and page predicates [219.06ms]
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [932.49ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [505.68ms]
+
+ 93 pass
+ 0 fail
+ 373 expect() calls
+Ran 93 tests across 5 files. [56.25s]

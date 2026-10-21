@@ -1,0 +1,34 @@
+{
+  "syntheticOnly": true,
+  "nativeUnchanged": true,
+  "observations": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "errors": [],
+      "resultCount": 2,
+      "missingReceiptRejected": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "errors": [],
+      "resultCount": 2,
+      "missingReceiptRejected": true
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "errors": [],
+      "resultCount": 2,
+      "missingReceiptRejected": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "errors": [],
+      "resultCount": 2,
+      "missingReceiptRejected": true
+    }
+  ]
+}
