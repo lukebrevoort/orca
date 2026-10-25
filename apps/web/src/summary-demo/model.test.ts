@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createFixtures } from "./fixtures";
-import { activeItems, canApprove, countdown, counts, isExpired, notificationLines, pluralize, transition } from "./model";
+import { activeItems, canApprove, countdown, countdownTone, counts, isExpired, notificationLines, pluralize, transition } from "./model";
 test("active counts exclude handled, approved, stopped and expired while retaining cards", () => {
   let state = createFixtures(0);
   state = transition(state, "work", { type: "handle", id: "work-attention" });
@@ -61,4 +61,12 @@ test("days pluralize and notifications contain categories and counts only", () =
   expect(pluralize(2, "day")).toBe("2 days");
   expect(pluralize(0, "day")).toBe("0 days");
   expect(notificationLines(createFixtures(0).work, 0)).toEqual(["Needs you: 1", "Drafted replies: 1", "Waiting on: 1", "Codes: 1"]);
+});
+
+test("countdown tone changes at ten seconds and expires at zero", () => {
+  const code = createFixtures(0).work.codes[0]!;
+  for (const [seconds, tone] of [[11, "calm"], [10, "warning"], [1, "warning"], [0, "expired"]] as const) {
+    expect(countdownTone(code, code.expiresAt - seconds * 1000)).toBe(tone);
+  }
+  expect(countdown(code, code.expiresAt)).toBe("Expired");
 });

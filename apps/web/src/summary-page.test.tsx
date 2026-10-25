@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
@@ -137,4 +137,32 @@ test("countdown refreshes and masks a revealed code at expiry", async () => {
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 1050)); });
   expect(text()).toContain("Expired"); expect(text()).not.toContain("482631");
   expect(tileCounts()[3]).toBe("0");
+});
+
+test("approving a demo draft makes no fetch or beacon requests", async () => {
+  const fetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, "fetch");
+  const beaconDescriptor = Object.getOwnPropertyDescriptor(navigator, "sendBeacon");
+  const fetchStub = mock(async () => new Response());
+  const beaconStub = mock(() => true);
+  try {
+    Object.defineProperty(globalThis, "fetch", { configurable: true, writable: true, value: fetchStub });
+    Object.defineProperty(navigator, "sendBeacon", { configurable: true, value: beaconStub });
+    await click("Approve reply");
+    expect(text()).toContain("Demo: nothing was sent");
+    expect(container.querySelector("textarea")!.disabled).toBe(true);
+    expect(fetchStub).not.toHaveBeenCalled();
+    expect(beaconStub).not.toHaveBeenCalled();
+  } finally {
+    if (fetchDescriptor) Object.defineProperty(globalThis, "fetch", fetchDescriptor);
+    else Reflect.deleteProperty(globalThis, "fetch");
+    if (beaconDescriptor) Object.defineProperty(navigator, "sendBeacon", beaconDescriptor);
+    else Reflect.deleteProperty(navigator, "sendBeacon");
+  }
+});
+test("stopping tracking disables an unapproved follow-up textarea", async () => {
+  await click("Draft follow-up");
+  const waiting = container.querySelector('[aria-labelledby="summary-waiting"]')!;
+  expect(waiting.querySelector("textarea")!.disabled).toBe(false);
+  await click("Stop tracking");
+  expect(waiting.querySelector("textarea")!.disabled).toBe(true);
 });

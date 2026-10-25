@@ -14,6 +14,10 @@ export type Action =
   | { type: "approve"; id: string };
 export const categories = ["Needs you", "Drafted replies", "Waiting on", "Codes"] as const;
 export function isExpired(code: Code, now: number): boolean { return now >= code.expiresAt; }
+export function countdownTone(code: Code, now: number): "calm" | "warning" | "expired" {
+  if (isExpired(code, now)) return "expired";
+  return code.expiresAt - now <= 10000 ? "warning" : "calm";
+}
 export function countdown(code: Code, now: number): string {
   if (isExpired(code, now)) return "Expired";
   const seconds = Math.ceil((code.expiresAt - now) / 1000);

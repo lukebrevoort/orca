@@ -30,8 +30,35 @@
 .summary-disclosure article { margin-top: 16px; }
 .summary-disclosure li { line-height: 1.8; }
 @media (max-width: 600px) {
-  .summary-page { padding: 26px 16px 50px; }
+  .summary-page { padding: 26px 16px calc(120px + env(safe-area-inset-bottom)); }
   .summary-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .summary-tiles button { padding: 16px; }
   .summary-card { padding: 16px; }
 }
+
+/* Section markers keep color small and pair hollow markers with neutral tracking and codes. */
+.summary-page :is(h2, summary)[data-section]::before,
+.summary-tiles button[data-section] span::before { content: ""; display: inline-block; box-sizing: border-box; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--orca-border); }
+.summary-page :is(h2, summary)[data-section="needs"]::before,
+.summary-page .summary-tiles button[data-section="needs"] span::before { background: var(--orca-danger); }
+.summary-page h2[data-section="drafted"]::before,
+.summary-page .summary-tiles button[data-section="drafted"] span::before { background: var(--orca-accent); }
+.summary-page h2[data-section="waiting"]::before,
+.summary-page .summary-tiles button[data-section="waiting"] span::before { background: var(--orca-surface); border: 2px solid var(--orca-muted); }
+.summary-page h2[data-section="codes"]::before,
+.summary-page .summary-tiles button[data-section="codes"] span::before { background: var(--orca-surface); border: 2px solid var(--orca-accent); }
+.summary-tiles button[data-section] { border-top-width: 3px; }
+.summary-page .summary-tiles button[data-section="needs"] { border-top-color: var(--orca-danger); }
+.summary-page .summary-tiles button[data-section="drafted"],
+.summary-page .summary-tiles button[data-section="codes"] { border-top-color: var(--orca-accent); }
+.summary-page .summary-tiles button[data-section="waiting"] { border-top-color: var(--orca-muted); }
+.summary-chip[data-status="Draft"],
+.summary-chip[data-status="Stopped"] { color: var(--orca-muted); border-color: var(--orca-border); }
+.summary-chip[data-status="Edited"] { color: var(--orca-ink); border-color: var(--orca-accent); }
+.summary-chip[data-status="Approved"],
+.summary-chip[data-status="Handled"] { color: var(--orca-accent); background: var(--orca-accent-soft); border-color: var(--orca-accent); }
+.summary-chip[data-status="Stopped"] { border-style: dashed; }
+.summary-chip[data-status="Expired"] { color: var(--orca-danger); border-color: var(--orca-danger); }
+.summary-page p[data-tone="calm"] { color: var(--orca-accent); }
+.summary-page p[data-tone="warning"] { color: var(--orca-danger); }
+.summary-page p[data-tone="expired"] { color: var(--orca-muted); }
