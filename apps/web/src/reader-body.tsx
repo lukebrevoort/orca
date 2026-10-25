@@ -53,6 +53,46 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
   const formattedBody = useRef<HTMLDivElement>(null);
   const [hasBlockedImages, setHasBlockedImages] = useState(false);
   useLayoutEffect(() => {
+    const body = formattedBody.current;
+    if (!body) return;
+    // Only whitespace may follow history. Never fold a quote with an inline
+    // answer or footer after it, or search inside arbitrary sender layouts.
+    const meaningfulNodes = (element: Element) => [...element.childNodes].filter(node =>
+      node.nodeType !== 3 || Boolean(node.textContent?.trim()));
+    let parent: Element = body;
+    while (true) {
+      const nodes = meaningfulNodes(parent);
+      const wrapper = nodes.length === 1 ? nodes[0] : null;
+      if (!(wrapper instanceof Element) || !wrapper.matches("div.orca-mail-formatted")) break;
+      parent = wrapper;
+    }
+    const nodes = meaningfulNodes(parent);
+    const quote = nodes.at(-1);
+    if (!(quote instanceof Element) || quote.hasAttribute("data-orca-quoted-history")
+      || !quote.matches('blockquote, [class*="quote"], #divRplyFwdMsg')) return;
+    const previous = nodes.at(-2);
+    const attribution = previous instanceof Element && (previous.matches(".gmail_attr")
+      || /^On .+wrote:$/i.test(previous.textContent?.trim() ?? "")) ? previous : null;
+    const details = document.createElement("details");
+    details.className = "reader-quoted";
+    details.setAttribute("data-orca-quoted-history", "collapsed");
+    const summary = document.createElement("summary");
+    summary.textContent = "Show quoted history";
+    const history = document.createElement("div");
+    parent.insertBefore(details, attribution ?? quote);
+    details.appendChild(summary);
+    details.appendChild(history);
+    // Move the original nodes, including whitespace between attribution and
+    // quote, so links, enhanced image notes and native details state survive.
+    let node: ChildNode | null = attribution ?? quote;
+    while (node) {
+      const next: ChildNode | null = node.nextSibling;
+      history.appendChild(node);
+      if (node === quote) break;
+      node = next;
+    }
+  }, [html]);
+  useLayoutEffect(() => {
     const notes = formattedBody.current?.querySelectorAll("span.orca-mail-image-note");
     setHasBlockedImages(Boolean(notes?.length));
     notes?.forEach(note => {
