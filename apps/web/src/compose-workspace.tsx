@@ -1,3 +1,4 @@
+import { AttachmentTypeIcon } from "./attachment-list";
 import {
   useCallback,
   useEffect,
@@ -1729,7 +1730,7 @@ function RenderedBlockEditor({
               {attachment.previewUrl ? (
                 <img alt="" className="compose-attachment-chip-preview" src={attachment.previewUrl} />
               ) : (
-                <span aria-hidden="true" className="compose-attachment-chip-glyph">↳</span>
+                <span className="compose-attachment-chip-glyph"><AttachmentTypeIcon mimeType={attachment.mimeType} filename={attachment.filename} /></span>
               )}
               <span className="compose-attachment-chip-meta">
                 <strong title={attachment.filename}>{attachment.filename}</strong>
