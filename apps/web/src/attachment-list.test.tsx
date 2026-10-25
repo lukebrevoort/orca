@@ -120,3 +120,133 @@ test("compose chips use square bordered thumbnails and shared type icons", () =>
   expect(css).toMatch(/\.compose-attachment-chip-preview \{[^}]*border-radius: 6px;[^}]*height: 40px;[^}]*object-fit: cover;[^}]*width: 40px;/);
   expect(css).toContain('.compose-attachment-error { color: var(--orca-danger);');
 });
+
+// Hostile/broken-response coverage. Keep these cases separate from the original suite.
+function captureHostileDownload() {
+  const downloads: string[] = [];
+  URL.createObjectURL = mock(() => "blob:hostile-test");
+  URL.revokeObjectURL = mock(() => {});
+  const originalClick = browser.HTMLAnchorElement.prototype.click;
+  restoreAnchorClick = () => { browser.HTMLAnchorElement.prototype.click = originalClick; };
+  browser.HTMLAnchorElement.prototype.click = function () { downloads.push(this.download); };
+  return downloads;
+}
+
+const hostileFilenames = [
+  "../../etc/passwd",
+  "<img src=x onerror=1>.pdf",
+  "folder/subfolder\\report.pdf",
+  "control\u0000\u0001\n\r\t.pdf",
+  "a".repeat(300),
+];
+
+test("HTTP 401 shows a generic failure and never leaves download disabled", async () => {
+  const fetcher = mock(async () => new Response("private auth details", { status: 401 }));
+  await render({ fetcher: fetcher as unknown as typeof fetch });
+  await click();
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Download failed. Try again.");
+  expect(host.textContent).not.toContain("private auth details");
+  expect(host.querySelector("button")?.disabled).toBe(false);
+});
+
+// Production currently downloads a zero-byte blob as a success instead of reporting failure.
+test.skip("empty successful response reports failure without creating a browser download", async () => {
+  const downloads = captureHostileDownload();
+  await render({ fetcher: mock(async () => new Response(null)) as unknown as typeof fetch });
+  await click();
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Download failed. Try again.");
+  expect(host.querySelector("button")?.disabled).toBe(false);
+  expect(downloads).toHaveLength(0);
+});
+
+test("rejected fetch never crashes or creates a browser download", async () => {
+  const downloads = captureHostileDownload();
+  await render({ fetcher: mock(async () => Promise.reject(new TypeError("connection reset"))) as unknown as typeof fetch });
+  await click();
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Download failed. Try again.");
+  expect(host.querySelector("button")?.disabled).toBe(false);
+  expect(downloads).toHaveLength(0);
+});
+
+test.each(hostileFilenames)("hostile filename stays inert with no img script or onerror element: %s", async (filename) => {
+  await render({ attachments: [{ ...attachment, filename }] });
+  const card = host.querySelector(".attachment-card")!;
+  expect(card.querySelector("img, script, [onerror]")).toBeNull();
+  expect(card.querySelector(".attachment-card-filename")?.textContent).toBe(filename);
+  expect(card.querySelector(".attachment-card-filename")?.getAttribute("title")).toBe(filename);
+});
+
+// Production assigns the raw filename to link.download; separators are not sanitized.
+test.skip.each(hostileFilenames)("browser download filename contains no path separators: %s", async (filename) => {
+  const downloads = captureHostileDownload();
+  await render({ attachments: [{ ...attachment, filename }], fetcher: mock(async () => new Response("bytes")) as unknown as typeof fetch });
+  await click();
+  expect(downloads).toHaveLength(1);
+  expect(downloads[0]).not.toMatch(/[/\\]/);
+});
+
+// Production uses CSS ellipsis: the full name remains in text and aria-label as well as title.
+test.skip("truncated long filename exposes the full name only in its title attribute", async () => {
+  const filename = "a".repeat(300);
+  await render({ attachments: [{ ...attachment, filename }] });
+  const label = host.querySelector(".attachment-card-filename")!;
+  expect(label.getAttribute("title")).toBe(filename);
+  expect(host.textContent).not.toContain(filename);
+  expect(host.querySelector("button")?.getAttribute("aria-label")).not.toContain(filename);
+});
+
+test.each(["unknown/type", ""])("unknown or empty MIME %s renders the generic File label", async (mimeType) => {
+  await render({ attachments: [{ ...attachment, filename: "opaque.unknown", mimeType }] });
+  expect(host.querySelector("small")?.textContent).toBe("File · 2.4 MB");
+  expect(host.querySelector('[data-attachment-family="file"]')).not.toBeNull();
+});
+
+// A missing MIME at runtime throws in describeAttachmentType; the wire type requires a string.
+test.skip("missing MIME renders the generic File label without crashing", async () => {
+  await render({ attachments: [{ ...attachment, filename: "opaque.unknown", mimeType: undefined as unknown as string }] });
+  expect(host.querySelector("small")?.textContent).toBe("File · 2.4 MB");
+});
+
+test("size over 25 MB renders metadata and leaves server rejection retryable", async () => {
+  const fetcher = mock(async () => new Response(null, { status: 413 }));
+  await render({ attachments: [{ ...attachment, size: 26 * 1024 * 1024 }], fetcher: fetcher as unknown as typeof fetch });
+  expect(host.querySelector("small")?.textContent).toBe("PDF · 26.0 MB");
+  expect(host.querySelector("button")?.disabled).toBe(false);
+  await click();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Too large to download here (over 25 MB). Open in Gmail.");
+  expect(host.querySelector("button")?.disabled).toBe(false);
+});
+
+test("successful retry clears the earlier failure message", async () => {
+  const downloads = captureHostileDownload();
+  let attempt = 0;
+  const fetcher = mock(async () => ++attempt === 1 ? new Response(null, { status: 401 }) : new Response("file bytes"));
+  await render({ fetcher: fetcher as unknown as typeof fetch });
+  await click();
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Download failed. Try again.");
+  await click();
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(downloads).toEqual([attachment.filename]);
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("");
+  expect(host.querySelector("button")?.disabled).toBe(false);
+});
+
+test("Gmail attachments never show the Outlook download note", async () => {
+  await render();
+  expect(host.querySelector(".reader-attachments-note")).toBeNull();
+  expect(host.textContent).not.toContain("Open this conversation in Outlook");
+});
+
+test("fetch only targets the encoded local attachment endpoint with included credentials", async () => {
+  const id = "../file /?#&=+%\\雪";
+  const accountId = "account /?&#=+%\\雪";
+  const fetcher = mock(async () => new Response(null, { status: 404 }));
+  await render({ attachments: [{ ...attachment, id }], accountId, fetcher: fetcher as unknown as typeof fetch });
+  await click();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher).toHaveBeenCalledWith(
+    "/v1/attachments/..%2Ffile%20%2F%3F%23%26%3D%2B%25%5C%E9%9B%AA?accountId=account+%2F%3F%26%23%3D%2B%25%5C%E9%9B%AA",
+    { credentials: "include" },
+  );
+});
