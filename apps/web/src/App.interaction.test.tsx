@@ -1913,6 +1913,35 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
+  test.each(["light", "dark"] as const)("Summary sits above Inbox and returns to Inbox in %s mode", async (theme) => {
+    await renderApp(defaultReaderPreferences, false, { theme });
+    const navigation = browserWindow.document.querySelector('nav[aria-label="Primary navigation"]')!;
+    const items = [...navigation.querySelectorAll("button.desktop-sidebar-item")];
+    const summary = items.find(item => item.textContent === "Summary")!;
+    const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
+    expect(items.indexOf(summary) + 1).toBe(items.indexOf(inbox));
+    expect(inbox.getAttribute("aria-current")).toBe("page");
+    expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
+    await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
+    expect(desktopWorkspace().querySelector("#summary-title")?.textContent).toBe("Summary");
+    expect(desktopWorkspace().textContent).toContain("Your summary will appear here.");
+    expect(summary.getAttribute("aria-current")).toBe("page");
+    expect(inbox.getAttribute("aria-current")).toBeNull();
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("summary");
+    await act(async () => { (inbox as unknown as HTMLButtonElement).click(); });
+    expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
+    expect(desktopWorkspace().querySelector(".inbox-view")).not.toBeNull();
+    expect(inbox.getAttribute("aria-current")).toBe("page");
+    expect(summary.getAttribute("aria-current")).toBeNull();
+  });
+
+  test("Summary preview URL opens its placeholder in the workspace", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=summary");
+    await renderApp();
+    expect(desktopWorkspace().querySelector("#summary-title")?.textContent).toBe("Summary");
+    expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toBe("Summary");
+  });
+
   test.each(["organization", "attention"])("%s links reopen Organization sender management", async (destination) => {
     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`);
     await renderApp();

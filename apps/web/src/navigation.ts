@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { Collection, OrganizationView, MailDestination } from "@orca/shared";
 
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "organization-studio" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
+export type DesktopDestination = "summary" | "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "organization-studio" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -47,7 +47,7 @@ export function formatNavigationCount(count: number) {
 type BuiltInSpaceId = "focus" | "signals" | "quiet" | "later";
 
 const builtInSpaceIds: BuiltInSpaceId[] = ["later"];
-const rootDestinations = new Set<DesktopDestination>(["inbox", "drafts", "focus", "signals", "quiet", "hidden", "later", "all", "attention", "organization"]);
+const rootDestinations = new Set<DesktopDestination>(["summary", "inbox", "drafts", "focus", "signals", "quiet", "hidden", "later", "all", "attention", "organization"]);
 
 const builtInSpaces: Record<BuiltInSpaceId, Omit<WorkflowSpace, "count" | "hidden">> = {
   focus: { id: "focus", label: "Focus", description: "protected attention" },
