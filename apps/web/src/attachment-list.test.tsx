@@ -15,6 +15,7 @@ const originals = new Map(names.map((name) => [name, Object.getOwnPropertyDescri
 let browser: Window;
 let root: Root;
 let host: HTMLDivElement;
+let restoreAnchorClick: (() => void) | undefined;
 const originalCreate = URL.createObjectURL;
 const originalRevoke = URL.revokeObjectURL;
 beforeEach(() => {
@@ -25,6 +26,8 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await act(async () => root.unmount());
+  restoreAnchorClick?.();
+  restoreAnchorClick = undefined;
   browser.close();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   for (const name of names) { const original = originals.get(name); if (original) Object.defineProperty(globalThis, name, original); else Reflect.deleteProperty(globalThis, name); }
@@ -60,6 +63,8 @@ test("downloads the authenticated blob with the original filename and releases t
   const create = mock(() => "blob:test"); const revoke = mock(() => {});
   URL.createObjectURL = create; URL.revokeObjectURL = revoke;
   let downloaded = ""; let href = "";
+  const originalClick = browser.HTMLAnchorElement.prototype.click;
+  restoreAnchorClick = () => { browser.HTMLAnchorElement.prototype.click = originalClick; };
   browser.HTMLAnchorElement.prototype.click = function () { downloaded = this.download; href = this.href; };
   await render({ fetcher: fetcher as unknown as typeof fetch }); await click();
   expect(fetcher).toHaveBeenCalledWith("/v1/attachments/file%20%2F1?accountId=account+%261", { credentials: "include" });
