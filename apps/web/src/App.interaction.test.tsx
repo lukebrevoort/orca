@@ -1924,7 +1924,7 @@ describe("Desktop evidence and navigation", () => {
     expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
     await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
     expect(desktopWorkspace().querySelector("#summary-title")?.textContent).toBe("Summary");
-    expect(desktopWorkspace().textContent).toContain("Your summary will appear here.");
+    expect(desktopWorkspace().textContent).toContain("Demo data");
     expect(summary.getAttribute("aria-current")).toBe("page");
     expect(inbox.getAttribute("aria-current")).toBeNull();
     expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("summary");
@@ -1935,7 +1935,7 @@ describe("Desktop evidence and navigation", () => {
     expect(summary.getAttribute("aria-current")).toBeNull();
   });
 
-  test("Summary preview URL opens its placeholder in the workspace", async () => {
+  test("Summary preview URL opens its demo in the workspace", async () => {
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=summary");
     await renderApp();
     expect(desktopWorkspace().querySelector("#summary-title")?.textContent).toBe("Summary");
