@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Window } from "happy-dom";
@@ -166,5 +166,45 @@ describe("reader content focus layout", () => {
     expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBe("true");
     await act(async () => root.render(<ReaderMessageList key="two"><ReaderBody html={null} text={"Reply\nOn Monday, Sam wrote:\n> Quoted"} /></ReaderMessageList>));
     expect((container.querySelector(".reader-message-list") as HTMLElement).dataset.fullBodyLayout).toBeUndefined();
+  });
+});
+
+
+describe("blocked image presentation", () => {
+  const blockedHtml = '<p>Statement ready.</p><span class="orca-mail-image-note">[Image blocked: Harbor Bank logo]</span><span class="orca-mail-image-note">[Image blocked: Spending &amp; savings]</span>';
+
+  test("shows accessible alt placeholders and one privacy note without image elements", async () => {
+    await render("blocked", blockedHtml, "Statement ready.");
+    const notes = container.querySelectorAll(".orca-mail-image-note");
+    expect([...notes].map(note => note.textContent)).toEqual(["Harbor Bank logo", "Spending & savings"]);
+    expect(notes[0]?.getAttribute("aria-label")).toBe("Blocked image: Harbor Bank logo");
+    expect(notes[1]?.getAttribute("aria-label")).toBe("Blocked image: Spending & savings");
+    expect(notes[0]?.getAttribute("data-orca-image-note")).toBe("enhanced");
+    expect(container.textContent).not.toContain("[Image blocked:");
+    expect(container.querySelectorAll(".reader-images-hidden-note").length).toBe(1);
+    expect(container.querySelector(".reader-images-hidden-note")?.textContent).toBe("Images hidden for privacy");
+    expect(container.querySelector("img, [src]")).toBeNull();
+    expect([...container.querySelectorAll("button")].map(button => button.textContent)).toEqual(["Formatted", "Plain text"]);
+    const body = container.querySelector(".reader-body-html");
+    await click("Plain text");
+    expect(container.querySelector(".reader-images-hidden-note")).toBeNull();
+    expect(container.querySelector(".reader-body-html")).toBe(body);
+    await click("Formatted");
+    expect(container.querySelector(".reader-body-html")).toBe(body);
+    expect(container.querySelectorAll(".reader-images-hidden-note").length).toBe(1);
+    expect(container.querySelector(".orca-mail-image-note")).toBe(notes[0]);
+    await render("blocked", "<p>No images here.</p>", "No images here.");
+    expect(container.querySelector(".reader-images-hidden-note")).toBeNull();
+  });
+
+  test("is idempotent across repeated layout effects and leaves non-matching spans untouched", async () => {
+    const body = '<span class="orca-mail-image-note">[Image blocked: [Image blocked: nested alt]]</span><span class="orca-mail-image-note">Original note</span>';
+    await act(async () => root.render(<StrictMode><ReaderBody html={body} text={null} /></StrictMode>));
+    const notes = container.querySelectorAll(".orca-mail-image-note");
+    expect(notes[0]?.textContent).toBe("[Image blocked: nested alt]");
+    expect(notes[0]?.getAttribute("aria-label")).toBe("Blocked image: [Image blocked: nested alt]");
+    expect(notes[1]?.textContent).toBe("Original note");
+    expect(notes[1]?.hasAttribute("data-orca-image-note")).toBe(false);
+    expect(notes[1]?.hasAttribute("aria-label")).toBe(false);
   });
 });
