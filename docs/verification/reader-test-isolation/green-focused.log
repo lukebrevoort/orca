@@ -1,0 +1,13 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/App.interaction.test.tsx:
+(pass) Inbox reader viewport restoration > retries a failed silent Reader refresh on a later same-version mailbox refresh [478.23ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (held prefetch) [266.71ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (completed prefetch) [162.60ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (in-flight prefetch) [173.31ms]
+
+ 4 pass
+ 131 filtered out
+ 0 fail
+ 86 expect() calls
+Ran 4 tests across 1 file. [1.69s]

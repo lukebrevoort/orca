@@ -1913,6 +1913,35 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
+  test.each(["light", "dark"] as const)("Summary sits above Inbox and returns to Inbox in %s mode", async (theme) => {
+    await renderApp(defaultReaderPreferences, false, { theme });
+    const navigation = browserWindow.document.querySelector('nav[aria-label="Primary navigation"]')!;
+    const items = [...navigation.querySelectorAll("button.desktop-sidebar-item")];
+    const summary = items.find(item => item.textContent === "Summary")!;
+    const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
+    expect(items.indexOf(summary) + 1).toBe(items.indexOf(inbox));
+    expect(inbox.getAttribute("aria-current")).toBe("page");
+    expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
+    await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
+    expect(desktopWorkspace().querySelector("#summary-title")?.textContent).toBe("Summary");
+    expect(desktopWorkspace().textContent).toContain("Demo data");
+    expect(summary.getAttribute("aria-current")).toBe("page");
+    expect(inbox.getAttribute("aria-current")).toBeNull();
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("summary");
+    await act(async () => { (inbox as unknown as HTMLButtonElement).click(); });
+    expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
+    expect(desktopWorkspace().querySelector(".inbox-view")).not.toBeNull();
+    expect(inbox.getAttribute("aria-current")).toBe("page");
+    expect(summary.getAttribute("aria-current")).toBeNull();
+  });
+
+  test("Summary preview URL opens its demo in the workspace", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=summary");
+    await renderApp();
+    expect(desktopWorkspace().querySelector("#summary-title")?.textContent).toBe("Summary");
+    expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toBe("Summary");
+  });
+
   test.each(["organization", "attention"])("%s links reopen Organization sender management", async (destination) => {
     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`);
     await renderApp();
@@ -3328,88 +3357,79 @@ describe("Inbox reader viewport restoration", () => {
 
   test("retries a failed silent Reader refresh on a later same-version mailbox refresh", async () => {
     const originalFetch = globalThis.fetch;
+    const prefetch = controlReaderPrefetch();
     const selectedMessage = inboxFixture[0]!;
     const updatedSubject = `${selectedMessage.subject} — eventually refreshed`;
     const refreshedMessages = inboxFixture.map((message, index) => index === 0
       ? { ...message, subject: updatedSubject, snippet: `${message.snippet} New reply.` }
       : { ...message });
-    const baseFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    const initialFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    const refreshedFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: refreshedMessages });
+    let changed = false;
+    let failNextDetail = false;
     let inboxReadCount = 0;
-    let threadReadCount = 0;
-    let resolveFirstRefreshInbox!: (response: Response) => void;
-    const firstRefreshInbox = new Promise<Response>((resolve) => { resolveFirstRefreshInbox = resolve; });
-
-    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(selectedMessage.threadId)}&accountId=${encodeURIComponent(selectedMessage.accountId)}`);
+    const inboxContracts = new Set<string>();
+    const threadReads: string[] = [];
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
       if (url.pathname === "/v1/inbox") {
-        inboxReadCount += 1;
-        if (inboxReadCount === 2) return firstRefreshInbox;
-        if (inboxReadCount >= 3) return jsonResponse({
-          accounts: [accountFixture],
-          messages: refreshedMessages,
-          nextCursor: null,
-          counts: {
-            attention: { focus: 0, normal: refreshedMessages.length, quiet: 0, hidden: 0, all: refreshedMessages.length },
-            classification: { likely_human: refreshedMessages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: refreshedMessages.length },
-          },
-        });
-      }
-      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
-        threadReadCount += 1;
-        if (threadReadCount === 2) return apiError(503, "temporarily_unavailable", "Silent Reader refresh failed once");
-        if (threadReadCount >= 3) {
-          const response = await baseFetch(input, init);
-          const detail = await response.json() as ThreadDetail;
-          return jsonResponse({
-            ...detail,
-            thread: { ...detail.thread, subject: updatedSubject },
-            messages: detail.messages.map((message) => ({ ...message, subject: updatedSubject })),
-          });
+        const contract = url.searchParams.has("destinationId") ? "destination"
+          : url.searchParams.get("limit") === "1" ? "guidance" : "mailbox";
+        inboxContracts.add(contract);
+        if (contract === "mailbox") {
+          expect(url.searchParams.get("limit")).toBe("100");
+          expect(url.searchParams.get("classification")).toBe("all");
+          inboxReadCount++;
         }
       }
-      return baseFetch(input, init);
+      if (url.pathname === `/v1/threads/${encodeURIComponent(selectedMessage.threadId)}`) {
+        expect(url.searchParams.get("accountId")).toBe(selectedMessage.accountId);
+        threadReads.push(`${url.pathname}${url.search}`);
+        if (failNextDetail) {
+          failNextDetail = false;
+          return apiError(503, "temporarily_unavailable", "Silent Reader refresh failed once");
+        }
+      }
+      // All query contracts see the same canonical mailbox state. Guidance and
+      // destination reads neither consume the refresh gate nor advance phases.
+      return (changed ? refreshedFetch : initialFetch)(input, init);
     }) as typeof fetch;
-
     try {
       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
-      for (let index = 0; index < 30 && (!browserWindow.document.querySelector(".reader-document:not(.reader-loading)") || inboxReadCount < 2); index += 1) await waitFor(0);
-      const readerDocument = browserWindow.document.querySelector(".reader-document:not(.reader-loading)");
-      if (!readerDocument) throw new Error("Reader did not settle before silent refresh retry test");
-
-      await act(async () => {
-        resolveFirstRefreshInbox(jsonResponse({
-          accounts: [accountFixture],
-          messages: refreshedMessages,
-          nextCursor: null,
-          counts: {
-            attention: { focus: 0, normal: refreshedMessages.length, quiet: 0, hidden: 0, all: refreshedMessages.length },
-            classification: { likely_human: refreshedMessages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: refreshedMessages.length },
-          },
-        }));
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      for (let index = 0; index < 20 && threadReadCount < 2; index += 1) await waitFor(0);
-
-      expect(threadReadCount).toBe(2);
+      await readerSettles(() => inboxReadCount === 2 && Boolean(browserWindow.document.querySelector(".message-row")));
+      expect([...inboxContracts].sort()).toEqual(["destination", "guidance", "mailbox"]);
+      await selectReaderFromHistory(selectedMessage);
+      await readerSettles(() => Boolean(browserWindow.document.querySelector(".reader-document:not(.reader-loading)")));
+      expect(threadReads).toHaveLength(1);
+      const readerDocument = browserWindow.document.querySelector(".reader-document");
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(selectedMessage.subject);
+      // Startup, including provider refresh, is complete before failure is armed.
+      changed = true;
+      failNextDetail = true;
+      await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("focus")));
+      await readerSettles(() => inboxReadCount === 3 && threadReads.length === 2);
+      expect(failNextDetail).toBe(false);
+      expect(threadReads).toHaveLength(2);
       expect(browserWindow.document.querySelector(".reader-document")).toBe(readerDocument);
       expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(selectedMessage.subject);
-
-      browserWindow.dispatchEvent(new browserWindow.Event("focus"));
-      for (let index = 0; index < 30 && threadReadCount < 3; index += 1) await waitFor(0);
-
-      expect(inboxReadCount).toBeGreaterThanOrEqual(3);
-      expect(threadReadCount).toBe(3);
-      expect(browserWindow.document.querySelector(".reader-document")).toBe(readerDocument);
-      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(updatedSubject);
       expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+
+      await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("focus")));
+      await readerSettles(() => browserWindow.document.querySelector("#reader-title")?.textContent === updatedSubject);
+      expect(inboxReadCount).toBe(4);
+      expect(threadReads).toHaveLength(3);
+      expect(browserWindow.document.querySelector(".reader-document")).toBe(readerDocument);
+      expect(browserWindow.document.querySelector(".reader-loading")).toBeNull();
+      // Exercise the real prefetch after recovery; the recovered version is hot.
+      await prefetch.run();
+      expect(threadReads).toHaveLength(3);
     } finally {
+      prefetch.restore();
       globalThis.fetch = originalFetch;
     }
   });
 
-  // Reuse PR252's reviewed Retry isolation cases; its silent-refresh work stays separate.
   // Hold only the reader's 100 ms prefetch scheduler, not React/DOM work. Use
   // real timer handles so production cleanup cancels superseded callbacks.
   // Every caller must explicitly run a queued prefetch and restore the clock.

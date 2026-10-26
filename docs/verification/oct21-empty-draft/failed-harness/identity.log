@@ -1,0 +1,9 @@
+{
+  "bun": "1.3.14",
+  "node": "v24.19.0",
+  "git": "git version 2.52.0",
+  "chromiumExecutable": "/usr/bin/chromium",
+  "testedCommit": "99ccf36c9f60340ab57c800f30a392a39d32ca00",
+  "lockSha256": "ed608305f7dd563306ebfcd889a002a3dbceaeadcf9d54c3d6c6aed6d166b06f",
+  "python": "3.12.14"
+}

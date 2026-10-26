@@ -1,0 +1,95 @@
+{
+  "startedAt": "2026-10-21T12:47:17.990Z",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "syntheticOnly": true,
+  "browserVersion": "154.0.8037.57",
+  "fixtureOrigin": "http://127.0.0.1:35593",
+  "scenarios": [],
+  "responses": [
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "status": 200
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "status": 200
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "status": 200
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/2e54c573-d3cd-4d08-b215-89a690f607b7",
+      "status": 200
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "status": 200
+    }
+  ],
+  "requests": [
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/2e54c573-d3cd-4d08-b215-89a690f607b7",
+      "query": "?accountId=first",
+      "body": "{\"revision\":0,\"to\":[],\"cc\":[],\"bcc\":[],\"subject\":\"\",\"body\":{\"text\":\"\",\"html\":null},\"context\":null}"
+    },
+    {
+      "theme": "light",
+      "method": "GET",
+      "path": "/v1/drafts",
+      "query": "?accountId=first",
+      "body": null
+    }
+  ],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    {
+      "theme": "light",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    },
+    {
+      "theme": "light",
+      "origin": "https://fonts.googleapis.com",
+      "path": "/css2"
+    }
+  ],
+  "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'Discard', exact: true })\n\n    at /tmp/orca-pstack-xhcg2_gt/source/apps/web/scripts/compose-fixture-e2e.mjs:160:62",
+  "deliveries": []
+}

@@ -63,6 +63,9 @@ let intercept:
   | undefined;
 let puts: Array<{ path: string; body: any }>;
 let refreshes: number;
+let inFlight = 0;
+let pendingIntercepts = 0;
+let requestActivity = 0;
 let quietId: string, fallbackId: string;
 let onRefresh: (() => Promise<void>) | undefined;
 const frameIds = new Set<ReturnType<typeof setTimeout>>();
@@ -172,6 +175,9 @@ beforeEach(async () => {
   refreshes = 0;
   onRefresh = undefined;
   intercept = undefined;
+  inFlight = 0;
+  pendingIntercepts = 0;
+  requestActivity = 0;
   globalThis.fetch = (async (
     input: string | URL | Request,
     init?: RequestInit,
@@ -179,7 +185,24 @@ beforeEach(async () => {
     const path = String(input);
     if (init?.method === "PUT")
       puts.push({ path, body: JSON.parse(String(init.body)) });
-    return (await intercept?.(path, init)) ?? (await request(path, init));
+    inFlight++;
+    requestActivity++;
+    try {
+      let intercepted: Response | undefined;
+      if (intercept) {
+        pendingIntercepts++;
+        try {
+          intercepted = await intercept(path, init);
+        } finally {
+          pendingIntercepts--;
+          requestActivity++;
+        }
+      }
+      return intercepted ?? (await request(path, init));
+    } finally {
+      inFlight--;
+      requestActivity++;
+    }
   }) as typeof fetch;
   const catalog = await (await request("/v1/destinations")).json();
   fallbackId = catalog.fallbackDestinationId;
@@ -224,9 +247,45 @@ async function state(account = "a", query = "") {
   return result;
 }
 async function settle() {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  });
+  // Interceptors can deliberately hold responses behind test gates. Require all
+  // non-intercepted work to finish and request activity to stay unchanged across
+  // two polls; a held interceptor is quiescent, but its eventual release starts
+  // activity again. Ordinary requests must reach zero, never just stop changing.
+  let previousActivity = -1;
+  let quietPolls = 0;
+  await waitForCondition(
+    "fetch quiescence (no non-gated requests in flight)",
+    () => {
+      quietPolls =
+        inFlight === pendingIntercepts && requestActivity === previousActivity
+          ? quietPolls + 1
+          : 0;
+      previousActivity = requestActivity;
+      return quietPolls >= 2;
+    },
+  );
+}
+async function waitForCondition(
+  description: string,
+  predicate: () => boolean,
+  { timeout = 5000, interval = 10 } = {},
+) {
+  const deadline = Date.now() + timeout;
+  do {
+    let satisfied = false;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, interval));
+      // Drain response-body continuations and give React an event-loop turn to
+      // commit updates while act is still active, including when fetch is idle.
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await Promise.resolve();
+      satisfied = predicate();
+    });
+    if (satisfied) return;
+  } while (Date.now() < deadline);
+  throw new Error(`Timed out waiting for ${description}`);
 }
 async function render(chooser = false) {
   await act(async () =>
@@ -1240,22 +1299,35 @@ test("App late batch completion does not clear another view's selection or overw
   intercept = async path => syncNoop(path);
   await renderMailbox(); await openBulkMove();
   const gate = deferred(); let held: Response | undefined;
+  let released = false, lateRefreshCompleted = false;
+  let pendingReads = 0;
   intercept = async (path, init) => {
     if (path.endsWith("/routing/batch") && init?.method === "PUT" && !held) { held = await request(path, init); await gate.promise; return held; }
+    if (released && init?.method !== "PUT" && !syncNoop(path)) {
+      pendingReads++;
+      try {
+        const response = await request(path, init);
+        if (path.startsWith("/v1/inbox?")) lateRefreshCompleted = true;
+        return response;
+      } finally { pendingReads--; }
+    }
     return syncNoop(path);
   };
   await act(async () => button("Move conversations").click());
-  await settle();
+  await waitForCondition("the first batch to commit and wait at its gate", () => held !== undefined);
   // Navigation can occur while a request is in flight; the new view owns new selection.
   await nav("All Mail"); await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
   await chooseBulkDestination("Inbox");
   await click("Move conversations");
+  await waitForCondition("the newer Inbox receipt", () => document.querySelector(".routing-feedback")?.textContent?.includes("1 conversation moved to Inbox.") === true);
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
-  await act(async () => gate.release()); await settle(); await settle();
+  await act(async () => { released = true; gate.release(); await gate.promise; });
+  await waitForCondition("the late batch's canonical mail refresh to finish", () => lateRefreshCompleted && pendingReads === 0);
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
   expect(document.querySelector(".routing-feedback")?.textContent).not.toContain("2 conversations moved");
   await click("Undo");
+  await waitForCondition("the newer receipt's Undo to finish", () => document.querySelector(".routing-feedback")?.textContent?.includes("Last routing change undone") === true && pendingReads === 0);
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("Last routing change undone");
 });
 

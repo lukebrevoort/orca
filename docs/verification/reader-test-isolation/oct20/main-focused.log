@@ -1,0 +1,26 @@
+bun test v1.3.14 (0d9b296a)
+
+../../tmp/orca252-oct20/main/apps/web/src/App.interaction.test.tsx:
+3390 |         await Promise.resolve();
+3391 |         await Promise.resolve();
+3392 |       });
+3393 |       for (let index = 0; index < 20 && threadReadCount < 2; index += 1) await waitFor(0);
+3394 | 
+3395 |       expect(threadReadCount).toBe(2);
+                                     ^
+error: expect(received).toBe(expected)
+
+Expected: 2
+Received: 3
+
+      at <anonymous> (/tmp/orca252-oct20/main/apps/web/src/App.interaction.test.tsx:3395:31)
+(fail) Inbox reader viewport restoration > retries a failed silent Reader refresh on a later same-version mailbox refresh [276.86ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (held prefetch) [303.25ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (completed prefetch) [225.82ms]
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (in-flight prefetch) [193.57ms]
+
+ 3 pass
+ 131 filtered out
+ 1 fail
+ 58 expect() calls
+Ran 4 tests across 1 file. [1.60s]

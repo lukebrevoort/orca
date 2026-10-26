@@ -3607,14 +3607,6 @@ textarea {
 .reader-attachments { margin-top: 38px; }
 .reader-attachments h3 { color: var(--orca-muted); font-size: 10px; letter-spacing: .12em; margin: 0 0 10px; text-transform: uppercase; }
 .reader-attachments-note { color: var(--orca-muted); font-size: 12px; line-height: 1.55; margin: 0 0 12px; max-width: 520px; }
-.reader-attachments-note strong { color: var(--orca-ink); }
-.reader-attachments ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
-.reader-attachments li { align-items: center; background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 9px; display: grid; gap: 12px; grid-template-columns: auto minmax(0, 1fr) auto; max-width: 520px; padding: 13px 15px; }
-.reader-attachments li > span { color: var(--orca-accent); font-family: var(--orca-font-display); font-size: 20px; }
-.reader-attachments li div { display: grid; gap: 3px; min-width: 0; }
-.reader-attachments strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reader-attachments small { color: var(--orca-muted); font-size: 11px; }
-.reader-attachments li > .reader-attachment-availability { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-family: var(--orca-font-body); font-size: 9px; font-weight: 750; letter-spacing: .06em; padding: 5px 8px; text-transform: uppercase; white-space: nowrap; }
 
 .reply-brief-invitation,
 .reply-brief {
@@ -3991,15 +3983,15 @@ textarea {
 .compose-drop-overlay strong { color: var(--orca-ink); font-family: var(--orca-font-display); font-size: clamp(22px, 2.4vw, 30px); font-weight: 400; letter-spacing: -.02em; }
 .compose-drop-overlay span { color: var(--orca-muted); font-size: 12px; max-width: 28ch; }
 .compose-attachment-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0 0 8px; }
-.compose-attachment-chips li { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); display: inline-flex; gap: 8px; max-width: min(280px, 100%); min-height: 34px; padding: 3px 4px 3px 4px; }
-.compose-attachment-chip-preview { aspect-ratio: 1 / 1; border-radius: 50%; height: 26px; object-fit: cover; width: 26px; }
+.compose-attachment-chips li { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 10px; color: var(--orca-ink); display: inline-flex; gap: 8px; max-width: min(280px, 100%); min-height: 34px; padding: 3px 4px 3px 4px; }
+.compose-attachment-chip-preview { aspect-ratio: 1 / 1; border: 1px solid var(--orca-border); border-radius: 6px; flex-shrink: 0; height: 40px; object-fit: cover; width: 40px; }
 .compose-attachment-chip-glyph { align-items: center; color: var(--orca-accent); display: inline-flex; font-family: var(--orca-font-display); font-size: 15px; height: 26px; justify-content: center; width: 26px; }
 .compose-attachment-chip-meta { display: grid; gap: 1px; min-width: 0; padding-right: 2px; }
 .compose-attachment-chip-meta strong { font-size: 12px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compose-attachment-chip-meta small { color: var(--orca-muted); font-size: 10px; }
 .compose-attachment-chips button { align-items: center; background: transparent; border: 0; border-radius: 50%; color: var(--orca-muted); cursor: pointer; display: inline-flex; font-size: 17px; height: 26px; justify-content: center; line-height: 1; width: 26px; }
 .compose-attachment-chips button:hover, .compose-attachment-chips button:focus-visible { background: var(--orca-paper); color: var(--orca-ink); outline: 0; }
-.compose-attachment-error { color: #a94f45; font-size: 11px; line-height: 1.45; margin: 0 0 8px; }
+.compose-attachment-error { color: var(--orca-danger); font-size: 11px; line-height: 1.45; margin: 0 0 8px; }
 
 .compose-delivery-bar { align-items: center; border-top: 1px solid var(--orca-border); display: grid; gap: 6px 16px; grid-template-columns: 1fr auto; padding-top: 16px; }
 .compose-delivery-bar > div:first-child { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }

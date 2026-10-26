@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "testedCommit": "99ccf36c9f60340ab57c800f30a392a39d32ca00",
+  "testedTree": "7d2351ffa1896599cc0b7a49ebbae9541ddbeba0",
+  "driverSha256": "cf377b385e1b2c4865f4ec96b0286b87a989bb690305639ec71866aeae79a4c9",
+  "dependencyLockSha256": "ed608305f7dd563306ebfcd889a002a3dbceaeadcf9d54c3d6c6aed6d166b06f",
+  "dependencies": "copy of preinstalled dependencies; no install performed",
+  "syntheticOnly": true,
+  "exitCode": 1,
+  "cleanupComplete": true,
+  "nativeChecks": "not run locally; existing hosted Fixture Checks owns iOS",
+  "files": {
+    "browser-failure-dom.txt": "b8af4e1ede45fe364833541a8340914b0ee35888e9f70317db3de866f8c0fb66",
+    "browser-results.json": "c9f0189108017482b46e70a71b0176fc6509dcc3ddb328b787f7c276d7248273",
+    "checks.log": "1da4a0a428475fa7e4096e17ade2595de1979290fb5782be66aa2c5378555788",
+    "fixture.log": "115481785f5519f7d211ad258315a7fd13bd72fb6425416101ba9e23c98f062b",
+    "identity.log": "41b1ac75cf9a830dacc2bf79976af5ed7d98f623cc75f6b270b15ad08fb0428b",
+    "outcome.json": "2a76c9742850721064723a7ae8690d8408b3522a1bbf20781a28e16b4a32e55c",
+    "screenshots/failure.png": "267c30efc064009eab40d00e260a9bdc7774ce4c562cb7e3b4479bfae3555a78",
+    "screenshots/light-account-pending.png": "9dcf7495176aec930d23db667a27a1be9fdf8600a2387bb47cd698a57f79a503",
+    "screenshots/light-cleared-draft-after-reload.png": "267c30efc064009eab40d00e260a9bdc7774ce4c562cb7e3b4479bfae3555a78",
+    "screenshots/light-draft-recovery-pending.png": "2f45afa84c2142133cec8dbe40c625de4f46bcaae0327d3b170f697980438bf0"
+  }
+}

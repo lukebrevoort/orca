@@ -1,0 +1,88 @@
+orca
+PERSONAL
+Compose
+C
+
+MAIL
+
+Inbox
+2
+Focus
+Drafts
+1
+SPACES
+MANAGE SPACES
+TOOLS
+CUSTOMIZE TOOLS
+Later
+0
+Manage saved views
+All Mail
+
+WORKSPACE
+
+Organization
+Settings
+first
+2 accounts · attention
+›
+⌕
+⌘ K
+Inbox
+Attention
+Black
+
+WEDNESDAY, OCTOBER 21
+
+Inbox
+0 unread · 0 pins
+Select
+
+2 messages in Inbox.
+
+MA
+Maya
+Normal
+12:47 PM
+first account conversation
+
+Could you send me your latest writing notes?
+
++
+WHY HERE
+INBOX
+MA
+Maya
+Normal
+12:47 PM
+second account conversation
+
+Could you send me your latest writing notes?
+
++
+WHY HERE
+INBOX
+New message
+Open in Zen
+×
+To
+Add Cc or Bcc
+Sub
+Message format
+Plain text
+Rich text
+B
+I
+List
+Quote
+Attach
+
+
+
+
+Use Command B for bold, Command I for italic, Command Z to undo, and arrow keys to move through slash commands. Drop files onto the compose canvas to attach them.
+Saved to Orca and Gmail
+A blank page
+Send
+
+Add at least one valid recipient to prepare this message.

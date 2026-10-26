@@ -1,0 +1,94 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/web/src/attention-page.test.tsx:
+(pass) page saves actual sender routing, refreshes consumers, Undo restores prior explicit state, accounts isolated [522.40ms]
+(pass) shared chooser defaults to actual conversation, sender action is explicit, reset inherits, guarded Undo never overwrites newer intent [687.00ms]
+(pass) unknown committed response reloads canonical state without retry; failed reload locks last values [396.48ms]
+(pass) late account response cannot replace current account and discovery never creates sender rules [252.46ms]
+(pass) account-list failure remains visible after a successful routing reload; offline locks edits [246.83ms]
+(pass) write-only permission failure remains locked when GET succeeds until explicit recovery [356.55ms]
+(pass) mixed-case sender identity is normalized for shared chooser reads and writes [315.41ms]
+(pass) failed recovery read is not silently retried after an unknown save [256.65ms]
+(pass) filtered sender disappearance and Undo return focus to a useful heading [345.33ms]
+(pass) old Undo conflict completion preserves a later save receipt [368.99ms]
+(pass) old Undo success completion preserves a later save receipt [559.67ms]
+(pass) filtered sender attempted edit reconciles focus after committed ambiguous response [369.31ms]
+(pass) filtered sender attempted edit reconciles focus after rejected ambiguous response [333.29ms]
+(pass) filtered sender attempted edit reconciles focus after moved-focus ambiguous response [380.00ms]
+(pass) App routing refresh releases pending Inbox pagination and installs usable canonical cursor [2266.29ms]
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to AttentionPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+(pass) App routing refresh releases pending Signals pagination and installs usable canonical cursor [1841.57ms]
+(pass) App ignores a pre-save background snapshot after Quiet save, retaining row, count and cursor truth [1763.87ms]
+(pass) App accepts final provider status after routing invalidates its completed background snapshot [1837.10ms]
+(pass) delayed successful old Undo response cannot replace a newer receipt [471.67ms]
+(pass) cancelled chooser reopening reads external routing before selecting or saving [336.57ms]
+(pass) App focus provider completion refreshes Quiet rows, count and cursor and rejects old pagination [1449.19ms]
+(pass) App interval provider completion refreshes Quiet rows, count and cursor and rejects old pagination [1579.92ms]
+(pass) App manual provider completion refreshes Quiet rows, count and cursor and rejects old pagination [1604.39ms]
+(pass) create from sidebar opens durable destination; sender routing covers future mail, rename keeps identity and retirement rejects references safely [1353.30ms]
+(pass) destination URL survives reader open, close and history while canonical pages exceed first hundred [2026.21ms]
+(pass) same-destination refresh retains an open chooser and explicit unsaved choice [639.94ms]
+(pass) opening unread mail updates the Inbox page and canonical catalog count [625.88ms]
+(pass) opening unread mail updates the Quiet page and canonical catalog count [779.87ms]
+(pass) destination switches clear hidden selections and actionable sender targets [645.29ms]
+(pass) custom destination cannot save its search as a fallback Inbox filter [449.72ms]
+(pass) rejected mark-read preserves canonical destination unread state without changing another account [498.09ms]
+(pass) App bulk move dedupes selected messages across accounts, refreshes counts/pages and retains root Undo [862.97ms]
+(pass) App pending batch preserves attempted scope when refreshed rows prune every selected target [757.78ms]
+(pass) App bulk rejected preserves choices and requires explicit recovery without fabricated Undo [648.47ms]
+(pass) App bulk unconfirmed preserves choices and requires explicit recovery without fabricated Undo [782.50ms]
+(pass) App bulk selection over 50 conversations is explicit and never silently truncated [1002.88ms]
+(pass) App late batch completion does not clear another view's selection or overwrite its newer receipt [788.30ms]
+(pass) App committed-but-unconfirmed batch reloads canonical mail, prunes stale selection and never offers fabricated Undo [579.80ms]
+(pass) batch receipt cannot cross an account/session owner replacement, including late success [124.48ms]
+(pass) App query replacement releases old bulk refresh busy state without unlocking a newer pending move [778.91ms]
+(pass) App uncertain batch recovery survives Cancel and selection teardown until explicit mail reload succeeds [936.01ms]
+(pass) App repeated global recovery clicks share one attempt and failed recovery keeps new batch choosers locked [799.25ms]
+(pass) superseded mail snapshot cannot satisfy explicit recovery [127.46ms]
+(pass) bulk recovery releases its parent busy lease on unmount before the catalog completes [206.77ms]
+(pass) detached recovery completion cannot unlock a new move after a same-query remount [371.37ms]
+(pass) App Start over removes recovery and empty reselected recovery clears busy before rows return [857.58ms]
+
+ 46 pass
+ 0 fail
+ 598 expect() calls
+Ran 46 tests across 1 file. [35.88s]

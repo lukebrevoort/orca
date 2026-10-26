@@ -1,0 +1,39 @@
+bun test v1.3.14 (0d9b296a)
+
+../../tmp/reader-review-mutation/apps/web/src/App.interaction.test.tsx:
+(pass) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (held prefetch) [1884.07ms]
+3496 |           expect(isSameNode(browserWindow.document.querySelector(".reader-state button"), retry)).toBe(true);
+3497 |         }
+3498 |         const beforeRetry = selectedReads().length;
+3499 |         await act(async () => retry.click());
+3500 |         await readerSettles(() => Boolean(browserWindow.document.querySelector(".reader-document:not(.reader-loading)")));
+3501 |         expect(selectedReads()).toHaveLength(beforeRetry + 1);
+                                       ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 3
+Received length: 2
+
+      at <anonymous> (/tmp/reader-review-mutation/apps/web/src/App.interaction.test.tsx:3501:33)
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (completed prefetch) [1083.19ms]
+3362 |     };
+3363 |   }
+3364 | 
+3365 |   async function readerSettles(check: () => boolean) {
+3366 |     for (let i = 0; i < 40 && !check(); i++) await waitFor(0);
+3367 |     expect(check()).toBe(true);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at readerSettles (/tmp/reader-review-mutation/apps/web/src/App.interaction.test.tsx:3367:21)
+      at async <anonymous> (/tmp/reader-review-mutation/apps/web/src/App.interaction.test.tsx:3500:15)
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread (in-flight prefetch) [227.92ms]
+
+ 1 pass
+ 132 filtered out
+ 2 fail
+ 40 expect() calls
+Ran 3 tests across 1 file. [5.15s]

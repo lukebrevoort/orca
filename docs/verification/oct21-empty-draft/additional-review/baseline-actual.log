@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a)
+
+../../tmp/orca-264-review-base/baseline.test.tsx:
+(pass) empty checkpoint cannot erase a different same-scope draft after original remote is deleted [507.77ms]
+
+ 1 pass
+ 8 filtered out
+ 0 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [783.00ms]
