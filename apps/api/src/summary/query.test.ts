@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { resolve } from "node:path";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { createDatabaseClient } from "../db/client.ts";
+import * as schema from "../db/schema.ts";
 import { agentEvents, emails, oauthAccounts, threadReminders, threads, users } from "../db/schema.ts";
 import { buildSummary } from "./rules.ts";
 import { querySummary } from "./query.ts";
@@ -15,7 +17,7 @@ function setup() {
   c.db.insert(users).values([{ id: "u", email: "user@example.test" }, { id: "other", email: "other@example.test" }]).run();
   c.db.insert(oauthAccounts).values(["a", "b", "private"].map(id => ({ id, userId: id === "private" ? "other" : "u", provider: "gmail", providerId: id, providerEmail: `${id}@example.test` }))).run();
   function messageRows(id: string, accountId = "a", patch: Partial<typeof emails.$inferInsert> = {}) {
-    return { thread: { id, accountId, providerThreadId: id }, email: { id, accountId, threadId: id, providerMessageId: id, fromAddress: "sender@example.test", toRecipients: JSON.stringify([{ email: `${accountId}@example.test` }]), receivedAt: now, humanClassification: "likely_human", humanSignal: 8, humanClassificationReasons: "[]", ...patch } };
+    return { thread: { id, accountId, providerThreadId: id }, email: { id, accountId, threadId: id, providerMessageId: id, fromAddress: "sender@example.test", toRecipients: JSON.stringify([{ email: `${accountId}@example.test` }]), receivedAt: now, isDraft: false, humanClassification: "likely_human", humanSignal: 8, humanClassificationReasons: "[]", ...patch } };
   }
   function eventRow(id: string, lifecycleState: string, accountId = "a") {
     return { id: `event-${id}`, ownerUserId: accountId === "private" ? "other" : "u", accountId, messageId: id, threadId: id, providerMessageId: id, provider: "gmail", senderAddress: "sender@example.test", sourceSubject: "subject", sourceReceivedAt: now, sourceUrl: "https://example.test", trigger: "sync", policyVersion: "v1", agentId: "agent", agentVersion: "v1", executionMode: "deterministic", eventKind: "request", importance: "normal", relevance: "direct", destination: "inbox", reasonCodes: "[]", title: "<script>event</script>", summary: "summary", whyThisMatters: "why", deduplicationKey: id, assessmentFingerprint: id, evaluatedAt: now, lifecycleState } satisfies typeof agentEvents.$inferInsert;
@@ -127,4 +129,78 @@ test("SQL bounds million-character subjects and snippets in all source projectio
     expect(m?.subject).toBe("s".repeat(300));
     expect(m?.snippet).toBe("x".repeat(500));
   }
+});
+
+test("an unsent own-account draft never answers inbound mail or starts waiting-on chronology", () => {
+  const f = setup();
+  f.message("inbound", "a", { receivedAt: new Date(now.getTime() - 2 * day) });
+  f.db.insert(emails).values(f.messageRows("reply-draft", "a", {
+    threadId: "inbound", fromAddress: "a@example.test", receivedAt: new Date(now.getTime() - day), isDraft: true,
+  }).email).run();
+  for (const at of [now, new Date(now.getTime() + 2 * day), new Date(now.getTime() + 3 * day)]) {
+    const result = buildSummary(querySummary(f.db, "u", "a", at), at);
+    expect(result.needsYou.map(i => i.source.messageId)).toEqual(["inbound"]);
+    expect(result.waitingOn).toEqual([]);
+  }
+});
+
+test("a draft-only thread contributes no messages or summary sections", () => {
+  const f = setup();
+  f.message("only-draft", "a", { isDraft: true, humanClassification: "automated_or_bulk" });
+  const data = querySummary(f.db, "u", "a", now);
+  expect(data.messages).toEqual([]);
+  const result = buildSummary(data, now);
+  expect(result.needsYou).toEqual([]);
+  expect(result.waitingOn).toEqual([]);
+  expect(result.routine.count).toBe(0);
+  expect(result.codes.items).toEqual([]);
+  expect(result.draftedReplies.items).toEqual([]);
+});
+
+test("more than 500 newer drafts cannot displace real messages from the bounded sample", () => {
+  const f = setup();
+  f.message("real", "a", { receivedAt: new Date(now.getTime() - day) });
+  f.db.transaction(() => {
+    for (let start = 0; start < 501; start += 250) {
+      const rows = Array.from({ length: Math.min(250, 501 - start) }, (_, offset) =>
+        f.messageRows(`draft-${start + offset}`, "a", { isDraft: true }));
+      f.db.insert(threads).values(rows.map(row => row.thread)).run();
+      f.db.insert(emails).values(rows.map(row => row.email)).run();
+    }
+  });
+  const data = querySummary(f.db, "u", "a", now);
+  expect(data.messages.map(m => m.id)).toEqual(["real"]);
+  expect(data.messages.some(m => m.id.startsWith("draft-"))).toBe(false);
+});
+
+test("draft events are skipped and reminders source the latest non-draft message", () => {
+  const f = setup();
+  f.message("event-draft", "a", { isDraft: true });
+  f.event("event-draft", "new");
+  f.message("event-real");
+  f.event("event-real", "seen");
+  f.message("older-real", "a", { receivedAt: new Date(now.getTime() - 30 * day) });
+  f.db.insert(emails).values(f.messageRows("latest-draft", "a", { threadId: "older-real", isDraft: true }).email).run();
+  f.message("only-draft", "a", { isDraft: true });
+  for (const threadId of ["older-real", "only-draft"]) {
+    f.db.insert(threadReminders).values({ id: `reminder-${threadId}`, accountId: "a", threadId, status: "resurfaced", scheduledFor: now, timezone: "UTC" }).run();
+  }
+  const data = querySummary(f.db, "u", "a", now);
+  expect(data.events.map(e => e.messageId)).toEqual(["event-real"]);
+  expect(data.reminders.map(r => [r.threadId, r.sourceMessage?.id])).toEqual([["older-real", "older-real"]]);
+  const result = buildSummary(data, now);
+  expect(result.needsYou.map(i => i.source.messageId).sort()).toEqual(["event-real", "older-real"]);
+  expect(result.waitingOn).toEqual([]);
+});
+
+
+test("reminder SQL independently guards the joined source against drafts", () => {
+  const f = setup();
+  const queries: string[] = [];
+  const db = drizzle(f.sqlite, { schema, logger: { logQuery(query) { queries.push(query); } } });
+  querySummary(db, "u", "a", now);
+  const reminderQuery = queries.find(query => query.includes('from "thread_reminders"'));
+  // The subquery already excludes drafts; retain the requested defense on the outer join too.
+  expect(reminderQuery).toBeDefined();
+  expect(reminderQuery).toMatch(/inner join "emails" on \(.*"emails"\."is_draft" = \?/);
 });
