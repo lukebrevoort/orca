@@ -133,10 +133,25 @@ test("clipboard rejection and unavailable clipboard expose graceful feedback", a
   await click("Copy"); expect(text()).toContain("Reveal the code to copy it manually.");
 });
 test("countdown refreshes and masks a revealed code at expiry", async () => {
-  await click("Reveal"); clock = 120000;
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1050)); });
-  expect(text()).toContain("Expired"); expect(text()).not.toContain("482631");
-  expect(tileCounts()[3]).toBe("0");
+  const originalSetInterval = globalThis.setInterval;
+  let tick: (() => void) | undefined;
+  try {
+    globalThis.setInterval = ((callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+      if (delay === 1000) tick = () => callback(...args);
+      return originalSetInterval(callback, delay, ...args);
+    }) as typeof setInterval;
+    // Remount so the countdown effect registers its callback under the stub.
+    await act(async () => root.render(<SummaryPage key="countdown" now={now} />));
+    await click("Reveal");
+    expect(text()).toContain("482631");
+    expect(tick).toBeDefined();
+    clock = 120000;
+    await act(async () => tick!());
+    expect(text()).toContain("Expired"); expect(text()).not.toContain("482631");
+    expect(tileCounts()[3]).toBe("0");
+  } finally {
+    globalThis.setInterval = originalSetInterval;
+  }
 });
 
 test("approving a demo draft makes no fetch or beacon requests", async () => {
