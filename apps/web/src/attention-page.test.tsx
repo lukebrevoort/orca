@@ -228,6 +228,20 @@ async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 20));
   });
 }
+async function waitForCondition(
+  description: string,
+  predicate: () => boolean,
+  { timeout = 5000, interval = 10 } = {},
+) {
+  const deadline = Date.now() + timeout;
+  do {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    });
+    if (predicate()) return;
+  } while (Date.now() < deadline);
+  throw new Error(`Timed out waiting for ${description}`);
+}
 async function render(chooser = false) {
   await act(async () =>
     root.render(
@@ -1240,22 +1254,35 @@ test("App late batch completion does not clear another view's selection or overw
   intercept = async path => syncNoop(path);
   await renderMailbox(); await openBulkMove();
   const gate = deferred(); let held: Response | undefined;
+  let released = false, lateRefreshCompleted = false;
+  let pendingReads = 0;
   intercept = async (path, init) => {
     if (path.endsWith("/routing/batch") && init?.method === "PUT" && !held) { held = await request(path, init); await gate.promise; return held; }
+    if (released && init?.method !== "PUT" && !syncNoop(path)) {
+      pendingReads++;
+      try {
+        const response = await request(path, init);
+        if (path.startsWith("/v1/inbox?")) lateRefreshCompleted = true;
+        return response;
+      } finally { pendingReads--; }
+    }
     return syncNoop(path);
   };
   await act(async () => button("Move conversations").click());
-  await settle();
+  await waitForCondition("the first batch to commit and wait at its gate", () => held !== undefined);
   // Navigation can occur while a request is in flight; the new view owns new selection.
   await nav("All Mail"); await click("Select");
   await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
   await chooseBulkDestination("Inbox");
   await click("Move conversations");
+  await waitForCondition("the newer Inbox receipt", () => document.querySelector(".routing-feedback")?.textContent?.includes("1 conversation moved to Inbox.") === true);
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
-  await act(async () => gate.release()); await settle(); await settle();
+  await act(async () => { released = true; gate.release(); await gate.promise; });
+  await waitForCondition("the late batch's canonical mail refresh to finish", () => lateRefreshCompleted && pendingReads === 0);
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
   expect(document.querySelector(".routing-feedback")?.textContent).not.toContain("2 conversations moved");
   await click("Undo");
+  await waitForCondition("the newer receipt's Undo to finish", () => document.querySelector(".routing-feedback")?.textContent?.includes("Last routing change undone") === true && pendingReads === 0);
   expect(document.querySelector(".routing-feedback")?.textContent).toContain("Last routing change undone");
 });
 
