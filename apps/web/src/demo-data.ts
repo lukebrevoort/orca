@@ -333,6 +333,7 @@ export const messageBodies: Record<string, string> = {
 };
 
 export const messageHtmlBodies: Record<string, string> = {
+  msg_2: `<span class="orca-mail-image-note">[Image blocked: Harbor Bank logo]</span><p>Your monthly statement is ready.</p><p>Review your recent activity and account summary in your banking portal.</p><span class="orca-mail-image-note">[Image blocked: Monthly spending chart]</span><p>Thank you for banking with Harbor Bank.</p>`,
   msg_1: `<p>Hey Luke,</p><p>Here are the <strong>launch notes</strong> for Orca Mail. The big shift is treating pinned people as filters, not shortcuts into a single thread.</p><h2>What changed</h2><ul><li>People stay visible across conversations.</li><li>The reading surface keeps the message hierarchy intact.</li><li>Links remain useful without inheriting sender styling.</li></ul><p>Review the <a href="https://example.com/orca-reader" rel="noopener noreferrer" target="_blank">reader notes</a> when you have a minute.</p><p>Let me know what you think.</p><p>— Maya</p>`,
 };
 

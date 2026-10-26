@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 
 /** Keep exact geometry after focus enters message content. The browser can
@@ -43,13 +43,28 @@ export function splitQuotedContent(body: string) {
 }
 
 /** Presentation only: HTML must already have passed the API's providerHtmlPolicy.
- * Switching alternatives never rewrites content, links, or reply source data.
+ * Switching alternatives preserves content, links, and reply source data.
  * Keep formatted DOM mounted while hidden: toggles must not refetch images. */
 export function ReaderBody({ html, text }: { html: string | null; text: string | null }) {
   const [preferredView, setPreferredView] = useState<"formatted" | "text">(() => text && splitQuotedContent(text).quoted ? "text" : "formatted");
   const bodyId = useId();
   const [showOriginal, setShowOriginal] = useState(false);
   const formattedContent = useMemo(() => ({ __html: html ?? "" }), [html]);
+  const formattedBody = useRef<HTMLDivElement>(null);
+  const [hasBlockedImages, setHasBlockedImages] = useState(false);
+  useLayoutEffect(() => {
+    const notes = formattedBody.current?.querySelectorAll("span.orca-mail-image-note");
+    setHasBlockedImages(Boolean(notes?.length));
+    notes?.forEach(note => {
+      if (note.getAttribute("data-orca-image-note") === "enhanced") return;
+      const match = /^\[Image blocked: ([\s\S]*)\]$/.exec(note.textContent ?? "");
+      if (!match) return;
+      const alt = match[1]!;
+      note.textContent = alt;
+      note.setAttribute("data-orca-image-note", "enhanced");
+      note.setAttribute("aria-label", `Blocked image: ${alt}`);
+    });
+  }, [html]);
   const hasHtml = Boolean(html?.trim());
   const hasText = Boolean(text?.trim());
   const showHtml = hasHtml && (preferredView === "formatted" || !hasText);
@@ -68,7 +83,8 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
       <div id={bodyId}>
         {hasHtml ? (
           <div aria-label="Formatted message" aria-description="Wide content can be scrolled horizontally." className="reader-formatted-region" hidden={!showHtml} role="region" tabIndex={0}>
-            <div className="reader-body reader-body-html" dangerouslySetInnerHTML={formattedContent} />
+            {showHtml && hasBlockedImages ? <p className="reader-images-hidden-note">Images hidden for privacy</p> : null}
+            <div ref={formattedBody} className="reader-body reader-body-html" dangerouslySetInnerHTML={formattedContent} />
           </div>
         ) : null}
         {!showHtml && plainBody ? (
