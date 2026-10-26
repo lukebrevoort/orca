@@ -363,7 +363,7 @@ async function createFixture(options: Parameters<typeof createMobileAuthApp>[0] 
   const { db, sqlite } = createDatabaseClient(dbPath);
   migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
 
-  const clockStart = new Date("2026-09-22T18:00:00.000Z");
+  const clockStart = new Date(Math.floor(Date.now() / 1000) * 1000);
   db.insert(users).values([
     { id: "user_1", email: "one@example.com", authenticatedAt: clockStart },
     { id: "user_2", email: "two@example.com", authenticatedAt: clockStart },
