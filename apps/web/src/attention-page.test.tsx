@@ -63,6 +63,9 @@ let intercept:
   | undefined;
 let puts: Array<{ path: string; body: any }>;
 let refreshes: number;
+let inFlight = 0;
+let pendingIntercepts = 0;
+let requestActivity = 0;
 let quietId: string, fallbackId: string;
 let onRefresh: (() => Promise<void>) | undefined;
 const frameIds = new Set<ReturnType<typeof setTimeout>>();
@@ -172,6 +175,9 @@ beforeEach(async () => {
   refreshes = 0;
   onRefresh = undefined;
   intercept = undefined;
+  inFlight = 0;
+  pendingIntercepts = 0;
+  requestActivity = 0;
   globalThis.fetch = (async (
     input: string | URL | Request,
     init?: RequestInit,
@@ -179,7 +185,24 @@ beforeEach(async () => {
     const path = String(input);
     if (init?.method === "PUT")
       puts.push({ path, body: JSON.parse(String(init.body)) });
-    return (await intercept?.(path, init)) ?? (await request(path, init));
+    inFlight++;
+    requestActivity++;
+    try {
+      let intercepted: Response | undefined;
+      if (intercept) {
+        pendingIntercepts++;
+        try {
+          intercepted = await intercept(path, init);
+        } finally {
+          pendingIntercepts--;
+          requestActivity++;
+        }
+      }
+      return intercepted ?? (await request(path, init));
+    } finally {
+      inFlight--;
+      requestActivity++;
+    }
   }) as typeof fetch;
   const catalog = await (await request("/v1/destinations")).json();
   fallbackId = catalog.fallbackDestinationId;
@@ -224,9 +247,23 @@ async function state(account = "a", query = "") {
   return result;
 }
 async function settle() {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  });
+  // Interceptors can deliberately hold responses behind test gates. Require all
+  // non-intercepted work to finish and request activity to stay unchanged across
+  // two polls; a held interceptor is quiescent, but its eventual release starts
+  // activity again. Ordinary requests must reach zero, never just stop changing.
+  let previousActivity = -1;
+  let quietPolls = 0;
+  await waitForCondition(
+    "fetch quiescence (no non-gated requests in flight)",
+    () => {
+      quietPolls =
+        inFlight === pendingIntercepts && requestActivity === previousActivity
+          ? quietPolls + 1
+          : 0;
+      previousActivity = requestActivity;
+      return quietPolls >= 2;
+    },
+  );
 }
 async function waitForCondition(
   description: string,
@@ -235,10 +272,18 @@ async function waitForCondition(
 ) {
   const deadline = Date.now() + timeout;
   do {
+    let satisfied = false;
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, interval));
+      // Drain response-body continuations and give React an event-loop turn to
+      // commit updates while act is still active, including when fetch is idle.
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await Promise.resolve();
+      satisfied = predicate();
     });
-    if (predicate()) return;
+    if (satisfied) return;
   } while (Date.now() < deadline);
   throw new Error(`Timed out waiting for ${description}`);
 }
