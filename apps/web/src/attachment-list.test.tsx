@@ -66,11 +66,27 @@ test("downloads the authenticated blob with the original filename and releases t
   const originalClick = browser.HTMLAnchorElement.prototype.click;
   restoreAnchorClick = () => { browser.HTMLAnchorElement.prototype.click = originalClick; };
   browser.HTMLAnchorElement.prototype.click = function () { downloaded = this.download; href = this.href; };
-  await render({ fetcher: fetcher as unknown as typeof fetch }); await click();
-  expect(fetcher).toHaveBeenCalledWith("/v1/attachments/file%20%2F1?accountId=account+%261", { credentials: "include" });
-  expect(create).toHaveBeenCalledTimes(1); expect(downloaded).toBe(attachment.filename); expect(href).toBe("blob:test");
-  expect(document.querySelector("a[download]")).toBeNull();
-  await new Promise((resolve) => setTimeout(resolve, 1050)); expect(revoke).toHaveBeenCalledWith("blob:test");
+  const realSetTimeout = globalThis.setTimeout;
+  let releaseUrl: (() => void) | undefined;
+  globalThis.setTimeout = ((...[callback, delay, ...args]: Parameters<typeof globalThis.setTimeout>) => {
+    if (delay === 1000) {
+      releaseUrl = () => callback(...args);
+      return realSetTimeout(() => {}, 0);
+    }
+    return realSetTimeout(callback, delay, ...args);
+  }) as typeof globalThis.setTimeout;
+  try {
+    await render({ fetcher: fetcher as unknown as typeof fetch }); await click();
+    expect(fetcher).toHaveBeenCalledWith("/v1/attachments/file%20%2F1?accountId=account+%261", { credentials: "include" });
+    expect(create).toHaveBeenCalledTimes(1); expect(downloaded).toBe(attachment.filename); expect(href).toBe("blob:test");
+    expect(document.querySelector("a[download]")).toBeNull();
+    expect(releaseUrl).toBeDefined();
+    expect(revoke).not.toHaveBeenCalled();
+    releaseUrl!();
+    expect(revoke).toHaveBeenCalledWith("blob:test");
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+  }
 });
 test.each([
   [413, "Too large to download here (over 25 MB). Open in Gmail."], [409, "Reconnect Gmail to download."],
