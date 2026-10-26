@@ -1,4 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
+import { threadDetailSchema } from "@orca/shared";
 import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -120,7 +121,7 @@ test("long-thread GET retains image availability, inert bodies and account isola
       expect(response.status).toBe(200);
       const text = await response.text();
       if (read) expect(text).toBe(first); else first = text;
-      const detail = JSON.parse(text);
+      const detail = threadDetailSchema.parse(JSON.parse(text));
       expect(detail.messages).toHaveLength(50);
       for (const [index, message] of detail.messages.entries()) {
         expect(message.accountId).toBe("a");
