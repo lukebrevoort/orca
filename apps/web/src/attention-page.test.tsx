@@ -287,20 +287,6 @@ async function waitForCondition(
   } while (Date.now() < deadline);
   throw new Error(`Timed out waiting for ${description}`);
 }
-async function waitForCondition(
-  description: string,
-  predicate: () => boolean,
-  { timeout = 5000, interval = 10 } = {},
-) {
-  const deadline = Date.now() + timeout;
-  do {
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    });
-    if (predicate()) return;
-  } while (Date.now() < deadline);
-  throw new Error(`Timed out waiting for ${description}`);
-}
 async function render(chooser = false) {
   await act(async () =>
     root.render(
