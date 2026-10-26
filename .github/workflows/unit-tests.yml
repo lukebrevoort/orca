@@ -5,10 +5,10 @@ on:
   push:
     branches: [main]
 
-# New commits supersede checks for the same pull request or branch.
+# PR runs are superseded by newer commits while each main commit runs to completion.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:

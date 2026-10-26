@@ -1,3 +1,4 @@
+import { AttachmentList } from "./attachment-list";
 import { ReaderSessions } from "./reader-session";
 import { readerNavigationVisibility } from "./reader-navigation";
 import { decodeMailPreview } from "./mail-preview";
@@ -26,7 +27,7 @@ import {
 import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, OrganizationViewPreparationInput, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
 import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
-  demoAccount,
+  demoAccount, demoAttachments,
   demoAgentEvents,
   demoAgentMessages,
   demoAgentMutes,
@@ -6087,10 +6088,9 @@ export function MessageReader({
                     </header>
                     <ReaderBody html={message.bodyHtml} text={message.bodyText} />
                     {message.attachments.length ? (
-                      <section className="reader-attachments" aria-describedby={`reader-attachments-note-${message.id}`} aria-labelledby={`reader-attachments-title-${message.id}`}>
+                      <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>
                         <h3 id={`reader-attachments-title-${message.id}`}>Attachments</h3>
-                        <p className="reader-attachments-note" id={`reader-attachments-note-${message.id}`}><strong>Files aren’t available in Orca yet.</strong> Attachment details are synced safely. Open this conversation in {detail.account.provider === "gmail" ? "Gmail" : "Outlook"} to view or download them.</p>
-                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
+                        <AttachmentList attachments={message.attachments} accountId={detail.account.id} provider={detail.account.provider} demoMode={demoMode} />
                       </section>
                     ) : null}
                     </div>
@@ -7365,7 +7365,7 @@ function createDemoThreadDetail(account: MailAccount, threadId: string, messages
       bodyHtml: messageHtmlBodies[message.id] ?? null,
       internetMessageId: `<${message.providerMessageId}@mail.gmail.com>`,
       references: [],
-      attachments: message.id === "msg_2" ? [{ id: "attachment_demo", filename: "Orca-reader-notes.pdf", mimeType: "application/pdf", size: 2483200 }] : [],
+      attachments: message.id === "msg_2" ? demoAttachments : [],
     })),
   };
 }
