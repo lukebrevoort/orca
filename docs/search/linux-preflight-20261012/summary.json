@@ -1,0 +1,50 @@
+{
+  "purpose": "Preparatory Linux correctness/portability only; not representative Railway validation",
+  "elapsedSeconds": 61.86379956799999,
+  "rows": [
+    {
+      "size": 1000,
+      "mode": "base",
+      "synchronous": 2,
+      "commonP50Ms": 70.3856650000007,
+      "commonP95Ms": 88.37709600000017,
+      "sampledPeakRssMiB": 173.63671875,
+      "seededDBMiB": 6.73828125,
+      "finalDBMiB": 7.8515625,
+      "workload": "legacy-common"
+    },
+    {
+      "size": 1000,
+      "mode": "head",
+      "synchronous": 2,
+      "commonP50Ms": 66.46958100000029,
+      "commonP95Ms": 82.1528100000005,
+      "sampledPeakRssMiB": 184.63671875,
+      "seededDBMiB": 6.73828125,
+      "finalDBMiB": 7.8515625,
+      "workload": "legacy-common"
+    },
+    {
+      "size": 5000,
+      "mode": "head",
+      "synchronous": 2,
+      "commonP50Ms": 190.28447899999992,
+      "commonP95Ms": 228.09151699999984,
+      "sampledPeakRssMiB": 185.0078125,
+      "seededDBMiB": 27.46484375,
+      "finalDBMiB": 28.6171875,
+      "workload": "legacy-common"
+    },
+    {
+      "size": 5000,
+      "mode": "base",
+      "synchronous": 2,
+      "commonP50Ms": 230.64294000000064,
+      "commonP95Ms": 487.31176099999993,
+      "sampledPeakRssMiB": 181.09375,
+      "seededDBMiB": 27.46484375,
+      "finalDBMiB": 28.6171875,
+      "workload": "legacy-common"
+    }
+  ]
+}

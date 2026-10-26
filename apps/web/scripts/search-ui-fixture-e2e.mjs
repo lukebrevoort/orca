@@ -89,7 +89,7 @@ try {
     }
     await account.selectOption('second');
     await page.waitForFunction(() => document.querySelectorAll('.global-mail-result-list a').length === 1 && document.querySelector('.global-mail-result-list').textContent.includes('second account conversation'));
-    check(requests.at(-1) === '/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=second', 'Second-account request preserves the existing search contract', id);
+    check(requests.at(-1) === '/v1/inbox?limit=100&classification=all&searchMode=metadata&view=all&query=conversation&accountId=second', 'Second-account request preserves the existing search contract', id);
     await page.getByRole('button', { name: /Close Search mail/ }).click();
     await header.fill(''); await header.press('Enter');
     await page.locator('.global-mail-search-state').waitFor();

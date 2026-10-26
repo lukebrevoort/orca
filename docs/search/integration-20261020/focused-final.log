@@ -1,0 +1,111 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/draft-mirror-recovery.test.ts:
+{"updates":["replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID null) [176.39ms]
+{"updates":["deleted-copy","replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID deleted-copy) [139.93ms]
+
+apps/web/src/global-search-accounts.test.tsx:
+(pass) full account choices survive scoped results in accounts-first response order [145.08ms]
+(pass) full account choices survive scoped results in search-first response order [54.15ms]
+(pass) collection failure does not discard successful full account choices [31.62ms]
+(pass) account failure preserves collections and uses only the latest search fallback [47.70ms]
+(pass) a successful empty full account list is authoritative over scoped metadata [33.18ms]
+(pass) closing and reopening clears old lists and ignores aborted account and collection responses [65.28ms]
+(pass) reopening with failed metadata cannot retain a previous successful full list [50.12ms]
+(pass) late scoped search metadata cannot overwrite the current fallback after account metadata fails [32.69ms]
+(pass) invalid account metadata falls back without discarding valid collections [31.72ms]
+
+apps/web/src/global-search.test.tsx:
+(pass) global mail search location contract > opens from Inbox, Reader, Organization, and Settings with a safe exact source [2.74ms]
+(pass) global mail search location contract > rejects cross-origin return targets and serializes an exact saved scope [2.63ms]
+(pass) global mail search location contract > nests a result Reader in SurfaceHistory and restores the serialized search on Back [4.01ms]
+(pass) global mail search location contract > reopens a saved Inbox scope through the API default mailbox semantics [1.78ms]
+(pass) GlobalMailSearch interaction > hands Search to the common View authoring surface without writing a pin and restores context on cancel [102.81ms]
+(pass) GlobalMailSearch interaction > keeps advanced scope controls collapsed and exposes one accessible close action [33.41ms]
+(pass) GlobalMailSearch interaction > keeps overflowing results in the shrinkable 1024px track when filters expand [51.01ms]
+(pass) GlobalMailSearch interaction > wraps a maximum-length no-result query inside the compact state [38.42ms]
+(pass) GlobalMailSearch interaction > includes the year only when a result is outside the current year [35.61ms]
+(pass) GlobalMailSearch interaction > moves from the query into results with ArrowDown and back with ArrowUp [35.24ms]
+(pass) GlobalMailSearch interaction > typing invalidates the old result generation before the debounced query runs [400.42ms]
+(pass) GlobalMailSearch interaction > pending input survives Mailbox change, late responses and source return [423.34ms]
+(pass) GlobalMailSearch interaction > pending input survives Evidence change, late responses and source return [430.87ms]
+(pass) GlobalMailSearch interaction > pending input survives Account change, late responses and source return [416.43ms]
+(pass) GlobalMailSearch interaction > pending input survives Space change, late responses and source return [418.79ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace new Search or its return snapshot [97.39ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace popstate or its return snapshot [55.54ms]
+(pass) GlobalMailSearch interaction > ignores a late prepared draft when the Search scope changes [53.11ms]
+(pass) GlobalMailSearch interaction > restores a saved Search snapshot, result anchor and scroll after loading [91.53ms]
+(pass) GlobalMailSearch interaction > requests a saved Inbox scope without the unsupported inbox view value [13.58ms]
+(pass) GlobalMailSearch interaction > a zero-result general search enters unsupported review without any persistence [49.09ms]
+(pass) metadata requests are explicit and missing or full-body coverage cannot render as metadata results [3.84ms]
+
+packages/shared/src/schemas.test.ts:
+(pass) shared API schemas > validates attachment base64 bytes against declared and aggregate size [1.55ms]
+(pass) shared API schemas > parses the fixture inbox response shape [0.79ms]
+(pass) shared API schemas > keeps the M5 fixture matrix provider- and account-attributed [1.20ms]
+(pass) shared API schemas > accepts the opt-in classification count contract alongside the legacy shape [0.27ms]
+(pass) shared API schemas > accepts a durable mailbox freshness token without rewriting legacy responses [0.43ms]
+(pass) shared API schemas > rejects blank inbox cursors [0.73ms]
+(pass) shared API schemas > coerces bounded inbox limits [0.27ms]
+(pass) shared API schemas > validates bounded stored-mail search scope [0.34ms]
+(pass) shared API schemas > normalizes unique batch sender changes and preserves canonical per-sender outcomes [2.17ms]
+(pass) shared API schemas > defines an explainable, bounded Human Signal contract [1.44ms]
+(pass) shared API schemas > requires an authenticated user when the session is authenticated [0.72ms]
+(pass) shared API schemas > accepts an older authenticated session response without onboarding state [0.09ms]
+(pass) shared API schemas > keeps nullable body fields and attachment metadata in reader payloads [2.94ms]
+(pass) shared API schemas > validates organization inputs without move semantics [1.48ms]
+(pass) shared API schemas > normalizes outbound recipients and requires a revision to update drafts [0.28ms]
+
+apps/api/src/db/client.test.ts:
+(pass) createDatabaseClient > enables SQLite foreign key enforcement [87.95ms]
+(pass) createDatabaseClient > rejects oauth accounts that reference missing users [62.94ms]
+(pass) createDatabaseClient > enforces account-scoped, retry-safe agent event storage without message bodies [67.14ms]
+
+apps/api/src/mailbox/search-contract.test.ts:
+(pass) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [152.97ms]
+(pass) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [147.99ms]
+(pass) canonical metadata reflects updates/deletes, invalidates stale cursors and denies foreign-owner account reuse [147.33ms]
+
+apps/api/src/mailbox/read.test.ts:
+(pass) bounded mailbox reader > projects one keyset page while SQL aggregates the complete mailbox counts [115.67ms]
+(pass) bounded mailbox reader > rejects stale cursors after attention, classification, label, and concurrent email mutations [108.24ms]
+(pass) bounded mailbox reader > owns mutable account metadata and revision in one snapshot [97.37ms]
+(pass) bounded mailbox reader > merges two index-backed account pages without duplicates or omissions [164.06ms]
+(pass) bounded mailbox reader > reports high-association enrichment separately and projects one effective override per message row [79.05ms]
+(pass) empty attention page pruning > uses zero snapshot aggregates to skip scans across two authorized accounts [105.12ms]
+(pass) empty attention page pruning > keeps notify rows, including combined notify/focus counts [66.78ms]
+(pass) empty attention page pruning > keeps focus rows, including combined notify/focus counts [68.99ms]
+(pass) empty attention page pruning > keeps normal rows, including combined notify/focus counts [71.30ms]
+(pass) empty attention page pruning > keeps quiet rows, including combined notify/focus counts [72.22ms]
+(pass) empty attention page pruning > keeps hidden rows, including combined notify/focus counts [65.90ms]
+(pass) empty attention page pruning > keeps a nonempty group in either account and honors effective attention precedence [75.99ms]
+(pass) empty attention page pruning > preserves timestamp and ID ties across accounts and empty ranks on later pages [91.92ms]
+(pass) empty attention page pruning > retains collection, destination, and account scope checks even for empty filters [79.55ms]
+(pass) empty attention page pruning > applies Inbox skip rules to both the aggregate proof and page predicates [78.51ms]
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [86.00ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [71.35ms]
+(pass) Inbox unread Focus timeline > read Focus returns to chronological Inbox; unread Notify and Focus share one newest-first promotion [75.27ms]
+(pass) Inbox unread Focus timeline > latest representative uses any-message unread and repromotes after mark unread; stale cursors rejected [78.65ms]
+(pass) Inbox unread Focus timeline > cursor pages equal complete ordering across accounts and read/promotion boundaries [127.90ms]
+(pass) Gmail archive excludes the whole thread from Inbox and Focus without deleting All Mail [93.91ms]
+(pass) a newly synced unread reply repromotes a read Focus conversation once, at latest date [79.51ms]
+(pass) Inbox search matches earlier thread content but returns its latest representative [68.40ms]
+(pass) Focus pages traverse combined unread and read ranks across accounts and reject old cursor format [223.20ms]
+
+apps/api/src/providers/gmail/draft-recovery.test.ts:
+(pass) draft mirror recovers only a missing provider copy (update status 404) [63.37ms]
+(pass) draft mirror recovers only a missing provider copy (update status 401) [65.08ms]
+(pass) draft mirror recovers only a missing provider copy (update status 403) [67.20ms]
+(pass) draft mirror recovers only a missing provider copy (update status 429) [75.36ms]
+(pass) draft mirror recovers only a missing provider copy (update status 500) [60.68ms]
+(pass) draft mirror recovers only a missing provider copy (update status network) [69.32ms]
+
+apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:
+(pass) malformed dates do not abort a batch or overwrite another account's matching provider IDs [88.19ms]
+
+ 85 pass
+ 0 fail
+ 471 expect() calls
+Ran 85 tests across 9 files. [7.72s]

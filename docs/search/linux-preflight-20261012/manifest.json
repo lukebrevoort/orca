@@ -1,0 +1,41 @@
+{
+  "purpose": "Preparatory Linux correctness/portability only; not representative Railway validation",
+  "revisions": {
+    "base": "6ac83d1ae1bed08dd5d380774667b03d5dffe55b",
+    "head": "3ba1f615c48425e178d9fe4226b208c69ea8e454"
+  },
+  "harnessSha256": "b114f3d77eacd8b92bf7f0b7866a35d9707d4ee6abca27895bf0ca3d5865d0ca",
+  "samplesPerWorkload": 5,
+  "warmups": 3,
+  "sizes": [
+    1000,
+    5000
+  ],
+  "runs": [
+    {
+      "size": 1000,
+      "mode": "base",
+      "file": "1000-base.json"
+    },
+    {
+      "size": 1000,
+      "mode": "head",
+      "file": "1000-head.json"
+    },
+    {
+      "size": 5000,
+      "mode": "head",
+      "file": "5000-head.json"
+    },
+    {
+      "size": 5000,
+      "mode": "base",
+      "file": "5000-base.json"
+    }
+  ],
+  "childTimeoutSeconds": 90,
+  "schedulingBudgetSeconds": 270,
+  "maximumTotalSeconds": 360,
+  "elapsedSeconds": 61.86379956799999,
+  "allSignaturesAndSeededFinalSizesEqual": true
+}

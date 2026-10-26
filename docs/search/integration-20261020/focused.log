@@ -1,0 +1,236 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/draft-mirror-recovery.test.ts:
+{"updates":["replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID null) [192.31ms]
+{"updates":["deleted-copy","replacement-1"],"creates":["replacement-1"],"finalProviderDraftId":"replacement-1","finalRevision":1,"finalSubject":"Revision one","finalSyncStatus":"synced"}
+(pass) editing during provider draft creation/recovery reuses its ID (prior ID deleted-copy) [138.81ms]
+
+apps/web/src/global-search-accounts.test.tsx:
+48 | const collectionResponse = { workspaceId: "workspace", accountIds: [first.id, second.id], collections: [space], pins: [], queries: [] };
+49 | 
+50 | for (const order of ["accounts-first", "search-first"]) test(`full account choices survive scoped results in ${order} response order`, async () => {
+51 |   await mount(first.id);
+52 |   const accounts = take("/v1/accounts"), search = take("/v1/inbox?");
+53 |   expect(search.url).toBe("/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first");
+                          ^
+error: expect(received).toBe(expected)
+
+Expected: "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first"
+Received: "/v1/inbox?limit=100&classification=all&searchMode=metadata&view=all&query=conversation&accountId=first"
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:53:22)
+(fail) full account choices survive scoped results in accounts-first response order [106.61ms]
+48 | const collectionResponse = { workspaceId: "workspace", accountIds: [first.id, second.id], collections: [space], pins: [], queries: [] };
+49 | 
+50 | for (const order of ["accounts-first", "search-first"]) test(`full account choices survive scoped results in ${order} response order`, async () => {
+51 |   await mount(first.id);
+52 |   const accounts = take("/v1/accounts"), search = take("/v1/inbox?");
+53 |   expect(search.url).toBe("/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first");
+                          ^
+error: expect(received).toBe(expected)
+
+Expected: "/v1/inbox?limit=100&classification=all&view=all&query=conversation&accountId=first"
+Received: "/v1/inbox?limit=100&classification=all&searchMode=metadata&view=all&query=conversation&accountId=first"
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:53:22)
+(fail) full account choices survive scoped results in search-first response order [36.38ms]
+(pass) collection failure does not discard successful full account choices [51.24ms]
+74 | 
+75 | test("account failure preserves collections and uses only the latest search fallback", async () => {
+76 |   await mount(); await respond(take("/v1/accounts"), {}, 503);
+77 |   await respond(take("/v1/organization/collections-pins/query"), collectionResponse);
+78 |   await respond(take("/v1/inbox?"), result([first]));
+79 |   expect(options()).toEqual(["", first.id]); expect(options(3)).toEqual(["", space.id]);
+                         ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "first",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:79:21)
+(fail) account failure preserves collections and uses only the latest search fallback [33.42ms]
+(pass) a successful empty full account list is authoritative over scoped metadata [31.34ms]
+ 97 |   await act(async () => openMailSearch("second")); await flush();
+ 98 |   expect(options()).toEqual([""]); expect(options(3)).toEqual([""]);
+ 99 |   await respond(take("/v1/accounts"), {}, 503); await respond(take("/v1/organization/collections-pins/query"), {}, 503);
+100 |   await respond(take("/v1/inbox?"), result([second]));
+101 |   await respond(oldAccounts, { items: [first], nextCursor: null }); await respond(oldCollections, collectionResponse);
+102 |   expect(options()).toEqual(["", second.id]); expect(options(3)).toEqual([""]);
+                          ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "second",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:102:21)
+(fail) closing and reopening clears old lists and ignores aborted account and collection responses [51.82ms]
+105 | test("reopening with failed metadata cannot retain a previous successful full list", async () => {
+106 |   await mount(); await respond(take("/v1/accounts"), { items: [first, second], nextCursor: null }); await respond(take("/v1/organization/collections-pins/query"), collectionResponse); await respond(take("/v1/inbox?"), result([first]));
+107 |   await act(async () => (browser.document.querySelector('.global-mail-search-heading > button') as unknown as HTMLButtonElement).click()); await flush();
+108 |   await act(async () => openMailSearch("second")); await flush();
+109 |   await respond(take("/v1/accounts"), {}, 503); await respond(take("/v1/organization/collections-pins/query"), {}, 503); await respond(take("/v1/inbox?"), result([second]));
+110 |   expect(options()).toEqual(["", second.id]); expect(options(3)).toEqual([""]);
+                          ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "second",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:110:21)
+(fail) reopening with failed metadata cannot retain a previous successful full list [58.63ms]
+113 | test("late scoped search metadata cannot overwrite the current fallback after account metadata fails", async () => {
+114 |   await mount(); await respond(take("/v1/accounts"), {}, 503);
+115 |   const stale = take("/v1/inbox?");
+116 |   await act(async () => openMailSearch("second")); await flush(); expect(stale.signal.aborted).toBe(true);
+117 |   await respond(take("/v1/inbox?"), result([second])); await respond(stale, result([first]));
+118 |   expect(options()).toEqual(["", second.id]);
+                          ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "second",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:118:21)
+(fail) late scoped search metadata cannot overwrite the current fallback after account metadata fails [31.72ms]
+122 | 
+123 | test("invalid account metadata falls back without discarding valid collections", async () => {
+124 |   await mount(); await respond(take("/v1/accounts"), { items: [{ id: "invalid" }], nextCursor: null });
+125 |   await respond(take("/v1/organization/collections-pins/query"), collectionResponse);
+126 |   await respond(take("/v1/inbox?"), result([first]));
+127 |   expect(options()).toEqual(["", first.id]); expect(options(3)).toEqual(["", space.id]);
+                          ^
+error: expect(received).toEqual(expected)
+
+  [
+    "",
+-   "first",
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/workspace/pr235-integration-20261020/apps/web/src/global-search-accounts.test.tsx:127:21)
+(fail) invalid account metadata falls back without discarding valid collections [32.56ms]
+
+apps/web/src/global-search.test.tsx:
+(pass) global mail search location contract > opens from Inbox, Reader, Organization, and Settings with a safe exact source [3.23ms]
+(pass) global mail search location contract > rejects cross-origin return targets and serializes an exact saved scope [2.41ms]
+(pass) global mail search location contract > nests a result Reader in SurfaceHistory and restores the serialized search on Back [4.38ms]
+(pass) global mail search location contract > reopens a saved Inbox scope through the API default mailbox semantics [1.16ms]
+(pass) GlobalMailSearch interaction > hands Search to the common View authoring surface without writing a pin and restores context on cancel [115.49ms]
+(pass) GlobalMailSearch interaction > keeps advanced scope controls collapsed and exposes one accessible close action [36.85ms]
+(pass) GlobalMailSearch interaction > keeps overflowing results in the shrinkable 1024px track when filters expand [56.08ms]
+(pass) GlobalMailSearch interaction > wraps a maximum-length no-result query inside the compact state [50.68ms]
+(pass) GlobalMailSearch interaction > includes the year only when a result is outside the current year [35.56ms]
+(pass) GlobalMailSearch interaction > moves from the query into results with ArrowDown and back with ArrowUp [32.16ms]
+(pass) GlobalMailSearch interaction > typing invalidates the old result generation before the debounced query runs [399.75ms]
+(pass) GlobalMailSearch interaction > pending input survives Mailbox change, late responses and source return [440.78ms]
+(pass) GlobalMailSearch interaction > pending input survives Evidence change, late responses and source return [430.18ms]
+(pass) GlobalMailSearch interaction > pending input survives Account change, late responses and source return [417.36ms]
+(pass) GlobalMailSearch interaction > pending input survives Space change, late responses and source return [413.96ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace new Search or its return snapshot [86.36ms]
+(pass) GlobalMailSearch interaction > late View commit cannot replace popstate or its return snapshot [65.46ms]
+(pass) GlobalMailSearch interaction > ignores a late prepared draft when the Search scope changes [42.03ms]
+(pass) GlobalMailSearch interaction > restores a saved Search snapshot, result anchor and scroll after loading [94.59ms]
+(pass) GlobalMailSearch interaction > requests a saved Inbox scope without the unsupported inbox view value [14.23ms]
+(pass) GlobalMailSearch interaction > a zero-result general search enters unsupported review without any persistence [47.90ms]
+(pass) metadata requests are explicit and missing or full-body coverage cannot render as metadata results [3.20ms]
+
+packages/shared/src/schemas.test.ts:
+(pass) shared API schemas > validates attachment base64 bytes against declared and aggregate size [2.74ms]
+(pass) shared API schemas > parses the fixture inbox response shape [0.66ms]
+(pass) shared API schemas > keeps the M5 fixture matrix provider- and account-attributed [1.63ms]
+(pass) shared API schemas > accepts the opt-in classification count contract alongside the legacy shape [0.54ms]
+(pass) shared API schemas > accepts a durable mailbox freshness token without rewriting legacy responses [0.47ms]
+(pass) shared API schemas > rejects blank inbox cursors [0.77ms]
+(pass) shared API schemas > coerces bounded inbox limits [0.27ms]
+(pass) shared API schemas > validates bounded stored-mail search scope [0.23ms]
+(pass) shared API schemas > normalizes unique batch sender changes and preserves canonical per-sender outcomes [2.69ms]
+(pass) shared API schemas > defines an explainable, bounded Human Signal contract [2.29ms]
+(pass) shared API schemas > requires an authenticated user when the session is authenticated [0.60ms]
+(pass) shared API schemas > accepts an older authenticated session response without onboarding state [0.06ms]
+(pass) shared API schemas > keeps nullable body fields and attachment metadata in reader payloads [2.99ms]
+(pass) shared API schemas > validates organization inputs without move semantics [1.53ms]
+(pass) shared API schemas > normalizes outbound recipients and requires a revision to update drafts [0.31ms]
+
+apps/api/src/db/client.test.ts:
+(pass) createDatabaseClient > enables SQLite foreign key enforcement [61.22ms]
+(pass) createDatabaseClient > rejects oauth accounts that reference missing users [60.56ms]
+(pass) createDatabaseClient > enforces account-scoped, retry-safe agent event storage without message bodies [64.15ms]
+
+apps/api/src/mailbox/search-contract.test.ts:
+(pass) explicit metadata remains complete for oversized bodies AND metadata across authorized accounts [143.36ms]
+(pass) full body requests fail explicitly without metadata results; legacy clients retain their exact envelope [129.51ms]
+(pass) canonical metadata reflects updates/deletes, invalidates stale cursors and denies foreign-owner account reuse [133.34ms]
+
+apps/api/src/mailbox/read.test.ts:
+(pass) bounded mailbox reader > projects one keyset page while SQL aggregates the complete mailbox counts [120.36ms]
+(pass) bounded mailbox reader > rejects stale cursors after attention, classification, label, and concurrent email mutations [107.20ms]
+(pass) bounded mailbox reader > owns mutable account metadata and revision in one snapshot [85.83ms]
+(pass) bounded mailbox reader > merges two index-backed account pages without duplicates or omissions [148.38ms]
+(pass) bounded mailbox reader > reports high-association enrichment separately and projects one effective override per message row [78.82ms]
+(pass) empty attention page pruning > uses zero snapshot aggregates to skip scans across two authorized accounts [109.37ms]
+(pass) empty attention page pruning > keeps notify rows, including combined notify/focus counts [69.83ms]
+(pass) empty attention page pruning > keeps focus rows, including combined notify/focus counts [66.22ms]
+(pass) empty attention page pruning > keeps normal rows, including combined notify/focus counts [64.84ms]
+(pass) empty attention page pruning > keeps quiet rows, including combined notify/focus counts [71.24ms]
+(pass) empty attention page pruning > keeps hidden rows, including combined notify/focus counts [67.08ms]
+(pass) empty attention page pruning > keeps a nonempty group in either account and honors effective attention precedence [76.70ms]
+(pass) empty attention page pruning > preserves timestamp and ID ties across accounts and empty ranks on later pages [92.86ms]
+(pass) empty attention page pruning > retains collection, destination, and account scope checks even for empty filters [74.10ms]
+(pass) empty attention page pruning > applies Inbox skip rules to both the aggregate proof and page predicates [70.87ms]
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [72.09ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [75.79ms]
+(pass) Inbox unread Focus timeline > read Focus returns to chronological Inbox; unread Notify and Focus share one newest-first promotion [125.32ms]
+(pass) Inbox unread Focus timeline > latest representative uses any-message unread and repromotes after mark unread; stale cursors rejected [141.91ms]
+(pass) Inbox unread Focus timeline > cursor pages equal complete ordering across accounts and read/promotion boundaries [236.97ms]
+(pass) Gmail archive excludes the whole thread from Inbox and Focus without deleting All Mail [90.60ms]
+(pass) a newly synced unread reply repromotes a read Focus conversation once, at latest date [104.11ms]
+(pass) Inbox search matches earlier thread content but returns its latest representative [67.18ms]
+(pass) Focus pages traverse combined unread and read ranks across accounts and reject old cursor format [336.05ms]
+
+apps/api/src/providers/gmail/draft-recovery.test.ts:
+(pass) draft mirror recovers only a missing provider copy (update status 404) [148.88ms]
+(pass) draft mirror recovers only a missing provider copy (update status 401) [65.00ms]
+(pass) draft mirror recovers only a missing provider copy (update status 403) [72.44ms]
+(pass) draft mirror recovers only a missing provider copy (update status 429) [72.09ms]
+(pass) draft mirror recovers only a missing provider copy (update status 500) [70.01ms]
+(pass) draft mirror recovers only a missing provider copy (update status network) [61.68ms]
+
+apps/api/src/providers/gmail/normalizer-date-persistence.test.ts:
+(pass) malformed dates do not abort a batch or overwrite another account's matching provider IDs [84.04ms]
+
+7 tests failed:
+(fail) full account choices survive scoped results in accounts-first response order [106.61ms]
+(fail) full account choices survive scoped results in search-first response order [36.38ms]
+(fail) account failure preserves collections and uses only the latest search fallback [33.42ms]
+(fail) closing and reopening clears old lists and ignores aborted account and collection responses [51.82ms]
+(fail) reopening with failed metadata cannot retain a previous successful full list [58.63ms]
+(fail) late scoped search metadata cannot overwrite the current fallback after account metadata fails [31.72ms]
+(fail) invalid account metadata falls back without discarding valid collections [32.56ms]
+
+ 78 pass
+ 7 fail
+ 446 expect() calls
+Ran 85 tests across 9 files. [8.03s]

@@ -1,0 +1,11 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/search/indexing/indexing.test.ts:
+(pass) oversize full job stays blocked while metadata can publish; canonical text retained [43.67ms]
+(pass) stage-one reproduction: oversized canonical metadata blocks metadata readiness [32.97ms]
+
+ 2 pass
+ 22 filtered out
+ 0 fail
+ 8 expect() calls
+Ran 2 tests across 1 file. [106.00ms]
