@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Window } from "happy-dom";
 import { readFileSync } from "node:fs";
-import { AttachmentList, AttachmentTypeIcon, describeAttachmentType } from "./attachment-list";
+import { AttachmentList, AttachmentTypeIcon, describeAttachmentType, truncateAttachmentFilename, sanitizeDownloadFilename } from "./attachment-list";
 import { ComposeWorkspace, createEmptyComposeDraft, type ComposeDraftController } from "./compose-workspace";
 import { demoAttachments } from "./demo-data";
 
@@ -149,8 +149,7 @@ test("HTTP 401 shows a generic failure and never leaves download disabled", asyn
   expect(host.querySelector("button")?.disabled).toBe(false);
 });
 
-// Production currently downloads a zero-byte blob as a success instead of reporting failure.
-test.skip("empty successful response reports failure without creating a browser download", async () => {
+test("empty successful response reports failure without creating a browser download", async () => {
   const downloads = captureHostileDownload();
   await render({ fetcher: mock(async () => new Response(null)) as unknown as typeof fetch });
   await click();
@@ -172,12 +171,11 @@ test.each(hostileFilenames)("hostile filename stays inert with no img script or 
   await render({ attachments: [{ ...attachment, filename }] });
   const card = host.querySelector(".attachment-card")!;
   expect(card.querySelector("img, script, [onerror]")).toBeNull();
-  expect(card.querySelector(".attachment-card-filename")?.textContent).toBe(filename);
+  expect(card.querySelector(".attachment-card-filename")?.textContent).toBe(filename.length > 60 ? truncateAttachmentFilename(filename) : filename);
   expect(card.querySelector(".attachment-card-filename")?.getAttribute("title")).toBe(filename);
 });
 
-// Production assigns the raw filename to link.download; separators are not sanitized.
-test.skip.each(hostileFilenames)("browser download filename contains no path separators: %s", async (filename) => {
+test.each(hostileFilenames)("browser download filename contains no path separators: %s", async (filename) => {
   const downloads = captureHostileDownload();
   await render({ attachments: [{ ...attachment, filename }], fetcher: mock(async () => new Response("bytes")) as unknown as typeof fetch });
   await click();
@@ -185,8 +183,7 @@ test.skip.each(hostileFilenames)("browser download filename contains no path sep
   expect(downloads[0]).not.toMatch(/[/\\]/);
 });
 
-// Production uses CSS ellipsis: the full name remains in text and aria-label as well as title.
-test.skip("truncated long filename exposes the full name only in its title attribute", async () => {
+test("truncated long filename exposes the full name only in its title attribute", async () => {
   const filename = "a".repeat(300);
   await render({ attachments: [{ ...attachment, filename }] });
   const label = host.querySelector(".attachment-card-filename")!;
@@ -201,16 +198,25 @@ test.each(["unknown/type", ""])("unknown or empty MIME %s renders the generic Fi
   expect(host.querySelector('[data-attachment-family="file"]')).not.toBeNull();
 });
 
-// A missing MIME at runtime throws in describeAttachmentType; the wire type requires a string.
-test.skip("missing MIME renders the generic File label without crashing", async () => {
+test("missing MIME renders the generic File label without crashing", async () => {
   await render({ attachments: [{ ...attachment, filename: "opaque.unknown", mimeType: undefined as unknown as string }] });
   expect(host.querySelector("small")?.textContent).toBe("File · 2.4 MB");
 });
 
-test("size over 25 MB renders metadata and leaves server rejection retryable", async () => {
-  const fetcher = mock(async () => new Response(null, { status: 413 }));
+test("size over 25 MB disables download up front without fetching", async () => {
+  const fetcher = mock(async () => new Response("bytes"));
   await render({ attachments: [{ ...attachment, size: 26 * 1024 * 1024 }], fetcher: fetcher as unknown as typeof fetch });
   expect(host.querySelector("small")?.textContent).toBe("PDF · 26.0 MB");
+  expect(host.querySelector("button")?.disabled).toBe(true);
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Too large to download here (over 25 MB). Open in Gmail.");
+  await click();
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+test("server 413 for an attachment under 25 MB stays retryable", async () => {
+  const fetcher = mock(async () => new Response(null, { status: 413 }));
+  await render({ fetcher: fetcher as unknown as typeof fetch });
+  expect(host.querySelector("small")?.textContent).toBe("PDF · 2.4 MB");
   expect(host.querySelector("button")?.disabled).toBe(false);
   await click();
   expect(fetcher).toHaveBeenCalledTimes(1);
@@ -249,4 +255,23 @@ test("fetch only targets the encoded local attachment endpoint with included cre
     "/v1/attachments/..%2Ffile%20%2F%3F%23%26%3D%2B%25%5C%E9%9B%AA?accountId=account+%2F%3F%26%23%3D%2B%25%5C%E9%9B%AA",
     { credentials: "include" },
   );
+});
+
+test.each([undefined, null, 42, {}])("non-string MIME falls back to extension or File: %s", (mimeType) => {
+  expect(describeAttachmentType(mimeType, "report.pdf").label).toBe("PDF");
+  expect(describeAttachmentType(mimeType, "opaque.unknown").label).toBe("File");
+});
+
+test("download filename removes controls separators leading dots and whitespace with an empty fallback", () => {
+  expect(sanitizeDownloadFilename("  .../\\report\u0000\u001f\u007f.pdf  ")).toBe("report.pdf");
+  expect(sanitizeDownloadFilename(" ../\\\u0000 ")).toBe("attachment");
+  expect(sanitizeDownloadFilename("a".repeat(300) + ".pdf")).toBe("a".repeat(116) + ".pdf");
+});
+
+test("visible filename uses a middle ellipsis within 60 characters and keeps the extension", () => {
+  const filename = "a".repeat(300) + ".pdf";
+  const visible = truncateAttachmentFilename(filename);
+  expect(visible.length).toBe(60);
+  expect(visible).toContain("…");
+  expect(visible.endsWith(".pdf")).toBe(true);
 });

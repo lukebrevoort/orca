@@ -3,8 +3,8 @@ import type { MailAttachment, MailProvider } from "@orca/shared";
 import "./attachment-list.css";
 
 type Family = "pdf" | "image" | "spreadsheet" | "document" | "presentation" | "archive" | "audio" | "video" | "text" | "file";
-export function describeAttachmentType(mimeType: string, filename: string): { family: Family; label: string } {
-  const mime = mimeType.toLowerCase().split(";")[0]!.trim();
+export function describeAttachmentType(mimeType: unknown, filename: string): { family: Family; label: string } {
+  const mime = typeof mimeType === "string" ? mimeType.toLowerCase().split(";")[0]!.trim() : "";
   const ext = filename.toLowerCase().split(".").pop() ?? "";
   if (mime === "text/calendar" || ext === "ics") return { family: "text", label: "Calendar invite" };
   const types: [Family, string, boolean][] = [
@@ -20,6 +20,26 @@ export function describeAttachmentType(mimeType: string, filename: string): { fa
   ];
   const match = types.find((type) => type[2]);
   return match ? { family: match[0], label: match[1] } : { family: "file", label: "File" };
+}
+
+function filenameExtension(filename: string): string {
+  const dot = filename.lastIndexOf(".");
+  return dot > 0 ? filename.slice(dot) : "";
+}
+
+export function truncateAttachmentFilename(filename: string): string {
+  if (filename.length <= 60) return filename;
+  const extension = filenameExtension(filename).slice(-20);
+  const tailLength = Math.max(extension.length, 15);
+  return `${filename.slice(0, 59 - tailLength)}…${filename.slice(-tailLength)}`;
+}
+
+export function sanitizeDownloadFilename(filename: string): string {
+  const clean = filename.replace(/[/\\\u0000-\u001f\u007f]/g, "").trim().replace(/^\.+/, "").trim();
+  if (!clean) return "attachment";
+  if (clean.length <= 120) return clean;
+  const extension = filenameExtension(clean).slice(-30);
+  return clean.slice(0, 120 - extension.length) + extension;
 }
 
 const iconPaths: Record<Family, string> = {
@@ -76,8 +96,10 @@ export function AttachmentList({ attachments, accountId, provider, demoMode = fa
 function AttachmentCard({ attachment, accountId, downloadable, demoMode, fetcher }: { attachment: MailAttachment; accountId: string; downloadable: boolean; demoMode: boolean; fetcher: typeof fetch }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const tooLarge = attachment.size > 25 * 1024 * 1024;
+  const visibleFilename = truncateAttachmentFilename(attachment.filename);
   async function download() {
-    if (loading) return;
+    if (loading || tooLarge) return;
     setError("");
     if (demoMode) { setError("Downloads aren't available in the demo."); return; }
     setLoading(true);
@@ -85,11 +107,12 @@ function AttachmentCard({ attachment, accountId, downloadable, demoMode, fetcher
       const response = await fetcher(`/v1/attachments/${encodeURIComponent(attachment.id)}?${new URLSearchParams({ accountId })}`, { credentials: "include" });
       if (!response.ok) { setError(errors[response.status] ?? "Download failed. Try again."); return; }
       const blob = await response.blob();
+      if (blob.size === 0) { setError("Download failed. Try again."); return; }
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       try {
         link.href = url;
-        link.download = attachment.filename;
+        link.download = sanitizeDownloadFilename(attachment.filename);
         document.body.append(link);
         link.click();
       } finally {
@@ -103,21 +126,21 @@ function AttachmentCard({ attachment, accountId, downloadable, demoMode, fetcher
   return <li className="attachment-card" tabIndex={0}>
     <AttachmentTypeIcon {...attachment} />
     <div className="attachment-card-meta">
-      <strong className="attachment-card-filename" title={attachment.filename}>{attachment.filename}</strong>
+      <strong className="attachment-card-filename" title={attachment.filename}>{visibleFilename}</strong>
       <small>{describeAttachmentType(attachment.mimeType, attachment.filename).label} · {humanSize(attachment.size)}</small>
     </div>
     {downloadable ? (
       <button
         className="attachment-card-download"
         type="button"
-        aria-label={`Download ${attachment.filename}`}
+        aria-label={`Download ${visibleFilename}`}
         aria-busy={loading}
-        disabled={loading}
+        disabled={loading || tooLarge}
         onClick={() => void download()}
       >
         {loading ? "Downloading…" : "Download"}
       </button>
     ) : null}
-    <p className="attachment-card-status" role="status" aria-live="polite">{error}</p>
+    <p className="attachment-card-status" role="status" aria-live="polite">{tooLarge ? errors[413] : error}</p>
   </li>;
 }
