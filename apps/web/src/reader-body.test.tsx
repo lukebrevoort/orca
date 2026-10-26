@@ -251,3 +251,37 @@ describe("blocked image presentation", () => {
     expect(notes[1]?.hasAttribute("aria-label")).toBe(false);
   });
 });
+
+describe("hostile blocked image placeholder text", () => {
+  const cases = [
+    ["never activates escaped image markup or event handlers", "<img src=x onerror=alert(1)>"],
+    ["never recursively decodes escaped markup entities", "&lt;img src=x onerror=alert(1)&gt;"],
+    ["never activates script-looking alt text", "<script>alert(1)</script>"],
+    ["never turns javascript URL alt text into a source", "javascript:alert(1)"],
+    ["never turns data HTML URL alt text into a source", "data:text/html,<script>alert(1)</script>"],
+    ["never truncates long hostile alt text", "<img src=x onerror=alert(1)>".repeat(50)],
+    ["never invents content for empty alt text", ""],
+    ["never interprets unicode and RTL alt text as markup", "مرحبا שלום \u202E<img src=x onerror=alert(1)>"],
+  ] as const;
+
+  for (const [name, alt] of cases) test(name, async () => {
+    // The API supplies escaped placeholder text; ReaderBody only enhances it.
+    const escapedAlt = alt.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    await render("hostile-blocked", `<span class="orca-mail-image-note">[Image blocked: ${escapedAlt}]</span>`, null);
+    const chip = container.querySelector(".orca-mail-image-note");
+    expect(container.querySelector('img, [src], script, [onerror]')).toBeNull();
+    expect(chip?.textContent).toBe(alt);
+    expect(chip?.getAttribute("aria-label")).toBe("Blocked image: " + alt);
+    expect(chip?.getAttribute("data-orca-image-note")).toBe("enhanced");
+
+    const enhancedHtml = container.querySelector(".reader-body-html")!.innerHTML;
+    const before = container.innerHTML;
+    // Changing the HTML prop re-runs the layout effect on the enhanced markup.
+    await render("hostile-blocked", enhancedHtml, null);
+    expect(container.innerHTML).toBe(before);
+    expect(container.querySelector('img, [src], script, [onerror]')).toBeNull();
+    const enhancedChip = container.querySelector(".orca-mail-image-note");
+    expect(enhancedChip?.textContent).toBe(alt);
+    expect(enhancedChip?.getAttribute("aria-label")).toBe("Blocked image: " + alt);
+  });
+});
