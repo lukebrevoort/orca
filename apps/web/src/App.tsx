@@ -1,3 +1,4 @@
+import { AttachmentList } from "./attachment-list";
 import { ReaderSessions } from "./reader-session";
 import { readerNavigationVisibility } from "./reader-navigation";
 import { decodeMailPreview } from "./mail-preview";
@@ -6,6 +7,7 @@ import { BulkSpaceMove, conversationKey, selectedConversations } from "./bulk-sp
 import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
 import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
+import { SummaryPage } from "./summary-page";
 import { AttentionPage } from "./attention-page";
 import {
   useEffect,
@@ -25,7 +27,7 @@ import {
 import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, OrganizationViewPreparationInput, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
 import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
-  demoAccount,
+  demoAccount, demoAttachments,
   demoAgentEvents,
   demoAgentMessages,
   demoAgentMutes,
@@ -1352,6 +1354,7 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
+  const [summaryOpen, setSummaryOpen] = useState(() => typeof window !== "undefined" && desktopDestinationFromLocation(window.location) === "summary");
   const [organizationStudioOpen, setOrganizationStudioOpen] = useState<false | "organization-studio" | "attention">(() => {
     const destination = typeof window !== "undefined" ? desktopDestinationFromLocation(window.location) : "inbox";
     return destination === "organization-studio" || destination === "attention" ? destination : false;
@@ -1925,7 +1928,7 @@ export function InboxApp({
     }));
   }, [activeCollectionId, activeMailbox, inboxTimeline, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
-  const activeDesktopDestination: DesktopDestination = organizationStudioOpen
+  const activeDesktopDestination: DesktopDestination = summaryOpen ? "summary" : organizationStudioOpen
     ? organizationStudioOpen
     : !activeDestinationId && activeMailbox === "focus" ? "focus"
     : requestedDestinationId
@@ -2282,6 +2285,7 @@ export function InboxApp({
     setManageToolsOpen(false);
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     setStreamQuery(location.query);
+    setSummaryOpen(destination === "summary");
     setOrganizationStudioOpen(destination === "organization-studio" || destination === "attention" ? destination : false);
     setViewsManagementRoute(location.viewsManagement ?? null);
     setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
@@ -2289,7 +2293,7 @@ export function InboxApp({
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
       setActiveCollectionId(null);
-      if (destination !== "organization-studio" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
+      if (destination !== "summary" && destination !== "organization-studio" && destination !== "attention") setActiveMailbox(destination.startsWith("destination:") ? (demoMode && ["focus", "signals", "quiet"].includes(destination.slice(12)) ? destination.slice(12) as Mailbox : "inbox") : destination.startsWith("view:") ? "inbox" : destination as Mailbox);
     }
 
     const history = surfaceHistoryRef.current;
@@ -3178,6 +3182,7 @@ export function InboxApp({
       window.location.assign(demoMode ? "/dev/settings" : "/settings");
       return;
     }
+    setSummaryOpen(destination === "summary");
     setActiveDestinationId(destination.startsWith("destination:") ? destination.slice(12) : null);
     surfaceHistoryRef.current?.navigate(destination, viewsRoute ?? undefined);
     setViewsManagementRoute(viewsRoute);
@@ -3191,6 +3196,13 @@ export function InboxApp({
       return;
     }
     setOrganizationStudioOpen(false);
+    if (destination === "summary") {
+      setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
+      setActiveCollectionId(null);
+      setActiveSavedViewId(null);
+      return;
+    }
     if (destination.startsWith("view:")) {
       runUiTransition("content", () => {
         setActiveSavedViewId(destination.slice("view:".length));
@@ -3315,11 +3327,11 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={!activeDestinationId && activeMailbox === "focus" && !organizationStudioOpen ? "Focus" : requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={summaryOpen ? "Summary" : !activeDestinationId && activeMailbox === "focus" && !organizationStudioOpen ? "Focus" : requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {summaryOpen ? <SummaryPage /> : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}
@@ -6076,10 +6088,9 @@ export function MessageReader({
                     </header>
                     <ReaderBody html={message.bodyHtml} text={message.bodyText} />
                     {message.attachments.length ? (
-                      <section className="reader-attachments" aria-describedby={`reader-attachments-note-${message.id}`} aria-labelledby={`reader-attachments-title-${message.id}`}>
+                      <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>
                         <h3 id={`reader-attachments-title-${message.id}`}>Attachments</h3>
-                        <p className="reader-attachments-note" id={`reader-attachments-note-${message.id}`}><strong>Files aren’t available in Orca yet.</strong> Attachment details are synced safely. Open this conversation in {detail.account.provider === "gmail" ? "Gmail" : "Outlook"} to view or download them.</p>
-                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
+                        <AttachmentList attachments={message.attachments} accountId={detail.account.id} provider={detail.account.provider} demoMode={demoMode} />
                       </section>
                     ) : null}
                     </div>
@@ -7354,7 +7365,7 @@ function createDemoThreadDetail(account: MailAccount, threadId: string, messages
       bodyHtml: messageHtmlBodies[message.id] ?? null,
       internetMessageId: `<${message.providerMessageId}@mail.gmail.com>`,
       references: [],
-      attachments: message.id === "msg_2" ? [{ id: "attachment_demo", filename: "Orca-reader-notes.pdf", mimeType: "application/pdf", size: 2483200 }] : [],
+      attachments: message.id === "msg_2" ? demoAttachments : [],
     })),
   };
 }

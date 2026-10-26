@@ -107,6 +107,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
       </button>
       <p className="desktop-sidebar-label">Mail</p>
+      <SidebarItem active={active === "summary"} icon={<NavIcon name="all" />} label="Summary" onClick={() => onNavigate("summary")} />
       <SidebarItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => onNavigate("inbox")} />
       <SidebarItem active={active === "focus"} icon={<NavIcon name="view" />} label="Focus" onClick={() => onNavigate("focus")} />
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
@@ -145,6 +146,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         <div aria-label="All Orca spaces" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
           <div aria-label="Mail" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
+            <MobileMenuItem active={active === "summary"} icon={<NavIcon name="all" />} label="Summary" onClick={() => navigateFromMobileMenu("summary")} />
             <MobileMenuItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => navigateFromMobileMenu("inbox")} />
             <MobileMenuItem active={active === "focus"} icon={<NavIcon name="view" />} label="Focus" onClick={() => navigateFromMobileMenu("focus")} />
             <MobileMenuItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => navigateFromMobileMenu("drafts")} />
