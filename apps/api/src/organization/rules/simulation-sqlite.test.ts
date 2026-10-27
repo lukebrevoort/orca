@@ -1757,3 +1757,91 @@ describe("BRE-317 historical production-failure REST lifecycle", () => {
     }
   }, 20_000);
 });
+
+describe("Context relationship compensation", () => {
+  async function appliedUnlink(edgeCount: number) {
+    const fixture = await setup('action unlink context "Project" "Orca"');
+    const { db, compiled, threadId } = fixture;
+    const actor = { id: "workspace-1", type: "human" as const };
+    const createdAt = new Date("2026-08-25T10:00:00.000Z");
+    db.insert(organizationContextRelationshipTypes).values({
+      workspaceId: "workspace-1", id: "relationship-project-second", contextTypeId: "context-type-project",
+      name: "references", inverseName: "referenced by", direction: "thread_to_context", position: 1,
+      maximumPerThread: 20, retiredAt: null, revision: 1, createdAt, updatedAt: createdAt,
+    }).run();
+    const edges = ["relationship-project", "relationship-project-second"].slice(0, edgeCount).map((relationshipTypeId, index) => ({
+      workspaceId: "workspace-1", id: `original-context-${index}`, accountId: "account-1", threadId,
+      contextTypeId: "context-type-project", contextId: "context-orca", relationshipTypeId,
+      direction: "thread_to_context", revision: index + 2, createdAt, updatedAt: createdAt,
+    }));
+    db.insert(organizationThreadContextRelationships).values(edges).run();
+    const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+      actor, workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id,
+        workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+        accountIds: ["account-1"], maximumThreads: 500,
+      },
+    });
+    const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+    const service = createSqliteRuleChangeSetService(db);
+    const applied = service.activate({ actor, capabilitySnapshot: validCapability(db), workspaceId: "workspace-1", request: {
+      ruleId: compiled.rule.id, revisionId: compiled.revision.id, simulationId: simulation.simulationId,
+      accountIds: ["account-1"], maximumThreads: 500,
+      expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+      expectedRuleRevision: compiled.rule.latestRevision, expectedRuleSetRevision: ruleSet.revision,
+      idempotencyKey: "unlink-context-edges",
+    } });
+    const revert = (changeSetId: string, expectedWorkspaceRevision: number, idempotencyKey: string) => service.revert({
+      actor, capabilitySnapshot: validCapability(db), workspaceId: "workspace-1",
+      request: { changeSetId, accountIds: ["account-1"], expectedWorkspaceRevision, idempotencyKey },
+    });
+    const readEdges = () => db.select().from(organizationThreadContextRelationships)
+      .where(eq(organizationThreadContextRelationships.threadId, threadId)).all()
+      .map(({ id, relationshipTypeId, direction, revision, createdAt }) => ({ id, relationshipTypeId, direction, revision, createdAt }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+    return { ...fixture, applied, revert, readEdges, expectedEdges: edges.map(({ id, relationshipTypeId, direction, revision, createdAt }) => ({ id, relationshipTypeId, direction, revision, createdAt })) };
+  }
+
+  test("restores every unlinked Context edge and replays the revert", async () => {
+    const fixture = await appliedUnlink(2);
+    const { sqlite, applied, revert, readEdges, expectedEdges } = fixture;
+    try {
+      assert.deepEqual(readEdges(), []);
+      const restored = revert(applied.changeSetId, applied.workspaceRevisionAfter, "restore-context-edges");
+      assert.deepEqual(readEdges(), expectedEdges);
+      assert.deepEqual(revert(applied.changeSetId, applied.workspaceRevisionAfter, "restore-context-edges"), restored);
+      assert.deepEqual(readEdges(), expectedEdges);
+      assert.throws(() => revert(restored.changeSetId, restored.workspaceRevisionAfter, "revert-restoration"),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "change_set_not_found");
+      assert.deepEqual(readEdges(), expectedEdges);
+    } finally { sqlite.close(); }
+  });
+
+  test("restores legacy single Context relationship evidence", async () => {
+    const { db, sqlite, applied, revert, readEdges, expectedEdges } = await appliedUnlink(1);
+    try {
+      const stored = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, applied.changeSetId)).get()!;
+      const inverse = JSON.parse(stored.inverseJson);
+      delete inverse.threads[0].beforeContexts[0].relationships;
+      db.update(organizationChangeSets).set({ inverseJson: JSON.stringify(inverse) }).where(eq(organizationChangeSets.id, applied.changeSetId)).run();
+      revert(applied.changeSetId, applied.workspaceRevisionAfter, "restore-legacy-context-edge");
+      assert.deepEqual(readEdges(), expectedEdges);
+    } finally { sqlite.close(); }
+  });
+
+  for (const relationships of ["x", [null]]) {
+    test(`rejects malformed Context relationships ${JSON.stringify(relationships)} without writes`, async () => {
+      const { db, sqlite, applied, revert } = await appliedUnlink(1);
+      try {
+        const stored = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, applied.changeSetId)).get()!;
+        const inverse = JSON.parse(stored.inverseJson);
+        inverse.threads[0].beforeContexts[0].relationships = relationships;
+        db.update(organizationChangeSets).set({ inverseJson: JSON.stringify(inverse) }).where(eq(organizationChangeSets.id, applied.changeSetId)).run();
+        const before = snapshot(db);
+        assert.throws(() => revert(applied.changeSetId, applied.workspaceRevisionAfter, "restore-malformed-context-edges"),
+          (error: unknown) => error instanceof Error && "code" in error && error.code === "invalid_change_set");
+        assert.deepEqual(snapshot(db), before);
+      } finally { sqlite.close(); }
+    });
+  }
+});
