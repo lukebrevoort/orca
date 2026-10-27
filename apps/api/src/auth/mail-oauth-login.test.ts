@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { createApp } from "../index.ts";
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, sessions, users } from "../db/schema.ts";
 import { createSession } from "./session-store.ts";
@@ -166,4 +167,62 @@ describe("completeMailOAuthLogin identity binding", () => {
     });
   }
 
+});
+
+describe("structural mail login owners", () => {
+  test("pending users never count as owner even after onboarding/complete", async () => {
+    const path = join(dir, `onboarded-pending-${++n}.sqlite`);
+    const dbFactory = () => createDatabaseClient(path);
+    const client = dbFactory(); clients.push(client);
+    const db = client.db;
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+    db.insert(users).values({ id: "existing", email: "a@example.test", authenticatedAt: new Date() }).run();
+    const stale = await startLogin(db, "gmail", "google-A", "a@example.test");
+    db.update(oauthAccounts).set({ createdAt: new Date(1000) }).where(eq(oauthAccounts.userId, stale.userId)).run();
+    const session = await createSession(db, stale.userId);
+    const response = await createApp({ dbFactory }).request("/v1/auth/onboarding/complete", {
+      method: "POST", headers: { cookie: `orca_session=${session.token}`, origin: "http://localhost:5173" },
+    });
+    expect(response.status).toBe(200);
+    expect(db.select().from(users).where(eq(users.id, stale.userId)).get()?.onboardingCompletedAt).toBeInstanceOf(Date);
+    db.insert(oauthAccounts).values({ id: "existing_gmail", userId: "existing", provider: "gmail", providerId: "google-A", providerEmail: "a@example.test", scope: "", createdAt: new Date(2000) }).run();
+    const next = await startLogin(db, "gmail", "next-tab", "a@example.test");
+    db.update(oauthAccounts).set({ providerId: "google-A" }).where(eq(oauthAccounts.userId, next.userId)).run();
+    expect(completeMailOAuthLogin(db, { ...next, providerAccountId: "google-A" })).toEqual({ ok: true, returningUserId: "existing" });
+  });
+  for (const email of ["a@example.test", "renamed@example.test"]) {
+    test(`legacy marker-less real user returns by identity with ${email}`, async () => {
+      const db = freshDb();
+      db.update(users).set({ authenticatedAt: null, onboardingCompletedAt: null }).where(eq(users.id, "existing")).run();
+      const input = await startLogin(db, "gmail", "google-A", email);
+      expect(completeMailOAuthLogin(db, input)).toEqual({ ok: true, returningUserId: "existing" });
+      expect(db.select().from(users).where(eq(users.id, input.userId)).get()).toBeUndefined();
+    });
+  }
+  test("legacy marker-less real user refuses a different identity with the same email", async () => {
+    const db = freshDb();
+    db.update(users).set({ authenticatedAt: null, onboardingCompletedAt: null }).where(eq(users.id, "existing")).run();
+    expect(completeMailOAuthLogin(db, await startLogin(db, "gmail", "different-id", "a@example.test"))).toEqual({ ok: false, reason: "account_exists" });
+  });
+  for (const email of ["pending-x@orca.invalid", "xpending-x@orca.invalid", "pending-x@orca.invalid.example.test"]) {
+    test(`placeholder pattern is anchored for ${email}`, async () => {
+      const db = freshDb();
+      db.update(users).set({ email }).where(eq(users.id, "existing")).run();
+      expect(completeMailOAuthLogin(db, await startLogin(db, "gmail", "google-A", "new@example.test"))).toEqual({
+        ok: true, returningUserId: email === "pending-x@orca.invalid" ? null : "existing",
+      });
+    });
+  }
+  test("provider placeholder-shaped email is stored but not recognized as an owner later", async () => {
+    const db = freshDb();
+    const first = await startLogin(db, "gmail", "new-id", "pending-provider@orca.invalid");
+    expect(completeMailOAuthLogin(db, first)).toEqual({ ok: true, returningUserId: null });
+    const promoted = db.select().from(users).where(eq(users.id, first.userId)).get();
+    expect(promoted?.email).toBe("pending-provider@orca.invalid");
+    expect(promoted?.authenticatedAt).toBeInstanceOf(Date);
+    const next = await startLogin(db, "gmail", "next-tab", "pending-provider@orca.invalid");
+    db.update(oauthAccounts).set({ providerId: "new-id" }).where(eq(oauthAccounts.userId, next.userId)).run();
+    expect(completeMailOAuthLogin(db, { ...next, providerAccountId: "new-id" })).toEqual({ ok: false, reason: "account_exists" });
+    expect(db.select().from(users).where(eq(users.id, first.userId)).get()).toEqual(promoted);
+  });
 });

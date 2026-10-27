@@ -282,7 +282,6 @@ describe("Gmail auth routes", () => {
     migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
     initialClient.db.insert(users).values({
       id: "existing_user",
-      authenticatedAt: new Date(),
       email: "returning@example.com",
     }).run();
     initialClient.db.insert(oauthAccounts).values({

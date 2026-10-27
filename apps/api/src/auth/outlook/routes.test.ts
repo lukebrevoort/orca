@@ -66,7 +66,6 @@ describe("Outlook auth routes", () => {
     migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
     initialClient.db.insert(users).values({
       id: "existing_user",
-      authenticatedAt: new Date(),
       email: "returning@outlook.com",
     }).run();
     initialClient.db.insert(oauthAccounts).values({
