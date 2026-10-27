@@ -334,3 +334,24 @@ describe("durable Gmail sync coordinator", () => {
     }
   });
 });
+
+describe("Gmail coordinator history ID bounds", () => {
+for (const [left, right, expected] of [
+  ["9", "10", "10"], ["18446744073709551615", "10", "18446744073709551615"],
+  ["9".repeat(300_000), "10", "9".repeat(300_000)],
+  ["18446744073709551616", "9", "9"],
+]) {
+  test(`coordinator compares bounded IDs and falls back for invalid IDs (${left.length} digits, ${right})`, async () => {
+    const { sqlite, dbFactory } = setup();
+    const claims: GmailSyncClaim[] = [];
+    const coordinator = createGmailSyncCoordinator({ dbFactory, ownerId: "comparison", worker: async (claim) => { claims.push(claim); return {}; } });
+    try {
+      coordinator.enqueue({ accountId: "account-a", source: "push", historyId: left });
+      coordinator.enqueue({ accountId: "account-a", source: "push", historyId: right });
+      assert.equal((await coordinator.drainAccount("account-a")).completed, true);
+      assert.equal(claims[0]?.historyId === expected, true);
+    } finally { sqlite.close(); }
+  });
+}
+
+});
