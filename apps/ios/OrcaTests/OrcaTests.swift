@@ -2717,6 +2717,21 @@ final class VerificationCodeTests: XCTestCase {
             ("code: 2026-10", ""),
             ("code: 12-345678", "12345678"),
             ("code: A-12345", "12345"),
+            ("Your verification code is 123456 DO NOT SHARE THIS CODE.", "123456"),
+            ("YOUR VERIFICATION CODE IS 123456", "123456"),
+            ("your code is 123456 do not share", "123456"),
+            ("YOUR CODE IS 123456 DO NOT SHARE", "123456"),
+            ("code: USE 123456 NOW", "123456"),
+            ("code: use 123456 now", "123456"),
+            ("YOUR CODE IS 123 456 DO NOT SHARE", "123456"),
+            ("your code is 123 456 do not share", "123456"),
+            ("YOUR CODE IS ABC-123 DO NOT SHARE", "ABC123"),
+            ("your code is ABC-123 do not share", "ABC123"),
+            ("Verify: 123 456 NOW", "123456"),
+            ("code: ABC-123 NOW", "ABC123"),
+            ("Your code is G-123456 NOW", "123456"),
+            ("code: 1234-5678 NOW", "12345678"),
+            ("code: AB12 CD34", "AB12CD34"),
 
         ]
         for (text, expected) in vectors {

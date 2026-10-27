@@ -23,7 +23,8 @@ struct VerificationCode: Equatable {
         if !subjectSignal && signals.isEmpty { return [] }
         let tokens = matches(#"\S+"#, text as String)
         let scripts = matches(#"<script\b[^<>]*>[\s\S]*?(?:</script\s*>|$)"#, text as String, insensitive: true)
-        let candidates = matches(#"(?<![A-Za-z0-9\x{200B}-\x{200D}])(?!(?:CODE|OTP|PIN|VERIFY|LOGIN|2FA) )(?:[A-Za-z]-[0-9]{4,8}|[A-Z0-9]{1}[ -][A-Z0-9]{3,7}|[A-Z0-9]{2}[ -][A-Z0-9]{2,6}|[A-Z0-9]{3}[ -][A-Z0-9]{1,5}|[A-Z0-9]{4}[ -][A-Z0-9]{1,4}|[A-Z0-9]{5}[ -][A-Z0-9]{1,3}|[A-Z0-9]{6}[ -][A-Z0-9]{1,2}|[A-Z0-9]{7}[ -][A-Z0-9]{1,1}|[A-Z0-9]{4,8})(?![A-Za-z0-9\x{200B}-\x{200D}])"#, text as String)
+        // Space-separated groups must each contain a digit so adjacent prose stays outside the code.
+        let candidates = matches(#"(?<![A-Za-z0-9\x{200B}-\x{200D}])(?:[A-Za-z]-[0-9]{4,8}|[A-Z0-9]{1}-[A-Z0-9]{3,7}|[A-Z0-9]{2}-[A-Z0-9]{2,6}|[A-Z0-9]{3}-[A-Z0-9]{1,5}|[A-Z0-9]{4}-[A-Z0-9]{1,4}|[A-Z0-9]{5}-[A-Z0-9]{1,3}|[A-Z0-9]{6}-[A-Z0-9]{1,2}|[A-Z0-9]{7}-[A-Z0-9]{1,1}|(?=[A-Z0-9]{0,7}[0-9][A-Z0-9]{0,7} )(?:[A-Z0-9]{1} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{3,7}|[A-Z0-9]{2} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{2,6}|[A-Z0-9]{3} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,5}|[A-Z0-9]{4} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,4}|[A-Z0-9]{5} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,3}|[A-Z0-9]{6} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,2}|[A-Z0-9]{7} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,1})|[A-Z0-9]{4,8})(?![A-Za-z0-9\x{200B}-\x{200D}])"#, text as String)
         // Exclude whole dates: the candidate may combine the day and year.
         let dates = matches(#"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(?:0?[1-9]|[12][0-9]|3[01]),?\s+[0-9]{4}\b"#, text as String, insensitive: true)
         var signalIndex = 0, tokenIndex = 0, scriptIndex = 0, dateIndex = 0

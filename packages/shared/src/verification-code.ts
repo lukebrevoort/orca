@@ -11,7 +11,8 @@ export function detectVerificationCodes(input: { subject?: string | null; bodyTe
   const results: { code: string; start: number }[] = [];
   let signalIndex = 0;
   // Bounded repetitions: no unbounded backtracking even for very large mail.
-  const candidates = /(?<![A-Za-z0-9\u200B-\u200D])(?!(?:CODE|OTP|PIN|VERIFY|LOGIN|2FA) )(?:[A-Za-z]-[0-9]{4,8}|[A-Z0-9]{1}[ -][A-Z0-9]{3,7}|[A-Z0-9]{2}[ -][A-Z0-9]{2,6}|[A-Z0-9]{3}[ -][A-Z0-9]{1,5}|[A-Z0-9]{4}[ -][A-Z0-9]{1,4}|[A-Z0-9]{5}[ -][A-Z0-9]{1,3}|[A-Z0-9]{6}[ -][A-Z0-9]{1,2}|[A-Z0-9]{7}[ -][A-Z0-9]{1,1}|[A-Z0-9]{4,8})(?![A-Za-z0-9\u200B-\u200D])/g;
+  // Space-separated groups must each contain a digit so adjacent prose stays outside the code.
+  const candidates = /(?<![A-Za-z0-9\u200B-\u200D])(?:[A-Za-z]-[0-9]{4,8}|[A-Z0-9]{1}-[A-Z0-9]{3,7}|[A-Z0-9]{2}-[A-Z0-9]{2,6}|[A-Z0-9]{3}-[A-Z0-9]{1,5}|[A-Z0-9]{4}-[A-Z0-9]{1,4}|[A-Z0-9]{5}-[A-Z0-9]{1,3}|[A-Z0-9]{6}-[A-Z0-9]{1,2}|[A-Z0-9]{7}-[A-Z0-9]{1,1}|(?=[A-Z0-9]{0,7}[0-9][A-Z0-9]{0,7} )(?:[A-Z0-9]{1} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{3,7}|[A-Z0-9]{2} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{2,6}|[A-Z0-9]{3} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,5}|[A-Z0-9]{4} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,4}|[A-Z0-9]{5} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,3}|[A-Z0-9]{6} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,2}|[A-Z0-9]{7} (?=[A-Z0-9]{0,7}[0-9])[A-Z0-9]{1,1})|[A-Z0-9]{4,8})(?![A-Za-z0-9\u200B-\u200D])/g;
   const tokens = [...text.matchAll(/\S+/g)];
   let tokenIndex = 0;
   const scripts = [...text.matchAll(/<script\b[^<>]*>[\s\S]*?(?:<\/script\s*>|$)/gi)];
