@@ -654,12 +654,12 @@ describe("Gmail history ID bounds", () => {
 
   for (const expired of [false, true]) {
     for (const profile of ["valid", "missing", "invalid", "throws"] as const) {
-      test(`backfill uses ${profile} profile cursor with expired=${expired}`, async () => {
+      test(`backfill profile cursor ${profile} with expired=${expired}`, async () => {
         setAuthEnv();
         const { db, sqlite } = createMigratedClient();
         const calls: string[] = [];
         try {
-          insertAccount(db, { historyId: expired ? "1" : null });
+          insertAccount(db, { historyId: expired ? "1" : null, lastSyncedAt: new Date("2026-08-01") });
           await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
           const gmailClient: GmailClient & { getProfile?: (token: string) => Promise<{ historyId: string | null }> } = {
             async getMessage() { throw new Error("unused"); },
@@ -673,16 +673,49 @@ describe("Gmail history ID bounds", () => {
               return { historyId: profile === "valid" ? "12345" : "9".repeat(300_000) };
             } }),
           };
-          const result = await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "99999999999999999999", gmailClient, config, now: new Date("2026-08-11") });
-          const expected = profile === "valid" ? "12345" : expired ? "1" : null;
-          assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, expected);
-          assert.equal(result.historyId, expected);
-          assert.equal(result.usedBackfill, true);
-          assert.equal(db.select().from(oauthAccounts).get()?.lastSyncedAt?.getTime(), Date.parse("2026-08-11"));
-          assert.deepEqual(calls, profile === "missing" ? ["backfill"] : ["profile", "backfill"]);
+          const run = () => syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "99999999999999999999", gmailClient, config, now: new Date("2026-08-11") });
+          if (profile === "valid") {
+            const result = await run();
+            assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, "12345");
+            assert.equal(result.historyId, "12345");
+            assert.equal(result.usedBackfill, true);
+            assert.equal(db.select().from(oauthAccounts).get()?.lastSyncedAt?.getTime(), Date.parse("2026-08-11"));
+            assert.deepEqual(calls, ["profile", "backfill"]);
+          } else {
+            for (let attempt = 0; attempt < 3; attempt++) {
+              await assert.rejects(run, (error: unknown) => error instanceof GmailPushError && error.code === "provider_error");
+            }
+            assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, expired ? "1" : null);
+            assert.equal(db.select().from(oauthAccounts).get()?.lastSyncedAt?.getTime(), Date.parse("2026-08-01"));
+            assert.deepEqual(calls, profile === "missing" ? [] : ["profile", "profile", "profile"]);
+          }
         } finally { sqlite.close(); }
       });
     }
   }
 
 });
+
+for (const [label, pageId, expected] of [
+  ["missing", null, "100"], ["huge", "9".repeat(300_000), "100"],
+  ["malformed", "abc", "100"], ["empty", "", "100"],
+  ["markup", "<script>1</script>", "100"], ["valid", "150", "150"],
+] as const) {
+  test(`incremental cursor uses validated page ID: ${label}`, async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    try {
+      insertAccount(db, { historyId: "100" });
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
+      const gmailClient: GmailClient = {
+        async getMessage() { throw new Error("unused"); },
+        async listLabels() { return []; },
+        async listInboxMessagePage() { throw new Error("unexpected backfill"); },
+        async listHistory() { return { messageIds: [], deletedMessageIds: [], nextCursor: null, historyId: pageId }; },
+      };
+      const result = await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "18446744073709551615", gmailClient, config, now: new Date("2026-08-11"), skipDateRecovery: true });
+      assert.equal(result.historyId, expected);
+      assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, expected);
+    } finally { sqlite.close(); }
+  });
+}
