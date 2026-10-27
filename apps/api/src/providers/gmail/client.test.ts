@@ -109,3 +109,19 @@ describe("Gmail authorization classification", () => {
     });
   }
 });
+
+describe("Gmail profile API client", () => {
+  for (const historyId of ["12345", null]) {
+    test(`reads the Gmail profile history ID ${historyId}`, async () => {
+      const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+        assert.equal(String(input), "https://gmail.googleapis.com/gmail/v1/users/me/profile");
+        assert.equal(init?.method ?? "GET", "GET");
+        assert.equal(new Headers(init?.headers).get("authorization"), "Bearer access-token");
+        return Response.json(historyId === null ? {} : { historyId });
+      };
+      const client = createGmailClient(fetchImpl as typeof fetch);
+      assert.deepEqual(await client.getProfile!("access-token"), { historyId });
+    });
+  }
+
+});
