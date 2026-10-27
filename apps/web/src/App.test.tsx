@@ -528,7 +528,7 @@ describe("App", () => {
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
   });
 
-  test("removes unsupported reader actions and truthfully explains attachment availability", () => {
+  test("shows downloadable attachment cards alongside supported reader actions", () => {
     const message = {
       ...makeThreadMessage("attachment-message", "2026-07-12T18:00:00.000Z"),
       attachments: [{ id: "attachment-1", filename: "launch-notes.pdf", mimeType: "application/pdf", size: 2483200 }],
@@ -552,12 +552,12 @@ describe("App", () => {
     expect(html).not.toContain("Star conversation");
     expect(html).not.toContain("More conversation actions");
     expect(html).toContain("launch-notes.pdf");
-    expect(html).toContain("2.4 MB · application/pdf");
-    expect(html).toContain("Files aren’t available in Orca yet.");
-    expect(html).toContain("Open this conversation in Gmail to view or download them.");
-    expect(html).toContain('aria-describedby="reader-attachments-note-attachment-message"');
-    expect(html).toContain("Details only");
-    expect(html).not.toContain('aria-label="Download launch-notes.pdf"');
+    expect(html).toContain("PDF · 2.4 MB");
+    expect(html).not.toContain("Files aren’t available in Orca yet.");
+    expect(html).toContain("attachment-card-list");
+    expect(html).toContain('title="launch-notes.pdf"');
+    expect(html).not.toContain("Details only");
+    expect(html).toContain('aria-label="Download launch-notes.pdf"');
   });
 
   test("keeps partial reader data and no-attachment states explicit without inventing actions", () => {

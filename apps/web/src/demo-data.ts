@@ -346,3 +346,12 @@ export function messageIncludesPerson(message: InboxMessage, personName: string)
   const haystack = `${fromName} ${fromEmail} ${message.subject} ${message.snippet}`.toLowerCase();
   return fromName.includes(needle) || fromEmail.includes(needle) || haystack.includes(needle);
 }
+
+export const demoAttachments: import("@orca/shared").MailAttachment[] = [
+  { id: "demo_pdf", filename: "Q4-board-deck.pdf", mimeType: "application/pdf", size: 2516582 },
+  { id: "demo_image", filename: "whiteboard-photo.jpg", mimeType: "image/jpeg", size: 1887437 },
+  { id: "demo_sheet", filename: "budget-2027.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", size: 86016 },
+  { id: "demo_zip", filename: "design-assets.zip", mimeType: "application/zip", size: 12582912 },
+  { id: "demo_doc", filename: "Orca-reader-research-notes-final-final-v3-with-comments-from-maya-and-luke.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", size: 245760 },
+  { id: "demo_video", filename: "launch-video-raw.mov", mimeType: "video/quicktime", size: 32505856 },
+];

@@ -58,8 +58,33 @@ struct SafeHTMLView: UIViewRepresentable {
             .orca-mail-image-note{display:block;font-size:0.9em;line-height:1.4;margin:0.3em 0 0.65em;overflow-wrap:anywhere}
             </style>
             """ + html
+#if DEBUG
+            (view as? ContentSizedWebView)?.fixtureDiagnosticPhase = "requested"
+#endif
             view.loadHTMLString(shell, baseURL: nil)
         }
+
+#if DEBUG
+        // Scalars only; never inspect or export the document, URL or error text.
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "started"
+        }
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "committed"
+        }
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "finished"
+        }
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "failed"
+        }
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "provisional-failed"
+        }
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "process-terminated"
+        }
+#endif
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if action.navigationType == .linkActivated, let url = action.request.url, ["http", "https", "mailto"].contains(url.scheme) {
@@ -72,6 +97,29 @@ struct SafeHTMLView: UIViewRepresentable {
     }
 }
 private final class ContentSizedWebView: WKWebView {
+#if DEBUG
+    private let fixtureDiagnosticsEnabled: Bool = {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("--fixture-html-diagnostics"),
+              let index = args.firstIndex(of: "--fixture-api-url"), args.indices.contains(index + 1),
+              let url = URL(string: args[index + 1]), url.scheme == "http",
+              ["127.0.0.1", "localhost"].contains(url.host ?? ""),
+              let token = args.firstIndex(of: "--fixture-access-token"), args.indices.contains(token + 1),
+              !args[token + 1].isEmpty else { return false }
+        return true
+    }()
+    var fixtureDiagnosticPhase = "created" { didSet { updateFixtureDiagnostics() } }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        updateFixtureDiagnostics()
+    }
+    private func updateFixtureDiagnostics() {
+        guard fixtureDiagnosticsEnabled else { return }
+        // Identifier carries bounded metadata without changing labels, values,
+        // navigation, sizing or the WebView's accessibility children.
+        accessibilityIdentifier = "fixture-html-state phase=\(fixtureDiagnosticPhase) loading=\(isLoading) bounds=\(bounds.size) content=\(scrollView.contentSize)"
+    }
+#endif
     private var observation: NSKeyValueObservation?
     override init(frame: CGRect, configuration: WKWebViewConfiguration) { super.init(frame: frame, configuration: configuration); observation = scrollView.observe(\.contentSize, options: [.new]) { [weak self] _, _ in self?.invalidateIntrinsicContentSize() } }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

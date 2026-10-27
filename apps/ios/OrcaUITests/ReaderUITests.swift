@@ -53,7 +53,7 @@ final class ReaderUITests: XCTestCase {
     }
 
     func testLongHTMLScrollBackAndRepeatedOpen() throws {
-        let app = try launchReader()
+        let app = try launchReader(htmlDiagnostics: true)
         for pass in 1...2 {
             openHTML(in: app)
             let first = app.staticTexts["Explicit dark foreground stays readable."]
@@ -78,15 +78,12 @@ final class ReaderUITests: XCTestCase {
             XCTAssertTrue(isVisible(end, in: app), "The complete HTML body must remain visible in the reader viewport")
             XCTAssertTrue(app.buttons["Reply"].isHittable)
             screenshot("reader-bottom-\(pass)")
+            readerAction("back-\(pass)-tap-begin")
             app.navigationBars.buttons.firstMatch.tap()
+            readerAction("back-\(pass)-tap-returned")
             let returnedToInbox = app.navigationBars["Inbox"].waitForExistence(timeout: 10)
             if !returnedToInbox {
-                screenshot("reader-back-navigation-failure")
-                var hierarchy = app.debugDescription
-                if let token = ProcessInfo.processInfo.environment["ORCA_FIXTURE_ACCESS_TOKEN"], !token.isEmpty {
-                    hierarchy = hierarchy.replacingOccurrences(of: token, with: "[REDACTED]")
-                }
-                print("READER_BACK_FAILURE_HIERARCHY_BEGIN\n\(hierarchy)\nREADER_BACK_FAILURE_HIERARCHY_END")
+                captureReaderFailure(in: app, stage: "back-\(pass)")
             }
             XCTAssertTrue(returnedToInbox, "One Back tap must return from the reader to Inbox")
         }
@@ -137,7 +134,7 @@ final class ReaderUITests: XCTestCase {
     func testImagesRequireExplicitLoadingAndResetOnReopen() throws {
         guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
         let initialDownloads = try imageDownloadCount()
-        let app = try launchReader()
+        let app = try launchReader(htmlDiagnostics: true)
         let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.tap()
@@ -146,13 +143,21 @@ final class ReaderUITests: XCTestCase {
         for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
         XCTAssertEqual(try imageDownloadCount(), initialDownloads, "Opening a message must not contact image hosts")
         screenshot("images-blocked-before-consent")
+        readerAction("load-images-tap-begin")
         load.tap()
+        readerAction("load-images-tap-returned")
         let status = app.staticTexts["message.images-status"]
-        XCTAssertTrue(status.waitForExistence(timeout: 10))
-        XCTAssertTrue(status.label.contains("1 image loaded."))
+        let statusExists = status.waitForExistence(timeout: 10)
+        if !statusExists { captureReaderFailure(in: app, stage: "image-status-exists") }
+        XCTAssertTrue(statusExists)
+        let loaded = status.label.contains("1 image loaded.")
+        if !loaded { captureReaderFailure(in: app, stage: "image-status-loaded") }
+        XCTAssertTrue(loaded)
         let landscape = app.images["Synthetic landscape"]
         for _ in 0..<4 { if landscape.exists && landscape.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(landscape.exists && landscape.isHittable)
+        let landscapeVisible = landscape.exists && landscape.isHittable
+        if !landscapeVisible { captureReaderFailure(in: app, stage: "image-landscape-visible") }
+        XCTAssertTrue(landscapeVisible)
         XCTAssertEqual(try imageDownloadCount(), initialDownloads + 1)
         screenshot("images-loaded-after-consent")
         app.navigationBars.buttons.firstMatch.tap()
@@ -227,7 +232,7 @@ final class ReaderUITests: XCTestCase {
         return try XCTUnwrap(count)
     }
 
-    private func launchReader(contentSize: String = "UICTContentSizeCategoryL") throws -> XCUIApplication {
+    private func launchReader(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false) throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         let url = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
         let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
@@ -237,6 +242,13 @@ final class ReaderUITests: XCTestCase {
         app.launchArguments = ["--fixture-api-url", url, "--fixture-access-token", token,
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-UIPreferredContentSizeCategoryName", contentSize]
+        if htmlDiagnostics {
+            let fixtureURL = try XCTUnwrap(URL(string: url))
+            XCTAssertEqual(fixtureURL.scheme, "http", "Reader diagnostics require an isolated loopback fixture")
+            XCTAssertTrue(["127.0.0.1", "localhost"].contains(fixtureURL.host ?? ""),
+                "Reader diagnostics require an isolated loopback fixture")
+            app.launchArguments.append("--fixture-html-diagnostics")
+        }
         app.launch()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20))
         return app
@@ -293,6 +305,56 @@ final class ReaderUITests: XCTestCase {
         let visible = frame.width > 0 && frame.height > 0 && frame.minY >= top && frame.maxY <= bottom
         print("READER_VISIBILITY frame=\(frame) top=\(top) bottom=\(bottom) visible=\(visible)")
         return visible && text.isHittable
+    }
+
+    private func readerAction(_ stage: String) {
+        // No additional AX queries, retries or waits before the original action.
+        print("[reader-fixture-action] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) stage=\(stage)")
+    }
+
+    private func captureReaderFailure(in app: XCUIApplication, stage: String) {
+        // Capture only after the original predicate/timeout has failed. These
+        // observations describe failure-time state, not proof a tap handler ran.
+        screenshot("reader-failure-" + stage)
+        var lines = ["[reader-fixture-failure] stage=\(stage) epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000))"]
+        func state(_ name: String, _ element: XCUIElement) {
+            let exists = element.exists
+            lines.append("target=\(name) exists=\(exists)")
+            if exists {
+                lines.append("type=\(element.elementType.rawValue) frame=\(element.frame) enabled=\(element.isEnabled) hittable=\(element.isHittable)")
+            }
+        }
+        state("first-navigation-button", app.navigationBars.buttons.firstMatch)
+        state("inbox-navigation", app.navigationBars["Inbox"])
+        state("conversation-navigation", app.navigationBars["Conversation"])
+        state("load-images", app.buttons["message.load-images"])
+        state("images-status", app.staticTexts["message.images-status"])
+        state("synthetic-landscape", app.images["Synthetic landscape"])
+        // No arbitrary identifiers, labels, values, URLs or debugDescription.
+        // Keep the same bounded structural evidence as the styled HTML probe.
+        func visit(_ element: XCUIElement, depth: Int) {
+            guard lines.count < 120, depth < 14 else { return }
+            lines.append("depth=\(depth) type=\(element.elementType.rawValue) frame=\(element.frame)")
+            for child in element.children(matching: .any).allElementsBoundByIndex.prefix(30) {
+                visit(child, depth: depth + 1)
+            }
+        }
+        for webView in app.webViews.allElementsBoundByIndex.prefix(4) {
+            let identifier = webView.identifier
+            if identifier.hasPrefix("fixture-html-state ") {
+                lines.append(String(identifier.prefix(300)))
+                lines.append("webview-subtree (relative depth starts at 10)")
+                visit(webView, depth: 10)
+            }
+        }
+        lines.append("app-structure")
+        visit(app, depth: 0)
+        let diagnostic = String(lines.joined(separator: "\n").prefix(16_000))
+        print(diagnostic)
+        let attachment = XCTAttachment(string: diagnostic)
+        attachment.name = "reader-fixture-state-" + stage
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     private func screenshot(_ name: String) {
