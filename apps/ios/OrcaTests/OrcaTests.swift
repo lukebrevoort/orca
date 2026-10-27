@@ -2655,3 +2655,108 @@ final class UnreadFocusTimelineTests: XCTestCase {
         XCTAssertEqual(model.messages.map(\.unread), [true, true, false])
     }
 }
+
+final class VerificationCodeTests: XCTestCase {
+    func testSharedVectors() {
+        let vectors: [(String, String)] = [
+            ("PIN 1234", "1234"),
+            ("CODE 1234", "1234"),
+            ("OTP 1234", "1234"),
+            ("Verification code: 123456", "123456"),
+            ("Your code is G-123456", "123456"),
+            ("G-123456 is your Google verification code", "123456"),
+            ("code: A-1234", "1234"),
+            ("code: g-12345678", "12345678"),
+            ("Verification code: 1234-5678", "12345678"),
+            ("Your one-time passcode is 482631", "482631"),
+            ("OTP: 9876", "9876"),
+            ("PIN: 1234", "1234"),
+            ("Login: AB12CD", "AB12CD"),
+            ("Sign-in: A1B2C3D4", "A1B2C3D4"),
+            ("Verify: 123 456", "123456"),
+            ("Security code: 12345678", "12345678"),
+            ("Confirmation code: 765432", "765432"),
+            ("code: ABC-123", "ABC123"),
+            ("Order #123456", ""),
+            ("code: Order #123456", ""),
+            ("code: $1234.56", ""),
+            ("code: €123456", ""),
+            ("code: Call 555-123-4567", ""),
+            ("code: +44 123456", ""),
+            ("2026", ""),
+            ("code: January 2026", ""),
+            ("code: Oct 26 2026", ""),
+            ("code: October 26, 2026", ""),
+            ("code: OCT 26 2026", ""),
+            ("code: Sept. 1, 2099", ""),
+            ("code: January 01 1800", ""),
+            ("code: Oct 26 2026. Your code is 482631", "482631"),
+            ("code: 482631. Sent October 26, 2026", "482631"),
+            ("code: October 26, 2026. PIN: 2027", "2027"),
+            ("code: October 26, 2026 <img onerror=\"alert(1)\"> OTP: 482631", "482631"),
+            ("code: OctoberX 26, 12345", "12345"),
+            ("code: 2026 December", ""),
+            ("Meeting at 10:30", ""),
+            ("code: 2026-10-26", ""),
+            ("code: NY 12345", ""),
+            ("code: https://x.y/?code=123456", ""),
+            ("code: person123456@example.com", ""),
+            ("code: invoice 123456", ""),
+            ("code: tracking 123456", ""),
+            ("code: ref 123456", ""),
+            ("code: ٤٨٢٦٣١", ""),
+            ("code: 123‍456", ""),
+            ("<script>code: 123456</script>", ""),
+            ("code: <img onerror=\"alert(1)\"> 482631", "482631"),
+            ("code: ABCDEF", ""),
+            ("code: 123456789", ""),
+            ("code: 123", ""),
+            ("", ""),
+            ("code: 000000", "000000"),
+            ("code: (555) 123 4567", ""),
+            ("code: 2026-10", ""),
+            ("code: 12-345678", "12345678"),
+            ("code: A-12345", "12345"),
+            ("Your verification code is 123456 DO NOT SHARE THIS CODE.", "123456"),
+            ("YOUR VERIFICATION CODE IS 123456", "123456"),
+            ("your code is 123456 do not share", "123456"),
+            ("YOUR CODE IS 123456 DO NOT SHARE", "123456"),
+            ("code: USE 123456 NOW", "123456"),
+            ("code: use 123456 now", "123456"),
+            ("YOUR CODE IS 123 456 DO NOT SHARE", "123456"),
+            ("your code is 123 456 do not share", "123456"),
+            ("YOUR CODE IS ABC-123 DO NOT SHARE", "ABC123"),
+            ("your code is ABC-123 do not share", "ABC123"),
+            ("Verify: 123 456 NOW", "123456"),
+            ("code: ABC-123 NOW", "ABC123"),
+            ("Your code is G-123456 NOW", "123456"),
+            ("code: 1234-5678 NOW", "12345678"),
+            ("code: AB12 CD34", "AB12CD34"),
+            ("2FA 1234", "1234"),
+            ("login 2FA 4821", "4821"),
+            ("code: 2FA 12345", "12345"),
+            ("2FA 98765 K7P2XQ", "98765"),
+            ("YOUR VERIFICATION CODE IS 12345", "12345"),
+            ("Your order verification code is 123456.", "123456"),
+            ("To verify your order, use code 123456.", "123456"),
+            ("Verification code sent to Springfield, IL 62704", ""),
+            ("YOUR CODE WAS SENT TO SPRINGFIELD, IL 62704", ""),
+            ("Your order code is 123456", ""),
+            ("Verification code for Order #123456", ""),
+
+        ]
+        for (text, expected) in vectors {
+            XCTAssertEqual(VerificationCode.detect(bodyText: text).map(\.code), expected.isEmpty ? [] : [expected])
+        }
+    }
+    func testBoundariesAndCap() {
+        XCTAssertEqual(VerificationCode.detect(subject: "verification", bodyText: "123456"), [.init(code: "123456", start: 0)])
+        XCTAssertEqual(VerificationCode.detect(snippet: "code: 123456").first?.start, 6)
+        XCTAssertTrue(VerificationCode.detect(bodyText: "ordinary text", snippet: "code: 123456").isEmpty)
+        let huge = String(repeating: "1", count: 1_000_000) + " code: 123456"
+        XCTAssertEqual(VerificationCode.detect(subject: "code", bodyText: huge), VerificationCode.detect(subject: "code", bodyText: String(huge.prefix(20_000))))
+        XCTAssertTrue(VerificationCode.detect(bodyText: String(repeating: "x", count: 20_000) + " code: 123456").isEmpty)
+        XCTAssertEqual(VerificationCode.detect(bodyText: "code: 123456, 654321, 765432").count, 2)
+        XCTAssertTrue(VerificationCode.detect(bodyText: "code " + String(repeating: "x", count: 81) + " 123456").isEmpty)
+    }
+}

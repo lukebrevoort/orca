@@ -1,0 +1,7 @@
+.verification-code-strip { color: var(--orca-ink); background: var(--orca-surface); border: 1px solid var(--orca-border); padding: 12px; margin-block: 12px; border-radius: 8px; }
+.verification-code-strip > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.verification-code-strip code { font-family: ui-monospace, monospace; }
+.verification-code-strip button { color: var(--orca-ink); background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 6px; padding: 6px 10px; }
+.verification-code-strip button:hover, .verification-code-strip button[aria-pressed="true"] { background: var(--orca-surface-hover); }
+.verification-code-strip button:focus-visible { outline: 2px solid var(--orca-ink); outline-offset: 2px; }
+.verification-code-strip > span, .verification-code-strip button { font-family: var(--orca-font-body); font-size: 13px; }
