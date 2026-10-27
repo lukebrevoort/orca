@@ -2,6 +2,7 @@ import { registerMessageImageRoutes } from "./mail/images/routes.ts";
 import { hasLoadableImages } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
+import { createLogoutApp } from "./auth/logout.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
 import { registerMobilePushRoutes, createMobilePushScheduler } from "./mobile-push/index.ts";
 import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
@@ -270,6 +271,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       origin: [serverConfig.webOrigin],
     }),
   );
+
+  app.post("/v1/auth/logout", (c, next) => c.req.header("origin") === serverConfig.webOrigin ? next() : c.json({ error: { code: "invalid_origin", message: "Sign-out must come from Orca" } }, 403));
+  app.route("/v1/auth", createLogoutApp({ dbFactory }));
 
   app.use("/v1/organization/*", requireAuth({ dbFactory }));
   app.use("/v1/organization/*", bodyLimit({
