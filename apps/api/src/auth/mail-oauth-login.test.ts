@@ -116,4 +116,54 @@ describe("completeMailOAuthLogin identity binding", () => {
     expect(db.select().from(users).where(eq(users.id, input.userId)).get()).toBeTruthy();
   });
 
+  test("pending users never count as owner after a stale login", async () => {
+    const db = freshDb();
+    db.delete(oauthAccounts).where(eq(oauthAccounts.userId, "existing")).run();
+    const stale = await startLogin(db, "gmail", "google-A", "a@example.test");
+    db.delete(sessions).where(eq(sessions.id, stale.sessionId)).run();
+    expect(completeMailOAuthLogin(db, stale)).toEqual({ ok: false });
+    expect(db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, stale.userId)).all()).toHaveLength(1);
+    db.insert(oauthAccounts).values({ id: "existing_gmail", userId: "existing", provider: "gmail", providerId: "google-A", providerEmail: "a@example.test", scope: "" }).run();
+    const next = await startLogin(db, "gmail", "next-tab", "a@example.test");
+    db.update(oauthAccounts).set({ providerId: "google-A" }).where(eq(oauthAccounts.userId, next.userId)).run();
+    expect(completeMailOAuthLogin(db, { ...next, providerAccountId: "google-A" })).toEqual({ ok: true, returningUserId: "existing" });
+  });
+
+  test("pending users never count as owner during overlapping logins", async () => {
+    const db = freshDb();
+    const first = await startLogin(db, "gmail", "google-new", "new@example.test");
+    const second = await startLogin(db, "gmail", "second-tab", "new@example.test");
+    db.update(oauthAccounts).set({ providerId: "google-new" }).where(eq(oauthAccounts.userId, second.userId)).run();
+    expect(completeMailOAuthLogin(db, first)).toEqual({ ok: true, returningUserId: null });
+    expect(db.select().from(users).where(eq(users.id, first.userId)).get()?.authenticatedAt).toBeInstanceOf(Date);
+    expect(completeMailOAuthLogin(db, { ...second, providerAccountId: "google-new" })).toEqual({ ok: true, returningUserId: first.userId });
+    expect(db.select().from(users).where(eq(users.id, second.userId)).get()).toBeUndefined();
+  });
+
+  for (const equalDates of [false, true]) {
+    test(`deterministic owner choice uses ${equalDates ? "id for equal dates" : "earliest createdAt"}`, async () => {
+      const db = freshDb();
+      db.update(oauthAccounts).set({ createdAt: new Date(2000) }).where(eq(oauthAccounts.id, "existing_gmail")).run();
+      db.insert(users).values({ id: "other", email: "other@example.test", onboardingCompletedAt: new Date() }).run();
+      db.insert(oauthAccounts).values({ id: "a_other", userId: "other", provider: "gmail", providerId: "google-A", providerEmail: "other@example.test", scope: "", createdAt: new Date(equalDates ? 2000 : 1000) }).run();
+      expect(completeMailOAuthLogin(db, await startLogin(db, "gmail", "google-A", "a@example.test"))).toEqual({ ok: true, returningUserId: "other" });
+    });
+  }
+
+  test("provider must match even when provider account ids are equal", async () => {
+    const db = freshDb();
+    const input = await startLogin(db, "outlook", "google-A", "new@example.test");
+    expect(completeMailOAuthLogin(db, input)).toEqual({ ok: true, returningUserId: null });
+    expect(db.select().from(users).where(eq(users.id, input.userId)).get()?.email).toBe("new@example.test");
+  });
+
+  for (const providerId of ["", "' OR 1=1 --", "<script>", "x".repeat(10_000)]) {
+    test(`unmatched provider account boundary input of length ${providerId.length} becomes a first signup`, async () => {
+      const db = freshDb();
+      const input = await startLogin(db, "gmail", providerId, "new@example.test");
+      expect(completeMailOAuthLogin(db, input)).toEqual({ ok: true, returningUserId: null });
+      expect(db.select().from(users).where(eq(users.id, "existing")).get()?.email).toBe("a@example.test");
+    });
+  }
+
 });
