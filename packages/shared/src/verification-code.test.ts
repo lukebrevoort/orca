@@ -74,6 +74,10 @@ const vectors: [string, string][] = [
   ["Your code is G-123456 NOW", "123456"],
   ["code: 1234-5678 NOW", "12345678"],
   ["code: AB12 CD34", "AB12CD34"],
+  ["2FA 1234", "1234"],
+  ["login 2FA 4821", "4821"],
+  ["code: 2FA 12345", "12345"],
+  ["2FA 98765 K7P2XQ", "98765"],
 ];
 for (const [bodyText, expected] of vectors) test(`detects safely: ${bodyText}`, () => {
   expect(detectVerificationCodes({ bodyText }).map(item => item.code)).toEqual(expected ? [expected] : []);
