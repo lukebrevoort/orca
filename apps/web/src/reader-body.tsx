@@ -53,6 +53,65 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
   const formattedBody = useRef<HTMLDivElement>(null);
   const [hasBlockedImages, setHasBlockedImages] = useState(false);
   useLayoutEffect(() => {
+    const body = formattedBody.current;
+    if (!body) return;
+    // Only whitespace may follow history. Never fold a quote with an inline
+    // answer or footer after it, or search inside arbitrary sender layouts.
+    const meaningfulNodes = (element: Element) => [...element.childNodes].filter(node =>
+      node.nodeType !== 3 || Boolean(node.textContent?.trim()));
+    const isPlainWrapper = (node: Node): node is Element => node instanceof Element
+      && node.tagName === "DIV" && node.attributes.length === 0;
+    const isAttribution = (node: Node | undefined): node is Element => node instanceof Element
+      && (node.matches(".gmail_attr") || /^On .+wrote:$/i.test(node.textContent?.trim() ?? ""));
+    // Sanitized Gmail wrappers contain only an optional attribution and a
+    // blockquote through plain divs. Never search arbitrary sender layouts.
+    const isHistory = (candidate: Element) => {
+      let element = candidate;
+      while (!element.matches('blockquote, [class*="quote"], #divRplyFwdMsg')) {
+        if (!isPlainWrapper(element)) return false;
+        const children = meaningfulNodes(element);
+        if (children.length === 2 && isAttribution(children[0])) children.shift();
+        if (children.length !== 1 || !(children[0] instanceof Element)) return false;
+        element = children[0];
+      }
+      return !element.hasAttribute("data-orca-quoted-history");
+    };
+    let parent: Element = body;
+    while (true) {
+      const nodes = meaningfulNodes(parent);
+      const wrapper = nodes.length === 1 ? nodes[0] : null;
+      if (!(wrapper instanceof Element) || !(wrapper.matches("div.orca-mail-formatted") || isPlainWrapper(wrapper))) break;
+      parent = wrapper;
+    }
+    const nodes = meaningfulNodes(parent);
+    const quote = nodes.at(-1);
+    if (!(quote instanceof Element) || quote.hasAttribute("data-orca-quoted-history")
+      || !isHistory(quote)) return;
+    const previous = nodes.at(-2);
+    const attribution = isAttribution(previous) ? previous : null;
+    const historyStart = attribution ?? quote;
+    // Attribution, whitespace and line breaks alone are not a current reply.
+    if (!nodes.slice(0, nodes.indexOf(historyStart)).some(node => node.textContent?.trim())) return;
+    const details = document.createElement("details");
+    details.className = "reader-quoted";
+    details.setAttribute("data-orca-quoted-history", "collapsed");
+    const summary = document.createElement("summary");
+    summary.textContent = "Show quoted history";
+    const history = document.createElement("div");
+    parent.insertBefore(details, attribution ?? quote);
+    details.appendChild(summary);
+    details.appendChild(history);
+    // Move the original nodes, including whitespace between attribution and
+    // quote, so links, enhanced image notes and native details state survive.
+    let node: ChildNode | null = attribution ?? quote;
+    while (node) {
+      const next: ChildNode | null = node.nextSibling;
+      history.appendChild(node);
+      if (node === quote) break;
+      node = next;
+    }
+  }, [html]);
+  useLayoutEffect(() => {
     const notes = formattedBody.current?.querySelectorAll("span.orca-mail-image-note");
     setHasBlockedImages(Boolean(notes?.length));
     notes?.forEach(note => {

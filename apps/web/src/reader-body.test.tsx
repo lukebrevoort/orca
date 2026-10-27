@@ -38,6 +38,49 @@ async function click(label: string) {
 }
 
 describe("message body alternatives", () => {
+  test("folds trailing HTML history once and preserves nodes and open state across alternatives", async () => {
+    const reply = '<p>Current reply.</p><div class="gmail_attr">On Monday, Sam wrote:</div>\n<div class="gmail_quote"><blockquote>Earlier discussion.</blockquote><span class="orca-mail-image-note">[Image blocked: Quoted chart]</span></div> \n';
+    await act(async () => root.render(<StrictMode><ReaderBody html={reply} text="Current reply." /></StrictMode>));
+    const body = container.querySelector<HTMLElement>(".reader-body-html")!;
+    const details = body.querySelector("details")!;
+    const quote = details.querySelector(".gmail_quote");
+    const note = details.querySelector(".orca-mail-image-note");
+    expect(details.className).toBe("reader-quoted");
+    expect(details.open).toBe(false);
+    expect(details.querySelector("summary")?.textContent).toBe("Show quoted history");
+    expect(details.querySelector(".gmail_attr")?.textContent).toBe("On Monday, Sam wrote:");
+    expect(body.querySelector("p")?.parentElement).toBe(body);
+    expect(note?.textContent).toBe("Quoted chart");
+    expect(note?.getAttribute("aria-label")).toBe("Blocked image: Quoted chart");
+    expect(container.querySelectorAll(".reader-images-hidden-note").length).toBe(1);
+    details.open = true;
+    await click("Plain text");
+    await click("Formatted");
+    await act(async () => root.render(<StrictMode><ReaderBody html={reply} text="Current reply." /></StrictMode>));
+    expect(container.querySelector(".reader-body-html")).toBe(body);
+    expect(body.querySelectorAll("details").length).toBe(1);
+    expect(body.querySelector("details")).toBe(details);
+    expect(details.open).toBe(true);
+    expect(details.querySelector(".gmail_quote")).toBe(quote);
+    expect(details.querySelector(".orca-mail-image-note")).toBe(note);
+  });
+  test("recognizes trailing quote markers inside a single formatted wrapper", async () => {
+    for (const marker of ['class="yahoo_quoted"', 'id="divRplyFwdMsg"', 'class="gmail_quote"']) {
+      await render("one", `<div class="orca-mail-formatted"><p>Reply.</p><p>On Tuesday, Lee wrote:</p>\n<div ${marker}>History.</div>\n</div>`, null);
+      const wrapper = container.querySelector<HTMLElement>(".orca-mail-formatted")!;
+      expect(wrapper.querySelector("details")?.parentElement).toBe(wrapper);
+      expect(wrapper.querySelector("details > div")?.textContent).toBe("On Tuesday, Lee wrote:\nHistory.");
+    }
+    await render("one", "<p>Reply.</p><blockquote>History.</blockquote> \n", null);
+    expect(container.querySelector("details blockquote")?.textContent).toBe("History.");
+  });
+  test("leaves non-trailing quotes and trailing unwrapped answer text visible", async () => {
+    for (const body of [html, "<blockquote>History.</blockquote>Current answer.", '<div class="gmail_quote">History.</div><p>Footer.</p>']) {
+      await render("one", body, null);
+      expect(container.querySelector("details")).toBeNull();
+      expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(body);
+    }
+  });
   test("keeps sanitized formatted content and destinations byte-for-byte on first render", async () => {
     await render();
     expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(html);

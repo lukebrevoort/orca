@@ -4,6 +4,12 @@ import { readFileSync } from "node:fs";
 const css = readFileSync(new URL("./reader-body.css", import.meta.url), "utf8");
 
 describe("reader body rendering boundary", () => {
+  test("scales layout mail typography relative to the reader size without changing conversational HTML", () => {
+    expect(css).toMatch(/\.reader-body-html \.orca-mail-formatted\s*\{[^}]*font-family: var\(--orca-font-body, system-ui, sans-serif\);[^}]*font-size: max\(15px, \.8em\);[^}]*line-height: 1\.55;/);
+    const mainCss = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    expect(mainCss).toMatch(/\.reader-body-html h1\s*\{ font-size: 1\.55em;/);
+    expect(mainCss).toMatch(/\.reader-body-html h2\s*\{ font-size: 1\.3em;/);
+  });
   test("lets the browser skip offscreen layout without removing content", () => {
     expect(css).toMatch(/@supports\s*\(content-visibility:\s*auto\)\s*and\s*\(contain-intrinsic-block-size:\s*auto 1000px\)\s*and\s*\(overflow-clip-margin:\s*10px\)\s*\{\s*\.reader-content\s*\{\s*content-visibility:\s*auto;\s*contain-intrinsic-block-size:\s*auto\s+1000px;/);
     expect(css).toMatch(/overflow-clip-margin: 10px;/);

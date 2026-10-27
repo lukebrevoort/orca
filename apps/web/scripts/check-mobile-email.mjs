@@ -70,7 +70,9 @@ try {
       // reports it rather than claiming a fit; actual app validation is separate.
       if (width >= 320) { assert.equal(metrics.documentOverflow, false, name); assert.equal(metrics.textBeyondViewport, 0, name); }
       if (width <= 720) for (const cell of metrics.layoutCells) assert.equal(cell.display, 'block', `${name}: columns stack`);
-      for (const font of metrics.copyFonts) assert.equal(font, metrics.bodyFont, `${name}: copy follows reader size`);
+      // Layout mail copy is deliberately calmer: reader-body.css sets max(15px, .8em).
+      const expectedCopy = Math.max(15, metrics.bodyFont * 0.8);
+      for (const font of metrics.copyFonts) assert(Math.abs(font - expectedCopy) < 0.05, `${name}: copy follows reader size (${font} vs ${expectedCopy})`);
     }
     if (name === 'data-and-code') assert(metrics.code.includes('    const artifact = "release_candidate_'), 'Code indentation/content retained');
     if (name === 'ordinary') { assert(metrics.links.includes('https://example.invalid/notes')); assert(metrics.text.includes('See you next week,')); }

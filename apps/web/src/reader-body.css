@@ -32,6 +32,7 @@
 /* A nested code element inherits the block size rather than shrinking twice. */
 .reader-body-html pre code { font-size: inherit; line-height: inherit; white-space: inherit; }
 .reader-body-html a { overflow-wrap: anywhere; }
+.reader-body-html .reader-quoted > div { white-space: normal; }
 /* Do not compound Orca margins inside nested tables. Unrecognized tables
    preserve cell spacing; trusted layout markers receive bounded spacing below. */
 .reader-body-html table table { margin: 0; }
@@ -80,7 +81,7 @@
    remain available in the keyboard-scrollable formatted region. */
 .reader-body-html .orca-mail-formatted {
   font-family: var(--orca-font-body, system-ui, sans-serif);
-  font-size: inherit;
+  font-size: max(15px, .8em);
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
