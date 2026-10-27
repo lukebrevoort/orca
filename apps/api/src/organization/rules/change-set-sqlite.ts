@@ -584,7 +584,7 @@ type StoredInverseThread = {
   beforeFacets: Array<Record<string, unknown>>;
   beforeWorkflow?: Record<string, unknown> | null;
   beforeCollections?: Array<{ collectionId: string; membership: Record<string, unknown> | null }>;
-  beforeContexts?: Array<{ contextTypeId: string; contextId: string; relationship: Record<string, unknown> | null }>;
+  beforeContexts?: Array<{ contextTypeId: string; contextId: string; relationship: Record<string, unknown> | null; relationships?: Array<Record<string, unknown>> }>;
   beforeRevision: number;
 };
 
@@ -615,7 +615,16 @@ function parseApplyEvidence(row: typeof organizationChangeSets.$inferSelect): {
         || !Number.isInteger(thread.expectedRevisionAfter)
         || !Array.isArray(thread.beforeFacets)
         || (thread.beforeCollections !== undefined && !Array.isArray(thread.beforeCollections))
-        || (thread.beforeContexts !== undefined && !Array.isArray(thread.beforeContexts)))) {
+        || (thread.beforeContexts !== undefined && (!Array.isArray(thread.beforeContexts)
+          || thread.beforeContexts.some((context) => {
+            if (context.relationships === undefined) return false;
+            return !Array.isArray(context.relationships)
+              || context.relationships.length === 0
+              || !context.relationship
+              || context.relationships.some((relationship) => !relationship
+                || typeof relationship !== "object" || Array.isArray(relationship))
+              || context.relationships[0]!.id !== context.relationship.id;
+          }))))) {
       throw new Error("incomplete evidence");
     }
     return {
@@ -1081,14 +1090,17 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
                 eq(organizationContextRelationshipTypes.direction, "thread_to_context"),
               )).orderBy(asc(organizationContextRelationshipTypes.position), asc(organizationContextRelationshipTypes.id)).get();
               if (!relationshipType) throw new OrcaRuleChangeSetError("revision_conflict", `Context Type ${action.contextTypeId} has no live Thread relationship`);
-              const relationship = executor.select().from(organizationThreadContextRelationships).where(and(
+              const relationships = executor.select().from(organizationThreadContextRelationships).where(and(
                 eq(organizationThreadContextRelationships.workspaceId, input.workspaceId),
                 eq(organizationThreadContextRelationships.accountId, plan.accountId),
                 eq(organizationThreadContextRelationships.threadId, plan.threadId),
                 eq(organizationThreadContextRelationships.contextTypeId, action.contextTypeId),
                 eq(organizationThreadContextRelationships.contextId, action.contextId),
-              )).get() ?? null;
-              beforeContexts.push({ contextTypeId: action.contextTypeId, contextId: action.contextId, relationship });
+              )).orderBy(asc(organizationThreadContextRelationships.relationshipTypeId), asc(organizationThreadContextRelationships.id)).all();
+              const relationship = relationships[0] ?? null;
+              beforeContexts.push({ contextTypeId: action.contextTypeId, contextId: action.contextId, relationship,
+                ...(relationships.length > 1 ? { relationships } : {}),
+              });
               if (action.kind === "link_context") {
                 executor.insert(organizationThreadContextRelationships).values({
                   workspaceId: input.workspaceId, id: `${changeSetId}:context:${actionPosition}`,
@@ -1415,17 +1427,19 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
               eq(collectionThreads.collectionId, collectionId), eq(collectionThreads.threadId, thread.threadId),
             )).get() ?? null,
           }));
-          const currentContexts = thread.beforeContexts?.map(({ contextTypeId, contextId }) => ({
-            contextTypeId,
-            contextId,
-            relationship: executor.select().from(organizationThreadContextRelationships).where(and(
+          const currentContexts = thread.beforeContexts?.map(({ contextTypeId, contextId }) => {
+            const relationships = executor.select().from(organizationThreadContextRelationships).where(and(
               eq(organizationThreadContextRelationships.workspaceId, input.workspaceId),
               eq(organizationThreadContextRelationships.accountId, thread.accountId),
               eq(organizationThreadContextRelationships.threadId, thread.threadId),
               eq(organizationThreadContextRelationships.contextTypeId, contextTypeId),
               eq(organizationThreadContextRelationships.contextId, contextId),
-            )).get() ?? null,
-          }));
+            )).orderBy(asc(organizationThreadContextRelationships.relationshipTypeId), asc(organizationThreadContextRelationships.id)).all();
+            return {
+              contextTypeId, contextId, relationship: relationships[0] ?? null,
+              ...(relationships.length > 1 ? { relationships } : {}),
+            };
+          });
           inverseThreads.push({
             accountId: thread.accountId,
             threadId: thread.threadId,
@@ -1552,8 +1566,8 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
               eq(organizationThreadContextRelationships.contextTypeId, beforeContext.contextTypeId),
               eq(organizationThreadContextRelationships.contextId, beforeContext.contextId),
             )).run();
-            if (beforeContext.relationship) {
-              const relationship = beforeContext.relationship;
+            for (const relationship of beforeContext.relationships
+              ?? (beforeContext.relationship ? [beforeContext.relationship] : [])) {
               executor.insert(organizationThreadContextRelationships).values({
                 workspaceId: input.workspaceId,
                 id: asString(relationship.id, "the original Context relationship"),
