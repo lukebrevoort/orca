@@ -204,7 +204,7 @@ describe("structural mail login owners", () => {
     db.update(users).set({ authenticatedAt: null, onboardingCompletedAt: null }).where(eq(users.id, "existing")).run();
     expect(completeMailOAuthLogin(db, await startLogin(db, "gmail", "different-id", "a@example.test"))).toEqual({ ok: false, reason: "account_exists" });
   });
-  for (const email of ["pending-x@orca.invalid", "xpending-x@orca.invalid", "pending-x@orca.invalid.example.test"]) {
+  for (const email of ["pending-x@orca.invalid", "pending@orca.invalid", "pendingx@orca.invalid", "xpending-x@orca.invalid", "pending-x@orca.invalid.example.test"]) {
     test(`placeholder pattern is anchored for ${email}`, async () => {
       const db = freshDb();
       db.update(users).set({ email }).where(eq(users.id, "existing")).run();
