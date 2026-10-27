@@ -1804,10 +1804,23 @@ describe("Context relationship compensation", () => {
 
   test("restores every unlinked Context edge and replays the revert", async () => {
     const fixture = await appliedUnlink(2);
-    const { sqlite, applied, revert, readEdges, expectedEdges } = fixture;
+    const { db, sqlite, threadId, applied, revert, readEdges, expectedEdges } = fixture;
     try {
       assert.deepEqual(readEdges(), []);
+      db.insert(organizationThreadContextRelationships).values(expectedEdges.map((edge) => ({
+        ...edge, workspaceId: "workspace-1", accountId: "account-1", threadId,
+        contextTypeId: "context-type-project", contextId: "context-orca", updatedAt: edge.createdAt,
+      }))).run();
       const restored = revert(applied.changeSetId, applied.workspaceRevisionAfter, "restore-context-edges");
+      const stored = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, restored.changeSetId)).get()!;
+      const context = JSON.parse(stored.inverseJson).threads[0].beforeContexts[0];
+      assert.deepEqual({
+        relationships: context.relationships?.map(({ id, relationshipTypeId }: { id: string; relationshipTypeId: string }) => ({ id, relationshipTypeId })),
+        relationship: context.relationship,
+      }, {
+        relationships: expectedEdges.map(({ id, relationshipTypeId }) => ({ id, relationshipTypeId })),
+        relationship: context.relationships?.[0],
+      });
       assert.deepEqual(readEdges(), expectedEdges);
       assert.deepEqual(revert(applied.changeSetId, applied.workspaceRevisionAfter, "restore-context-edges"), restored);
       assert.deepEqual(readEdges(), expectedEdges);
