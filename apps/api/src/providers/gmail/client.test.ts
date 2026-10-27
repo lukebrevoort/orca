@@ -109,3 +109,32 @@ describe("Gmail authorization classification", () => {
     });
   }
 });
+
+describe("Gmail profile API client", () => {
+  for (const historyId of ["12345", null]) {
+    test(`reads the Gmail profile history ID ${historyId}`, async () => {
+      const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+        assert.equal(String(input), "https://gmail.googleapis.com/gmail/v1/users/me/profile");
+        assert.equal(init?.method ?? "GET", "GET");
+        assert.equal(new Headers(init?.headers).get("authorization"), "Bearer access-token");
+        return Response.json(historyId === null ? {} : { historyId });
+      };
+      const client = createGmailClient(fetchImpl as typeof fetch);
+      assert.deepEqual(await client.getProfile!("access-token"), { historyId });
+    });
+  }
+
+});
+
+for (const [label, value, expected] of [
+  ["missing", undefined, null], ["null", null, null], ["empty", "", null],
+  ["malformed", "abc", null], ["markup", "<script>1</script>", null],
+  ["huge", "9".repeat(300_000), null], ["overflow", "18446744073709551616", null],
+  ["numeric", 12345, "12345"], ["maximum", "18446744073709551615", "18446744073709551615"],
+] as const) {
+  test(`history response validates cursor: ${label}`, async () => {
+    const client = createGmailClient((async () => Response.json({ historyId: value })) as unknown as typeof fetch);
+    const page = await client.listHistory!({ accessToken: "access-token", startHistoryId: "100" });
+    assert.equal(page.historyId, expected);
+  });
+}

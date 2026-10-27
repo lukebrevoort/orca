@@ -10,6 +10,8 @@ import {
   GmailApiError,
   type GmailClient,
 } from "./client.ts";
+import { isValidGmailHistoryId } from "./history-id.ts";
+export { isValidGmailHistoryId } from "./history-id.ts";
 import type { GmailLabel, GmailMessage } from "./types.ts";
 import { normalizeGmailMessage } from "./normalizer.ts";
 import {
@@ -65,7 +67,7 @@ export type GmailBackfillResult = {
 
 export type GmailHistorySyncResult = {
   accountId: string;
-  historyId: string;
+  historyId: string | null;
   emailCount: number;
   deletedEmailCount: number;
   threadCount: number;
@@ -130,9 +132,9 @@ export async function watchGmailAccount(
     throw mapGmailPushError(error);
   }
 
-  const historyId = String(response.historyId ?? "").trim();
+  const historyId = String(response.historyId ?? "");
   const expirationAt = parseWatchExpiration(response.expiration, now);
-  if (!historyId || !/^\d+$/.test(historyId) || !expirationAt) {
+  if (!isValidGmailHistoryId(historyId) || !expirationAt) {
     throw new GmailPushError("Gmail returned an invalid push watch response", "provider_error");
   }
 
@@ -297,6 +299,9 @@ export async function syncGmailAccountHistory(
   }
 
   if (!account.syncHistoryId || isHistoryIdAtOrBefore(input.historyId, account.syncHistoryId)) {
+    const profileHistoryId = !account.syncHistoryId
+      ? await getBackfillHistoryId(gmailClient, tokenRecord.accessToken)
+      : null;
     const backfill = !account.syncHistoryId
       ? await backfillGmailAccount(db, {
           accountId: account.id,
@@ -314,7 +319,7 @@ export async function syncGmailAccountHistory(
       accountId: account.id, accessToken: tokenRecord.accessToken, gmailClient, now,
       leaseGuard: input.leaseGuard, metrics: input.metrics,
     });
-    const nextHistoryId = account.syncHistoryId ?? input.historyId;
+    const nextHistoryId = account.syncHistoryId ?? profileHistoryId;
     updateHistoryCursor(db, account.id, nextHistoryId, now, input.leaseGuard, input.metrics);
     return {
       accountId: account.id,
@@ -338,7 +343,7 @@ export async function syncGmailAccountHistory(
   const historyPageSize = input.pageSize ?? input.config?.backfillPageSize ?? loadGmailPushConfig().backfillPageSize;
   const maxHistoryPages = input.maxPages ?? input.config?.backfillMaxPages ?? loadGmailPushConfig().backfillMaxPages;
   let cursor: string | null = null;
-  let historyId = input.historyId;
+  let historyId = account.syncHistoryId;
   let pages = 0;
 
   try {
@@ -361,7 +366,7 @@ export async function syncGmailAccountHistory(
         messageIds.delete(messageId);
         deletedMessageIds.add(messageId);
       }
-      if (page.historyId) historyId = page.historyId;
+      if (typeof page.historyId === "string" && isValidGmailHistoryId(page.historyId)) historyId = page.historyId;
       cursor = page.nextCursor;
     } while (cursor && pages < maxHistoryPages);
     if (cursor) {
@@ -369,6 +374,7 @@ export async function syncGmailAccountHistory(
     }
   } catch (error) {
     if (error instanceof GmailApiError && error.status === 404) {
+      const profileHistoryId = await getBackfillHistoryId(gmailClient, tokenRecord.accessToken);
       const backfill = await backfillGmailAccount(db, {
         accountId: account.id,
         gmailClient,
@@ -380,10 +386,10 @@ export async function syncGmailAccountHistory(
         leaseGuard: input.leaseGuard,
         metrics: input.metrics,
       });
-      updateHistoryCursor(db, account.id, input.historyId, now, input.leaseGuard, input.metrics);
+      updateHistoryCursor(db, account.id, profileHistoryId, now, input.leaseGuard, input.metrics);
       return {
         accountId: account.id,
-        historyId: input.historyId,
+        historyId: profileHistoryId ?? account.syncHistoryId,
         emailCount: backfill.emailCount,
         deletedEmailCount: 0,
         threadCount: backfill.threadCount,
@@ -551,8 +557,8 @@ export function parseGmailPubSubNotification(body: unknown): GmailPushNotificati
 
   if (!isRecord(decoded)) return null;
   const emailAddress = typeof decoded.emailAddress === "string" ? decoded.emailAddress.trim().toLowerCase() : "";
-  const historyId = typeof decoded.historyId === "string" ? decoded.historyId.trim() : "";
-  if (!emailAddress || !historyId || !/^\d+$/.test(historyId) || !emailAddress.includes("@")) {
+  const historyId = typeof decoded.historyId === "string" ? decoded.historyId : "";
+  if (!emailAddress || !isValidGmailHistoryId(historyId) || !emailAddress.includes("@")) {
     return null;
   }
 
@@ -580,7 +586,7 @@ export function verifyGmailPushToken(request: Request, config: GmailPushConfig):
 function updateHistoryCursor(
   db: DatabaseClient,
   accountId: string,
-  historyId: string,
+  historyId: string | null,
   now: Date,
   leaseGuard?: GmailSyncLeaseGuard,
   metrics?: GmailSyncMetricsRecorder,
@@ -593,7 +599,7 @@ function updateHistoryCursor(
     .from(oauthAccounts)
     .where(eq(oauthAccounts.id, accountId))
     .get();
-  const nextHistoryId = current?.syncHistoryId && isHistoryIdAtOrBefore(historyId, current.syncHistoryId)
+  const nextHistoryId = historyId !== null && current?.syncHistoryId && isHistoryIdAtOrBefore(historyId, current.syncHistoryId)
     ? current.syncHistoryId
     : historyId;
 
@@ -602,7 +608,7 @@ function updateHistoryCursor(
     // A successful History drain is a freshness checkpoint even when Gmail
     // returned no changed messages. Keep status and mailbox revision aligned
     // with the completed incremental read, not only with backfill pages.
-    .set({ syncHistoryId: nextHistoryId, lastSyncedAt: now, updatedAt: now })
+    .set({ ...(historyId === null ? {} : { syncHistoryId: nextHistoryId }), lastSyncedAt: now, updatedAt: now })
     .where(eq(oauthAccounts.id, accountId))
     .run();
   };
@@ -661,12 +667,22 @@ function parseWatchExpiration(value: string | number, now: Date): Date | null {
   return new Date(timestamp);
 }
 
-function isHistoryIdAtOrBefore(next: string, current: string): boolean {
+async function getBackfillHistoryId(gmailClient: GmailClient, accessToken: string): Promise<string> {
+  // Snapshot before the backfill so subsequent changes can be replayed.
   try {
-    return BigInt(next) <= BigInt(current);
-  } catch {
-    return next === current;
+    const profile = await gmailClient.getProfile?.(accessToken);
+    if (typeof profile?.historyId !== "string" || !isValidGmailHistoryId(profile.historyId)) {
+      throw new GmailPushError("Gmail profile history cursor is unavailable", "provider_error");
+    }
+    return profile.historyId;
+  } catch (error) {
+    throw mapGmailPushError(error);
   }
+}
+
+function isHistoryIdAtOrBefore(next: string, current: string): boolean {
+  if (!isValidGmailHistoryId(next) || !isValidGmailHistoryId(current)) return next === current;
+  return BigInt(next) <= BigInt(current);
 }
 
 function mapGmailPushError(error: unknown): GmailPushError {

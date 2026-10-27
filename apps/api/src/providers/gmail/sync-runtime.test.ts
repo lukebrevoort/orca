@@ -235,3 +235,34 @@ test("stale takeover runs recovered push history and fallback watch through the 
     sqlite.close();
   }
 });
+
+test("profile failure queues push retry with backoff before any backfill", async () => {
+  const { sqlite, dbFactory } = await setup();
+  const calls: string[] = [];
+  sqlite.query("update oauth_accounts set sync_history_id = null where id = 'account'").run();
+  const client = gmailClient(calls);
+  client.getProfile = async () => { calls.push("profile"); throw new Error("profile unavailable"); };
+  let clock = new Date("2026-08-11T00:00:00.000Z");
+  const coordinator = createDefaultGmailSyncCoordinator({ dbFactory, gmailClient: client, config, now: () => clock });
+  try {
+    coordinator.enqueue({ accountId: "account", source: "push", historyId: "11" });
+    const result = await coordinator.drainAccount("account");
+    assert.equal(result.completed, false);
+    assert.equal((result.error as { code?: string })?.code, "provider_error");
+    assert.deepEqual(calls, ["profile"]);
+    const job = sqlite.query("select state, pending_history_id, available_at from gmail_sync_jobs where account_id = 'account'").get() as { state: string; pending_history_id: string; available_at: number };
+    assert.equal(job.state, "queued");
+    assert.equal(job.pending_history_id, "11");
+    assert.equal(job.available_at, clock.getTime() + 1_000);
+    const run = sqlite.query("select status from gmail_sync_runs where account_id = 'account'").get() as { status: string };
+    assert.equal(run.status, "failed");
+    await coordinator.drainAccount("account");
+    assert.deepEqual(calls, ["profile"]);
+    clock = new Date(job.available_at);
+    const retry = await coordinator.drainAccount("account");
+    assert.equal(retry.completed, false);
+    assert.deepEqual(calls, ["profile", "profile"]);
+    const account = sqlite.query("select sync_history_id, last_synced_at from oauth_accounts where id = 'account'").get();
+    assert.deepEqual(account, { sync_history_id: null, last_synced_at: Date.parse("2026-08-10T00:00:00.000Z") });
+  } finally { sqlite.close(); }
+});

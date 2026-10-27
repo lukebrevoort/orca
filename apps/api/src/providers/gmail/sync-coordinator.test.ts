@@ -277,12 +277,16 @@ describe("durable Gmail sync coordinator", () => {
     const { sqlite, dbFactory } = setup(["account-a", "account-b"]);
     const active = new Set<string>();
     let simultaneous = false;
+    const bothStarted = deferred<void>();
     const gate = deferred<void>();
     const coordinator = createGmailSyncCoordinator({
       dbFactory,
       worker: async ({ accountId }) => {
         active.add(accountId);
-        if (active.size === 2) simultaneous = true;
+        if (active.size === 2) {
+          simultaneous = true;
+          bothStarted.resolve();
+        }
         await gate.promise;
         active.delete(accountId);
         return {};
@@ -296,7 +300,7 @@ describe("durable Gmail sync coordinator", () => {
         coordinator.drainAccount("account-a"),
         coordinator.drainAccount("account-b"),
       ]);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await bothStarted.promise;
       gate.resolve();
       await drains;
       assert.equal(simultaneous, true);
@@ -333,4 +337,25 @@ describe("durable Gmail sync coordinator", () => {
       sqlite.close();
     }
   });
+});
+
+describe("Gmail coordinator history ID bounds", () => {
+  for (const [left, right, expected] of [
+    ["9", "10", "10"], ["18446744073709551615", "10", "18446744073709551615"],
+    ["9".repeat(300_000), "10", "9".repeat(300_000)],
+    ["18446744073709551616", "9", "9"],
+  ]) {
+    test(`coordinator compares bounded IDs and falls back for invalid IDs (${left.length} digits, ${right})`, async () => {
+      const { sqlite, dbFactory } = setup();
+      const claims: GmailSyncClaim[] = [];
+      const coordinator = createGmailSyncCoordinator({ dbFactory, ownerId: "comparison", worker: async (claim) => { claims.push(claim); return {}; } });
+      try {
+        coordinator.enqueue({ accountId: "account-a", source: "push", historyId: left });
+        coordinator.enqueue({ accountId: "account-a", source: "push", historyId: right });
+        assert.equal((await coordinator.drainAccount("account-a")).completed, true);
+        assert.equal(claims[0]?.historyId === expected, true);
+      } finally { sqlite.close(); }
+    });
+  }
+
 });

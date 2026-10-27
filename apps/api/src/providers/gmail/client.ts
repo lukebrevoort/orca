@@ -1,3 +1,4 @@
+import { isValidGmailHistoryId } from "./history-id.ts";
 import type { GmailLabel, GmailMessage } from "./types.ts";
 
 const gmailApiBaseUrl = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -46,6 +47,7 @@ export type GmailMessagePage = {
 };
 
 export type GmailClient = {
+  getProfile?(accessToken: string): Promise<{ historyId: string | null }>;
   getMessageMetadata?(accessToken: string, messageId: string): Promise<GmailMessage>;
   getMessage(accessToken: string, messageId: string): Promise<GmailMessage>;
   listInboxMessagePage(input: {
@@ -107,6 +109,11 @@ export class GmailApiError extends Error {
 
 export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient & GmailTransportClient {
   return {
+    async getProfile(accessToken) {
+      const response = await gmailRequest<{ historyId?: string | null }>(fetchImpl, accessToken, "/profile");
+      return { historyId: response.historyId ?? null };
+    },
+
     async getMessageMetadata(accessToken, messageId) {
       return gmailRequest<GmailMessage>(fetchImpl, accessToken, `/messages/${messageId}?format=metadata&fields=id,threadId,internalDate`);
     },
@@ -193,7 +200,8 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
         messageIds: [...messageChanges].filter(([, change]) => change === "changed").map(([id]) => id),
         deletedMessageIds: [...messageChanges].filter(([, change]) => change === "deleted").map(([id]) => id),
         nextCursor: response.nextPageToken ?? null,
-        historyId: response.historyId === undefined ? null : String(response.historyId),
+        historyId: (typeof response.historyId === "string" || typeof response.historyId === "number")
+          && isValidGmailHistoryId(String(response.historyId)) ? String(response.historyId) : null,
       };
     },
 

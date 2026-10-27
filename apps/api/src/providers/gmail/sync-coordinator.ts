@@ -4,6 +4,7 @@ import { and, asc, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { gmailSyncJobs, gmailSyncRuns, oauthAccounts } from "../../db/schema.ts";
+import { isValidGmailHistoryId } from "./push.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
 type DatabaseExecutor = Pick<DatabaseClient, "insert" | "select" | "update">;
@@ -608,13 +609,10 @@ function laterHistoryId(left: string | null, right: string | null): string | nul
 }
 
 function compareHistoryIds(left: string, right: string): number {
-  try {
-    const a = BigInt(left);
-    const b = BigInt(right);
-    return a === b ? 0 : a > b ? 1 : -1;
-  } catch {
-    return left.localeCompare(right);
-  }
+  if (!isValidGmailHistoryId(left) || !isValidGmailHistoryId(right)) return left.localeCompare(right);
+  const a = BigInt(left);
+  const b = BigInt(right);
+  return a === b ? 0 : a > b ? 1 : -1;
 }
 
 function earliestDate(...values: Array<Date | null | undefined>): Date {
