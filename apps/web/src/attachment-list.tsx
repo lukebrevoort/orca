@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { MailAttachment, MailProvider } from "@orca/shared";
 import "./attachment-list.css";
 
@@ -65,6 +65,7 @@ function humanSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 const errors: Record<number, string> = {
+  415: "Preview isn't available for this file. Download it instead.",
   413: "Too large to download here (over 25 MB). Open in Gmail.",
   409: "Reconnect Gmail to download.",
   404: "This file is no longer available.",
@@ -95,7 +96,50 @@ export function AttachmentList({ attachments, accountId, provider, demoMode = fa
 }
 function AttachmentCard({ attachment, accountId, downloadable, demoMode, fetcher }: { attachment: MailAttachment; accountId: string; downloadable: boolean; demoMode: boolean; fetcher: typeof fetch }) {
   const [loading, setLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const previewPending = useRef(false);
+  const mounted = useRef(true);
+  const labelId = useId();
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => {
+    if (!previewUrl) return;
+    const previouslyFocused = document.activeElement;
+    closeButton.current?.focus();
+    const keepFocus = (event: FocusEvent) => {
+      if (!closeButton.current?.parentElement?.contains(event.target as Node)) closeButton.current?.focus();
+    };
+    document.addEventListener("focusin", keepFocus);
+    return () => {
+      document.removeEventListener("focusin", keepFocus);
+      URL.revokeObjectURL(previewUrl);
+      if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) previewButton.current?.focus();
+    };
+  }, [previewUrl]);
+  const previewMime = typeof attachment.mimeType === "string" ? attachment.mimeType.toLowerCase().split(";")[0]!.trim() : "";
+  const canPreview = /^(image\/(png|jpeg|gif|webp))$/.test(previewMime) && attachment.size <= 10 * 1024 * 1024;
+  async function preview() {
+    if (previewLoading || previewPending.current || previewUrl) return;
+    setError("");
+    if (demoMode) { setError("Preview isn't available in the demo"); return; }
+    previewPending.current = true;
+    setPreviewLoading(true);
+    try {
+      const response = await fetcher(`/v1/attachments/${encodeURIComponent(attachment.id)}?${new URLSearchParams({ accountId, disposition: "inline" })}`, { credentials: "include" });
+      if (!mounted.current) return;
+      if (!response.ok) { setError(errors[response.status] ?? "Preview failed. Try again."); return; }
+      const blob = await response.blob();
+      if (!mounted.current) return;
+      if (!blob.size || blob.size > 10 * 1024 * 1024 || !/^image\/(png|jpeg|gif|webp)$/.test(blob.type)) {
+        setError(errors[415]!); return;
+      }
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch { if (mounted.current) setError("Preview failed. Try again."); }
+    finally { previewPending.current = false; if (mounted.current) setPreviewLoading(false); }
+  }
   const tooLarge = attachment.size > 25 * 1024 * 1024;
   const visibleFilename = truncateAttachmentFilename(attachment.filename);
   async function download() {
@@ -129,6 +173,8 @@ function AttachmentCard({ attachment, accountId, downloadable, demoMode, fetcher
       <strong className="attachment-card-filename" title={attachment.filename}>{visibleFilename}</strong>
       <small>{describeAttachmentType(attachment.mimeType, attachment.filename).label} · {humanSize(attachment.size)}</small>
     </div>
+    <div className="attachment-card-actions">
+    {downloadable && canPreview ? <button ref={previewButton} className="attachment-card-download" type="button" disabled={previewLoading} aria-label={`Preview ${visibleFilename}`} onClick={() => void preview()}>Preview</button> : null}
     {downloadable ? (
       <button
         className="attachment-card-download"
@@ -141,6 +187,15 @@ function AttachmentCard({ attachment, accountId, downloadable, demoMode, fetcher
         {loading ? "Downloading…" : "Download"}
       </button>
     ) : null}
+    </div>
+    {previewUrl ? <div className="attachment-preview-backdrop"><div className="attachment-preview-dialog" role="dialog" aria-modal="true" aria-labelledby={labelId} onKeyDown={(event) => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setPreviewUrl(null); }
+      if (event.key === "Tab") { event.preventDefault(); closeButton.current?.focus(); }
+    }}>
+      <strong id={labelId}>{attachment.filename}</strong>
+      <button ref={closeButton} className="attachment-card-download" type="button" onClick={() => setPreviewUrl(null)}>Close preview</button>
+      <img src={previewUrl} alt={attachment.filename} />
+    </div></div> : null}
     <p className="attachment-card-status" role="status" aria-live="polite">{tooLarge ? errors[413] : error}</p>
   </li>;
 }

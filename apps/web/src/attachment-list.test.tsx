@@ -291,3 +291,107 @@ test("visible filename uses a middle ellipsis within 60 characters and keeps the
   expect(visible).toContain("…");
   expect(visible.endsWith(".pdf")).toBe(true);
 });
+
+const image = { ...attachment, filename: '<script>雪</script>.png', mimeType: 'IMAGE/PNG; charset=binary', size: 8 };
+async function previewClick() { await act(async () => host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!.click()); }
+test.each([415, 404, 409, 502])("preview HTTP %s shows status", async (status) => {
+  await render({ attachments: [image], fetcher: mock(async () => new Response(null, { status })) as unknown as typeof fetch });
+  await previewClick();
+  expect(host.querySelector('[role="status"]')?.textContent).toBe(({415: "Preview isn't available for this file. Download it instead.", 404: "This file is no longer available.", 409: "Reconnect Gmail to download.", 502: "Preview failed. Try again."})[status]);
+});
+test("preview is authenticated, traps focus, returns focus and revokes on close and unmount", async () => {
+  URL.createObjectURL = mock(() => "blob:preview");
+  const revoke = mock(() => {}); URL.revokeObjectURL = revoke;
+  const fetcher = mock(async () => new Response(new Blob(["png"], { type: "image/png" })));
+  await render({ attachments: [image], fetcher: fetcher as unknown as typeof fetch });
+  const trigger = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!;
+  trigger.focus(); await previewClick();
+  expect(fetcher).toHaveBeenCalledWith('/v1/attachments/file%20%2F1?accountId=account+%261&disposition=inline', { credentials: "include" });
+  const dialog = host.querySelector<HTMLElement>('[role="dialog"]')!;
+  expect(document.getElementById(dialog.getAttribute('aria-labelledby')!)?.textContent).toBe(image.filename);
+  expect(dialog.querySelector('img')?.alt).toBe(image.filename);
+  expect(dialog.querySelector('script')).toBeNull();
+  expect(document.activeElement).toBe(dialog.querySelector('button'));
+  for (const shiftKey of [false, true]) {
+    dialog.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }) as unknown as Event);
+    expect(document.activeElement).toBe(dialog.querySelector('button'));
+  }
+  trigger.focus(); expect(document.activeElement).toBe(dialog.querySelector('button'));
+  await act(async () => dialog.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }) as unknown as Event));
+  expect(host.querySelector('[role="dialog"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
+  expect(revoke).toHaveBeenCalledTimes(1);
+  await previewClick();
+  await act(async () => host.querySelector<HTMLButtonElement>('[role="dialog"] button')!.click());
+  expect(revoke).toHaveBeenCalledTimes(2); expect(document.activeElement).toBe(trigger);
+  await previewClick(); await act(async () => root.render(<></>));
+  expect(revoke).toHaveBeenCalledTimes(3);
+});
+test("preview double clicks and unmount during fetch do not leak URLs", async () => {
+  let resolve!: (response: Response) => void;
+  const fetcher = mock(() => new Promise<Response>(done => { resolve = done; }));
+  const create = mock(() => 'blob:unused'); URL.createObjectURL = create;
+  await render({ attachments: [image], fetcher: fetcher as unknown as typeof fetch });
+  await act(async () => { const button = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!; button.click(); button.click(); });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await act(async () => root.render(<></>));
+  await act(async () => resolve(new Response(new Blob(['png'], {type: 'image/png'}))));
+  expect(create).not.toHaveBeenCalled();
+});
+test.each([0, 10 * 1024 * 1024 + 1])("invalid preview blob size %s is rejected", async (size) => {
+  const create = mock(() => 'blob:unused'); URL.createObjectURL = create;
+  await render({ attachments: [image], fetcher: mock(async () => new Response(new Blob([new Uint8Array(size)], {type: 'image/png'}))) as unknown as typeof fetch });
+  await previewClick(); expect(create).not.toHaveBeenCalled(); expect(host.textContent).toContain("Preview isn't available for this file.");
+});
+test.each(['image/svg+xml', 'text/html'])("unsafe response MIME %s never creates a URL", async (type) => {
+  const create = mock(() => 'blob:unused'); URL.createObjectURL = create;
+  await render({ attachments: [image], fetcher: mock(async () => new Response(new Blob(['<svg/>'], {type}))) as unknown as typeof fetch });
+  await previewClick(); expect(create).not.toHaveBeenCalled();
+});
+test("preview size boundary and PDF exclusion", async () => {
+  await render(); expect(host.querySelector('[aria-label^="Preview"]')).toBeNull();
+  await render({ attachments: [{...image, size: 10 * 1024 * 1024}] }); expect(host.querySelector('[aria-label^="Preview"]')).not.toBeNull();
+  await render({ attachments: [{...image, size: 10 * 1024 * 1024 + 1}] }); expect(host.querySelector('[aria-label^="Preview"]')).toBeNull();
+  expect(host.querySelector('[aria-label^="Download"]')).not.toBeNull();
+});
+test("demo preview explains unavailability without fetching", async () => {
+  const fetcher = mock(async () => new Response());
+  await render({attachments: [image], demoMode: true, fetcher: fetcher as unknown as typeof fetch}); await previewClick();
+  expect(host.textContent).toContain("Preview isn't available in the demo"); expect(fetcher).not.toHaveBeenCalled();
+});
+
+test.each(["image/png", "image/jpeg", "image/gif", "image/webp"])("supported card MIME %s offers preview", async (mimeType) => {
+  await render({ attachments: [{ ...image, mimeType }] });
+  expect(host.querySelector('[aria-label^="Preview"]')).not.toBeNull();
+});
+
+test.each(["image/svg+xml", "image/heic", "image/avif", "image/bmp", "text/html", "application/octet-stream", "", undefined, null, 42, {}, "image/png<script>"])("unsupported card MIME %s hides preview even with a PNG filename", async (mimeType) => {
+  await render({ attachments: [{ ...image, mimeType: mimeType as string }] });
+  expect(host.querySelector('[aria-label^="Preview"]')).toBeNull();
+  expect(host.querySelector('[aria-label^="Download"]')).not.toBeNull();
+});
+
+test("pending preview keeps Download enabled and labeled independently through fetch and blob reads", async () => {
+  let resolveResponse!: (response: Response) => void;
+  let resolveBlob!: (blob: Blob) => void;
+  const blob = new Promise<Blob>((resolve) => { resolveBlob = resolve; });
+  const fetcher = mock(() => new Promise<Response>((resolve) => { resolveResponse = resolve; }));
+  await render({ attachments: [image], fetcher: fetcher as unknown as typeof fetch });
+  await previewClick();
+  const download = host.querySelector<HTMLButtonElement>('[aria-label^="Download"]')!;
+  const preview = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!;
+  const expectPreviewPending = () => {
+    expect(preview.disabled).toBe(true);
+    expect(download.disabled).toBe(false);
+    expect(download.textContent).toBe("Download");
+    expect(download.getAttribute("aria-busy")).toBe("false");
+  };
+  expectPreviewPending();
+  const response = new Response();
+  response.blob = () => blob;
+  await act(async () => resolveResponse(response));
+  expectPreviewPending();
+  await act(async () => resolveBlob(new Blob()));
+  expect(preview.disabled).toBe(false);
+  expect(download.disabled).toBe(false);
+  expect(download.textContent).toBe("Download");
+});
