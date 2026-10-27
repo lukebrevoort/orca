@@ -10,6 +10,8 @@ import {
   GmailApiError,
   type GmailClient,
 } from "./client.ts";
+import { isValidGmailHistoryId } from "./history-id.ts";
+export { isValidGmailHistoryId } from "./history-id.ts";
 import type { GmailLabel, GmailMessage } from "./types.ts";
 import { normalizeGmailMessage } from "./normalizer.ts";
 import {
@@ -341,7 +343,7 @@ export async function syncGmailAccountHistory(
   const historyPageSize = input.pageSize ?? input.config?.backfillPageSize ?? loadGmailPushConfig().backfillPageSize;
   const maxHistoryPages = input.maxPages ?? input.config?.backfillMaxPages ?? loadGmailPushConfig().backfillMaxPages;
   let cursor: string | null = null;
-  let historyId = input.historyId;
+  let historyId = account.syncHistoryId;
   let pages = 0;
 
   try {
@@ -364,7 +366,7 @@ export async function syncGmailAccountHistory(
         messageIds.delete(messageId);
         deletedMessageIds.add(messageId);
       }
-      if (page.historyId) historyId = page.historyId;
+      if (typeof page.historyId === "string" && isValidGmailHistoryId(page.historyId)) historyId = page.historyId;
       cursor = page.nextCursor;
     } while (cursor && pages < maxHistoryPages);
     if (cursor) {
@@ -665,19 +667,16 @@ function parseWatchExpiration(value: string | number, now: Date): Date | null {
   return new Date(timestamp);
 }
 
-export function isValidGmailHistoryId(value: string): boolean {
-  return /^[0-9]{1,20}$/.test(value) && BigInt(value) <= 18446744073709551615n;
-}
-
-async function getBackfillHistoryId(gmailClient: GmailClient, accessToken: string): Promise<string | null> {
+async function getBackfillHistoryId(gmailClient: GmailClient, accessToken: string): Promise<string> {
   // Snapshot before the backfill so subsequent changes can be replayed.
   try {
     const profile = await gmailClient.getProfile?.(accessToken);
-    return typeof profile?.historyId === "string" && isValidGmailHistoryId(profile.historyId)
-      ? profile.historyId
-      : null;
-  } catch {
-    return null;
+    if (typeof profile?.historyId !== "string" || !isValidGmailHistoryId(profile.historyId)) {
+      throw new GmailPushError("Gmail profile history cursor is unavailable", "provider_error");
+    }
+    return profile.historyId;
+  } catch (error) {
+    throw mapGmailPushError(error);
   }
 }
 

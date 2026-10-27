@@ -1,3 +1,4 @@
+import { isValidGmailHistoryId } from "./history-id.ts";
 import type { GmailLabel, GmailMessage } from "./types.ts";
 
 const gmailApiBaseUrl = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -199,7 +200,8 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
         messageIds: [...messageChanges].filter(([, change]) => change === "changed").map(([id]) => id),
         deletedMessageIds: [...messageChanges].filter(([, change]) => change === "deleted").map(([id]) => id),
         nextCursor: response.nextPageToken ?? null,
-        historyId: response.historyId === undefined ? null : String(response.historyId),
+        historyId: (typeof response.historyId === "string" || typeof response.historyId === "number")
+          && isValidGmailHistoryId(String(response.historyId)) ? String(response.historyId) : null,
       };
     },
 
