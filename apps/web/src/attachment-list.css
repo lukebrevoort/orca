@@ -13,3 +13,11 @@
 .attachment-card-status { color: var(--orca-danger); font-size: 12px; grid-column: 1 / -1; line-height: 1.5; margin: 0; }
 .attachment-card-status:empty { display: none; }
 @media (max-width: 480px) { .attachment-card-list { grid-template-columns: minmax(0, 1fr); } }
+
+.attachment-preview-backdrop { position: fixed; inset: 0; z-index: 1000; background: var(--orca-surface); display: grid; place-items: center; padding: 24px; }
+.attachment-preview-dialog { background: var(--orca-surface); color: var(--orca-ink); border: 1px solid var(--orca-border); border-radius: 9px; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-width: 100%; max-height: 100%; overflow: auto; }
+.attachment-preview-dialog strong { overflow-wrap: anywhere; }
+.attachment-preview-dialog button { align-self: flex-start; }
+.attachment-preview-dialog img { max-width: 100%; max-height: 75vh; object-fit: contain; }
+
+.attachment-card-actions { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 2; }

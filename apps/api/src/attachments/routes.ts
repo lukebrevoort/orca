@@ -60,8 +60,12 @@ export function registerAttachmentRoutes(app: Hono<{ Variables: AuthVariables }>
       const filename = record.attachment.filename.replace(/[\u0000-\u001f\u007f/\\]/g, "_").slice(0, 255) || "attachment";
       const asciiName = filename.replace(/[^\x20-\x7e]|["\\]/g, "_");
       const encodedName = encodeURIComponent(filename).replace(/['()*]/g, (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`);
-      c.header("Content-Type", "application/octet-stream");
-      c.header("Content-Disposition", `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
+      const inline = c.req.query("disposition") === "inline";
+      const mime = record.attachment.mimeType.toLowerCase().split(";")[0]!.trim();
+      if (inline && !matchesImage(bytes, mime)) return c.json({ error: { code: "preview_unavailable", message: "Preview is not available for this file" } }, 415);
+      if (inline) c.header("Content-Security-Policy", "default-src 'none'; sandbox");
+      c.header("Content-Type", inline ? mime : "application/octet-stream");
+      c.header("Content-Disposition", inline ? `inline; filename*=UTF-8''${encodedName}` : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
       c.header("Content-Length", String(bytes.length));
       return c.body(new Uint8Array(bytes));
     } catch {
@@ -92,4 +96,14 @@ async function readBoundedResponse(response: Response): Promise<string> {
     }
     return Buffer.concat(chunks, length).toString("utf8");
   } finally { reader.releaseLock(); }
+}
+
+function matchesImage(bytes: Buffer, mime: string): boolean {
+  switch (mime) {
+    case "image/png": return bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    case "image/jpeg": return bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+    case "image/gif": return ["GIF87a", "GIF89a"].includes(bytes.subarray(0, 6).toString("latin1"));
+    case "image/webp": return bytes.length >= 12 && bytes.subarray(0, 4).toString("latin1") === "RIFF" && bytes.subarray(8, 12).toString("latin1") === "WEBP";
+    default: return false;
+  }
 }

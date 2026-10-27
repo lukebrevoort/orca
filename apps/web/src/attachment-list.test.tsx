@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { act, type ComponentProps } from "react";
+import { act, useEffect, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Window } from "happy-dom";
 import { readFileSync } from "node:fs";
 import { AttachmentList, AttachmentTypeIcon, describeAttachmentType, truncateAttachmentFilename, sanitizeDownloadFilename } from "./attachment-list";
 import { ComposeWorkspace, createEmptyComposeDraft, type ComposeDraftController } from "./compose-workspace";
+import { TopLayerProvider, useTopLayerActive } from "./top-layer";
 import { demoAttachments } from "./demo-data";
 
 const attachment = { id: "file /1", filename: "A very long board review document.pdf", mimeType: "application/pdf", size: 2516582 };
@@ -20,6 +21,10 @@ const originalCreate = URL.createObjectURL;
 const originalRevoke = URL.revokeObjectURL;
 beforeEach(() => {
   browser = new Window({ url: "http://localhost" });
+  Object.defineProperties(browser, {
+    requestAnimationFrame: { configurable: true, value: (callback: FrameRequestCallback) => { callback(0); return 1; } },
+    cancelAnimationFrame: { configurable: true, value: () => {} },
+  });
   for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, value: browser[name] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -33,7 +38,7 @@ afterEach(async () => {
   for (const name of names) { const original = originals.get(name); if (original) Object.defineProperty(globalThis, name, original); else Reflect.deleteProperty(globalThis, name); }
   URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke;
 });
-async function render(extra: Partial<ComponentProps<typeof AttachmentList>> = {}) { await act(async () => root.render(<AttachmentList {...props} {...extra} />)); }
+async function render(extra: Partial<ComponentProps<typeof AttachmentList>> = {}) { await act(async () => root.render(<TopLayerProvider><AttachmentList {...props} {...extra} /></TopLayerProvider>)); }
 async function click() { await act(async () => host.querySelector("button")!.click()); }
 
 describe("attachment types", () => {
@@ -290,4 +295,174 @@ test("visible filename uses a middle ellipsis within 60 characters and keeps the
   expect(visible.length).toBe(60);
   expect(visible).toContain("…");
   expect(visible.endsWith(".pdf")).toBe(true);
+});
+
+const image = { ...attachment, filename: '<script>雪</script>.png', mimeType: 'IMAGE/PNG; charset=binary', size: 8 };
+async function previewClick() { await act(async () => host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!.click()); }
+test.each([415, 404, 409, 502])("preview HTTP %s shows status", async (status) => {
+  await render({ attachments: [image], fetcher: mock(async () => new Response(null, { status })) as unknown as typeof fetch });
+  await previewClick();
+  expect(host.querySelector('[role="status"]')?.textContent).toBe(({415: "Preview isn't available for this file. Download it instead.", 404: "This file is no longer available.", 409: "Reconnect Gmail to download.", 502: "Preview failed. Try again."})[status]);
+});
+test("preview is authenticated, traps focus, returns focus and revokes on close and unmount", async () => {
+  URL.createObjectURL = mock(() => "blob:preview");
+  const revoke = mock(() => {}); URL.revokeObjectURL = revoke;
+  const fetcher = mock(async () => new Response(new Blob(["png"], { type: "image/png" })));
+  await render({ attachments: [image], fetcher: fetcher as unknown as typeof fetch });
+  const trigger = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!;
+  trigger.focus(); await previewClick();
+  expect(fetcher).toHaveBeenCalledWith('/v1/attachments/file%20%2F1?accountId=account+%261&disposition=inline', { credentials: "include" });
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+  expect(document.getElementById(dialog.getAttribute('aria-labelledby')!)?.textContent).toBe(image.filename);
+  expect(dialog.querySelector('img')?.alt).toBe(image.filename);
+  expect(dialog.querySelector('script')).toBeNull();
+  expect(document.activeElement).toBe(dialog.querySelector('button'));
+  for (const shiftKey of [false, true]) {
+    dialog.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }) as unknown as Event);
+    expect(document.activeElement).toBe(dialog.querySelector('button'));
+  }
+  trigger.focus(); expect(document.activeElement).toBe(dialog.querySelector('button'));
+  await act(async () => dialog.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }) as unknown as Event));
+  expect(document.querySelector('[role="dialog"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
+  expect(revoke).toHaveBeenCalledTimes(1);
+  await previewClick();
+  await act(async () => document.querySelector<HTMLButtonElement>('[role="dialog"] button')!.click());
+  expect(revoke).toHaveBeenCalledTimes(2); expect(document.activeElement).toBe(trigger);
+  await previewClick(); await act(async () => root.render(<></>));
+  expect(revoke).toHaveBeenCalledTimes(3);
+});
+test("preview double clicks and unmount during fetch do not leak URLs", async () => {
+  let resolve!: (response: Response) => void;
+  const fetcher = mock(() => new Promise<Response>(done => { resolve = done; }));
+  const create = mock(() => 'blob:unused'); URL.createObjectURL = create;
+  await render({ attachments: [image], fetcher: fetcher as unknown as typeof fetch });
+  await act(async () => { const button = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!; button.click(); button.click(); });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await act(async () => root.render(<></>));
+  await act(async () => resolve(new Response(new Blob(['png'], {type: 'image/png'}))));
+  expect(create).not.toHaveBeenCalled();
+});
+test.each([0, 10 * 1024 * 1024 + 1])("invalid preview blob size %s is rejected", async (size) => {
+  const create = mock(() => 'blob:unused'); URL.createObjectURL = create;
+  await render({ attachments: [image], fetcher: mock(async () => new Response(new Blob([new Uint8Array(size)], {type: 'image/png'}))) as unknown as typeof fetch });
+  await previewClick(); expect(create).not.toHaveBeenCalled(); expect(host.textContent).toContain("Preview isn't available for this file.");
+});
+test.each(['image/svg+xml', 'text/html'])("unsafe response MIME %s never creates a URL", async (type) => {
+  const create = mock(() => 'blob:unused'); URL.createObjectURL = create;
+  await render({ attachments: [image], fetcher: mock(async () => new Response(new Blob(['<svg/>'], {type}))) as unknown as typeof fetch });
+  await previewClick(); expect(create).not.toHaveBeenCalled();
+});
+test("preview size boundary and PDF exclusion", async () => {
+  await render(); expect(host.querySelector('[aria-label^="Preview"]')).toBeNull();
+  await render({ attachments: [{...image, size: 10 * 1024 * 1024}] }); expect(host.querySelector('[aria-label^="Preview"]')).not.toBeNull();
+  await render({ attachments: [{...image, size: 10 * 1024 * 1024 + 1}] }); expect(host.querySelector('[aria-label^="Preview"]')).toBeNull();
+  expect(host.querySelector('[aria-label^="Download"]')).not.toBeNull();
+});
+test("demo preview explains unavailability without fetching", async () => {
+  const fetcher = mock(async () => new Response());
+  await render({attachments: [image], demoMode: true, fetcher: fetcher as unknown as typeof fetch}); await previewClick();
+  expect(host.textContent).toContain("Preview isn't available in the demo"); expect(fetcher).not.toHaveBeenCalled();
+});
+
+test.each(["image/png", "image/jpeg", "image/gif", "image/webp"])("supported card MIME %s offers preview", async (mimeType) => {
+  await render({ attachments: [{ ...image, mimeType }] });
+  expect(host.querySelector('[aria-label^="Preview"]')).not.toBeNull();
+});
+
+test.each(["image/svg+xml", "image/heic", "image/avif", "image/bmp", "text/html", "application/octet-stream", "", undefined, null, 42, {}, "image/png<script>"])("unsupported card MIME %s hides preview even with a PNG filename", async (mimeType) => {
+  await render({ attachments: [{ ...image, mimeType: mimeType as string }] });
+  expect(host.querySelector('[aria-label^="Preview"]')).toBeNull();
+  expect(host.querySelector('[aria-label^="Download"]')).not.toBeNull();
+});
+
+test("pending preview keeps Download enabled and labeled independently through fetch and blob reads", async () => {
+  let resolveResponse!: (response: Response) => void;
+  let resolveBlob!: (blob: Blob) => void;
+  const blob = new Promise<Blob>((resolve) => { resolveBlob = resolve; });
+  const fetcher = mock(() => new Promise<Response>((resolve) => { resolveResponse = resolve; }));
+  await render({ attachments: [image], fetcher: fetcher as unknown as typeof fetch });
+  await previewClick();
+  const download = host.querySelector<HTMLButtonElement>('[aria-label^="Download"]')!;
+  const preview = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!;
+  const expectPreviewPending = () => {
+    expect(preview.disabled).toBe(true);
+    expect(download.disabled).toBe(false);
+    expect(download.textContent).toBe("Download");
+    expect(download.getAttribute("aria-busy")).toBe("false");
+  };
+  expectPreviewPending();
+  const response = new Response();
+  response.blob = () => blob;
+  await act(async () => resolveResponse(response));
+  expectPreviewPending();
+  await act(async () => resolveBlob(new Blob()));
+  expect(preview.disabled).toBe(false);
+  expect(download.disabled).toBe(false);
+  expect(download.textContent).toBe("Download");
+});
+
+test("list admits only one preview request across cards while pending and open", async () => {
+  const responses: ((response: Response) => void)[] = [];
+  const fetcher = mock(() => new Promise<Response>((resolve) => responses.push(resolve)));
+  URL.createObjectURL = mock(() => "blob:single-preview");
+  await render({ attachments: [image, { ...image, id: "second" }], fetcher: fetcher as unknown as typeof fetch });
+  const buttons = host.querySelectorAll<HTMLButtonElement>('[aria-label^="Preview"]');
+  buttons[0]!.focus();
+  await act(async () => { buttons[0]!.click(); buttons[1]!.click(); });
+  // Check admission before resolving: a failing baseline never installs competing traps.
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await act(async () => responses[0]!(new Response(new Blob(["png"], { type: "image/png" }))));
+  expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+  const close = document.querySelector<HTMLButtonElement>('[role="dialog"] button')!;
+  await act(async () => buttons[1]!.click());
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  buttons[1]!.focus();
+  expect(document.activeElement).toBe(close);
+  close.focus();
+  expect(document.activeElement).toBe(close);
+  await act(async () => close.click());
+  expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0);
+  expect(document.activeElement).toBe(buttons[0]);
+  await act(async () => buttons[1]!.click());
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  await act(async () => responses[1]!(new Response(null, { status: 404 })));
+});
+
+test("preview activates the top-layer guard for every App writing shortcut and releases it on Escape", async () => {
+  const handled = mock(() => {});
+  function WritingShortcutProbe() {
+    const active = useTopLayerActive();
+    useEffect(() => {
+      const handler = (event: KeyboardEvent) => {
+        if (!active && !event.defaultPrevented) handled();
+      };
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }, [active]);
+    return <output data-layer-active={String(active)} />;
+  }
+  URL.createObjectURL = mock(() => "blob:shortcuts");
+  await act(async () => root.render(<TopLayerProvider>
+    <WritingShortcutProbe />
+    <AttachmentList {...props} attachments={[image]} fetcher={mock(async () => new Response(new Blob(["png"], { type: "image/png" }))) as unknown as typeof fetch} />
+  </TopLayerProvider>));
+  const trigger = host.querySelector<HTMLButtonElement>('[aria-label^="Preview"]')!;
+  trigger.focus();
+  await previewClick();
+  expect(host.querySelector("output")?.getAttribute("data-layer-active")).toBe("true");
+  const close = document.querySelector<HTMLButtonElement>('[role="dialog"] button')!;
+  for (const init of [{ key: "c" }, { key: "r" }, { key: "a" }, { key: "f" }, { key: "m", ctrlKey: true, shiftKey: true }, { key: "m", metaKey: true, shiftKey: true }]) {
+    await act(async () => close.dispatchEvent(new browser.KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true }) as unknown as Event));
+  }
+  expect(handled).not.toHaveBeenCalled();
+  for (const shiftKey of [false, true]) {
+    const event = new browser.KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true });
+    await act(async () => close.dispatchEvent(event as unknown as Event));
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+  }
+  await act(async () => close.dispatchEvent(new browser.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }) as unknown as Event));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+  expect(host.querySelector("output")?.getAttribute("data-layer-active")).toBe("false");
 });
