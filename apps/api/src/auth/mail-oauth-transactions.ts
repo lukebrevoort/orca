@@ -76,6 +76,8 @@ export function isMailOAuthSessionActive(db: Pick<ReturnType<typeof createDataba
   )).get());
 }
 
+export const PENDING_EMAIL_LIKE = "pending-%@orca.invalid";
+
 export function pendingUserWhere(userId: string, pendingEmail: string) {
   return and(eq(users.id, userId), eq(users.email, pendingEmail), isNull(users.authenticatedAt), isNull(users.onboardingCompletedAt));
 }

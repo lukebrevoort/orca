@@ -1,7 +1,7 @@
-import { and, asc, eq, isNotNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, like, ne, not } from "drizzle-orm";
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, users } from "../db/schema.ts";
-import { isMailOAuthSessionActive, pendingUserWhere } from "./mail-oauth-transactions.ts";
+import { isMailOAuthSessionActive, PENDING_EMAIL_LIKE, pendingUserWhere } from "./mail-oauth-transactions.ts";
 
 /** Promote only the exact still-pending user created for this login transaction. */
 export function completeMailOAuthLogin(db: ReturnType<typeof createDatabaseClient>["db"], input: {
@@ -25,7 +25,7 @@ export function completeMailOAuthLogin(db: ReturnType<typeof createDatabaseClien
         eq(oauthAccounts.provider, input.provider),
         eq(oauthAccounts.providerId, input.providerAccountId),
         ne(oauthAccounts.userId, input.userId),
-        or(isNotNull(users.authenticatedAt), isNotNull(users.onboardingCompletedAt)),
+        not(like(users.email, PENDING_EMAIL_LIKE)),
       ))
       .orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id))
       .limit(1).get()?.account;
