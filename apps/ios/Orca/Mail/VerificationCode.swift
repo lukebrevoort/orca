@@ -33,7 +33,7 @@ struct VerificationCode: Equatable {
             let start = candidate.range.location, end = NSMaxRange(candidate.range)
             while dateIndex < dates.count && NSMaxRange(dates[dateIndex].range) <= start { dateIndex += 1 }
             if dateIndex < dates.count && dates[dateIndex].range.location < end { continue }
-            if has(#"^[A-Z]{2} [0-9]{5}$"#, text.substring(with: candidate.range)) { continue }
+            if has(#"^(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC|PR|GU|VI|MP) [0-9]{5}$"#, text.substring(with: candidate.range)) { continue }
             if has(#"^(?:19|20)[0-9]{2}[- /](?:0?[1-9]|1[0-2])$"#, text.substring(with: candidate.range)) { continue }
             let code = text.substring(with: candidate.range).replacingOccurrences(of: #"^[A-Za-z]-(?=[0-9]{4,8}$)"#, with: "", options: .regularExpression).replacingOccurrences(of: "-", with: "").replacingOccurrences(of: " ", with: "")
             if !has(#"^(?:[0-9]{4,8}|(?=[A-Z0-9]*[A-Z])(?=[A-Z0-9]*[0-9])[A-Z0-9]{6,8})$"#, code) { continue }
@@ -46,7 +46,7 @@ struct VerificationCode: Equatable {
             if scriptIndex < scripts.count && scripts[scriptIndex].range.location <= start { continue }
             let before = text.substring(with: NSRange(location: max(0, start - 35), length: min(start, 35)))
             let after = text.substring(with: NSRange(location: end, length: min(20, text.length - end)))
-            if has(#"(?:order|tracking|invoice|ref)\b[^\n]{0,24}$"#, before, insensitive: true) { continue }
+            if has(#"(?:order|tracking|invoice|ref)\b(?:\s+(?:code|passcode|OTP|PIN)\b[^\n]{0,24}|(?![^\n]{0,24}\b(?:code|passcode|OTP|PIN)\b)[^\n]{0,24})$"#, before, insensitive: true) { continue }
             if has(#"[$€]\s*$"#, before) { continue }
             if has(#"^\.[0-9]{2}"#, after) { continue }
             if has(#"[0-9][.:/\-]$"#, before) { continue }
@@ -55,7 +55,7 @@ struct VerificationCode: Equatable {
             if has(#"\+[^A-Za-z\n]*$"#, before) { continue }
             if has(#"[0-9][ -]$"#, before) { continue }
             if has(#"^[ -][0-9]"#, after) { continue }
-            if has(#"\b[A-Z]{2}\s+$"#, before) && has(#"^[0-9]{5}$"#, code) { continue }
+            if has(#"\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC|PR|GU|VI|MP)\s+$"#, before) && has(#"^[0-9]{5}$"#, code) { continue }
             if has(#"^(?:19|20)[0-9]{2}$"#, code) && (has(#"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*$"#, before, insensitive: true) || has(#"^\s*(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b"#, after, insensitive: true)) { continue }
             if !results.contains(where: { $0.code == code }) { results.append(.init(code: code, start: start)) }
             if results.count == 2 { break }
