@@ -146,7 +146,7 @@ describe("completeMailOAuthLogin identity binding", () => {
       const db = freshDb();
       db.update(oauthAccounts).set({ createdAt: new Date(2000) }).where(eq(oauthAccounts.id, "existing_gmail")).run();
       db.insert(users).values({ id: "other", email: "other@example.test", onboardingCompletedAt: new Date() }).run();
-      db.insert(oauthAccounts).values({ id: "a_other", userId: "other", provider: "gmail", providerId: "google-A", providerEmail: "other@example.test", scope: "", createdAt: new Date(equalDates ? 2000 : 1000) }).run();
+      db.insert(oauthAccounts).values({ id: equalDates ? "a_other" : "z_other", userId: "other", provider: "gmail", providerId: "google-A", providerEmail: "other@example.test", scope: "", createdAt: new Date(equalDates ? 2000 : 1000) }).run();
       expect(completeMailOAuthLogin(db, await startLogin(db, "gmail", "google-A", "a@example.test"))).toEqual({ ok: true, returningUserId: "other" });
     });
   }
