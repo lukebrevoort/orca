@@ -619,8 +619,11 @@ function parseApplyEvidence(row: typeof organizationChangeSets.$inferSelect): {
           || thread.beforeContexts.some((context) => {
             if (context.relationships === undefined) return false;
             return !Array.isArray(context.relationships)
+              || context.relationships.length === 0
+              || !context.relationship
               || context.relationships.some((relationship) => !relationship
-                || typeof relationship !== "object" || Array.isArray(relationship));
+                || typeof relationship !== "object" || Array.isArray(relationship))
+              || context.relationships[0]!.id !== context.relationship.id;
           }))))) {
       throw new Error("incomplete evidence");
     }
