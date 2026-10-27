@@ -133,7 +133,7 @@ for (const [label, value, expected] of [
   ["numeric", 12345, "12345"], ["maximum", "18446744073709551615", "18446744073709551615"],
 ] as const) {
   test(`history response validates cursor: ${label}`, async () => {
-    const client = createGmailClient((async () => Response.json({ historyId: value })) as typeof fetch);
+    const client = createGmailClient((async () => Response.json({ historyId: value })) as unknown as typeof fetch);
     const page = await client.listHistory!({ accessToken: "access-token", startHistoryId: "100" });
     assert.equal(page.historyId, expected);
   });
