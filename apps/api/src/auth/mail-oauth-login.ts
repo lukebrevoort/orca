@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne, or } from "drizzle-orm";
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, users } from "../db/schema.ts";
 import { isMailOAuthSessionActive, pendingUserWhere } from "./mail-oauth-transactions.ts";
@@ -19,13 +19,16 @@ export function completeMailOAuthLogin(db: ReturnType<typeof createDatabaseClien
     )).get();
     if (!pendingAccount) return { ok: false as const };
 
-    const existingAccount = tx.query.oauthAccounts.findFirst({
-      where: (account, { and, eq, ne }) => and(
-        eq(account.provider, input.provider),
-        eq(account.providerId, input.providerAccountId),
-        ne(account.userId, input.userId),
-      ),
-    }).sync();
+    const existingAccount = tx.select({ account: oauthAccounts }).from(oauthAccounts)
+      .innerJoin(users, eq(users.id, oauthAccounts.userId))
+      .where(and(
+        eq(oauthAccounts.provider, input.provider),
+        eq(oauthAccounts.providerId, input.providerAccountId),
+        ne(oauthAccounts.userId, input.userId),
+        or(isNotNull(users.authenticatedAt), isNotNull(users.onboardingCompletedAt)),
+      ))
+      .orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id))
+      .limit(1).get()?.account;
     if (existingAccount) {
       const ownerId = existingAccount.userId;
       // Preserve account identity and cached workspace/mail while rotating its grant.
