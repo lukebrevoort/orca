@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AC0DE0000000000000000001 /* VerificationCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0DE0000000000000000002 /* VerificationCode.swift */; };
 		E7502EA5193F48CA8261B7AE /* SafeHTMLOverflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF00DA38C5EA46A7B1BD4F0C /* SafeHTMLOverflowTests.swift */; };
 		AADDEE020000000000000001 /* ReaderUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDEE020000000000000002 /* ReaderUITests.swift */; };
 		AADDEE010000000000000001 /* SafeHTMLViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDEE010000000000000002 /* SafeHTMLViewTests.swift */; };
@@ -57,6 +58,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AC0DE0000000000000000002 /* VerificationCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationCode.swift; sourceTree = "<group>"; };
 		EF00DA38C5EA46A7B1BD4F0C /* SafeHTMLOverflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLOverflowTests.swift; sourceTree = "<group>"; };
 		AADDEE020000000000000002 /* ReaderUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderUITests.swift; sourceTree = "<group>"; };
 		AADDEE010000000000000002 /* SafeHTMLViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLViewTests.swift; sourceTree = "<group>"; };
@@ -170,6 +172,7 @@
 				FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */,
 				63653D38AA3104BDBDE5CCFA /* SavedMailboxResults.swift */,
 				C5A8BEAFF621E5292BE1D0AB /* ThreadView.swift */,
+				AC0DE0000000000000000002 /* VerificationCode.swift */,
 			);
 			path = Mail;
 			sourceTree = "<group>";
@@ -374,6 +377,7 @@
 				015A7DF605ECD74F7EF67DC7 /* Security.swift in Sources */,
 				CCB8FEAFDCB6B0C123E3304C /* SettingsView.swift in Sources */,
 				EEBEDF73B67CC16DE0F3A264 /* ThreadView.swift in Sources */,
+				AC0DE0000000000000000001 /* VerificationCode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

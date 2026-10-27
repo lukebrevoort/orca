@@ -83,6 +83,8 @@ struct ThreadView: View {
                             }.font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                             MessageImageBody(item: item, accountId: accountId)
                                 .id(state.ownerScope + "|" + accountId + "|" + item.id + "|" + (item.bodyHtml ?? ""))
+                            VerificationCodeStrip(codes: VerificationCode.detect(subject: item.subject, bodyText: item.bodyText, snippet: item.snippet))
+                                .id(state.ownerScope + "|" + accountId + "|" + item.id)
                             ForEach(item.attachments) { attachment in
                                 Button { Task { await download(attachment) } } label: {
                                     Label("\(attachment.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(attachment.size), countStyle: .file))", systemImage: "paperclip").font(OrcaTheme.ui(12))

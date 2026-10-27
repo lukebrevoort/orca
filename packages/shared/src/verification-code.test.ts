@@ -1,0 +1,75 @@
+import { expect, test } from "bun:test";
+import { detectVerificationCodes } from "./verification-code";
+const vectors: [string, string][] = [
+  ["PIN 1234", "1234"],
+  ["CODE 1234", "1234"],
+  ["OTP 1234", "1234"],
+  ["Verification code: 123456", "123456"],
+  ["Your code is G-123456", "123456"],
+  ["G-123456 is your Google verification code", "123456"],
+  ["code: A-1234", "1234"],
+  ["code: g-12345678", "12345678"],
+  ["Verification code: 1234-5678", "12345678"],
+  ["Your one-time passcode is 482631", "482631"],
+  ["OTP: 9876", "9876"],
+  ["PIN: 1234", "1234"],
+  ["Login: AB12CD", "AB12CD"],
+  ["Sign-in: A1B2C3D4", "A1B2C3D4"],
+  ["Verify: 123 456", "123456"],
+  ["Security code: 12345678", "12345678"],
+  ["Confirmation code: 765432", "765432"],
+  ["code: ABC-123", "ABC123"],
+  ["Order #123456", ""],
+  ["code: Order #123456", ""],
+  ["code: $1234.56", ""],
+  ["code: €123456", ""],
+  ["code: Call 555-123-4567", ""],
+  ["code: +44 123456", ""],
+  ["2026", ""],
+  ["code: January 2026", ""],
+  ["code: Oct 26 2026", ""],
+  ["code: October 26, 2026", ""],
+  ["code: OCT 26 2026", ""],
+  ["code: Sept. 1, 2099", ""],
+  ["code: January 01 1800", ""],
+  ["code: Oct 26 2026. Your code is 482631", "482631"],
+  ["code: 482631. Sent October 26, 2026", "482631"],
+  ["code: October 26, 2026. PIN: 2027", "2027"],
+  ["code: October 26, 2026 <img onerror=\"alert(1)\"> OTP: 482631", "482631"],
+  ["code: OctoberX 26, 12345", "12345"],
+  ["code: 2026 December", ""],
+  ["Meeting at 10:30", ""],
+  ["code: 2026-10-26", ""],
+  ["code: NY 12345", ""],
+  ["code: https://x.y/?code=123456", ""],
+  ["code: person123456@example.com", ""],
+  ["code: invoice 123456", ""],
+  ["code: tracking 123456", ""],
+  ["code: ref 123456", ""],
+  ["code: ٤٨٢٦٣١", ""],
+  ["code: 123‍456", ""],
+  ["<script>code: 123456</script>", ""],
+  ["code: <img onerror=\"alert(1)\"> 482631", "482631"],
+  ["code: ABCDEF", ""],
+  ["code: 123456789", ""],
+  ["code: 123", ""],
+  ["", ""],
+  ["code: 000000", "000000"],
+  ["code: (555) 123 4567", ""],
+  ["code: 2026-10", ""],
+  ["code: 12-345678", "12345678"],
+  ["code: A-12345", "12345"],
+];
+for (const [bodyText, expected] of vectors) test(`detects safely: ${bodyText}`, () => {
+  expect(detectVerificationCodes({ bodyText }).map(item => item.code)).toEqual(expected ? [expected] : []);
+});
+test("caps input, preserves offsets, prefers body, falls back to snippet and caps results", () => {
+  expect(detectVerificationCodes({ subject: "verification", bodyText: "123456" })).toEqual([{code: "123456", start: 0}]);
+  expect(detectVerificationCodes({ snippet: "code: 123456" })[0]?.start).toBe(6);
+  expect(detectVerificationCodes({ bodyText: "ordinary text", snippet: "code: 123456" })).toEqual([]);
+  const huge = "1".repeat(1_000_000) + " code: 123456";
+  expect(detectVerificationCodes({ subject: "code", bodyText: huge })).toEqual(detectVerificationCodes({ subject: "code", bodyText: huge.slice(0, 20_000) }));
+  expect(detectVerificationCodes({ bodyText: "x".repeat(20_000) + " code: 123456" })).toEqual([]);
+  expect(detectVerificationCodes({ bodyText: "code: 123456, 654321, 765432" }).length).toBe(2);
+  expect(detectVerificationCodes({ bodyText: "code " + "x".repeat(81) + " 123456" })).toEqual([]);
+});

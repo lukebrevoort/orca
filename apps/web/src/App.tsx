@@ -1,3 +1,4 @@
+import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
 import { ReaderSessions } from "./reader-session";
 import { readerNavigationVisibility } from "./reader-navigation";
@@ -6087,6 +6088,7 @@ export function MessageReader({
                       <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
                     <ReaderBody html={message.bodyHtml} text={message.bodyText} />
+                    <VerificationCodeStrip messageId={messageKey} subject={message.subject} bodyText={message.bodyText} snippet={message.snippet} />
                     {message.attachments.length ? (
                       <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>
                         <h3 id={`reader-attachments-title-${message.id}`}>Attachments</h3>
