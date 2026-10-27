@@ -9,7 +9,7 @@ import { Hono } from "hono";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { sessions, users } from "../db/schema.ts";
-import { buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
+import { buildClearedSessionCookie, buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
 import { createLogoutApp } from "./logout.ts";
 import { createSession, getSessionFromToken, invalidateSession } from "./session-store.ts";
 
@@ -46,7 +46,7 @@ async function createFixture() {
   const sameUser = await createSession(client.db, "one");
   const otherUser = await createSession(client.db, "two");
   const handles: ReturnType<typeof createDatabaseClient>[] = [];
-  const app = new Hono().route("/api/auth", createLogoutApp({
+  const app = new Hono().route("/v1/auth", createLogoutApp({
     dbFactory: () => {
       const handle = createDatabaseClient(dbPath);
       handles.push(handle);
@@ -62,6 +62,7 @@ async function expectOk(response: Response) {
   expect(response.headers.get("set-cookie")).toBe(
     buildSessionCookie("", new Date(0), getSessionCookieOptions()),
   );
+  expect(response.headers.get("set-cookie")).toBe(buildClearedSessionCookie(getSessionCookieOptions()));
   for (const handle of fixture.handles) {
     expect(() => handle.sqlite.query("SELECT 1").get()).toThrow();
   }
@@ -71,7 +72,7 @@ async function expectLive(...tokens: string[]) {
   for (const token of tokens) expect(await getSessionFromToken(fixture.db, token)).not.toBeNull();
 }
 
-function post(cookie?: string, path = "/api/auth/logout", init: RequestInit = {}) {
+function post(cookie?: string, path = "/v1/auth/logout", init: RequestInit = {}) {
   return fixture.app.request(path, {
     ...init,
     method: "POST",
@@ -128,7 +129,7 @@ test("only own session: ignores body, query, session headers and Authorization b
     },
     body: JSON.stringify({ sessionId: fixture.otherUser.sessionId, token: fixture.otherUser.token }),
   };
-  const path = `/api/auth/logout?sessionId=${fixture.otherUser.sessionId}&token=${fixture.otherUser.token}`;
+  const path = `/v1/auth/logout?sessionId=${fixture.otherUser.sessionId}&token=${fixture.otherUser.token}`;
   await expectOk(await post(undefined, path, init));
   await expectLive(fixture.own.token, fixture.sameUser.token, fixture.otherUser.token);
   await expectOk(await post(`orca_session=${fixture.own.token}`, path, init));
@@ -137,7 +138,7 @@ test("only own session: ignores body, query, session headers and Authorization b
 });
 
 for (const kind of ["duplicates", "reverse duplicates", "oversized", "control chars", "unicode", "markup", "bad escape"] as const) {
-  test(`idempotent/no oracle: hostile cookie ${kind} never invalidates a session`, async () => {
+  test(`idempotent/no oracle: hostile cookie ${kind} handles only live bounded candidates`, async () => {
     const token = fixture.own.token;
     const values = {
       duplicates: `orca_session=${token}; orca_session=${fixture.otherUser.token}`,
@@ -149,21 +150,62 @@ for (const kind of ["duplicates", "reverse duplicates", "oversized", "control ch
       "bad escape": "orca_session=%E0%A4%A",
     };
     // Bypass Fetch's transport header validation to exercise the handler with hostile bytes.
-    const request = new Request("http://localhost/api/auth/logout", { method: "POST" });
+    const request = new Request("http://localhost/v1/auth/logout", { method: "POST" });
     const originalGet = request.headers.get.bind(request.headers);
     request.headers.get = (name) => name.toLowerCase() === "cookie" ? values[kind] : originalGet(name);
     await expectOk(await fixture.app.fetch(request));
-    await expectLive(fixture.own.token, fixture.sameUser.token, fixture.otherUser.token);
+    if (kind === "duplicates" || kind === "reverse duplicates") {
+      expect(await getSessionFromToken(fixture.db, fixture.own.token)).toBeNull();
+      if (kind === "duplicates") expect(await getSessionFromToken(fixture.db, fixture.otherUser.token)).toBeNull();
+      else await expectLive(fixture.otherUser.token);
+      await expectLive(fixture.sameUser.token);
+    } else {
+      await expectLive(fixture.own.token, fixture.sameUser.token, fixture.otherUser.token);
+    }
   });
 }
 
 test("GET and other methods do not perform logout", async () => {
   for (const method of ["GET", "PUT", "DELETE", "PATCH", "OPTIONS"]) {
-    const response = await fixture.app.request("/api/auth/logout", {
+    const response = await fixture.app.request("/v1/auth/logout", {
       method, headers: { cookie: `orca_session=${fixture.own.token}` },
     });
     expect([404, 405]).toContain(response.status);
     expect(response.headers.get("set-cookie")).toBeNull();
     await expectLive(fixture.own.token, fixture.sameUser.token, fixture.otherUser.token);
   }
+});
+
+for (const kind of ["two valid", "quoted", "garbage first"] as const) {
+  test(`cookie parity: ${kind} revokes every live candidate`, async () => {
+    const cookie = kind === "two valid"
+      ? `orca_session=${fixture.own.token}; orca_session="${fixture.otherUser.token}"`
+      : kind === "quoted" ? `orca_session="${fixture.own.token}"`
+      : `orca_session=garbage; orca_session=${fixture.own.token}`;
+    await expectOk(await post(cookie));
+    expect(await getSessionFromToken(fixture.db, fixture.own.token)).toBeNull();
+    if (kind === "two valid") expect(await getSessionFromToken(fixture.db, fixture.otherUser.token)).toBeNull();
+    else await expectLive(fixture.otherUser.token);
+    await expectLive(fixture.sameUser.token);
+  });
+}
+
+test("bounded candidates: only the first eight cookies can revoke sessions", async () => {
+  const candidates = await Promise.all(Array.from({ length: 9 }, () => createSession(fixture.db, "one")));
+  await expectOk(await post(candidates.map(({ token }) => `orca_session=${token}`).join("; ")));
+  for (const candidate of candidates.slice(0, 8)) {
+    expect(await getSessionFromToken(fixture.db, candidate.token)).toBeNull();
+  }
+  await expectLive(candidates[8]!.token, fixture.own.token);
+});
+
+test("bounded header: oversized header containing live tokens revokes nothing", async () => {
+  await expectOk(await post(`orca_session=${fixture.own.token}; padding=${"a".repeat(16_384)}; orca_session=${fixture.otherUser.token}`));
+  await expectLive(fixture.own.token, fixture.sameUser.token, fixture.otherUser.token);
+});
+
+test("bounded token: oversized JWT-shaped candidate cannot hide a later live session", async () => {
+  await expectOk(await post(`orca_session=${"a".repeat(4097)}.b.c; orca_session=${fixture.own.token}`));
+  expect(await getSessionFromToken(fixture.db, fixture.own.token)).toBeNull();
+  await expectLive(fixture.sameUser.token, fixture.otherUser.token);
 });
