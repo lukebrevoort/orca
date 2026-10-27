@@ -186,13 +186,13 @@ type OAuthAuthorizationStartResult = "started" | "provider_unavailable" | "faile
 type OAuthProviderAvailabilityState =
   | { status: "loading" | "error"; providers: null }
   | { status: "ready"; providers: Record<OAuthProvider, AuthProviderAvailability> };
-type OAuthReturnErrorReason = "provider_error" | "compose_not_granted" | "account_mismatch" | "upgrade_account_missing" | "connect_account_missing" | "account_persistence_failed" | "missing_code" | "invalid_state" | "missing_state" | "token_exchange_failed" | "userinfo_failed" | "account_identity_missing" | "oauth_not_configured";
+type OAuthReturnErrorReason = "account_exists" | "provider_error" | "compose_not_granted" | "account_mismatch" | "upgrade_account_missing" | "connect_account_missing" | "account_persistence_failed" | "missing_code" | "invalid_state" | "missing_state" | "token_exchange_failed" | "userinfo_failed" | "account_identity_missing" | "oauth_not_configured";
 type OAuthReturnStatus =
   | { provider: OAuthProvider; kind: "success"; email: string | null; intent: string | null }
   | { provider: OAuthProvider; kind: "error"; reason: OAuthReturnErrorReason | null; intent: string | null }
   | null;
 
-const oauthReturnErrorReasons = new Set<OAuthReturnErrorReason>(["provider_error", "compose_not_granted", "account_mismatch", "upgrade_account_missing", "connect_account_missing", "account_persistence_failed", "missing_code", "invalid_state", "missing_state", "token_exchange_failed", "userinfo_failed", "account_identity_missing", "oauth_not_configured"]);
+const oauthReturnErrorReasons = new Set<OAuthReturnErrorReason>(["account_exists", "provider_error", "compose_not_granted", "account_mismatch", "upgrade_account_missing", "connect_account_missing", "account_persistence_failed", "missing_code", "invalid_state", "missing_state", "token_exchange_failed", "userinfo_failed", "account_identity_missing", "oauth_not_configured"]);
 
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 500;
@@ -4317,7 +4317,7 @@ function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
 
   return (
     <div className="oauth-notice oauth-notice-error" role="alert">
-      <strong>{providerDisplayName(status.provider)} returned an error</strong>
+      <strong>{status.reason === "account_exists" ? "Sign-in not completed" : `${providerDisplayName(status.provider)} returned an error`}</strong>
       <span>{oauthErrorMessage(status.reason, false, status.provider)}</span>
     </div>
   );
@@ -4327,6 +4327,7 @@ function oauthErrorMessage(reason: string | null, preserveReading: boolean, prov
   const providerName = providerDisplayName(provider);
   const suffix = preserveReading ? " Your read-only inbox still works." : " Nothing in Orca or your mail account changed.";
   switch (reason) {
+    case "account_exists": return "An Orca account already exists for that email address. Sign in with the account or provider you used when you first set up Orca. Nothing in Orca or your mail account changed.";
     case "provider_error": return `${providerName} permission was not granted.${suffix}`;
     case "compose_not_granted": return `Google did not grant Gmail draft and send access.${suffix}`;
     case "account_mismatch": return `Choose the same ${providerName} account that is already connected to Orca.${suffix}`;
@@ -7255,6 +7256,10 @@ export function readOAuthReturnStatus(): OAuthReturnStatus {
       email: sanitizeOAuthEmail(params.get("email")),
       intent: params.get("intent"),
     };
+  }
+
+  if (status === "account_exists") {
+    return { provider, kind: "error", reason: "account_exists", intent: null };
   }
 
   if (status === "error") {

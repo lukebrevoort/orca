@@ -88,6 +88,16 @@ for (const provider of ["gmail", "outlook"] as const) {
         test(`${path} rejects transplanted callbacks (${email}) before exchange and preserves the victim`, async () => {
           const f = await fixture(provider, email);
           const before = f.snapshot();
+          const existingUserSnapshot = () => {
+            const { db, sqlite } = f.dbFactory();
+            try {
+              return {
+                user: db.select().from(users).where(eq(users.email, email)).get(),
+                accounts: db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, f.attacker.userId)).all(),
+              };
+            } finally { sqlite.close(); }
+          };
+          const collisionBefore = email === "attacker@example.com" && path === "login" ? existingUserSnapshot() : null;
           const authorization = await f.start(path);
           const response = await f.callback(authorization.state, f.cookie(f.victim.token));
           expect(response.status).toBe(400);
@@ -95,7 +105,12 @@ for (const provider of ["gmail", "outlook"] as const) {
           expect(f.calls).toHaveLength(0);
           expect(f.snapshot()).toEqual(before);
           // A failed foreign callback cannot consume the initiator's transaction.
-          expect((await f.callback(authorization.state, authorization.cookie)).headers.get("location")).toContain("status=success");
+          const expectedStatus = collisionBefore ? "account_exists" : "success";
+          expect((await f.callback(authorization.state, authorization.cookie)).headers.get("location")).toContain(`status=${expectedStatus}`);
+          if (collisionBefore) {
+            expect(existingUserSnapshot()).toEqual(collisionBefore);
+            expect(f.snapshot()).toEqual(before);
+          }
         });
       }
     }
