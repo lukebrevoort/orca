@@ -19,30 +19,35 @@ export function completeMailOAuthLogin(db: ReturnType<typeof createDatabaseClien
     )).get();
     if (!pendingAccount) return { ok: false as const };
 
-    const existingUser = tx.select({ id: users.id }).from(users).where(eq(users.email, input.providerEmail)).get();
-    if (existingUser && existingUser.id !== input.userId) {
-      const existingAccount = tx.select().from(oauthAccounts).where(and(
-        eq(oauthAccounts.userId, existingUser.id), eq(oauthAccounts.provider, input.provider),
-        eq(oauthAccounts.providerId, input.providerAccountId),
-      )).get();
-      if (existingAccount) {
-        // Preserve account identity and cached workspace/mail while rotating its grant.
-        tx.update(oauthAccounts).set({
-          providerEmail: pendingAccount.providerEmail,
-          profileImageUrl: pendingAccount.profileImageUrl ?? existingAccount.profileImageUrl,
-          accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
-          refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
-          tokenExpiry: pendingAccount.tokenExpiry,
-          scope: input.scopeReturned === false ? existingAccount.scope : pendingAccount.scope,
-          updatedAt: new Date(),
-        }).where(eq(oauthAccounts.id, existingAccount.id)).run();
-        tx.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
-      } else {
-        tx.update(oauthAccounts).set({ userId: existingUser.id }).where(eq(oauthAccounts.id, pendingAccount.id)).run();
-      }
-      tx.update(users).set({ authenticatedAt: new Date(), onboardingCompletedAt: new Date() }).where(eq(users.id, existingUser.id)).run();
+    const existingAccount = tx.query.oauthAccounts.findFirst({
+      where: (account, { and, eq, ne }) => and(
+        eq(account.provider, input.provider),
+        eq(account.providerId, input.providerAccountId),
+        ne(account.userId, input.userId),
+      ),
+    }).sync();
+    if (existingAccount) {
+      const ownerId = existingAccount.userId;
+      // Preserve account identity and cached workspace/mail while rotating its grant.
+      tx.update(oauthAccounts).set({
+        providerEmail: pendingAccount.providerEmail,
+        profileImageUrl: pendingAccount.profileImageUrl ?? existingAccount.profileImageUrl,
+        accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
+        refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
+        tokenExpiry: pendingAccount.tokenExpiry,
+        scope: input.scopeReturned === false ? existingAccount.scope : pendingAccount.scope,
+        updatedAt: new Date(),
+      }).where(eq(oauthAccounts.id, existingAccount.id)).run();
+      tx.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
+      tx.update(users).set({ authenticatedAt: new Date(), onboardingCompletedAt: new Date() }).where(eq(users.id, ownerId)).run();
       tx.delete(users).where(pendingWhere).run();
-      return { ok: true as const, returningUserId: existingUser.id };
+      return { ok: true as const, returningUserId: ownerId };
+    }
+    const emailOwner = tx.select({ id: users.id }).from(users).where(eq(users.email, input.providerEmail)).get();
+    if (emailOwner && emailOwner.id !== input.userId) {
+      tx.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
+      tx.delete(users).where(pendingWhere).run();
+      return { ok: false as const, reason: "account_exists" as const };
     }
     tx.update(users).set({
       email: input.providerEmail, authenticatedAt: new Date(),

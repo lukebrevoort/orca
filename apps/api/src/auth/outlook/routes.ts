@@ -81,6 +81,15 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
           userId: current.userId, sessionId: current.sessionId, pendingEmail: result.pendingEmail, provider: "outlook",
           ...result.account,
         });
+        if (!completion.ok && completion.reason === "account_exists") {
+          c.header("Set-Cookie", buildSessionCookie("", new Date(0), getSessionCookieOptions()));
+          if (result.redirectUrl) {
+            const url = new URL(result.redirectUrl);
+            url.searchParams.set("status", "account_exists");
+            return c.redirect(url.toString(), 302);
+          }
+          return c.json({ ok: false, error: "account_exists" }, 409);
+        }
         if (!completion.ok) return c.json({ ok: false, error: "invalid_state", message: "The pending login is no longer available. Try again from Orca." }, 400);
         if (completion.returningUserId) {
           const session = await createSession(db, completion.returningUserId);

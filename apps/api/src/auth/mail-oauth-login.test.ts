@@ -1,5 +1,5 @@
 // Target repo path: apps/api/src/auth/mail-oauth-login.test.ts
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,6 +9,12 @@ import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, sessions, users } from "../db/schema.ts";
 import { createSession } from "./session-store.ts";
 import { completeMailOAuthLogin } from "./mail-oauth-login.ts";
+
+import { createMobileSession } from "./mobile/store.ts";
+import { mobileSessions } from "./mobile/schema.ts";
+
+const clients: ReturnType<typeof createDatabaseClient>[] = [];
+afterEach(() => { while (clients.length) clients.pop()!.sqlite.close(); });
 
 const env = { ...process.env };
 let dir = "";
@@ -21,7 +27,9 @@ afterAll(() => { process.env = env; rmSync(dir, { recursive: true, force: true }
 
 let n = 0;
 function freshDb() {
-  const { db } = createDatabaseClient(join(dir, `db-${++n}.sqlite`));
+  const client = createDatabaseClient(join(dir, `db-${++n}.sqlite`));
+  clients.push(client);
+  const { db } = client;
   migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
   db.insert(users).values({ id: "existing", email: "a@example.test", authenticatedAt: new Date() }).run();
   db.insert(oauthAccounts).values({ id: "existing_gmail", userId: "existing", provider: "gmail", providerEmail: "a@example.test", providerId: "google-A", scope: "", accessTokenEncrypted: "enc" }).run();
@@ -79,5 +87,33 @@ describe("completeMailOAuthLogin identity binding", () => {
       expect(db.select().from(users).where(eq(users.id, input.userId)).get()?.email).toBe(email);
     });
   }
+
+  test("identity match ignores an email belonging to another user", async () => {
+    const db = freshDb();
+    db.insert(users).values({ id: "other", email: "other@example.test" }).run();
+    const input = await startLogin(db, "gmail", "google-A", "other@example.test");
+    expect(completeMailOAuthLogin(db, input)).toEqual({ ok: true, returningUserId: "existing" });
+    expect(db.select().from(users).where(eq(users.id, "existing")).get()?.email).toBe("a@example.test");
+    expect(db.select().from(users).where(eq(users.id, "other")).get()?.email).toBe("other@example.test");
+  });
+
+  test("mobile pending login refusal removes both mobile and browser sessions", async () => {
+    const db = freshDb();
+    const input = await startLogin(db, "outlook", "ms-mobile", "a@example.test");
+    const mobile = createMobileSession(db, input.userId);
+    expect(completeMailOAuthLogin(db, { ...input, sessionId: mobile.sessionId })).toEqual({ ok: false, reason: "account_exists" });
+    expect(db.select().from(users).where(eq(users.id, input.userId)).get()).toBeUndefined();
+    expect(db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, input.userId)).all()).toEqual([]);
+    expect(db.select().from(sessions).where(eq(sessions.userId, input.userId)).all()).toEqual([]);
+    expect(db.select().from(mobileSessions).where(eq(mobileSessions.userId, input.userId)).all()).toEqual([]);
+  });
+
+  test("stale session retains its reasonless failure", async () => {
+    const db = freshDb();
+    const input = await startLogin(db, "outlook", "ms-stale", "a@example.test");
+    db.delete(sessions).where(eq(sessions.id, input.sessionId)).run();
+    expect(completeMailOAuthLogin(db, input)).toEqual({ ok: false });
+    expect(db.select().from(users).where(eq(users.id, input.userId)).get()).toBeTruthy();
+  });
 
 });

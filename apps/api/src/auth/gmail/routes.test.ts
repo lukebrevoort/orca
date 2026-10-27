@@ -670,3 +670,71 @@ async function seedReadOnlyAccount(store: InMemoryOAuthAccountStore) {
     expiresAt: null,
   });
 }
+
+
+describe("Login email collision response", () => {
+  for (const destination of ["/onboarding", "/mobile-auth?request=synthetic-request", null]) {
+    test(`refuses an unrelated identity and clears its cookie for ${destination}`, async () => {
+      const previousSecret = process.env.SESSION_SECRET;
+      const previousKey = process.env.TOKEN_ENCRYPTION_KEY;
+      process.env.SESSION_SECRET = "synthetic-session-secret-0123456789abcdef";
+      process.env.TOKEN_ENCRYPTION_KEY = config.tokenEncryptionKey;
+      const dir = mkdtempSync(join(tmpdir(), "orca-login-collision-"));
+      const dbFactory = () => createDatabaseClient(join(dir, "test.sqlite"));
+      const email = '\"><script>@example.test';
+      const seed = dbFactory();
+      migrate(seed.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
+      seed.db.insert(users).values({ id: "existing", email, authenticatedAt: new Date() }).run();
+      seed.db.insert(oauthAccounts).values({
+        id: "existing-account", userId: "existing", provider: "gmail", providerId: "existing-id",
+        providerEmail: email, accessTokenEncrypted: "existing-token", scope: "",
+      }).run();
+      seed.sqlite.close();
+      try {
+        const app = createGmailAuthApp({
+          config: { ...config, successRedirectUrl: null }, dbFactory,
+          fetch: async (input) => {
+            if (String(input).includes("/token")) return Response.json({ access_token: "synthetic-token", scope: config.scopes.join(" ") });
+            if (String(input).endsWith("/photo/$value")) return new Response(null, { status: 404 });
+            return Response.json({ id: "other-id", email, mail: email });
+          },
+        });
+        const start = await app.request(destination === null ? "/login" : "/login?returnTo=" + encodeURIComponent(config.webOrigin + destination));
+        if (destination === null) {
+          const { mailOAuthTransactions } = await import("../../db/schema.ts");
+          const client = dbFactory();
+          try { client.db.update(mailOAuthTransactions).set({ returnTo: null }).run(); }
+          finally { client.sqlite.close(); }
+        }
+        const { state } = await start.json() as { state: string };
+        const cookie = start.headers.get("set-cookie")!.split(";", 1)[0]!;
+        const response = await app.request("/callback?code=synthetic-code&state=" + encodeURIComponent(state), { headers: { cookie }, redirect: "manual" });
+        const body = await response.text();
+        if (destination === null) {
+          expect(response.status).toBe(409);
+          expect(JSON.parse(body)).toEqual({ ok: false, error: "account_exists" });
+        } else {
+          expect(response.status).toBe(302);
+          const location = new URL(response.headers.get("location")!);
+          expect(location.pathname).toBe(new URL(config.webOrigin + destination).pathname);
+          expect(location.searchParams.get("status")).toBe("account_exists");
+        }
+        expect(response.headers.get("set-cookie")).toContain("Expires=Thu, 01 Jan 1970");
+        expect(response.headers.get("set-cookie")).toMatch(/^[^=]+=;/);
+        expect(body).not.toContain(email);
+        expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+        const check = dbFactory();
+        try {
+          expect(check.db.select().from(users).all().map((u) => u.id)).toEqual(["existing"]);
+          expect(check.db.select().from(oauthAccounts).all().map((a) => a.id)).toEqual(["existing-account"]);
+        } finally { check.sqlite.close(); }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+        if (previousSecret === undefined) delete process.env.SESSION_SECRET;
+        else process.env.SESSION_SECRET = previousSecret;
+        if (previousKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+        else process.env.TOKEN_ENCRYPTION_KEY = previousKey;
+      }
+    });
+  }
+});
