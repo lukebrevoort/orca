@@ -4,6 +4,10 @@ import type { Database } from "bun:sqlite";
 import { decryptToken, encryptToken } from "../auth/token-crypto.ts";
 import { resolveNotificationSpaceSelection } from "./catalog.ts";
 
+export const maxDevicesPerUser = 10;
+
+export class DeviceLimitError extends Error {}
+
 export type ApnsEnvironment = "sandbox" | "production";
 export type NotificationSelection = { inbox: boolean; spaceIds: string[] };
 
@@ -57,6 +61,11 @@ export async function registerDevice(sqlite: Database, input: {
     const spaces = resolveNotificationSpaceSelection(sqlite, input.userId, input.notificationSelection.spaceIds);
     const current = sqlite.query(`SELECT ${deviceProjection} FROM mobile_push_devices WHERE user_id = ? AND installation_id = ?`)
       .get(input.userId, input.installationId) as StoredDeviceRow | null;
+    if (!current) {
+      const { count } = sqlite.query("SELECT COUNT(*) AS count FROM mobile_push_devices WHERE user_id = ?")
+        .get(input.userId) as { count: number };
+      if (count >= maxDevicesPerUser) throw new DeviceLimitError("Device limit reached. Remove an unused device and try again.");
+    }
     const currentSpaceIds = current ? listDeviceSpaceIds(sqlite, input.userId, input.installationId) : [];
     const nextSpaceIds = spaces.map((space) => space.id).sort();
     const selectionChanged = current
