@@ -61,11 +61,6 @@ export async function registerDevice(sqlite: Database, input: {
     const spaces = resolveNotificationSpaceSelection(sqlite, input.userId, input.notificationSelection.spaceIds);
     const current = sqlite.query(`SELECT ${deviceProjection} FROM mobile_push_devices WHERE user_id = ? AND installation_id = ?`)
       .get(input.userId, input.installationId) as StoredDeviceRow | null;
-    if (!current) {
-      const { count } = sqlite.query("SELECT COUNT(*) AS count FROM mobile_push_devices WHERE user_id = ?")
-        .get(input.userId) as { count: number };
-      if (count >= maxDevicesPerUser) throw new DeviceLimitError("Device limit reached. Remove an unused device and try again.");
-    }
     const currentSpaceIds = current ? listDeviceSpaceIds(sqlite, input.userId, input.installationId) : [];
     const nextSpaceIds = spaces.map((space) => space.id).sort();
     const selectionChanged = current
@@ -84,6 +79,11 @@ export async function registerDevice(sqlite: Database, input: {
     // switching atomically removes the prior registration and cascades its outbox.
     sqlite.query("DELETE FROM mobile_push_devices WHERE token_hash=? AND environment=? AND NOT (user_id=? AND installation_id=?)")
       .run(tokenHash, input.environment, input.userId, input.installationId);
+    if (!current) {
+      const { count } = sqlite.query("SELECT COUNT(*) AS count FROM mobile_push_devices WHERE user_id = ?")
+        .get(input.userId) as { count: number };
+      if (count >= maxDevicesPerUser) throw new DeviceLimitError("Device limit reached. Remove an unused device and try again.");
+    }
     sqlite.query(`INSERT INTO mobile_push_devices (
       user_id, installation_id, session_id, token_encrypted, token_hash, environment, notification_mode, notify_inbox, generation, eligible_after_at,
       watermark_sequence, watermark_created_at, watermark_email_id, registered_at, last_seen_at, updated_at, disabled_at, disabled_reason
