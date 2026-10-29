@@ -120,8 +120,7 @@ function submit(value: typeof report, time = epoch, onReport?: () => void) {
     body: JSON.stringify(value),
   }), { allowedOrigin: origin, now: () => new Date(time), onReport });
 }
-// Cast only bridges the optional clock argument until the implementation lands.
-const lookup = getFeedbackReceipt as (id: string, now?: Date) => ReturnType<typeof getFeedbackReceipt>;
+const lookup = getFeedbackReceipt;
 
 describe("feedback bounds", () => {
   for (const [field, cap] of [["id", 128], ["title", 200], ["projectId", 128], ["route", 2048]] as const) {
@@ -218,7 +217,7 @@ describe("feedback bounds", () => {
       const response = await handleFeedbackRequest(new Request("http://localhost/feedback", { method: "POST", body }), { allowedOrigin: origin });
       assert.equal(response.status, status);
     }
-    for (const [method, status] of [["OPTIONS", 204], ["GET", 405]]) {
+    for (const [method, status] of [["OPTIONS", 204], ["GET", 405]] as const) {
       const response = await handleFeedbackRequest(new Request("http://localhost/feedback", { method, headers: { origin } }), { allowedOrigin: origin });
       assert.equal(response.status, status);
       assert.equal(response.headers.get("access-control-allow-origin"), origin);

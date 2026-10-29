@@ -7,6 +7,8 @@ import {
 import { readBoundedRequestBody } from "./request-body.ts";
 
 const MAX_FEEDBACK_BODY_BYTES = 40 * 1024 * 1024;
+const MAX_FEEDBACK_RECEIPTS = 500;
+const FEEDBACK_RECEIPT_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type FeedbackReceipt = {
   id: string;
@@ -23,8 +25,13 @@ export type FeedbackDelivery = Pick<
 
 const feedbackReceipts = new Map<string, FeedbackReceipt>();
 
-export function getFeedbackReceipt(id: string) {
-  return feedbackReceipts.get(id);
+export function getFeedbackReceipt(id: string, now = new Date()) {
+  const receipt = feedbackReceipts.get(id);
+  if (receipt && now.getTime() - Date.parse(receipt.receivedAt) >= FEEDBACK_RECEIPT_TTL_MS) {
+    feedbackReceipts.delete(id);
+    return undefined;
+  }
+  return receipt;
 }
 
 export async function handleFeedbackRequest(
@@ -70,6 +77,17 @@ export async function handleFeedbackRequest(
       return Response.json({ error: validation.error }, { status: 400, headers });
     }
 
+    const validatedReport = validation.report;
+    if (
+      validatedReport.id.length > 128 ||
+      validatedReport.title.length > 200 ||
+      validatedReport.project.id.length > 128 ||
+      validatedReport.context.route.length > 2048
+    ) {
+      return Response.json({ error: "Feedback field is too long." }, { status: 400, headers });
+    }
+
+    const now = (options.now ?? (() => new Date()))();
     const report: FeedbackReport = {
       ...validation.report,
       ...(validation.report.state === undefined
@@ -81,9 +99,15 @@ export async function handleFeedbackRequest(
       projectId: report.project.id,
       title: report.title,
       route: report.context.route,
-      receivedAt: (options.now ?? (() => new Date()))().toISOString(),
+      receivedAt: now.toISOString(),
     };
+    for (const id of feedbackReceipts.keys()) getFeedbackReceipt(id, now);
+    feedbackReceipts.delete(receipt.id);
     feedbackReceipts.set(receipt.id, receipt);
+    while (feedbackReceipts.size > MAX_FEEDBACK_RECEIPTS) {
+      const oldestId = feedbackReceipts.keys().next().value;
+      if (oldestId !== undefined) feedbackReceipts.delete(oldestId);
+    }
     const delivery = await options.onReport?.(report);
     console.info("Feedback received", receipt);
     return Response.json({
