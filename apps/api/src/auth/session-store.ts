@@ -2,23 +2,19 @@ import { and, eq, gt, inArray, isNull, like, lt, ne, notExists } from "drizzle-o
 
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, sessions, users } from "../db/schema.ts";
+import { isPendingUser, pendingUserEmailPattern } from "./pending-user.ts";
+export { isPendingUser, pendingUserEmailPattern } from "./pending-user.ts";
+
 import { defaultSessionTtlMs } from "./config.ts";
 import { createSessionToken, verifySessionToken } from "./jwt.ts";
 import { decryptToken, encryptToken } from "./token-crypto.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
 
-export const pendingUserEmailPattern = "pending-%@orca.invalid";
 export const pendingSessionTtlMs = 1000 * 60 * 15;
 export const stalePendingPurgeBatchSize = 100;
 export const pendingSessionMaxAgeMs = 1000 * 60 * 60;
 const stalePendingUserAgeMs = 1000 * 60 * 60;
-
-export function isPendingUser(db: DatabaseClient, userId: string) {
-  return Boolean(db.select({ id: users.id }).from(users).where(
-    and(eq(users.id, userId), like(users.email, pendingUserEmailPattern), isNull(users.authenticatedAt)),
-  ).get());
-}
 
 export type SessionRecord = {
   sessionId: string;
