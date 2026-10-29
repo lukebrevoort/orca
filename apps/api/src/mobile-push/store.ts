@@ -4,6 +4,10 @@ import type { Database } from "bun:sqlite";
 import { decryptToken, encryptToken } from "../auth/token-crypto.ts";
 import { resolveNotificationSpaceSelection } from "./catalog.ts";
 
+export const maxDevicesPerUser = 10;
+
+export class DeviceLimitError extends Error {}
+
 export type ApnsEnvironment = "sandbox" | "production";
 export type NotificationSelection = { inbox: boolean; spaceIds: string[] };
 
@@ -75,6 +79,11 @@ export async function registerDevice(sqlite: Database, input: {
     // switching atomically removes the prior registration and cascades its outbox.
     sqlite.query("DELETE FROM mobile_push_devices WHERE token_hash=? AND environment=? AND NOT (user_id=? AND installation_id=?)")
       .run(tokenHash, input.environment, input.userId, input.installationId);
+    if (!current) {
+      const { count } = sqlite.query("SELECT COUNT(*) AS count FROM mobile_push_devices WHERE user_id = ?")
+        .get(input.userId) as { count: number };
+      if (count >= maxDevicesPerUser) throw new DeviceLimitError("Device limit reached. Remove an unused device and try again.");
+    }
     sqlite.query(`INSERT INTO mobile_push_devices (
       user_id, installation_id, session_id, token_encrypted, token_hash, environment, notification_mode, notify_inbox, generation, eligible_after_at,
       watermark_sequence, watermark_created_at, watermark_email_id, registered_at, last_seen_at, updated_at, disabled_at, disabled_reason

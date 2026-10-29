@@ -6,7 +6,7 @@ import { requireAuth, type AuthVariables } from "../auth/middleware.ts";
 import { createDatabaseClient } from "../db/client.ts";
 import { listNotificationSpaces, NotificationSelectionError } from "./catalog.ts";
 import { loadMobilePushConfig, type MobilePushConfig } from "./config.ts";
-import { listDevices, registerDevice, unregisterDevice } from "./store.ts";
+import { DeviceLimitError, listDevices, registerDevice, unregisterDevice } from "./store.ts";
 
 const installationIdSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9._:-]+$/);
 const notificationSelectionSchema = z.object({
@@ -71,6 +71,7 @@ export function registerMobilePushRoutes(app: MobilePushApp, options: {
       const device = listDevices(client.sqlite, c.get("auth").userId, installation.data)[0];
       return c.json({ device: publicDevice(device!), push: { configured: config.configured, disabledReason: config.disabledReason } });
     } catch (error) {
+      if (error instanceof DeviceLimitError) return c.json({ error: { code: "device_limit", message: "Device limit reached. Remove an unused device and try again." } }, 409);
       if (error instanceof NotificationSelectionError) return c.json({ error: { code: "invalid_notification_space", message: error.message } }, 400);
       throw error;
     } finally { client.sqlite.close(); }
