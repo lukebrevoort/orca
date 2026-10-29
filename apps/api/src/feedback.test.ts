@@ -217,3 +217,60 @@ describe("feedback bounds", () => {
     assert.equal(disabled.status, 404);
   });
 });
+
+describe("feedback string types", () => {
+  const objectWithLength = { length: 1, pad: "x".repeat(5 * 1024 * 1024) };
+  const cases: [string, unknown][] = [
+    ...[objectWithLength, 42, ["id"], null, true].map(value => ["id", value] as [string, unknown]),
+    ...[objectWithLength, 42, ["project"]].map(value => ["project.id", value] as [string, unknown]),
+    ...[objectWithLength, 42, ["route"], undefined].map(value => ["context.route", value] as [string, unknown]),
+    ...[{}, 42, ["title"], { length: 1 }].map(value => ["title", value] as [string, unknown]),
+    ...[undefined, null, [], "context"].map(value => ["context", value] as [string, unknown]),
+    ["project.name", 42], ["description", 42], ["description", []],
+  ];
+  for (const [index, [field, value]] of cases.entries()) {
+    test(`rejects invalid ${field} variant ${index} without retention or delivery`, async () => {
+      const input = structuredClone(report) as Record<string, unknown>;
+      input.id = `type-confusion-${index}`;
+      const [parent, child] = field.split(".");
+      if (child) (input[parent!] as Record<string, unknown>)[child] = value;
+      else input[parent!] = value;
+      let calls = 0;
+      const response = await submit(input as typeof report, epoch, () => { calls++; });
+      const body = await response.text();
+      assert.equal(response.status, 400);
+      assert.equal(body, JSON.stringify({ error: "Feedback field is invalid." }));
+      for (const forbidden of ["pad", "is not a function", "undefined", "TypeError", objectWithLength.pad]) {
+        assert.equal(body.includes(forbidden), false);
+      }
+      assert.equal(response.headers.get("access-control-allow-origin"), origin);
+      assert.equal(response.headers.get("vary"), "origin");
+      assert.equal(response.headers.get("content-type"), "application/json; charset=utf-8");
+      assert.equal(calls, 0);
+      assert.equal(lookup(input.id as string, new Date(epoch)), undefined);
+      if (field === "id") assert.equal(lookup(value as string, new Date(epoch)), undefined);
+    });
+  }
+  const legacy: [string, unknown, string][] = [
+    ["schema", { ...report, schemaVersion: 2 }, "Unsupported feedback schema version."],
+    ["empty title", { ...report, title: "" }, "Title and description are required."],
+    ["missing description", { ...report, description: undefined }, "Title and description are required."],
+    ["null description", { ...report, description: null }, "Title and description are required."],
+    ["empty project id", { ...report, project: { id: "", name: "P" } }, "Project id and name are required."],
+    ["missing project name", { ...report, project: { id: "p" } }, "Project id and name are required."],
+    ["null project", { ...report, project: null }, "Project id and name are required."],
+    ["array project", { ...report, project: [] }, "Project id and name are required."],
+    ["attachments", { ...report, attachments: {} }, "Attachments must be an array."],
+    ["elements", { ...report, elements: {} }, "Elements must be an array."],
+    ["null body", null, "Feedback body must be an object."],
+    ["string body", "body", "Feedback body must be an object."],
+    ["array body", [], "Unsupported feedback schema version."],
+  ];
+  for (const [name, input, error] of legacy) {
+    test(`preserves existing validator message for ${name}`, async () => {
+      const response = await submit(input as typeof report);
+      assert.equal(response.status, 400);
+      assert.equal(await response.text(), JSON.stringify({ error }));
+    });
+  }
+});
