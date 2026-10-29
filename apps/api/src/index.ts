@@ -2090,7 +2090,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.patch("/v1/drafts/:id", requireAuth({ dbFactory }), bodyLimit({ maxSize: 36 * 1024 * 1024 }), validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      return sqlite.transaction(() => {
       const requestedAccountId = c.req.query("accountId");
       const account = requestedAccountId !== undefined
         ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
@@ -2115,15 +2114,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         attachments: update.attachments ?? current.attachments,
       });
       const storage = draftStorage(content);
+      const mirrorsToProvider = capabilitiesFor(account).draft;
+      const updatedAt = now();
+      const result = sqlite.transaction(() => {
+        const latest = getMessageDraft(db, account.id, draft.id);
+        if (!latest || latest.revision !== update.revision || latest.deliveryStatus !== "draft" || latest.sendIdempotencyKey !== null) return undefined;
       const quotaError = checkDraftQuota(sqlite, { accountId: account.id, newBytes: draftStorageBytes(storage), replacingDraftId: draft.id });
       if (quotaError) return c.json(draftQuotaResponse(quotaError), 413);
-      const mirrorsToProvider = capabilitiesFor(account).draft;
-      const result = db.update(messageDrafts).set({
+      return db.update(messageDrafts).set({
         ...storage,
         revision: sql`${messageDrafts.revision} + 1`,
         providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
         providerSyncError: null,
-        updatedAt: now(),
+        updatedAt,
       })
         .where(and(
           eq(messageDrafts.id, draft.id),
@@ -2133,6 +2136,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           isNull(messageDrafts.sendIdempotencyKey),
         ))
         .returning({ id: messageDrafts.id }).get();
+      }).immediate();
+      if (result instanceof Response) return result;
       if (!result) {
         const latest = getMessageDraft(db, account.id, draft.id);
         if (!latest) return noDraft(c);
@@ -2141,7 +2146,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       }
       if (mirrorsToProvider) scheduleDraftMirror(draft.id, update.revision + 1);
       return jsonWithSchema(c, messageDraftSchema, toMessageDraft(getMessageDraft(db, account.id, draft.id)!));
-      }).immediate();
     } finally { sqlite.close(); }
   });
 
