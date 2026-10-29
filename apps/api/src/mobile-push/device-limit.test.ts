@@ -100,3 +100,37 @@ test("capped account switching preserves the other user's device, spaces and pen
     assert.deepEqual(snapshot(client.sqlite), before);
   } finally { client.sqlite.close(); }
 });
+
+test("reinstall at the cap replaces the same token and cascades the old registration", async () => {
+  const { client, request } = await fixture();
+  try {
+    seedMessage(client.sqlite, { id: "reinstall-message", accountId: "owner-account", createdAt: 1 });
+    client.sqlite.query(`INSERT INTO mobile_push_outbox
+      (id,user_id,installation_id,device_generation,message_id,account_id,thread_id,environment,payload_json,apns_id,state,available_at,created_at,updated_at)
+      VALUES ('reinstall-pending','owner','phone-1',1,'reinstall-message','owner-account','thread-reinstall-message','sandbox','{}','apns','pending',1,1,1)`).run();
+    assert.equal((await request("reinstalled", { token: token(1) })).status, 200);
+    assert.equal(store.getDevice(client.sqlite, "owner", "phone-1"), null);
+    assert.equal(store.getDevice(client.sqlite, "owner", "reinstalled")!.tokenHash, store.hashDeviceToken(token(1)));
+    assert.equal(store.listDevices(client.sqlite, "owner").length, 10);
+    assert.deepEqual(client.sqlite.query("SELECT * FROM mobile_push_outbox WHERE installation_id='phone-1'").all(), []);
+    assert.deepEqual(client.sqlite.query("SELECT * FROM mobile_push_device_spaces WHERE installation_id='phone-1'").all(), []);
+  } finally { client.sqlite.close(); }
+});
+
+test("store permits reinstall at the cap but different environments and new tokens leave the database unchanged", async () => {
+  const { client, selection, request } = await fixture();
+  try {
+    const before = snapshot(client.sqlite);
+    assert.equal((await request("different-environment", { token: token(1), environment: "production" })).status, 409);
+    assert.deepEqual(snapshot(client.sqlite), before);
+    assert.equal((await request("new-token", { token: token(200) })).status, 409);
+    assert.deepEqual(snapshot(client.sqlite), before);
+    const device = await store.registerDevice(client.sqlite, {
+      userId: "owner", installationId: "store-reinstalled", sessionId: "session-owner", token: token(10), environment: "sandbox",
+      notificationSelection: selection, now: new Date(3_000),
+    });
+    assert.equal(device.installationId, "store-reinstalled");
+    assert.equal(store.getDevice(client.sqlite, "owner", "phone-10"), null);
+    assert.equal(store.listDevices(client.sqlite, "owner").length, 10);
+  } finally { client.sqlite.close(); }
+});
