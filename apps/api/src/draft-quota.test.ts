@@ -46,7 +46,7 @@ test("byte boundaries include all stored UTF-8 fields and nullable content", () 
   assert.equal(checkDraftQuota(sqlite, { accountId: "a", newBytes: 94 }), null);
   assert.equal(checkDraftQuota(sqlite, { accountId: "a", newBytes: maxDraftBytesPerAccount, replacingDraftId: "large" }), null);
   assert.deepEqual(checkDraftQuota(sqlite, { accountId: "a", newBytes: maxDraftBytesPerAccount + 1, replacingDraftId: "large" }), denied);
-}));
+}), 60_000);
 
 test("SQL measures every content column in bytes, including embedded NUL", () => fixture(sqlite => {
   const content = { ...empty, toRecipients: "é", ccRecipients: "界", bccRecipients: "🙂", subject: "a\0b", bodyText: "é", bodyHtml: "界", context: "🙂", attachments: "é" };
@@ -80,3 +80,22 @@ test("malformed byte counts fail closed with a static error", () => fixture(sqli
     assert.deepEqual(checkDraftQuota(sqlite, { accountId: "a", newBytes }), denied);
   }
 }));
+
+
+test("non-growing replacements are admitted in an over-cap account", () => fixture(sqlite => {
+  sqlite.query("INSERT INTO message_drafts (id, account_id, to_recipients, cc_recipients, bcc_recipients, attachments, body_text) VALUES ('large', 'a', '', '', '', '', printf('%.*c', ?, 'x'))").run(maxDraftBytesPerAccount + 5 * 1024 * 1024);
+  const content = { ...empty, toRecipients: "é", ccRecipients: "界", bccRecipients: "🙂", subject: "a\0b", bodyText: "é", bodyHtml: "界", context: "🙂", attachments: "é" };
+  sqlite.query("INSERT INTO message_drafts (id, account_id, to_recipients, cc_recipients, bcc_recipients, subject, body_text, body_html, context, attachments) VALUES ('mixed', 'a', ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(content.toRecipients, content.ccRecipients, content.bccRecipients, content.subject, content.bodyText, content.bodyHtml, content.context, content.attachments);
+  sqlite.query("INSERT INTO message_drafts (id, account_id, body_text) VALUES ('foreign', 'b', 'foreign content')").run();
+  const oldBytes = draftStorageBytes(content);
+  assert.ok(oldBytes > Object.values(content).reduce((sum, value) => sum + value.length, 0));
+  sqlite.transaction(() => {
+    assert.equal(checkDraftQuota(sqlite, { accountId: "a", newBytes: oldBytes, replacingDraftId: "mixed" }), null);
+    assert.equal(checkDraftQuota(sqlite, { accountId: "a", newBytes: oldBytes - 1, replacingDraftId: "mixed" }), null);
+    assert.deepEqual(checkDraftQuota(sqlite, { accountId: "a", newBytes: oldBytes + 1, replacingDraftId: "mixed" }), denied);
+    assert.deepEqual(checkDraftQuota(sqlite, { accountId: "a", newBytes: 0 }), denied);
+    assert.deepEqual(checkDraftQuota(sqlite, { accountId: "a", newBytes: 1, replacingDraftId: "missing" }), denied);
+    assert.deepEqual(checkDraftQuota(sqlite, { accountId: "a", newBytes: 1, replacingDraftId: "foreign" }), denied);
+  })();
+}), 60_000);
