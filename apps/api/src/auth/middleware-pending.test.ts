@@ -108,14 +108,22 @@ for (const { email, onboardingCompletedAt } of [
   });
 }
 
-test("uppercase placeholder follows the shared isPendingUser predicate", async () => {
+test("uppercase pending placeholder is rejected (case-insensitive match)", async () => {
   const session = await seed("PENDING-x@ORCA.INVALID");
   expect(typeof isPendingSessionUser).toBe("function");
   const client = dbFactory();
-  let pending: boolean;
-  try { pending = isPendingSessionUser(client.db, session.userId); }
+  try { expect(isPendingSessionUser(client.db, session.userId)).toBe(true); }
   finally { client.sqlite.close(); }
-  expect((await app().request("/protected", { headers: headers(session.token) })).status).toBe(pending ? 401 : 200);
+  const response = await app().request("/protected", { headers: headers(session.token) });
+  expect(response.status).toBe(401);
+  expect(response.headers.get("set-cookie")).toBeNull();
+});
+
+test("mixed-case pending placeholder is rejected (case-insensitive match)", async () => {
+  const session = await seed("Pending-Mixed@Orca.Invalid");
+  const response = await app().request("/protected", { headers: headers(session.token) });
+  expect(response.status).toBe(401);
+  expect(response.headers.get("set-cookie")).toBeNull();
 });
 
 test("promotion accepts the pre-existing session and renews it for thirty days", async () => {
