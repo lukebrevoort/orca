@@ -126,7 +126,7 @@ for (const method of ["POST", "PATCH"] as const) {
       assert.equal(exact.status, method === "POST" ? 201 : 200);
       assert.equal((sqlite.query(`SELECT SUM(${storedByteExpression}) AS bytes FROM message_drafts`).get() as { bytes: number }).bytes, cap);
       if (method === "POST") sqlite.query("DELETE FROM message_drafts WHERE id = ?").run((await exact.json()).id);
-      else sqlite.query("UPDATE message_drafts SET subject = 'x', body_text = NULL, body_html = NULL WHERE id = ?").run(editableId);
+      else sqlite.query("UPDATE message_drafts SET subject = 'x', body_text = '', body_html = NULL WHERE id = ?").run(editableId);
       sqlite.query("UPDATE message_drafts SET body_text = zeroblob(?) WHERE id = 'ballast'").run(cap - bytes - ballastOverhead + 1);
       const before = sqlite.query(`SELECT ${storedByteExpression} AS bytes, revision FROM message_drafts ORDER BY id`).all();
       const over = await request(method, method === "PATCH" ? `/${editableId}` : "", method === "PATCH" ? { ...body, revision: 1 } : body);
