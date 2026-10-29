@@ -1,3 +1,4 @@
+import { checkDraftQuota, draftStorageBytes, draftQuotaResponse } from "./draft-quota.ts";
 import { registerMessageImageRoutes } from "./mail/images/routes.ts";
 import { hasLoadableImages } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
@@ -2038,6 +2039,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/drafts", requireAuth({ dbFactory }), bodyLimit({ maxSize: 36 * 1024 * 1024 }), validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
+      return sqlite.transaction(() => {
       const requestedAccountId = c.req.query("accountId");
       const account = requestedAccountId !== undefined
         ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
@@ -2054,15 +2056,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           },
         }, 400);
       }
+      const storage = draftStorage(input);
+      const quotaError = checkDraftQuota(sqlite, { accountId: account.id, newBytes: draftStorageBytes(storage) });
+      if (quotaError) return c.json(draftQuotaResponse(quotaError), 413);
       const mirrorsToProvider = capabilitiesFor(account).draft;
       db.insert(messageDrafts).values({
         id,
         accountId: account.id,
-        ...draftStorage(input),
+        ...storage,
         providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
       }).run();
       if (mirrorsToProvider) scheduleDraftMirror(id, 0);
       return c.json(messageDraftSchema.parse(toMessageDraft(getMessageDraft(db, account.id, id)!)), 201);
+      }).immediate();
     } finally { sqlite.close(); }
   });
 
@@ -2084,6 +2090,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.patch("/v1/drafts/:id", requireAuth({ dbFactory }), bodyLimit({ maxSize: 36 * 1024 * 1024 }), validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
+      return sqlite.transaction(() => {
       const requestedAccountId = c.req.query("accountId");
       const account = requestedAccountId !== undefined
         ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
@@ -2096,6 +2103,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (draft.deliveryStatus !== "draft") {
         return c.json({ error: { code: "ambiguous_delivery", message: "A draft that has begun delivery cannot be edited", retryable: false } }, 409);
       }
+      if (draft.sendIdempotencyKey !== null) return deliveryStarted(c);
       const current = toMessageDraft(draft);
       const content = createMessageDraftSchema.parse({
         to: update.to ?? current.to,
@@ -2106,9 +2114,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         context: update.context ?? current.context,
         attachments: update.attachments ?? current.attachments,
       });
+      const storage = draftStorage(content);
+      const quotaError = checkDraftQuota(sqlite, { accountId: account.id, newBytes: draftStorageBytes(storage), replacingDraftId: draft.id });
+      if (quotaError) return c.json(draftQuotaResponse(quotaError), 413);
       const mirrorsToProvider = capabilitiesFor(account).draft;
       const result = db.update(messageDrafts).set({
-        ...draftStorage(content),
+        ...storage,
         revision: sql`${messageDrafts.revision} + 1`,
         providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
         providerSyncError: null,
@@ -2130,6 +2141,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       }
       if (mirrorsToProvider) scheduleDraftMirror(draft.id, update.revision + 1);
       return jsonWithSchema(c, messageDraftSchema, toMessageDraft(getMessageDraft(db, account.id, draft.id)!));
+      }).immediate();
     } finally { sqlite.close(); }
   });
 
