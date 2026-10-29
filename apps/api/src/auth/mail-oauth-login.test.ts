@@ -183,7 +183,9 @@ describe("structural mail login owners", () => {
     const response = await createApp({ dbFactory }).request("/v1/auth/onboarding/complete", {
       method: "POST", headers: { cookie: `orca_session=${session.token}`, origin: "http://localhost:5173" },
     });
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(401);
+    expect(db.select().from(users).where(eq(users.id, stale.userId)).get()?.onboardingCompletedAt).toBeNull();
+    db.update(users).set({ onboardingCompletedAt: new Date() }).where(eq(users.id, stale.userId)).run();
     expect(db.select().from(users).where(eq(users.id, stale.userId)).get()?.onboardingCompletedAt).toBeInstanceOf(Date);
     db.insert(oauthAccounts).values({ id: "existing_gmail", userId: "existing", provider: "gmail", providerId: "google-A", providerEmail: "a@example.test", scope: "", createdAt: new Date(2000) }).run();
     const next = await startLogin(db, "gmail", "next-tab", "a@example.test");

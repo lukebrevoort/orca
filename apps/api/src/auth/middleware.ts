@@ -1,7 +1,10 @@
+import { and, eq, isNull, like } from "drizzle-orm";
 import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { createDatabaseClient } from "../db/client.ts";
+import { users } from "../db/schema.ts";
+import { PENDING_EMAIL_LIKE } from "./mail-oauth-transactions.ts";
 import { sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
 import { buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
 import { getMobileSessionFromToken } from "./mobile/store.ts";
@@ -21,7 +24,19 @@ type RequireAuthOptions = {
   dbFactory?: typeof createDatabaseClient;
   renewSession?: typeof renewSession;
   allowMobileBearer?: boolean;
+  allowPending?: boolean;
 };
+
+export function isPendingSessionUser(
+  db: ReturnType<typeof createDatabaseClient>["db"],
+  userId: string,
+): boolean {
+  return db.select({ id: users.id }).from(users).where(and(
+    eq(users.id, userId),
+    like(users.email, PENDING_EMAIL_LIKE),
+    isNull(users.authenticatedAt),
+  )).get() !== undefined;
+}
 
 export function shouldRenewSession(expiresAt: Date, now = Date.now()) {
   return expiresAt.getTime() - now <= sessionRenewalWindowMs;
@@ -76,6 +91,10 @@ export function requireAuth(
       }
 
       if (!auth) {
+        return unauthorized(c);
+      }
+
+      if (!options.allowPending && isPendingSessionUser(db, auth.userId)) {
         return unauthorized(c);
       }
 

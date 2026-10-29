@@ -41,7 +41,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     fetch: options.fetch,
   });
   const authMiddleware = options.authMiddleware ?? requireAuth({ dbFactory });
-  const pendingAuthMiddleware = options.authMiddleware ?? requireAuth({ dbFactory });
+  const pendingAuthMiddleware = options.authMiddleware ?? requireAuth({ dbFactory, allowPending: true });
 
   const app = new Hono<{ Variables: AuthVariables }>();
 

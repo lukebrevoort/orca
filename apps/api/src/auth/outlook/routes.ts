@@ -20,6 +20,7 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
   const store = options.store ?? new DatabaseOAuthAccountStore(dbFactory, "outlook");
   const service = createOutlookOAuthService({ config, store, transactions: options.transactions ?? new DatabaseMailOAuthTransactionStore(dbFactory), fetch: options.fetch });
   const auth = options.authMiddleware ?? requireAuth({ dbFactory });
+  const pendingAuth = options.authMiddleware ?? requireAuth({ dbFactory, allowPending: true });
   const app = new Hono<{ Variables: AuthVariables }>();
 
   app.get("/status", (c) => {
@@ -65,7 +66,7 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
       return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
     } finally { sqlite.close(); }
   });
-  app.get("/callback", auth, async (c) => {
+  app.get("/callback", pendingAuth, async (c) => {
     const current = c.get("auth");
     let result;
     try {
