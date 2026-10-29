@@ -1,10 +1,9 @@
-import { and, eq, isNull, like } from "drizzle-orm";
 import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { users } from "../db/schema.ts";
-import { PENDING_EMAIL_LIKE } from "./mail-oauth-transactions.ts";
+import { isPendingUser } from "./pending-user.ts";
+export { isPendingUser as isPendingSessionUser } from "./pending-user.ts";
 import { sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
 import { buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
 import { getMobileSessionFromToken } from "./mobile/store.ts";
@@ -26,17 +25,6 @@ type RequireAuthOptions = {
   allowMobileBearer?: boolean;
   allowPending?: boolean;
 };
-
-export function isPendingSessionUser(
-  db: ReturnType<typeof createDatabaseClient>["db"],
-  userId: string,
-): boolean {
-  return db.select({ id: users.id }).from(users).where(and(
-    eq(users.id, userId),
-    like(users.email, PENDING_EMAIL_LIKE),
-    isNull(users.authenticatedAt),
-  )).get() !== undefined;
-}
 
 export function shouldRenewSession(expiresAt: Date, now = Date.now()) {
   return expiresAt.getTime() - now <= sessionRenewalWindowMs;
@@ -94,8 +82,12 @@ export function requireAuth(
         return unauthorized(c);
       }
 
-      if (!options.allowPending && isPendingSessionUser(db, auth.userId)) {
-        return unauthorized(c);
+      const pending = isPendingUser(db, auth.userId);
+      if (pending) {
+        if (!options.allowPending) return unauthorized(c);
+        c.set("auth", auth);
+        await next();
+        return;
       }
 
       if (shouldRenewSession(auth.expiresAt)) {

@@ -1,12 +1,20 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, like, lt, ne, notExists } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { oauthAccounts, sessions } from "../db/schema.ts";
+import { oauthAccounts, sessions, users } from "../db/schema.ts";
+import { isPendingUser, pendingUserEmailPattern } from "./pending-user.ts";
+export { isPendingUser, pendingUserEmailPattern } from "./pending-user.ts";
+
 import { defaultSessionTtlMs } from "./config.ts";
 import { createSessionToken, verifySessionToken } from "./jwt.ts";
 import { decryptToken, encryptToken } from "./token-crypto.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
+
+export const pendingSessionTtlMs = 1000 * 60 * 15;
+export const stalePendingPurgeBatchSize = 100;
+export const pendingSessionMaxAgeMs = 1000 * 60 * 60;
+const stalePendingUserAgeMs = 1000 * 60 * 60;
 
 export type SessionRecord = {
   sessionId: string;
@@ -17,9 +25,26 @@ export type SessionRecord = {
 export async function createSession(
   db: DatabaseClient,
   userId: string,
-  ttlMs = defaultSessionTtlMs,
+  ttlMs?: number,
 ) {
-  const expiresAt = new Date(Date.now() + ttlMs);
+  const now = Date.now();
+  const pending = isPendingUser(db, userId);
+  if (pending) {
+    try {
+      db.delete(users).where(inArray(users.id,
+        db.select({ id: users.id }).from(users).where(and(
+          like(users.email, pendingUserEmailPattern),
+          isNull(users.authenticatedAt),
+          lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
+          ne(users.id, userId),
+          notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
+        )).limit(stalePendingPurgeBatchSize),
+      )).run();
+    } catch {
+      // Opportunistic cleanup must never prevent login.
+    }
+  }
+  const expiresAt = new Date(now + (ttlMs ?? (pending ? pendingSessionTtlMs : defaultSessionTtlMs)));
   const sessionId = crypto.randomUUID();
 
   db.insert(sessions).values({
@@ -45,10 +70,23 @@ export async function createSession(
 export async function renewSession(
   db: DatabaseClient,
   session: Pick<SessionRecord, "sessionId" | "userId">,
-  ttlMs = defaultSessionTtlMs,
+  ttlMs?: number,
 ) {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + ttlMs);
+  const pending = ttlMs === undefined && isPendingUser(db, session.userId);
+  const effectiveTtlMs = ttlMs ?? (pending
+    ? pendingSessionTtlMs
+    : defaultSessionTtlMs);
+  let expiresAt = new Date(now.getTime() + effectiveTtlMs);
+  if (pending) {
+    const record = db.select({ createdAt: sessions.createdAt }).from(sessions).where(and(
+      eq(sessions.id, session.sessionId),
+      eq(sessions.userId, session.userId),
+    )).get();
+    if (!record) return null;
+    expiresAt = new Date(Math.min(expiresAt.getTime(), record.createdAt.getTime() + pendingSessionMaxAgeMs));
+    if (expiresAt.getTime() <= now.getTime()) return null;
+  }
 
   const updated = db
     .update(sessions)

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -204,3 +204,62 @@ for (const provider of ["gmail", "outlook"] as const) {
     if (provider === "gmail") expect((await server.request("/upgrade", { headers: { cookie } })).status).toBe(401);
   });
 }
+
+for (const status of [200, 400] as const) {
+  test(`pending callback status ${status} never renews or sets a cookie`, async () => {
+    const session = await seed(undefined, null, 300_000);
+    const before = expiry(session.sessionId);
+    const server = new Hono<{ Variables: AuthVariables }>();
+    server.get("/callback", requireAuth({ dbFactory, allowPending: true }), c => {
+      expect(c.get("auth").userId).toBe(session.userId);
+      return c.json({ reached: true }, status);
+    });
+    const response = await server.request("/callback", { headers: headers(session.token) });
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ reached: true });
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(expiry(session.sessionId)).toBe(before);
+  });
+}
+for (const allowPending of [false, true]) {
+  test(`pending renewal dependency is never called, allowPending=${allowPending}`, async () => {
+    const session = await seed(undefined, null, 300_000);
+    const before = expiry(session.sessionId);
+    const renew = mock(sessionStore.renewSession);
+    const server = new Hono<{ Variables: AuthVariables }>();
+    server.get("/callback", requireAuth({ dbFactory, allowPending, renewSession: renew }), c => c.json({ reached: true }));
+    const response = await server.request("/callback", { headers: headers(session.token) });
+    expect(response.status).toBe(allowPending ? 200 : 401);
+    expect(renew).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(expiry(session.sessionId)).toBe(before);
+  });
+}
+test("non-pending session in renewal window still renews with a cookie", async () => {
+  const session = await seed("owner@example.test", new Date(), 300_000);
+  const before = expiry(session.sessionId);
+  const renew = mock(sessionStore.renewSession);
+  const server = new Hono<{ Variables: AuthVariables }>();
+  server.get("/protected", requireAuth({ dbFactory, allowPending: true, renewSession: renew }), c => c.json({ userId: c.get("auth").userId }));
+  const response = await server.request("/protected", { headers: headers(session.token) });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ userId: session.userId });
+  expect(renew).toHaveBeenCalledTimes(1);
+  expect(response.headers.get("set-cookie")).toContain(sessionCookieName + "=");
+  expect(expiry(session.sessionId)).toBeGreaterThan(before);
+});
+test("pending helper exports agree across pending, authenticated, legacy and uppercase users", async () => {
+  for (const [email, authenticatedAt, expected] of [
+    ["pending-x@orca.invalid", null, true],
+    ["pending-authenticated@orca.invalid", new Date(), false],
+    ["legacy@example.test", null, false],
+    ["PENDING-x@ORCA.INVALID", null, true],
+  ] as const) {
+    const session = await seed(email, authenticatedAt);
+    const client = dbFactory();
+    try {
+      expect(isPendingSessionUser(client.db, session.userId)).toBe(expected);
+      expect(sessionStore.isPendingUser(client.db, session.userId)).toBe(expected);
+    } finally { client.sqlite.close(); }
+  }
+});
