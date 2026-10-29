@@ -143,10 +143,19 @@ function normalizeInlineStyles(elements: HTMLElement[]): void {
   });
 }
 
+const maxRouteLength = 2048;
+
+function truncateRoute(route: string): string {
+  if (route.length <= maxRouteLength) return route;
+  const truncated = route.slice(0, maxRouteLength);
+  // Avoid splitting a UTF-16 surrogate pair at the cap.
+  return /[\uD800-\uDBFF]$/.test(truncated) ? truncated.slice(0, -1) : truncated;
+}
+
 export function collectRuntimeContext(): FeedbackRuntimeContext {
   return {
     url: window.location.href,
-    route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    route: truncateRoute(`${window.location.pathname}${window.location.search}${window.location.hash}`),
     title: document.title,
     userAgent: navigator.userAgent,
     viewport: {
