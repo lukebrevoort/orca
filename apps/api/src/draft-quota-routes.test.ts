@@ -35,7 +35,7 @@ test("draft routes admit count boundaries, isolate accounts, and preserve reject
   });
 });
 
-test("draft byte quota rejects growth but permits shrinking an over-cap account", async () => {
+test("draft byte quota rejects growth but permits shrinking an over-cap account", { timeout: 60_000 }, async () => {
   await fixture(async ({ sqlite, request }) => {
     // SQLite builds the large synthetic value without a giant request or JS allocation.
     const ballastBytes = cap - 1024;
@@ -68,6 +68,74 @@ test("draft byte quota rejects growth but permits shrinking an over-cap account"
     assert.equal((await request("POST", "", { body: largeBody }, "second")).status, 201);
   });
 });
+
+const storedByteExpression = ["to_recipients", "cc_recipients", "bcc_recipients", "subject", "body_text", "body_html", "context", "attachments"]
+  .map(column => `COALESCE(length(CAST(${column} AS BLOB)), 0)`).join(" + ");
+
+test("truly over-cap accounts admit shrinking and identical edits but reject growth and creates", { timeout: 60_000 }, async () => {
+  await fixture(async ({ sqlite, request }) => {
+    const created = await request("POST", "", { body: { text: "original", html: null } });
+    assert.equal(created.status, 201);
+    const { id } = await created.json();
+    sqlite.query("INSERT INTO message_drafts (id, account_id, body_text) VALUES ('ballast', 'account', zeroblob(?))").run(cap + 4096);
+    for (const [revision, text] of [[0, "short"], [1, "short"]] as const) {
+      assert.equal((await request("PATCH", `/${id}`, { revision, body: { text, html: null } })).status, 200);
+    }
+    const columns = sqlite.query("PRAGMA table_info(message_drafts)").all() as { name: string }[];
+    const projection = columns.map(({ name }) => name === "body_text"
+      ? "CASE WHEN id = 'ballast' THEN '<synthetic ballast>' ELSE body_text END AS body_text"
+      : `"${name}"`).join(", ");
+    const rows = () => sqlite.query(`SELECT ${projection} FROM message_drafts ORDER BY id`).all();
+    const before = rows();
+    for (const [method, suffix, body] of [
+      ["PATCH", `/${id}`, { revision: 2, body: { text: "short!", html: null } }],
+      ["POST", "", { subject: "new" }],
+    ] as const) {
+      const response = await request(method, suffix, body);
+      assert.equal(response.status, 413);
+      assert.deepEqual(await response.json(), quotaBody);
+      assert.deepEqual(rows(), before);
+    }
+    const stale = await request("PATCH", `/${id}`, { revision: 0, subject: "stale" });
+    assert.equal(stale.status, 409);
+    assert.equal((await stale.json()).error.code, "stale_draft");
+    assert.deepEqual(rows(), before);
+    assert.equal((sqlite.query("SELECT body_text = zeroblob(?) AS intact FROM message_drafts WHERE id = 'ballast'").get(cap + 4096) as { intact: number }).intact, 1);
+  });
+});
+
+for (const method of ["POST", "PATCH"] as const) {
+  test(`${method} draft bytes admit the exact cap and reject one byte over`, { timeout: 60_000 }, async () => {
+    await fixture(async ({ sqlite, request }) => {
+      const body = { subject: "boundary 🐋", body: { text: "probe", html: "<b>safe</b><script>hostile()</script>" } };
+      const probe = await request("POST", "", body);
+      assert.equal(probe.status, 201);
+      const { id: probeId } = await probe.json();
+      const { bytes } = sqlite.query(`SELECT ${storedByteExpression} AS bytes FROM message_drafts WHERE id = ?`).get(probeId) as { bytes: number };
+      sqlite.query("DELETE FROM message_drafts WHERE id = ?").run(probeId);
+      sqlite.query("INSERT INTO message_drafts (id, account_id, body_text) VALUES ('ballast', 'account', zeroblob(?))").run(cap - bytes);
+      const ballastOverhead = (sqlite.query(`SELECT ${storedByteExpression} AS bytes FROM message_drafts WHERE id = 'ballast'`).get() as { bytes: number }).bytes - (cap - bytes);
+      sqlite.query("UPDATE message_drafts SET body_text = zeroblob(?) WHERE id = 'ballast'").run(cap - bytes - ballastOverhead);
+      let editableId = "";
+      if (method === "PATCH") {
+        const editable = await request("POST", "", { subject: "x" });
+        assert.equal(editable.status, 201);
+        editableId = (await editable.json()).id;
+      }
+      const exact = await request(method, method === "PATCH" ? `/${editableId}` : "", method === "PATCH" ? { ...body, revision: 0 } : body);
+      assert.equal(exact.status, method === "POST" ? 201 : 200);
+      assert.equal((sqlite.query(`SELECT SUM(${storedByteExpression}) AS bytes FROM message_drafts`).get() as { bytes: number }).bytes, cap);
+      if (method === "POST") sqlite.query("DELETE FROM message_drafts WHERE id = ?").run((await exact.json()).id);
+      else sqlite.query("UPDATE message_drafts SET subject = 'x', body_text = NULL, body_html = NULL WHERE id = ?").run(editableId);
+      sqlite.query("UPDATE message_drafts SET body_text = zeroblob(?) WHERE id = 'ballast'").run(cap - bytes - ballastOverhead + 1);
+      const before = sqlite.query(`SELECT ${storedByteExpression} AS bytes, revision FROM message_drafts ORDER BY id`).all();
+      const over = await request(method, method === "PATCH" ? `/${editableId}` : "", method === "PATCH" ? { ...body, revision: 1 } : body);
+      assert.equal(over.status, 413);
+      assert.deepEqual(await over.json(), quotaBody);
+      assert.deepEqual(sqlite.query(`SELECT ${storedByteExpression} AS bytes, revision FROM message_drafts ORDER BY id`).all(), before);
+    });
+  });
+}
 
 async function fixture(run: (context: {
   sqlite: ReturnType<typeof createDatabaseClient>["sqlite"];
