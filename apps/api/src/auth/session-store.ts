@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, like, lt, ne, notExists } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, like, lt, ne, notExists } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, sessions, users } from "../db/schema.ts";
@@ -10,6 +10,8 @@ type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
 
 export const pendingUserEmailPattern = "pending-%@orca.invalid";
 export const pendingSessionTtlMs = 1000 * 60 * 15;
+export const stalePendingPurgeBatchSize = 100;
+export const pendingSessionMaxAgeMs = 1000 * 60 * 60;
 const stalePendingUserAgeMs = 1000 * 60 * 60;
 
 export function isPendingUser(db: DatabaseClient, userId: string) {
@@ -32,14 +34,20 @@ export async function createSession(
   const now = Date.now();
   const pending = isPendingUser(db, userId);
   if (pending) {
-    db.delete(users).where(and(
-      like(users.email, pendingUserEmailPattern),
-      isNull(users.authenticatedAt),
-      isNull(users.onboardingCompletedAt),
-      lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
-      ne(users.id, userId),
-      notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
-    )).run();
+    try {
+      db.delete(users).where(inArray(users.id,
+        db.select({ id: users.id }).from(users).where(and(
+          like(users.email, pendingUserEmailPattern),
+          isNull(users.authenticatedAt),
+          isNull(users.onboardingCompletedAt),
+          lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
+          ne(users.id, userId),
+          notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
+        )).limit(stalePendingPurgeBatchSize),
+      )).run();
+    } catch {
+      // Opportunistic cleanup must never prevent login.
+    }
   }
   const expiresAt = new Date(now + (ttlMs ?? (pending ? pendingSessionTtlMs : defaultSessionTtlMs)));
   const sessionId = crypto.randomUUID();
@@ -70,10 +78,20 @@ export async function renewSession(
   ttlMs?: number,
 ) {
   const now = new Date();
-  const effectiveTtlMs = ttlMs ?? (isPendingUser(db, session.userId)
+  const pending = ttlMs === undefined && isPendingUser(db, session.userId);
+  const effectiveTtlMs = ttlMs ?? (pending
     ? pendingSessionTtlMs
     : defaultSessionTtlMs);
-  const expiresAt = new Date(now.getTime() + effectiveTtlMs);
+  let expiresAt = new Date(now.getTime() + effectiveTtlMs);
+  if (pending) {
+    const record = db.select({ createdAt: sessions.createdAt }).from(sessions).where(and(
+      eq(sessions.id, session.sessionId),
+      eq(sessions.userId, session.userId),
+    )).get();
+    if (!record) return null;
+    expiresAt = new Date(Math.min(expiresAt.getTime(), record.createdAt.getTime() + pendingSessionMaxAgeMs));
+    if (expiresAt.getTime() <= now.getTime()) return null;
+  }
 
   const updated = db
     .update(sessions)
