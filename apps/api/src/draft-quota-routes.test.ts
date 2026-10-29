@@ -86,7 +86,7 @@ async function fixture(run: (context: {
     db.insert(oauthAccounts).values(["account", "second"].map(id => ({ id, userId: "owner", provider: "gmail" as const, providerId: id, providerEmail: `${id}@example.com` }))).run();
     const session = await createSession(db, "owner");
     const app = createApp({ dbFactory: () => createDatabaseClient(path) });
-    await run({ sqlite, request: (method, suffix, body, account = "account") => app.request(`/v1/drafts${suffix}?accountId=${account}`, {
+    await run({ sqlite, request: async (method, suffix, body, account = "account") => app.request(`/v1/drafts${suffix}?accountId=${account}`, {
       method, headers: { cookie: `orca_session=${session.token}`, "content-type": "application/json" }, body: JSON.stringify(body),
     }) });
   } finally {
