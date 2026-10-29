@@ -48,6 +48,35 @@ describe("pending login sessions", () => {
     seed("real", "real@example.test");
     await expectTtl(() => createSession(client.db, "real"), defaultSessionTtlMs);
   });
+  for (const email of [
+    "pending-real@orca.invalid",
+    "pending-%@orca.invalid",
+    "pending-_@orca.invalid",
+    "pending-%_雪@orca.invalid",
+  ]) {
+    test(`authenticated user is never short-lived on creation (${email})`, async () => {
+      seed("real", email, { authenticatedAt: new Date() });
+      await expectTtl(() => createSession(client.db, "real"), defaultSessionTtlMs);
+    });
+    test(`authenticated user is never short-lived on renewal (${email})`, async () => {
+      seed("real", email, { authenticatedAt: new Date() });
+      const session = await createSession(client.db, "real", hour);
+      await expectTtl(() => renewSession(client.db, session), defaultSessionTtlMs);
+    });
+    test(`authenticated placeholder-shaped user does not trigger stale purge (${email})`, async () => {
+      seed("stale", undefined, { createdAt: new Date(Date.now() - 2 * hour) });
+      seed("real", email, { authenticatedAt: new Date() });
+      const stale = client.db.select().from(users).where(eq(users.id, "stale")).get();
+      await createSession(client.db, "real");
+      expect(client.db.select().from(users).where(eq(users.id, "stale")).get()).toEqual(stale);
+    });
+    test(`unauthenticated placeholder stays short-lived even after onboarding (${email})`, async () => {
+      seed("pending", email, { authenticatedAt: null, onboardingCompletedAt: new Date() });
+      await expectTtl(() => createSession(client.db, "pending"), shortTtl);
+      const session = await createSession(client.db, "pending", hour);
+      await expectTtl(() => renewSession(client.db, session), shortTtl);
+    });
+  }
   test("explicit TTL is honored for creation and renewal", async () => {
     seed("pending");
     await expectTtl(() => createSession(client.db, "pending", 1234567), 1234567);
