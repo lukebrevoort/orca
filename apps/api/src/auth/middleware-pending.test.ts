@@ -57,6 +57,34 @@ function expiry(sessionId: string) {
   finally { client.sqlite.close(); }
 }
 
+for (const pendingFirst of [false, true]) {
+  test(`pending predicate is scoped to the session user: pending seeded ${pendingFirst ? "first" : "last"}`, async () => {
+    const client = dbFactory();
+    try {
+      const rows = [
+        { id: crypto.randomUUID(), email: "authenticated@example.test", authenticatedAt: new Date() },
+        { id: crypto.randomUUID(), email: "legacy@example.test", authenticatedAt: null },
+      ];
+      const pending = { id: crypto.randomUUID(), email: "pending-unrelated@orca.invalid", authenticatedAt: null };
+      const ordered = pendingFirst ? [pending, ...rows] : [...rows, pending];
+      const seeded = [];
+      for (const row of ordered) {
+        client.db.insert(users).values(row).run();
+        seeded.push({ row, session: await sessionStore.createSession(client.db, row.id, 3600_000) });
+      }
+
+      const server = app();
+      for (const { row, session } of seeded) {
+        const isPending = row.id === pending.id;
+        expect(isPendingSessionUser(client.db, row.id)).toBe(isPending);
+        const response = await server.request("/protected", { headers: headers(session.token) });
+        expect(response.status).toBe(isPending ? 401 : 200);
+        if (!isPending) expect(await response.json()).toEqual({ userId: row.id });
+      }
+    } finally { client.sqlite.close(); }
+  });
+}
+
 test("pending session cannot use ordinary routes: identical invalid-session response without renewal", async () => {
   const session = await seed();
   const before = expiry(session.sessionId);
