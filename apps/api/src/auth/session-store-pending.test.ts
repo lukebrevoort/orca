@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { resolve } from "node:path";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -6,6 +6,8 @@ import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, sessions, users } from "../db/schema.ts";
 import { defaultSessionTtlMs } from "./config.ts";
 import { createSession, renewSession } from "./session-store.ts";
+import * as sessionStore from "./session-store.ts";
+import { verifySessionToken } from "./jwt.ts";
 
 const shortTtl = 1000 * 60 * 15;
 const hour = 1000 * 60 * 60;
@@ -40,6 +42,76 @@ async function expectTtl(action: () => Promise<{ expiresAt: Date } | null>, ttl:
 }
 
 describe("pending login sessions", () => {
+  test("purge is bounded", async () => {
+    const batch = sessionStore.stalePendingPurgeBatchSize;
+    const old = new Date(Date.now() - 2 * hour);
+    // Keep the baseline runnable before the exported limit exists.
+    const count = (batch ?? 100) + 25;
+    for (let i = 0; i < count; i++) seed(`stale-${i}`, undefined, { createdAt: old });
+    seed("current", undefined, { createdAt: old });
+    seed("owner", undefined, { createdAt: old });
+    seed("authenticated", undefined, { createdAt: old, authenticatedAt: old });
+    seed("onboarded", undefined, { createdAt: old, onboardingCompletedAt: old });
+    seed("young", undefined, { createdAt: new Date(Date.now() - hour / 2) });
+    seed("real", "real@example.test", { createdAt: old });
+    client.db.insert(oauthAccounts).values({ id: "oauth", userId: "owner", provider: "gmail", providerId: "owner", providerEmail: "owner@example.test" }).run();
+    const protectedRows = client.db.select().from(users).all().filter(row => !row.id.startsWith("stale-"));
+    await createSession(client.db, "current");
+    expect(client.db.select().from(users).all().filter(row => row.id.startsWith("stale-"))).toHaveLength(25);
+    expect(batch).toBe(100);
+    expect(client.db.select().from(users).all().filter(row => !row.id.startsWith("stale-"))).toEqual(protectedRows);
+    await createSession(client.db, "current");
+    expect(client.db.select().from(users).all()).toEqual(protectedRows);
+  });
+  test("purge failure never fails login", async () => {
+    seed("current");
+    const db = new Proxy(client.db, {
+      get(target, property, receiver) {
+        if (property === "delete") return () => { throw new Error("synthetic purge failure"); };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const output: unknown[][] = [];
+    const spies = (["log", "warn", "error", "info", "debug"] as const).map(method =>
+      spyOn(console, method).mockImplementation((...args: unknown[]) => { output.push(args); }));
+    try {
+      const before = Date.now();
+      const session = await createSession(db, "current");
+      expect(session.expiresAt.getTime()).toBeGreaterThanOrEqual(before + shortTtl);
+      expect(session.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + shortTtl);
+      expect(client.db.select().from(sessions).where(eq(sessions.id, session.sessionId)).get()?.expiresAt).toEqual(session.expiresAt);
+      expect((await verifySessionToken(session.token)).sessionId).toBe(session.sessionId);
+      expect(output).toEqual([]);
+    } finally {
+      spies.forEach(spy => spy.mockRestore());
+    }
+  });
+  test("pending session cannot renew past cap", async () => {
+    seed("pending");
+    const session = await createSession(client.db, "pending", hour);
+    const createdAt = new Date(Date.now() - 50 * 60 * 1000);
+    client.db.update(sessions).set({ createdAt }).where(eq(sessions.id, session.sessionId)).run();
+    const renewed = await renewSession(client.db, session);
+    expect(renewed?.expiresAt.getTime()).toBe(createdAt.getTime() + hour);
+    expect(sessionStore.pendingSessionMaxAgeMs).toBe(hour);
+    expect(client.db.select().from(sessions).where(eq(sessions.id, session.sessionId)).get()?.expiresAt).toEqual(renewed!.expiresAt);
+    client.db.update(sessions).set({ createdAt: new Date(Date.now() - 61 * 60 * 1000) }).where(eq(sessions.id, session.sessionId)).run();
+    const before = client.db.select().from(sessions).where(eq(sessions.id, session.sessionId)).get();
+    expect(await renewSession(client.db, session)).toBeNull();
+    expect(client.db.select().from(sessions).where(eq(sessions.id, session.sessionId)).get()).toEqual(before);
+  });
+  test("pending renewal cap preserves fresh, authenticated and explicit TTL sessions", async () => {
+    seed("pending");
+    const fresh = await createSession(client.db, "pending");
+    await expectTtl(() => renewSession(client.db, fresh), shortTtl);
+    seed("authenticated", undefined, { authenticatedAt: new Date() });
+    const real = await createSession(client.db, "authenticated");
+    client.db.update(sessions).set({ createdAt: new Date(Date.now() - 2 * hour) }).where(eq(sessions.id, real.sessionId)).run();
+    await expectTtl(() => renewSession(client.db, real), defaultSessionTtlMs);
+    await expectTtl(() => createSession(client.db, "pending", 1234567), 1234567);
+    client.db.update(sessions).set({ createdAt: new Date(Date.now() - 2 * hour) }).where(eq(sessions.id, fresh.sessionId)).run();
+    await expectTtl(() => renewSession(client.db, fresh, 2345678), 2345678);
+  });
   test("pending TTL is 15 minutes", async () => {
     seed("pending");
     await expectTtl(() => createSession(client.db, "pending"), shortTtl);
