@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, before, describe, test } from "node:test";
+import { describe, test } from "node:test";
 
 import { getFeedbackReceipt, handleFeedbackRequest } from "./feedback.ts";
 
@@ -28,15 +28,6 @@ const report = {
 };
 
 describe("feedback receipt handler", () => {
-  const RealDate = Date;
-  before(() => {
-    globalThis.Date = class extends RealDate {
-      constructor(value?: string | number | Date) {
-        super(value === undefined ? "2026-08-01T22:01:00.000Z" : value);
-      }
-    } as DateConstructor;
-  });
-  after(() => { globalThis.Date = RealDate; });
   test("accepts same-origin reports, redacts state, and returns a receipt", async () => {
     let receivedState: unknown;
     const response = await handleFeedbackRequest(
@@ -60,7 +51,7 @@ describe("feedback receipt handler", () => {
       },
     });
     assert.deepEqual(receivedState, { token: "[REDACTED]", theme: "dark" });
-    assert.deepEqual(getFeedbackReceipt("feedback-test-1"), {
+    assert.deepEqual(getFeedbackReceipt("feedback-test-1", new Date("2026-08-01T22:02:00.000Z")), {
       id: "feedback-test-1",
       projectId: "orca",
       title: "The button feels quiet",
