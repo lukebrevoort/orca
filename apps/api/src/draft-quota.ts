@@ -56,6 +56,15 @@ export function checkDraftQuota(
       AND (?2 IS NULL OR id != ?2)
   `).get(input.accountId, input.replacingDraftId ?? null)!;
 
+  if (replacing) {
+    const stored = sqlite.query<{ bytes: number }, [string, string]>(`
+      SELECT ${byteExpression} AS bytes
+      FROM message_drafts
+      WHERE account_id = ? AND id = ? AND delivery_status = 'draft'
+    `).get(input.accountId, input.replacingDraftId!);
+    if (stored && input.newBytes <= stored.bytes) return null;
+  }
+
   if ((!replacing && totals.count >= maxDraftsPerAccount)
     || totals.bytes + input.newBytes > maxDraftBytesPerAccount) return exceeded();
   return null;
