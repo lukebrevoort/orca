@@ -85,6 +85,29 @@ for (const email of ["pending-real@orca.invalid", "pending-%@orca.invalid", "pen
   });
 }
 
+for (const { email, onboardingCompletedAt } of [
+  { email: "legacy@example.test", onboardingCompletedAt: null },
+  { email: "legacy@example.test", onboardingCompletedAt: new Date("2026-01-01T00:00:00Z") },
+  { email: "pending-x@orca.invalid.example.test", onboardingCompletedAt: null },
+  { email: "xpending-x@orca.invalid", onboardingCompletedAt: null },
+  { email: "pending@orca.invalid", onboardingCompletedAt: null },
+  { email: "pendingx@orca.invalid", onboardingCompletedAt: null },
+]) {
+  test(`marker-less real user is not pending: ${email}, onboarding ${onboardingCompletedAt ? "complete" : "incomplete"}`, async () => {
+    const session = await seed(email, null);
+    const client = dbFactory();
+    try {
+      client.db.update(users).set({ onboardingCompletedAt }).where(eq(users.id, session.userId)).run();
+      expect(isPendingSessionUser(client.db, session.userId)).toBe(false);
+    } finally { client.sqlite.close(); }
+    const server = new Hono<{ Variables: AuthVariables }>();
+    server.get("/protected", requireAuth({ dbFactory }), (c) => c.json({ userId: c.get("auth").userId }));
+    const response = await server.request("/protected", { headers: headers(session.token) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ userId: session.userId });
+  });
+}
+
 test("uppercase placeholder follows the shared isPendingUser predicate", async () => {
   const session = await seed("PENDING-x@ORCA.INVALID");
   expect(typeof isPendingSessionUser).toBe("function");
