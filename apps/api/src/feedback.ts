@@ -72,7 +72,35 @@ export async function handleFeedbackRequest(
       return Response.json({ error: "Feedback payload is too large." }, { status: 413, headers });
     }
     const body = new TextDecoder().decode(bytes);
-    const validation = validateFeedbackReport(JSON.parse(body));
+    const parsed: unknown = JSON.parse(body);
+    const candidate = parsed as Partial<FeedbackReport> | null;
+    // Preserve early library rejections that are safe without string methods.
+    // Other malformed fields must be rejected before validation can call trim().
+    const hasLegacyRejection =
+      !candidate || typeof candidate !== "object" ||
+      candidate.schemaVersion !== 1 ||
+      !candidate.project?.id || !candidate.project.name ||
+      candidate.title == null ||
+      (typeof candidate.title === "string" && (
+        !candidate.title.trim() || candidate.description == null ||
+        (typeof candidate.description === "string" && !candidate.description.trim())
+      ));
+    const isObject = (value: unknown): value is Record<string, unknown> =>
+      value !== null && typeof value === "object" && !Array.isArray(value);
+    if (!hasLegacyRejection && (
+      !isObject(parsed) ||
+      typeof parsed.id !== "string" ||
+      typeof parsed.title !== "string" ||
+      typeof parsed.description !== "string" ||
+      !isObject(parsed.project) ||
+      typeof parsed.project.id !== "string" ||
+      typeof parsed.project.name !== "string" ||
+      !isObject(parsed.context) ||
+      typeof parsed.context.route !== "string"
+    )) {
+      return Response.json({ error: "Feedback field is invalid." }, { status: 400, headers });
+    }
+    const validation = validateFeedbackReport(parsed);
     if (!validation.ok) {
       return Response.json({ error: validation.error }, { status: 400, headers });
     }
