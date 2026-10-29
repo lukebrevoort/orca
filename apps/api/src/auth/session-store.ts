@@ -14,7 +14,7 @@ const stalePendingUserAgeMs = 1000 * 60 * 60;
 
 export function isPendingUser(db: DatabaseClient, userId: string) {
   return Boolean(db.select({ id: users.id }).from(users).where(
-    and(eq(users.id, userId), like(users.email, pendingUserEmailPattern)),
+    and(eq(users.id, userId), like(users.email, pendingUserEmailPattern), isNull(users.authenticatedAt)),
   ).get());
 }
 
