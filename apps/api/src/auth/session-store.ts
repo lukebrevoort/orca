@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, like, lt, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, like, lt, ne, notExists } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, sessions, users } from "../db/schema.ts";
@@ -38,6 +38,7 @@ export async function createSession(
       isNull(users.onboardingCompletedAt),
       lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
       ne(users.id, userId),
+      notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
     )).run();
   }
   const expiresAt = new Date(now + (ttlMs ?? (pending ? pendingSessionTtlMs : defaultSessionTtlMs)));
