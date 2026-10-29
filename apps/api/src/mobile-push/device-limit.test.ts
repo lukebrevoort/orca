@@ -134,3 +134,49 @@ test("store permits reinstall at the cap but different environments and new toke
     assert.equal(store.listDevices(client.sqlite, "owner").length, 10);
   } finally { client.sqlite.close(); }
 });
+
+test("concurrent processes competing for the last device slot respect the write lock", async () => {
+  const { client } = await fixture();
+  const workers: ReturnType<typeof Bun.spawn>[] = [];
+  try {
+    store.unregisterDevice(client.sqlite, "owner", "phone-10");
+    client.sqlite.exec("BEGIN IMMEDIATE");
+    const readers = await Promise.all(Array.from({ length: 8 }, async (_, n) => {
+      const worker = Bun.spawn([process.execPath, `${import.meta.dir}/device-limit-worker.ts`, client.path, `racing-${n}`, token(300 + n)], {
+        env: { ...process.env }, stdin: "pipe", stdout: "pipe", stderr: "pipe",
+      });
+      workers.push(worker);
+      const reader = worker.stdout.getReader();
+      const first = await reader.read();
+      assert.equal(new TextDecoder().decode(first.value), "ready\n");
+      return { worker, reader };
+    }));
+    for (const { worker } of readers) { worker.stdin.write("go\n"); worker.stdin.end(); }
+    await Promise.all(readers.map(async ({ reader }) => {
+      const entered = await reader.read();
+      assert.equal(new TextDecoder().decode(entered.value), "locking\n");
+    }));
+    client.sqlite.exec("COMMIT");
+    const results = await Promise.all(readers.map(async ({ worker, reader }) => {
+      let output = "";
+      for (;;) {
+        const next = await reader.read();
+        if (next.done) break;
+        output += new TextDecoder().decode(next.value);
+      }
+      const stderr = await new Response(worker.stderr).text();
+      assert.equal(await worker.exited, 0, stderr);
+      assert.equal(stderr, "");
+      assert.ok(!output.includes("err:"), output);
+      return output.trim();
+    }));
+    assert.equal(results.filter((result) => result === "ok").length, 1, JSON.stringify(results));
+    assert.equal(results.filter((result) => result === "limit").length, 7, JSON.stringify(results));
+    assert.equal(store.listDevices(client.sqlite, "owner").length, 10);
+  } finally {
+    if (client.sqlite.inTransaction) client.sqlite.exec("ROLLBACK");
+    for (const worker of workers) worker.kill();
+    await Promise.all(workers.map((worker) => worker.exited));
+    client.sqlite.close();
+  }
+});
