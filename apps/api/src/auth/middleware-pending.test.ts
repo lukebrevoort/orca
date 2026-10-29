@@ -8,7 +8,7 @@ import { Hono } from "hono";
 import { createDatabaseClient } from "../db/client.ts";
 import { sessions, users } from "../db/schema.ts";
 import { defaultSessionTtlMs, sessionCookieName } from "./config.ts";
-import { requireAuth, type AuthVariables } from "./middleware.ts";
+import { isPendingSessionUser, requireAuth, type AuthVariables } from "./middleware.ts";
 import * as sessionStore from "./session-store.ts";
 import { createMobileSession } from "./mobile/store.ts";
 import { createGmailAuthApp } from "./gmail/routes.ts";
@@ -87,13 +87,10 @@ for (const email of ["pending-real@orca.invalid", "pending-%@orca.invalid", "pen
 
 test("uppercase placeholder follows the shared isPendingUser predicate", async () => {
   const session = await seed("PENDING-x@ORCA.INVALID");
-  const exports = sessionStore as typeof sessionStore & {
-    isPendingUser?: (db: ReturnType<typeof dbFactory>["db"], userId: string) => boolean;
-  };
-  expect(typeof exports.isPendingUser).toBe("function");
+  expect(typeof isPendingSessionUser).toBe("function");
   const client = dbFactory();
   let pending: boolean;
-  try { pending = exports.isPendingUser!(client.db, session.userId); }
+  try { pending = isPendingSessionUser(client.db, session.userId); }
   finally { client.sqlite.close(); }
   expect((await app().request("/protected", { headers: headers(session.token) })).status).toBe(pending ? 401 : 200);
 });
