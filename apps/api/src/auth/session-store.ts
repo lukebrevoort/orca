@@ -39,7 +39,6 @@ export async function createSession(
         db.select({ id: users.id }).from(users).where(and(
           like(users.email, pendingUserEmailPattern),
           isNull(users.authenticatedAt),
-          isNull(users.onboardingCompletedAt),
           lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
           ne(users.id, userId),
           notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
