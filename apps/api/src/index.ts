@@ -2039,7 +2039,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/drafts", requireAuth({ dbFactory }), bodyLimit({ maxSize: 36 * 1024 * 1024 }), validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      return sqlite.transaction(() => {
       const requestedAccountId = c.req.query("accountId");
       const account = requestedAccountId !== undefined
         ? getConnectedAccountById(db, c.get("auth").userId, requestedAccountId)
@@ -2057,6 +2056,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }, 400);
       }
       const storage = draftStorage(input);
+      return sqlite.transaction(() => {
       const quotaError = checkDraftQuota(sqlite, { accountId: account.id, newBytes: draftStorageBytes(storage) });
       if (quotaError) return c.json(draftQuotaResponse(quotaError), 413);
       const mirrorsToProvider = capabilitiesFor(account).draft;
