@@ -1,12 +1,22 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, like, lt, ne } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { oauthAccounts, sessions } from "../db/schema.ts";
+import { oauthAccounts, sessions, users } from "../db/schema.ts";
 import { defaultSessionTtlMs } from "./config.ts";
 import { createSessionToken, verifySessionToken } from "./jwt.ts";
 import { decryptToken, encryptToken } from "./token-crypto.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
+
+export const pendingUserEmailPattern = "pending-%@orca.invalid";
+export const pendingSessionTtlMs = 1000 * 60 * 15;
+const stalePendingUserAgeMs = 1000 * 60 * 60;
+
+export function isPendingUser(db: DatabaseClient, userId: string) {
+  return Boolean(db.select({ id: users.id }).from(users).where(
+    and(eq(users.id, userId), like(users.email, pendingUserEmailPattern)),
+  ).get());
+}
 
 export type SessionRecord = {
   sessionId: string;
@@ -17,9 +27,20 @@ export type SessionRecord = {
 export async function createSession(
   db: DatabaseClient,
   userId: string,
-  ttlMs = defaultSessionTtlMs,
+  ttlMs?: number,
 ) {
-  const expiresAt = new Date(Date.now() + ttlMs);
+  const now = Date.now();
+  const pending = isPendingUser(db, userId);
+  if (pending) {
+    db.delete(users).where(and(
+      like(users.email, pendingUserEmailPattern),
+      isNull(users.authenticatedAt),
+      isNull(users.onboardingCompletedAt),
+      lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
+      ne(users.id, userId),
+    )).run();
+  }
+  const expiresAt = new Date(now + (ttlMs ?? (pending ? pendingSessionTtlMs : defaultSessionTtlMs)));
   const sessionId = crypto.randomUUID();
 
   db.insert(sessions).values({
@@ -45,10 +66,13 @@ export async function createSession(
 export async function renewSession(
   db: DatabaseClient,
   session: Pick<SessionRecord, "sessionId" | "userId">,
-  ttlMs = defaultSessionTtlMs,
+  ttlMs?: number,
 ) {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + ttlMs);
+  const effectiveTtlMs = ttlMs ?? (isPendingUser(db, session.userId)
+    ? pendingSessionTtlMs
+    : defaultSessionTtlMs);
+  const expiresAt = new Date(now.getTime() + effectiveTtlMs);
 
   const updated = db
     .update(sessions)
