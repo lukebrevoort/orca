@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { resolve } from "node:path";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -23,6 +23,7 @@ beforeEach(() => {
   migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
 });
 afterEach(() => {
+  setSystemTime();
   client.sqlite.close();
   if (previousKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
   else process.env.TOKEN_ENCRYPTION_KEY = previousKey;
@@ -61,7 +62,55 @@ describe("pending login sessions", () => {
     expect(batch).toBe(100);
     expect(client.db.select().from(users).all().filter(row => !row.id.startsWith("stale-"))).toEqual(protectedRows);
     await createSession(client.db, "current");
+    expect(client.db.select().from(users).all()).toEqual(protectedRows.filter(row => row.id !== "onboarded"));
+  });
+  test("onboarded junk is purged while protected users are kept", async () => {
+    const now = Date.now();
+    const old = new Date(now - 2 * hour);
+    seed("current");
+    seed("onboarded", undefined, { createdAt: old, onboardingCompletedAt: old });
+    seed("owner", undefined, { createdAt: old, onboardingCompletedAt: old });
+    seed("authenticated", undefined, { createdAt: old, authenticatedAt: old });
+    seed("authenticated-onboarded", undefined, { createdAt: old, authenticatedAt: old, onboardingCompletedAt: old });
+    seed("young-onboarded", undefined, { createdAt: new Date(now - hour / 2), onboardingCompletedAt: old });
+    seed("real", "real@example.test", { createdAt: old, onboardingCompletedAt: old });
+    client.db.insert(oauthAccounts).values({ id: "oauth", userId: "owner", provider: "gmail", providerId: "owner", providerEmail: "owner@example.test" }).run();
+    const protectedRows = client.db.select().from(users).all().filter(row => row.id !== "onboarded");
+    await createSession(client.db, "current");
+    expect(client.db.select().from(users).where(eq(users.id, "onboarded")).get()).toBeUndefined();
     expect(client.db.select().from(users).all()).toEqual(protectedRows);
+    expect(client.db.select().from(oauthAccounts).all()).toHaveLength(1);
+  });
+  test("cap boundary rejects equality and renews one millisecond before the cap", async () => {
+    const now = Date.now();
+    setSystemTime(now);
+    seed("pending");
+    const session = await createSession(client.db, "pending", hour);
+    client.db.update(sessions).set({ createdAt: new Date(now - sessionStore.pendingSessionMaxAgeMs) }).where(eq(sessions.id, session.sessionId)).run();
+    const before = client.db.select().from(sessions).all();
+    expect(await renewSession(client.db, session)).toBeNull();
+    expect(client.db.select().from(sessions).all()).toEqual(before);
+    client.db.update(sessions).set({ createdAt: new Date(now - sessionStore.pendingSessionMaxAgeMs + 1) }).where(eq(sessions.id, session.sessionId)).run();
+    const renewed = await renewSession(client.db, session);
+    expect(renewed).not.toBeNull();
+    expect(renewed!.expiresAt.getTime()).toBe(now + 1);
+    expect(client.db.select().from(sessions).where(eq(sessions.id, session.sessionId)).get()?.expiresAt).toEqual(new Date(now + 1));
+  });
+  test("purge age boundary keeps equality and purges one millisecond older", async () => {
+    const now = Date.now();
+    setSystemTime(now);
+    seed("current");
+    seed("boundary", undefined, { createdAt: new Date(now - hour) });
+    seed("older", undefined, { createdAt: new Date(now - hour - 1) });
+    const boundary = client.db.select().from(users).where(eq(users.id, "boundary")).get();
+    await createSession(client.db, "current");
+    expect(client.db.select().from(users).where(eq(users.id, "boundary")).get()).toEqual(boundary);
+    expect(client.db.select().from(users).where(eq(users.id, "older")).get()).toBeUndefined();
+  });
+  test("missing session record returns null and creates no row", async () => {
+    seed("pending");
+    expect(await renewSession(client.db, { sessionId: "missing", userId: "pending" })).toBeNull();
+    expect(client.db.select().from(sessions).all()).toEqual([]);
   });
   test("purge failure never fails login", async () => {
     seed("current");
@@ -182,7 +231,7 @@ describe("pending login sessions", () => {
     client.db.insert(sessions).values({ id: "stale-session", userId: "stale", expiresAt: new Date(Date.now() + hour) }).run();
     await createSession(client.db, "current");
     expect(client.db.select().from(users).all().map(row => row.id).sort()).toEqual([
-      "current", "fresh", "real", "authenticated", "onboarded", ...lookalikes.map((_, i) => `lookalike-${i}`),
+      "current", "fresh", "real", "authenticated", ...lookalikes.map((_, i) => `lookalike-${i}`),
     ].sort());
     expect(client.db.select().from(sessions).where(eq(sessions.id, "stale-session")).all()).toHaveLength(0);
     expect(client.db.select().from(oauthAccounts).all()).toHaveLength(0);
