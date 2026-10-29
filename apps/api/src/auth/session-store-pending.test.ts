@@ -79,7 +79,6 @@ describe("pending login sessions", () => {
     seed("authenticated", undefined, { createdAt: old, authenticatedAt: old });
     seed("onboarded", undefined, { createdAt: old, onboardingCompletedAt: old });
     client.db.insert(sessions).values({ id: "stale-session", userId: "stale", expiresAt: new Date(Date.now() + hour) }).run();
-    client.db.insert(oauthAccounts).values({ id: "stale-oauth", userId: "stale", provider: "gmail", providerId: "stale", providerEmail: "stale@example.test" }).run();
     await createSession(client.db, "current");
     expect(client.db.select().from(users).all().map(row => row.id).sort()).toEqual([
       "current", "fresh", "real", "authenticated", "onboarded", ...lookalikes.map((_, i) => `lookalike-${i}`),
@@ -87,6 +86,44 @@ describe("pending login sessions", () => {
     expect(client.db.select().from(sessions).where(eq(sessions.id, "stale-session")).all()).toHaveLength(0);
     expect(client.db.select().from(oauthAccounts).all()).toHaveLength(0);
   });
+  for (const providerId of ["p1", "%_\"'雪"]) {
+    test(`never deletes an account with a provider row (${providerId})`, async () => {
+      const old = new Date(Date.now() - 2 * hour);
+      seed("owner", undefined, { createdAt: old });
+      seed("unconnected", undefined, { createdAt: old });
+      seed("current");
+      for (const userId of ["owner", "unconnected"]) {
+        client.db.insert(sessions).values({ id: `${userId}-session`, userId, expiresAt: new Date(Date.now() + hour) }).run();
+      }
+      client.db.insert(oauthAccounts).values({ id: "owned-oauth", userId: "owner", provider: "gmail", providerId, providerEmail: "owner@example.test" }).run();
+      const owner = client.db.select().from(users).where(eq(users.id, "owner")).get();
+      const session = client.db.select().from(sessions).where(eq(sessions.id, "owner-session")).get();
+      const account = client.db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "owned-oauth")).get();
+
+      await createSession(client.db, "current");
+
+      expect(client.db.select().from(users).where(eq(users.id, "owner")).get()).toEqual(owner);
+      expect(client.db.select().from(sessions).where(eq(sessions.id, "owner-session")).get()).toEqual(session);
+      expect(client.db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "owned-oauth")).get()).toEqual(account);
+      expect(client.db.select().from(users).where(eq(users.id, "unconnected")).all()).toHaveLength(0);
+      expect(client.db.select().from(sessions).where(eq(sessions.id, "unconnected-session")).all()).toHaveLength(0);
+    });
+    test(`a provider row belonging to a different user does not protect a stale placeholder (${providerId})`, async () => {
+      seed("stale", undefined, { createdAt: new Date(Date.now() - 2 * hour) });
+      seed("other", "other@example.test");
+      seed("current");
+      client.db.insert(sessions).values({ id: "stale-session", userId: "stale", expiresAt: new Date(Date.now() + hour) }).run();
+      client.db.insert(oauthAccounts).values({ id: "other-oauth", userId: "other", provider: "gmail", providerId, providerEmail: "other@example.test" }).run();
+      const account = client.db.select().from(oauthAccounts).all();
+
+      await createSession(client.db, "current");
+
+      expect(client.db.select().from(users).where(eq(users.id, "stale")).all()).toHaveLength(0);
+      expect(client.db.select().from(sessions).where(eq(sessions.id, "stale-session")).all()).toHaveLength(0);
+      expect(client.db.select().from(users).where(eq(users.id, "other")).all()).toHaveLength(1);
+      expect(client.db.select().from(oauthAccounts).all()).toEqual(account);
+    });
+  }
   test("hostile input with %, _, quotes and unicode does not widen purge", async () => {
     const old = new Date(Date.now() - 2 * hour);
     const hostile = "%_\"'雪";
