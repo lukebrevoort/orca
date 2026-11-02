@@ -18,6 +18,52 @@ if [[ ! -f $connection_file ]]; then
   exit 66
 fi
 
+# Preserve the runner's wait for a caller-supplied booting simulator, before
+# requiring post-boot diagnostics or asking Xcode to build for that device.
+xcrun simctl bootstatus "$simulator_udid" -b
+# fixture-check.sh boots this exact CI-owned simulator before invoking us.
+# Observe both CoreSimulator and Xcode: bootstatus has reported Finished while
+# Xcode could see no concrete destination. Never substitute another device.
+mkdir -p "$derived_data"
+xcrun simctl list --json > "$derived_data/fixture-simulator-inventory.json"
+/usr/bin/python3 - "$derived_data/fixture-simulator-inventory.json" "$simulator_udid" <<'PYDIAGNOSTIC'
+import json, sys
+inventory = json.load(open(sys.argv[1]))
+selected = [(runtime, device) for runtime, devices in inventory.get('devices', {}).items()
+            for device in devices if device.get('udid') == sys.argv[2]]
+if len(selected) != 1:
+    raise SystemExit('Owned simulator is missing or ambiguous in post-boot inventory')
+runtime_id, device = selected[0]
+runtime = next((r for r in inventory.get('runtimes', []) if r.get('identifier') == runtime_id), {})
+print('[simulator readiness] ' + json.dumps({
+    'device': {key: device.get(key) for key in ('udid', 'name', 'deviceTypeIdentifier', 'state', 'isAvailable')},
+    'runtime': {key: runtime.get(key) for key in ('identifier', 'version', 'buildversion', 'isAvailable')},
+}, sort_keys=True))
+if device.get('state') != 'Booted' or not device.get('isAvailable') or not runtime.get('isAvailable'):
+    raise SystemExit('Owned simulator/runtime is not booted and available; refusing test execution')
+PYDIAGNOSTIC
+xcrun --find xcodebuild
+xcodebuild -version
+xcodebuild -showsdks
+if ! xcodebuild -showdestinations -project "$ios_dir/Orca.xcodeproj" -scheme Orca \
+  > "$derived_data/fixture-xcode-destinations.log" 2>&1; then
+  cat "$derived_data/fixture-xcode-destinations.log"
+  print -u2 'Xcode destination discovery failed before build; no simulator substitution attempted.'
+  exit 70
+fi
+cat "$derived_data/fixture-xcode-destinations.log"
+/usr/bin/python3 - "$derived_data/fixture-xcode-destinations.log" "$simulator_udid" <<'PYDESTINATION'
+import re, sys
+text = open(sys.argv[1]).read()
+if 'Available destinations' not in text:
+    raise SystemExit('Xcode did not report an available-destination section')
+section = text.split('Available destinations', 1)[1].split('Ineligible destinations', 1)[0]
+pattern = r'platform:iOS Simulator,.*\bid:\s*' + re.escape(sys.argv[2]) + r'\s*[,}]'
+if not any(re.search(pattern, line) for line in section.splitlines()):
+    raise SystemExit('Booted owned simulator is absent from Xcode available destinations; inspect readiness diagnostics')
+print('[simulator readiness] owned simulator is visible to Xcode')
+PYDESTINATION
+
 xcodebuild build-for-testing \
   -project "$ios_dir/Orca.xcodeproj" \
   -scheme Orca \
@@ -58,9 +104,6 @@ with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
 PY
 
-# Appearance and app-management commands require a booted device. Wait for a
-# fresh simulator to finish booting before running either test appearance.
-xcrun simctl bootstatus "$simulator_udid" -b
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
 result_dir=${ORCA_UI_RESULT_DIRECTORY:-$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")}
 mkdir -p "$result_dir"

@@ -84,7 +84,9 @@ jobs:
   ios-simulator:
     name: Unsigned iOS unit and compose UI
     runs-on: macos-26
-    timeout-minutes: 45
+    # Full light/dark compose coverage took 44m24s on the hosted runner.
+    # Leave room for simulator setup, evidence upload and runner finalization.
+    timeout-minutes: 60
     env:
       # Installed on the standard macos-26 arm64 image; fail rather than silently drift.
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
