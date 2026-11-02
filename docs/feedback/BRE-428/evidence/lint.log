@@ -1,0 +1,4 @@
+$ bun --filter '*' lint
+@orca/shared lint: Exited with code 0
+@orca/api lint: Exited with code 0
+@orca/web lint: Exited with code 0
