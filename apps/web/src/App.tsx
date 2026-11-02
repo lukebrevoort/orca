@@ -11,8 +11,6 @@ import { RoutingChooser } from "./routing-chooser";
 import { SummaryPage } from "./summary-page";
 import { AttentionPage } from "./attention-page";
 import {
-  lazy,
-  Suspense,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -412,8 +410,6 @@ const pinsResponseSchema: JsonSchema<Pin[]> = { parse: (value) => Array.isArray(
 const remindersResponseSchema: JsonSchema<Reminder[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => reminderSchema.parse(item)) : (() => { throw new Error("Reminders response was not a list."); })() };
 const draftsResponseSchema: JsonSchema<MessageDraft[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => messageDraftSchema.parse(item)) : (() => { throw new Error("Draft response was not a list."); })() };
 
-const FeedbackPage = lazy(() => import("./feedback-page").then(module => ({ default: module.FeedbackPage })));
-
 export function App() {
   const [preferences, setPreferences] = useState<ReaderPreferences>(() => readStoredPreferences());
   const [systemTheme, setSystemTheme] = useState<Theme>(() => getSystemTheme());
@@ -503,10 +499,6 @@ export function App() {
 
   if (access === "checking") return <SessionCheckingScreen />;
   if (access === "signedout") return isOnboardingRoute() ? <OAuthLoginPage /> : <LoginRequiredScreen />;
-
-  if (window.location.pathname === "/settings/feedback") {
-    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Feedback"><Suspense fallback={<p role="status">Loading feedback…</p>}><FeedbackPage /></Suspense></DesktopSettingsFrame>;
-  }
 
   if (isOnboardingRoute()) {
     return <WelcomeOrientationPage onComplete={completeOnboarding} theme={theme} setTheme={setTheme} />;
@@ -921,7 +913,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     <main className="settings-home-page">
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
-      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a><a href="/settings/feedback">Feedback</a></aside>
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}

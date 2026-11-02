@@ -141,31 +141,18 @@ enum MailDate {
 }
 
 // Feedback contains only deliberately supplied text, never message bodies.
-struct FeedbackInput: Codable, Equatable {
+struct FeedbackTicketInput: Codable, Equatable {
     var id = UUID().uuidString.lowercased()
-    var title: String
-    var description: String
-    var kind: String
+    var message: String
     var platform = "ios"
-    var route = "/feedback"
 }
-struct FeedbackQueueItem: Codable, Identifiable {
-    var id: String
-    var title: String
-    var description: String
-    var kind: String
-    var platform: String
-    var route: String
-    var status: String
-    var createdAt: String
-    var identifier: String?
-    var url: String?
-    var deliveryError: String?
+struct FeedbackTicketAvailability: Codable { var available: Bool }
+struct FeedbackTicketReceipt: Codable, Equatable {
+    var identifier: String
+    var url: String
     var issueURL: URL? {
-        guard let url, let parsed = URL(string: url), parsed.scheme == "https",
+        guard let parsed = URL(string: url), parsed.scheme == "https",
               parsed.host == "linear.app", parsed.user == nil, parsed.password == nil else { return nil }
         return parsed
     }
 }
-struct FeedbackQueueResponse: Codable { var items: [FeedbackQueueItem]; var deliveryAvailable: Bool }
-struct FeedbackSubmissionResponse: Codable { var item: FeedbackQueueItem; var deliveryAvailable: Bool }

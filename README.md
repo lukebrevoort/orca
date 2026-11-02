@@ -331,19 +331,26 @@ The webhook acknowledges removed/unknown accounts without exposing account
 existence. Invalid history cursors trigger a complete existing-message
 backfill, and provider failures return a non-2xx response so Pub/Sub retries.
 
-### Local feedback
+### Feedback to Linear
 
-In Vite development mode, every React route includes the Feedback button from
-the vendored `@feedback-kit/react` package. It can include an explicitly
-selected screen, selected elements, and a small redacted Orca state snapshot.
-Reports are validated by the local API at `POST /v1/feedback` and require no
-browser-side secrets. Without `LINEAR_API_KEY`, they remain available as
-in-memory receipts only. If `LINEAR_API_KEY` is present in the root `.env`, the
-same dev-only route uploads image/file attachments to Linear’s private storage,
-creates a Linear issue in the configured Brev team and Orca project, applies the
-Feedback label, and returns the created issue link to the widget. The API key
-must remain server-side. The receipt endpoint is disabled when
-`NODE_ENV=production`.
+The web and native corner buttons open a compact, text-only composer. Sending
+creates a ticket in the existing configured Linear destination and shows its link
+only after delivery is confirmed. Failed delivery preserves the note for retry.
+Linear is the work queue; no feedback table or migration is required.
+
+The existing Linear configuration targets a personal workspace. Activation requires
+server-side `LINEAR_API_KEY` and explicit `LINEAR_FEEDBACK_OWNER_USER_ID` matching
+the intended owner's **Orca user ID**. Do not substitute a Linear user ID, guess an
+email, or authorize the first database user. Without this configuration the
+affordance is hidden and delivery is rejected. Confirm the existing team, project,
+label, state and assignee settings before rollout; their existing defaults remain.
+
+Authenticated `GET /v1/feedback/ticket` reports availability; `POST` accepts
+`{ id, message, platform }`. Exact retries reuse a deterministic UUID and reconcile
+the Linear receipt, including after API restart. Drafts remain in memory across
+composer dismissal, but not app termination. No mail, screenshots or account
+details are automatically attached. The older development-only `POST /v1/feedback`
+endpoint remains available but is not used by the corner composer.
 
 ## Workspace Layout
 

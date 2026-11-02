@@ -44,12 +44,13 @@ def failure_excerpt(text):
 def feedback_test_summary(text):
     """Emit only known test identities and numeric outcomes, never log payloads."""
     known = {
-        ('OrcaTests.FeedbackQueueTests', 'testLostResponseRetainsExactSubmissionForRetryAndClearsOnlyAfterReceipt'),
-        ('OrcaTests.FeedbackQueueTests', 'testQueueRefreshRestoresSavedRowsAndFailurePreservesVisibleQueue'),
-        ('OrcaTests.FeedbackQueueTests', 'testChangingOwnerClearsDraftAndQueueAndRejectsOldScopeActions'),
-        ('OrcaTests.FeedbackQueueTests', 'testFeedbackValidationUsesWireLengthAndRequiresBothFields'),
-        ('OrcaTests.FeedbackQueueTests', 'testWorkRecordLinkAcceptsOnlyHTTPSLinearURLs'),
-        ('OrcaUITests.OrcaUITests', 'test38FeedbackQueuesAndSurvivesRelaunch'),
+        ('OrcaTests.FeedbackTicketTests', 'testLostResponseRetainsExactSubmissionUntilConfirmedTicket'),
+        ('OrcaTests.FeedbackTicketTests', 'testAvailabilityFailsClosedAndBlocksOtherAccounts'),
+        ('OrcaTests.FeedbackTicketTests', 'testChangingOwnerClearsDraftAndRejectsOldScopeActions'),
+        ('OrcaTests.FeedbackTicketTests', 'testFeedbackValidationUsesWireLengthAndRequiresText'),
+        ('OrcaTests.FeedbackTicketTests', 'testTicketLinkAcceptsOnlyHTTPSLinearURLs'),
+        ('OrcaTests.FeedbackTicketTests', 'testMalformedReceiptNeverReportsSuccessOrDropsDraft'),
+        ('OrcaUITests.OrcaUITests', 'test38FeedbackCornerCreatesLinearTicket'),
     }
     pattern = re.compile(r"Test Case '-\[([A-Za-z.]+) ([A-Za-z0-9]+)\]' (passed|failed) \(([0-9]{1,6}(?:\.[0-9]{1,6})?) seconds\)\.")
     summaries = []

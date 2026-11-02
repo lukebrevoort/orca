@@ -1,31 +1,13 @@
-# BRE-428 — durable feedback
+# BRE-428 — corner feedback to Linear
 
-- Intent / playbook: feature. Make feedback easy to submit from production web and iOS, save it durably, and expose its handoff to the existing Linear work queue.
-- Acceptance: authenticated own-user capture and latest 100 reports; SQLite persistence across restart; stable retry identity; no duplicated Linear issues after uncertain delivery; visible queued/delivered/error/retry; text-only explicit capture; both-theme responsive UI; native Settings entry.
-- Status: **running**. Updated 2026-11-02 UTC.
-- Base: `2a56e488aa4a47c24846448c648a4d9cbe088590`; branch `feat/BRE-428-durable-feedback`; worktree `/workspace/orca-feedback`.
-- Tracking: [BRE-428](https://linear.app/brevoort/issue/BRE-428/add-production-feedback-capture-and-durable-work-queue-to-orca-web-and).
-- Inspection: main has a development-only widget and POST route; receipts are a process-local Map. Existing Linear destination/submitter is reused. No overlapping open PR; #235 search remains excluded. Existing feedback tickets in Orca are completed/canceled; no active production queue implementation found.
-- Owners: root web/integration; feedback_api API/shared contracts/persistence; feedback_ios native; feedback_verification synthetic browser harness. Independent review pending. Agents share this worktree, distinct owned paths.
-- Dependencies: persistence/shared contracts precede integrated UI checks; one API owner for migration/index/integration. No new scheduler or autonomous coding agent. Linear delivery is attempted on submission and explicitly retried; without configured integration, reports remain durable and queued.
-- Data boundary: user text only; no email bodies, screenshots, selected DOM, account addresses or query strings are captured. Live data, credentials and production access untouched.
-- Before-fix evidence: `apps/web/src/main.tsx` excludes widget in production; `apps/api/src/index.ts` disables legacy feedback in production; `feedback.ts` stores receipts only in memory.
-- Setup: first setup failed because default temp directory was read-only. Explicit TMPDIR=/tmp, BUN_INSTALL_CACHE_DIR=/tmp/orca-feedback-bun-cache and ORCA_CHROMIUM_EXECUTABLE=/usr/bin/chromium setup succeeded with frozen dependencies and browser doctor. Logs in /tmp/orca-feedback-setup*.log. System Chromium used rather than pinned download. Linear get_agent_context tool returned unsupported; repository is source of truth.
-- Verification / review / screenshots / hosted checks: pending final executable revision.
-- Permission boundary: draft PR/push authorized. No merge, deploy, production migration, TestFlight, new credentials, external communications, or automated execution of feedback.
-- Rollout: additive migration is proposed only. Existing API startup runs migrations; main is deployment-linked. Human approval and controlled API-before-client rollout required after checks/review. No production action performed by this task.
-
-## Verified checkpoint
-
-- Draft PR: https://github.com/lukebrevoort/orca/pull/286
-- Executable revision: `96849fdaf63c271f34d078d03069584d3037c3a2`; evidence-only commit follows.
-- Final production build and browser matrix passed, zero page errors. [Evidence and limits](../../feedback/BRE-428/README.md).
-- Independent review found no source blocker through that executable revision. Latest100 and in-memory pending-draft limitations are explicit.
-- Hosted checks / native simulator validation still in progress at this evidence checkpoint. Final check links and status are maintained on the draft PR to avoid repeatedly restarting CI for documentation-only status commits.
-- All owned feedback fixtures stopped; disposable databases cleaned; logs and failed attempts retained under `/tmp/orca-feedback-*` and selected evidence committed.
-
-## Native CI follow-up
-
-- Head `1fa8f2b` passed hosted 2,094 unit tests, typecheck, production browser/API and native image checks. Native reading initially failed before build because Xcode could not discover its booted simulator; one failed-job retry was requested.
-- Native compose execution reached the new feedback test: 16 selected UI tests passed, feedback failed when the keyboard covered Submit. The helper's drag began within the keyboard. Added an explicit keyboard Done control with focus management; the test dismisses the keyboard before revealing Submit and retains queue, uniqueness and relaunch assertions.
-- Added bounded, allowlisted native feedback test outcomes to sanitized CI output so passing/failing unit and UI results are visible without downloading the artifact. New native execution is required; current status remains running and final results are recorded on PR #286.
+- Status: **running**, 2026-11-02 UTC. [Draft PR #286](https://github.com/lukebrevoort/orca/pull/286).
+- User clarification: persistent corner button, minimal feedback input, creates a ticket in Luke's Linear. **Linear is the work queue.** No separate in-app queue or dashboard.
+- Base: `2a56e488aa4a47c24846448c648a4d9cbe088590`; branch `feat/BRE-428-durable-feedback`; isolated worktree `/workspace/orca-feedback`.
+- Existing development integration targets a personal Linear destination without per-user mapping. New API requires explicit `LINEAR_FEEDBACK_OWNER_USER_ID` and existing server-only destination settings, failing closed without it. No production configuration read or changed.
+- Scope: owner-only direct-ticket API; web corner composer; native corner button on three main tabs; one text field; confirmed ticket link; immutable retry payload on uncertain delivery. No automatic mail, screenshot or account-data capture.
+- Linear owns the durable ticket. SHA256-derived UUIDv4 identity makes exact retries stable across server restarts. No local queue, new table, migration, scheduler or autonomous agent. Drafts stay in memory across composer closure, but not app termination.
+- Owners: root web/integration; feedback_api API/shared; feedback_ios native; feedback_verification fixtures/browser evidence; feedback_review independent review. Repository workflow supports scoped parallel work.
+- Heads through `7156094` built the superseded queue design. The unshipped migration and queue UI are removed. Prior native test exposed keyboard-covered Submit; compact composer retains explicit keyboard dismissal coverage.
+- Final revised verification pending. [Evidence](../../feedback/BRE-428/README.md) and PR track exact revisions and limitations. No live Linear test tickets.
+- Permission boundary: fixes, tests, pushes and draft PR updates authorized. No merge, main push, deploy, production migration, TestFlight, new credentials or third-party messages.
+- Activation requires confirming Luke's Orca user ID and existing Linear destination, final tests/visual review, and merge/rollout approval. Missing owner config hides the affordance and rejects delivery. No schema rollout required.

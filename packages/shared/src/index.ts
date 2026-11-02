@@ -590,4 +590,4 @@ export * from "./summary.ts";
 
 export { detectVerificationCodes } from "./verification-code.ts";
 
-export * from "./feedback-queue.ts";
+export * from "./feedback-ticket.ts";

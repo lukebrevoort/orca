@@ -266,7 +266,7 @@ export function createLinearFeedbackSubmitter(
   };
 
   return async (report, options) => {
-    // A queue-owned UUID is also the Linear issue ID. Retrying an uncertain
+    // A server-derived UUID is also the Linear issue ID. Retrying an uncertain
     // create cannot create a second issue; recover the receipt by that exact ID.
     const signal = options ? AbortSignal.timeout(12_000) : undefined;
     const recover = async () => {

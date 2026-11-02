@@ -10,20 +10,13 @@ import "./organization-lanes.css";
 import "./organization-views.css";
 import "./mobile-mail.css";
 
-// Vite removes this entire import (including widget CSS) in production.
-const DevelopmentFeedback = import.meta.env.DEV
-  ? lazy(() => import("./development-feedback"))
-  : null;
+const FeedbackCorner = lazy(() => import("./feedback-corner"));
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <TopLayerProvider>
       <App />
-      {DevelopmentFeedback ? (
-        <Suspense fallback={null}>
-          <DevelopmentFeedback />
-        </Suspense>
-      ) : null}
+      <Suspense fallback={null}><FeedbackCorner /></Suspense>
     </TopLayerProvider>
   </StrictMode>,
 );

@@ -17,87 +17,54 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    /// Selected in both appearances by the fixture runner. All requests use
-    /// the loopback-only mobile fixture and deliberately synthetic text.
-    func test38FeedbackQueuesAndSurvivesRelaunch() throws {
-        let subject = "Feedback fixture " + String(UUID().uuidString.prefix(8))
-        let detail = "Synthetic idea: make the feedback queue easy to find."
-        let before = try composeFixtureRequest("v1/feedback/queue")
-        XCTAssertEqual(before["deliveryAvailable"] as? Bool, false, "Native fixture must disable external Linear delivery")
-        let app = try launchApp()
-        assertInboxLoaded(in: app)
-        openFeedback(in: app)
+    /// Runs in both themes against the authenticated loopback fixture only.
+    func test38FeedbackCornerCreatesLinearTicket() throws {
+        let message = "Synthetic feedback " + UUID().uuidString
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        let corner = app.buttons["feedback.open"]
+        XCTAssertTrue(corner.waitForExistence(timeout: 10)); XCTAssertTrue(corner.isHittable)
+        attachScreenshot(named: "feedback-persistent-corner")
+        corner.tap()
         let submit = app.buttons["feedback.submit"]
-        XCTAssertTrue(submit.waitForExistence(timeout: 10))
-        XCTAssertFalse(submit.isEnabled, "Empty feedback cannot be submitted")
-        attachScreenshot(named: "feedback-empty-disabled")
-        let title = app.textFields["feedback.title"]
-        XCTAssertTrue(title.waitForExistence(timeout: 10)); title.tap(); title.typeText(subject)
-        let details = app.textViews["feedback.details"]
-        XCTAssertTrue(details.waitForExistence(timeout: 5)); details.tap(); details.typeText(detail)
-        let keyboardDone = app.buttons["feedback.keyboard-done"]
-        XCTAssertTrue(keyboardDone.waitForExistence(timeout: 5))
-        XCTAssertTrue(keyboardDone.isHittable)
+        XCTAssertTrue(submit.waitForExistence(timeout: 5)); XCTAssertFalse(submit.isEnabled)
+        attachScreenshot(named: "feedback-empty-composer")
+        let editor = app.textViews["feedback.message"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.tap(); editor.typeText(message)
+        let done = app.buttons["feedback.keyboard-done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5)); XCTAssertTrue(done.isHittable)
         attachScreenshot(named: "feedback-keyboard-done")
-        keyboardDone.tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
-        revealFeedbackElement(submit, in: app)
-        XCTAssertTrue(submit.isEnabled)
-        attachScreenshot(named: "feedback-form-ready")
+        done.tap(); XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        app.buttons["feedback.close"].tap()
+        for tab in ["Drafts", "Settings"] {
+            app.tabBars.buttons[tab].tap()
+            XCTAssertTrue(corner.waitForExistence(timeout: 5)); XCTAssertTrue(corner.isHittable)
+            corner.tap()
+            XCTAssertTrue(editor.waitForExistence(timeout: 5)); XCTAssertEqual(editor.value as? String, message)
+            if tab == "Drafts" { app.buttons["feedback.close"].tap() }
+        }
+        XCTAssertTrue(submit.isHittable); XCTAssertTrue(submit.isEnabled)
+        attachScreenshot(named: "feedback-ready-to-send")
+        _ = try composeFixtureRequest("__fixture/feedback/fail-once", method: "POST", body: [:])
         submit.tap()
-        XCTAssertTrue(app.staticTexts["feedback.confirmation"].waitForExistence(timeout: 15))
-        let saved = try composeFixtureRequest("v1/feedback/queue")
-        let matching = (saved["items"] as? [[String: Any]] ?? []).filter { $0["title"] as? String == subject }
-        XCTAssertEqual(matching.count, 1)
-        let row = try XCTUnwrap(matching.first)
-        let id = try XCTUnwrap(row["id"] as? String)
-        XCTAssertEqual(row["status"] as? String, "queued")
-        XCTAssertEqual(row["description"] as? String, detail)
-        XCTAssertEqual(row["platform"] as? String, "ios")
-        let status = app.staticTexts["feedback.status.\(id)"]
-        revealFeedbackElement(status, in: app)
-        XCTAssertEqual(status.label, "Queued")
-        attachScreenshot(named: "feedback-saved-queue")
-        navigateBack(in: app)
-        openFeedback(in: app)
-        revealFeedbackElement(app.staticTexts["feedback.status.\(id)"], in: app)
-        XCTAssertEqual(app.staticTexts["feedback.status.\(id)"].label, "Queued")
-        app.terminate()
-        let reopened = try launchApp()
-        assertInboxLoaded(in: reopened)
-        openFeedback(in: reopened)
-        let restored = reopened.staticTexts["feedback.status.\(id)"]
-        revealFeedbackElement(restored, in: reopened)
-        XCTAssertEqual(restored.label, "Queued", "Server-saved feedback must survive app termination")
-        attachScreenshot(named: "feedback-queue-after-relaunch")
-        let after = try composeFixtureRequest("v1/feedback/queue")
-        XCTAssertEqual((after["items"] as? [[String: Any]] ?? []).filter { $0["title"] as? String == subject }.count, 1)
-        print("[feedback-fixture] PASS: keyboard dismissal, one durable queued record, navigation reopen and app relaunch; platform=ios")
-    }
-
-    private func openFeedback(in app: XCUIApplication) {
-        app.tabBars.buttons["Settings"].tap()
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
-        let entry = app.buttons["settings.feedback"]
-        revealFeedbackElement(entry, in: app)
-        entry.tap()
-        XCTAssertTrue(app.navigationBars["Feedback"].waitForExistence(timeout: 10))
-    }
-
-    private func revealFeedbackElement(_ element: XCUIElement, in app: XCUIApplication) {
-        for _ in 0..<8 {
-            if element.exists && element.isHittable { break }
-            // Drag the outer gutter, not the nested text editor.
-            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.8))
-            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
-            start.press(forDuration: 0.1, thenDragTo: end)
-        }
-        XCTAssertTrue(element.waitForExistence(timeout: 10))
-        if !element.isHittable {
-            attachScreenshot(named: "feedback-control-not-hittable")
-            print("[feedback-fixture] target=\(element.identifier) frame=\(element.frame) keyboard=\(app.keyboards.firstMatch.exists) app=\(app.frame)")
-        }
-        XCTAssertTrue(element.isHittable)
+        XCTAssertTrue(app.staticTexts["feedback.error"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.descendants(matching: .any)["feedback.confirmation"].exists)
+        XCTAssertEqual(editor.value as? String, message); XCTAssertFalse(editor.isEnabled)
+        XCTAssertEqual(submit.label, "Retry submission")
+        attachScreenshot(named: "feedback-uncertain-retry")
+        submit.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 10))
+        let state = try composeFixtureRequest("__fixture/feedback/state")
+        let matching = (state["tickets"] as? [[String: Any]] ?? []).filter { $0["message"] as? String == message }
+        XCTAssertEqual(matching.count, 1, "Retry after a lost receipt must recover the same Linear ticket")
+        let ticket = try XCTUnwrap(matching.first)
+        XCTAssertEqual(ticket["platform"] as? String, "ios")
+        let identifier = try XCTUnwrap(ticket["identifier"] as? String)
+        let link = app.descendants(matching: .any)["feedback.ticket-link"].firstMatch
+        XCTAssertTrue(link.waitForExistence(timeout: 5)); XCTAssertTrue(link.label.contains(identifier))
+        attachScreenshot(named: "feedback-linear-confirmed")
+        app.buttons["feedback.close"].tap(); corner.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 5))
+        print("[feedback-fixture] PASS: persistent corner on three tabs, draft reopen, keyboard Done, ambiguous retry, one confirmed synthetic Linear ticket")
     }
 
     func test20EmptyInboxCanRefreshIntoMail() throws {
