@@ -1,7 +1,7 @@
 {
-  "sourceCommit": "7156094f0154b402da5b002ec16ede14530738e1",
-  "dirty": true,
-  "startedAt": "2026-11-02T18:55:36.332Z",
+  "sourceCommit": "0085ffbcf8a2e003f07bf76a28ef951529f95470",
+  "dirty": false,
+  "startedAt": "2026-11-02T18:58:47.773Z",
   "syntheticOnly": true,
   "scenarios": [
     "light/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
@@ -25,5 +25,5 @@
   ],
   "browser": "154.0.8037.57",
   "status": "passed",
-  "finishedAt": "2026-11-02T18:56:06.151Z"
+  "finishedAt": "2026-11-02T18:59:15.317Z"
 }

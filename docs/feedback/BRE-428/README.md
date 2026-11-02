@@ -31,7 +31,9 @@ All screenshots use synthetic data and a stub delivery boundary. No real Linear 
 - Confirmed success links to the exact synthetic work record.
 - Other-user and anonymous sessions have no affordance; the corner also remains available on the inbox route.
 
-The development run passed with zero page errors using system Chromium 154.0.8037.57. Its `dirty` flag is explicit: this is interim evidence until the final committed revision is rebuilt and rerun. Native verification belongs to the hosted macOS/Xcode checks; these browser results do not certify native behavior or a real provider connection.
+The final run passed on clean commit `0085ffbcf8a2e003f07bf76a28ef951529f95470` with zero page errors using system Chromium 154.0.8037.57. [Build log](evidence/build.log) and [bundle SHA-256 manifest](evidence/bundle-sha256.json) identify the production files exercised. [Lint](evidence/lint.log) passed all workspaces; build also runs their TypeScript checks. Main entry JavaScript is 496.60 kB; the corner component loads separately at 4.36 kB. Final desktop composer, mobile failure/sending/receipt screenshots were visually inspected for readable controls and viewport fit.
+
+Local full-suite results on that source were **2,095 passes and one failure**: API 1,077 pass/1 fail, shared 187 pass, web 831 pass. The failure was the unchanged Gmail sync coordinator multiprocess timing test; its complete file subsequently [passed unchanged in isolation](evidence/sync-isolated.log), 12 tests in 3.99 seconds. The normal full run remains a failure, not a clean pass. The focused feedback tests passed separately; current hosted checks remain the merge gate. Native execution belongs to hosted macOS/Xcode; these browser results do not certify native behavior or a real provider connection.
 
 Reproduce with frozen dependencies and an installed browser:
 

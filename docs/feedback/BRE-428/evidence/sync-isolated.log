@@ -1,0 +1,19 @@
+bun test v1.3.14 (0d9b296a)
+
+src/providers/gmail/sync-coordinator.test.ts:
+(pass) durable Gmail sync coordinator > collapses duplicate queued requests and runs the highest history cursor once [272.13ms]
+(pass) durable Gmail sync coordinator > coalesces concurrent manual and fallback triggers while preserving a newer push [238.37ms]
+(pass) durable Gmail sync coordinator > allows only one lease owner across coordinator instances [139.20ms]
+(pass) durable Gmail sync coordinator > allows only one active worker across Bun processes [1720.96ms]
+(pass) durable Gmail sync coordinator > takes over a stale lease after a crash and fences the old owner [177.07ms]
+(pass) durable Gmail sync coordinator > requeues a partial failure with bounded backoff and recovers on restart [116.94ms]
+(pass) durable Gmail sync coordinator > keeps account leases isolated [125.16ms]
+(pass) durable Gmail sync coordinator > records queue depth, coalescing, and end-to-end freshness from publish time [106.23ms]
+(pass) Gmail coordinator history ID bounds > coordinator compares bounded IDs and falls back for invalid IDs (1 digits, 10) [112.58ms]
+(pass) Gmail coordinator history ID bounds > coordinator compares bounded IDs and falls back for invalid IDs (20 digits, 10) [149.24ms]
+(pass) Gmail coordinator history ID bounds > coordinator compares bounded IDs and falls back for invalid IDs (300000 digits, 10) [167.93ms]
+(pass) Gmail coordinator history ID bounds > coordinator compares bounded IDs and falls back for invalid IDs (20 digits, 9) [114.43ms]
+
+ 12 pass
+ 0 fail
+Ran 12 tests across 1 file. [3.99s]
