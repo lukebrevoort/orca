@@ -14,3 +14,12 @@
 - Verification / review / screenshots / hosted checks: pending final executable revision.
 - Permission boundary: draft PR/push authorized. No merge, deploy, production migration, TestFlight, new credentials, external communications, or automated execution of feedback.
 - Rollout: additive migration is proposed only. Existing API startup runs migrations; main is deployment-linked. Human approval and controlled API-before-client rollout required after checks/review. No production action performed by this task.
+
+## Verified checkpoint
+
+- Draft PR: https://github.com/lukebrevoort/orca/pull/286
+- Executable revision: `96849fdaf63c271f34d078d03069584d3037c3a2`; evidence-only commit follows.
+- Final production build and browser matrix passed, zero page errors. [Evidence and limits](../../feedback/BRE-428/README.md).
+- Independent review found no source blocker through that executable revision. Latest100 and in-memory pending-draft limitations are explicit.
+- Hosted checks / native simulator validation still in progress at this evidence checkpoint. Final check links and status are maintained on the draft PR to avoid repeatedly restarting CI for documentation-only status commits.
+- All owned feedback fixtures stopped; disposable databases cleaned; logs and failed attempts retained under `/tmp/orca-feedback-*` and selected evidence committed.

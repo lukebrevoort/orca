@@ -1,0 +1,24 @@
+{
+  "errors": [
+    {
+      "message": "Transition was aborted because of invalid state. ViewTransition opt-in disabled",
+      "stack": "",
+      "url": "http://127.0.0.1:39781/settings/feedback"
+    },
+    {
+      "message": "Transition was aborted because of invalid state. ViewTransition opt-in disabled",
+      "stack": "",
+      "url": "http://127.0.0.1:39781/settings/feedback"
+    },
+    {
+      "message": "Transition was aborted because of invalid state. ViewTransition opt-in disabled",
+      "stack": "",
+      "url": "http://127.0.0.1:39781/settings/feedback"
+    }
+  ],
+  "events": [
+    "TRANSITION_UNHANDLED InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled",
+    "TRANSITION_UNHANDLED InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled",
+    "TRANSITION_UNHANDLED InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled"
+  ]
+}

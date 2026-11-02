@@ -1,0 +1,220 @@
+{
+  "sourceCommit": "96849fdaf63c271f34d078d03069584d3037c3a2",
+  "dirty": false,
+  "startedAt": "2026-11-02T18:04:57.222Z",
+  "syntheticOnly": true,
+  "scenarios": [
+    "light: real SQLite persistence, lost response and stable retry ID, double click, delivery failure/retry, linked work record, own-user isolation",
+    "light: loading/read error/recovery, desktop navigation, 390/320 mobile menu and overflow, focus/hover/disabled screenshots",
+    "dark: real SQLite persistence, lost response and stable retry ID, double click, delivery failure/retry, linked work record, own-user isolation",
+    "dark: loading/read error/recovery, desktop navigation, 390/320 mobile menu and overflow, focus/hover/disabled screenshots"
+  ],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com"
+  ],
+  "controls": [
+    {
+      "theme": "light",
+      "width": 390,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "label": "IdeaSomething’s brokenQuestionOther",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(247, 250, 248)",
+          "opacity": "1",
+          "width": 324
+        },
+        {
+          "tag": "INPUT",
+          "label": "feedback-title",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(247, 250, 248)",
+          "opacity": "1",
+          "width": 324
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "feedback-description",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(247, 250, 248)",
+          "opacity": "1",
+          "width": 324
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Send feedback",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(237, 245, 242)",
+          "opacity": "0.65",
+          "width": 324
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Refresh",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(255, 255, 255)",
+          "opacity": "1",
+          "width": 69.015625
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "label": "IdeaSomething’s brokenQuestionOther",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(247, 250, 248)",
+          "opacity": "1",
+          "width": 254
+        },
+        {
+          "tag": "INPUT",
+          "label": "feedback-title",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(247, 250, 248)",
+          "opacity": "1",
+          "width": 254
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "feedback-description",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(247, 250, 248)",
+          "opacity": "1",
+          "width": 254
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Send feedback",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(237, 245, 242)",
+          "opacity": "0.65",
+          "width": 254
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Refresh",
+          "color": "rgb(15, 36, 34)",
+          "background": "rgb(255, 255, 255)",
+          "opacity": "1",
+          "width": 69.015625
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "label": "IdeaSomething’s brokenQuestionOther",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(5, 5, 5)",
+          "opacity": "1",
+          "width": 324
+        },
+        {
+          "tag": "INPUT",
+          "label": "feedback-title",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(5, 5, 5)",
+          "opacity": "1",
+          "width": 324
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "feedback-description",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(5, 5, 5)",
+          "opacity": "1",
+          "width": 324
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Send feedback",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "0.65",
+          "width": 324
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Refresh",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(13, 13, 13)",
+          "opacity": "1",
+          "width": 69.015625
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "label": "IdeaSomething’s brokenQuestionOther",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(5, 5, 5)",
+          "opacity": "1",
+          "width": 254
+        },
+        {
+          "tag": "INPUT",
+          "label": "feedback-title",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(5, 5, 5)",
+          "opacity": "1",
+          "width": 254
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "feedback-description",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(5, 5, 5)",
+          "opacity": "1",
+          "width": 254
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Send feedback",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "0.65",
+          "width": 254
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Refresh",
+          "color": "rgb(244, 243, 239)",
+          "background": "rgb(13, 13, 13)",
+          "opacity": "1",
+          "width": 69.015625
+        }
+      ]
+    }
+  ],
+  "browser": "154.0.8037.57",
+  "status": "passed",
+  "finishedAt": "2026-11-02T18:05:28.620Z"
+}
