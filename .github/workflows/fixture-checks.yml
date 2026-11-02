@@ -38,6 +38,16 @@ jobs:
       - run: bun run build
       - run: bun run test:smoke
       - run: bunx --no-install playwright install --with-deps chromium
+      - name: Verify durable feedback in production browser and isolated SQLite
+        run: bash scripts/ci/feedback-queue-check.sh "${{ runner.temp }}/orca-feedback-evidence"
+      - name: Upload synthetic feedback evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: feedback-queue-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/orca-feedback-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Install hosted browser Find controls
         run: sudo apt-get install --no-install-recommends -y xvfb xdotool
       - name: Exercise production browser against isolated API/SQLite

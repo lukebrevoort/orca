@@ -164,7 +164,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Summary", "Inbox", "Focus", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Customize tools", "Organization", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Summary", "Inbox", "Focus", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Customize tools", "Organization", "Settings", "Feedback", "Account · Maya Chen"]);
     expect(menu.querySelector('[role="group"][aria-label="Mail"]')?.textContent).toContain("Focus");
     expect(menu.querySelector('[role="group"][aria-label="Spaces"]')).not.toBeNull();
     expect(menu.querySelector('[role="group"][aria-label="Tools"]')?.textContent).toContain("Later");

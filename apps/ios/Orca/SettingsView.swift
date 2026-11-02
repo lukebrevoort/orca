@@ -417,6 +417,7 @@ private struct FeedbackSettingsView: View {
                 queue
             }.padding(20).foregroundStyle(OrcaTheme.ink)
         }.background(OrcaTheme.paper.ignoresSafeArea()).tint(OrcaTheme.accent)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Feedback").navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier("feedback.root")
             .task(id: state.ownerScope) {

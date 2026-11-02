@@ -17,6 +17,78 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// Selected in both appearances by the fixture runner. All requests use
+    /// the loopback-only mobile fixture and deliberately synthetic text.
+    func test38FeedbackQueuesAndSurvivesRelaunch() throws {
+        let subject = "Feedback fixture " + String(UUID().uuidString.prefix(8))
+        let detail = "Synthetic idea: make the feedback queue easy to find."
+        let before = try composeFixtureRequest("v1/feedback/queue")
+        XCTAssertEqual(before["deliveryAvailable"] as? Bool, false, "Native fixture must disable external Linear delivery")
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        openFeedback(in: app)
+        let submit = app.buttons["feedback.submit"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 10))
+        XCTAssertFalse(submit.isEnabled, "Empty feedback cannot be submitted")
+        attachScreenshot(named: "feedback-empty-disabled")
+        let title = app.textFields["feedback.title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 10)); title.tap(); title.typeText(subject)
+        let details = app.textViews["feedback.details"]
+        XCTAssertTrue(details.waitForExistence(timeout: 5)); details.tap(); details.typeText(detail)
+        revealFeedbackElement(submit, in: app)
+        XCTAssertTrue(submit.isEnabled)
+        attachScreenshot(named: "feedback-form-ready")
+        submit.tap()
+        XCTAssertTrue(app.staticTexts["feedback.confirmation"].waitForExistence(timeout: 15))
+        let saved = try composeFixtureRequest("v1/feedback/queue")
+        let matching = (saved["items"] as? [[String: Any]] ?? []).filter { $0["title"] as? String == subject }
+        XCTAssertEqual(matching.count, 1)
+        let row = try XCTUnwrap(matching.first)
+        let id = try XCTUnwrap(row["id"] as? String)
+        XCTAssertEqual(row["status"] as? String, "queued")
+        XCTAssertEqual(row["description"] as? String, detail)
+        XCTAssertEqual(row["platform"] as? String, "ios")
+        let status = app.staticTexts["feedback.status.\(id)"]
+        revealFeedbackElement(status, in: app)
+        XCTAssertEqual(status.label, "Queued")
+        attachScreenshot(named: "feedback-saved-queue")
+        navigateBack(in: app)
+        openFeedback(in: app)
+        revealFeedbackElement(app.staticTexts["feedback.status.\(id)"], in: app)
+        XCTAssertEqual(app.staticTexts["feedback.status.\(id)"].label, "Queued")
+        app.terminate()
+        let reopened = try launchApp()
+        assertInboxLoaded(in: reopened)
+        openFeedback(in: reopened)
+        let restored = reopened.staticTexts["feedback.status.\(id)"]
+        revealFeedbackElement(restored, in: reopened)
+        XCTAssertEqual(restored.label, "Queued", "Server-saved feedback must survive app termination")
+        attachScreenshot(named: "feedback-queue-after-relaunch")
+        let after = try composeFixtureRequest("v1/feedback/queue")
+        XCTAssertEqual((after["items"] as? [[String: Any]] ?? []).filter { $0["title"] as? String == subject }.count, 1)
+    }
+
+    private func openFeedback(in app: XCUIApplication) {
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
+        let entry = app.buttons["settings.feedback"]
+        revealFeedbackElement(entry, in: app)
+        entry.tap()
+        XCTAssertTrue(app.navigationBars["Feedback"].waitForExistence(timeout: 10))
+    }
+
+    private func revealFeedbackElement(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<8 {
+            if element.exists && element.isHittable { break }
+            // Drag the outer gutter, not the nested text editor.
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.8))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+            start.press(forDuration: 0.1, thenDragTo: end)
+        }
+        XCTAssertTrue(element.waitForExistence(timeout: 10))
+        XCTAssertTrue(element.isHittable)
+    }
+
     func test20EmptyInboxCanRefreshIntoMail() throws {
         _ = try composeFixtureRequest("__fixture/inbox-recovery/empty-once", method: "POST", body: [:])
         addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:]) }

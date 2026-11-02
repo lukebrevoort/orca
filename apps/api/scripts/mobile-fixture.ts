@@ -99,6 +99,7 @@ let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
 const app = createApp({
+  feedbackQueueDelivery: null,
   downloadMessageImage: async (url, signal) => {
     if (!imageFixture || url.href !== "https://images.example.invalid/landscape.png") throw new Error("Fixture image unavailable");
     imageDownloads++;
