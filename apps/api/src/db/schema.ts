@@ -1678,3 +1678,20 @@ export const organizationDestinationBindings = sqliteTable("organization_destina
 export const organizationDestinationLegacy = sqliteTable("organization_destination_legacy", {
   workspaceId:text("workspace_id").notNull(),behavior:text("behavior").notNull(),destinationId:text("destination_id").notNull(),
 },t=>({pk:primaryKey({columns:[t.workspaceId,t.behavior]}),destinationFk:foreignKey({columns:[t.workspaceId,t.destinationId],foreignColumns:[organizationLanes.workspaceId,organizationLanes.id]})}));
+
+export const feedbackQueue = sqliteTable("feedback_queue", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  id: text("id").notNull(),
+  issueId: text("issue_id").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  kind: text("kind").$type<"bug" | "idea" | "question" | "other">().notNull(),
+  platform: text("platform").$type<"web" | "ios">().notNull(),
+  route: text("route").$type<import("@orca/shared").FeedbackQueueSubmission["route"]>().notNull(),
+  createdAt: text("created_at").notNull(),
+  identifier: text("identifier"),
+  url: text("url"),
+  deliveryError: text("delivery_error"),
+  leaseUntil: integer("lease_until").notNull().default(0),
+  lastAttemptAt: integer("last_attempt_at").notNull().default(0),
+}, (table) => [primaryKey({ columns: [table.userId, table.id] }), index("feedback_queue_user_created_idx").on(table.userId, table.createdAt)]);

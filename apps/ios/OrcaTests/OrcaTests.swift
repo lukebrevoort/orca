@@ -2760,3 +2760,80 @@ final class VerificationCodeTests: XCTestCase {
         XCTAssertTrue(VerificationCode.detect(bodyText: "code " + String(repeating: "x", count: 81) + " 123456").isEmpty)
     }
 }
+
+final class FeedbackQueueTests: XCTestCase {
+    private func client() -> APIClient {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        return APIClient(baseURL: URL(string: "https://fixture.example")!, session: URLSession(configuration: configuration)) { "fixture-token" }
+    }
+    private func item(id: String = UUID().uuidString.lowercased()) -> FeedbackQueueItem {
+        FeedbackQueueItem(id: id, title: "An idea", description: "Make the action easier to find", kind: "idea", platform: "ios", route: "/feedback", status: "queued", createdAt: "2026-11-02T00:00:00Z", identifier: nil, url: nil, deliveryError: nil)
+    }
+    @MainActor func testLostResponseRetainsExactSubmissionForRetryAndClearsOnlyAfterReceipt() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackQueueModel()
+        model.configure(scope: "owner-a"); model.title = "An idea"; model.detail = "Make the action easier to find"
+        var bodies = [FeedbackInput]()
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer fixture-token")
+            XCTAssertEqual(request.url?.path, "/v1/feedback/queue")
+            bodies.append(try JSONDecoder().decode(FeedbackInput.self, from: requestBodyData(request)))
+            throw URLError(.networkConnectionLost)
+        }
+        await model.submit(client: client, scope: "owner-a")
+        XCTAssertNotNil(model.pending); XCTAssertNotNil(model.error); XCTAssertTrue(model.items.isEmpty)
+        XCTAssertEqual(model.title, "An idea")
+        let saved = item(id: try XCTUnwrap(model.pending?.id))
+        StubURLProtocol.handler = { request in
+            bodies.append(try JSONDecoder().decode(FeedbackInput.self, from: requestBodyData(request)))
+            return (200, try JSONEncoder().encode(FeedbackSubmissionResponse(item: saved, deliveryAvailable: false)))
+        }
+        await model.submit(client: client, scope: "owner-a")
+        XCTAssertEqual(bodies.count, 2); XCTAssertEqual(bodies[0], bodies[1])
+        XCTAssertNil(model.pending); XCTAssertNil(model.error); XCTAssertEqual(model.title, "")
+        XCTAssertEqual(model.items.map(\.id), [saved.id]); XCTAssertNotNil(model.confirmation)
+    }
+    @MainActor func testQueueRefreshRestoresSavedRowsAndFailurePreservesVisibleQueue() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackQueueModel(), saved = item()
+        model.configure(scope: "owner-a")
+        StubURLProtocol.handler = { _ in (200, try JSONEncoder().encode(FeedbackQueueResponse(items: [saved], deliveryAvailable: false))) }
+        await model.load(client: client, scope: "owner-a")
+        XCTAssertEqual(model.items.map(\.id), [saved.id])
+        StubURLProtocol.handler = { _ in throw URLError(.notConnectedToInternet) }
+        await model.load(client: client, scope: "owner-a")
+        XCTAssertEqual(model.items.map(\.id), [saved.id]); XCTAssertNotNil(model.loadError)
+        XCTAssertFalse(model.loading)
+    }
+    @MainActor func testChangingOwnerClearsDraftAndQueueAndRejectsOldScopeActions() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackQueueModel(), saved = item()
+        model.configure(scope: "owner-a"); model.title = "Private draft"; model.detail = "Only A"
+        StubURLProtocol.handler = { _ in (200, try JSONEncoder().encode(FeedbackQueueResponse(items: [saved], deliveryAvailable: true))) }
+        await model.load(client: client, scope: "owner-a")
+        model.configure(scope: "owner-b")
+        XCTAssertEqual(model.title, ""); XCTAssertEqual(model.detail, ""); XCTAssertTrue(model.items.isEmpty)
+        XCTAssertNil(model.pending)
+        var requests = 0
+        StubURLProtocol.handler = { _ in requests += 1; throw URLError(.badURL) }
+        await model.load(client: client, scope: "owner-a")
+        await model.retry(item: saved, client: client, scope: "owner-a")
+        XCTAssertEqual(requests, 0)
+    }
+    @MainActor func testFeedbackValidationUsesWireLengthAndRequiresBothFields() {
+        let model = FeedbackQueueModel(); model.configure(scope: "owner")
+        XCTAssertFalse(model.canSubmit)
+        model.title = "Idea"; model.detail = "   "; XCTAssertFalse(model.canSubmit)
+        model.detail = "Details"; XCTAssertTrue(model.canSubmit)
+        model.title = String(repeating: "a", count: 201); XCTAssertFalse(model.canSubmit)
+        model.title = "Idea"; model.detail = String(repeating: "a", count: 10_001); XCTAssertFalse(model.canSubmit)
+    }
+    func testWorkRecordLinkAcceptsOnlyHTTPSLinearURLs() {
+        var saved = item()
+        saved.url = "https://linear.app/brevoort/issue/BRE-1/example"; XCTAssertNotNil(saved.issueURL)
+        for url in ["javascript:alert(1)", "https://example.com/issue", "http://linear.app/issue", "https://secret@linear.app/issue"] {
+            saved.url = url; XCTAssertNil(saved.issueURL)
+        }
+    }
+}

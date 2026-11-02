@@ -1,0 +1,31 @@
+.orca-feedback-page { max-width: 1120px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 56px) 100px; color: var(--orca-ink); }
+.orca-feedback-page > header { margin: 28px 0; max-width: 600px; }
+.orca-feedback-page h1 { font-family: var(--font-display, Georgia, serif); font-size: clamp(36px, 5vw, 52px); font-weight: 400; margin: 8px 0 12px; }
+.orca-feedback-page h2 { font-size: 18px; margin: 0; }
+.orca-feedback-page h3 { font-size: 14px; margin: 0; overflow-wrap: anywhere; }
+.orca-feedback-page p { font-size: 13px; line-height: 1.65; }
+.orca-feedback-back, .orca-feedback-issue { color: var(--orca-ink); font-size: 13px; text-underline-offset: 4px; }
+.orca-feedback-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.orca-feedback-card { border: 1px solid var(--orca-border); border-radius: 16px; padding: 24px; background: var(--orca-surface); min-width: 0; }
+.orca-feedback-card form { display: grid; gap: 10px; margin-top: 24px; }
+.orca-feedback-card label { font-size: 12px; font-weight: 600; margin-top: 8px; }
+.orca-feedback-page input, .orca-feedback-page textarea, .orca-feedback-page select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid var(--orca-border); border-radius: 8px; padding: 12px; background: var(--orca-paper); color: var(--orca-ink); font: inherit; font-size: 14px; }
+.orca-feedback-page textarea { resize: vertical; }
+.orca-feedback-page button { min-height: 42px; padding: 9px 12px; border: 1px solid var(--orca-border); border-radius: 8px; background: var(--orca-surface); color: var(--orca-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.orca-feedback-page button:hover, .orca-feedback-page button:active, .orca-feedback-page .orca-feedback-primary { background: var(--orca-surface-hover); color: var(--orca-ink); }
+.orca-feedback-page :focus-visible { outline: 2px solid var(--orca-ink); outline-offset: 3px; }
+.orca-feedback-page :disabled { opacity: .65; cursor: default; }
+.orca-feedback-primary { margin-top: 10px; font-weight: 600 !important; }
+.orca-feedback-page small { display: block; font-size: 11px; line-height: 1.6; }
+.orca-feedback-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.orca-feedback-note, .orca-feedback-empty { padding: 12px; background: var(--orca-surface-hover); border-radius: 8px; }
+.orca-feedback-list { list-style: none; padding: 0; margin: 20px 0 0; }
+.orca-feedback-list li { padding: 20px 0; border-top: 1px solid var(--orca-border); }
+.orca-feedback-description { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; }
+.orca-feedback-badge { flex-shrink: 0; font-size: 10px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--orca-border); background: var(--orca-surface-hover); }
+.orca-feedback-error { border-left: 3px solid var(--orca-ink); padding: 10px; }
+.orca-feedback-issue { display: inline-block; margin-top: 12px; }
+.orca-feedback-list button { margin-top: 12px; }
+.orca-feedback-notice:empty { display: none; }
+@media(max-width: 1000px) { .orca-feedback-layout { grid-template-columns: minmax(0, 1fr); } }
+@media(max-width: 420px) { .orca-feedback-card { padding: 16px; } .orca-feedback-page { padding-top: 16px; } }

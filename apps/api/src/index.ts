@@ -120,6 +120,7 @@ import { GmailTransportError, type GmailTransport } from "./providers/gmail/tran
 import { providerRegistry as defaultProviderRegistry, type ProviderRegistry } from "./providers/registry.ts";
 import { ProviderNotImplementedError, type ProviderTransport } from "./providers/shared/interfaces.ts";
 import { createOnDemandReplyBrief, interpretRequestedAvailabilityWindows, replyBriefInvocationRequestSchema, type ReplyBriefInvocationRequest } from "./reply-brief.ts";
+import { registerFeedbackQueueRoutes, type FeedbackQueueDelivery } from "./feedback-queue.ts";
 import { handleFeedbackRequest } from "./feedback.ts";
 import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
 import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agents/boundary.ts";
@@ -187,6 +188,8 @@ const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
 type CreateAppOptions = {
   downloadMessageImage?: import("./mail/images/render.ts").ImageDownload;
   dbFactory?: typeof createDatabaseClient;
+  feedbackQueueDelivery?: FeedbackQueueDelivery | null;
+  feedbackQueueNow?: () => number;
   syncPage?: typeof syncGmailAccountPage;
   gmailTransport?: GmailTransport;
   gmailClient?: GmailClient;
@@ -975,6 +978,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   // during local Pub/Sub emulator setup.
   app.post("/v1/webhooks/gmail", handleGmailPush);
   app.post("/v1/gmail/push", handleGmailPush);
+
+  registerFeedbackQueueRoutes(app, { dbFactory, allowedOrigin: serverConfig.webOrigin, deliver: options.feedbackQueueDelivery, now: options.feedbackQueueNow });
 
   app.all("/v1/feedback", (c) => handleFeedbackRequest(c.req.raw, {
     allowedOrigin: serverConfig.webOrigin,

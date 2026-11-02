@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject private var mailboxes: MailboxViews
     @EnvironmentObject private var notifications: NotificationManager
+    @StateObject private var feedback = FeedbackQueueModel()
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -138,6 +139,21 @@ struct SettingsView: View {
                         }
                     }
 
+                    SettingsGroup(title: "Help improve Orca", scope: "Your feedback") {
+                        NavigationLink {
+                            FeedbackSettingsView(model: feedback)
+                        } label: {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text("Feedback").font(OrcaTheme.ui(13, weight: .semibold)).foregroundStyle(OrcaTheme.ink)
+                                    Text("Share an idea or problem and see your queue.").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
+                                }
+                                Spacer(minLength: 8)
+                                Image(systemName: "chevron.right").foregroundStyle(OrcaTheme.muted)
+                            }.frame(minHeight: 44).contentShape(Rectangle())
+                        }.accessibilityIdentifier("settings.feedback")
+                    }
+
                     SettingsGroup(title: "Connection", scope: "Account") {
                         SettingsValue(label: "Server", value: state.baseURLText)
 #if DEBUG
@@ -173,6 +189,8 @@ struct SettingsView: View {
             }
             .background(OrcaTheme.paper.ignoresSafeArea())
             .accessibilityIdentifier("settings.root")
+            .onAppear { feedback.configure(scope: state.ownerScope) }
+            .onChange(of: state.ownerScope) { _, scope in feedback.configure(scope: scope) }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .task { await notifications.refreshPermission(); await notifications.loadCatalog(); await notifications.loadServerStatus() }
         }
@@ -295,5 +313,192 @@ private struct MailboxVisibilitySettings: View {
     private func choice(id: String, name: String, detail: String) -> some View {
         SettingsChoiceToggle(name: name, detail: detail, isOn: Binding(get: { mailboxes.enabledIDs.contains(id) }, set: { mailboxes.setEnabled(id, $0) }))
             .accessibilityIdentifier("settings.views.\(id)")
+    }
+}
+
+@MainActor final class FeedbackQueueModel: ObservableObject {
+    @Published var title = ""
+    @Published var detail = ""
+    @Published var kind = "idea"
+    @Published private(set) var pending: FeedbackInput?
+    @Published private(set) var items: [FeedbackQueueItem] = []
+    @Published private(set) var deliveryAvailable = false
+    @Published private(set) var loading = false
+    @Published private(set) var busy = false
+    @Published private(set) var error: String?
+    @Published private(set) var loadError: String?
+    @Published private(set) var confirmation: String?
+    private var scope = ""
+    private var generation = UUID()
+    var canSubmit: Bool {
+        pending != nil || (!title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && title.utf16.count <= 200 && detail.utf16.count <= 10_000)
+    }
+    func configure(scope: String) {
+        guard self.scope != scope else { return }
+        self.scope = scope; generation = UUID()
+        title = ""; detail = ""; kind = "idea"; pending = nil; items = []
+        deliveryAvailable = false; loading = false; busy = false; error = nil; loadError = nil; confirmation = nil
+    }
+    func load(client: APIClient, scope: String) async {
+        guard scope == self.scope, !loading, !busy else { return }
+        let generation = generation
+        loading = true; loadError = nil
+        defer { if generation == self.generation { loading = false } }
+        do {
+            let response: FeedbackQueueResponse = try await client.request("v1/feedback/queue")
+            guard generation == self.generation else { return }
+            items = response.items; deliveryAvailable = response.deliveryAvailable
+        } catch {
+            guard generation == self.generation else { return }
+            loadError = "Your queue could not be loaded. Try refreshing."
+        }
+    }
+    func submit(client: APIClient, scope: String) async {
+        guard scope == self.scope, !busy, !loading, canSubmit else { return }
+        let generation = generation
+        busy = true; error = nil; confirmation = nil
+        if pending == nil {
+            pending = FeedbackInput(title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                                    description: detail.trimmingCharacters(in: .whitespacesAndNewlines), kind: kind)
+        }
+        defer { if generation == self.generation { busy = false } }
+        do {
+            let response: FeedbackSubmissionResponse = try await client.request("v1/feedback/queue", method: "POST", body: pending)
+            guard generation == self.generation else { return }
+            accept(response)
+            pending = nil; title = ""; detail = ""; kind = "idea"
+            confirmation = "Feedback saved to your queue."
+        } catch {
+            guard generation == self.generation else { return }
+            // Only explicit pre-persistence rejections unlock editing. A lost
+            // response keeps the exact payload and idempotency key frozen.
+            if case let APIClient.ClientError.http(status, body) = error,
+               (status == 400 && body?.code == "invalid_feedback") ||
+               (status == 413 && body?.code == "payload_too_large") {
+                pending = nil
+                self.error = "Feedback was not saved. Check the title and details, then try again."
+            } else if case let APIClient.ClientError.http(429, body) = error, body?.code == "feedback_limit" {
+                self.error = "Your feedback queue is full. Your text is still here; contact support before retrying."
+            } else if case APIClient.ClientError.http(401, _) = error {
+                self.error = "Sign in again to confirm this submission. Your feedback text is still here."
+            } else {
+                self.error = "We could not confirm your feedback was saved. Retry this same submission; it will not create a second item."
+            }
+        }
+    }
+    func retry(item: FeedbackQueueItem, client: APIClient, scope: String) async {
+        guard scope == self.scope, !busy, !loading else { return }
+        let generation = generation
+        busy = true; error = nil
+        defer { if generation == self.generation { busy = false } }
+        do {
+            let response: FeedbackSubmissionResponse = try await client.request("v1/feedback/queue", pathSuffix: [item.id, "retry"], method: "POST")
+            guard generation == self.generation else { return }
+            accept(response)
+        } catch {
+            guard generation == self.generation else { return }
+            self.error = "Delivery could not be confirmed. Your feedback remains saved. Wait 30 seconds before retrying."
+        }
+    }
+    private func accept(_ response: FeedbackSubmissionResponse) {
+        items.removeAll { $0.id == response.item.id }; items.insert(response.item, at: 0)
+        deliveryAvailable = response.deliveryAvailable
+    }
+}
+
+private struct FeedbackSettingsView: View {
+    @EnvironmentObject private var state: AppState
+    @ObservedObject var model: FeedbackQueueModel
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                form
+                queue
+            }.padding(20).foregroundStyle(OrcaTheme.ink)
+        }.background(OrcaTheme.paper.ignoresSafeArea()).tint(OrcaTheme.accent)
+            .navigationTitle("Feedback").navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier("feedback.root")
+            .task(id: state.ownerScope) {
+                model.configure(scope: state.ownerScope)
+                if let client = state.client, !state.demoMode { await model.load(client: client, scope: state.ownerScope) }
+            }
+    }
+    private var form: some View {
+        SettingsGroup(title: "Share feedback", scope: "Orca") {
+            Text("Tell us what happened or what you would like to improve. Only the text you enter is sent. Avoid private mail or passwords.")
+                .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            Picker("Type", selection: $model.kind) {
+                Text("Idea").tag("idea"); Text("Problem").tag("bug")
+                Text("Question").tag("question"); Text("Other").tag("other")
+            }.disabled(model.pending != nil || model.busy).tint(OrcaTheme.accent)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Title").font(OrcaTheme.ui(12, weight: .semibold))
+                TextField("A short summary", text: $model.title)
+                    .textFieldStyle(.roundedBorder).accessibilityIdentifier("feedback.title")
+                Text("Details").font(OrcaTheme.ui(12, weight: .semibold))
+                TextEditor(text: $model.detail).frame(minHeight: 130).scrollContentBackground(.hidden)
+                    .padding(8).background(OrcaTheme.surface, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(OrcaTheme.border))
+                    .accessibilityLabel("Feedback details").accessibilityIdentifier("feedback.details")
+                Text("Title: \(model.title.utf16.count)/200 · Details: \(model.detail.utf16.count)/10,000")
+                    .font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted)
+            }.disabled(model.pending != nil || model.busy)
+            if let error = model.error {
+                Text(error).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.danger).accessibilityIdentifier("feedback.error")
+            }
+            if let confirmation = model.confirmation {
+                Text(confirmation).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.ink).accessibilityIdentifier("feedback.confirmation")
+            }
+            Button(model.busy ? "Saving…" : model.pending == nil ? "Queue feedback" : "Retry submission") {
+                guard let client = state.client else { return }
+                Task { await model.submit(client: client, scope: state.ownerScope) }
+            }.buttonStyle(OrcaPrimaryButtonStyle())
+                .disabled(!model.canSubmit || model.busy || model.loading || state.client == nil || state.demoMode)
+                .accessibilityIdentifier("feedback.submit")
+        }
+    }
+    private var queue: some View {
+        SettingsGroup(title: "Your feedback", scope: "Latest 100") {
+            Text("Queued items are saved in Orca. Delivered items have a Linear work record; follow the link for progress. Work starts after review.")
+                .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            if !model.deliveryAvailable && !model.loading && model.loadError == nil {
+                Text("Linear delivery is not configured. Feedback stays safely queued in Orca.")
+                    .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            }
+            if model.loading { ProgressView("Loading feedback…") }
+            if let error = model.loadError {
+                Text(error).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.danger)
+            } else if !model.loading && model.items.isEmpty {
+                Text("No feedback yet. Your ideas and reports will appear here.").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            }
+            Button("Refresh queue") {
+                guard let client = state.client else { return }
+                Task { await model.load(client: client, scope: state.ownerScope) }
+            }.disabled(model.loading || model.busy || state.client == nil || state.demoMode)
+                .frame(minHeight: 44).accessibilityIdentifier("feedback.refresh")
+            ForEach(model.items) { item in feedbackRow(item) }
+        }
+    }
+    private func feedbackRow(_ item: FeedbackQueueItem) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(item.title).font(OrcaTheme.ui(13, weight: .semibold))
+            Text(item.status == "delivered" ? "Delivered to Linear" : "Queued")
+                .font(OrcaTheme.ui(11, weight: .semibold)).accessibilityIdentifier("feedback.status.\(item.id)")
+            Text(item.description).font(OrcaTheme.ui(12)).textSelection(.enabled)
+            if let url = item.issueURL {
+                Link(item.identifier ?? "Open work record", destination: url).frame(minHeight: 44)
+            }
+            if let error = item.deliveryError {
+                Text(error).font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
+            }
+            if item.status == "queued" && model.deliveryAvailable {
+                Button("Retry delivery") {
+                    guard let client = state.client else { return }
+                    Task { await model.retry(item: item, client: client, scope: state.ownerScope) }
+                }.disabled(model.busy || model.loading).frame(minHeight: 44)
+            }
+            SettingsRule()
+        }.padding(.vertical, 8)
     }
 }

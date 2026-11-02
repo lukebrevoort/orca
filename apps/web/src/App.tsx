@@ -1,3 +1,4 @@
+import { FeedbackPage } from "./feedback-page";
 import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
 import { ReaderSessions } from "./reader-session";
@@ -500,6 +501,10 @@ export function App() {
   if (access === "checking") return <SessionCheckingScreen />;
   if (access === "signedout") return isOnboardingRoute() ? <OAuthLoginPage /> : <LoginRequiredScreen />;
 
+  if (window.location.pathname === "/settings/feedback") {
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Feedback"><FeedbackPage /></DesktopSettingsFrame>;
+  }
+
   if (isOnboardingRoute()) {
     return <WelcomeOrientationPage onComplete={completeOnboarding} theme={theme} setTheme={setTheme} />;
   }
@@ -913,7 +918,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     <main className="settings-home-page">
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
-      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a><a href="/settings/feedback">Feedback</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}

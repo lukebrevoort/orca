@@ -123,7 +123,8 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
       <SidebarItem active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("attention")} />
-      <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
+      <SidebarItem active={active === "settings" && window.location.pathname !== "/settings/feedback"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
+      <SidebarItem active={window.location.pathname === "/settings/feedback"} icon={<span aria-hidden="true">✎</span>} label="Feedback" onClick={() => window.location.assign("/settings/feedback")} />
       <div className="desktop-sidebar-spacer"/>
       <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
         <span className="desktop-account-avatar">{account.avatar ?? initials}</span><span><strong>{account.displayName}</strong><small>{account.detail ?? `${account.accountCount} ${account.accountCount === 1 ? "account" : "accounts"} · ${account.health}`}</small></span><span aria-hidden="true">›</span>
@@ -165,7 +166,8 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
             <MobileMenuItem active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => navigateFromMobileMenu("attention")} />
-            <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
+            <MobileMenuItem active={active === "settings" && window.location.pathname !== "/settings/feedback"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
+            <MobileMenuItem active={window.location.pathname === "/settings/feedback"} icon={<span aria-hidden="true">✎</span>} label="Feedback" onClick={() => window.location.assign("/settings/feedback")} />
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
           </div>
         </div>
@@ -354,7 +356,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     syncing: source.syncing,
   });
   const navigate = (destination: DesktopDestination) => {
-    if (destination === "settings") return;
+    if (destination === "settings" && window.location.pathname !== "/settings/feedback") return;
     window.location.assign(desktopDestinationHref(destination, window.location.pathname));
   };
   return <div className="desktop-shell desktop-settings-frame">

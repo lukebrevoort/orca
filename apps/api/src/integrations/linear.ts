@@ -238,7 +238,7 @@ async function uploadAttachment(
 
 export function createLinearFeedbackSubmitter(
   environment: LinearEnvironment = process.env,
-): ((report: FeedbackReport) => Promise<{
+): ((report: FeedbackReport, options?: { issueId: string }) => Promise<{
   identifier: string;
   url: string;
 }>) | undefined {
@@ -265,7 +265,24 @@ export function createLinearFeedbackSubmitter(
     ),
   };
 
-  return async (report) => {
+  return async (report, options) => {
+    // A queue-owned UUID is also the Linear issue ID. Retrying an uncertain
+    // create cannot create a second issue; recover the receipt by that exact ID.
+    const signal = options ? AbortSignal.timeout(12_000) : undefined;
+    const recover = async () => {
+      const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
+        method: "POST", signal,
+        headers: { authorization: apiKey, "content-type": "application/json" },
+        body: JSON.stringify({ query: "query FeedbackIssue($id: String!) { issue(id: $id) { identifier url } }", variables: { id: options!.issueId } }),
+      });
+      const payload = await response.json() as { data?: { issue?: { identifier: string; url: string } }; errors?: unknown[] };
+      if (!response.ok || payload.errors?.length || !payload.data?.issue) return null;
+      return payload.data.issue;
+    };
+    if (options) {
+      const existing = await recover();
+      if (existing) return existing;
+    }
     const attachmentUrls = new Map<string, string>();
     for (const attachment of report.attachments) {
       attachmentUrls.set(attachment.id, await uploadAttachment(apiKey, attachment));
@@ -280,6 +297,7 @@ export function createLinearFeedbackSubmitter(
 
     const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
       method: "POST",
+      signal,
       headers: {
         authorization: apiKey,
         "content-type": "application/json",
@@ -288,6 +306,7 @@ export function createLinearFeedbackSubmitter(
         query: ISSUE_CREATE_MUTATION,
         variables: {
           input: {
+            ...(options ? { id: options.issueId } : {}),
             assigneeId: destination.assigneeId,
             description,
             labelIds: [destination.feedbackLabelId],
@@ -305,6 +324,7 @@ export function createLinearFeedbackSubmitter(
     const graphQLErrorMessage = linearErrorMessage(payload.errors);
     const issue = payload.data?.issueCreate?.issue;
     if (!response.ok || graphQLErrorMessage || !payload.data?.issueCreate?.success || !issue) {
+      if (options) { const existing = await recover(); if (existing) return existing; }
       throw new Error(graphQLErrorMessage ?? `Linear issue creation failed (${response.status}).`);
     }
 

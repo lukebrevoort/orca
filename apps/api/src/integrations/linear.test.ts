@@ -155,3 +155,47 @@ describe("Linear feedback integration", () => {
     }
   });
 });
+
+describe("durable feedback delivery", () => {
+  test("reconciles an existing issue by the durable ID without creating or uploading", async () => {
+    const original = globalThis.fetch; const seen: unknown[] = [];
+    const receipt = { identifier: "BRE-22", url: "https://linear.app/brevoort/issue/BRE-22" };
+    globalThis.fetch = (async (_url, init) => { seen.push(JSON.parse(String(init?.body))); assert.ok(init?.signal); return Response.json({ data: { issue: receipt } }); }) as typeof fetch;
+    try {
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+      assert.deepEqual(await send({ ...report, attachments: [] }, { issueId: "10000000-0000-4000-8000-000000000001" }), receipt);
+      assert.equal(seen.length, 1);
+      assert.equal((seen[0] as { variables: { id: string } }).variables.id, "10000000-0000-4000-8000-000000000001");
+    } finally { globalThis.fetch = original; }
+  });
+  test("lost create response is recovered on retry and every create uses the same UUID", async () => {
+    const original = globalThis.fetch; const inputs: Array<{ id: string }> = []; let stored = false;
+    const receipt = { identifier: "BRE-23", url: "https://linear.app/brevoort/issue/BRE-23" };
+    globalThis.fetch = (async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: stored ? receipt : null } });
+      inputs.push(body.variables.input); stored = true; throw new Error("response lost after server accepted");
+    }) as typeof fetch;
+    try {
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+      const options = { issueId: "10000000-0000-4000-8000-000000000002" };
+      await assert.rejects(send({ ...report, attachments: [] }, options));
+      assert.deepEqual(await send({ ...report, attachments: [] }, options), receipt);
+      assert.equal(inputs.length, 1); assert.equal(inputs[0]!.id, options.issueId);
+    } finally { globalThis.fetch = original; }
+  });
+  test("duplicate-create errors reconcile by exact ID", async () => {
+    const original = globalThis.fetch; let lookups = 0;
+    const receipt = { identifier: "BRE-24", url: "https://linear.app/brevoort/issue/BRE-24" };
+    globalThis.fetch = (async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: ++lookups === 1 ? null : receipt } });
+      return Response.json({ errors: [{ message: "ID already exists" }] });
+    }) as typeof fetch;
+    try {
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+      assert.deepEqual(await send({ ...report, attachments: [] }, { issueId: "10000000-0000-4000-8000-000000000003" }), receipt);
+      assert.equal(lookups, 2);
+    } finally { globalThis.fetch = original; }
+  });
+});
