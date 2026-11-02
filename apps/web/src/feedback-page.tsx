@@ -143,7 +143,7 @@ export function FeedbackPage() {
           <div className="orca-feedback-heading"><h3>{item.title}</h3><span className="orca-feedback-badge">{item.status === "delivered" ? "Sent to Linear" : "Queued"}</span></div>
           <p className="orca-feedback-description">{item.description}</p>
           <small>{item.kind} · {new Date(item.createdAt).toLocaleDateString()} · {item.platform}</small>
-          {item.status === "delivered" && item.url && /^https:\/\/linear\.app\//.test(item.url) && <a className="orca-feedback-issue" href={item.url} target="_blank" rel="noopener noreferrer">Open {item.identifier ?? "work item"} ↗</a>}
+          {item.status === "delivered" && item.url && /^https:\/\/linear\.app\//.test(item.url) && <a className="orca-feedback-issue" href={item.url} target="_blank" rel="noopener noreferrer">Open {item.identifier ?? "work item"} in Linear</a>}
           {item.deliveryError && <p className="orca-feedback-note">{item.deliveryError}</p>}
           {item.status === "queued" && deliveryAvailable && <button type="button" disabled={busy || retryId !== null} onClick={() => void retry(item.id)}>{retryId === item.id ? "Retrying…" : "Retry Linear delivery"}</button>}
         </li>)}</ol>
