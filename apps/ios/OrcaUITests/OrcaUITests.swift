@@ -35,6 +35,12 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 10)); title.tap(); title.typeText(subject)
         let details = app.textViews["feedback.details"]
         XCTAssertTrue(details.waitForExistence(timeout: 5)); details.tap(); details.typeText(detail)
+        let keyboardDone = app.buttons["feedback.keyboard-done"]
+        XCTAssertTrue(keyboardDone.waitForExistence(timeout: 5))
+        XCTAssertTrue(keyboardDone.isHittable)
+        attachScreenshot(named: "feedback-keyboard-done")
+        keyboardDone.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
         revealFeedbackElement(submit, in: app)
         XCTAssertTrue(submit.isEnabled)
         attachScreenshot(named: "feedback-form-ready")
@@ -66,6 +72,7 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "feedback-queue-after-relaunch")
         let after = try composeFixtureRequest("v1/feedback/queue")
         XCTAssertEqual((after["items"] as? [[String: Any]] ?? []).filter { $0["title"] as? String == subject }.count, 1)
+        print("[feedback-fixture] PASS: keyboard dismissal, one durable queued record, navigation reopen and app relaunch; platform=ios")
     }
 
     private func openFeedback(in app: XCUIApplication) {
@@ -86,6 +93,10 @@ final class OrcaUITests: XCTestCase {
             start.press(forDuration: 0.1, thenDragTo: end)
         }
         XCTAssertTrue(element.waitForExistence(timeout: 10))
+        if !element.isHittable {
+            attachScreenshot(named: "feedback-control-not-hittable")
+            print("[feedback-fixture] target=\(element.identifier) frame=\(element.frame) keyboard=\(app.keyboards.firstMatch.exists) app=\(app.frame)")
+        }
         XCTAssertTrue(element.isHittable)
     }
 

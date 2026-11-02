@@ -13,6 +13,34 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_feedback_summary_exposes_only_known_terminal_test_results(self):
+        unit = "Test Case '-[OrcaTests.FeedbackQueueTests testWorkRecordLinkAcceptsOnlyHTTPSLinearURLs]' passed (0.004 seconds)."
+        ui = "Test Case '-[OrcaUITests.OrcaUITests test38FeedbackQueuesAndSurvivesRelaunch]' failed (52.541 seconds)."
+        text = '\n'.join([unit, ui, unit + ' private-payload ::error::',
+                         "Test Case '-[OrcaTests.OtherTests privatePayload]' passed (0.1 seconds).",
+                         '[feedback-fixture] arbitrary private-payload', unit.replace('passed', 'started')])
+        summaries = evidence.feedback_test_summary(text)
+        self.assertEqual(len(summaries), 2)
+        self.assertIn('passed (0.004 seconds)', summaries[0])
+        self.assertIn('failed (52.541 seconds)', summaries[1])
+        self.assertNotIn('private', ' '.join(summaries))
+        self.assertEqual(len(evidence.feedback_test_summary((unit + '\n') * 100)), 20)
+
+    def test_feedback_summary_is_printed_after_redaction_on_success_and_failure(self):
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory) / 'private'; out = Path(directory) / 'public'
+                work.mkdir(); out.mkdir()
+                connection = work / 'connection.json'
+                connection.write_text(json.dumps({'accessToken': 'feedback-secret'}))
+                (work / 'checks.log').write_text(
+                    "Test Case '-[OrcaTests.FeedbackQueueTests testWorkRecordLinkAcceptsOnlyHTTPSLinearURLs]' passed (0.004 seconds).\n"
+                    'noise feedback-secret\n' + 'later output\n' * 200)
+                output = io.StringIO()
+                with redirect_stdout(output): evidence.export(work, out, str(connection), status)
+                self.assertIn('[feedback test] OrcaTests.FeedbackQueueTests.testWorkRecordLinkAcceptsOnlyHTTPSLinearURLs passed (0.004 seconds)', output.getvalue())
+                self.assertNotIn('feedback-secret', output.getvalue())
+
     def test_search_telemetry_is_redacted_bounded_and_keeps_full_log(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory) / 'private'; out = Path(directory) / 'public'

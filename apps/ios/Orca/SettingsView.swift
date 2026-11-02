@@ -410,6 +410,8 @@ private struct MailboxVisibilitySettings: View {
 private struct FeedbackSettingsView: View {
     @EnvironmentObject private var state: AppState
     @ObservedObject var model: FeedbackQueueModel
+    private enum WritingField: Hashable { case title, details }
+    @FocusState private var writingField: WritingField?
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -419,6 +421,13 @@ private struct FeedbackSettingsView: View {
         }.background(OrcaTheme.paper.ignoresSafeArea()).tint(OrcaTheme.accent)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Feedback").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { writingField = nil }
+                        .accessibilityIdentifier("feedback.keyboard-done")
+                }
+            }
             .accessibilityIdentifier("feedback.root")
             .task(id: state.ownerScope) {
                 model.configure(scope: state.ownerScope)
@@ -436,9 +445,12 @@ private struct FeedbackSettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Title").font(OrcaTheme.ui(12, weight: .semibold))
                 TextField("A short summary", text: $model.title)
+                    .focused($writingField, equals: .title)
+                    .submitLabel(.next).onSubmit { writingField = .details }
                     .textFieldStyle(.roundedBorder).accessibilityIdentifier("feedback.title")
                 Text("Details").font(OrcaTheme.ui(12, weight: .semibold))
                 TextEditor(text: $model.detail).frame(minHeight: 130).scrollContentBackground(.hidden)
+                    .focused($writingField, equals: .details)
                     .padding(8).background(OrcaTheme.surface, in: RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(OrcaTheme.border))
                     .accessibilityLabel("Feedback details").accessibilityIdentifier("feedback.details")

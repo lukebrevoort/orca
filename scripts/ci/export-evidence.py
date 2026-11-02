@@ -40,6 +40,26 @@ def failure_excerpt(text):
     return '\n'.join(result)
 
 
+
+def feedback_test_summary(text):
+    """Emit only known test identities and numeric outcomes, never log payloads."""
+    known = {
+        ('OrcaTests.FeedbackQueueTests', 'testLostResponseRetainsExactSubmissionForRetryAndClearsOnlyAfterReceipt'),
+        ('OrcaTests.FeedbackQueueTests', 'testQueueRefreshRestoresSavedRowsAndFailurePreservesVisibleQueue'),
+        ('OrcaTests.FeedbackQueueTests', 'testChangingOwnerClearsDraftAndQueueAndRejectsOldScopeActions'),
+        ('OrcaTests.FeedbackQueueTests', 'testFeedbackValidationUsesWireLengthAndRequiresBothFields'),
+        ('OrcaTests.FeedbackQueueTests', 'testWorkRecordLinkAcceptsOnlyHTTPSLinearURLs'),
+        ('OrcaUITests.OrcaUITests', 'test38FeedbackQueuesAndSurvivesRelaunch'),
+    }
+    pattern = re.compile(r"Test Case '-\[([A-Za-z.]+) ([A-Za-z0-9]+)\]' (passed|failed) \(([0-9]{1,6}(?:\.[0-9]{1,6})?) seconds\)\.")
+    summaries = []
+    for line in text.splitlines():
+        match = pattern.fullmatch(line.strip())
+        if match and (match[1], match[2]) in known:
+            summaries.append(f'{match[1]}.{match[2]} {match[3]} ({match[4]} seconds)')
+    return summaries[-20:]
+
+
 def export(work, evidence, connection, status):
     tokens = []
     if connection:
@@ -97,6 +117,9 @@ def export(work, evidence, connection, status):
     # Print only after the complete export passed its credential scan. Prefix
     # every line so synthetic log content cannot become a workflow command.
     checks = evidence / 'checks.log'
+    if checks.is_file():
+        for summary in feedback_test_summary(checks.read_text()):
+            print(f'[feedback test] {summary}')
     native_times = re.findall(r'\[counter-native\] epoch_ms=(\d+)', checks.read_text() if checks.is_file() else '')
     # xcresult export can finish minutes after the assertion. Anchor server
     # liveness to the final native observation, not the later cleanup time.

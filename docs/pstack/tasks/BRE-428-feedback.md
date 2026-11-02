@@ -23,3 +23,9 @@
 - Independent review found no source blocker through that executable revision. Latest100 and in-memory pending-draft limitations are explicit.
 - Hosted checks / native simulator validation still in progress at this evidence checkpoint. Final check links and status are maintained on the draft PR to avoid repeatedly restarting CI for documentation-only status commits.
 - All owned feedback fixtures stopped; disposable databases cleaned; logs and failed attempts retained under `/tmp/orca-feedback-*` and selected evidence committed.
+
+## Native CI follow-up
+
+- Head `1fa8f2b` passed hosted 2,094 unit tests, typecheck, production browser/API and native image checks. Native reading initially failed before build because Xcode could not discover its booted simulator; one failed-job retry was requested.
+- Native compose execution reached the new feedback test: 16 selected UI tests passed, feedback failed when the keyboard covered Submit. The helper's drag began within the keyboard. Added an explicit keyboard Done control with focus management; the test dismisses the keyboard before revealing Submit and retains queue, uniqueness and relaunch assertions.
+- Added bounded, allowlisted native feedback test outcomes to sanitized CI output so passing/failing unit and UI results are visible without downloading the artifact. New native execution is required; current status remains running and final results are recorded on PR #286.
