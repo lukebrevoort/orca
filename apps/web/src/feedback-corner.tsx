@@ -23,6 +23,7 @@ export default function FeedbackCorner() {
   const [files, setFiles] = useState<FeedbackMediaFile[]>([]);
   const [reviewed, setReviewed] = useState(false);
   const [mediaWorking, setMediaWorking] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const request = useRef<XMLHttpRequest | null>(null);
   const [pending, setPending] = useState<Submission | null>(null);
@@ -112,10 +113,10 @@ export default function FeedbackCorner() {
 
   if (!available) return null;
   return <>
-    <button ref={trigger} className="feedback-corner-trigger" hidden={topLayerActive && !open} type="button" aria-label="Feedback" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+    <button ref={trigger} className="feedback-corner-trigger" hidden={capturing || (topLayerActive && !open)} type="button" aria-label="Feedback" aria-haspopup="dialog" onClick={() => setOpen(true)}>
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 11a8 8 0 0 1-8 8H5l-4 3 2-7a8 8 0 1 1 17-4Z" /><path d="M8 9h8M8 13h5" /></svg><span>Feedback</span>
     </button>
-    {open && <TopLayer ariaLabel="Send feedback" layerClassName="feedback-corner-layer" backdropClassName="feedback-corner-backdrop" className="feedback-corner-dialog" onClose={() => setOpen(false)} initialFocusRef={receipt ? undefined : editor} returnFocusRef={trigger} ariaBusy={busy}>
+    {open && <TopLayer suspended={capturing} ariaLabel="Send feedback" layerClassName="feedback-corner-layer" backdropClassName="feedback-corner-backdrop" className="feedback-corner-dialog" onClose={() => setOpen(false)} initialFocusRef={receipt ? undefined : editor} returnFocusRef={trigger} ariaBusy={busy}>
       <header><h2>Feedback</h2><button type="button" aria-label="Close feedback" onClick={() => setOpen(false)}>×</button></header>
       {receipt ? <div className="feedback-corner-success">
         <p role="status">Created in Linear.</p>
@@ -125,7 +126,7 @@ export default function FeedbackCorner() {
         <label htmlFor="orca-feedback-message">Your feedback</label>
         <textarea ref={editor} id="orca-feedback-message" rows={5} maxLength={10000} required value={message} readOnly={pending !== null || busy} placeholder="What should we improve?" onChange={event => setMessage(event.target.value)} />
         <p className="feedback-corner-hint">Creates a ticket in your Linear with only your message and reviewed attachments.</p>
-        <FeedbackMedia files={files} onChange={setFiles} reviewed={reviewed} onReviewed={setReviewed} locked={pending !== null || busy} onWorking={setMediaWorking} />
+        <FeedbackMedia files={files} onChange={setFiles} reviewed={reviewed} onReviewed={setReviewed} locked={pending !== null || busy} onWorking={setMediaWorking} onCaptureChange={setCapturing} />
         {busy && <p role="status" className="feedback-corner-hint">{progress === 100 ? "Confirming ticket and private media in Linear…" : progress === null ? "Uploading to Orca…" : `Uploading to Orca… ${progress}%`}</p>}
         {files.length > 0 && !pending && !busy && <button type="button" disabled={mediaWorking} onClick={() => { setFiles([]); setReviewed(false); }}>Discard attachments</button>}
         {error && <p role="alert" className="feedback-corner-error">{error}</p>}

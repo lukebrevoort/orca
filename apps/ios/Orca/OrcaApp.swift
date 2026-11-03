@@ -9,7 +9,7 @@ import ImageIO
     @UIApplicationDelegateAdaptor(NotificationManager.self) var notifications
     @StateObject private var state = AppState()
     @Environment(\.scenePhase) private var scenePhase
-    init() { OrcaTheme.configureNavigation(); FeedbackTicketModel.removeAbandonedPreviews() }
+    init() { OrcaTheme.configureNavigation(); FeedbackTicketModel.removeAbandonedPreviews(); FeedbackVideoWriter.removeAbandonedFiles() }
     var body: some Scene { WindowGroup { RootView().environmentObject(state).environmentObject(notifications).tint(OrcaTheme.accent).font(OrcaTheme.ui(15)).foregroundStyle(OrcaTheme.ink).task { notifications.state = state; await notifications.refreshPermission(); await state.start(); if state.phase == .ready { notifications.openPendingNotification(); notifications.reconcile() } }.onChange(of: state.phase) { if state.phase == .ready { notifications.openPendingNotification(); notifications.reconcile() } }.onChange(of: scenePhase) { if scenePhase == .active && state.phase == .ready { notifications.reconcile() } }.alert("Orca", isPresented: Binding(get: { state.errorMessage != nil }, set: { if !$0 { state.errorMessage = nil } })) { Button("OK") { state.errorMessage = nil } } message: { Text(state.errorMessage ?? "") } } }
 }
 
@@ -45,6 +45,11 @@ struct MainView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var mailboxes = MailboxViews()
     @StateObject private var feedback = FeedbackTicketModel()
+    @StateObject private var capture = FeedbackCaptureController()
+    @StateObject private var captureWindow = FeedbackWindowReference()
+    @State private var captureRequest: FeedbackCaptureAction?
+    @State private var captureRequestScope = ""
+    private var captureScope: String { state.ownerScope + "|" + (state.selectedAccount?.id ?? "") }
     @State private var feedbackPresented = false
     var body: some View {
         TabView(selection: $state.selectedTab) {
@@ -53,8 +58,23 @@ struct MainView: View {
             SettingsView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
         }
         .environmentObject(mailboxes)
-        .sheet(isPresented: $feedbackPresented) {
-            FeedbackTicketComposer(model: feedback).environmentObject(state)
+        .background(FeedbackWindowProbe(reference: captureWindow).frame(width: 0, height: 0))
+        .sheet(isPresented: $feedbackPresented, onDismiss: performCaptureAfterDismissal) {
+            FeedbackTicketComposer(model: feedback, capture: capture) { action in
+                captureRequest = action; captureRequestScope = captureScope
+                feedbackPresented = false
+            }.environmentObject(state)
+        }
+        .task(id: captureScope) {
+            capture.configure(scope: captureScope)
+            capture.onReturnToComposer = { receiveCapture() }
+        }
+        .onChange(of: captureScope) { _, scope in
+            captureRequest = nil; capture.configure(scope: scope)
+        }
+        .onDisappear { captureRequest = nil; capture.onReturnToComposer = nil; capture.cancel() }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+            captureRequest = nil; capture.cancel()
         }
         .task(id: state.ownerScope) {
             feedback.configure(scope: state.ownerScope)
@@ -79,8 +99,30 @@ struct MainView: View {
             }
         }
     }
+    private func performCaptureAfterDismissal() {
+        guard let action = captureRequest else { return }
+        captureRequest = nil
+        guard captureRequestScope == captureScope, feedback.canAddMedia,
+              UIApplication.shared.applicationState == .active else { return }
+        let window = captureWindow.window
+        let requestedScope = captureRequestScope
+        if action == .screenshot {
+            capture.screenshot(window: window, scope: captureScope)
+            receiveCapture()
+        } else {
+            Task { await capture.start(scope: requestedScope, windowScene: window?.windowScene) }
+        }
+    }
+    private func receiveCapture() {
+        guard capture.scope == captureScope else { return }
+        if let result = capture.result, result.scope == captureScope {
+            feedback.attachCapture(result, scope: state.ownerScope)
+            capture.clearResult()
+        }
+        if UIApplication.shared.applicationState == .active { feedbackPresented = true }
+    }
     @ViewBuilder private var feedbackCorner: some View {
-        if feedback.available {
+        if feedback.available && !capture.active {
             Button { feedbackPresented = true } label: {
                 Label("Feedback", systemImage: "bubble.left")
                     .font(OrcaTheme.ui(11, weight: .semibold))
@@ -124,6 +166,12 @@ private struct FeedbackPickedMedia: Transferable {
     private var scope = ""
     private var generation = UUID()
     private var checking = false
+    var canAddMedia: Bool { available && pending == nil && !busy && !importing && attachments.count < 3 }
+    func attachCapture(_ capture: FeedbackCapturedMedia, scope: String) {
+        guard self.scope == scope, canAddMedia else { return }
+        do { try addAttachment(data: capture.data, name: capture.name, mime: capture.mime); error = nil }
+        catch { self.error = "Could not attach this capture. Keep each capture under 10 MiB and all attachments under 20 MiB." }
+    }
     var canSubmit: Bool {
         available && !importing && (pending != nil || (attachments.allSatisfy { reviewed.contains($0.id) } && !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && message.utf16.count <= 10_000))
     }
@@ -287,10 +335,14 @@ private struct FeedbackPickedMedia: Transferable {
     func writeAnother() { receipt = nil; error = nil }
 }
 
+enum FeedbackCaptureAction { case screenshot, recording }
+
 private struct FeedbackTicketComposer: View {
     @EnvironmentObject private var state: AppState
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: FeedbackTicketModel
+    @ObservedObject var capture: FeedbackCaptureController
+    let requestCapture: (FeedbackCaptureAction) -> Void
     @FocusState private var writing: Bool
     @State private var choosingMedia = false
     @State private var choosingPhotos = false
@@ -325,13 +377,27 @@ private struct FeedbackTicketComposer: View {
                             .disabled(model.pending != nil || model.busy)
                         Text("Creates a ticket in your Linear. Only your note and reviewed files are sent.")
                             .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
+                        HStack {
+                            Button { writing = false; requestCapture(.screenshot) } label: {
+                                Label("Screenshot this screen", systemImage: "camera.viewfinder")
+                            }.frame(minHeight: 44).accessibilityIdentifier("feedback.capture-screenshot")
+                            Button { writing = false; requestCapture(.recording) } label: {
+                                Label("Record this screen", systemImage: "record.circle")
+                            }.frame(minHeight: 44).accessibilityIdentifier("feedback.capture-recording")
+                        }.disabled(!model.canAddMedia || capture.active)
+                        Text("Captures the current Orca screen with this composer hidden. Recordings are silent and stop after 60 seconds. Review captures before sending.")
+                            .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
+                        if let error = capture.error {
+                            Text(error).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.danger).accessibilityIdentifier("feedback.capture-error")
+                        }
+                        Text("Or attach an existing file").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
                         Button("Choose photos or videos") { writing = false; importScope = state.ownerScope; choosingPhotos = true }
                             .frame(minHeight: 44).accessibilityIdentifier("feedback.photos")
                             .disabled(model.pending != nil || model.busy || model.importing || model.attachments.count >= 3)
                         Button("Choose from Files") { writing = false; importScope = state.ownerScope; choosingMedia = true }
                             .frame(minHeight: 44).accessibilityIdentifier("feedback.attach")
                             .disabled(model.pending != nil || model.busy || model.importing || model.attachments.count >= 3)
-                        Text("Use your device’s screenshot or screen-recording controls, then choose from Photos or Files. Up to 3 files, 10 MiB each, 20 MiB total. Images omit location and camera metadata. Selected videos may retain audio and metadata.")
+                        Text("Up to 3 files, 10 MiB each, 20 MiB total. Images omit location and camera metadata. Imported videos may retain audio and metadata.")
                             .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
                         ForEach(model.attachments) { attachment in
                             HStack {

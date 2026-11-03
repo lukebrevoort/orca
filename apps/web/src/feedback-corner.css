@@ -3,6 +3,7 @@
 .feedback-corner-trigger:hover, .feedback-corner-dialog button:hover { background: var(--orca-surface-hover); }
 .feedback-corner-trigger:focus-visible, .feedback-corner-dialog :focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
 .feedback-corner-layer { display: flex; align-items: flex-end; justify-content: flex-end; padding: 20px; }
+.feedback-corner-layer[data-top-layer="active"] { z-index: 1001 !important; }
 .feedback-corner-backdrop { position: absolute; inset: 0; border: 0; background: #00000018; cursor: default; }
 .feedback-corner-dialog { position: relative; width: min(380px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; padding: 20px; border: 1px solid var(--orca-border); border-radius: 16px; background: var(--orca-paper); color: var(--orca-ink); box-shadow: 0 12px 48px #00000024; }
 .feedback-corner-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -34,3 +35,8 @@
 .feedback-media-review { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
 .feedback-media-review input { margin-top: 3px; min-width: 18px; min-height: 18px; accent-color: var(--orca-accent); }
 .feedback-media-capture { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border: 2px solid var(--orca-accent); border-radius: 8px; font-size: 13px; }
+.feedback-capture-controls { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); right: 16px; z-index: 1000; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 10px; border: 2px solid var(--orca-accent); border-radius: 12px; background: var(--orca-paper); color: var(--orca-ink); box-shadow: 0 3px 14px #00000020; font: inherit; font-size: 13px; }
+.feedback-capture-controls[hidden] { display: none; }
+.feedback-capture-controls button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--orca-border); border-radius: 8px; background: var(--orca-surface); color: var(--orca-ink); font: inherit; cursor: pointer; }
+.feedback-capture-controls button:hover { background: var(--orca-surface-hover); }
+.feedback-capture-controls button:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }

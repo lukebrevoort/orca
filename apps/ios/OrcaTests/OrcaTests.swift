@@ -1,6 +1,7 @@
 import XCTest
 import ImageIO
 import UniformTypeIdentifiers
+import AVFoundation
 @testable import Orca
 
 private final class StubURLProtocol: URLProtocol {
@@ -2763,6 +2764,23 @@ final class VerificationCodeTests: XCTestCase {
     }
 }
 
+@MainActor private final class FakeFeedbackRecordingSession: FeedbackRecordingSession {
+    var available = true
+    var data = Data([1, 2, 3])
+    var starts = 0, finishes = 0, cancels = 0
+    var heldStart: CheckedContinuation<Void, Error>?
+    var holdStart = false
+    var onStart: (() -> Void)?
+    func start(onLimit: @escaping @MainActor () -> Void) async throws {
+        starts += 1
+        if holdStart {
+            try await withCheckedThrowingContinuation { heldStart = $0; self.onStart?() }
+        } else { onStart?() }
+    }
+    func finish() async throws -> Data { finishes += 1; return data }
+    func cancel() async { cancels += 1 }
+}
+
 final class FeedbackTicketTests: XCTestCase {
     private var syntheticImage: Data { Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGOQ6FlAU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULALhwEEy5eilwAAAAAElFTkSuQmCC")! }
     private func client() -> APIClient {
@@ -2948,6 +2966,96 @@ final class FeedbackTicketTests: XCTestCase {
         XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8000, height: 8000))
         XCTAssertTrue(FeedbackTicketModel.validImageDimensions(width: 8000, height: 4000))
         XCTAssertThrowsError(try FeedbackTicketModel.normalizeImage(Data([1, 2, 3])))
+    }
+    @MainActor func testScreenCaptureRequiresForegroundOriginatingScene() async {
+        let capture = FeedbackCaptureController()
+        capture.configure(scope: "owner-a")
+        await capture.start(scope: "owner-a", windowScene: nil)
+        XCTAssertEqual(capture.phase, .idle); XCTAssertNotNil(capture.error); XCTAssertNil(capture.result)
+        capture.screenshot(window: nil, scope: "owner-a")
+        XCTAssertNil(capture.result); XCTAssertNotNil(capture.error)
+    }
+    @MainActor func testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let recorder = FakeFeedbackRecordingSession()
+        let capture = FeedbackCaptureController(testSessionFactory: { recorder })
+        capture.configure(scope: "owner-a|account-a")
+        await capture.start(scope: "owner-a|account-a")
+        XCTAssertEqual(capture.phase, .recording)
+        await capture.elapsedTimeDidChange(60)
+        XCTAssertEqual(capture.phase, .idle); XCTAssertEqual(recorder.finishes, 1)
+        let media = try XCTUnwrap(capture.result)
+        XCTAssertEqual(media.scope, "owner-a|account-a"); XCTAssertEqual(media.mime, "video/mp4")
+        let model = FeedbackTicketModel(), client = client()
+        await enable(model, client: client); model.message = "Screen recording"
+        model.attachCapture(media, scope: "owner-a")
+        XCTAssertEqual(model.attachments.count, 1); XCTAssertTrue(model.reviewed.isEmpty)
+        XCTAssertFalse(model.canSubmit)
+        await capture.stop(); XCTAssertEqual(recorder.finishes, 1)
+    }
+    @MainActor func testScreenRecordingCancellationFencesLatePermissionAndAccountChange() async {
+        let recorder = FakeFeedbackRecordingSession(); recorder.holdStart = true
+        let started = expectation(description: "Permission pending")
+        recorder.onStart = { started.fulfill() }
+        let capture = FeedbackCaptureController(testSessionFactory: { recorder })
+        capture.configure(scope: "owner-a|account-a")
+        let start = Task { await capture.start(scope: "owner-a|account-a") }
+        await fulfillment(of: [started], timeout: 2)
+        XCTAssertEqual(capture.phase, .starting)
+        capture.configure(scope: "owner-b|account-b")
+        recorder.heldStart?.resume(); recorder.heldStart = nil
+        await start.value; await Task.yield()
+        XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
+        XCTAssertGreaterThanOrEqual(recorder.cancels, 1)
+        await capture.start(scope: "owner-a|account-a")
+        XCTAssertEqual(recorder.starts, 1)
+    }
+    @MainActor func testScreenRecordingUnavailableAndOversizedResultsNeverAttach() async {
+        let recorder = FakeFeedbackRecordingSession(); recorder.available = false
+        let capture = FeedbackCaptureController(testSessionFactory: { recorder })
+        capture.configure(scope: "owner-a")
+        await capture.start(scope: "owner-a")
+        XCTAssertNotNil(capture.error); XCTAssertNil(capture.result); XCTAssertEqual(recorder.starts, 0)
+        recorder.available = true; recorder.data = Data(repeating: 1, count: 10 * 1_024 * 1_024 + 1)
+        await capture.start(scope: "owner-a"); await capture.stop()
+        XCTAssertNotNil(capture.error); XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
+        recorder.data = Data([1]); await capture.start(scope: "owner-a")
+        capture.cancel(); await Task.yield()
+        XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
+    }
+    func testScreenRecordingWriterProducesSilentBoundedVideo() async throws {
+        let limited = expectation(description: "Duration limit")
+        let writer = FeedbackVideoWriter { limited.fulfill() }
+        for second in [0, 1, 61] {
+            var pixel: CVPixelBuffer?
+            XCTAssertEqual(CVPixelBufferCreate(kCFAllocatorDefault, 32, 32, kCVPixelFormatType_32BGRA, nil, &pixel), kCVReturnSuccess)
+            let buffer = try XCTUnwrap(pixel)
+            CVPixelBufferLockBaseAddress(buffer, [])
+            if let address = CVPixelBufferGetBaseAddress(buffer) {
+                memset(address, 128, CVPixelBufferGetBytesPerRow(buffer) * CVPixelBufferGetHeight(buffer))
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            var format: CMVideoFormatDescription?
+            XCTAssertEqual(CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer, formatDescriptionOut: &format), noErr)
+            var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: 30), presentationTimeStamp: CMTime(seconds: Double(second), preferredTimescale: 600), decodeTimeStamp: .invalid)
+            var sample: CMSampleBuffer?
+            XCTAssertEqual(CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer, formatDescription: try XCTUnwrap(format), sampleTiming: &timing, sampleBufferOut: &sample), noErr)
+            writer.append(try XCTUnwrap(sample))
+        }
+        await fulfillment(of: [limited], timeout: 2)
+        let data = try await writer.finish()
+        XCTAssertFalse(data.isEmpty); XCTAssertLessThanOrEqual(data.count, 10 * 1_024 * 1_024)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+        defer { try? FileManager.default.removeItem(at: url); writer.discard() }
+        try data.write(to: url)
+        let asset = AVURLAsset(url: url)
+        let video = try await asset.loadTracks(withMediaType: .video)
+        let audio = try await asset.loadTracks(withMediaType: .audio)
+        let duration = try await asset.load(.duration)
+        XCTAssertEqual(video.count, 1); XCTAssertTrue(audio.isEmpty)
+        XCTAssertLessThanOrEqual(CMTimeGetSeconds(duration), 60)
+        let frame = try await AVAssetImageGenerator(asset: asset).image(at: .zero)
+        XCTAssertEqual(frame.image.width, 32); XCTAssertEqual(frame.image.height, 32)
     }
     func testTicketLinkAcceptsOnlyHTTPSLinearURLs() {
         var receipt = FeedbackTicketReceipt(identifier: "BRE-1", url: "https://linear.app/brevoort/issue/BRE-1/example")

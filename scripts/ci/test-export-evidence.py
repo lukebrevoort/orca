@@ -62,6 +62,13 @@ class EvidenceTests(unittest.TestCase):
         self.assertNotIn('private', ' '.join(summaries))
         self.assertEqual(len(evidence.feedback_test_summary((unit + '\n') * 100)), 20)
 
+    def test_direct_capture_results_are_allowlisted_without_payloads(self):
+        methods = ['testScreenCaptureRequiresForegroundOriginatingScene', 'testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit', 'testScreenRecordingCancellationFencesLatePermissionAndAccountChange', 'testScreenRecordingUnavailableAndOversizedResultsNeverAttach', 'testScreenRecordingWriterProducesSilentBoundedVideo']
+        lines = [f"Test Case '-[OrcaTests.FeedbackTicketTests {method}]' passed (0.1 seconds)." for method in methods]
+        lines.append("Test Case '-[OrcaUITests.OrcaUITests test39FeedbackCapturesCurrentOrcaScreen]' passed (2.0 seconds).")
+        self.assertEqual(len(evidence.feedback_test_summary('\n'.join(lines))), 6)
+        self.assertEqual(evidence.feedback_test_summary(lines[0] + ' private screenshot'), [])
+
     def test_feedback_summary_is_printed_after_redaction_on_success_and_failure(self):
         for status in (0, 65):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:

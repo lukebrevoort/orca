@@ -76,6 +76,19 @@ function BusyLayer() {
   </TopLayer> : null}</TopLayerProvider>;
 }
 
+function SuspendedLayer() {
+  const [suspended, setSuspended] = useState(false);
+  const [count, setCount] = useState(0);
+  return <TopLayerProvider>
+    <button data-resume onClick={() => setSuspended(false)}>Return to feedback</button>
+    <TopLayer suspended={suspended} ariaLabel="Capture composer" onClose={() => {}}>
+      <input defaultValue="Keep my feedback" />
+      <button data-count onClick={() => setCount(value => value + 1)}>{count}</button>
+      <button data-suspend onClick={() => setSuspended(true)}>Capture current screen</button>
+    </TopLayer>
+  </TopLayerProvider>;
+}
+
 async function keydown(key: string, shiftKey = false) {
   await act(async () => {
     browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key, shiftKey }));
@@ -84,6 +97,28 @@ async function keydown(key: string, shiftKey = false) {
 
 describe("shared top-layer contract", () => {
   beforeEach(installDom);
+
+  test("suspending capture removes modality without losing the composer and resumes focus trapping", async () => {
+    await act(async () => root!.render(<SuspendedLayer />));
+    const input = document.querySelector("input")!;
+    input.value = "My unsent note";
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-count]")!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-suspend]")!.click());
+    expect(container.inert).toBe(false);
+    expect(document.querySelector<HTMLElement>("[data-top-layer]")!.hidden).toBe(true);
+    const event = new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true });
+    browserWindow.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-resume]")!.click());
+    expect(container.inert).toBe(true);
+    expect(document.querySelector<HTMLElement>("[data-top-layer]")!.hidden).toBe(false);
+    expect(document.querySelector("input")).toBe(input);
+    expect(input.value).toBe("My unsent note");
+    expect(document.querySelector("[data-count]")!.textContent).toBe("1");
+    document.querySelector<HTMLButtonElement>("[data-suspend]")!.focus();
+    await keydown("Tab");
+    expect(document.activeElement).toBe(input);
+  });
 
   // Happy DOM does not perform native sequential focus navigation. These tests
   // exercise the real manager's interception and boundary wrapping only.

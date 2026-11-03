@@ -43,7 +43,9 @@ final class OrcaUITests: XCTestCase {
             if tab == "Drafts" { app.buttons["feedback.close"].tap() }
         }
         let photos = app.buttons["feedback.photos"]
-        XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
+        XCTAssertTrue(photos.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !photos.isHittable { app.swipeUp() }
+        XCTAssertTrue(photos.isHittable); photos.tap()
         let importDay = try XCTUnwrap(ProcessInfo.processInfo.environment["ORCA_FIXTURE_MEDIA_DAY"])
         let escapedDay = NSRegularExpression.escapedPattern(for: importDay)
         // The hosted picker exposes media as images, not collection cells.
@@ -143,6 +145,48 @@ final class OrcaUITests: XCTestCase {
         app.buttons["feedback.close"].tap(); corner.tap()
         XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 5))
         print("[feedback-fixture] PASS: persistent corner on three tabs, draft reopen, keyboard Done, ambiguous retry, one confirmed synthetic Linear ticket")
+    }
+
+    /// Actual UIKit capture of the synthetic fixture app; no Photos import.
+    func test39FeedbackCapturesCurrentOrcaScreen() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        let message = "Synthetic current-screen feedback " + UUID().uuidString
+        app.buttons["feedback.open"].tap()
+        let editor = app.textViews["feedback.message"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.tap(); editor.typeText(message)
+        app.buttons["feedback.keyboard-done"].tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        let screenshot = app.buttons["feedback.capture-screenshot"]
+        XCTAssertTrue(screenshot.waitForExistence(timeout: 5)); XCTAssertTrue(screenshot.isHittable)
+        attachScreenshot(named: "feedback-current-screen-capture-controls")
+        screenshot.tap()
+        let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
+        expectation(for: NSPredicate(format: "count == 1"), evaluatedWith: previews)
+        waitForExpectations(timeout: 10)
+        let submit = app.buttons["feedback.submit"]
+        XCTAssertFalse(submit.isEnabled, "Captured screen requires explicit review")
+        let preview = previews.firstMatch
+        for _ in 0..<4 where !preview.isHittable { app.swipeUp() }
+        XCTAssertTrue(preview.isHittable); preview.tap()
+        let review = app.buttons["feedback.media-reviewed"]
+        XCTAssertTrue(review.waitForExistence(timeout: 5)); XCTAssertTrue(review.isEnabled)
+        attachScreenshot(named: "feedback-current-orca-screen-review")
+        review.tap()
+        for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
+        XCTAssertTrue(submit.isHittable); XCTAssertTrue(submit.isEnabled); submit.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 10))
+        let ledger = try composeFixtureRequest("__fixture/feedback/state")
+        let tickets = (ledger["tickets"] as? [[String: Any]] ?? []).filter { $0["message"] as? String == message }
+        XCTAssertEqual(tickets.count, 1)
+        let attachments = try XCTUnwrap(tickets.first?["attachments"] as? [[String: Any]])
+        XCTAssertEqual(attachments.count, 1)
+        let image = try XCTUnwrap(attachments.first)
+        XCTAssertEqual(image["mimeType"] as? String, "image/png")
+        XCTAssertGreaterThan(try XCTUnwrap(image["imageWidth"] as? Int), 300)
+        XCTAssertGreaterThan(try XCTUnwrap(image["imageHeight"] as? Int), 500)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(image["size"] as? Int), 10 * 1_024 * 1_024)
+        attachScreenshot(named: "feedback-current-screen-confirmed")
+        print("[feedback-fixture] PASS: current Orca screen captured, explicitly reviewed, confirmed synthetic ticket")
     }
 
     private func tapFeedbackPickerAsset(_ asset: XCUIElement, in app: XCUIApplication) -> Bool {

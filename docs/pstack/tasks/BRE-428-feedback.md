@@ -37,3 +37,11 @@
 - Compose job `125680139177` compiled and passed 16 other UI tests, but test38 failed before selection because its assumed Photos collection cell was absent. The underlying accessibility/presentation cause is not yet established. Add loopback-only bounded, sanitized picker diagnostics after the existing wait, plus a focused light feedback preflight ahead of the unchanged broader suite. Seed synthetic PNG and MP4 and require both reviews and stable digests across retry; retain dark coverage. No assertion or wait is relaxed.
 
 - Hosted `b81dac1` and `8c0a55d` each passed all 2,108 unit tests, typecheck, browser/API checks and all ten native feedback model tests. The Photos picker exposes `PXGGridLayout-Info` images rather than cells; its current-year labels omit the year and it confirms with Done. Tests now use observed roles/labels with exact synthetic-fixture identity checks. Single-snapshot diagnostics avoid stale live-query failures. Native UI rerun remains required; image-reader jobs still fail pre-build Xcode simulator discovery.
+
+## Direct current-screen capture correction
+
+- User explicitly requested buttons for screenshot and recording of the current screen, not upload-first interaction. Continue from verified head `f9f1a7fb948ccff5567e84b38b8d4481faa0947a` on the existing draft branch.
+- Web primary actions suspend the composer and its modality, prefer the current tab through the browser chooser, leave the app usable during recording, then restore the same draft for review. Stop/Cancel controls remain accessible inside subsequently opened dialogs.
+- Native adds UIKit screenshot capture after composer dismissal and explicit ReplayKit app-screen recording with video-only writer, visible controls, foreground-scene requirement and account/background cancellation. Existing file selection stays secondary.
+- Verification must distinguish real synthetic UIKit/AVAssetWriter tests and injected lifecycle tests from physical-device ReplayKit and actual browser chooser/compositor verification. No live user screen capture, real Linear submission, deployment or release is authorized.
+- The owner variable was separately staged by explicit user request; this feature change must not apply that staged configuration or publish its value.

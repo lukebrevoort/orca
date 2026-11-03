@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FEE000000000000000000001 /* FeedbackCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE000000000000000000002 /* FeedbackCapture.swift */; };
 		AC0DE0000000000000000001 /* VerificationCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0DE0000000000000000002 /* VerificationCode.swift */; };
 		E7502EA5193F48CA8261B7AE /* SafeHTMLOverflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF00DA38C5EA46A7B1BD4F0C /* SafeHTMLOverflowTests.swift */; };
 		AADDEE020000000000000001 /* ReaderUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDEE020000000000000002 /* ReaderUITests.swift */; };
@@ -58,6 +59,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FEE000000000000000000002 /* FeedbackCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackCapture.swift; sourceTree = "<group>"; };
 		AC0DE0000000000000000002 /* VerificationCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationCode.swift; sourceTree = "<group>"; };
 		EF00DA38C5EA46A7B1BD4F0C /* SafeHTMLOverflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLOverflowTests.swift; sourceTree = "<group>"; };
 		AADDEE020000000000000002 /* ReaderUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderUITests.swift; sourceTree = "<group>"; };
@@ -122,6 +124,7 @@
 		2DED08717BC463CBFCC5F794 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				FEE000000000000000000002 /* FeedbackCapture.swift */,
 				A07450C2D63ED60304D85D8E /* APIClient.swift */,
 				654DBEFED4AB0FA22340D491 /* AppState.swift */,
 				FADD581980498D42BE0AB0D5 /* CacheStore.swift */,
@@ -359,6 +362,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEE000000000000000000001 /* FeedbackCapture.swift in Sources */,
 				ED573088B33A83A102E6FD17 /* APIClient.swift in Sources */,
 				CE2B1790BCC8808A1B7B934A /* AppState.swift in Sources */,
 				EA80960E50258D55C9917494 /* CacheStore.swift in Sources */,

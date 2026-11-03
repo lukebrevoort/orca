@@ -1,82 +1,46 @@
-# Corner feedback — BRE-428
+# Current-screen feedback — BRE-428
 
-[Draft PR #286](https://github.com/lukebrevoort/orca/pull/286) adds a persistent corner button that opens a small, single-message composer. Sending creates a ticket directly in the configured Linear workspace. Linear is the work queue; Orca adds no feedback dashboard, local queue, schema migration, or autonomous coding agent.
+[Draft PR #286](https://github.com/lukebrevoort/orca/pull/286) adds a persistent corner button, a small composer, and a confirmed Linear ticket. Linear is the work queue; there is no separate dashboard, migration or autonomous coding agent.
 
-The server exposes this personal integration only to the explicitly configured Orca owner. Other users and signed-out sessions have no feedback affordance. Only the entered message and explicitly selected, reviewed attachments are shared. Nothing records automatically; no DOM, mail or account data is collected implicitly.
+## Direct capture
 
-## Review the UI
+**Screenshot this screen** and **Record this screen** are the primary context actions. File selection remains secondary; users do not need to take a screenshot elsewhere and upload it.
 
-All screenshots use synthetic data and a stub delivery boundary. No real Linear tickets were created.
+- **Web:** the composer and backdrop disappear before requesting browser capture. The current Orca tab is preferred, but the browser controls its permission/source chooser; choose the Orca tab if prompted. Screenshot extraction also hides the capture controls. During recording the app remains interactive, with a visible Stop/Cancel bar that follows opened app dialogs. Stop also works with Ctrl/Cmd+Shift+X. Ending capture returns the existing draft and the captured media for review.
+- **iOS:** Screenshot captures the originating Orca window after the feedback sheet dismisses. Record uses ReplayKit app-screen capture and a video-only MP4 writer. A visible Stop/Cancel bar remains above app sheets. Capture is limited to Orca, not other apps. Recording requires an available recorder and a foreground scene with visible controls; unsupported devices show an actionable error.
+- **Both:** capture starts only from a user action. Recordings are silent and stop after 60 seconds, with bounded file sizes. Cancellation, owner changes and leaving the active app/tab discard capture. Nothing is uploaded until the user reviews the result and sends feedback. Capture permission prompts and unsupported APIs are not bypassed.
 
-| State | Light | Dark |
-| --- | --- | --- |
-| Persistent corner button | [Desktop](evidence/light-1440-corner.png) | [Desktop](evidence/dark-1440-corner.png) |
-| Small message composer | [Desktop](evidence/light-1440-composer.png) | [Desktop](evidence/dark-1440-composer.png) |
-| Narrow mobile composer | [320px](evidence/light-320-composer.png) | [320px](evidence/dark-320-composer.png) |
-| Sending / disabled controls | [390px](evidence/light-390-sending.png) | [390px](evidence/dark-390-sending.png) |
-| Failure keeps the message | [320px](evidence/light-320-failure.png) | [320px](evidence/dark-320-failure.png) |
-| Confirmed ticket link | [Desktop](evidence/light-1440-sent.png) | [320px](evidence/dark-320-sent.png) |
+Only the configured, authenticated owner sees this personal integration. Review captured content for unrelated mail, passwords or other private information before sending. Selecting existing videos can retain their original audio and metadata; new recordings contain no audio.
 
-![Small feedback composer](evidence/light-1440-composer.png)
+## Bounds, delivery and cleanup
+
+Up to three PNG, JPEG, WebP, MP4, WebM or MOV files are allowed: 10 MiB each, 20 MiB total. Images are re-encoded without private source EXIF/GPS. Native previews and capture files use protected app-local storage and are cleaned on removal, successful delivery, cancellation/account change and subsequent launch after interruption. Drafts are memory-only; they survive composer closure but not process termination.
+
+The owner-authenticated API validates count, byte totals, canonical base64 and container signatures. These checks are not full decoding or malware scanning. Attachment content participates in stable issue identity; exact retries reconcile the same issue, including archived issues. Upload failures never produce a false success or ticket link.
+
+Linear's [file upload API](https://linear.app/developers/how-to-upload-a-file-to-linear) and [authenticated private storage](https://linear.app/developers/file-storage-authentication) provide the storage destination. No public bucket or new storage account is introduced. Only private asset receipts are cached (30 minutes, at most 100 entries), not media bytes or signed PUT URLs. Private unreferenced assets may remain after partial failure, expiry or restart: there is no documented safe general-purpose deletion API, and the internal destructive deletion mutation is not used.
 
 ## Verification
 
-[Browser results](evidence/results.json) exercise the production web bundle and authenticated API with an isolated database and synthetic Linear delivery. Six scenarios cover light/dark at 1440, 390, and 320 pixels:
+The PR records the exact latest head, immutable review and hosted results. The previous file-selection revision `f9f1a7fb948ccff5567e84b38b8d4481faa0947a` passed all hosted workflows, 2,108 unit tests, ten native feedback model tests and Photos PNG/MP4 review/retry in both themes. Those results do not verify the subsequent direct-capture change.
 
-- Corner entry, one message field, no title/category form or queue.
-- Keyboard opening, visible focus, focus containment, Escape dismissal and restored trigger focus.
-- Closing and reopening preserves the current draft.
-- Failed delivery produces no false receipt or ticket link.
-- Rapid double-click sends once. Losing the response after creation retains the original request ID; retry confirms the same ticket without duplication.
-- Confirmed success links to the exact synthetic work record.
-- Other-user and anonymous sessions have no affordance; the corner also remains available on the inbox route.
+Direct-capture verification uses synthetic browser canvas streams with the real MediaRecorder, actual UIKit screenshots of the synthetic native app, injected recording lifecycle tests and a real AVAssetWriter fed synthetic frames. A successful fake session or writer test does not establish ReplayKit recording on physical hardware. Browser permission-picker behavior/current-tab compositor timing and physical-device ReplayKit remain explicit manual checks. Native artifacts have not been visually inspected through the previously blocked download proxy; do not bypass that restriction.
 
-The original text-only run passed on clean commit `0085ffbcf8a2e003f07bf76a28ef951529f95470` with zero page errors using system Chromium 154.0.8037.57. [Build log](evidence/build.log) and [bundle SHA-256 manifest](evidence/bundle-sha256.json) identify the production files exercised. [Lint](evidence/lint.log) passed all workspaces; build also runs their TypeScript checks. Main entry JavaScript is 496.60 kB; the corner component loads separately at 4.36 kB. Final desktop composer, mobile failure/sending/receipt screenshots were visually inspected for readable controls and viewport fit.
+Historical galleries remain available for comparison: [text flow](evidence/results.json), [file-selection/media gallery](media-evidence/README.md). The updated direct-capture gallery and current run links are provided in the PR.
 
-Local full-suite results on that source were **2,095 passes and one failure**: API 1,077 pass/1 fail, shared 187 pass, web 831 pass. The failure was the unchanged Gmail sync coordinator multiprocess timing test; its complete file subsequently [passed unchanged in isolation](evidence/sync-isolated.log), 12 tests in 3.99 seconds. The normal full run remains a failure, not a clean pass. The focused feedback tests passed separately; current hosted checks remain the merge gate. Native execution belongs to hosted macOS/Xcode; these browser results do not certify native behavior or a real provider connection. See the PR for later hosted results and the media extension below.
-
-Reproduce with frozen dependencies and an installed browser:
+Reproduce the production browser fixture with frozen dependencies and an installed browser:
 
 ```sh
 bun install --frozen-lockfile
 bun run build
-ORCA_CHROMIUM_EXECUTABLE=/usr/bin/chromium bash scripts/ci/feedback-ticket-check.sh /tmp/orca-feedback-ticket-new-evidence
+ORCA_CHROMIUM_EXECUTABLE=/usr/bin/chromium bash scripts/ci/feedback-ticket-check.sh /tmp/orca-feedback-direct-evidence
 python3 scripts/ci/test-export-evidence.py
 ```
 
-The runner binds loopback, removes provider credentials, seeds synthetic users, injects delivery, and cleans its own process and disposable database. No `.env`, live database, browser profile, or credentials are copied. The native exporter recognizes `FeedbackTicketTests` and `test38FeedbackCornerCreatesLinearTicket` without publishing fixture tokens.
+Fixtures bind loopback, use synthetic users and mocked Linear delivery, and clean their own processes/databases. Do not use live credentials, mail databases, browser profiles or private media as test input.
 
-## Behavior and rollout limits
+## Backend activation
 
-- The owner identifier must be configured server-side along with the existing Linear delivery credentials/destination. Missing configuration fails closed. This PR does not alter production configuration.
-- Linear is the durable record. Orca returns success only after a validated Linear receipt. Exact retries derive the same issue identity across server restarts.
-- Pending text stays in browser memory; close/reopen preserves it and navigation warns while unsent. This is not offline or process-restart draft storage.
-- No merge, deployment, production migration, release, or TestFlight action is included.
+Configure the backend service with secret `LINEAR_API_KEY` and non-secret `LINEAR_FEEDBACK_OWNER_USER_ID`. The owner value is the exact `user.id` from the signed-in `/v1/auth/session` response, including any prefix such as `user_`; it is not the Linear user ID. Never put the key in frontend/native configuration or publish its value. Destination override variable names/defaults are in `.env.example`.
 
-## Diagnostic history
-
-The initial dashboard/queue interpretation was superseded by the user's explicit corner-composer correction. Its screenshots and verification artifacts were removed to prevent stale evidence being mistaken for this product.
-
-Earlier browser work exposed a cross-document transition opt-in race: external CSS produced empty-stack `ViewTransition opt-in disabled` errors. The same navigation probe passed with the existing opt-in rule in the initial HTML head ([before](evidence/transition-ready.json), [after](evidence/transition-inline.json)). The retained fix moves that rule early without suppressing errors. The new corner-flow matrix also passes the unchanged browser-error assertion.
-
-## Screenshots and recordings
-
-The composer now accepts up to three PNG, JPEG, WebP, MP4, WebM or MOV files, at most 10 MiB each and 20 MiB total. Images are re-encoded to remove source EXIF/location metadata; selected videos retain audio and metadata. Review the visible content for private mail, passwords and unrelated material before confirming inclusion. Files stay local until Send. Unsupported previews cannot be approved.
-
-On supported desktop browsers, **Take screenshot** asks the browser to choose a surface and captures one frame. **Record screen** asks separately, records without audio, and provides a visible indicator, Stop and Cancel. Recording stops at 60 seconds or the size limit; closing the composer, hiding the page or cancelling discards active capture and stops tracks. Browsers without capture APIs keep file selection available. Browser upload progress shows transfer to Orca, then a separate confirmation phase for Linear.
-
-Native uses scoped Photos and Files pickers for existing system screenshots and screen recordings. It has per-file preview/review, removal and an indeterminate sending indicator. In-app ReplayKit recording is not implemented; use iOS system capture and select the resulting media. No camera, microphone or broad photo-library access is requested. Local temporary previews use file protection and are removed on removal, successful delivery, account change, deinitialization or the next app launch after interruption. Drafts do not survive app termination.
-
-The authenticated owner-only API validates the file count, byte totals, canonical base64 and container signatures before provider calls. These checks are not a full media decoder or malware scanner. Attachment content contributes to the stable issue identity; exact retries reconcile the same ticket. Upload failures never return ticket success.
-
-Linear's documented [file upload API](https://linear.app/developers/how-to-upload-a-file-to-linear) stores files in [authenticated private storage](https://linear.app/developers/file-storage-authentication). No additional bucket, public endpoint or database migration is introduced. The backend explicitly requests private uploads and validates upload/asset destinations. Only private asset receipts are cached (30-minute TTL, at most 100 entries); no media bytes or signed PUT URLs are retained in that cache. Failed submissions or server restarts can leave private unreferenced assets in Linear. There is no documented safe general-purpose deletion API; the internal destructive deletion mutation is deliberately not used. This limitation is not represented as successful remote cleanup.
-
-All verification media is synthetic; capture tests use a generated canvas stream, never the current desktop. Real Linear uploads, end-user permissions and live provider compatibility remain untested until approved activation. Fresh [media results and gallery](media-evidence/README.md) are also linked from the draft PR. Product source `89c5e1d4d931bf9c531820d55f2ab5f0f6c131dc` passed 2,107 local tests, production build and lint; fresh native hosted results remain the merge gate.
-
-### Backend configuration after approval
-
-In Railway, open project **orca-api** → **production** → service **orca-api** → **Variables**. Set secret `LINEAR_API_KEY` and non-secret `LINEAR_FEEDBACK_OWNER_USER_ID`. Obtain the latter from `user.id` in the existing authenticated `/v1/auth/session` response; do not use the Linear user ID or send cookies/tokens to anyone. The November 3 read-only production inspection found `LINEAR_API_KEY` present but `LINEAR_FEEDBACK_OWNER_USER_ID` absent; no key value was read. Never put the key in `VITE_*`, frontend hosting variables or native app configuration.
-
-Optional non-secret destination overrides are documented in `.env.example`; existing defaults point to Brev / Orca, Feedback label, Backlog and Luke. A team-restricted Read + Create issues key covers ticket lookup/creation. The exact minimum permission for `fileUpload` is not specified by the inspected documentation and still needs verification; no Admin or broader permissions have been requested or granted.
-
-Railway variable edits are [staged until reviewed and deployed](https://docs.railway.com/variables). After an approved merge, coordinate applying backend settings and deployment before relying on the web/native clients. No production changes, credential generation, merge or release is part of this PR work.
+A team-restricted Read + Create issues key covers core lookup/creation. The minimum permission required for `fileUpload` remains an activation check; do not assume broader access is needed. Railway changes can be staged without deployment and take effect when applied. Coordinate owner configuration, key-permission verification and client/backend rollout only after approval. This PR does not authorize merge, deployment, production migration or release.
