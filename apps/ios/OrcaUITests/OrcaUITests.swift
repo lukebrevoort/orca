@@ -53,8 +53,8 @@ final class OrcaUITests: XCTestCase {
                                                         "PXGGridLayout-Info", "Photo, \(escapedDay), [0-9]{1,2}:.*"))
         let photoExists = photoQuery.firstMatch.waitForExistence(timeout: 10)
         attachScreenshot(named: "feedback-system-picker-before-selection")
-        logFeedbackPicker(in: app)
         guard photoExists, photoQuery.count == 1 else {
+            logFeedbackPicker(in: app)
             XCTFail("System picker must expose exactly one photo imported for this fixture day")
             return
         }
@@ -65,7 +65,8 @@ final class OrcaUITests: XCTestCase {
             guard bannerClose.exists, bannerClose.isHittable else { break }
             bannerClose.tap()
         }
-        photoQuery.firstMatch.tap()
+        attachScreenshot(named: "feedback-system-picker-banner-dismissed")
+        guard tapFeedbackPickerAsset(photoQuery.firstMatch, in: app) else { return }
         let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
                                                         "PXGGridLayout-Info", "Video, .*, \(escapedDay), [0-9]{1,2}:.*"))
         guard videoQuery.firstMatch.waitForExistence(timeout: 10), videoQuery.count == 1 else {
@@ -73,7 +74,9 @@ final class OrcaUITests: XCTestCase {
             XCTFail("System picker must expose exactly one recording imported for this fixture day")
             return
         }
-        videoQuery.firstMatch.tap()
+        guard tapFeedbackPickerAsset(videoQuery.firstMatch, in: app) else { return }
+        attachScreenshot(named: "feedback-system-picker-selected-media")
+        logFeedbackPicker(in: app)
         let finishSelection = app.buttons["Done"]
         XCTAssertTrue(finishSelection.waitForExistence(timeout: 5))
         XCTAssertTrue(finishSelection.isEnabled); finishSelection.tap()
@@ -140,6 +143,30 @@ final class OrcaUITests: XCTestCase {
         app.buttons["feedback.close"].tap(); corner.tap()
         XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 5))
         print("[feedback-fixture] PASS: persistent corner on three tabs, draft reopen, keyboard Done, ambiguous retry, one confirmed synthetic Linear ticket")
+    }
+
+    private func tapFeedbackPickerAsset(_ asset: XCUIElement, in app: XCUIApplication) -> Bool {
+        // PXGGridLayout-Info is the picker’s descriptive image accessibility
+        // node; XCTest cannot derive its hit point. Tap the uniquely identified
+        // visible media tile’s center, constrained to the actual picker bounds.
+        let picker = app.scrollViews["photosView_content_scroll_view"]
+        guard asset.exists, picker.exists else {
+            XCTFail("Selected fixture asset and system picker must exist")
+            return false
+        }
+        let frame = asset.frame, pickerFrame = picker.frame, appFrame = app.frame
+        let coordinates = [frame.minX, frame.minY, frame.width, frame.height,
+                           pickerFrame.minX, pickerFrame.minY, pickerFrame.width, pickerFrame.height,
+                           appFrame.minX, appFrame.minY, appFrame.width, appFrame.height]
+        guard coordinates.allSatisfy({ $0.isFinite }), frame.width > 0, frame.height > 0,
+              pickerFrame.width > 0, pickerFrame.height > 0, appFrame.width > 0, appFrame.height > 0,
+              pickerFrame.contains(frame), appFrame.contains(frame) else {
+            XCTFail("Fixture media must be fully visible inside the system picker before tapping")
+            return false
+        }
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - appFrame.minX, dy: frame.midY - appFrame.minY)).tap()
+        return true
     }
 
     private func logFeedbackPicker(in app: XCUIApplication) {
