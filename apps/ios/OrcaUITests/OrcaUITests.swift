@@ -218,8 +218,8 @@ final class OrcaUITests: XCTestCase {
         guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
               let url = URL(string: raw), url.scheme == "http",
               ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "") else { return }
-        let kinds: [(String, XCUIElement.ElementType)] = [("Button", .button), ("Image", .image), ("Cell", .cell),
-                                                          ("CollectionView", .collectionView), ("ScrollView", .scrollView), ("Sheet", .sheet)]
+        let kinds: [(String, XCUIElement.ElementType)] = [("Button", .button), ("StaticText", .staticText), ("Image", .image), ("Cell", .cell),
+                                                          ("CollectionView", .collectionView), ("ScrollView", .scrollView), ("Sheet", .sheet), ("Other", .other)]
         var remaining = 40
         var remainingBytes = 8_000
         func emit(_ line: String) {
@@ -228,7 +228,16 @@ final class OrcaUITests: XCTestCase {
             print(line)
         }
         func bounded(_ value: String) -> String {
-            String(value.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ").prefix(160))
+            // Only synthetic fixture/system UI is inspected; never print a
+            // fixture credential even if an accessibility label contains it.
+            var text = value
+            if let token = ProcessInfo.processInfo.environment["ORCA_FIXTURE_ACCESS_TOKEN"], !token.isEmpty {
+                text = text.replacingOccurrences(of: token, with: "[REDACTED]")
+            }
+            text = text.replacingOccurrences(of: #"(?i)Bearer\s+[^\s]+|orca_session=[^;\s]+"#,
+                                            with: "[REDACTED]", options: .regularExpression)
+            text = text.unicodeScalars.map { CharacterSet.controlCharacters.contains($0) ? " " : String($0) }.joined()
+            return String(text.replacingOccurrences(of: "::", with: ": :").replacingOccurrences(of: "##[", with: "# #[").prefix(160))
         }
         do {
             // One immutable accessibility snapshot avoids stale live indices as
@@ -240,6 +249,7 @@ final class OrcaUITests: XCTestCase {
                 snapshots.append(item)
                 pending.append(contentsOf: item.children.reversed())
             }
+            emit("[feedback picker] snapshot_nodes=\(snapshots.count) truncated=\(!pending.isEmpty) app_state=\(app.state.rawValue)")
             for (name, kind) in kinds {
                 var matches = snapshots.filter { $0.elementType == kind }
                 if kind == .image {
