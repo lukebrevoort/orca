@@ -12,8 +12,13 @@ func feedbackCaptureTrace(_ phase: String) {
     let known: Set<String> = ["sheet_dismissed", "layout_begin", "layout_end", "render_begin", "render_end",
                               "png_ready", "attachment_begin", "attachment_end", "composer_reopen"]
     guard known.contains(phase), let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let file = directory.appendingPathComponent("orca-fixture-capture-phases.log")
-    let previous = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+    var previous = ""
+    if let input = try? FileHandle(forReadingFrom: file) {
+        defer { try? input.close() }
+        if let data = try? input.read(upToCount: 8_192) { previous = String(data: data, encoding: .utf8) ?? "" }
+    }
     let phases = (previous.split(separator: "\n").map(String.init).filter { known.contains($0) } + [phase]).suffix(32)
     // Synchronous atomic write survives app termination before XCTest forwards stdout.
     try? (phases.joined(separator: "\n") + "\n").write(to: file, atomically: true, encoding: .utf8)
