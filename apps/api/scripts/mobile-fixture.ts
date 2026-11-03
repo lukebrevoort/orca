@@ -102,7 +102,7 @@ const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
 let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
-const feedbackTickets = new Map<string, { id: string; identifier: string; url: string; message: string; platform: unknown; attachments: Array<{ name: string; mimeType: string; size: number; sha256: string }> }>();
+const feedbackTickets = new Map<string, { id: string; identifier: string; url: string; message: string; platform: unknown; attachments: Array<{ name: string; mimeType: string; size: number; sha256: string; imageWidth?: number; imageHeight?: number }> }>();
 let feedbackFailOnce = false;
 const app = createApp({
   feedbackTicketOwnerUserId: userId,
@@ -115,7 +115,10 @@ const app = createApp({
         attachments: report.attachments.map(attachment => {
           const bytes = Buffer.from(attachment.dataUrl.slice(attachment.dataUrl.indexOf(",") + 1), "base64");
           return { name: attachment.name, mimeType: attachment.mimeType, size: bytes.length,
-            sha256: createHash("sha256").update(bytes).digest("hex") };
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+            ...(attachment.mimeType === "image/png" && bytes.length >= 24 ? {
+              imageWidth: bytes.readUInt32BE(16), imageHeight: bytes.readUInt32BE(20),
+            } : {}) };
         }) };
       feedbackTickets.set(issueId, ticket);
     }

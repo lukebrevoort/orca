@@ -44,22 +44,28 @@ final class OrcaUITests: XCTestCase {
         }
         let photos = app.buttons["feedback.photos"]
         XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
-        let photo = app.collectionViews.cells.firstMatch
-        let photoExists = photo.waitForExistence(timeout: 10)
+        let importYear = try XCTUnwrap(ProcessInfo.processInfo.environment["ORCA_FIXTURE_MEDIA_YEAR"])
+        XCTAssertNotNil(Int(importYear))
+        // The hosted picker exposes media as images, not collection cells.
+        // Scope to this run's imports, excluding the simulator's stock 2012 photos.
+        let photoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label BEGINSWITH %@ AND label CONTAINS %@",
+                                                        "PXGGridLayout-Info", "Photo,", importYear))
+        let photoExists = photoQuery.firstMatch.waitForExistence(timeout: 10)
         attachScreenshot(named: "feedback-system-picker-before-selection")
         logFeedbackPicker(in: app)
-        guard photoExists else {
-            XCTFail("System picker must show the synthetic simulator image")
+        guard photoExists, photoQuery.count == 1 else {
+            XCTFail("System picker must expose exactly one photo imported for this fixture year")
             return
         }
-        photo.tap()
-        let video = app.collectionViews.cells.element(boundBy: 1)
-        guard video.waitForExistence(timeout: 10) else {
+        photoQuery.firstMatch.tap()
+        let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label BEGINSWITH %@ AND label CONTAINS %@",
+                                                        "PXGGridLayout-Info", "Video,", importYear))
+        guard videoQuery.firstMatch.waitForExistence(timeout: 10), videoQuery.count == 1 else {
             logFeedbackPicker(in: app)
-            XCTFail("System picker must also show the synthetic simulator recording")
+            XCTFail("System picker must expose exactly one recording imported for this fixture year")
             return
         }
-        video.tap()
+        videoQuery.firstMatch.tap()
         let add = app.buttons["Add"]
         XCTAssertTrue(add.waitForExistence(timeout: 5)); add.tap()
         let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
@@ -96,6 +102,10 @@ final class OrcaUITests: XCTestCase {
         }
         let preparedDigests = Dictionary(preparedPairs, uniquingKeysWith: { first, _ in first })
         XCTAssertEqual(Set(preparedDigests.keys), Set(["image/png", "video/mp4"]))
+        XCTAssertEqual(preparedDigests["video/mp4"], "0a901c954fd7f21eeab6c48c2ac77e74368df72f9d2a061e88a1a462b1b376d4")
+        let preparedImage = try XCTUnwrap(firstAttachments.first { $0["mimeType"] as? String == "image/png" })
+        XCTAssertEqual(preparedImage["imageWidth"] as? Int, 32)
+        XCTAssertEqual(preparedImage["imageHeight"] as? Int, 32)
         XCTAssertTrue(preparedDigests.values.allSatisfy { $0.count == 64 })
         attachScreenshot(named: "feedback-uncertain-retry")
         for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
@@ -140,13 +150,29 @@ final class OrcaUITests: XCTestCase {
         func bounded(_ value: String) -> String {
             String(value.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ").prefix(160))
         }
-        for (name, kind) in kinds {
-            let query = app.descendants(matching: kind)
-            emit("[feedback picker] kind=\(name) count=\(query.count)")
-            for element in query.allElementsBoundByIndex.prefix(min(remaining, 8)) {
-                emit("[feedback picker] kind=\(name) label=\(bounded(element.label)) identifier=\(bounded(element.identifier))")
-                remaining -= 1
+        do {
+            // One immutable accessibility snapshot avoids stale live indices as
+            // the remote system picker changes its accessibility hierarchy.
+            let root = try app.snapshot()
+            var snapshots: [XCUIElementSnapshot] = []
+            var pending = [root]
+            while let item = pending.popLast(), snapshots.count < 500 {
+                snapshots.append(item)
+                pending.append(contentsOf: item.children.reversed())
             }
+            for (name, kind) in kinds {
+                var matches = snapshots.filter { $0.elementType == kind }
+                if kind == .image {
+                    matches.sort { ($0.identifier == "PXGGridLayout-Info" ? 0 : 1) < ($1.identifier == "PXGGridLayout-Info" ? 0 : 1) }
+                }
+                emit("[feedback picker] kind=\(name) count=\(matches.count)")
+                for element in matches.prefix(min(remaining, kind == .image ? 16 : 8)) {
+                    emit("[feedback picker] kind=\(name) label=\(bounded(element.label)) identifier=\(bounded(element.identifier))")
+                    remaining -= 1
+                }
+            }
+        } catch {
+            emit("[feedback picker] snapshot unavailable")
         }
     }
 

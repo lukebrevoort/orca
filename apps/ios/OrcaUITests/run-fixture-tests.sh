@@ -87,6 +87,7 @@ cp "$base_xctestrun[1]" "$injected_xctestrun"
 import json
 import plistlib
 import sys
+from datetime import datetime, timezone
 
 connection_path, xctestrun_path = sys.argv[1:]
 with open(connection_path, encoding="utf-8") as handle:
@@ -99,6 +100,7 @@ environment["ORCA_FIXTURE_API_URL"] = connection["apiURL"]
 environment["ORCA_FIXTURE_ACCESS_TOKEN"] = connection["accessToken"]
 environment["ORCA_FIXTURE_IMAGES"] = "1" if connection.get("imageFixture", False) else "0"
 environment["ORCA_FIXTURE_READ_ONLY"] = "1" if connection.get("readOnly", False) else "0"
+environment["ORCA_FIXTURE_MEDIA_YEAR"] = str(datetime.now(timezone.utc).year)
 
 with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
