@@ -13,6 +13,42 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_picker_diagnostics_are_redacted_before_printing_on_success_and_failure(self):
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory) / 'private'; out = Path(directory) / 'public'
+                work.mkdir(); out.mkdir()
+                connection = work / 'connection.json'
+                connection.write_text(json.dumps({'accessToken': 'picker-secret'}))
+                (work / 'checks.log').write_text(
+                    'timestamp [feedback picker] Button label=Photos picker-secret Bearer hidden-token\n'
+                    '[feedback picker] Image id=orca_session=hidden-cookie; ::error::##[warning]\x1b\x00\n'
+                    'unrelated private label\n')
+                output = io.StringIO()
+                with redirect_stdout(output): evidence.export(work, out, str(connection), status)
+                text = output.getvalue()
+                self.assertIn('[feedback picker] Button label=Photos', text)
+                self.assertIn('[REDACTED]', text)
+                for forbidden in ('picker-secret', 'hidden-token', 'hidden-cookie', '::', '##['):
+                    self.assertNotIn(forbidden, text)
+                picker_lines = '\n'.join(line for line in text.splitlines() if line.startswith('[feedback picker]'))
+                for forbidden in ('\x1b', '\x00', 'unrelated private label'):
+                    self.assertNotIn(forbidden, picker_lines)
+
+    def test_picker_diagnostics_bound_lines_bytes_and_preserve_full_sanitized_log(self):
+        self.assertEqual(len(evidence.feedback_picker_excerpt('[feedback picker] Cell\n' * 100)), 40)
+        bounded = evidence.feedback_picker_excerpt(('[feedback picker] ' + '界' * 5000 + '\n') * 100)
+        self.assertLessEqual(len(('\n'.join(bounded) + '\n').encode('utf-8')), 8192)
+        self.assertTrue(all(len(line) <= 512 for line in bounded))
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'private'; out = Path(directory) / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'checks.log').write_text('[feedback picker] Cell label=synthetic\n' * 100)
+            output = io.StringIO()
+            with redirect_stdout(output): evidence.export(work, out, '', 0)
+            self.assertEqual(output.getvalue().count('[feedback picker]'), 40)
+            self.assertEqual((out / 'checks.log').read_text().count('[feedback picker]'), 100)
+
     def test_feedback_summary_exposes_only_known_terminal_test_results(self):
         unit = "Test Case '-[OrcaTests.FeedbackTicketTests testTicketLinkAcceptsOnlyHTTPSLinearURLs]' passed (0.004 seconds)."
         ui = "Test Case '-[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket]' failed (52.541 seconds)."
@@ -201,7 +237,7 @@ class EvidenceTests(unittest.TestCase):
             work.mkdir(); out.mkdir(); (work / 'browser').mkdir()
             connection = work / 'connection.json'
             connection.write_text(json.dumps({'token': 'private-fixture-secret'}))
-            (work / 'checks.log').write_text('error: private-fixture-secret')
+            (work / 'checks.log').write_text('error: private-fixture-secret\n[feedback picker] Image private-fixture-secret')
             (work / 'fixture.log').write_text('[counter-server] received private-fixture-secret')
             (work / 'browser' / 'image.png').write_bytes(b'private-fixture-secret')
             output = io.StringIO()

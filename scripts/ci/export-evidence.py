@@ -65,6 +65,28 @@ def feedback_test_summary(text):
     return summaries[-20:]
 
 
+
+def feedback_picker_excerpt(text):
+    """Bound synthetic picker diagnostics from an already-redacted log."""
+    output = []
+    remaining = 8192
+    for line in text.splitlines():
+        marker = line.find('[feedback picker]')
+        if marker < 0:
+            continue
+        line = ''.join(char for char in line[marker:] if ord(char) >= 32 and ord(char) != 127)
+        line = line.replace('::', ': :').replace('##[', '# #[')[:512]
+        # Bound UTF-8 bytes, including the printed newline, without splitting a character.
+        line = line.encode('utf-8')[:remaining - 1].decode('utf-8', errors='ignore')
+        if not line:
+            break
+        output.append(line)
+        remaining -= len(line.encode('utf-8')) + 1
+        if len(output) >= 40 or remaining <= 1:
+            break
+    return output
+
+
 def export(work, evidence, connection, status):
     tokens = []
     if connection:
@@ -125,6 +147,8 @@ def export(work, evidence, connection, status):
     if checks.is_file():
         for summary in feedback_test_summary(checks.read_text()):
             print(f'[feedback test] {summary}')
+        for line in feedback_picker_excerpt(checks.read_text()):
+            print(line)
     native_times = re.findall(r'\[counter-native\] epoch_ms=(\d+)', checks.read_text() if checks.is_file() else '')
     # xcresult export can finish minutes after the assertion. Anchor server
     # liveness to the final native observation, not the later cleanup time.

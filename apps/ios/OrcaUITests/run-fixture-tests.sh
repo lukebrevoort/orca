@@ -111,7 +111,7 @@ import base64, sys
 with open(sys.argv[1], "wb") as file:
     file.write(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGOQ6FlAU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULALhwEEy5eilwAAAAAElFTkSuQmCC"))
 PYMEDIA
-  xcrun simctl addmedia "$simulator_udid" "$derived_data/feedback-synthetic.png"
+  xcrun simctl addmedia "$simulator_udid" "$derived_data/feedback-synthetic.png" "$ios_dir/../web/scripts/fixtures/feedback-media/synthetic.mp4"
 fi
 
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
@@ -127,7 +127,7 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
   light_tests=(-only-testing:OrcaUITests/ReaderUITests/testImagesRequireExplicitLoadingAndResetOnReopen)
   dark_tests=("${light_tests[@]}")
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
-  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket)
+  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == overscroll ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
@@ -150,6 +150,19 @@ elif [[ $read_only == 1 ]]; then
 else
   light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
+fi
+
+# Run the changed feedback contract and real Photos picker before the longer
+# compose suite. Every other existing test still runs after this gate succeeds.
+if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
+  xcodebuild test-without-building \
+    -xctestrun "$injected_xctestrun" \
+    -destination "platform=iOS Simulator,id=$simulator_udid" \
+    -parallel-testing-enabled NO \
+    -resultBundlePath "$result_dir/FeedbackLight.xcresult" \
+    -only-testing:OrcaTests/FeedbackTicketTests \
+    -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket
+  light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 
 xcodebuild test-without-building \

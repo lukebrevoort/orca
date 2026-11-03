@@ -45,20 +45,39 @@ final class OrcaUITests: XCTestCase {
         let photos = app.buttons["feedback.photos"]
         XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
         let photo = app.collectionViews.cells.firstMatch
-        XCTAssertTrue(photo.waitForExistence(timeout: 10), "System picker must show the synthetic simulator image")
+        let photoExists = photo.waitForExistence(timeout: 10)
+        attachScreenshot(named: "feedback-system-picker-before-selection")
+        logFeedbackPicker(in: app)
+        guard photoExists else {
+            XCTFail("System picker must show the synthetic simulator image")
+            return
+        }
         photo.tap()
+        let video = app.collectionViews.cells.element(boundBy: 1)
+        guard video.waitForExistence(timeout: 10) else {
+            logFeedbackPicker(in: app)
+            XCTFail("System picker must also show the synthetic simulator recording")
+            return
+        }
+        video.tap()
         let add = app.buttons["Add"]
         XCTAssertTrue(add.waitForExistence(timeout: 5)); add.tap()
-        let preview = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview.")).firstMatch
-        XCTAssertTrue(preview.waitForExistence(timeout: 10)); XCTAssertFalse(submit.isEnabled)
-        for _ in 0..<4 where !preview.isHittable { app.swipeUp() }
-        XCTAssertTrue(preview.isHittable); preview.tap()
-        let approve = app.buttons["feedback.media-reviewed"]
-        XCTAssertTrue(approve.waitForExistence(timeout: 5))
-        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: approve)
+        let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
+        expectation(for: NSPredicate(format: "count == 2"), evaluatedWith: previews)
         waitForExpectations(timeout: 10)
-        attachScreenshot(named: "feedback-selected-image-review")
-        approve.tap()
+        XCTAssertEqual(previews.count, 2); XCTAssertFalse(submit.isEnabled)
+        for (index, identifier) in previews.allElementsBoundByIndex.map({ $0.identifier }).enumerated() {
+            let preview = app.buttons[identifier]
+            for _ in 0..<4 where !preview.isHittable { app.swipeUp() }
+            XCTAssertTrue(preview.isHittable); preview.tap()
+            let approve = app.buttons["feedback.media-reviewed"]
+            XCTAssertTrue(approve.waitForExistence(timeout: 5))
+            expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: approve)
+            waitForExpectations(timeout: 10)
+            attachScreenshot(named: "feedback-selected-media-review-\(index)")
+            approve.tap()
+            if index == 0 { XCTAssertFalse(submit.isEnabled, "Every selected file needs explicit review") }
+        }
         for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
         XCTAssertTrue(submit.isHittable); XCTAssertTrue(submit.isEnabled)
         attachScreenshot(named: "feedback-ready-to-send")
@@ -71,8 +90,13 @@ final class OrcaUITests: XCTestCase {
         let firstState = try composeFixtureRequest("__fixture/feedback/state")
         let firstTicket = try XCTUnwrap((firstState["tickets"] as? [[String: Any]])?.first { $0["message"] as? String == message })
         let firstAttachments = try XCTUnwrap(firstTicket["attachments"] as? [[String: Any]])
-        let preparedDigest = try XCTUnwrap(firstAttachments.first?["sha256"] as? String)
-        XCTAssertEqual(preparedDigest.count, 64)
+        XCTAssertEqual(firstAttachments.count, 2)
+        let preparedPairs = try firstAttachments.map {
+            (try XCTUnwrap($0["mimeType"] as? String), try XCTUnwrap($0["sha256"] as? String))
+        }
+        let preparedDigests = Dictionary(preparedPairs, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(Set(preparedDigests.keys), Set(["image/png", "video/mp4"]))
+        XCTAssertTrue(preparedDigests.values.allSatisfy { $0.count == 64 })
         attachScreenshot(named: "feedback-uncertain-retry")
         for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
         XCTAssertTrue(submit.isHittable); submit.tap()
@@ -83,10 +107,13 @@ final class OrcaUITests: XCTestCase {
         let ticket = try XCTUnwrap(matching.first)
         XCTAssertEqual(ticket["platform"] as? String, "ios")
         let attachments = try XCTUnwrap(ticket["attachments"] as? [[String: Any]])
-        XCTAssertEqual(attachments.count, 1)
-        XCTAssertEqual(attachments.first?["mimeType"] as? String, "image/png")
-        XCTAssertGreaterThan(try XCTUnwrap(attachments.first?["size"] as? Int), 0)
-        XCTAssertEqual(attachments.first?["sha256"] as? String, preparedDigest)
+        XCTAssertEqual(attachments.count, 2)
+        let confirmedPairs = try attachments.map {
+            XCTAssertGreaterThan(try XCTUnwrap($0["size"] as? Int), 0)
+            return (try XCTUnwrap($0["mimeType"] as? String), try XCTUnwrap($0["sha256"] as? String))
+        }
+        let confirmedDigests = Dictionary(confirmedPairs, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(confirmedDigests, preparedDigests)
         let identifier = try XCTUnwrap(ticket["identifier"] as? String)
         let link = app.descendants(matching: .any)["feedback.ticket-link"].firstMatch
         XCTAssertTrue(link.waitForExistence(timeout: 5)); XCTAssertTrue(link.label.contains(identifier))
@@ -94,6 +121,33 @@ final class OrcaUITests: XCTestCase {
         app.buttons["feedback.close"].tap(); corner.tap()
         XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 5))
         print("[feedback-fixture] PASS: persistent corner on three tabs, draft reopen, keyboard Done, ambiguous retry, one confirmed synthetic Linear ticket")
+    }
+
+    private func logFeedbackPicker(in app: XCUIApplication) {
+        // Diagnostics only run against the explicitly supplied loopback fixture.
+        guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
+              let url = URL(string: raw), url.scheme == "http",
+              ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "") else { return }
+        let kinds: [(String, XCUIElement.ElementType)] = [("Button", .button), ("Image", .image), ("Cell", .cell),
+                                                          ("CollectionView", .collectionView), ("ScrollView", .scrollView), ("Sheet", .sheet)]
+        var remaining = 40
+        var remainingBytes = 8_000
+        func emit(_ line: String) {
+            guard line.utf8.count <= remainingBytes else { return }
+            remainingBytes -= line.utf8.count
+            print(line)
+        }
+        func bounded(_ value: String) -> String {
+            String(value.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ").prefix(160))
+        }
+        for (name, kind) in kinds {
+            let query = app.descendants(matching: kind)
+            emit("[feedback picker] kind=\(name) count=\(query.count)")
+            for element in query.allElementsBoundByIndex.prefix(min(remaining, 8)) {
+                emit("[feedback picker] kind=\(name) label=\(bounded(element.label)) identifier=\(bounded(element.identifier))")
+                remaining -= 1
+            }
+        }
     }
 
     func test20EmptyInboxCanRefreshIntoMail() throws {
