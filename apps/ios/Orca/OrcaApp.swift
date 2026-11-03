@@ -49,6 +49,7 @@ struct MainView: View {
     @StateObject private var captureWindow = FeedbackWindowReference()
     @State private var captureRequest: FeedbackCaptureAction?
     @State private var captureRequestScope = ""
+    @State private var captureGeneration = UUID()
     private var captureScope: String { state.ownerScope + "|" + (state.selectedAccount?.id ?? "") }
     @State private var feedbackPresented = false
     var body: some View {
@@ -61,6 +62,7 @@ struct MainView: View {
         .background(FeedbackWindowProbe(reference: captureWindow).frame(width: 0, height: 0))
         .sheet(isPresented: $feedbackPresented, onDismiss: performCaptureAfterDismissal) {
             FeedbackTicketComposer(model: feedback, capture: capture) { action in
+                captureGeneration = UUID()
                 captureRequest = action; captureRequestScope = captureScope
                 feedbackPresented = false
             }.environmentObject(state)
@@ -70,11 +72,11 @@ struct MainView: View {
             capture.onReturnToComposer = { receiveCapture() }
         }
         .onChange(of: captureScope) { _, scope in
-            captureRequest = nil; capture.configure(scope: scope)
+            captureGeneration = UUID(); captureRequest = nil; capture.configure(scope: scope)
         }
-        .onDisappear { captureRequest = nil; capture.onReturnToComposer = nil; capture.cancel() }
+        .onDisappear { captureGeneration = UUID(); captureRequest = nil; capture.onReturnToComposer = nil; capture.cancel() }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-            captureRequest = nil; capture.cancel()
+            captureGeneration = UUID(); captureRequest = nil; capture.cancel()
         }
         .task(id: state.ownerScope) {
             feedback.configure(scope: state.ownerScope)
@@ -106,10 +108,22 @@ struct MainView: View {
               UIApplication.shared.applicationState == .active else { return }
         let window = captureWindow.window
         let requestedScope = captureRequestScope
+        let requestedGeneration = captureGeneration
         if action == .screenshot {
             feedbackCaptureTrace("sheet_dismissed")
-            capture.screenshot(window: window, scope: captureScope)
-            receiveCapture()
+            // SwiftUI is still completing its dismissal/layout transaction here.
+            // Capture after this callback returns, without a timed delay or a
+            // forced recursive window layout. Fence navigation/account changes.
+            DispatchQueue.main.async { [weak window] in
+                guard let window, window === captureWindow.window,
+                      requestedGeneration == captureGeneration,
+                      requestedScope == captureScope, capture.scope == requestedScope,
+                      feedback.canAddMedia, !feedbackPresented, !capture.active,
+                      UIApplication.shared.applicationState == .active,
+                      window.windowScene?.activationState == .foregroundActive else { return }
+                capture.screenshot(window: window, scope: requestedScope)
+                receiveCapture()
+            }
         } else {
             Task { await capture.start(scope: requestedScope, windowScene: window?.windowScene) }
         }

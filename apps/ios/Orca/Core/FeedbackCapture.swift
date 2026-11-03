@@ -102,10 +102,9 @@ enum FeedbackCaptureError: LocalizedError {
               window.bounds.width > 0, window.bounds.height > 0 else {
             error = "The current Orca screen could not be captured."; return
         }
-        // The caller uses sheet onDismiss, so the feedback composer is gone.
-        feedbackCaptureTrace("layout_begin")
-        window.layoutIfNeeded()
-        feedbackCaptureTrace("layout_end")
+        // The caller schedules this after the sheet dismissal callback returns.
+        // drawHierarchy waits for screen updates; forcing window layout inside
+        // SwiftUI's dismissal transaction terminated the app in the UI fixture.
         let format = UIGraphicsImageRendererFormat()
         format.scale = min(window.screen.scale, 2)
         let renderer = UIGraphicsImageRenderer(bounds: window.bounds, format: format)
