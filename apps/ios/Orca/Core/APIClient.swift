@@ -34,7 +34,7 @@ actor APIClient {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
         guard let url = components.url else { throw ClientError.invalidBaseURL }
-        var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = 30
+        var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = path == "v1/feedback/ticket" && (body as? FeedbackTicketInput)?.attachments?.isEmpty == false ? 300 : 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
         if let body { request.httpBody = try encoder.encode(AnyEncodable(body)); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }

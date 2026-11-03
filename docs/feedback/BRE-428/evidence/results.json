@@ -1,0 +1,29 @@
+{
+  "sourceCommit": "0085ffbcf8a2e003f07bf76a28ef951529f95470",
+  "dirty": false,
+  "startedAt": "2026-11-02T18:58:47.773Z",
+  "syntheticOnly": true,
+  "scenarios": [
+    "light/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/390: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/320: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/390: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/320: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link"
+  ],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com"
+  ],
+  "browser": "154.0.8037.57",
+  "status": "passed",
+  "finishedAt": "2026-11-02T18:59:15.317Z"
+}

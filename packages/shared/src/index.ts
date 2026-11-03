@@ -589,3 +589,5 @@ export * from "./space-color.ts";
 export * from "./summary.ts";
 
 export { detectVerificationCodes } from "./verification-code.ts";
+
+export * from "./feedback-ticket.ts";

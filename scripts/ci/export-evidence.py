@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Publish an allowlist of synthetic evidence, never raw fixture/xcresult data."""
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -40,7 +41,163 @@ def failure_excerpt(text):
     return '\n'.join(result)
 
 
-def export(work, evidence, connection, status):
+
+def feedback_test_summary(text):
+    """Emit only known test identities and numeric outcomes, never log payloads."""
+    known = {
+        ('OrcaTests.FeedbackTicketTests', 'testLostResponseRetainsExactSubmissionUntilConfirmedTicket'),
+        ('OrcaTests.FeedbackTicketTests', 'testAvailabilityFailsClosedAndBlocksOtherAccounts'),
+        ('OrcaTests.FeedbackTicketTests', 'testChangingOwnerClearsDraftAndRejectsOldScopeActions'),
+        ('OrcaTests.FeedbackTicketTests', 'testFeedbackValidationUsesWireLengthAndRequiresText'),
+        ('OrcaTests.FeedbackTicketTests', 'testTicketLinkAcceptsOnlyHTTPSLinearURLs'),
+        ('OrcaTests.FeedbackTicketTests', 'testMalformedReceiptNeverReportsSuccessOrDropsDraft'),
+        ('OrcaTests.FeedbackTicketTests', 'testMediaRequiresReviewAndCleansUpOnOwnerChange'),
+        ('OrcaTests.FeedbackTicketTests', 'testMediaRetryFreezesBytesAndSuccessRemovesPreview'),
+        ('OrcaTests.FeedbackTicketTests', 'testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft'),
+        ('OrcaTests.FeedbackTicketTests', 'testImagePreparationStripsMetadataAndBoundsDecodedDimensions'),
+        ('OrcaTests.FeedbackTicketTests', 'testScreenCaptureRequiresForegroundOriginatingScene'),
+        ('OrcaTests.FeedbackTicketTests', 'testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit'),
+        ('OrcaTests.FeedbackTicketTests', 'testScreenRecordingCancellationFencesLatePermissionAndAccountChange'),
+        ('OrcaTests.FeedbackTicketTests', 'testScreenRecordingUnavailableAndOversizedResultsNeverAttach'),
+        ('OrcaTests.FeedbackTicketTests', 'testScreenRecordingWriterProducesSilentBoundedVideo'),
+        ('OrcaUITests.OrcaUITests', 'test38FeedbackCornerCreatesLinearTicket'),
+        ('OrcaUITests.OrcaUITests', 'test39FeedbackCapturesCurrentOrcaScreen'),
+    }
+    pattern = re.compile(r"Test Case '-\[([A-Za-z.]+) ([A-Za-z0-9]+)\]' (passed|failed) \(([0-9]{1,6}(?:\.[0-9]{1,6})?) seconds\)\.")
+    summaries = []
+    for line in text.splitlines():
+        match = pattern.fullmatch(line.strip())
+        if match and (match[1], match[2]) in known:
+            summaries.append(f'{match[1]}.{match[2]} {match[3]} ({match[4]} seconds)')
+    return summaries[-20:]
+
+
+
+def feedback_picker_excerpt(text):
+    """Bound synthetic picker diagnostics from an already-redacted log."""
+    output = []
+    remaining = 8192
+    for line in text.splitlines():
+        marker = line.find('[feedback picker]')
+        if marker < 0:
+            continue
+        line = ''.join(char for char in line[marker:] if ord(char) >= 32 and ord(char) != 127)
+        line = line.replace('::', ': :').replace('##[', '# #[')[:512]
+        # Bound UTF-8 bytes, including the printed newline, without splitting a character.
+        line = line.encode('utf-8')[:remaining - 1].decode('utf-8', errors='ignore')
+        if not line:
+            break
+        output.append(line)
+        remaining -= len(line.encode('utf-8')) + 1
+        if len(output) >= 40 or remaining <= 1:
+            break
+    return output
+
+
+def native_diagnostic_excerpt(text):
+    phases = 'sheet_dismissed|layout_begin|layout_end|render_begin|render_end|png_ready|attachment_begin|attachment_end|composer_reopen'
+    patterns = [r'\[feedback capture\] phase=(?:' + phases + r')',
+                r'\[simulator readiness\] attempt=\d{1,3} (?:exit=-?\d{1,3}|command_timeout=true) owned_destination=(?:True|False)',
+                r'\[simulator readiness\] first_launch_status=\d{1,3}',
+                r'\[simulator readiness\] deadline exceeded; owned simulator absent from Xcode available destinations']
+    output = []
+    for line in text.splitlines():
+        # XCTest prefixes app stdout with a timestamp; accept only the entire
+        # known static marker suffix, never append arbitrary app text.
+        for pattern in patterns:
+            match = re.search(pattern + r'$', line)
+            if match:
+                output.append(match[0]); break
+    return output[-100:]
+
+
+def crash_summary(text):
+    """Strict JSON crash fields only; never publish raw reports, paths or values."""
+    decoder = json.JSONDecoder()
+    try:
+        first, offset = decoder.raw_decode(text.lstrip())
+        remaining = text.lstrip()[offset:].strip()
+        report = json.loads(remaining) if remaining else first
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(report, dict) or report.get('procName') != 'Orca':
+        return []
+    bundle = report.get('bundleInfo')
+    if not isinstance(bundle, dict) or bundle.get('CFBundleIdentifier') != 'com.orca.mail':
+        return []
+    output = []
+    for group, keys in [('exception', ('type', 'signal')), ('termination', ('namespace', 'code'))]:
+        values = report.get(group)
+        if not isinstance(values, dict):
+            continue
+        for key in keys:
+            value = str(values.get(key, ''))
+            if re.fullmatch(r'[A-Za-z0-9_ -]{1,100}', value):
+                output.append(f'[feedback crash] {group}.{key}={value}')
+    frames = report.get('lastExceptionBacktrace', [])
+    if not frames:
+        threads = report.get('threads', [])
+        frames = next((t.get('frames', []) for t in threads if isinstance(t, dict) and t.get('triggered')), []) if isinstance(threads, list) else []
+    if not isinstance(frames, list):
+        frames = []
+    for frame in frames[:20]:
+        if not isinstance(frame, dict):
+            continue
+        symbol = frame.get('symbol', '')
+        # Symbols contain code identities, not crash addresses, argv or memory.
+        if isinstance(symbol, str) and re.fullmatch(r'[A-Za-z_$+\-][A-Za-z0-9_$ .:+\-()<>?,*\[\]]{0,240}', symbol):
+            output.append('[feedback crash] frame=' + symbol.replace('::', ': :'))
+    return output[:24]
+
+
+def read_capture_phases(container, owned_root):
+    container = Path(container)
+    if not container.resolve().is_relative_to(Path(owned_root).resolve()):
+        return []
+    path = container / 'Library/Caches/orca-fixture-capture-phases.log'
+    if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(container.resolve()) or path.stat().st_size > 8192:
+        return []
+    phases = {'sheet_dismissed', 'layout_begin', 'layout_end', 'render_begin', 'render_end',
+              'png_ready', 'attachment_begin', 'attachment_end', 'composer_reopen'}
+    return ['[feedback capture] phase=' + line for line in path.read_text(errors='replace').splitlines()[-32:] if line in phases]
+
+
+def owned_capture_phases(simulator):
+    if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('RUNNER_ENVIRONMENT') != 'github-hosted' or not re.fullmatch(r'[0-9A-Fa-f-]{36}', simulator):
+        return []
+    try:
+        result = subprocess.run(['xcrun', 'simctl', 'get_app_container', simulator, 'com.orca.mail', 'data'],
+                                capture_output=True, text=True, timeout=10, check=False)
+        if result.returncode != 0:
+            return []
+        root = Path.home() / 'Library/Developer/CoreSimulator/Devices' / simulator / 'data/Containers/Data/Application'
+        return read_capture_phases(result.stdout.strip(), root)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+
+
+def hosted_crash_summaries(work, simulator=""):
+    if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('RUNNER_ENVIRONMENT') != 'github-hosted':
+        return []
+    identity = work / 'identity.log'
+    if not identity.is_file():
+        return []
+    started = identity.stat().st_mtime
+    directories = [Path.home() / 'Library/Logs/DiagnosticReports']
+    if re.fullmatch(r'[0-9A-Fa-f-]{36}', simulator):
+        directories.append(Path.home() / 'Library/Developer/CoreSimulator/Devices' / simulator / 'data/Library/Logs/CrashReporter')
+    candidates = [path for directory in directories for path in directory.glob('Orca-*.ips')]
+    output = []
+    for path in sorted(candidates)[-10:]:
+        if path.is_symlink() or not path.is_file() or path.stat().st_mtime < started or path.stat().st_size > 5_000_000:
+            continue
+        output.extend(crash_summary(path.read_text(errors='replace')))
+        if len(output) >= 72:
+            break
+    return output[:72]
+
+
+def export(work, evidence, connection, status, simulator=""):
     tokens = []
     if connection:
         connection_path = Path(connection).resolve()
@@ -88,6 +245,13 @@ def export(work, evidence, connection, status):
                     raise ValueError('Attachment symlinks are not allowed')
                 screenshots.mkdir(exist_ok=True)
                 shutil.copyfile(source, screenshots / f'{bundle.stem}-{index}{source.suffix.lower()}')
+    phases = owned_capture_phases(simulator)
+    if phases:
+        checks_path = evidence / 'checks.log'
+        write('checks.log', (checks_path.read_text() if checks_path.is_file() else '') + '\n' + '\n'.join(phases) + '\n')
+    crash_lines = hosted_crash_summaries(work, simulator) if int(status) != 0 else []
+    if crash_lines:
+        write('native-crash-summary.log', '\n'.join(crash_lines) + '\n')
     # Verify the exact ephemeral credentials never appear in any published bytes.
     for path in evidence.rglob('*'):
         if path.is_file():
@@ -97,6 +261,16 @@ def export(work, evidence, connection, status):
     # Print only after the complete export passed its credential scan. Prefix
     # every line so synthetic log content cannot become a workflow command.
     checks = evidence / 'checks.log'
+    if checks.is_file():
+        for summary in feedback_test_summary(checks.read_text()):
+            print(f'[feedback test] {summary}')
+        for line in feedback_picker_excerpt(checks.read_text()):
+            print(line)
+        for line in native_diagnostic_excerpt(checks.read_text()):
+            print(line)
+    crash_log = evidence / 'native-crash-summary.log'
+    if crash_log.is_file():
+        print(crash_log.read_text(), end='')
     native_times = re.findall(r'\[counter-native\] epoch_ms=(\d+)', checks.read_text() if checks.is_file() else '')
     # xcresult export can finish minutes after the assertion. Anchor server
     # liveness to the final native observation, not the later cleanup time.
@@ -127,4 +301,4 @@ def export(work, evidence, connection, status):
 
 
 if __name__ == '__main__':
-    export(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4])
+    export(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else '')

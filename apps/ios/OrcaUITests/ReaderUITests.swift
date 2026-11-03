@@ -133,6 +133,7 @@ final class ReaderUITests: XCTestCase {
 
     func testImagesRequireExplicitLoadingAndResetOnReopen() throws {
         guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        try requireFixtureTransportReady()
         let initialDownloads = try imageDownloadCount()
         let app = try launchReader(htmlDiagnostics: true)
         let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
@@ -186,6 +187,39 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["message.images-status"].exists, "A previous reader's response must not restore images")
         screenshot("images-late-response-discarded")
+    }
+
+    // Separate cold simulator transport readiness from image behavior. The
+    // existing five-second image counter assertions remain unchanged.
+    private func requireFixtureTransportReady() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
+        let root = try XCTUnwrap(URL(string: base))
+        XCTAssertEqual(root.scheme, "http")
+        XCTAssertTrue(["127.0.0.1", "localhost"].contains(root.host ?? ""))
+        var request = URLRequest(url: root.appending(path: "v1/auth/session"),
+                                 cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
+        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let done = expectation(description: "Simulator fixture transport readiness")
+        var status: Int?
+        var authenticated = false
+        let traceID = UUID().uuidString
+        print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=readiness_started")
+        // Same session as imageDownloadCount; one request, no retry or image load.
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            status = (response as? HTTPURLResponse)?.statusCode
+            if let data, let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                authenticated = value["isAuthenticated"] as? Bool == true
+            }
+            print("[counter-native] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) id=\(traceID) event=readiness_completed status=\(status ?? -1) error_code=\((error as NSError?)?.code ?? 0)")
+            done.fulfill()
+        }
+        task.resume()
+        defer { task.cancel() }
+        wait(for: [done], timeout: 35)
+        XCTAssertEqual(status, 200, "Fixture transport must be ready before app behavior is tested")
+        XCTAssertTrue(authenticated, "Fixture readiness requires the synthetic authenticated session")
     }
 
     private func delayFixtureImageResponse() throws {

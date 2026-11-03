@@ -18,6 +18,42 @@ if [[ ! -f $connection_file ]]; then
   exit 66
 fi
 
+# Preserve the runner's wait for a caller-supplied booting simulator, before
+# requiring post-boot diagnostics or asking Xcode to build for that device.
+xcrun simctl bootstatus "$simulator_udid" -b
+# fixture-check.sh boots this exact CI-owned simulator before invoking us.
+# Observe both CoreSimulator and Xcode: bootstatus has reported Finished while
+# Xcode could see no concrete destination. Never substitute another device.
+mkdir -p "$derived_data"
+xcrun simctl list --json > "$derived_data/fixture-simulator-inventory.json"
+/usr/bin/python3 - "$derived_data/fixture-simulator-inventory.json" "$simulator_udid" <<'PYDIAGNOSTIC'
+import json, sys
+inventory = json.load(open(sys.argv[1]))
+selected = [(runtime, device) for runtime, devices in inventory.get('devices', {}).items()
+            for device in devices if device.get('udid') == sys.argv[2]]
+if len(selected) != 1:
+    raise SystemExit('Owned simulator is missing or ambiguous in post-boot inventory')
+runtime_id, device = selected[0]
+runtime = next((r for r in inventory.get('runtimes', []) if r.get('identifier') == runtime_id), {})
+print('[simulator readiness] ' + json.dumps({
+    'device': {key: device.get(key) for key in ('udid', 'name', 'deviceTypeIdentifier', 'state', 'isAvailable')},
+    'runtime': {key: runtime.get(key) for key in ('identifier', 'version', 'buildversion', 'isAvailable')},
+}, sort_keys=True))
+if device.get('state') != 'Booted' or not device.get('isAvailable') or not runtime.get('isAvailable'):
+    raise SystemExit('Owned simulator/runtime is not booted and available; refusing test execution')
+PYDIAGNOSTIC
+xcrun --find xcodebuild
+xcodebuild -version
+xcodebuild -showsdks
+if ! /usr/bin/python3 "$ios_dir/../../scripts/ci/ios-readiness.py" \
+  --project "$ios_dir/Orca.xcodeproj" --udid "$simulator_udid" \
+  --log "$derived_data/fixture-xcode-destinations.log"; then
+  cat "$derived_data/fixture-xcode-destinations.log"
+  print -u2 'Xcode destination discovery failed before build; no simulator substitution attempted.'
+  exit 70
+fi
+cat "$derived_data/fixture-xcode-destinations.log"
+
 xcodebuild build-for-testing \
   -project "$ios_dir/Orca.xcodeproj" \
   -scheme Orca \
@@ -41,6 +77,7 @@ cp "$base_xctestrun[1]" "$injected_xctestrun"
 import json
 import plistlib
 import sys
+from datetime import datetime, timezone
 
 connection_path, xctestrun_path = sys.argv[1:]
 with open(connection_path, encoding="utf-8") as handle:
@@ -53,14 +90,22 @@ environment["ORCA_FIXTURE_API_URL"] = connection["apiURL"]
 environment["ORCA_FIXTURE_ACCESS_TOKEN"] = connection["accessToken"]
 environment["ORCA_FIXTURE_IMAGES"] = "1" if connection.get("imageFixture", False) else "0"
 environment["ORCA_FIXTURE_READ_ONLY"] = "1" if connection.get("readOnly", False) else "0"
+environment["ORCA_FIXTURE_MEDIA_DAY"] = datetime.now(timezone.utc).strftime("%B %d")
 
 with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
 PY
 
-# Appearance and app-management commands require a booted device. Wait for a
-# fresh simulator to finish booting before running either test appearance.
-xcrun simctl bootstatus "$simulator_udid" -b
+# Seed only a generated, nonprivate image for the system Photos picker test.
+if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose || ${ORCA_UI_TEST_SCOPE:-all} == all ]]; then
+  /usr/bin/python3 - "$derived_data/feedback-synthetic.png" <<'PYMEDIA'
+import base64, sys
+with open(sys.argv[1], "wb") as file:
+    file.write(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGOQ6FlAU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULALhwEEy5eilwAAAAAElFTkSuQmCC"))
+PYMEDIA
+  xcrun simctl addmedia "$simulator_udid" "$derived_data/feedback-synthetic.png" "$ios_dir/../web/scripts/fixtures/feedback-media/synthetic.mp4"
+fi
+
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
 result_dir=${ORCA_UI_RESULT_DIRECTORY:-$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")}
 mkdir -p "$result_dir"
@@ -75,7 +120,7 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
   dark_tests=("${light_tests[@]}")
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway)
-  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket -only-testing:OrcaUITests/OrcaUITests/test39FeedbackCapturesCurrentOrcaScreen)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == overscroll ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
@@ -97,6 +142,27 @@ elif [[ $read_only == 1 ]]; then
 else
   light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
+fi
+
+# Run the changed feedback contract and real Photos picker before the longer
+# compose suite. Every other existing test still runs after this gate succeeds.
+if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
+  xcodebuild test-without-building \
+    -xctestrun "$injected_xctestrun" \
+    -destination "platform=iOS Simulator,id=$simulator_udid" \
+    -parallel-testing-enabled NO \
+    -resultBundlePath "$result_dir/DirectCaptureLight.xcresult" \
+    -only-testing:OrcaTests/FeedbackTicketTests \
+    -only-testing:OrcaUITests/OrcaUITests/test39FeedbackCapturesCurrentOrcaScreen
+  # Isolate current-screen capture from any preceding system Photos session.
+  # Photos import remains a required independent gate, not a skipped fallback.
+  xcodebuild test-without-building \
+    -xctestrun "$injected_xctestrun" \
+    -destination "platform=iOS Simulator,id=$simulator_udid" \
+    -parallel-testing-enabled NO \
+    -resultBundlePath "$result_dir/FeedbackLight.xcresult" \
+    -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket
+  light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 
 xcodebuild test-without-building \

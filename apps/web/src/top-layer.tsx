@@ -252,6 +252,8 @@ type AccessibleName =
   | { ariaLabel?: never; ariaLabelledBy: string };
 
 type TopLayerProps = AccessibleName & {
+  /** Keep local state mounted while temporarily returning interaction to the app. */
+  suspended?: boolean;
   ariaBusy?: boolean;
   ariaDescribedBy?: string;
   as?: "aside" | "div" | "section";
@@ -272,6 +274,7 @@ type TopLayerProps = AccessibleName & {
 };
 
 export function TopLayer({
+  suspended = false,
   ariaBusy,
   ariaDescribedBy,
   ariaLabel,
@@ -309,7 +312,7 @@ export function TopLayer({
 
   useLayoutEffect(() => {
     const element = surfaceRef.current;
-    if (!element) return;
+    if (!element || suspended) return;
     openerRef.current ??= document.activeElement instanceof HTMLElement ? document.activeElement : null;
     return manager.register({
       dismissible: () => dismissibleRef.current,
@@ -327,11 +330,13 @@ export function TopLayer({
       opener: openerRef.current,
       returnFocus: () => returnFocusRef?.current ?? null,
     });
-  }, [id, manager.register]);
+  }, [id, manager.register, suspended]);
 
   const isTop = manager.activeId === id;
   const layer = (
     <div
+      hidden={suspended}
+      style={suspended ? { display: "none" } : undefined}
       aria-hidden={isTop ? undefined : "true"}
       className={`orca-top-layer ${layerClassName}`.trim()}
       data-top-layer={isTop ? "active" : "background"}

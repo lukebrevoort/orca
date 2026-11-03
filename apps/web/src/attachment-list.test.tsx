@@ -19,7 +19,18 @@ let host: HTMLDivElement;
 let restoreAnchorClick: (() => void) | undefined;
 const originalCreate = URL.createObjectURL;
 const originalRevoke = URL.revokeObjectURL;
+const originalSetTimeout = globalThis.setTimeout;
+const downloadReleases = new Map<ReturnType<typeof setTimeout>, () => void>();
 beforeEach(() => {
+  // Successful downloads release their blob after one second using a native
+  // timer. Own those timers so they cannot call the next test's URL mock.
+  globalThis.setTimeout = ((...[callback, delay, ...args]: Parameters<typeof globalThis.setTimeout>) => {
+    if (delay !== 1000) return originalSetTimeout(callback, delay, ...args);
+    const release = () => { downloadReleases.delete(id); callback(...args); };
+    const id = originalSetTimeout(release, delay);
+    downloadReleases.set(id, release);
+    return id;
+  }) as typeof globalThis.setTimeout;
   browser = new Window({ url: "http://localhost" });
   Object.defineProperties(browser, {
     requestAnimationFrame: { configurable: true, value: (callback: FrameRequestCallback) => { callback(0); return 1; } },
@@ -31,6 +42,9 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await act(async () => root.unmount());
+  for (const [id, release] of downloadReleases) { clearTimeout(id); release(); }
+  downloadReleases.clear();
+  globalThis.setTimeout = originalSetTimeout;
   restoreAnchorClick?.();
   restoreAnchorClick = undefined;
   browser.close();

@@ -5,6 +5,7 @@ import io
 from contextlib import redirect_stdout
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location('evidence', Path(__file__).with_name('export-evidence.py'))
@@ -13,6 +14,143 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_owned_capture_file_accepts_only_known_bounded_phases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); container = root / 'app'
+            cache = container / 'Library/Caches'; cache.mkdir(parents=True)
+            path = cache / 'orca-fixture-capture-phases.log'
+            path.write_text('private note\nrender_begin\nrender_end ::error::oops\n')
+            self.assertEqual(evidence.read_capture_phases(container, root), ['[feedback capture] phase=render_begin'])
+            path.write_text('render_begin\n' * 40)
+            self.assertEqual(len(evidence.read_capture_phases(container, root)), 32)
+            path.write_text('x' * 8193)
+            self.assertEqual(evidence.read_capture_phases(container, root), [])
+
+    def test_capture_file_rejects_wrong_container_and_symlinks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); container = root / 'app'; cache = container / 'Library/Caches'
+            cache.mkdir(parents=True)
+            target = root / 'private'; target.write_text('render_begin\n')
+            path = cache / 'orca-fixture-capture-phases.log'; path.symlink_to(target)
+            self.assertEqual(evidence.read_capture_phases(container, root), [])
+            path.unlink(); path.write_text('render_begin\n')
+            self.assertEqual(evidence.read_capture_phases(container, root / 'other-owned-device'), [])
+
+    def test_capture_collection_never_runs_on_personal_machine(self):
+        with patch.dict(evidence.os.environ, {}, clear=True), patch.object(evidence.subprocess, 'run', side_effect=AssertionError('No commands')):
+            self.assertEqual(evidence.owned_capture_phases('A' * 36), [])
+
+    def test_native_diagnostics_only_accept_static_phase_and_readiness_fields(self):
+        accepted = ['[feedback capture] phase=render_begin',
+                    '[simulator readiness] attempt=2 exit=0 owned_destination=True',
+                    '[simulator readiness] first_launch_status=0']
+        rejected = ['[feedback capture] phase=private-value', accepted[0] + ' private',
+                    '[simulator readiness] raw secret payload', '[feedback capture] phase=render_begin ::error::oops']
+        self.assertEqual(evidence.native_diagnostic_excerpt('\n'.join(accepted + rejected)), accepted)
+        self.assertEqual(len(evidence.native_diagnostic_excerpt('\n'.join(accepted * 100))), 100)
+
+    def test_crash_summary_excludes_raw_paths_memory_and_user_payload(self):
+        report = {'procName': 'Orca', 'bundleInfo': {'CFBundleIdentifier': 'com.orca.mail'},
+                  'procPath': '/private/user/Orca.app/Orca', 'asi': {'secret': ['private note']},
+                  'exception': {'type': 'EXC_BAD_ACCESS', 'signal': 'SIGSEGV', 'reason': 'private note'},
+                  'termination': {'namespace': 'SIGNAL', 'code': 11},
+                  'threads': [{'triggered': True, 'frames': [{'symbol': 'FeedbackCaptureController.screenshot(window:scope:)', 'imageOffset': 123},
+                                                           {'symbol': 'private\n::error::payload'}]}]}
+        summary = '\n'.join(evidence.crash_summary('{}\n' + json.dumps(report)))
+        self.assertIn('EXC_BAD_ACCESS', summary); self.assertIn('FeedbackCaptureController.screenshot', summary)
+        self.assertNotIn('private', summary); self.assertNotIn('123', summary); self.assertNotIn('reason', summary)
+        report['bundleInfo']['CFBundleIdentifier'] = 'other.app'
+        self.assertEqual(evidence.crash_summary(json.dumps(report)), [])
+        for text in ('malformed', '[]', '{"procName":"Orca","bundleInfo":[]}'):
+            self.assertEqual(evidence.crash_summary(text), [])
+
+    def test_crash_scan_never_reads_personal_or_self_hosted_machine(self):
+        with patch.dict(evidence.os.environ, {}, clear=True), patch.object(Path, 'home', side_effect=AssertionError('No access')):
+            self.assertEqual(evidence.hosted_crash_summaries(Path('/unused')), [])
+        with patch.dict(evidence.os.environ, {'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'self-hosted'}, clear=True), patch.object(Path, 'home', side_effect=AssertionError('No access')):
+            self.assertEqual(evidence.hosted_crash_summaries(Path('/unused')), [])
+
+    def test_crash_summary_is_bounded_and_accepts_only_orca(self):
+        report = {'procName': 'Orca', 'bundleInfo': {'CFBundleIdentifier': 'com.orca.mail'},
+                  'lastExceptionBacktrace': [{'symbol': '-[UIView drawViewHierarchyInRect:afterScreenUpdates:]'}] * 100}
+        self.assertEqual(len(evidence.crash_summary(json.dumps(report))), 20)
+        report['procName'] = 'Other'
+        self.assertEqual(evidence.crash_summary(json.dumps(report)), [])
+        for fields in ({'bundleInfo': None}, {'exception': [], 'termination': None, 'threads': [None], 'lastExceptionBacktrace': None}, {'lastExceptionBacktrace': 'invalid'}, {'lastExceptionBacktrace': [None]}):
+            malformed = {'procName': 'Orca', 'bundleInfo': {'CFBundleIdentifier': 'com.orca.mail'}, **fields}
+            self.assertEqual(evidence.crash_summary(json.dumps(malformed)), [])
+
+    def test_picker_diagnostics_are_redacted_before_printing_on_success_and_failure(self):
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory) / 'private'; out = Path(directory) / 'public'
+                work.mkdir(); out.mkdir()
+                connection = work / 'connection.json'
+                connection.write_text(json.dumps({'accessToken': 'picker-secret'}))
+                (work / 'checks.log').write_text(
+                    'timestamp [feedback picker] Button label=Photos picker-secret Bearer hidden-token\n'
+                    '[feedback picker] Image id=orca_session=hidden-cookie; ::error::##[warning]\x1b\x00\n'
+                    'unrelated private label\n')
+                output = io.StringIO()
+                with redirect_stdout(output): evidence.export(work, out, str(connection), status)
+                text = output.getvalue()
+                self.assertIn('[feedback picker] Button label=Photos', text)
+                self.assertIn('[REDACTED]', text)
+                for forbidden in ('picker-secret', 'hidden-token', 'hidden-cookie', '::', '##['):
+                    self.assertNotIn(forbidden, text)
+                picker_lines = '\n'.join(line for line in text.splitlines() if line.startswith('[feedback picker]'))
+                for forbidden in ('\x1b', '\x00', 'unrelated private label'):
+                    self.assertNotIn(forbidden, picker_lines)
+
+    def test_picker_diagnostics_bound_lines_bytes_and_preserve_full_sanitized_log(self):
+        self.assertEqual(len(evidence.feedback_picker_excerpt('[feedback picker] Cell\n' * 100)), 40)
+        bounded = evidence.feedback_picker_excerpt(('[feedback picker] ' + '界' * 5000 + '\n') * 100)
+        self.assertLessEqual(len(('\n'.join(bounded) + '\n').encode('utf-8')), 8192)
+        self.assertTrue(all(len(line) <= 512 for line in bounded))
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'private'; out = Path(directory) / 'public'
+            work.mkdir(); out.mkdir()
+            (work / 'checks.log').write_text('[feedback picker] Cell label=synthetic\n' * 100)
+            output = io.StringIO()
+            with redirect_stdout(output): evidence.export(work, out, '', 0)
+            self.assertEqual(output.getvalue().count('[feedback picker]'), 40)
+            self.assertEqual((out / 'checks.log').read_text().count('[feedback picker]'), 100)
+
+    def test_feedback_summary_exposes_only_known_terminal_test_results(self):
+        unit = "Test Case '-[OrcaTests.FeedbackTicketTests testTicketLinkAcceptsOnlyHTTPSLinearURLs]' passed (0.004 seconds)."
+        ui = "Test Case '-[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket]' failed (52.541 seconds)."
+        text = '\n'.join([unit, ui, unit + ' private-payload ::error::',
+                         "Test Case '-[OrcaTests.OtherTests privatePayload]' passed (0.1 seconds).",
+                         '[feedback-fixture] arbitrary private-payload', unit.replace('passed', 'started')])
+        summaries = evidence.feedback_test_summary(text)
+        self.assertEqual(len(summaries), 2)
+        self.assertIn('passed (0.004 seconds)', summaries[0])
+        self.assertIn('failed (52.541 seconds)', summaries[1])
+        self.assertNotIn('private', ' '.join(summaries))
+        self.assertEqual(len(evidence.feedback_test_summary((unit + '\n') * 100)), 20)
+
+    def test_direct_capture_results_are_allowlisted_without_payloads(self):
+        methods = ['testScreenCaptureRequiresForegroundOriginatingScene', 'testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit', 'testScreenRecordingCancellationFencesLatePermissionAndAccountChange', 'testScreenRecordingUnavailableAndOversizedResultsNeverAttach', 'testScreenRecordingWriterProducesSilentBoundedVideo']
+        lines = [f"Test Case '-[OrcaTests.FeedbackTicketTests {method}]' passed (0.1 seconds)." for method in methods]
+        lines.append("Test Case '-[OrcaUITests.OrcaUITests test39FeedbackCapturesCurrentOrcaScreen]' passed (2.0 seconds).")
+        self.assertEqual(len(evidence.feedback_test_summary('\n'.join(lines))), 6)
+        self.assertEqual(evidence.feedback_test_summary(lines[0] + ' private screenshot'), [])
+
+    def test_feedback_summary_is_printed_after_redaction_on_success_and_failure(self):
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory) / 'private'; out = Path(directory) / 'public'
+                work.mkdir(); out.mkdir()
+                connection = work / 'connection.json'
+                connection.write_text(json.dumps({'accessToken': 'feedback-secret'}))
+                (work / 'checks.log').write_text(
+                    "Test Case '-[OrcaTests.FeedbackTicketTests testTicketLinkAcceptsOnlyHTTPSLinearURLs]' passed (0.004 seconds).\n"
+                    'noise feedback-secret\n' + 'later output\n' * 200)
+                output = io.StringIO()
+                with redirect_stdout(output): evidence.export(work, out, str(connection), status)
+                self.assertIn('[feedback test] OrcaTests.FeedbackTicketTests.testTicketLinkAcceptsOnlyHTTPSLinearURLs passed (0.004 seconds)', output.getvalue())
+                self.assertNotIn('feedback-secret', output.getvalue())
+
     def test_search_telemetry_is_redacted_bounded_and_keeps_full_log(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory) / 'private'; out = Path(directory) / 'public'
@@ -173,7 +311,7 @@ class EvidenceTests(unittest.TestCase):
             work.mkdir(); out.mkdir(); (work / 'browser').mkdir()
             connection = work / 'connection.json'
             connection.write_text(json.dumps({'token': 'private-fixture-secret'}))
-            (work / 'checks.log').write_text('error: private-fixture-secret')
+            (work / 'checks.log').write_text('error: private-fixture-secret\n[feedback picker] Image private-fixture-secret')
             (work / 'fixture.log').write_text('[counter-server] received private-fixture-secret')
             (work / 'browser' / 'image.png').write_bytes(b'private-fixture-secret')
             output = io.StringIO()

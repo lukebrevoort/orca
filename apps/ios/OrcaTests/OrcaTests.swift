@@ -1,4 +1,8 @@
 import XCTest
+import ImageIO
+import UniformTypeIdentifiers
+import AVFoundation
+import Combine
 @testable import Orca
 
 private final class StubURLProtocol: URLProtocol {
@@ -2758,5 +2762,315 @@ final class VerificationCodeTests: XCTestCase {
         XCTAssertTrue(VerificationCode.detect(bodyText: String(repeating: "x", count: 20_000) + " code: 123456").isEmpty)
         XCTAssertEqual(VerificationCode.detect(bodyText: "code: 123456, 654321, 765432").count, 2)
         XCTAssertTrue(VerificationCode.detect(bodyText: "code " + String(repeating: "x", count: 81) + " 123456").isEmpty)
+    }
+}
+
+@MainActor private final class FakeFeedbackRecordingSession: FeedbackRecordingSession {
+    var available = true
+    var data = Data([1, 2, 3])
+    var starts = 0, finishes = 0, cancels = 0
+    var heldStart: CheckedContinuation<Void, Error>?
+    var holdStart = false
+    var onStart: (() -> Void)?
+    func start(onLimit: @escaping @MainActor () -> Void) async throws {
+        starts += 1
+        if holdStart {
+            try await withCheckedThrowingContinuation { heldStart = $0; self.onStart?() }
+        } else { onStart?() }
+    }
+    func finish() async throws -> Data { finishes += 1; return data }
+    func cancel() async { cancels += 1 }
+}
+
+final class FeedbackTicketTests: XCTestCase {
+    private var syntheticImage: Data { Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGOQ6FlAU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULALhwEEy5eilwAAAAAElFTkSuQmCC")! }
+    private func client() -> APIClient {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        return APIClient(baseURL: URL(string: "https://fixture.example")!, session: URLSession(configuration: configuration)) { "fixture-token" }
+    }
+    @MainActor private func enable(_ model: FeedbackTicketModel, client: APIClient, scope: String = "owner-a") async {
+        model.configure(scope: scope)
+        StubURLProtocol.handler = { _ in (200, Data(#"{"available":true}"#.utf8)) }
+        await model.checkAvailability(client: client, scope: scope)
+    }
+    @MainActor func testLostResponseRetainsExactSubmissionUntilConfirmedTicket() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackTicketModel()
+        await enable(model, client: client); model.message = "A small improvement"
+        var bodies = [FeedbackTicketInput]()
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer fixture-token")
+            XCTAssertEqual(request.url?.path, "/v1/feedback/ticket")
+            bodies.append(try JSONDecoder().decode(FeedbackTicketInput.self, from: requestBodyData(request)))
+            throw URLError(.networkConnectionLost)
+        }
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertNotNil(model.pending); XCTAssertNotNil(model.error); XCTAssertNil(model.receipt)
+        XCTAssertEqual(model.message, "A small improvement")
+        StubURLProtocol.handler = { request in
+            bodies.append(try JSONDecoder().decode(FeedbackTicketInput.self, from: requestBodyData(request)))
+            return (201, Data(#"{"identifier":"BRE-FIXTURE-1","url":"https://linear.app/fixture/issue/test"}"#.utf8))
+        }
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertEqual(bodies.count, 2); XCTAssertEqual(bodies[0], bodies[1])
+        XCTAssertNil(model.pending); XCTAssertNil(model.error); XCTAssertEqual(model.message, "")
+        XCTAssertEqual(model.receipt?.identifier, "BRE-FIXTURE-1")
+    }
+    @MainActor func testAvailabilityFailsClosedAndBlocksOtherAccounts() async {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackTicketModel()
+        model.configure(scope: "other-owner"); model.message = "Private note"
+        StubURLProtocol.handler = { _ in (200, Data(#"{"available":false}"#.utf8)) }
+        await model.checkAvailability(client: client, scope: "other-owner")
+        XCTAssertFalse(model.available)
+        var writes = 0
+        StubURLProtocol.handler = { _ in writes += 1; throw URLError(.notConnectedToInternet) }
+        await model.send(client: client, scope: "other-owner")
+        XCTAssertEqual(writes, 0); XCTAssertNil(model.pending)
+        await model.checkAvailability(client: client, scope: "other-owner")
+        XCTAssertFalse(model.available); XCTAssertEqual(model.message, "Private note")
+    }
+    @MainActor func testChangingOwnerClearsDraftAndRejectsOldScopeActions() async {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackTicketModel()
+        await enable(model, client: client); model.message = "Only owner A"
+        StubURLProtocol.handler = { _ in throw URLError(.timedOut) }
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertNotNil(model.pending)
+        model.configure(scope: "owner-b")
+        XCTAssertEqual(model.message, ""); XCTAssertNil(model.pending); XCTAssertNil(model.receipt); XCTAssertFalse(model.available)
+        var requests = 0
+        StubURLProtocol.handler = { _ in requests += 1; throw URLError(.badURL) }
+        await model.checkAvailability(client: client, scope: "owner-a")
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertEqual(requests, 0)
+    }
+    @MainActor func testFeedbackValidationUsesWireLengthAndRequiresText() async {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackTicketModel()
+        await enable(model, client: client)
+        XCTAssertFalse(model.canSubmit)
+        model.message = "   "; XCTAssertFalse(model.canSubmit)
+        model.message = "Details"; XCTAssertTrue(model.canSubmit)
+        model.message = String(repeating: "a", count: 10_001); XCTAssertFalse(model.canSubmit)
+    }
+    @MainActor func testMalformedReceiptNeverReportsSuccessOrDropsDraft() async {
+        defer { StubURLProtocol.handler = nil }
+        let client = client(), model = FeedbackTicketModel()
+        await enable(model, client: client); model.message = "Keep this note"
+        StubURLProtocol.handler = { _ in (201, Data(#"{"identifier":"BRE-1","url":"https://example.com/issue"}"#.utf8)) }
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertNil(model.receipt); XCTAssertNotNil(model.pending)
+        XCTAssertEqual(model.message, "Keep this note"); XCTAssertNotNil(model.error)
+    }
+    @MainActor func testMediaRequiresReviewAndCleansUpOnOwnerChange() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let model = FeedbackTicketModel(), client = client()
+        await enable(model, client: client); model.message = "Screenshot"
+        try model.addAttachment(data: syntheticImage, name: "selected.png", mime: "image/png")
+        let item = try XCTUnwrap(model.attachments.first)
+        let preview = try XCTUnwrap(model.previewURL(for: item.id))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: preview.path))
+        XCTAssertFalse(model.canSubmit)
+        model.review(item.id); XCTAssertTrue(model.canSubmit)
+        model.configure(scope: "owner-b")
+        XCTAssertTrue(model.attachments.isEmpty); XCTAssertTrue(model.reviewed.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: preview.path))
+    }
+    @MainActor func testMediaRetryFreezesBytesAndSuccessRemovesPreview() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let model = FeedbackTicketModel(), client = client()
+        await enable(model, client: client); model.message = "Selected recording"
+        try model.addAttachment(data: Data([1, 2, 3]), name: "capture.mov", mime: "video/quicktime")
+        let item = try XCTUnwrap(model.attachments.first)
+        let preview = try XCTUnwrap(model.previewURL(for: item.id))
+        model.review(item.id)
+        var bodies = [FeedbackTicketInput]()
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.timeoutInterval, 300)
+            bodies.append(try JSONDecoder().decode(FeedbackTicketInput.self, from: requestBodyData(request)))
+            throw URLError(.networkConnectionLost)
+        }
+        await model.send(client: client, scope: "owner-a")
+        model.removeAttachment(item.id)
+        XCTAssertEqual(model.attachments, [item]); XCTAssertNotNil(model.pending)
+        XCTAssertThrowsError(try model.addAttachment(data: Data([4]), name: "extra.png", mime: "image/png"))
+        StubURLProtocol.handler = { request in
+            bodies.append(try JSONDecoder().decode(FeedbackTicketInput.self, from: requestBodyData(request)))
+            return (201, Data(#"{"identifier":"BRE-FIXTURE-1","url":"https://linear.app/fixture/issue/test"}"#.utf8))
+        }
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertEqual(bodies.count, 2); XCTAssertEqual(bodies.first, bodies.last)
+        XCTAssertTrue(model.attachments.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: preview.path))
+    }
+    @MainActor func testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft() async throws {
+        let model = FeedbackTicketModel()
+        model.configure(scope: "owner-a"); model.message = "Keep draft"
+        XCTAssertThrowsError(try model.addAttachment(data: Data(repeating: 1, count: 10 * 1_024 * 1_024 + 1), name: "large.png", mime: "image/png"))
+        XCTAssertThrowsError(try model.addAttachment(data: Data([1]), name: "file.txt", mime: "text/plain"))
+        try model.addAttachment(data: syntheticImage, name: "sample.png", mime: "image/png")
+        let item = try XCTUnwrap(model.attachments.first)
+        let preview = try XCTUnwrap(model.previewURL(for: item.id))
+        model.removeAttachment(item.id)
+        XCTAssertTrue(model.attachments.isEmpty); XCTAssertFalse(FileManager.default.fileExists(atPath: preview.path))
+        await model.importFiles([URL(fileURLWithPath: "/missing.png")], scope: "owner-b")
+        XCTAssertNil(model.error); XCTAssertEqual(model.message, "Keep draft")
+        for _ in 0..<3 { try model.addAttachment(data: syntheticImage, name: "small.png", mime: "image/png") }
+        XCTAssertThrowsError(try model.addAttachment(data: Data([1]), name: "fourth.png", mime: "image/png"))
+        for attachment in model.attachments { model.removeAttachment(attachment.id) }
+        let maximum = Data(repeating: 1, count: 10 * 1_024 * 1_024)
+        try model.addAttachment(data: maximum, name: "first.mov", mime: "video/quicktime")
+        try model.addAttachment(data: maximum, name: "second.mov", mime: "video/quicktime")
+        XCTAssertThrowsError(try model.addAttachment(data: Data([1]), name: "over-total.png", mime: "image/png"))
+        model.configure(scope: "owner-c")
+    }
+    func testImagePreparationStripsMetadataAndBoundsDecodedDimensions() throws {
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(syntheticImage as CFData, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let tagged = NSMutableData()
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(tagged, UTType.jpeg.identifier as CFString, 1, nil))
+        let metadata: [CFString: Any] = [kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 1.25, kCGImagePropertyGPSLatitudeRef: "N"],
+                                        kCGImagePropertyExifDictionary: [kCGImagePropertyExifUserComment: "Synthetic private metadata", kCGImagePropertyExifDateTimeOriginal: "2020:01:02 03:04:05"],
+                                        kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "Synthetic camera maker", kCGImagePropertyTIFFModel: "Synthetic camera model"]]
+        CGImageDestinationAddImage(destination, image, metadata as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let taggedSource = try XCTUnwrap(CGImageSourceCreateWithData(tagged as CFData, nil))
+        let originalProperties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(taggedSource, 0, nil) as? [CFString: Any])
+        let originalGPS = try XCTUnwrap(originalProperties[kCGImagePropertyGPSDictionary] as? [CFString: Any])
+        XCTAssertEqual(originalGPS[kCGImagePropertyGPSLatitude] as? Double, 1.25)
+        let originalEXIF = try XCTUnwrap(originalProperties[kCGImagePropertyExifDictionary] as? [CFString: Any])
+        XCTAssertEqual(originalEXIF[kCGImagePropertyExifUserComment] as? String, "Synthetic private metadata")
+        XCTAssertEqual(originalEXIF[kCGImagePropertyExifDateTimeOriginal] as? String, "2020:01:02 03:04:05")
+        let originalTIFF = try XCTUnwrap(originalProperties[kCGImagePropertyTIFFDictionary] as? [CFString: Any])
+        XCTAssertEqual(originalTIFF[kCGImagePropertyTIFFMake] as? String, "Synthetic camera maker")
+        XCTAssertEqual(originalTIFF[kCGImagePropertyTIFFModel] as? String, "Synthetic camera model")
+        let prepared = try FeedbackTicketModel.normalizeImage(tagged as Data)
+        let cleanSource = try XCTUnwrap(CGImageSourceCreateWithData(prepared as CFData, nil))
+        let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(cleanSource, 0, nil) as? [CFString: Any])
+        XCTAssertNil(properties[kCGImagePropertyGPSDictionary])
+        let cleanEXIF = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
+        // ImageIO generates structural color/dimension properties for a fresh PNG.
+        // Permit those only, never the source comment, timestamp or other EXIF.
+        let structuralEXIF: Set<CFString> = [kCGImagePropertyExifColorSpace, kCGImagePropertyExifPixelXDimension, kCGImagePropertyExifPixelYDimension]
+        XCTAssertTrue(Set(cleanEXIF.keys).isSubset(of: structuralEXIF))
+        XCTAssertNil(cleanEXIF[kCGImagePropertyExifUserComment])
+        XCTAssertNil(cleanEXIF[kCGImagePropertyExifDateTimeOriginal])
+        let cleanTIFF = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+        let structuralTIFF: Set<CFString> = [kCGImagePropertyTIFFOrientation, kCGImagePropertyTIFFXResolution, kCGImagePropertyTIFFYResolution, kCGImagePropertyTIFFResolutionUnit]
+        XCTAssertTrue(Set(cleanTIFF.keys).isSubset(of: structuralTIFF))
+        XCTAssertNil(cleanTIFF[kCGImagePropertyTIFFMake]); XCTAssertNil(cleanTIFF[kCGImagePropertyTIFFModel])
+        XCTAssertNil(cleanTIFF[kCGImagePropertyTIFFDateTime])
+        XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 32)
+        XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8193, height: 1))
+        XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8000, height: 8000))
+        XCTAssertTrue(FeedbackTicketModel.validImageDimensions(width: 8000, height: 4000))
+        XCTAssertThrowsError(try FeedbackTicketModel.normalizeImage(Data([1, 2, 3])))
+    }
+    @MainActor func testScreenCaptureRequiresForegroundOriginatingScene() async {
+        let capture = FeedbackCaptureController()
+        capture.configure(scope: "owner-a")
+        await capture.start(scope: "owner-a", windowScene: nil)
+        XCTAssertEqual(capture.phase, .idle); XCTAssertNotNil(capture.error); XCTAssertNil(capture.result)
+        capture.screenshot(window: nil, scope: "owner-a")
+        XCTAssertNil(capture.result); XCTAssertNotNil(capture.error)
+    }
+    @MainActor func testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let recorder = FakeFeedbackRecordingSession()
+        let capture = FeedbackCaptureController(testSessionFactory: { recorder })
+        capture.configure(scope: "owner-a|account-a")
+        await capture.start(scope: "owner-a|account-a")
+        XCTAssertEqual(capture.phase, .recording)
+        await capture.elapsedTimeDidChange(60)
+        XCTAssertEqual(capture.phase, .idle); XCTAssertEqual(recorder.finishes, 1)
+        let media = try XCTUnwrap(capture.result)
+        XCTAssertEqual(media.scope, "owner-a|account-a"); XCTAssertEqual(media.mime, "video/mp4")
+        let model = FeedbackTicketModel(), client = client()
+        await enable(model, client: client); model.message = "Screen recording"
+        model.attachCapture(media, scope: "owner-a")
+        XCTAssertEqual(model.attachments.count, 1); XCTAssertTrue(model.reviewed.isEmpty)
+        XCTAssertFalse(model.canSubmit)
+        await capture.stop(); XCTAssertEqual(recorder.finishes, 1)
+    }
+    @MainActor func testScreenRecordingCancellationFencesLatePermissionAndAccountChange() async {
+        let recorder = FakeFeedbackRecordingSession(); recorder.holdStart = true
+        let started = expectation(description: "Permission pending")
+        recorder.onStart = { started.fulfill() }
+        let capture = FeedbackCaptureController(testSessionFactory: { recorder })
+        capture.configure(scope: "owner-a|account-a")
+        let start = Task { await capture.start(scope: "owner-a|account-a") }
+        await fulfillment(of: [started], timeout: 2)
+        XCTAssertEqual(capture.phase, .starting)
+        let idle = expectation(description: "Cancelled permission flow becomes idle")
+        let observation = capture.$phase.filter { $0 == .idle }.prefix(1).sink { _ in idle.fulfill() }
+        defer { observation.cancel() }
+        capture.configure(scope: "owner-b|account-b")
+        recorder.heldStart?.resume(); recorder.heldStart = nil
+        await start.value
+        await fulfillment(of: [idle], timeout: 2)
+        XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
+        XCTAssertGreaterThanOrEqual(recorder.cancels, 1)
+        await capture.start(scope: "owner-a|account-a")
+        XCTAssertEqual(recorder.starts, 1)
+    }
+    @MainActor func testScreenRecordingUnavailableAndOversizedResultsNeverAttach() async {
+        let recorder = FakeFeedbackRecordingSession(); recorder.available = false
+        let capture = FeedbackCaptureController(testSessionFactory: { recorder })
+        capture.configure(scope: "owner-a")
+        await capture.start(scope: "owner-a")
+        XCTAssertNotNil(capture.error); XCTAssertNil(capture.result); XCTAssertEqual(recorder.starts, 0)
+        recorder.available = true; recorder.data = Data(repeating: 1, count: 10 * 1_024 * 1_024 + 1)
+        await capture.start(scope: "owner-a"); await capture.stop()
+        XCTAssertNotNil(capture.error); XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
+        recorder.data = Data([1]); await capture.start(scope: "owner-a")
+        let idle = expectation(description: "Cancelled recording becomes idle")
+        let observation = capture.$phase.filter { $0 == .idle }.prefix(1).sink { _ in idle.fulfill() }
+        defer { observation.cancel() }
+        capture.cancel()
+        await fulfillment(of: [idle], timeout: 2)
+        XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
+    }
+    func testScreenRecordingWriterProducesSilentBoundedVideo() async throws {
+        let limited = expectation(description: "Duration limit")
+        let writer = FeedbackVideoWriter { limited.fulfill() }
+        for second in [0, 1, 61] {
+            var pixel: CVPixelBuffer?
+            XCTAssertEqual(CVPixelBufferCreate(kCFAllocatorDefault, 32, 32, kCVPixelFormatType_32BGRA, nil, &pixel), kCVReturnSuccess)
+            let buffer = try XCTUnwrap(pixel)
+            CVPixelBufferLockBaseAddress(buffer, [])
+            if let address = CVPixelBufferGetBaseAddress(buffer) {
+                memset(address, 128, CVPixelBufferGetBytesPerRow(buffer) * CVPixelBufferGetHeight(buffer))
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            var format: CMVideoFormatDescription?
+            XCTAssertEqual(CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer, formatDescriptionOut: &format), noErr)
+            var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: 30), presentationTimeStamp: CMTime(seconds: Double(second), preferredTimescale: 600), decodeTimeStamp: .invalid)
+            var sample: CMSampleBuffer?
+            XCTAssertEqual(CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer, formatDescription: try XCTUnwrap(format), sampleTiming: &timing, sampleBufferOut: &sample), noErr)
+            writer.append(try XCTUnwrap(sample))
+        }
+        await fulfillment(of: [limited], timeout: 2)
+        let data = try await writer.finish()
+        XCTAssertFalse(data.isEmpty); XCTAssertLessThanOrEqual(data.count, 10 * 1_024 * 1_024)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+        defer { try? FileManager.default.removeItem(at: url); writer.discard() }
+        try data.write(to: url)
+        let asset = AVURLAsset(url: url)
+        let video = try await asset.loadTracks(withMediaType: .video)
+        let audio = try await asset.loadTracks(withMediaType: .audio)
+        let duration = try await asset.load(.duration)
+        XCTAssertEqual(video.count, 1); XCTAssertTrue(audio.isEmpty)
+        XCTAssertLessThanOrEqual(CMTimeGetSeconds(duration), 60)
+        let frame = try await AVAssetImageGenerator(asset: asset).image(at: .zero)
+        XCTAssertEqual(frame.image.width, 32); XCTAssertEqual(frame.image.height, 32)
+    }
+    func testTicketLinkAcceptsOnlyHTTPSLinearURLs() {
+        var receipt = FeedbackTicketReceipt(identifier: "BRE-1", url: "https://linear.app/brevoort/issue/BRE-1/example")
+        XCTAssertNotNil(receipt.issueURL)
+        for url in ["javascript:alert(1)", "https://example.com/issue", "http://linear.app/issue", "https://secret@linear.app/issue"] {
+            receipt.url = url; XCTAssertNil(receipt.issueURL)
+        }
     }
 }

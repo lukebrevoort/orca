@@ -3,6 +3,7 @@
  * or calls a mail provider. Stop with Ctrl-C; its temporary mailbox is removed.
  * Run: bun apps/api/scripts/mobile-fixture.ts
  */
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -28,6 +29,9 @@ process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 19).toString("base64");
 // Explicitly disable outbound push even if the caller's environment has keys.
 delete process.env.APNS_KEY_ID;
 delete process.env.APNS_PRIVATE_KEY;
+// Feedback uses the injected in-memory Linear fake below, never real tickets.
+delete process.env.LINEAR_API_KEY;
+delete process.env.LINEAR_FEEDBACK_OWNER_USER_ID;
 
 const { createDatabaseClient } = await import("../src/db/client.ts");
 const { users, oauthAccounts, threads, emails, labels, emailLabels, messageDrafts } = await import("../src/db/schema.ts");
@@ -98,7 +102,29 @@ const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
 let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
+const feedbackTickets = new Map<string, { id: string; identifier: string; url: string; message: string; platform: unknown; attachments: Array<{ name: string; mimeType: string; size: number; sha256: string; imageWidth?: number; imageHeight?: number }> }>();
+let feedbackFailOnce = false;
 const app = createApp({
+  feedbackTicketOwnerUserId: userId,
+  feedbackTicketDelivery: async (report, { issueId }) => {
+    let ticket = feedbackTickets.get(issueId);
+    if (!ticket) {
+      ticket = { id: issueId, identifier: `BRE-FIXTURE-${feedbackTickets.size + 1}`,
+        url: `https://linear.app/fixture/issue/${issueId}`, message: report.description,
+        platform: report.metadata?.platform,
+        attachments: report.attachments.map(attachment => {
+          const bytes = Buffer.from(attachment.dataUrl.slice(attachment.dataUrl.indexOf(",") + 1), "base64");
+          return { name: attachment.name, mimeType: attachment.mimeType, size: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+            ...(attachment.mimeType === "image/png" && bytes.length >= 24 ? {
+              imageWidth: bytes.readUInt32BE(16), imageHeight: bytes.readUInt32BE(20),
+            } : {}) };
+        }) };
+      feedbackTickets.set(issueId, ticket);
+    }
+    if (feedbackFailOnce) { feedbackFailOnce = false; throw new Error("Synthetic response lost after ticket creation"); }
+    return { identifier: ticket.identifier, url: ticket.url };
+  },
   downloadMessageImage: async (url, signal) => {
     if (!imageFixture || url.href !== "https://images.example.invalid/landscape.png") throw new Error("Fixture image unavailable");
     imageDownloads++;
@@ -149,6 +175,12 @@ let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
 // Keep the connection alive until each gate’s explicit safety release.
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/__fixture/feedback/")) {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method === "GET" && url.pathname.endsWith("/state")) return Response.json({ tickets: [...feedbackTickets.values()] });
+    if (request.method === "POST" && url.pathname.endsWith("/fail-once")) { feedbackFailOnce = true; return new Response(null, { status: 204 }); }
+    return new Response(null, { status: 404 });
+  }
   if (url.pathname === "/__fixture/image-delay" && request.method === "POST") {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     imageDelayMilliseconds = 4000;

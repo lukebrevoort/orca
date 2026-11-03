@@ -17,6 +17,255 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// Runs in both themes against the authenticated loopback fixture only.
+    func test38FeedbackCornerCreatesLinearTicket() throws {
+        let message = "Synthetic feedback " + UUID().uuidString
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        let corner = app.buttons["feedback.open"]
+        XCTAssertTrue(corner.waitForExistence(timeout: 10)); XCTAssertTrue(corner.isHittable)
+        attachScreenshot(named: "feedback-persistent-corner")
+        corner.tap()
+        let submit = app.buttons["feedback.submit"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 5)); XCTAssertFalse(submit.isEnabled)
+        attachScreenshot(named: "feedback-empty-composer")
+        let editor = app.textViews["feedback.message"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.tap(); editor.typeText(message)
+        let done = app.buttons["feedback.keyboard-done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5)); XCTAssertTrue(done.isHittable)
+        attachScreenshot(named: "feedback-keyboard-done")
+        done.tap(); XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        app.buttons["feedback.close"].tap()
+        for tab in ["Drafts", "Settings"] {
+            app.tabBars.buttons[tab].tap()
+            XCTAssertTrue(corner.waitForExistence(timeout: 5)); XCTAssertTrue(corner.isHittable)
+            corner.tap()
+            XCTAssertTrue(editor.waitForExistence(timeout: 5)); XCTAssertEqual(editor.value as? String, message)
+            if tab == "Drafts" { app.buttons["feedback.close"].tap() }
+        }
+        let photos = app.buttons["feedback.photos"]
+        XCTAssertTrue(photos.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !photos.isHittable { app.swipeUp() }
+        XCTAssertTrue(photos.isHittable); photos.tap()
+        let importDay = try XCTUnwrap(ProcessInfo.processInfo.environment["ORCA_FIXTURE_MEDIA_DAY"])
+        let escapedDay = NSRegularExpression.escapedPattern(for: importDay)
+        // The hosted picker exposes media as images, not collection cells.
+        // Current-year Photos labels omit the year. Require the injected month/day
+        // followed immediately by time, excluding older stock photos with a year.
+        let photoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
+                                                        "PXGGridLayout-Info", "Photo, \(escapedDay), [0-9]{1,2}:.*"))
+        let photoExists = photoQuery.firstMatch.waitForExistence(timeout: 10)
+        attachScreenshot(named: "feedback-system-picker-before-selection")
+        guard photoExists, photoQuery.count == 1 else {
+            logFeedbackPicker(in: app)
+            XCTFail("System picker must expose exactly one photo imported for this fixture day")
+            return
+        }
+        // Only dismiss the observed system privacy banner, never Orca's Close.
+        for _ in 0..<2 {
+            guard app.images.matching(identifier: "PickerOnboardingHeaderViewIcon").firstMatch.exists else { break }
+            let bannerClose = app.buttons.matching(NSPredicate(format: "identifier == '' AND label == 'Close'")).firstMatch
+            guard bannerClose.exists, bannerClose.isHittable else { break }
+            bannerClose.tap()
+        }
+        attachScreenshot(named: "feedback-system-picker-banner-dismissed")
+        guard tapFeedbackPickerAsset(photoQuery.firstMatch, in: app) else { return }
+        let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
+                                                        "PXGGridLayout-Info", "Video, .*, \(escapedDay), [0-9]{1,2}:.*"))
+        guard videoQuery.firstMatch.waitForExistence(timeout: 10), videoQuery.count == 1 else {
+            logFeedbackPicker(in: app)
+            XCTFail("System picker must expose exactly one recording imported for this fixture day")
+            return
+        }
+        guard tapFeedbackPickerAsset(videoQuery.firstMatch, in: app) else { return }
+        attachScreenshot(named: "feedback-system-picker-selected-media")
+        logFeedbackPicker(in: app)
+        let finishSelection = app.buttons["Done"]
+        XCTAssertTrue(finishSelection.waitForExistence(timeout: 5))
+        XCTAssertTrue(finishSelection.isEnabled); finishSelection.tap()
+        let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
+        expectation(for: NSPredicate(format: "count == 2"), evaluatedWith: previews)
+        waitForExpectations(timeout: 10)
+        XCTAssertEqual(previews.count, 2); XCTAssertFalse(submit.isEnabled)
+        for (index, identifier) in previews.allElementsBoundByIndex.map({ $0.identifier }).enumerated() {
+            let preview = app.buttons[identifier]
+            for _ in 0..<4 where !preview.isHittable { app.swipeUp() }
+            XCTAssertTrue(preview.isHittable); preview.tap()
+            let approve = app.buttons["feedback.media-reviewed"]
+            XCTAssertTrue(approve.waitForExistence(timeout: 5))
+            expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: approve)
+            waitForExpectations(timeout: 10)
+            attachScreenshot(named: "feedback-selected-media-review-\(index)")
+            approve.tap()
+            if index == 0 { XCTAssertFalse(submit.isEnabled, "Every selected file needs explicit review") }
+        }
+        for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
+        XCTAssertTrue(submit.isHittable); XCTAssertTrue(submit.isEnabled)
+        attachScreenshot(named: "feedback-ready-to-send")
+        _ = try composeFixtureRequest("__fixture/feedback/fail-once", method: "POST", body: [:])
+        submit.tap()
+        XCTAssertTrue(app.staticTexts["feedback.error"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.descendants(matching: .any)["feedback.confirmation"].exists)
+        XCTAssertEqual(editor.value as? String, message); XCTAssertFalse(editor.isEnabled)
+        XCTAssertEqual(submit.label, "Retry submission")
+        let firstState = try composeFixtureRequest("__fixture/feedback/state")
+        let firstTicket = try XCTUnwrap((firstState["tickets"] as? [[String: Any]])?.first { $0["message"] as? String == message })
+        let firstAttachments = try XCTUnwrap(firstTicket["attachments"] as? [[String: Any]])
+        XCTAssertEqual(firstAttachments.count, 2)
+        let preparedPairs = try firstAttachments.map {
+            (try XCTUnwrap($0["mimeType"] as? String), try XCTUnwrap($0["sha256"] as? String))
+        }
+        let preparedDigests = Dictionary(preparedPairs, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(Set(preparedDigests.keys), Set(["image/png", "video/mp4"]))
+        XCTAssertEqual(preparedDigests["video/mp4"], "0a901c954fd7f21eeab6c48c2ac77e74368df72f9d2a061e88a1a462b1b376d4")
+        let preparedImage = try XCTUnwrap(firstAttachments.first { $0["mimeType"] as? String == "image/png" })
+        XCTAssertEqual(preparedImage["imageWidth"] as? Int, 32)
+        XCTAssertEqual(preparedImage["imageHeight"] as? Int, 32)
+        XCTAssertTrue(preparedDigests.values.allSatisfy { $0.count == 64 })
+        attachScreenshot(named: "feedback-uncertain-retry")
+        for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
+        XCTAssertTrue(submit.isHittable); submit.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 10))
+        let state = try composeFixtureRequest("__fixture/feedback/state")
+        let matching = (state["tickets"] as? [[String: Any]] ?? []).filter { $0["message"] as? String == message }
+        XCTAssertEqual(matching.count, 1, "Retry after a lost receipt must recover the same Linear ticket")
+        let ticket = try XCTUnwrap(matching.first)
+        XCTAssertEqual(ticket["platform"] as? String, "ios")
+        let attachments = try XCTUnwrap(ticket["attachments"] as? [[String: Any]])
+        XCTAssertEqual(attachments.count, 2)
+        let confirmedPairs = try attachments.map {
+            XCTAssertGreaterThan(try XCTUnwrap($0["size"] as? Int), 0)
+            return (try XCTUnwrap($0["mimeType"] as? String), try XCTUnwrap($0["sha256"] as? String))
+        }
+        let confirmedDigests = Dictionary(confirmedPairs, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(confirmedDigests, preparedDigests)
+        let identifier = try XCTUnwrap(ticket["identifier"] as? String)
+        let link = app.descendants(matching: .any)["feedback.ticket-link"].firstMatch
+        XCTAssertTrue(link.waitForExistence(timeout: 5)); XCTAssertTrue(link.label.contains(identifier))
+        attachScreenshot(named: "feedback-linear-confirmed")
+        app.buttons["feedback.close"].tap(); corner.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 5))
+        print("[feedback-fixture] PASS: persistent corner on three tabs, draft reopen, keyboard Done, ambiguous retry, one confirmed synthetic Linear ticket")
+    }
+
+    /// Actual UIKit capture of the synthetic fixture app; no Photos import.
+    func test39FeedbackCapturesCurrentOrcaScreen() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        let message = "Synthetic current-screen feedback " + UUID().uuidString
+        app.buttons["feedback.open"].tap()
+        let editor = app.textViews["feedback.message"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.tap(); editor.typeText(message)
+        app.buttons["feedback.keyboard-done"].tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        let screenshot = app.buttons["feedback.capture-screenshot"]
+        XCTAssertTrue(screenshot.waitForExistence(timeout: 5)); XCTAssertTrue(screenshot.isHittable)
+        attachScreenshot(named: "feedback-current-screen-capture-controls")
+        screenshot.tap()
+        let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
+        expectation(for: NSPredicate(format: "count == 1"), evaluatedWith: previews)
+        waitForExpectations(timeout: 10)
+        let submit = app.buttons["feedback.submit"]
+        XCTAssertFalse(submit.isEnabled, "Captured screen requires explicit review")
+        let preview = previews.firstMatch
+        for _ in 0..<4 where !preview.isHittable { app.swipeUp() }
+        XCTAssertTrue(preview.isHittable); preview.tap()
+        let review = app.buttons["feedback.media-reviewed"]
+        XCTAssertTrue(review.waitForExistence(timeout: 5)); XCTAssertTrue(review.isEnabled)
+        attachScreenshot(named: "feedback-current-orca-screen-review")
+        review.tap()
+        for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
+        XCTAssertTrue(submit.isHittable); XCTAssertTrue(submit.isEnabled); submit.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 10))
+        let ledger = try composeFixtureRequest("__fixture/feedback/state")
+        let tickets = (ledger["tickets"] as? [[String: Any]] ?? []).filter { $0["message"] as? String == message }
+        XCTAssertEqual(tickets.count, 1)
+        let attachments = try XCTUnwrap(tickets.first?["attachments"] as? [[String: Any]])
+        XCTAssertEqual(attachments.count, 1)
+        let image = try XCTUnwrap(attachments.first)
+        XCTAssertEqual(image["mimeType"] as? String, "image/png")
+        XCTAssertGreaterThan(try XCTUnwrap(image["imageWidth"] as? Int), 300)
+        XCTAssertGreaterThan(try XCTUnwrap(image["imageHeight"] as? Int), 500)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(image["size"] as? Int), 10 * 1_024 * 1_024)
+        attachScreenshot(named: "feedback-current-screen-confirmed")
+        print("[feedback-fixture] PASS: current Orca screen captured, explicitly reviewed, confirmed synthetic ticket")
+    }
+
+    private func tapFeedbackPickerAsset(_ asset: XCUIElement, in app: XCUIApplication) -> Bool {
+        // PXGGridLayout-Info is the picker’s descriptive image accessibility
+        // node; XCTest cannot derive its hit point. Tap the uniquely identified
+        // visible media tile’s center, constrained to the actual picker bounds.
+        let picker = app.scrollViews["photosView_content_scroll_view"]
+        guard asset.exists, picker.exists else {
+            XCTFail("Selected fixture asset and system picker must exist")
+            return false
+        }
+        let frame = asset.frame, pickerFrame = picker.frame, appFrame = app.frame
+        let coordinates = [frame.minX, frame.minY, frame.width, frame.height,
+                           pickerFrame.minX, pickerFrame.minY, pickerFrame.width, pickerFrame.height,
+                           appFrame.minX, appFrame.minY, appFrame.width, appFrame.height]
+        guard coordinates.allSatisfy({ $0.isFinite }), frame.width > 0, frame.height > 0,
+              pickerFrame.width > 0, pickerFrame.height > 0, appFrame.width > 0, appFrame.height > 0,
+              pickerFrame.contains(frame), appFrame.contains(frame) else {
+            XCTFail("Fixture media must be fully visible inside the system picker before tapping")
+            return false
+        }
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - appFrame.minX, dy: frame.midY - appFrame.minY)).tap()
+        return true
+    }
+
+    private func logFeedbackPicker(in app: XCUIApplication) {
+        // Diagnostics only run against the explicitly supplied loopback fixture.
+        guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
+              let url = URL(string: raw), url.scheme == "http",
+              ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "") else { return }
+        let kinds: [(String, XCUIElement.ElementType)] = [("Button", .button), ("StaticText", .staticText), ("Image", .image), ("Cell", .cell),
+                                                          ("CollectionView", .collectionView), ("ScrollView", .scrollView), ("Sheet", .sheet), ("Other", .other)]
+        var remaining = 40
+        var remainingBytes = 8_000
+        func emit(_ line: String) {
+            guard line.utf8.count <= remainingBytes else { return }
+            remainingBytes -= line.utf8.count
+            print(line)
+        }
+        func bounded(_ value: String) -> String {
+            // Only synthetic fixture/system UI is inspected; never print a
+            // fixture credential even if an accessibility label contains it.
+            var text = value
+            if let token = ProcessInfo.processInfo.environment["ORCA_FIXTURE_ACCESS_TOKEN"], !token.isEmpty {
+                text = text.replacingOccurrences(of: token, with: "[REDACTED]")
+            }
+            text = text.replacingOccurrences(of: #"(?i)Bearer\s+[^\s]+|orca_session=[^;\s]+"#,
+                                            with: "[REDACTED]", options: .regularExpression)
+            text = text.unicodeScalars.map { CharacterSet.controlCharacters.contains($0) ? " " : String($0) }.joined()
+            return String(text.replacingOccurrences(of: "::", with: ": :").replacingOccurrences(of: "##[", with: "# #[").prefix(160))
+        }
+        do {
+            // One immutable accessibility snapshot avoids stale live indices as
+            // the remote system picker changes its accessibility hierarchy.
+            let root = try app.snapshot()
+            var snapshots: [XCUIElementSnapshot] = []
+            var pending = [root]
+            while let item = pending.popLast(), snapshots.count < 500 {
+                snapshots.append(item)
+                pending.append(contentsOf: item.children.reversed())
+            }
+            emit("[feedback picker] snapshot_nodes=\(snapshots.count) truncated=\(!pending.isEmpty) app_state=\(app.state.rawValue)")
+            for (name, kind) in kinds {
+                var matches = snapshots.filter { $0.elementType == kind }
+                if kind == .image {
+                    matches.sort { ($0.identifier == "PXGGridLayout-Info" ? 0 : 1) < ($1.identifier == "PXGGridLayout-Info" ? 0 : 1) }
+                }
+                emit("[feedback picker] kind=\(name) count=\(matches.count)")
+                for element in matches.prefix(min(remaining, kind == .image ? 16 : 8)) {
+                    emit("[feedback picker] kind=\(name) label=\(bounded(element.label)) identifier=\(bounded(element.identifier))")
+                    remaining -= 1
+                }
+            }
+        } catch {
+            emit("[feedback picker] snapshot unavailable")
+        }
+    }
+
     func test20EmptyInboxCanRefreshIntoMail() throws {
         _ = try composeFixtureRequest("__fixture/inbox-recovery/empty-once", method: "POST", body: [:])
         addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:]) }

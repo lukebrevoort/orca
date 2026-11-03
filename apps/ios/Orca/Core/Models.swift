@@ -139,3 +139,28 @@ enum MailDate {
         parse(value)?.formatted(date: .abbreviated, time: .shortened) ?? value
     }
 }
+
+// Feedback contains only deliberately supplied text and explicitly selected media.
+struct FeedbackTicketInput: Codable, Equatable {
+    var id = UUID().uuidString.lowercased()
+    var message: String
+    var platform = "ios"
+    var attachments: [FeedbackAttachment]? = nil
+}
+struct FeedbackAttachment: Codable, Equatable, Identifiable {
+    var id = UUID().uuidString.lowercased()
+    var name: String
+    var mimeType: String
+    var dataUrl: String
+    var size: Int
+}
+struct FeedbackTicketAvailability: Codable { var available: Bool }
+struct FeedbackTicketReceipt: Codable, Equatable {
+    var identifier: String
+    var url: String
+    var issueURL: URL? {
+        guard let parsed = URL(string: url), parsed.scheme == "https",
+              parsed.host == "linear.app", parsed.user == nil, parsed.password == nil else { return nil }
+        return parsed
+    }
+}
