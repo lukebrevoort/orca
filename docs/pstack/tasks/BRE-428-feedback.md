@@ -45,3 +45,10 @@
 - Native adds UIKit screenshot capture after composer dismissal and explicit ReplayKit app-screen recording with video-only writer, visible controls, foreground-scene requirement and account/background cancellation. Existing file selection stays secondary.
 - Verification must distinguish real synthetic UIKit/AVAssetWriter tests and injected lifecycle tests from physical-device ReplayKit and actual browser chooser/compositor verification. No live user screen capture, real Linear submission, deployment or release is authorized.
 - This feature change does not apply backend configuration or publish account identifiers.
+
+## Direct-capture CI readiness follow-up
+
+- Product source `678e96d` with evidence head `9a7fcd9` passed 2,109 unit tests, all 16 direct-capture browser scenarios, full hosted browser/API, Xcode compilation, native reading light/dark and all 15 feedback model/capture tests. Direct screenshot UI test39 did not execute: compose and images jobs failed before compilation at simulator discovery, including one targeted retry.
+- CI fix `5ed9dff` conditionally initializes required Xcode components only on disposable GitHub-hosted runners without sudo, then waits at most 180 seconds for Xcode to report the exact owned simulator as available. Each probe has a 45-second cap and bounded process cleanup. It never substitutes devices or retries test suites. Full XCTest gates remain unchanged.
+- Eleven readiness tests (including real subprocess timeout/reaping), eighteen evidence-exporter tests, shell syntax and diff checks passed. Independent immutable review found no blockers. New hosted verification is pending; cold registration is a hypothesis, not an established root cause.
+- No connected macOS execution tool is available in this task. Use existing hosted workflows; do not bypass the prior screenshot-download restriction or disturb a personal Mac.
