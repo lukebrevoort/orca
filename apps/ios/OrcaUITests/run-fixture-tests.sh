@@ -45,24 +45,14 @@ PYDIAGNOSTIC
 xcrun --find xcodebuild
 xcodebuild -version
 xcodebuild -showsdks
-if ! xcodebuild -showdestinations -project "$ios_dir/Orca.xcodeproj" -scheme Orca \
-  > "$derived_data/fixture-xcode-destinations.log" 2>&1; then
+if ! /usr/bin/python3 "$ios_dir/../../scripts/ci/ios-readiness.py" \
+  --project "$ios_dir/Orca.xcodeproj" --udid "$simulator_udid" \
+  --log "$derived_data/fixture-xcode-destinations.log"; then
   cat "$derived_data/fixture-xcode-destinations.log"
   print -u2 'Xcode destination discovery failed before build; no simulator substitution attempted.'
   exit 70
 fi
 cat "$derived_data/fixture-xcode-destinations.log"
-/usr/bin/python3 - "$derived_data/fixture-xcode-destinations.log" "$simulator_udid" <<'PYDESTINATION'
-import re, sys
-text = open(sys.argv[1]).read()
-if 'Available destinations' not in text:
-    raise SystemExit('Xcode did not report an available-destination section')
-section = text.split('Available destinations', 1)[1].split('Ineligible destinations', 1)[0]
-pattern = r'platform:iOS Simulator,.*\bid:\s*' + re.escape(sys.argv[2]) + r'\s*[,}]'
-if not any(re.search(pattern, line) for line in section.splitlines()):
-    raise SystemExit('Booted owned simulator is absent from Xcode available destinations; inspect readiness diagnostics')
-print('[simulator readiness] owned simulator is visible to Xcode')
-PYDESTINATION
 
 xcodebuild build-for-testing \
   -project "$ios_dir/Orca.xcodeproj" \

@@ -56,6 +56,8 @@ if [[ "$mode" == browser ]]; then
 else
   fixture=mobile-fixture.ts
   xcodebuild -version >> "$work/identity.log"
+  python3 scripts/ci/test-ios-readiness.py >> "$work/checks.log" 2>&1
+  python3 scripts/ci/ios-readiness.py --first-launch >> "$work/checks.log" 2>&1
   # Discover a compatible available iPhone/runtime, then create our own device.
   xcrun simctl list --json > "$work/simulators.json"
   python3 - "$work/simulators.json" "$work/destination.json" <<'PY'
@@ -99,7 +101,7 @@ if [[ "$mode" == browser ]]; then
   node apps/web/scripts/catchup-fixture-e2e.mjs "$connection" "$work/reader" head >> "$work/checks.log" 2>&1
 else
   # Exercise the production Swift client against this same isolated API before UI tests.
-  bash apps/ios/Tools/check-api.sh "$connection" > "$work/checks.log" 2>&1
+  bash apps/ios/Tools/check-api.sh "$connection" >> "$work/checks.log" 2>&1
   ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
     zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" >> "$work/checks.log" 2>&1
 fi
