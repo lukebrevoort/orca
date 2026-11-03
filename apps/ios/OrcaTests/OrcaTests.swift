@@ -1,4 +1,6 @@
 import XCTest
+import ImageIO
+import UniformTypeIdentifiers
 @testable import Orca
 
 private final class StubURLProtocol: URLProtocol {
@@ -2762,6 +2764,7 @@ final class VerificationCodeTests: XCTestCase {
 }
 
 final class FeedbackTicketTests: XCTestCase {
+    private var syntheticImage: Data { Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGOQ6FlAU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULALhwEEy5eilwAAAAAElFTkSuQmCC")! }
     private func client() -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -2841,6 +2844,90 @@ final class FeedbackTicketTests: XCTestCase {
         await model.send(client: client, scope: "owner-a")
         XCTAssertNil(model.receipt); XCTAssertNotNil(model.pending)
         XCTAssertEqual(model.message, "Keep this note"); XCTAssertNotNil(model.error)
+    }
+    @MainActor func testMediaRequiresReviewAndCleansUpOnOwnerChange() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let model = FeedbackTicketModel(), client = client()
+        await enable(model, client: client); model.message = "Screenshot"
+        try model.addAttachment(data: syntheticImage, name: "selected.png", mime: "image/png")
+        let item = try XCTUnwrap(model.attachments.first)
+        let preview = try XCTUnwrap(model.previewURL(for: item.id))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: preview.path))
+        XCTAssertFalse(model.canSubmit)
+        model.review(item.id); XCTAssertTrue(model.canSubmit)
+        model.configure(scope: "owner-b")
+        XCTAssertTrue(model.attachments.isEmpty); XCTAssertTrue(model.reviewed.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: preview.path))
+    }
+    @MainActor func testMediaRetryFreezesBytesAndSuccessRemovesPreview() async throws {
+        defer { StubURLProtocol.handler = nil }
+        let model = FeedbackTicketModel(), client = client()
+        await enable(model, client: client); model.message = "Selected recording"
+        try model.addAttachment(data: Data([1, 2, 3]), name: "capture.mov", mime: "video/quicktime")
+        let item = try XCTUnwrap(model.attachments.first)
+        let preview = try XCTUnwrap(model.previewURL(for: item.id))
+        model.review(item.id)
+        var bodies = [FeedbackTicketInput]()
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.timeoutInterval, 300)
+            bodies.append(try JSONDecoder().decode(FeedbackTicketInput.self, from: requestBodyData(request)))
+            throw URLError(.networkConnectionLost)
+        }
+        await model.send(client: client, scope: "owner-a")
+        model.removeAttachment(item.id)
+        XCTAssertEqual(model.attachments, [item]); XCTAssertNotNil(model.pending)
+        XCTAssertThrowsError(try model.addAttachment(data: Data([4]), name: "extra.png", mime: "image/png"))
+        StubURLProtocol.handler = { request in
+            bodies.append(try JSONDecoder().decode(FeedbackTicketInput.self, from: requestBodyData(request)))
+            return (201, Data(#"{"identifier":"BRE-FIXTURE-1","url":"https://linear.app/fixture/issue/test"}"#.utf8))
+        }
+        await model.send(client: client, scope: "owner-a")
+        XCTAssertEqual(bodies.count, 2); XCTAssertEqual(bodies.first, bodies.last)
+        XCTAssertTrue(model.attachments.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: preview.path))
+    }
+    @MainActor func testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft() async throws {
+        let model = FeedbackTicketModel()
+        model.configure(scope: "owner-a"); model.message = "Keep draft"
+        XCTAssertThrowsError(try model.addAttachment(data: Data(repeating: 1, count: 10 * 1_024 * 1_024 + 1), name: "large.png", mime: "image/png"))
+        XCTAssertThrowsError(try model.addAttachment(data: Data([1]), name: "file.txt", mime: "text/plain"))
+        try model.addAttachment(data: syntheticImage, name: "sample.png", mime: "image/png")
+        let item = try XCTUnwrap(model.attachments.first)
+        let preview = try XCTUnwrap(model.previewURL(for: item.id))
+        model.removeAttachment(item.id)
+        XCTAssertTrue(model.attachments.isEmpty); XCTAssertFalse(FileManager.default.fileExists(atPath: preview.path))
+        await model.importFiles([URL(fileURLWithPath: "/missing.png")], scope: "owner-b")
+        XCTAssertNil(model.error); XCTAssertEqual(model.message, "Keep draft")
+        for _ in 0..<3 { try model.addAttachment(data: syntheticImage, name: "small.png", mime: "image/png") }
+        XCTAssertThrowsError(try model.addAttachment(data: Data([1]), name: "fourth.png", mime: "image/png"))
+        for attachment in model.attachments { model.removeAttachment(attachment.id) }
+        let maximum = Data(repeating: 1, count: 10 * 1_024 * 1_024)
+        try model.addAttachment(data: maximum, name: "first.mov", mime: "video/quicktime")
+        try model.addAttachment(data: maximum, name: "second.mov", mime: "video/quicktime")
+        XCTAssertThrowsError(try model.addAttachment(data: Data([1]), name: "over-total.png", mime: "image/png"))
+        model.configure(scope: "owner-c")
+    }
+    func testImagePreparationStripsMetadataAndBoundsDecodedDimensions() throws {
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(syntheticImage as CFData, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let tagged = NSMutableData()
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(tagged, UTType.jpeg.identifier as CFString, 1, nil))
+        let metadata: [CFString: Any] = [kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 1.25, kCGImagePropertyGPSLatitudeRef: "N"],
+                                        kCGImagePropertyExifDictionary: [kCGImagePropertyExifUserComment: "Synthetic private metadata"]]
+        CGImageDestinationAddImage(destination, image, metadata as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let taggedSource = try XCTUnwrap(CGImageSourceCreateWithData(tagged as CFData, nil))
+        let originalProperties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(taggedSource, 0, nil) as? [CFString: Any])
+        XCTAssertNotNil(originalProperties[kCGImagePropertyGPSDictionary])
+        let prepared = try FeedbackTicketModel.normalizeImage(tagged as Data)
+        let cleanSource = try XCTUnwrap(CGImageSourceCreateWithData(prepared as CFData, nil))
+        let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(cleanSource, 0, nil) as? [CFString: Any])
+        XCTAssertNil(properties[kCGImagePropertyGPSDictionary]); XCTAssertNil(properties[kCGImagePropertyExifDictionary])
+        XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 32)
+        XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8193, height: 1))
+        XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8000, height: 8000))
+        XCTAssertTrue(FeedbackTicketModel.validImageDimensions(width: 8000, height: 4000))
+        XCTAssertThrowsError(try FeedbackTicketModel.normalizeImage(Data([1, 2, 3])))
     }
     func testTicketLinkAcceptsOnlyHTTPSLinearURLs() {
         var receipt = FeedbackTicketReceipt(identifier: "BRE-1", url: "https://linear.app/brevoort/issue/BRE-1/example")

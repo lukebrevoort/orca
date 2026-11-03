@@ -26,3 +26,11 @@
   .feedback-corner-layer { padding: 12px; align-items: center; }
   .feedback-corner-dialog { max-height: calc(100dvh - 24px); padding: 16px; }
 }
+.feedback-media { display: flex; flex-direction: column; gap: 10px; }
+.feedback-media-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.feedback-media-preview { margin: 0; padding: 8px; border: 1px solid var(--orca-border); border-radius: 8px; display: flex; flex-direction: column; gap: 6px; }
+.feedback-media-preview img, .feedback-media-preview video { width: 100%; max-height: 180px; object-fit: contain; background: var(--orca-surface); border-radius: 4px; }
+.feedback-media-preview figcaption { overflow-wrap: anywhere; font-size: 12px; color: var(--orca-muted); }
+.feedback-media-review { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.feedback-media-review input { margin-top: 3px; min-width: 18px; min-height: 18px; accent-color: var(--orca-accent); }
+.feedback-media-capture { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border: 2px solid var(--orca-accent); border-radius: 8px; font-size: 13px; }

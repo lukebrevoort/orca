@@ -57,7 +57,7 @@ describe("Linear feedback integration", () => {
       input: Parameters<typeof fetch>[0],
       init: Parameters<typeof fetch>[1],
     ) => {
-      if (String(input) === "https://uploads.test/feedback.png") {
+      if (String(input) === "https://storage.googleapis.com/linear-production/feedback.png") {
         uploadRequest = init;
         return new Response(null, { status: 200 });
       }
@@ -69,9 +69,9 @@ describe("Linear feedback integration", () => {
             fileUpload: {
               success: true,
               uploadFile: {
-                uploadUrl: "https://uploads.test/feedback.png",
+                uploadUrl: "https://storage.googleapis.com/linear-production/feedback.png",
                 assetUrl: "https://uploads.linear.app/feedback.png",
-                headers: [{ key: "x-upload-token", value: "test-token" }],
+                headers: [{ key: "x-goog-meta-test", value: "test-token" }],
               },
             },
           },
@@ -111,7 +111,7 @@ describe("Linear feedback integration", () => {
       });
 
       assert.equal(uploadRequest?.method, "PUT");
-      assert.equal((uploadRequest?.headers as Headers).get("x-upload-token"), "test-token");
+      assert.equal((uploadRequest?.headers as Headers).get("x-goog-meta-test"), "test-token");
       const body = JSON.parse(String(request?.body)) as {
         variables: { input: Record<string, unknown> };
       };
@@ -198,4 +198,115 @@ describe("durable feedback delivery", () => {
       assert.equal(lookups, 2);
     } finally { globalThis.fetch = original; }
   });
+});
+
+describe("private feedback media", () => {
+  const issueId = "10000000-0000-4000-8000-000000000011";
+  const receipt = { identifier: "BRE-31", url: "https://linear.app/brevoort/issue/BRE-31" };
+  const upload = { uploadUrl: "https://storage.googleapis.com/linear-production/asset?signature=test", assetUrl: "https://uploads.linear.app/private/asset.png", headers: [{ key: "x-goog-meta-test", value: "fixture" }] };
+  test("private uploads are reused after failed creation; every operation is bounded and key stays on GraphQL", async () => {
+    const original = globalThis.fetch; let puts = 0, metadata = 0, creates = 0;
+    const signals: AbortSignal[] = [];
+    globalThis.fetch = (async (url, init) => {
+      assert.ok(init?.signal); signals.push(init.signal); assert.equal(init.redirect, "error");
+      if (init.method === "PUT") { puts++; const headers = new Headers(init.headers); assert.equal(headers.get("authorization"), null); assert.equal(headers.get("cache-control"), "private, no-store"); return new Response(null); }
+      assert.equal(String(url), "https://api.linear.app/graphql");
+      const body = JSON.parse(String(init?.body));
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+      if (body.query.includes("fileUpload")) { metadata++; assert.match(body.query, /makePublic: false/); return Response.json({ data: { fileUpload: { success: true, uploadFile: upload } } }); }
+      creates++; assert.ok(body.variables.input.description.includes(upload.assetUrl));
+      if (creates === 1) return Response.json({ errors: [{ message: "rejected" }] });
+      return Response.json({ data: { issueCreate: { success: true, issue: receipt } } });
+    }) as typeof fetch;
+    try {
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+      await assert.rejects(send(report, { issueId }));
+      assert.deepEqual(await send(report, { issueId }), receipt);
+      assert.equal(puts, 1); assert.equal(metadata, 1); assert.equal(creates, 2);
+      assert.equal(new Set(signals).size, signals.length);
+    } finally { globalThis.fetch = original; }
+  });
+  test("failed attachment upload never creates a ticket", async () => {
+    const original = globalThis.fetch; let creates = 0;
+    globalThis.fetch = (async (_url, init) => {
+      if (init?.method === "PUT") return new Response(null, { status: 500 });
+      const body = JSON.parse(String(init?.body));
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+      if (body.query.includes("fileUpload")) return Response.json({ data: { fileUpload: { success: true, uploadFile: upload } } });
+      creates++; return Response.json({});
+    }) as typeof fetch;
+    try { await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!(report, { issueId })); assert.equal(creates, 0); }
+    finally { globalThis.fetch = original; }
+  });
+  test("unsafe upload/asset URLs, redirect destinations and credential headers are rejected before PUT", async () => {
+    const original = globalThis.fetch;
+    for (const bad of [
+      { ...upload, uploadUrl: "http://storage.googleapis.com/linear-production/x" },
+      { ...upload, uploadUrl: "https://evil.example/x" },
+      { ...upload, uploadUrl: "https://storage.googleapis.com/other-bucket/x" },
+      { ...upload, uploadUrl: "https://secret@uploads.linear.app/x" },
+      { ...upload, assetUrl: "https://uploads.linear.app/x?public-signature=secret" },
+      { ...upload, assetUrl: "https://evil.example/file" },
+      { ...upload, headers: [{ key: "authorization", value: "secret" }] },
+    ]) {
+      let puts = 0;
+      globalThis.fetch = (async (_url, init) => { if (init?.method === "PUT") { puts++; return new Response(null); } return Response.json({ data: { fileUpload: { success: true, uploadFile: bad } } }); }) as typeof fetch;
+      try { await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!(report)); assert.equal(puts, 0); }
+      finally { globalThis.fetch = original; }
+    }
+  });
+  test("reconciliation failure prevents uploads rather than treating unknown existence as absent", async () => {
+    const original = globalThis.fetch; let requests = 0;
+    globalThis.fetch = (async () => { requests++; return Response.json({ errors: [{ extensions: { code: "INTERNAL_SERVER_ERROR" } }] }); }) as unknown as typeof fetch;
+    try { await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!(report, { issueId })); assert.equal(requests, 1); }
+    finally { globalThis.fetch = original; }
+  });
+});
+
+test("media upload receipt cache expires and stays bounded without retaining signed URLs or deleting assets", async () => {
+  const originalFetch = globalThis.fetch, originalNow = Date.now;
+  let clock = originalNow(); Date.now = () => clock;
+  let metadataCalls = 0, puts = 0;
+  globalThis.fetch = (async (_url, init) => {
+    if (init?.method === "PUT") { puts++; return new Response(null); }
+    const body = JSON.parse(String(init?.body));
+    assert.ok(!body.query.includes("DangerouslyDelete"));
+    if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+    if (body.query.includes("fileUpload")) { metadataCalls++; return Response.json({ data: { fileUpload: { success: true, uploadFile: { uploadUrl: "https://storage.googleapis.com/linear-production/test?signature=private", assetUrl: `https://uploads.linear.app/private/${metadataCalls}.png`, headers: [] } } } }); }
+    return Response.json({ errors: [{ message: "retry fixture" }] });
+  }) as typeof fetch;
+  try {
+    const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+    const issueId = "10000000-0000-4000-8000-000000000101";
+    await assert.rejects(send(report, { issueId }));
+    await assert.rejects(send(report, { issueId })); assert.equal(metadataCalls, 1);
+    clock += 30 * 60 * 1000 + 1;
+    await assert.rejects(send(report, { issueId })); assert.equal(metadataCalls, 2);
+    for (let index = 0; index < 100; index++) await assert.rejects(send(report, { issueId: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}` }));
+    await assert.rejects(send(report, { issueId })); assert.equal(metadataCalls, 103); assert.equal(puts, 103);
+  } finally { globalThis.fetch = originalFetch; Date.now = originalNow; }
+});
+
+test("partial media upload failure reuses completed files and never confirms an incomplete ticket", async () => {
+  const original = globalThis.fetch;
+  const fullReport = { ...report, attachments: [report.attachments[0]!, { ...report.attachments[0]!, id: "second-file", name: "second.png" }] };
+  const uploadedNames: string[] = []; let failedSecond = false, creates = 0;
+  globalThis.fetch = (async (url, init) => {
+    if (init?.method === "PUT") {
+      if (String(url).includes("second.png") && !failedSecond) { failedSecond = true; return new Response(null, { status: 503 }); }
+      return new Response(null);
+    }
+    const body = JSON.parse(String(init?.body));
+    if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+    if (body.query.includes("fileUpload")) { const name = body.variables.filename; uploadedNames.push(name); return Response.json({ data: { fileUpload: { success: true, uploadFile: { uploadUrl: `https://storage.googleapis.com/linear-production/${name}`, assetUrl: `https://uploads.linear.app/private/${name}`, headers: [] } } } }); }
+    creates++; assert.ok(body.variables.input.description.includes("second.png"));
+    return Response.json({ data: { issueCreate: { success: true, issue: { identifier: "BRE-32", url: "https://linear.app/brevoort/issue/BRE-32" } } } });
+  }) as typeof fetch;
+  try {
+    const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+    const options = { issueId: "10000000-0000-4000-8000-000000000032" };
+    await assert.rejects(send(fullReport, options)); assert.equal(creates, 0);
+    await send(fullReport, options); assert.equal(creates, 1);
+    assert.deepEqual(uploadedNames, [fullReport.attachments[0]!.name, "second.png", "second.png"]);
+  } finally { globalThis.fetch = original; }
 });

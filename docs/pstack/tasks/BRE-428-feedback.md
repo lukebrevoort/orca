@@ -1,6 +1,6 @@
 # BRE-428 — corner feedback to Linear
 
-- Status: **running**, 2026-11-02 UTC. [Draft PR #286](https://github.com/lukebrevoort/orca/pull/286).
+- Status: **running**, 2026-11-03 UTC. [Draft PR #286](https://github.com/lukebrevoort/orca/pull/286).
 - User clarification: persistent corner button, minimal feedback input, creates a ticket in Luke's Linear. **Linear is the work queue.** No separate in-app queue or dashboard.
 - Base: `2a56e488aa4a47c24846448c648a4d9cbe088590`; branch `feat/BRE-428-durable-feedback`; isolated worktree `/workspace/orca-feedback`.
 - Existing development integration targets a personal Linear destination without per-user mapping. New API requires explicit `LINEAR_FEEDBACK_OWNER_USER_ID` and existing server-only destination settings, failing closed without it. Read-only production variable-name inspection found the required key and owner settings absent; no values retrieved or configuration changed.
@@ -18,3 +18,11 @@
 - Image setup takes a single bounded authenticated readiness request before measuring the image counter, using the same URLSession. The existing five-second counter checks and consent/cancellation assertions remain unchanged.
 - Record simulator/runtime/SDK inventory and Xcode destinations before building; fail explicitly if the owned simulator is absent. This is diagnostic coverage, not a proven repair for hosted discovery failures.
 - Native screenshot download remains blocked by proxy HTTP 403. Do not bypass it.
+
+## Optional media extension
+
+- User requested screenshots and screen recordings as context, keeping the corner composer. Start from PR head `e5f6252ed41a00c96ab3675337411e7c0cd6f3a6`.
+- Accept reviewed images/videos: maximum three files, 10 MiB each and 20 MiB total. Web offers explicit browser-selected screenshot and audio-free recording (60-second cap), with visible stop/cancel and cleanup on close/hidden page. Native uses scoped Photos/Files selection of existing system captures; no ReplayKit recorder or broad library permission.
+- Media stays local until Send, travels through the owner-authenticated API to Linear private storage, and is linked in the issue. Existing API key/destination suffice as storage architecture; no new public host or database migration. Verify required key permission for uploads before activation; docs do not identify its exact minimum.
+- Failures preserve exact payload/issue identity. Bounded metadata-only upload receipt cache reuses successful private uploads. No supported safe remote deletion API was found; failed/restarted submissions can leave private unreferenced Linear assets. Local preview/media bytes must be cleaned on discard/success/account change.
+- Tests use synthetic media and mocked Linear only. API/shared, native, and web scopes split among existing agents, followed by independent immutable-head review and fresh browser/native evidence.

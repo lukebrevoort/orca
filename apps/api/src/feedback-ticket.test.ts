@@ -9,7 +9,7 @@ import { users } from "./db/schema.ts";
 import { createSession } from "./auth/session-store.ts";
 import { createMobileSession } from "./auth/mobile/store.ts";
 import type { AuthVariables } from "./auth/middleware.ts";
-import { registerFeedbackTicketRoutes, feedbackTicketId, type FeedbackTicketDelivery } from "./feedback-ticket.ts";
+import { registerFeedbackTicketRoutes, feedbackTicketId, validFeedbackAttachment, type FeedbackTicketDelivery } from "./feedback-ticket.ts";
 
 let dir: string, dbPath: string, cookie: string, otherCookie: string;
 let savedSecret: string | undefined, savedKey: string | undefined;
@@ -97,7 +97,7 @@ test("malformed, oversized and implicit capture/destination fields are rejected"
   for (const body of [{ ...submission(), id: "bad" }, { ...submission(), message: " " }, { ...submission(), message: "x".repeat(10001) }, { ...submission(), route: "/?message=secret" }, { ...submission(), teamId: "other-team" }]) {
     expect((await app().request(path, post(body))).status).toBe(400);
   }
-  expect((await app().request(path, post({ ...submission(), message: "x".repeat(70_000) }))).status).toBe(413);
+  expect((await app().request(path, post({ ...submission(), message: "x".repeat(29 * 1024 * 1024) }))).status).toBe(413);
   expect((await app().request(path, { method: "POST", headers: { cookie, origin }, body: "{" })).status).toBe(400);
 });
 test("native owner bearer works without Origin; pending cookie cannot send", async () => {
@@ -124,4 +124,75 @@ test("unique requests have bounded concurrency and release admission after compl
   const next = a.request(path, post(submission()));
   while (releases.length < 5) await new Promise(resolve => setTimeout(resolve, 1));
   releases[4]!(); expect((await next).status).toBe(201);
+});
+
+const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+function media(bytes = pngBytes, mimeType = "image/png", name = "screenshot.png") {
+  return { id: crypto.randomUUID(), name, mimeType, size: bytes.length, dataUrl: `data:${mimeType};base64,${bytes.toString("base64")}` };
+}
+test("optional reviewed media reaches delivery; content changes identity and empty array keeps text-only identity", async () => {
+  const input = submission(); const file = media(); let received: Parameters<FeedbackTicketDelivery>[0] | undefined;
+  const response = await app(async report => { received = report; return receipt; }).request(path, post({ ...input, attachments: [file] }));
+  expect(response.status).toBe(201); expect(received?.attachments).toEqual([{ id: file.id, name: file.name, mimeType: file.mimeType, dataUrl: file.dataUrl, source: "upload" }]);
+  expect(feedbackTicketId("owner", { ...input, attachments: [] })).toBe(feedbackTicketId("owner", input));
+  expect(received!.id).not.toBe(feedbackTicketId("owner", input));
+  expect(feedbackTicketId("owner", { ...input, attachments: [{ ...file, mimeType: "image/png", dataUrl: file.dataUrl + "A" }] })).not.toBe(received!.id);
+});
+test("strict media bounds and signatures reject malformed content before provider access", async () => {
+  let calls = 0; const a = app(async () => { calls++; return receipt; }); const file = media();
+  const invalid = [
+    { ...file, mimeType: "image/svg+xml", dataUrl: "data:image/svg+xml;base64,PHN2Zy8+" },
+    { ...file, dataUrl: "data:image/png;base64,PHN2Zy8+", size: 6 },
+    { ...file, dataUrl: "data:image/jpeg;base64," + pngBytes.toString("base64") },
+    { ...file, size: file.size + 1 }, { ...file, dataUrl: file.dataUrl + "\n" },
+    { ...file, dataUrl: file.dataUrl.replace("=", "!") }, { ...file, name: "../secret.png" },
+    { ...file, name: "private\nname.png" }, { ...file, dataUrl: "https://example.com/file.png" },
+    { ...file, size: 10 * 1024 * 1024 + 1 }, { ...file, size: 0 },
+  ];
+  for (const candidate of invalid) expect((await a.request(path, post({ ...submission(), attachments: [candidate] }))).status).toBe(400);
+  expect((await a.request(path, post({ ...submission(), attachments: [file, file] }))).status).toBe(400);
+  expect((await a.request(path, post({ ...submission(), attachments: Array.from({ length: 4 }, () => media()) }))).status).toBe(400);
+  expect((await a.request(path, post({ ...submission(), attachments: Array.from({ length: 3 }, () => ({ ...media(), size: 7 * 1024 * 1024 })) }))).status).toBe(400);
+  expect(calls).toBe(0);
+});
+test("supported image/video container signatures pass; mismatched brands do not", async () => {
+  const iso = (brand: string) => { const bytes = Buffer.alloc(24); bytes.writeUInt32BE(24); bytes.write("ftyp", 4); bytes.write(brand, 8); return bytes; };
+  for (const [bytes, mime] of [[pngBytes, "image/png"], [Buffer.from([255, 216, 255, 1]), "image/jpeg"], [Buffer.from("RIFF0000WEBPdata"), "image/webp"], [iso("isom"), "video/mp4"], [iso("qt  "), "video/quicktime"], [Buffer.concat([Buffer.from([26, 69, 223, 163]), Buffer.from("webm")]), "video/webm"]] as const) {
+    expect((await app().request(path, post({ ...submission(), attachments: [media(bytes, mime)] }))).status).toBe(201);
+  }
+  expect((await app().request(path, post({ ...submission(), attachments: [media(iso("qt  "), "video/mp4")] }))).status).toBe(400);
+});
+test("10 MiB image boundary is admitted without losing bytes", async () => {
+  const bytes = Buffer.alloc(10 * 1024 * 1024); pngBytes.copy(bytes);
+  let decodedSize = 0;
+  const result = await app(async report => { decodedSize = Buffer.from(report.attachments[0]!.dataUrl.split(",")[1]!, "base64").length; return receipt; })
+    .request(path, post({ ...submission(), attachments: [media(bytes)] }));
+  expect(result.status).toBe(201); expect(decodedSize).toBe(bytes.length);
+});
+
+
+test("MP4 signatures recognize registered newer and compatible ftyp brands without trusting the MIME label", () => {
+  const container = (major: string, compatible: string[] = []) => {
+    const bytes = Buffer.alloc(16 + 4 * compatible.length);
+    bytes.writeUInt32BE(bytes.length); bytes.write("ftyp", 4); bytes.write(major, 8);
+    compatible.forEach((brand, index) => bytes.write(brand, 16 + 4 * index));
+    return bytes;
+  };
+  for (const brand of ["iso7", "iso8", "iso9", "isoa", "isob", "isoc", "mp71", "av01"]) {
+    expect(validFeedbackAttachment({ ...media(container(brand)), mimeType: "video/mp4", dataUrl: `data:video/mp4;base64,${container(brand).toString("base64")}` })).toBe(true);
+  }
+  const compatible = container("test", ["iso8", "mp41"]);
+  expect(validFeedbackAttachment({ ...media(compatible, "video/mp4"), mimeType: "video/mp4" })).toBe(true);
+  const unknown = container("test", ["nope"]);
+  expect(validFeedbackAttachment({ ...media(unknown, "video/mp4"), mimeType: "video/mp4" })).toBe(false);
+  // An accepted string elsewhere in the file or in the minor-version word is
+  // not a compatible-brand declaration.
+  const outside = Buffer.concat([container("test"), Buffer.from("iso9")]);
+  expect(validFeedbackAttachment({ ...media(outside, "video/mp4"), mimeType: "video/mp4" })).toBe(false);
+  const minor = container("test"); minor.write("mp71", 12);
+  expect(validFeedbackAttachment({ ...media(minor, "video/mp4"), mimeType: "video/mp4" })).toBe(false);
+  const malformed = container("iso9"); malformed.writeUInt32BE(17);
+  expect(validFeedbackAttachment({ ...media(malformed, "video/mp4"), mimeType: "video/mp4" })).toBe(false);
+  const oversizedHeader = container("iso9", Array(1024).fill("iso9"));
+  expect(validFeedbackAttachment({ ...media(oversizedHeader, "video/mp4"), mimeType: "video/mp4" })).toBe(false);
 });

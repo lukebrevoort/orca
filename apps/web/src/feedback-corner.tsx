@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import "./feedback-corner.css";
+import { FeedbackMedia, type FeedbackMediaFile } from "./feedback-media";
 
-type Submission = { id: string; message: string; platform: "web" };
+type Submission = { id: string; message: string; platform: "web"; attachments?: FeedbackMediaFile[] };
 type Receipt = { identifier: string; url: string };
 
 function validReceipt(value: unknown): value is Receipt {
@@ -19,10 +20,16 @@ export default function FeedbackCorner() {
   const [available, setAvailable] = useState(false);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<FeedbackMediaFile[]>([]);
+  const [reviewed, setReviewed] = useState(false);
+  const [mediaWorking, setMediaWorking] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
+  const request = useRef<XMLHttpRequest | null>(null);
   const [pending, setPending] = useState<Submission | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const scopeVersion = useRef(0);
   const sending = useRef(false);
   const alive = useRef(true);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -33,55 +40,71 @@ export default function FeedbackCorner() {
     alive.current = true;
     const controller = new AbortController();
     if (["/login", "/mobile-auth", "/onboarding"].includes(window.location.pathname) || window.location.pathname.startsWith("/dev/")) {
-      return () => { alive.current = false; controller.abort(); };
+      return () => { alive.current = false; controller.abort(); request.current?.abort(); };
     }
     // Only the server can establish the signed-in owner's entitlement. No
     // client-selected destination or personal integration credentials are used.
-    void fetch("/v1/feedback/ticket", { credentials: "include", signal: controller.signal })
-      .then(async response => response.ok ? response.json() : null)
-      .then(result => { if (!controller.signal.aborted) setAvailable(result?.available === true); })
-      .catch(() => {});
-    return () => { alive.current = false; controller.abort(); };
+    const check = () => {
+      void fetch("/v1/feedback/ticket", { credentials: "include", signal: controller.signal })
+        .then(async response => response.ok ? response.json() : [401, 403].includes(response.status) ? { available: false } : null)
+        .then(result => {
+          if (controller.signal.aborted || !result) return;
+          setAvailable(result.available === true);
+          if (result.available !== true) {
+            scopeVersion.current++; request.current?.abort(); request.current = null; sending.current = false;
+            setOpen(false); setFiles([]); setReviewed(false); setPending(null); setMessage(""); setReceipt(null); setError(null); setBusy(false);
+          }
+        }).catch(() => {});
+    };
+    check(); window.addEventListener("focus", check);
+    return () => { alive.current = false; controller.abort(); request.current?.abort(); window.removeEventListener("focus", check); };
   }, []);
 
   useEffect(() => {
-    if (!message) return;
+    if (!message && !files.length) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [message]);
+  }, [message, files.length]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (sending.current || !message.trim()) return;
+    if (sending.current || mediaWorking || !message.trim() || (files.length > 0 && !reviewed)) return;
+    const version = scopeVersion.current;
     sending.current = true;
-    setBusy(true); setError(null);
-    const submission = pending ?? { id: crypto.randomUUID(), message: message.trim(), platform: "web" as const };
+    setBusy(true); setError(null); setProgress(0);
+    const submission = pending ?? { id: crypto.randomUUID(), message: message.trim(), platform: "web" as const, ...(files.length ? { attachments: files } : {}) };
     setPending(submission);
     try {
-      const response = await fetch("/v1/feedback/ticket", {
-        method: "POST", credentials: "include", headers: { "content-type": "application/json" },
-        body: JSON.stringify(submission), signal: AbortSignal.timeout(30_000),
+      const response = await new Promise<{ status: number; result: unknown }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest(); request.current = xhr;
+        xhr.open("POST", "/v1/feedback/ticket"); xhr.withCredentials = true;
+        xhr.setRequestHeader("content-type", "application/json");
+        xhr.timeout = submission.attachments?.length ? 300_000 : 30_000;
+        xhr.upload.onprogress = event => { if (alive.current && version === scopeVersion.current) setProgress(event.lengthComputable ? Math.round(event.loaded / event.total * 100) : null); };
+        xhr.upload.onload = () => { if (alive.current && version === scopeVersion.current) setProgress(100); };
+        xhr.onload = () => { let result: unknown = null; try { result = JSON.parse(xhr.responseText); } catch {} resolve({ status: xhr.status, result }); };
+        xhr.onerror = xhr.ontimeout = xhr.onabort = () => reject(new Error("Couldn’t confirm delivery. Your text and attachments are still here. Retry this same submission."));
+        xhr.send(JSON.stringify(submission));
       });
-      const result: unknown = await response.json().catch(() => null);
-      if (!alive.current) return;
-      if (!response.ok) {
+      const result = response.result;
+      if (!alive.current || version !== scopeVersion.current) return;
+      if (response.status < 200 || response.status >= 300) {
         // These statuses reject before delivery. Ambiguous failures retain the
         // exact immutable ID and text so a retry recovers the same Linear issue.
         if ([400, 413].includes(response.status)) setPending(null);
         if (response.status === 401) throw new Error("Your session expired. Sign in again to send this feedback.");
         if (response.status === 403 || response.status === 503) throw new Error("Linear feedback isn’t available for this account. Check the feedback configuration and try again.");
-        if (response.status === 400 || response.status === 413) throw new Error("Check your feedback text and try again.");
+        if (response.status === 400 || response.status === 413) throw new Error("Check your feedback and attachments: up to 3 supported files, 10 MB each, 20 MB total.");
         throw new Error("Delivery could not be confirmed. Retry to check and send this same feedback.");
       }
       if (!validReceipt(result)) throw new Error("Delivery could not be confirmed. Retry to check this same feedback.");
-      setReceipt(result); setPending(null); setMessage("");
+      setReceipt(result); setPending(null); setMessage(""); setFiles([]); setReviewed(false);
     } catch (cause) {
-      if (alive.current) setError(cause instanceof Error && cause.name !== "TimeoutError" && cause.name !== "TypeError"
+      if (alive.current && version === scopeVersion.current) setError(cause instanceof Error && cause.name !== "TimeoutError" && cause.name !== "TypeError"
         ? cause.message : "Couldn’t confirm delivery. Your text is still here. Retry this same submission.");
     } finally {
-      sending.current = false;
-      if (alive.current) setBusy(false);
+      if (version === scopeVersion.current) { request.current = null; sending.current = false; if (alive.current) setBusy(false); }
     }
   }
 
@@ -99,9 +122,12 @@ export default function FeedbackCorner() {
       </div> : <form onSubmit={submit}>
         <label htmlFor="orca-feedback-message">Your feedback</label>
         <textarea ref={editor} id="orca-feedback-message" rows={5} maxLength={10000} required value={message} readOnly={pending !== null || busy} placeholder="What should we improve?" onChange={event => setMessage(event.target.value)} />
-        <p className="feedback-corner-hint">Creates a ticket in your Linear. Only what you write is shared.</p>
+        <p className="feedback-corner-hint">Creates a ticket in your Linear with only your message and reviewed attachments.</p>
+        <FeedbackMedia files={files} onChange={setFiles} reviewed={reviewed} onReviewed={setReviewed} locked={pending !== null || busy} onWorking={setMediaWorking} />
+        {busy && <p role="status" className="feedback-corner-hint">{progress === 100 ? "Confirming ticket and private media in Linear…" : progress === null ? "Uploading to Orca…" : `Uploading to Orca… ${progress}%`}</p>}
+        {files.length > 0 && !pending && !busy && <button type="button" disabled={mediaWorking} onClick={() => { setFiles([]); setReviewed(false); }}>Discard attachments</button>}
         {error && <p role="alert" className="feedback-corner-error">{error}</p>}
-        <button className="feedback-corner-send" type="submit" disabled={busy || !message.trim()}>{busy ? "Sending…" : pending ? "Retry submission" : "Send to Linear"}</button>
+        <button className="feedback-corner-send" type="submit" disabled={busy || mediaWorking || !message.trim() || (files.length > 0 && !reviewed)}>{busy ? "Sending…" : pending ? "Retry submission" : "Send to Linear"}</button>
       </form>}
     </TopLayer>}
   </>;

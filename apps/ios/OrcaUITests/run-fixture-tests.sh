@@ -104,6 +104,16 @@ with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
 PY
 
+# Seed only a generated, nonprivate image for the system Photos picker test.
+if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose || ${ORCA_UI_TEST_SCOPE:-all} == all ]]; then
+  /usr/bin/python3 - "$derived_data/feedback-synthetic.png" <<'PYMEDIA'
+import base64, sys
+with open(sys.argv[1], "wb") as file:
+    file.write(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGOQ6FlAU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULALhwEEy5eilwAAAAAElFTkSuQmCC"))
+PYMEDIA
+  xcrun simctl addmedia "$simulator_udid" "$derived_data/feedback-synthetic.png"
+fi
+
 xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
 result_dir=${ORCA_UI_RESULT_DIRECTORY:-$(mktemp -d "${TMPDIR%/}/orca-ios-tests-XXXXXX")}
 mkdir -p "$result_dir"

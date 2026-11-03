@@ -140,11 +140,19 @@ enum MailDate {
     }
 }
 
-// Feedback contains only deliberately supplied text, never message bodies.
+// Feedback contains only deliberately supplied text and explicitly selected media.
 struct FeedbackTicketInput: Codable, Equatable {
     var id = UUID().uuidString.lowercased()
     var message: String
     var platform = "ios"
+    var attachments: [FeedbackAttachment]? = nil
+}
+struct FeedbackAttachment: Codable, Equatable, Identifiable {
+    var id = UUID().uuidString.lowercased()
+    var name: String
+    var mimeType: String
+    var dataUrl: String
+    var size: Int
 }
 struct FeedbackTicketAvailability: Codable { var available: Bool }
 struct FeedbackTicketReceipt: Codable, Equatable {

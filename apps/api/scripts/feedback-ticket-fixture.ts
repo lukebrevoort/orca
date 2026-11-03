@@ -1,4 +1,5 @@
 /** Disposable loopback fixture. All feedback delivery is synthetic; no live mail or Linear. */
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
@@ -17,7 +18,7 @@ process.env.NODE_ENV = "production";
 let app: Hono;
 const tokens: string[] = [];
 let outcome = "failure";
-const deliveries: Array<{ issueId: string; title: string; message: string }> = [];
+const deliveries: Array<{ issueId: string; title: string; message: string; attachments: Array<{ id: string; name: string; mimeType: string; size: number; sha256: string }> }> = [];
 const webRoot = resolve(import.meta.dir, "../../web/dist");
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   const url = new URL(request.url);
@@ -66,7 +67,12 @@ app = createApp({ dbFactory: () => createDatabaseClient(), providerRegistry: new
   feedbackTicketOwnerUserId: "feedback-first",
   feedbackTicketDelivery: async (report, { issueId }) => {
     if (outcome === "failure") throw new Error("Synthetic Linear unavailable");
-    if (!deliveries.some(item => item.issueId === issueId)) deliveries.push({ issueId, title: report.title, message: report.description });
+    if (!deliveries.some(item => item.issueId === issueId)) deliveries.push({ issueId, title: report.title, message: report.description,
+      attachments: report.attachments.map(attachment => {
+        const bytes = Buffer.from(attachment.dataUrl.slice(attachment.dataUrl.indexOf(",") + 1), "base64");
+        return { id: attachment.id, name: attachment.name, mimeType: attachment.mimeType, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+      }),
+    });
     if (outcome === "ambiguous") throw new Error("Synthetic response lost after ticket creation");
     return { identifier: `BRE-FIXTURE-${deliveries.findIndex(item => item.issueId === issueId) + 1}`, url: `https://linear.app/fixture/issue/${issueId}` };
   },

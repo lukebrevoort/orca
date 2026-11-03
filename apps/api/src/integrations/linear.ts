@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   FeedbackReport,
   FeedbackSeverity,
@@ -8,7 +9,7 @@ const LINEAR_DESCRIPTION_LIMIT = 250_000;
 
 const FILE_UPLOAD_MUTATION = `
   mutation UploadFeedbackFile($contentType: String!, $filename: String!, $size: Int!) {
-    fileUpload(contentType: $contentType, filename: $filename, size: $size) {
+    fileUpload(contentType: $contentType, filename: $filename, size: $size, makePublic: false) {
       success
       uploadFile {
         uploadUrl
@@ -141,14 +142,14 @@ function formatDescription(
   const attachments = report.attachments.length
     ? report.attachments
         .map((attachment) => {
-          const assetUrl = attachmentUrls.get(attachment.id);
+          const assetUrl = attachmentUrls.get(attachment.id)?.replace(/[()[\]<>\\]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
           if (!assetUrl) {
             return `- ${attachment.name} (${attachment.mimeType})`;
           }
           if (attachment.mimeType.startsWith("image/")) {
-            return `![${attachment.name}](${assetUrl})`;
+            return `![${markdownLabel(attachment.name)}](${assetUrl})`;
           }
-          return `[${attachment.name}](${assetUrl})`;
+          return `[${markdownLabel(attachment.name)}](${assetUrl})`;
         })
         .join("\n")
     : "None";
@@ -188,6 +189,19 @@ function decodeDataUrl(dataUrl: string): Uint8Array {
   return Uint8Array.from(Buffer.from(decodeURIComponent(payload), "utf8"));
 }
 
+function markdownLabel(value: string) {
+  return value.replace(/[\\[\]()!*_<>`]/g, "\\$&").replace(/[\r\n]/g, " ");
+}
+function validateUploadUrls(uploadUrl: string, assetUrl: string) {
+  const upload = new URL(uploadUrl);
+  const asset = new URL(assetUrl);
+  const secure = (url: URL) => url.protocol === "https:" && !url.username && !url.password && !url.port && !url.hash;
+  const googleBucket = upload.hostname === "storage.googleapis.com" && /^\/linear-[a-z0-9-]+\//.test(upload.pathname);
+  const googleBucketHost = /^linear-[a-z0-9-]+\.storage\.googleapis\.com$/.test(upload.hostname);
+  if (!secure(upload) || !(googleBucket || googleBucketHost || upload.hostname === "uploads.linear.app")) throw new Error("Unexpected upload destination");
+  if (!secure(asset) || asset.hostname !== "uploads.linear.app" || asset.search || /\s/.test(assetUrl)) throw new Error("Unexpected asset destination");
+}
+
 async function uploadAttachment(
   apiKey: string,
   attachment: FeedbackReport["attachments"][number],
@@ -195,6 +209,8 @@ async function uploadAttachment(
   const bytes = decodeDataUrl(attachment.dataUrl);
   const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
     method: "POST",
+    signal: AbortSignal.timeout(12_000),
+    redirect: "error",
     headers: {
       authorization: apiKey,
       "content-type": "application/json",
@@ -216,16 +232,20 @@ async function uploadAttachment(
     throw new Error(errorMessage ?? `Linear attachment upload failed (${response.status}).`);
   }
 
+  validateUploadUrls(uploadFile.uploadUrl, uploadFile.assetUrl);
   const uploadHeaders = new Headers({
     "Content-Type": attachment.mimeType,
-    "Cache-Control": "public, max-age=31536000",
+    "Cache-Control": "private, no-store",
   });
   for (const header of uploadFile.headers) {
+    if (!/^(content-type|cache-control|x-goog-[a-z0-9-]+|x-amz-[a-z0-9-]+)$/i.test(header.key)) throw new Error("Unexpected upload header");
     uploadHeaders.set(header.key, header.value);
   }
 
   const uploadResponse = await fetch(uploadFile.uploadUrl, {
     method: "PUT",
+    signal: AbortSignal.timeout(60_000),
+    redirect: "error",
     headers: uploadHeaders,
     body: bytes as unknown as BodyInit,
   });
@@ -265,27 +285,48 @@ export function createLinearFeedbackSubmitter(
     ),
   };
 
+  // Metadata only: private unsigned asset URLs, never bytes or signed PUT URLs.
+  // No public deletion API exists. Do not invoke Linear's INTERNAL dangerous
+  // deletion after a failure: an ambiguous create may already reference assets.
+  // Partial uploads can remain private orphans after eviction/process restart.
+  const uploads = new Map<string, { assetUrl: string; expiresAt: number }>();
+  const uploadCacheTtlMs = 30 * 60 * 1000;
+  const uploadCacheLimit = 100;
   return async (report, options) => {
     // A server-derived UUID is also the Linear issue ID. Retrying an uncertain
     // create cannot create a second issue; recover the receipt by that exact ID.
-    const signal = options ? AbortSignal.timeout(12_000) : undefined;
     const recover = async () => {
       const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
-        method: "POST", signal,
+        method: "POST", signal: AbortSignal.timeout(12_000), redirect: "error",
         headers: { authorization: apiKey, "content-type": "application/json" },
         body: JSON.stringify({ query: "query FeedbackIssue($id: String!) { issue(id: $id) { identifier url } }", variables: { id: options!.issueId } }),
       });
-      const payload = await response.json() as { data?: { issue?: { identifier: string; url: string } }; errors?: unknown[] };
-      if (!response.ok || payload.errors?.length || !payload.data?.issue) return null;
+      const payload = await response.json() as { data?: { issue?: { identifier: string; url: string } }; errors?: Array<{ extensions?: { code?: string } }> };
+      if (!response.ok) throw new Error("Could not reconcile Linear ticket");
+      if (payload.errors?.length) {
+        if (payload.errors.every(error => error.extensions?.code === "ENTITY_NOT_FOUND")) return null;
+        throw new Error("Could not reconcile Linear ticket");
+      }
+      if (!payload.data?.issue) return null;
       return payload.data.issue;
     };
     if (options) {
       const existing = await recover();
       if (existing) return existing;
     }
+    for (const [key, value] of uploads) if (value.expiresAt <= Date.now()) uploads.delete(key);
     const attachmentUrls = new Map<string, string>();
     for (const attachment of report.attachments) {
-      attachmentUrls.set(attachment.id, await uploadAttachment(apiKey, attachment));
+      const key = options ? `${options.issueId}:${createHash("sha256").update(JSON.stringify(attachment)).digest("hex")}` : undefined;
+      let assetUrl = key ? uploads.get(key)?.assetUrl : undefined;
+      if (!assetUrl) {
+        assetUrl = await uploadAttachment(apiKey, attachment);
+        if (key) {
+          uploads.set(key, { assetUrl, expiresAt: Date.now() + uploadCacheTtlMs });
+          while (uploads.size > uploadCacheLimit) uploads.delete(uploads.keys().next().value!);
+        }
+      }
+      attachmentUrls.set(attachment.id, assetUrl);
     }
 
     const description = formatDescription(report, attachmentUrls);
@@ -297,7 +338,8 @@ export function createLinearFeedbackSubmitter(
 
     const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
       method: "POST",
-      signal,
+      signal: AbortSignal.timeout(12_000),
+      redirect: "error",
       headers: {
         authorization: apiKey,
         "content-type": "application/json",

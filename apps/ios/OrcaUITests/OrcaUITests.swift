@@ -42,6 +42,24 @@ final class OrcaUITests: XCTestCase {
             XCTAssertTrue(editor.waitForExistence(timeout: 5)); XCTAssertEqual(editor.value as? String, message)
             if tab == "Drafts" { app.buttons["feedback.close"].tap() }
         }
+        let photos = app.buttons["feedback.photos"]
+        XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
+        let photo = app.collectionViews.cells.firstMatch
+        XCTAssertTrue(photo.waitForExistence(timeout: 10), "System picker must show the synthetic simulator image")
+        photo.tap()
+        let add = app.buttons["Add"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5)); add.tap()
+        let preview = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview.")).firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 10)); XCTAssertFalse(submit.isEnabled)
+        for _ in 0..<4 where !preview.isHittable { app.swipeUp() }
+        XCTAssertTrue(preview.isHittable); preview.tap()
+        let approve = app.buttons["feedback.media-reviewed"]
+        XCTAssertTrue(approve.waitForExistence(timeout: 5))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: approve)
+        waitForExpectations(timeout: 10)
+        attachScreenshot(named: "feedback-selected-image-review")
+        approve.tap()
+        for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
         XCTAssertTrue(submit.isHittable); XCTAssertTrue(submit.isEnabled)
         attachScreenshot(named: "feedback-ready-to-send")
         _ = try composeFixtureRequest("__fixture/feedback/fail-once", method: "POST", body: [:])
@@ -50,14 +68,25 @@ final class OrcaUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["feedback.confirmation"].exists)
         XCTAssertEqual(editor.value as? String, message); XCTAssertFalse(editor.isEnabled)
         XCTAssertEqual(submit.label, "Retry submission")
+        let firstState = try composeFixtureRequest("__fixture/feedback/state")
+        let firstTicket = try XCTUnwrap((firstState["tickets"] as? [[String: Any]])?.first { $0["message"] as? String == message })
+        let firstAttachments = try XCTUnwrap(firstTicket["attachments"] as? [[String: Any]])
+        let preparedDigest = try XCTUnwrap(firstAttachments.first?["sha256"] as? String)
+        XCTAssertEqual(preparedDigest.count, 64)
         attachScreenshot(named: "feedback-uncertain-retry")
-        submit.tap()
+        for _ in 0..<4 where !submit.isHittable { app.swipeUp() }
+        XCTAssertTrue(submit.isHittable); submit.tap()
         XCTAssertTrue(app.descendants(matching: .any)["feedback.confirmation"].waitForExistence(timeout: 10))
         let state = try composeFixtureRequest("__fixture/feedback/state")
         let matching = (state["tickets"] as? [[String: Any]] ?? []).filter { $0["message"] as? String == message }
         XCTAssertEqual(matching.count, 1, "Retry after a lost receipt must recover the same Linear ticket")
         let ticket = try XCTUnwrap(matching.first)
         XCTAssertEqual(ticket["platform"] as? String, "ios")
+        let attachments = try XCTUnwrap(ticket["attachments"] as? [[String: Any]])
+        XCTAssertEqual(attachments.count, 1)
+        XCTAssertEqual(attachments.first?["mimeType"] as? String, "image/png")
+        XCTAssertGreaterThan(try XCTUnwrap(attachments.first?["size"] as? Int), 0)
+        XCTAssertEqual(attachments.first?["sha256"] as? String, preparedDigest)
         let identifier = try XCTUnwrap(ticket["identifier"] as? String)
         let link = app.descendants(matching: .any)["feedback.ticket-link"].firstMatch
         XCTAssertTrue(link.waitForExistence(timeout: 5)); XCTAssertTrue(link.label.contains(identifier))

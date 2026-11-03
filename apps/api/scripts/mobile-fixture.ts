@@ -3,6 +3,7 @@
  * or calls a mail provider. Stop with Ctrl-C; its temporary mailbox is removed.
  * Run: bun apps/api/scripts/mobile-fixture.ts
  */
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -101,7 +102,7 @@ const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
 let sendEnabled = !readOnly;
 let accountsUnavailable = false;
 let sendRequests = 0;
-const feedbackTickets = new Map<string, { id: string; identifier: string; url: string; message: string; platform: unknown }>();
+const feedbackTickets = new Map<string, { id: string; identifier: string; url: string; message: string; platform: unknown; attachments: Array<{ name: string; mimeType: string; size: number; sha256: string }> }>();
 let feedbackFailOnce = false;
 const app = createApp({
   feedbackTicketOwnerUserId: userId,
@@ -110,7 +111,12 @@ const app = createApp({
     if (!ticket) {
       ticket = { id: issueId, identifier: `BRE-FIXTURE-${feedbackTickets.size + 1}`,
         url: `https://linear.app/fixture/issue/${issueId}`, message: report.description,
-        platform: report.metadata?.platform };
+        platform: report.metadata?.platform,
+        attachments: report.attachments.map(attachment => {
+          const bytes = Buffer.from(attachment.dataUrl.slice(attachment.dataUrl.indexOf(",") + 1), "base64");
+          return { name: attachment.name, mimeType: attachment.mimeType, size: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex") };
+        }) };
       feedbackTickets.set(issueId, ticket);
     }
     if (feedbackFailOnce) { feedbackFailOnce = false; throw new Error("Synthetic response lost after ticket creation"); }

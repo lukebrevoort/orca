@@ -50,6 +50,10 @@ def feedback_test_summary(text):
         ('OrcaTests.FeedbackTicketTests', 'testFeedbackValidationUsesWireLengthAndRequiresText'),
         ('OrcaTests.FeedbackTicketTests', 'testTicketLinkAcceptsOnlyHTTPSLinearURLs'),
         ('OrcaTests.FeedbackTicketTests', 'testMalformedReceiptNeverReportsSuccessOrDropsDraft'),
+        ('OrcaTests.FeedbackTicketTests', 'testMediaRequiresReviewAndCleansUpOnOwnerChange'),
+        ('OrcaTests.FeedbackTicketTests', 'testMediaRetryFreezesBytesAndSuccessRemovesPreview'),
+        ('OrcaTests.FeedbackTicketTests', 'testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft'),
+        ('OrcaTests.FeedbackTicketTests', 'testImagePreparationStripsMetadataAndBoundsDecodedDimensions'),
         ('OrcaUITests.OrcaUITests', 'test38FeedbackCornerCreatesLinearTicket'),
     }
     pattern = re.compile(r"Test Case '-\[([A-Za-z.]+) ([A-Za-z0-9]+)\]' (passed|failed) \(([0-9]{1,6}(?:\.[0-9]{1,6})?) seconds\)\.")

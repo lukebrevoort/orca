@@ -4,6 +4,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {chromium} from 'playwright';
+import {runMediaScenarios} from './feedback-media-scenarios.mjs';
 const [connectionFile,outputDirectory]=process.argv.slice(2);
 assert(connectionFile && outputDirectory);
 const {url}=JSON.parse(await readFile(connectionFile,'utf8'));
@@ -15,10 +16,11 @@ const browser=await chromium.launch({executablePath:process.env.ORCA_CHROMIUM_EX
 results.browser=browser.version();let current;
 async function api(context,path,method='GET',data){const response=await context.request.fetch(url+path,{method,data,headers:{origin:url}});assert(response.ok(),`${path}: ${response.status()} ${await response.text()}`);return response.status()===204?null:response.json();}
 async function shot(page,name){await page.screenshot({path:join(out,name+'.png')});}
-async function setup(theme,width,user='first'){
+async function setup(theme,width,user='first',init){
  const context=await browser.newContext({viewport:{width,height:844},colorScheme:theme,serviceWorkers:'block'});
  await context.addInitScript(theme=>localStorage.setItem('orca-reader-preferences',JSON.stringify({theme,motion:'reduced'})),theme);
  await context.route('**/*',route=>{const target=new URL(route.request().url());if(target.origin===origin.origin)return route.continue();results.externalRequestsBlocked.push(target.origin);return route.abort();});
+ if(init)await context.addInitScript(init);
  const page=await context.newPage();current=page;page.on('pageerror',error=>results.pageErrors.push({message:error.message,url:page.url()}));
  await page.goto(url+'/__fixture/login?user='+user,{waitUntil:'networkidle'});
  return {context,page};
@@ -34,7 +36,7 @@ try{
   const dialog=page.getByRole('dialog',{name:'Send feedback',exact:true});await dialog.waitFor();
   const message=dialog.getByLabel('Your feedback',{exact:true});
   assert.equal(await dialog.locator('textarea').count(),1,'One message composer');
-  assert.equal(await dialog.locator('input,select').count(),0,'No title/type form');
+  assert.equal(await dialog.locator('input:not([type=file]):not([type=checkbox]),select').count(),0,'No title/type form');
   const send=dialog.getByRole('button',{name:'Send to Linear',exact:true});assert(await send.isDisabled());
   const text=`Synthetic ${theme} ${width}: make the next action easier to find.`;
   await message.fill(text);await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
@@ -75,6 +77,7 @@ try{
   results.scenarios.push(`${theme}/${width}: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link`);
   await context.close();
  }
+ await runMediaScenarios({setup,api,shot,results});
  const {context:other,page:otherPage}=await setup('light',390,'second');
  assert.equal((await api(other,'/v1/feedback/ticket')).available,false);
  assert.equal(await otherPage.getByRole('button',{name:'Feedback',exact:true}).count(),0,'Other user has no affordance');
