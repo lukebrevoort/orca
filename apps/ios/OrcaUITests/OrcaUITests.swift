@@ -44,30 +44,39 @@ final class OrcaUITests: XCTestCase {
         }
         let photos = app.buttons["feedback.photos"]
         XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
-        let importYear = try XCTUnwrap(ProcessInfo.processInfo.environment["ORCA_FIXTURE_MEDIA_YEAR"])
-        XCTAssertNotNil(Int(importYear))
+        let importDay = try XCTUnwrap(ProcessInfo.processInfo.environment["ORCA_FIXTURE_MEDIA_DAY"])
+        let escapedDay = NSRegularExpression.escapedPattern(for: importDay)
         // The hosted picker exposes media as images, not collection cells.
-        // Scope to this run's imports, excluding the simulator's stock 2012 photos.
-        let photoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label BEGINSWITH %@ AND label CONTAINS %@",
-                                                        "PXGGridLayout-Info", "Photo,", importYear))
+        // Current-year Photos labels omit the year. Require the injected month/day
+        // followed immediately by time, excluding older stock photos with a year.
+        let photoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
+                                                        "PXGGridLayout-Info", "Photo, \(escapedDay), [0-9]{1,2}:.*"))
         let photoExists = photoQuery.firstMatch.waitForExistence(timeout: 10)
         attachScreenshot(named: "feedback-system-picker-before-selection")
         logFeedbackPicker(in: app)
         guard photoExists, photoQuery.count == 1 else {
-            XCTFail("System picker must expose exactly one photo imported for this fixture year")
+            XCTFail("System picker must expose exactly one photo imported for this fixture day")
             return
         }
+        // Only dismiss the observed system privacy banner, never Orca's Close.
+        for _ in 0..<2 {
+            guard app.images.matching(identifier: "PickerOnboardingHeaderViewIcon").firstMatch.exists else { break }
+            let bannerClose = app.buttons.matching(NSPredicate(format: "identifier == '' AND label == 'Close'")).firstMatch
+            guard bannerClose.exists, bannerClose.isHittable else { break }
+            bannerClose.tap()
+        }
         photoQuery.firstMatch.tap()
-        let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label BEGINSWITH %@ AND label CONTAINS %@",
-                                                        "PXGGridLayout-Info", "Video,", importYear))
+        let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
+                                                        "PXGGridLayout-Info", "Video, .*, \(escapedDay), [0-9]{1,2}:.*"))
         guard videoQuery.firstMatch.waitForExistence(timeout: 10), videoQuery.count == 1 else {
             logFeedbackPicker(in: app)
-            XCTFail("System picker must expose exactly one recording imported for this fixture year")
+            XCTFail("System picker must expose exactly one recording imported for this fixture day")
             return
         }
         videoQuery.firstMatch.tap()
-        let add = app.buttons["Add"]
-        XCTAssertTrue(add.waitForExistence(timeout: 5)); add.tap()
+        let finishSelection = app.buttons["Done"]
+        XCTAssertTrue(finishSelection.waitForExistence(timeout: 5))
+        XCTAssertTrue(finishSelection.isEnabled); finishSelection.tap()
         let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
         expectation(for: NSPredicate(format: "count == 2"), evaluatedWith: previews)
         waitForExpectations(timeout: 10)

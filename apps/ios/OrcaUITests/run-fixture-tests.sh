@@ -100,7 +100,7 @@ environment["ORCA_FIXTURE_API_URL"] = connection["apiURL"]
 environment["ORCA_FIXTURE_ACCESS_TOKEN"] = connection["accessToken"]
 environment["ORCA_FIXTURE_IMAGES"] = "1" if connection.get("imageFixture", False) else "0"
 environment["ORCA_FIXTURE_READ_ONLY"] = "1" if connection.get("readOnly", False) else "0"
-environment["ORCA_FIXTURE_MEDIA_YEAR"] = str(datetime.now(timezone.utc).year)
+environment["ORCA_FIXTURE_MEDIA_DAY"] = datetime.now(timezone.utc).strftime("%B %d")
 
 with open(xctestrun_path, "wb") as handle:
     plistlib.dump(xctestrun, handle)
