@@ -151,10 +151,17 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
     -xctestrun "$injected_xctestrun" \
     -destination "platform=iOS Simulator,id=$simulator_udid" \
     -parallel-testing-enabled NO \
-    -resultBundlePath "$result_dir/FeedbackLight.xcresult" \
+    -resultBundlePath "$result_dir/DirectCaptureLight.xcresult" \
     -only-testing:OrcaTests/FeedbackTicketTests \
-    -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket \
     -only-testing:OrcaUITests/OrcaUITests/test39FeedbackCapturesCurrentOrcaScreen
+  # Isolate current-screen capture from any preceding system Photos session.
+  # Photos import remains a required independent gate, not a skipped fallback.
+  xcodebuild test-without-building \
+    -xctestrun "$injected_xctestrun" \
+    -destination "platform=iOS Simulator,id=$simulator_udid" \
+    -parallel-testing-enabled NO \
+    -resultBundlePath "$result_dir/FeedbackLight.xcresult" \
+    -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket
   light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 

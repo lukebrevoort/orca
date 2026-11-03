@@ -2,6 +2,17 @@ import SwiftUI
 import ReplayKit
 import AVFoundation
 
+/// Static phase names only, enabled solely by the existing DEBUG loopback fixture.
+func feedbackCaptureTrace(_ phase: String) {
+#if DEBUG
+    let args = ProcessInfo.processInfo.arguments
+    guard let index = args.firstIndex(of: "--fixture-api-url"), args.indices.contains(index + 1),
+          let url = URL(string: args[index + 1]), url.scheme == "http",
+          ["127.0.0.1", "localhost"].contains(url.host ?? "") else { return }
+    print("[feedback capture] phase=\(phase)")
+#endif
+}
+
 @MainActor final class FeedbackWindowReference: ObservableObject { weak var window: UIWindow? }
 struct FeedbackWindowProbe: UIViewRepresentable {
     let reference: FeedbackWindowReference
@@ -80,13 +91,18 @@ enum FeedbackCaptureError: LocalizedError {
             error = "The current Orca screen could not be captured."; return
         }
         // The caller uses sheet onDismiss, so the feedback composer is gone.
+        feedbackCaptureTrace("layout_begin")
         window.layoutIfNeeded()
+        feedbackCaptureTrace("layout_end")
         let format = UIGraphicsImageRendererFormat()
         format.scale = min(window.screen.scale, 2)
         let renderer = UIGraphicsImageRenderer(bounds: window.bounds, format: format)
         var complete = false
+        feedbackCaptureTrace("render_begin")
         let image = renderer.image { _ in complete = window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
+        feedbackCaptureTrace("render_end")
         guard complete, let data = image.pngData() else { error = FeedbackCaptureError.failed.localizedDescription; return }
+        feedbackCaptureTrace("png_ready")
         result = FeedbackCapturedMedia(scope: scope, data: data, name: "Orca screenshot.png", mime: "image/png")
     }
     func start(scope: String, windowScene: UIWindowScene? = nil) async {

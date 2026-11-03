@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Publish an allowlist of synthetic evidence, never raw fixture/xcresult data."""
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -93,6 +94,80 @@ def feedback_picker_excerpt(text):
     return output
 
 
+def native_diagnostic_excerpt(text):
+    phases = 'sheet_dismissed|layout_begin|layout_end|render_begin|render_end|png_ready|attachment_begin|attachment_end|composer_reopen'
+    patterns = [r'\[feedback capture\] phase=(?:' + phases + r')',
+                r'\[simulator readiness\] attempt=\d{1,3} (?:exit=-?\d{1,3}|command_timeout=true) owned_destination=(?:True|False)',
+                r'\[simulator readiness\] first_launch_status=\d{1,3}',
+                r'\[simulator readiness\] deadline exceeded; owned simulator absent from Xcode available destinations']
+    output = []
+    for line in text.splitlines():
+        # XCTest prefixes app stdout with a timestamp; accept only the entire
+        # known static marker suffix, never append arbitrary app text.
+        for pattern in patterns:
+            match = re.search(pattern + r'$', line)
+            if match:
+                output.append(match[0]); break
+    return output[-100:]
+
+
+def crash_summary(text):
+    """Strict JSON crash fields only; never publish raw reports, paths or values."""
+    decoder = json.JSONDecoder()
+    try:
+        first, offset = decoder.raw_decode(text.lstrip())
+        remaining = text.lstrip()[offset:].strip()
+        report = json.loads(remaining) if remaining else first
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(report, dict) or report.get('procName') != 'Orca':
+        return []
+    bundle = report.get('bundleInfo')
+    if not isinstance(bundle, dict) or bundle.get('CFBundleIdentifier') != 'com.orca.mail':
+        return []
+    output = []
+    for group, keys in [('exception', ('type', 'signal')), ('termination', ('namespace', 'code'))]:
+        values = report.get(group)
+        if not isinstance(values, dict):
+            continue
+        for key in keys:
+            value = str(values.get(key, ''))
+            if re.fullmatch(r'[A-Za-z0-9_ -]{1,100}', value):
+                output.append(f'[feedback crash] {group}.{key}={value}')
+    frames = report.get('lastExceptionBacktrace', [])
+    if not frames:
+        threads = report.get('threads', [])
+        frames = next((t.get('frames', []) for t in threads if isinstance(t, dict) and t.get('triggered')), []) if isinstance(threads, list) else []
+    if not isinstance(frames, list):
+        frames = []
+    for frame in frames[:20]:
+        if not isinstance(frame, dict):
+            continue
+        symbol = frame.get('symbol', '')
+        # Symbols contain code identities, not crash addresses, argv or memory.
+        if isinstance(symbol, str) and re.fullmatch(r'[A-Za-z_$+\-][A-Za-z0-9_$ .:+\-()<>?,*\[\]]{0,240}', symbol):
+            output.append('[feedback crash] frame=' + symbol.replace('::', ': :'))
+    return output[:24]
+
+
+def hosted_crash_summaries(work):
+    if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('RUNNER_ENVIRONMENT') != 'github-hosted':
+        return []
+    identity = work / 'identity.log'
+    if not identity.is_file():
+        return []
+    started = identity.stat().st_mtime
+    reports = Path.home() / 'Library/Logs/DiagnosticReports'
+    output = []
+    for path in sorted(reports.glob('Orca-*.ips'))[-10:]:
+        if path.is_symlink() or not path.is_file() or path.stat().st_mtime < started or path.stat().st_size > 5_000_000:
+            continue
+        output.extend(crash_summary(path.read_text(errors='replace')))
+        if len(output) >= 72:
+            break
+    return output[:72]
+
+
 def export(work, evidence, connection, status):
     tokens = []
     if connection:
@@ -141,6 +216,9 @@ def export(work, evidence, connection, status):
                     raise ValueError('Attachment symlinks are not allowed')
                 screenshots.mkdir(exist_ok=True)
                 shutil.copyfile(source, screenshots / f'{bundle.stem}-{index}{source.suffix.lower()}')
+    crash_lines = hosted_crash_summaries(work) if int(status) != 0 else []
+    if crash_lines:
+        write('native-crash-summary.log', '\n'.join(crash_lines) + '\n')
     # Verify the exact ephemeral credentials never appear in any published bytes.
     for path in evidence.rglob('*'):
         if path.is_file():
@@ -155,6 +233,11 @@ def export(work, evidence, connection, status):
             print(f'[feedback test] {summary}')
         for line in feedback_picker_excerpt(checks.read_text()):
             print(line)
+        for line in native_diagnostic_excerpt(checks.read_text()):
+            print(line)
+    crash_log = evidence / 'native-crash-summary.log'
+    if crash_log.is_file():
+        print(crash_log.read_text(), end='')
     native_times = re.findall(r'\[counter-native\] epoch_ms=(\d+)', checks.read_text() if checks.is_file() else '')
     # xcresult export can finish minutes after the assertion. Anchor server
     # liveness to the final native observation, not the later cleanup time.

@@ -107,6 +107,7 @@ struct MainView: View {
         let window = captureWindow.window
         let requestedScope = captureRequestScope
         if action == .screenshot {
+            feedbackCaptureTrace("sheet_dismissed")
             capture.screenshot(window: window, scope: captureScope)
             receiveCapture()
         } else {
@@ -116,10 +117,15 @@ struct MainView: View {
     private func receiveCapture() {
         guard capture.scope == captureScope else { return }
         if let result = capture.result, result.scope == captureScope {
+            feedbackCaptureTrace("attachment_begin")
             feedback.attachCapture(result, scope: state.ownerScope)
+            feedbackCaptureTrace("attachment_end")
             capture.clearResult()
         }
-        if UIApplication.shared.applicationState == .active { feedbackPresented = true }
+        if UIApplication.shared.applicationState == .active {
+            feedbackCaptureTrace("composer_reopen")
+            feedbackPresented = true
+        }
     }
     @ViewBuilder private var feedbackCorner: some View {
         if feedback.available && !capture.active {

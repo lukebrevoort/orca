@@ -5,6 +5,7 @@ import io
 from contextlib import redirect_stdout
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location('evidence', Path(__file__).with_name('export-evidence.py'))
@@ -13,6 +14,46 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_native_diagnostics_only_accept_static_phase_and_readiness_fields(self):
+        accepted = ['[feedback capture] phase=render_begin',
+                    '[simulator readiness] attempt=2 exit=0 owned_destination=True',
+                    '[simulator readiness] first_launch_status=0']
+        rejected = ['[feedback capture] phase=private-value', accepted[0] + ' private',
+                    '[simulator readiness] raw secret payload', '[feedback capture] phase=render_begin ::error::oops']
+        self.assertEqual(evidence.native_diagnostic_excerpt('\n'.join(accepted + rejected)), accepted)
+        self.assertEqual(len(evidence.native_diagnostic_excerpt('\n'.join(accepted * 100))), 100)
+
+    def test_crash_summary_excludes_raw_paths_memory_and_user_payload(self):
+        report = {'procName': 'Orca', 'bundleInfo': {'CFBundleIdentifier': 'com.orca.mail'},
+                  'procPath': '/private/user/Orca.app/Orca', 'asi': {'secret': ['private note']},
+                  'exception': {'type': 'EXC_BAD_ACCESS', 'signal': 'SIGSEGV', 'reason': 'private note'},
+                  'termination': {'namespace': 'SIGNAL', 'code': 11},
+                  'threads': [{'triggered': True, 'frames': [{'symbol': 'FeedbackCaptureController.screenshot(window:scope:)', 'imageOffset': 123},
+                                                           {'symbol': 'private\n::error::payload'}]}]}
+        summary = '\n'.join(evidence.crash_summary('{}\n' + json.dumps(report)))
+        self.assertIn('EXC_BAD_ACCESS', summary); self.assertIn('FeedbackCaptureController.screenshot', summary)
+        self.assertNotIn('private', summary); self.assertNotIn('123', summary); self.assertNotIn('reason', summary)
+        report['bundleInfo']['CFBundleIdentifier'] = 'other.app'
+        self.assertEqual(evidence.crash_summary(json.dumps(report)), [])
+        for text in ('malformed', '[]', '{"procName":"Orca","bundleInfo":[]}'):
+            self.assertEqual(evidence.crash_summary(text), [])
+
+    def test_crash_scan_never_reads_personal_or_self_hosted_machine(self):
+        with patch.dict(evidence.os.environ, {}, clear=True), patch.object(Path, 'home', side_effect=AssertionError('No access')):
+            self.assertEqual(evidence.hosted_crash_summaries(Path('/unused')), [])
+        with patch.dict(evidence.os.environ, {'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'self-hosted'}, clear=True), patch.object(Path, 'home', side_effect=AssertionError('No access')):
+            self.assertEqual(evidence.hosted_crash_summaries(Path('/unused')), [])
+
+    def test_crash_summary_is_bounded_and_accepts_only_orca(self):
+        report = {'procName': 'Orca', 'bundleInfo': {'CFBundleIdentifier': 'com.orca.mail'},
+                  'lastExceptionBacktrace': [{'symbol': '-[UIView drawViewHierarchyInRect:afterScreenUpdates:]'}] * 100}
+        self.assertEqual(len(evidence.crash_summary(json.dumps(report))), 20)
+        report['procName'] = 'Other'
+        self.assertEqual(evidence.crash_summary(json.dumps(report)), [])
+        for fields in ({'bundleInfo': None}, {'exception': [], 'termination': None, 'threads': [None], 'lastExceptionBacktrace': None}, {'lastExceptionBacktrace': 'invalid'}, {'lastExceptionBacktrace': [None]}):
+            malformed = {'procName': 'Orca', 'bundleInfo': {'CFBundleIdentifier': 'com.orca.mail'}, **fields}
+            self.assertEqual(evidence.crash_summary(json.dumps(malformed)), [])
+
     def test_picker_diagnostics_are_redacted_before_printing_on_success_and_failure(self):
         for status in (0, 65):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
