@@ -150,16 +150,45 @@ def crash_summary(text):
     return output[:24]
 
 
-def hosted_crash_summaries(work):
+def read_capture_phases(container, owned_root):
+    container = Path(container)
+    if not container.resolve().is_relative_to(Path(owned_root).resolve()):
+        return []
+    path = container / 'Library/Caches/orca-fixture-capture-phases.log'
+    if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(container.resolve()) or path.stat().st_size > 8192:
+        return []
+    phases = {'sheet_dismissed', 'layout_begin', 'layout_end', 'render_begin', 'render_end',
+              'png_ready', 'attachment_begin', 'attachment_end', 'composer_reopen'}
+    return ['[feedback capture] phase=' + line for line in path.read_text(errors='replace').splitlines()[-32:] if line in phases]
+
+
+def owned_capture_phases(simulator):
+    if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('RUNNER_ENVIRONMENT') != 'github-hosted' or not re.fullmatch(r'[0-9A-Fa-f-]{36}', simulator):
+        return []
+    try:
+        result = subprocess.run(['xcrun', 'simctl', 'get_app_container', simulator, 'com.orca.mail', 'data'],
+                                capture_output=True, text=True, timeout=10, check=False)
+        if result.returncode != 0:
+            return []
+        root = Path.home() / 'Library/Developer/CoreSimulator/Devices' / simulator / 'data/Containers/Data/Application'
+        return read_capture_phases(result.stdout.strip(), root)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+
+
+def hosted_crash_summaries(work, simulator=""):
     if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('RUNNER_ENVIRONMENT') != 'github-hosted':
         return []
     identity = work / 'identity.log'
     if not identity.is_file():
         return []
     started = identity.stat().st_mtime
-    reports = Path.home() / 'Library/Logs/DiagnosticReports'
+    directories = [Path.home() / 'Library/Logs/DiagnosticReports']
+    if re.fullmatch(r'[0-9A-Fa-f-]{36}', simulator):
+        directories.append(Path.home() / 'Library/Developer/CoreSimulator/Devices' / simulator / 'data/Library/Logs/CrashReporter')
+    candidates = [path for directory in directories for path in directory.glob('Orca-*.ips')]
     output = []
-    for path in sorted(reports.glob('Orca-*.ips'))[-10:]:
+    for path in sorted(candidates)[-10:]:
         if path.is_symlink() or not path.is_file() or path.stat().st_mtime < started or path.stat().st_size > 5_000_000:
             continue
         output.extend(crash_summary(path.read_text(errors='replace')))
@@ -168,7 +197,7 @@ def hosted_crash_summaries(work):
     return output[:72]
 
 
-def export(work, evidence, connection, status):
+def export(work, evidence, connection, status, simulator=""):
     tokens = []
     if connection:
         connection_path = Path(connection).resolve()
@@ -216,7 +245,11 @@ def export(work, evidence, connection, status):
                     raise ValueError('Attachment symlinks are not allowed')
                 screenshots.mkdir(exist_ok=True)
                 shutil.copyfile(source, screenshots / f'{bundle.stem}-{index}{source.suffix.lower()}')
-    crash_lines = hosted_crash_summaries(work) if int(status) != 0 else []
+    phases = owned_capture_phases(simulator)
+    if phases:
+        checks_path = evidence / 'checks.log'
+        write('checks.log', (checks_path.read_text() if checks_path.is_file() else '') + '\n' + '\n'.join(phases) + '\n')
+    crash_lines = hosted_crash_summaries(work, simulator) if int(status) != 0 else []
     if crash_lines:
         write('native-crash-summary.log', '\n'.join(crash_lines) + '\n')
     # Verify the exact ephemeral credentials never appear in any published bytes.
@@ -268,4 +301,4 @@ def export(work, evidence, connection, status):
 
 
 if __name__ == '__main__':
-    export(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4])
+    export(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else '')

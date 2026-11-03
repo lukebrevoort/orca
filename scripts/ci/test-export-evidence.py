@@ -14,6 +14,32 @@ spec.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_owned_capture_file_accepts_only_known_bounded_phases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); container = root / 'app'
+            cache = container / 'Library/Caches'; cache.mkdir(parents=True)
+            path = cache / 'orca-fixture-capture-phases.log'
+            path.write_text('private note\nrender_begin\nrender_end ::error::oops\n')
+            self.assertEqual(evidence.read_capture_phases(container, root), ['[feedback capture] phase=render_begin'])
+            path.write_text('render_begin\n' * 40)
+            self.assertEqual(len(evidence.read_capture_phases(container, root)), 32)
+            path.write_text('x' * 8193)
+            self.assertEqual(evidence.read_capture_phases(container, root), [])
+
+    def test_capture_file_rejects_wrong_container_and_symlinks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); container = root / 'app'; cache = container / 'Library/Caches'
+            cache.mkdir(parents=True)
+            target = root / 'private'; target.write_text('render_begin\n')
+            path = cache / 'orca-fixture-capture-phases.log'; path.symlink_to(target)
+            self.assertEqual(evidence.read_capture_phases(container, root), [])
+            path.unlink(); path.write_text('render_begin\n')
+            self.assertEqual(evidence.read_capture_phases(container, root / 'other-owned-device'), [])
+
+    def test_capture_collection_never_runs_on_personal_machine(self):
+        with patch.dict(evidence.os.environ, {}, clear=True), patch.object(evidence.subprocess, 'run', side_effect=AssertionError('No commands')):
+            self.assertEqual(evidence.owned_capture_phases('A' * 36), [])
+
     def test_native_diagnostics_only_accept_static_phase_and_readiness_fields(self):
         accepted = ['[feedback capture] phase=render_begin',
                     '[simulator readiness] attempt=2 exit=0 owned_destination=True',

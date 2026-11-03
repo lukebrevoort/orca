@@ -9,7 +9,14 @@ func feedbackCaptureTrace(_ phase: String) {
     guard let index = args.firstIndex(of: "--fixture-api-url"), args.indices.contains(index + 1),
           let url = URL(string: args[index + 1]), url.scheme == "http",
           ["127.0.0.1", "localhost"].contains(url.host ?? "") else { return }
-    print("[feedback capture] phase=\(phase)")
+    let known: Set<String> = ["sheet_dismissed", "layout_begin", "layout_end", "render_begin", "render_end",
+                              "png_ready", "attachment_begin", "attachment_end", "composer_reopen"]
+    guard known.contains(phase), let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+    let file = directory.appendingPathComponent("orca-fixture-capture-phases.log")
+    let previous = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+    let phases = (previous.split(separator: "\n").map(String.init).filter { known.contains($0) } + [phase]).suffix(32)
+    // Synchronous atomic write survives app termination before XCTest forwards stdout.
+    try? (phases.joined(separator: "\n") + "\n").write(to: file, atomically: true, encoding: .utf8)
 #endif
 }
 

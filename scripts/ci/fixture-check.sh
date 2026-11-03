@@ -20,7 +20,7 @@ cleanup() {
   trap - EXIT INT TERM
   set +e
   # Export before stopping the fixture (which removes its connection metadata).
-  python3 scripts/ci/export-evidence.py "$work" "$evidence" "$connection" "$status"
+  python3 scripts/ci/export-evidence.py "$work" "$evidence" "$connection" "$status" "$simulator"
   export_status=$?
   if [[ -n "$fixture_pid" ]]; then kill "$fixture_pid" 2>/dev/null; wait "$fixture_pid" 2>/dev/null; fi
   if [[ -n "$simulator" ]]; then
