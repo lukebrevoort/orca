@@ -75,7 +75,7 @@ All verification media is synthetic; capture tests use a generated canvas stream
 
 ### Backend configuration after approval
 
-In Railway, open project **orca-api** → **production** → service **orca-api** → **Variables**. Set secret `LINEAR_API_KEY` and non-secret `LINEAR_FEEDBACK_OWNER_USER_ID`. Obtain the latter from `user.id` in the existing authenticated `/v1/auth/session` response; do not use the Linear user ID or send cookies/tokens to anyone. Neither setting was present in the read-only production inspection. Never put the key in `VITE_*`, frontend hosting variables or native app configuration.
+In Railway, open project **orca-api** → **production** → service **orca-api** → **Variables**. Set secret `LINEAR_API_KEY` and non-secret `LINEAR_FEEDBACK_OWNER_USER_ID`. Obtain the latter from `user.id` in the existing authenticated `/v1/auth/session` response; do not use the Linear user ID or send cookies/tokens to anyone. The November 3 read-only production inspection found `LINEAR_API_KEY` present but `LINEAR_FEEDBACK_OWNER_USER_ID` absent; no key value was read. Never put the key in `VITE_*`, frontend hosting variables or native app configuration.
 
 Optional non-secret destination overrides are documented in `.env.example`; existing defaults point to Brev / Orca, Feedback label, Backlog and Luke. A team-restricted Read + Create issues key covers ticket lookup/creation. The exact minimum permission for `fileUpload` is not specified by the inspected documentation and still needs verification; no Admin or broader permissions have been requested or granted.
 

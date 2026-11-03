@@ -74,14 +74,34 @@ export async function runMediaScenarios({setup,api,shot,results}){
   await dialog.getByLabel('Your feedback',{exact:true}).fill('Synthetic owner-private draft');
   await dialog.getByLabel('Choose feedback attachments').setInputFiles({name:'private-synthetic.png',mimeType:'image/png',buffer:png});
   await dialog.getByRole('img',{name:'Preview of private-synthetic.png'}).waitFor();
-  await page.route('**/v1/feedback/ticket',route=>route.request().method()==='GET'?route.fulfill({json:{available:false}}):route.continue());
-  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  const checks=[];
+  await page.route('**/v1/feedback/ticket',route=>{
+   if(route.request().method()!=='GET')return route.continue();
+   return new Promise(done=>checks.push({route,done}));
+  });
+  async function focusCheck(expected){
+   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   const deadline=Date.now()+5000;
+   while(checks.length<expected && Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,10));
+   assert.equal(checks.length,expected,'Expected capability check was requested');
+  }
+  async function reply(index,available){
+   const {route,done}=checks[index];await route.fulfill({json:{available}});done();
+   const response=await route.request().response();await response?.finished();
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  }
+  await focusCheck(1);await focusCheck(2);await reply(1,true);await reply(0,false);
+  assert(await dialog.isVisible(),'Older unavailable response cannot erase a newer authorized draft');
+  assert.equal(await dialog.getByLabel('Your feedback',{exact:true}).inputValue(),'Synthetic owner-private draft');
+  assert.equal(await dialog.locator('figure').count(),1,'Older unavailable response cannot discard private draft attachment');
+  await focusCheck(3);await focusCheck(4);await reply(3,false);
   await dialog.waitFor({state:'hidden'});await page.getByRole('button',{name:'Feedback',exact:true}).waitFor({state:'hidden'});
+  await reply(2,true);assert.equal(await page.getByRole('button',{name:'Feedback',exact:true}).count(),0,'Older authorized response cannot re-enable a revoked capability');
   await page.unroute('**/v1/feedback/ticket');await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
   await page.getByRole('button',{name:'Feedback',exact:true}).waitFor();dialog=await open(page);
   assert.equal(await dialog.getByLabel('Your feedback',{exact:true}).inputValue(),'');
   assert.equal(await dialog.locator('figure').count(),0,'Capability recovery cannot restore prior private attachments');
-  await shot(page,'capability-recovery-empty');results.scenarios.push('Known capability loss on focus closes/hides composer and clears unsent text/media; recovery is empty');await context.close();
+  await shot(page,'capability-recovery-empty');results.scenarios.push('Out-of-order capability checks respect newest result in both orders; known loss closes/hides and clears unsent text/media; recovery is empty');await context.close();
  }
  // Real MediaRecorder, driven by generated canvas frames; no desktop or audio.
  const {context,page}=await setup('light',1440,'first',syntheticCapture);const dialog=await open(page);

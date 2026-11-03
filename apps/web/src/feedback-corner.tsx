@@ -44,11 +44,13 @@ export default function FeedbackCorner() {
     }
     // Only the server can establish the signed-in owner's entitlement. No
     // client-selected destination or personal integration credentials are used.
+    let checkSequence = 0;
     const check = () => {
+      const sequence = ++checkSequence;
       void fetch("/v1/feedback/ticket", { credentials: "include", signal: controller.signal })
         .then(async response => response.ok ? response.json() : [401, 403].includes(response.status) ? { available: false } : null)
         .then(result => {
-          if (controller.signal.aborted || !result) return;
+          if (controller.signal.aborted || sequence !== checkSequence || !result) return;
           setAvailable(result.available === true);
           if (result.available !== true) {
             scopeVersion.current++; request.current?.abort(); request.current = null; sending.current = false;
