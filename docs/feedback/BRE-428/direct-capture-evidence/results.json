@@ -1,0 +1,956 @@
+{
+  "sourceCommit": "678e96de02f2ab0bcab5838bbd2634d64c390485",
+  "dirty": true,
+  "startedAt": "2026-11-03T15:41:24.580Z",
+  "syntheticOnly": true,
+  "scenarios": [
+    "light/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/390: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/320: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/390: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/320: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/1440: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "light/320: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "dark/1440: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "dark/320: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "Out-of-order capability checks respect newest result in both orders; known loss closes/hides and clears unsent text/media; recovery is empty",
+    "light/1440 synthetic-only capture: screenshot and real canvas MediaRecorder validated by API/delivery, stop/cancel, simulated60s limit, pending chooser close and active-recording unmount cleanup, chooser rejection, hidden tab, bytecap, capability-loss unmount; app interactive/composer absent; all tracks ended, audio:false",
+    "light/390 synthetic-only capture: screenshot and real canvas MediaRecorder validated by API/delivery, stop/cancel, simulated60s limit, pending chooser close and active-recording unmount cleanup, chooser rejection, hidden tab, bytecap, capability-loss unmount; app interactive/composer absent; all tracks ended, audio:false",
+    "dark/1440 synthetic-only capture: screenshot and real canvas MediaRecorder validated by API/delivery, stop/cancel, simulated60s limit, pending chooser close and active-recording unmount cleanup, chooser rejection, hidden tab, bytecap, capability-loss unmount; app interactive/composer absent; all tracks ended, audio:false",
+    "dark/390 synthetic-only capture: screenshot and real canvas MediaRecorder validated by API/delivery, stop/cancel, simulated60s limit, pending chooser close and active-recording unmount cleanup, chooser rejection, hidden tab, bytecap, capability-loss unmount; app interactive/composer absent; all tracks ended, audio:false",
+    "Recording HUD follows real Compose focus boundary; Escape leaves recording active; stopping with Compose open restores clickable feedback review above Compose; closing feedback restores Compose"
+  ],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com"
+  ],
+  "browser": "154.0.8037.57",
+  "capture": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "requests": [
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        }
+      ],
+      "requestStates": [
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        }
+      ],
+      "snapshotStates": [
+        {
+          "overlayVisible": false,
+          "hudVisible": false
+        }
+      ],
+      "streams": [
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 1,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "requests": [
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        }
+      ],
+      "requestStates": [
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        }
+      ],
+      "snapshotStates": [
+        {
+          "overlayVisible": false,
+          "hudVisible": false
+        }
+      ],
+      "streams": [
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 1,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "requests": [
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        }
+      ],
+      "requestStates": [
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        }
+      ],
+      "snapshotStates": [
+        {
+          "overlayVisible": false,
+          "hudVisible": false
+        }
+      ],
+      "streams": [
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 1,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "requests": [
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        },
+        {
+          "video": {
+            "displaySurface": "browser",
+            "frameRate": {
+              "ideal": 15,
+              "max": 15
+            }
+          },
+          "audio": false,
+          "preferCurrentTab": true,
+          "selfBrowserSurface": "include",
+          "systemAudio": "exclude",
+          "surfaceSwitching": "exclude",
+          "monitorTypeSurfaces": "exclude"
+        }
+      ],
+      "requestStates": [
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        },
+        {
+          "overlayVisible": false
+        }
+      ],
+      "snapshotStates": [
+        {
+          "overlayVisible": false,
+          "hudVisible": false
+        }
+      ],
+      "streams": [
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 1,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 2,
+          "states": [
+            "ended"
+          ]
+        },
+        {
+          "stops": 3,
+          "states": [
+            "ended"
+          ]
+        }
+      ]
+    }
+  ],
+  "status": "passed",
+  "finishedAt": "2026-11-03T15:43:17.463Z"
+}

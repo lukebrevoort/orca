@@ -193,7 +193,20 @@ export async function runMediaScenarios({setup,api,shot,results}){
   await page.getByRole('button',{name:'Cancel recording'}).click();await ended(page);await dialog.waitFor();
   assert.equal(await dialog.getByLabel('Your feedback',{exact:true}).inputValue(),'Synthetic nested dialog capture');
   assert.equal(await dialog.locator('figure').count(),0);
-  results.scenarios.push('Recording HUD moves inside real Compose modal focus boundary, Escape closes Compose without cancelling capture, Cancel restores feedback draft');
+  const frameStart=await page.evaluate(()=>window.__feedbackCapture.frames);
+  await dialog.getByRole('button',{name:'Record this screen'}).click();await page.getByRole('button',{name:'Stop recording'}).waitFor();
+  await page.getByRole('button',{name:/^Compose(?:\s+C)?$/}).first().click();await compose.waitFor();await controls.waitFor();
+  await page.waitForFunction(start=>window.__feedbackCapture.frames>=start+12,frameStart);
+  await controls.getByRole('button',{name:'Stop recording'}).click();await ended(page);await dialog.waitFor();await dialog.locator('video').waitFor();
+  assert.equal(await dialog.getByLabel('Your feedback',{exact:true}).inputValue(),'Synthetic nested dialog capture');
+  await dialog.getByRole('checkbox',{name:reviewName}).check();
+  assert(await dialog.getByRole('button',{name:'Send to Linear',exact:true}).isEnabled(),'Restored feedback must be frontmost and clickable above Compose');
+  await shot(page,'capture-review-above-compose');
+  await dialog.getByRole('button',{name:'Close feedback',exact:true}).click();await dialog.waitFor({state:'hidden'});await compose.waitFor();
+  await compose.getByRole('combobox',{name:'Message format'}).selectOption('plain');
+  await shot(page,'compose-restored-after-feedback');
+  await page.keyboard.press('Escape');await compose.waitFor({state:'hidden'});await ended(page);
+  results.scenarios.push('Recording HUD follows real Compose focus boundary; Escape leaves recording active; stopping with Compose open restores clickable feedback review above Compose; closing feedback restores Compose');
   await context.close();
  }
 }

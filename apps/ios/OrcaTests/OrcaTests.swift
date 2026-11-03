@@ -2,6 +2,7 @@ import XCTest
 import ImageIO
 import UniformTypeIdentifiers
 import AVFoundation
+import Combine
 @testable import Orca
 
 private final class StubURLProtocol: URLProtocol {
@@ -3002,9 +3003,13 @@ final class FeedbackTicketTests: XCTestCase {
         let start = Task { await capture.start(scope: "owner-a|account-a") }
         await fulfillment(of: [started], timeout: 2)
         XCTAssertEqual(capture.phase, .starting)
+        let idle = expectation(description: "Cancelled permission flow becomes idle")
+        let observation = capture.$phase.filter { $0 == .idle }.prefix(1).sink { _ in idle.fulfill() }
+        defer { observation.cancel() }
         capture.configure(scope: "owner-b|account-b")
         recorder.heldStart?.resume(); recorder.heldStart = nil
-        await start.value; await Task.yield()
+        await start.value
+        await fulfillment(of: [idle], timeout: 2)
         XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
         XCTAssertGreaterThanOrEqual(recorder.cancels, 1)
         await capture.start(scope: "owner-a|account-a")
@@ -3020,7 +3025,11 @@ final class FeedbackTicketTests: XCTestCase {
         await capture.start(scope: "owner-a"); await capture.stop()
         XCTAssertNotNil(capture.error); XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
         recorder.data = Data([1]); await capture.start(scope: "owner-a")
-        capture.cancel(); await Task.yield()
+        let idle = expectation(description: "Cancelled recording becomes idle")
+        let observation = capture.$phase.filter { $0 == .idle }.prefix(1).sink { _ in idle.fulfill() }
+        defer { observation.cancel() }
+        capture.cancel()
+        await fulfillment(of: [idle], timeout: 2)
         XCTAssertNil(capture.result); XCTAssertEqual(capture.phase, .idle)
     }
     func testScreenRecordingWriterProducesSilentBoundedVideo() async throws {
