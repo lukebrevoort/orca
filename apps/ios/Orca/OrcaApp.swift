@@ -331,7 +331,7 @@ private struct FeedbackTicketComposer: View {
                         Button("Choose from Files") { writing = false; importScope = state.ownerScope; choosingMedia = true }
                             .frame(minHeight: 44).accessibilityIdentifier("feedback.attach")
                             .disabled(model.pending != nil || model.busy || model.importing || model.attachments.count >= 3)
-                        Text("Choose a system screenshot or screen recording from Photos or Files. Capture inside this composer is not implemented. Up to 3 files, 10 MiB each, 20 MiB total. Image metadata is removed. Selected videos may include audio and metadata.")
+                        Text("Use your device’s screenshot or screen-recording controls, then choose from Photos or Files. Up to 3 files, 10 MiB each, 20 MiB total. Images omit location and camera metadata. Selected videos may retain audio and metadata.")
                             .font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
                         ForEach(model.attachments) { attachment in
                             HStack {

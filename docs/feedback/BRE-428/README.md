@@ -61,7 +61,7 @@ Earlier browser work exposed a cross-document transition opt-in race: external C
 
 ## Screenshots and recordings
 
-The composer now accepts up to three PNG, JPEG, WebP, MP4, WebM or MOV files, at most 10 MiB each and 20 MiB total. Images are re-encoded to remove EXIF/location metadata; selected videos retain audio and metadata. Review the visible content for private mail, passwords and unrelated material before confirming inclusion. Files stay local until Send. Unsupported previews cannot be approved.
+The composer now accepts up to three PNG, JPEG, WebP, MP4, WebM or MOV files, at most 10 MiB each and 20 MiB total. Images are re-encoded to remove source EXIF/location metadata; selected videos retain audio and metadata. Review the visible content for private mail, passwords and unrelated material before confirming inclusion. Files stay local until Send. Unsupported previews cannot be approved.
 
 On supported desktop browsers, **Take screenshot** asks the browser to choose a surface and captures one frame. **Record screen** asks separately, records without audio, and provides a visible indicator, Stop and Cancel. Recording stops at 60 seconds or the size limit; closing the composer, hiding the page or cancelling discards active capture and stops tracks. Browsers without capture APIs keep file selection available. Browser upload progress shows transfer to Orca, then a separate confirmation phase for Linear.
 

@@ -2913,16 +2913,36 @@ final class FeedbackTicketTests: XCTestCase {
         let tagged = NSMutableData()
         let destination = try XCTUnwrap(CGImageDestinationCreateWithData(tagged, UTType.jpeg.identifier as CFString, 1, nil))
         let metadata: [CFString: Any] = [kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 1.25, kCGImagePropertyGPSLatitudeRef: "N"],
-                                        kCGImagePropertyExifDictionary: [kCGImagePropertyExifUserComment: "Synthetic private metadata"]]
+                                        kCGImagePropertyExifDictionary: [kCGImagePropertyExifUserComment: "Synthetic private metadata", kCGImagePropertyExifDateTimeOriginal: "2020:01:02 03:04:05"],
+                                        kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "Synthetic camera maker", kCGImagePropertyTIFFModel: "Synthetic camera model"]]
         CGImageDestinationAddImage(destination, image, metadata as CFDictionary)
         XCTAssertTrue(CGImageDestinationFinalize(destination))
         let taggedSource = try XCTUnwrap(CGImageSourceCreateWithData(tagged as CFData, nil))
         let originalProperties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(taggedSource, 0, nil) as? [CFString: Any])
-        XCTAssertNotNil(originalProperties[kCGImagePropertyGPSDictionary])
+        let originalGPS = try XCTUnwrap(originalProperties[kCGImagePropertyGPSDictionary] as? [CFString: Any])
+        XCTAssertEqual(originalGPS[kCGImagePropertyGPSLatitude] as? Double, 1.25)
+        let originalEXIF = try XCTUnwrap(originalProperties[kCGImagePropertyExifDictionary] as? [CFString: Any])
+        XCTAssertEqual(originalEXIF[kCGImagePropertyExifUserComment] as? String, "Synthetic private metadata")
+        XCTAssertEqual(originalEXIF[kCGImagePropertyExifDateTimeOriginal] as? String, "2020:01:02 03:04:05")
+        let originalTIFF = try XCTUnwrap(originalProperties[kCGImagePropertyTIFFDictionary] as? [CFString: Any])
+        XCTAssertEqual(originalTIFF[kCGImagePropertyTIFFMake] as? String, "Synthetic camera maker")
+        XCTAssertEqual(originalTIFF[kCGImagePropertyTIFFModel] as? String, "Synthetic camera model")
         let prepared = try FeedbackTicketModel.normalizeImage(tagged as Data)
         let cleanSource = try XCTUnwrap(CGImageSourceCreateWithData(prepared as CFData, nil))
         let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(cleanSource, 0, nil) as? [CFString: Any])
-        XCTAssertNil(properties[kCGImagePropertyGPSDictionary]); XCTAssertNil(properties[kCGImagePropertyExifDictionary])
+        XCTAssertNil(properties[kCGImagePropertyGPSDictionary])
+        let cleanEXIF = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
+        // ImageIO generates structural color/dimension properties for a fresh PNG.
+        // Permit those only, never the source comment, timestamp or other EXIF.
+        let structuralEXIF: Set<CFString> = [kCGImagePropertyExifColorSpace, kCGImagePropertyExifPixelXDimension, kCGImagePropertyExifPixelYDimension]
+        XCTAssertTrue(Set(cleanEXIF.keys).isSubset(of: structuralEXIF))
+        XCTAssertNil(cleanEXIF[kCGImagePropertyExifUserComment])
+        XCTAssertNil(cleanEXIF[kCGImagePropertyExifDateTimeOriginal])
+        let cleanTIFF = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+        let structuralTIFF: Set<CFString> = [kCGImagePropertyTIFFOrientation, kCGImagePropertyTIFFXResolution, kCGImagePropertyTIFFYResolution, kCGImagePropertyTIFFResolutionUnit]
+        XCTAssertTrue(Set(cleanTIFF.keys).isSubset(of: structuralTIFF))
+        XCTAssertNil(cleanTIFF[kCGImagePropertyTIFFMake]); XCTAssertNil(cleanTIFF[kCGImagePropertyTIFFModel])
+        XCTAssertNil(cleanTIFF[kCGImagePropertyTIFFDateTime])
         XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 32)
         XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8193, height: 1))
         XCTAssertFalse(FeedbackTicketModel.validImageDimensions(width: 8000, height: 8000))

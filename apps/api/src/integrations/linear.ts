@@ -295,20 +295,24 @@ export function createLinearFeedbackSubmitter(
   return async (report, options) => {
     // A server-derived UUID is also the Linear issue ID. Retrying an uncertain
     // create cannot create a second issue; recover the receipt by that exact ID.
+    // Filtered lookup has a documented empty connection for absence, avoiding
+    // undocumented error codes from issue(id:). Include archived tickets too.
     const recover = async () => {
       const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
         method: "POST", signal: AbortSignal.timeout(12_000), redirect: "error",
         headers: { authorization: apiKey, "content-type": "application/json" },
-        body: JSON.stringify({ query: "query FeedbackIssue($id: String!) { issue(id: $id) { identifier url } }", variables: { id: options!.issueId } }),
+        body: JSON.stringify({ query: "query FeedbackIssue($id: ID!) { issues(filter: { id: { eq: $id } }, first: 1, includeArchived: true) { nodes { identifier url } } }", variables: { id: options!.issueId } }),
       });
-      const payload = await response.json() as { data?: { issue?: { identifier: string; url: string } }; errors?: Array<{ extensions?: { code?: string } }> };
-      if (!response.ok) throw new Error("Could not reconcile Linear ticket");
-      if (payload.errors?.length) {
-        if (payload.errors.every(error => error.extensions?.code === "ENTITY_NOT_FOUND")) return null;
-        throw new Error("Could not reconcile Linear ticket");
-      }
-      if (!payload.data?.issue) return null;
-      return payload.data.issue;
+      const payload: unknown = await response.json();
+      const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+      if (!response.ok || !isObject(payload)) throw new Error("Could not reconcile Linear ticket");
+      if ("errors" in payload && (!Array.isArray(payload.errors) || payload.errors.length > 0)) throw new Error("Could not reconcile Linear ticket");
+      const nodes = isObject(payload.data) && isObject(payload.data.issues) ? payload.data.issues.nodes : undefined;
+      if (!Array.isArray(nodes) || nodes.length > 1) throw new Error("Could not reconcile Linear ticket");
+      if (nodes.length === 0) return null;
+      const existing: unknown = nodes[0];
+      if (!isObject(existing) || typeof existing.identifier !== "string" || !existing.identifier || typeof existing.url !== "string" || !existing.url) throw new Error("Could not reconcile Linear ticket");
+      return { identifier: existing.identifier, url: existing.url };
     };
     if (options) {
       const existing = await recover();

@@ -29,3 +29,7 @@
 
 - Media product source `89c5e1d4d931bf9c531820d55f2ab5f0f6c131dc`: full local suite **2,107 passed, zero failures** (1,089 API / 187 shared / 831 web), production build and lint passed. Independent review by `feedback_review` found no remaining source blocker; overlapping availability response race was fixed and regression-tested in both orders.
 - Browser media verification passed 12 scenarios with synthetic files/canvas capture only. Fresh native compilation and Photos picker UI verification remain hosted CI gates. No live Linear upload or actual system-screen capture was performed.
+
+- Hosted native app/test compilation on `4131068` succeeded. Reading job `125680139379` found an over-strict new metadata assertion: ImageIO generated structural EXIF ColorSpace although source GPS/private metadata was removed. Preserve encoder behavior; tighten the test around removal of private source metadata while allowing generated rendering fields. Await compose picker result before batching the narrow correction.
+
+- Reconciliation now uses the official schema's `issues(filter: { id: { eq: $id } }, first: 1, includeArchived: true)` connection. Only a validated empty nodes array means absence; GraphQL errors/malformed data stop before uploads. This removes the unverified `ENTITY_NOT_FOUND` assumption. Focused API/Linear suite now 28 passed; typecheck passed.

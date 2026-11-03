@@ -157,15 +157,18 @@ describe("Linear feedback integration", () => {
 });
 
 describe("durable feedback delivery", () => {
-  test("reconciles an existing issue by the durable ID without creating or uploading", async () => {
+  test("reconciles existing or archived issues by exact durable ID without creating or uploading", async () => {
     const original = globalThis.fetch; const seen: unknown[] = [];
     const receipt = { identifier: "BRE-22", url: "https://linear.app/brevoort/issue/BRE-22" };
-    globalThis.fetch = (async (_url, init) => { seen.push(JSON.parse(String(init?.body))); assert.ok(init?.signal); return Response.json({ data: { issue: receipt } }); }) as typeof fetch;
+    globalThis.fetch = (async (_url, init) => { seen.push(JSON.parse(String(init?.body))); assert.ok(init?.signal); return Response.json({ data: { issues: { nodes: [receipt] } } }); }) as typeof fetch;
     try {
       const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
       assert.deepEqual(await send({ ...report, attachments: [] }, { issueId: "10000000-0000-4000-8000-000000000001" }), receipt);
       assert.equal(seen.length, 1);
-      assert.equal((seen[0] as { variables: { id: string } }).variables.id, "10000000-0000-4000-8000-000000000001");
+      assert.deepEqual(seen[0], {
+        query: "query FeedbackIssue($id: ID!) { issues(filter: { id: { eq: $id } }, first: 1, includeArchived: true) { nodes { identifier url } } }",
+        variables: { id: "10000000-0000-4000-8000-000000000001" },
+      });
     } finally { globalThis.fetch = original; }
   });
   test("lost create response is recovered on retry and every create uses the same UUID", async () => {
@@ -173,7 +176,7 @@ describe("durable feedback delivery", () => {
     const receipt = { identifier: "BRE-23", url: "https://linear.app/brevoort/issue/BRE-23" };
     globalThis.fetch = (async (_url, init) => {
       const body = JSON.parse(String(init?.body));
-      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: stored ? receipt : null } });
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issues: { nodes: stored ? [receipt] : [] } } });
       inputs.push(body.variables.input); stored = true; throw new Error("response lost after server accepted");
     }) as typeof fetch;
     try {
@@ -189,7 +192,7 @@ describe("durable feedback delivery", () => {
     const receipt = { identifier: "BRE-24", url: "https://linear.app/brevoort/issue/BRE-24" };
     globalThis.fetch = (async (_url, init) => {
       const body = JSON.parse(String(init?.body));
-      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: ++lookups === 1 ? null : receipt } });
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issues: { nodes: ++lookups === 1 ? [] : [receipt] } } });
       return Response.json({ errors: [{ message: "ID already exists" }] });
     }) as typeof fetch;
     try {
@@ -212,7 +215,7 @@ describe("private feedback media", () => {
       if (init.method === "PUT") { puts++; const headers = new Headers(init.headers); assert.equal(headers.get("authorization"), null); assert.equal(headers.get("cache-control"), "private, no-store"); return new Response(null); }
       assert.equal(String(url), "https://api.linear.app/graphql");
       const body = JSON.parse(String(init?.body));
-      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issues: { nodes: [] } } });
       if (body.query.includes("fileUpload")) { metadata++; assert.match(body.query, /makePublic: false/); return Response.json({ data: { fileUpload: { success: true, uploadFile: upload } } }); }
       creates++; assert.ok(body.variables.input.description.includes(upload.assetUrl));
       if (creates === 1) return Response.json({ errors: [{ message: "rejected" }] });
@@ -231,7 +234,7 @@ describe("private feedback media", () => {
     globalThis.fetch = (async (_url, init) => {
       if (init?.method === "PUT") return new Response(null, { status: 500 });
       const body = JSON.parse(String(init?.body));
-      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+      if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issues: { nodes: [] } } });
       if (body.query.includes("fileUpload")) return Response.json({ data: { fileUpload: { success: true, uploadFile: upload } } });
       creates++; return Response.json({});
     }) as typeof fetch;
@@ -271,7 +274,7 @@ test("media upload receipt cache expires and stays bounded without retaining sig
     if (init?.method === "PUT") { puts++; return new Response(null); }
     const body = JSON.parse(String(init?.body));
     assert.ok(!body.query.includes("DangerouslyDelete"));
-    if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+    if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issues: { nodes: [] } } });
     if (body.query.includes("fileUpload")) { metadataCalls++; return Response.json({ data: { fileUpload: { success: true, uploadFile: { uploadUrl: "https://storage.googleapis.com/linear-production/test?signature=private", assetUrl: `https://uploads.linear.app/private/${metadataCalls}.png`, headers: [] } } } }); }
     return Response.json({ errors: [{ message: "retry fixture" }] });
   }) as typeof fetch;
@@ -297,7 +300,7 @@ test("partial media upload failure reuses completed files and never confirms an 
       return new Response(null);
     }
     const body = JSON.parse(String(init?.body));
-    if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issue: null } });
+    if (body.query.includes("query FeedbackIssue")) return Response.json({ data: { issues: { nodes: [] } } });
     if (body.query.includes("fileUpload")) { const name = body.variables.filename; uploadedNames.push(name); return Response.json({ data: { fileUpload: { success: true, uploadFile: { uploadUrl: `https://storage.googleapis.com/linear-production/${name}`, assetUrl: `https://uploads.linear.app/private/${name}`, headers: [] } } } }); }
     creates++; assert.ok(body.variables.input.description.includes("second.png"));
     return Response.json({ data: { issueCreate: { success: true, issue: { identifier: "BRE-32", url: "https://linear.app/brevoort/issue/BRE-32" } } } });
@@ -309,4 +312,30 @@ test("partial media upload failure reuses completed files and never confirms an 
     await send(fullReport, options); assert.equal(creates, 1);
     assert.deepEqual(uploadedNames, [fullReport.attachments[0]!.name, "second.png", "second.png"]);
   } finally { globalThis.fetch = original; }
+});
+
+
+test("filtered reconciliation rejects malformed nodes and upstream errors before uploads or creation", async () => {
+  const original = globalThis.fetch;
+  const invalid = [
+    { body: {}, status: 200 }, { body: null, status: 200 },
+    { body: { data: { issues: null } }, status: 200 },
+    { body: { data: { issues: { nodes: null } } }, status: 200 },
+    { body: { data: { issues: { nodes: {} } } }, status: 200 },
+    { body: { data: { issues: { nodes: [null] } } }, status: 200 },
+    { body: { data: { issues: { nodes: [{ identifier: "BRE-1" }] } } }, status: 200 },
+    { body: { data: { issues: { nodes: [{ identifier: "BRE-1", url: "https://linear.app/a" }, { identifier: "BRE-2", url: "https://linear.app/b" }] } } }, status: 200 },
+    { body: { data: { issues: { nodes: [] } }, errors: {} }, status: 200 },
+    { body: { data: { issues: { nodes: [] } }, errors: [{ extensions: { type: "authentication error" } }] }, status: 401 },
+    { body: { data: { issues: { nodes: [] } }, errors: [{ extensions: { type: "ratelimited" } }] }, status: 429 },
+    { body: { data: { issues: { nodes: [] } }, errors: [{ extensions: { code: "ENTITY_NOT_FOUND" } }] }, status: 200 },
+  ];
+  for (const value of invalid) {
+    let calls = 0;
+    globalThis.fetch = (async () => { calls++; return Response.json(value.body, { status: value.status }); }) as unknown as typeof fetch;
+    try {
+      await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!(report, { issueId: "10000000-0000-4000-8000-000000000111" }));
+      assert.equal(calls, 1);
+    } finally { globalThis.fetch = original; }
+  }
 });
