@@ -71,7 +71,7 @@ The authenticated owner-only API validates the file count, byte totals, canonica
 
 Linear's documented [file upload API](https://linear.app/developers/how-to-upload-a-file-to-linear) stores files in [authenticated private storage](https://linear.app/developers/file-storage-authentication). No additional bucket, public endpoint or database migration is introduced. The backend explicitly requests private uploads and validates upload/asset destinations. Only private asset receipts are cached (30-minute TTL, at most 100 entries); no media bytes or signed PUT URLs are retained in that cache. Failed submissions or server restarts can leave private unreferenced assets in Linear. There is no documented safe general-purpose deletion API; the internal destructive deletion mutation is deliberately not used. This limitation is not represented as successful remote cleanup.
 
-All verification media is synthetic; capture tests use a generated canvas stream, never the current desktop. Real Linear uploads, end-user permissions and live provider compatibility remain untested until approved activation. Fresh media results and gallery are linked from the draft PR.
+All verification media is synthetic; capture tests use a generated canvas stream, never the current desktop. Real Linear uploads, end-user permissions and live provider compatibility remain untested until approved activation. Fresh [media results and gallery](media-evidence/README.md) are also linked from the draft PR. Product source `89c5e1d4d931bf9c531820d55f2ab5f0f6c131dc` passed 2,107 local tests, production build and lint; fresh native hosted results remain the merge gate.
 
 ### Backend configuration after approval
 

@@ -1,0 +1,146 @@
+{
+  "sourceCommit": "89c5e1d4d931bf9c531820d55f2ab5f0f6c131dc",
+  "dirty": false,
+  "startedAt": "2026-11-03T01:55:41.731Z",
+  "syntheticOnly": true,
+  "scenarios": [
+    "light/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/390: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/320: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/1440: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/390: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "dark/320: corner, single message, focus, close/reopen draft, failure, double click, lost response same-ID retry, confirmed Linear link",
+    "light/1440: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "light/320: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "dark/1440: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "dark/320: valid image/video previews, remove/review gate, invalid format/image/size, frozen media retry and one synthetic ticket",
+    "Out-of-order capability checks respect newest result in both orders; known loss closes/hides and clears unsent text/media; recovery is empty",
+    "Synthetic-only capture: screenshot and real canvas MediaRecorder validated by API/delivery, stop/cancel, simulated60s limit, pending chooser close and active-recording unmount cleanup, chooser rejection; all tracks ended, audio:false"
+  ],
+  "pageErrors": [],
+  "externalRequestsBlocked": [
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.googleapis.com"
+  ],
+  "browser": "154.0.8037.57",
+  "capture": {
+    "requests": [
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      },
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      },
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      },
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      },
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      },
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      },
+      {
+        "video": {
+          "frameRate": {
+            "ideal": 15,
+            "max": 15
+          }
+        },
+        "audio": false
+      }
+    ],
+    "streams": [
+      {
+        "stops": 2,
+        "states": [
+          "ended"
+        ]
+      },
+      {
+        "stops": 2,
+        "states": [
+          "ended"
+        ]
+      },
+      {
+        "stops": 2,
+        "states": [
+          "ended"
+        ]
+      },
+      {
+        "stops": 1,
+        "states": [
+          "ended"
+        ]
+      },
+      {
+        "stops": 1,
+        "states": [
+          "ended"
+        ]
+      },
+      {
+        "stops": 2,
+        "states": [
+          "ended"
+        ]
+      }
+    ]
+  },
+  "status": "passed",
+  "finishedAt": "2026-11-03T01:56:48.461Z"
+}

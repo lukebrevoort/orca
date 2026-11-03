@@ -111,8 +111,12 @@ export async function runMediaScenarios({setup,api,shot,results}){
  const frameStart=await page.evaluate(()=>window.__feedbackCapture.frames);
  await dialog.getByRole('button',{name:'Record screen'}).click();await dialog.getByRole('button',{name:'Stop recording'}).waitFor();
  await page.waitForFunction(start=>window.__feedbackCapture.frames>=start+12,frameStart);
+ await dialog.getByRole('button',{name:'Stop recording'}).scrollIntoViewIfNeeded();await shot(page,'synthetic-recording-active');
  await dialog.getByRole('button',{name:'Stop recording'}).click();await dialog.locator('video').waitFor();await ended(page);
- await page.waitForFunction(()=>document.querySelector('.feedback-media-preview video')?.readyState>=1);await shot(page,'synthetic-recording-preview');
+ await page.waitForFunction(()=>document.querySelector('.feedback-media-preview video')?.readyState>=1);
+ await dialog.locator('video').evaluate(async video=>{video.muted=true;await video.play();});
+ await page.waitForFunction(()=>{const video=document.querySelector('.feedback-media-preview video');return video?.readyState>=2 && video.currentTime>0 && video.videoWidth>0 && video.videoHeight>0;});
+ await dialog.locator('video').evaluate(video=>video.pause());await dialog.locator('video').scrollIntoViewIfNeeded();await shot(page,'synthetic-recording-preview');
  assert(await dialog.getByRole('button',{name:'Send to Linear'}).isDisabled());
  await dialog.getByRole('checkbox',{name:reviewName}).check();await api(context,'/__fixture/delivery','POST',{outcome:'success'});
  const beforeCapture=(await api(context,'/__fixture/deliveries')).length;
