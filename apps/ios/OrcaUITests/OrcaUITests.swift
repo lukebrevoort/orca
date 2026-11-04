@@ -1650,7 +1650,9 @@ final class OrcaUITests: XCTestCase {
         // Clearing triggers InboxView's empty-search reload immediately. iOS
         // disables the keyboard Search key for an empty field, so submitting
         // again is neither a valid user action nor required to restore mail.
-        XCTAssertFalse(search.buttons["Clear text"].exists)
+        // Accessibility can retain the clear control while SwiftUI processes
+        // the tap. Wait for the same required state instead of sampling once.
+        XCTAssertTrue(search.buttons["Clear text"].waitForNonExistence(timeout: 5), "Clearing search must remove the clear control")
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 10))
     }
 
