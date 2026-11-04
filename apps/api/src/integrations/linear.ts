@@ -7,6 +7,19 @@ import type {
 const LINEAR_GRAPHQL_ENDPOINT = "https://api.linear.app/graphql";
 const LINEAR_DESCRIPTION_LIMIT = 250_000;
 
+type DeliveryStage = "reconcile" | "upload_prepare" | "upload_put" | "create";
+type DeliveryDiagnostic = { stage: DeliveryStage | "unknown"; status: number | null; reason: "timeout" | "failed" };
+const deliveryDiagnostics = new WeakMap<object, DeliveryDiagnostic>();
+
+// Never serialize upstream messages, URLs, GraphQL variables, or Error objects.
+export function feedbackDeliveryDiagnostic(error: unknown): DeliveryDiagnostic {
+  const diagnostic = error !== null && typeof error === "object" ? deliveryDiagnostics.get(error) : undefined;
+  return diagnostic ? { ...diagnostic } : { stage: "unknown", status: null, reason: "failed" };
+}
+
+type DeliveryFetch = (stage: DeliveryStage, input: string, init: RequestInit) => Promise<Response>;
+
+
 const FILE_UPLOAD_MUTATION = `
   mutation UploadFeedbackFile($contentType: String!, $filename: String!, $size: Int!) {
     fileUpload(contentType: $contentType, filename: $filename, size: $size, makePublic: false) {
@@ -205,9 +218,10 @@ function validateUploadUrls(uploadUrl: string, assetUrl: string) {
 async function uploadAttachment(
   apiKey: string,
   attachment: FeedbackReport["attachments"][number],
+  request: DeliveryFetch,
 ): Promise<string> {
   const bytes = decodeDataUrl(attachment.dataUrl);
-  const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
+  const response = await request("upload_prepare", LINEAR_GRAPHQL_ENDPOINT, {
     method: "POST",
     signal: AbortSignal.timeout(12_000),
     redirect: "error",
@@ -242,7 +256,7 @@ async function uploadAttachment(
     uploadHeaders.set(header.key, header.value);
   }
 
-  const uploadResponse = await fetch(uploadFile.uploadUrl, {
+  const uploadResponse = await request("upload_put", uploadFile.uploadUrl, {
     method: "PUT",
     signal: AbortSignal.timeout(60_000),
     redirect: "error",
@@ -293,90 +307,107 @@ export function createLinearFeedbackSubmitter(
   const uploadCacheTtlMs = 30 * 60 * 1000;
   const uploadCacheLimit = 100;
   return async (report, options) => {
-    // A server-derived UUID is also the Linear issue ID. Retrying an uncertain
-    // create cannot create a second issue; recover the receipt by that exact ID.
-    // Filtered lookup has a documented empty connection for absence, avoiding
-    // undocumented error codes from issue(id:). Include archived tickets too.
-    const recover = async () => {
-      const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
-        method: "POST", signal: AbortSignal.timeout(12_000), redirect: "error",
-        headers: { authorization: apiKey, "content-type": "application/json" },
-        body: JSON.stringify({ query: "query FeedbackIssue($id: ID!) { issues(filter: { id: { eq: $id } }, first: 1, includeArchived: true) { nodes { identifier url } } }", variables: { id: options!.issueId } }),
-      });
-      const payload: unknown = await response.json();
-      const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
-      if (!response.ok || !isObject(payload)) throw new Error("Could not reconcile Linear ticket");
-      if ("errors" in payload && (!Array.isArray(payload.errors) || payload.errors.length > 0)) throw new Error("Could not reconcile Linear ticket");
-      const nodes = isObject(payload.data) && isObject(payload.data.issues) ? payload.data.issues.nodes : undefined;
-      if (!Array.isArray(nodes) || nodes.length > 1) throw new Error("Could not reconcile Linear ticket");
-      if (nodes.length === 0) return null;
-      const existing: unknown = nodes[0];
-      if (!isObject(existing) || typeof existing.identifier !== "string" || !existing.identifier || typeof existing.url !== "string" || !existing.url) throw new Error("Could not reconcile Linear ticket");
-      return { identifier: existing.identifier, url: existing.url };
+    let stage: DeliveryStage = "create";
+    let status: number | null = null;
+    const request: DeliveryFetch = async (nextStage, input, init) => {
+      stage = nextStage; status = null;
+      const response = await fetch(input, init);
+      status = response.status;
+      return response;
     };
-    if (options) {
-      const existing = await recover();
-      if (existing) return existing;
-    }
-    for (const [key, value] of uploads) if (value.expiresAt <= Date.now()) uploads.delete(key);
-    const attachmentUrls = new Map<string, string>();
-    for (const attachment of report.attachments) {
-      const key = options ? `${options.issueId}:${createHash("sha256").update(JSON.stringify(attachment)).digest("hex")}` : undefined;
-      let assetUrl = key ? uploads.get(key)?.assetUrl : undefined;
-      if (!assetUrl) {
-        assetUrl = await uploadAttachment(apiKey, attachment);
-        if (key) {
-          uploads.set(key, { assetUrl, expiresAt: Date.now() + uploadCacheTtlMs });
-          while (uploads.size > uploadCacheLimit) uploads.delete(uploads.keys().next().value!);
-        }
+    try {
+      // A server-derived UUID is also the Linear issue ID. Retrying an uncertain
+      // create cannot create a second issue; recover the receipt by that exact ID.
+      // Filtered lookup has a documented empty connection for absence, avoiding
+      // undocumented error codes from issue(id:). Include archived tickets too.
+      const recover = async () => {
+        const response = await request("reconcile", LINEAR_GRAPHQL_ENDPOINT, {
+          method: "POST", signal: AbortSignal.timeout(12_000), redirect: "error",
+          headers: { authorization: apiKey, "content-type": "application/json" },
+          body: JSON.stringify({ query: "query FeedbackIssue($id: ID!) { issues(filter: { id: { eq: $id } }, first: 1, includeArchived: true) { nodes { identifier url } } }", variables: { id: options!.issueId } }),
+        });
+        const payload: unknown = await response.json();
+        const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+        if (!response.ok || !isObject(payload)) throw new Error("Could not reconcile Linear ticket");
+        if ("errors" in payload && (!Array.isArray(payload.errors) || payload.errors.length > 0)) throw new Error("Could not reconcile Linear ticket");
+        const nodes = isObject(payload.data) && isObject(payload.data.issues) ? payload.data.issues.nodes : undefined;
+        if (!Array.isArray(nodes) || nodes.length > 1) throw new Error("Could not reconcile Linear ticket");
+        if (nodes.length === 0) return null;
+        const existing: unknown = nodes[0];
+        if (!isObject(existing) || typeof existing.identifier !== "string" || !existing.identifier || typeof existing.url !== "string" || !existing.url) throw new Error("Could not reconcile Linear ticket");
+        return { identifier: existing.identifier, url: existing.url };
+      };
+      if (options) {
+        const existing = await recover();
+        if (existing) return existing;
       }
-      attachmentUrls.set(attachment.id, assetUrl);
-    }
+      for (const [key, value] of uploads) if (value.expiresAt <= Date.now()) uploads.delete(key);
+      const attachmentUrls = new Map<string, string>();
+      for (const attachment of report.attachments) {
+        const key = options ? `${options.issueId}:${createHash("sha256").update(JSON.stringify(attachment)).digest("hex")}` : undefined;
+        let assetUrl = key ? uploads.get(key)?.assetUrl : undefined;
+        if (!assetUrl) {
+          assetUrl = await uploadAttachment(apiKey, attachment, request);
+          if (key) {
+            uploads.set(key, { assetUrl, expiresAt: Date.now() + uploadCacheTtlMs });
+            while (uploads.size > uploadCacheLimit) uploads.delete(uploads.keys().next().value!);
+          }
+        }
+        attachmentUrls.set(attachment.id, assetUrl);
+      }
 
-    const description = formatDescription(report, attachmentUrls);
-    if (description.length > LINEAR_DESCRIPTION_LIMIT) {
-      throw new Error(
-        `Linear description is too long (${description.length} characters; maximum is ${LINEAR_DESCRIPTION_LIMIT}).`,
-      );
-    }
+      stage = "create"; status = null;
+      const description = formatDescription(report, attachmentUrls);
+      if (description.length > LINEAR_DESCRIPTION_LIMIT) {
+        throw new Error(
+          `Linear description is too long (${description.length} characters; maximum is ${LINEAR_DESCRIPTION_LIMIT}).`,
+        );
+      }
 
-    const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
-      method: "POST",
-      signal: AbortSignal.timeout(12_000),
-      redirect: "error",
-      headers: {
-        authorization: apiKey,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        query: ISSUE_CREATE_MUTATION,
-        variables: {
-          input: {
-            ...(options ? { id: options.issueId } : {}),
-            assigneeId: destination.assigneeId,
-            description,
-            labelIds: [destination.feedbackLabelId],
-            priority: PRIORITY_BY_SEVERITY[report.severity],
-            projectId: destination.projectId,
-            stateId: destination.backlogStateId,
-            teamId: destination.teamId,
-            title: `[Feedback] ${report.title}`,
-          },
+      const response = await request("create", LINEAR_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        signal: AbortSignal.timeout(12_000),
+        redirect: "error",
+        headers: {
+          authorization: apiKey,
+          "content-type": "application/json",
         },
-      }),
-    });
+        body: JSON.stringify({
+          query: ISSUE_CREATE_MUTATION,
+          variables: {
+            input: {
+              ...(options ? { id: options.issueId } : {}),
+              assigneeId: destination.assigneeId,
+              description,
+              labelIds: [destination.feedbackLabelId],
+              priority: PRIORITY_BY_SEVERITY[report.severity],
+              projectId: destination.projectId,
+              stateId: destination.backlogStateId,
+              teamId: destination.teamId,
+              title: `[Feedback] ${report.title}`,
+            },
+          },
+        }),
+      });
 
-    const payload = (await response.json().catch(() => ({}))) as LinearResponse;
-    const graphQLErrorMessage = linearErrorMessage(payload.errors);
-    const issue = payload.data?.issueCreate?.issue;
-    if (!response.ok || graphQLErrorMessage || !payload.data?.issueCreate?.success || !issue) {
-      if (options) { const existing = await recover(); if (existing) return existing; }
-      throw new Error(graphQLErrorMessage ?? `Linear issue creation failed (${response.status}).`);
+      const payload = (await response.json().catch(() => ({}))) as LinearResponse;
+      const graphQLErrorMessage = linearErrorMessage(payload.errors);
+      const issue = payload.data?.issueCreate?.issue;
+      if (!response.ok || graphQLErrorMessage || !payload.data?.issueCreate?.success || !issue) {
+        if (options) { const existing = await recover(); if (existing) return existing; }
+        stage = "create"; status = response.status;
+        throw new Error(graphQLErrorMessage ?? `Linear issue creation failed (${response.status}).`);
+      }
+
+      return {
+        identifier: issue.identifier,
+        url: issue.url,
+      };
+    } catch (error) {
+      if (error !== null && typeof error === "object") {
+        deliveryDiagnostics.set(error, { stage, status, reason: error instanceof Error && error.name === "TimeoutError" ? "timeout" : "failed" });
+      }
+      throw error;
     }
-
-    return {
-      identifier: issue.identifier,
-      url: issue.url,
-    };
   };
 }

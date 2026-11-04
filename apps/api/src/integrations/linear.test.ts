@@ -339,3 +339,38 @@ test("filtered reconciliation rejects malformed nodes and upstream errors before
     } finally { globalThis.fetch = original; }
   }
 });
+
+test("delivery diagnostics expose only stage, HTTP status and bounded reason", async () => {
+  const { feedbackDeliveryDiagnostic } = await import("./linear.ts");
+  const originalFetch = globalThis.fetch;
+  const secret = "private-note-media-signed-url-api-key";
+  try {
+    for (const stage of ["reconcile", "upload_prepare", "upload_put", "create"] as const) {
+      globalThis.fetch = (async (url, init) => {
+        const body = String(init?.body);
+        const current = String(url).startsWith("https://storage.googleapis.com/") ? "upload_put"
+          : body.includes("query FeedbackIssue") ? "reconcile" : body.includes("UploadFeedbackFile") ? "upload_prepare" : "create";
+        if (current === stage) return Response.json({ errors: [{ message: secret }] }, { status: 403 });
+        if (current === "reconcile") return Response.json({ data: { issues: { nodes: [] } } });
+        if (current === "upload_prepare") return Response.json({ data: { fileUpload: { success: true, uploadFile: {
+          uploadUrl: "https://storage.googleapis.com/linear-production/file?secret=" + secret,
+          assetUrl: "https://uploads.linear.app/file", headers: [],
+        } } } });
+        return new Response(null, { status: 200 });
+      }) as typeof fetch;
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!;
+      // Create without reconciliation so its failure is the final failing operation.
+      await assert.rejects(send(report, stage === "create" ? undefined : { issueId: "10000000-0000-4000-8000-000000000111" }), error => {
+        assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage, status: 403, reason: "failed" });
+        assert.ok(!JSON.stringify(feedbackDeliveryDiagnostic(error)).includes(secret));
+        return true;
+      });
+    }
+    globalThis.fetch = (async () => { throw new DOMException(secret, "TimeoutError"); }) as unknown as typeof fetch;
+    await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!(report), error => {
+      assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage: "upload_prepare", status: null, reason: "timeout" });
+      return true;
+    });
+    assert.deepEqual(feedbackDeliveryDiagnostic(new Error(secret)), { stage: "unknown", status: null, reason: "failed" });
+  } finally { globalThis.fetch = originalFetch; }
+});

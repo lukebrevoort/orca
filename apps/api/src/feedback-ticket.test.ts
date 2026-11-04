@@ -196,3 +196,16 @@ test("MP4 signatures recognize registered newer and compatible ftyp brands witho
   const oversizedHeader = container("iso9", Array(1024).fill("iso9"));
   expect(validFeedbackAttachment({ ...media(oversizedHeader, "video/mp4"), mimeType: "video/mp4" })).toBe(false);
 });
+
+test("delivery failure logs exclude raw exceptions and submission contents", async () => {
+  const original = console.error;
+  const logs: unknown[][] = [];
+  console.error = (...args: unknown[]) => { logs.push(args); };
+  try {
+    const a = app(async () => { throw new Error("private-note credential signed-upload-url"); });
+    const response = await a.request(path, post(submission()));
+    expect(response.status).toBe(502);
+    expect(logs).toEqual([[JSON.stringify({ event: "feedback_delivery_failed", stage: "unknown", status: null, reason: "failed" })]]);
+    expect((await response.json()).error.code).toBe("feedback_delivery_failed");
+  } finally { console.error = original; }
+});

@@ -5,7 +5,7 @@ import type { FeedbackReport } from "@feedback-kit/core";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { readBoundedRequestBody } from "./request-body.ts";
-import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
+import { createLinearFeedbackSubmitter, feedbackDeliveryDiagnostic } from "./integrations/linear.ts";
 
 export type FeedbackTicketDelivery = (report: FeedbackReport, options: { issueId: string }) => Promise<FeedbackTicketReceipt>;
 
@@ -125,7 +125,8 @@ export function registerFeedbackTicketRoutes(app: Hono<{ Variables: AuthVariable
         const receipt = await pending;
         if (!validReceipt(receipt)) throw new Error("Invalid Linear receipt");
         return c.json({ identifier: receipt.identifier, url: receipt.url }, 201);
-      } catch {
+      } catch (error) {
+        console.error(JSON.stringify({ event: "feedback_delivery_failed", ...feedbackDeliveryDiagnostic(error) }));
         // A timeout may follow a successful create. Keep the same request payload
         // on retry so Linear can confirm the existing issue without duplication.
         return c.json({ error: { code: "feedback_delivery_failed", message: "Could not confirm your Linear ticket. Keep this message and retry." } }, 502);
