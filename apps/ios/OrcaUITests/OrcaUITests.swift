@@ -588,12 +588,15 @@ final class OrcaUITests: XCTestCase {
         let app = try launchApp(); assertInboxLoaded(in: app)
         app.tabBars.buttons["Drafts"].tap()
         let serverRow = app.descendants(matching: .any)["draft.\(id)"]
+        // Earlier journeys leave local drafts above the lazy server section.
+        revealDraftRow(serverRow, in: app)
         XCTAssertTrue(serverRow.waitForExistence(timeout: 10)); serverRow.tap()
         XCTAssertTrue(messageBody(in: app).waitForExistence(timeout: 5))
         navigateBack(in: app)
         // A UUID local row distinct from the server row proves the production
         // autosave finished before the remote delivery transition.
         let localCopy = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND identifier != %@ AND label CONTAINS %@", "draft.", "draft.\(id)", subject)).firstMatch
+        revealDraftRow(localCopy, in: app)
         XCTAssertTrue(localCopy.waitForExistence(timeout: 10))
         _ = try composeFixtureRequest("__fixture/compose/delivery", method: "POST", body: ["draftId": id, "status": "sent"])
         let marker = try createComposeFixtureDraft(subject: "Reload marker " + UUID().uuidString)
