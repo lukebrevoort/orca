@@ -450,7 +450,7 @@ test("upload URL predicate diagnostics stay bounded and preserve rejection prece
         return Response.json({ data: { fileUpload: { success: true, uploadFile: {
           uploadUrl, assetUrl, headers: [{ key: "x-goog-meta-test", value: secret }],
         } } } });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
       const privateReport = { ...report, id: secret, description: secret,
         attachments: [{ ...report.attachments[0]!, name: secret }] };
       await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!(privateReport), error => {
