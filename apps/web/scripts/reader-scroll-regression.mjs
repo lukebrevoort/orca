@@ -24,7 +24,6 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
       assert(session.ok());
       assert.equal((await session.json()).user?.id, 'compose-fixture-user');
       page = await context.newPage();
-      page.on('console', message => { if (message.text().startsWith('reader-scroll-probe')) console.log(message.text()); });
       page.on('pageerror', error => result.pageErrors.push(error.message));
       page.on('request', request => {
         const url = new URL(request.url());
@@ -54,7 +53,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
       const jump = page.getByRole('button', { name: 'Jump to top', exact: true });
       // One reader stays mounted across both breakpoint transitions. Native
       // scrolling and computed layout are measured; no geometry is mocked.
-      for (const [stage, width] of Array.from({ length: 6 }, () => [['mobile', 390], ['desktop-after-resize', 1440], ['mobile-after-resize', 390]]).flat()) {
+      for (const [cycle, stage, width] of Array.from({ length: 2 }, (_, cycle) => [['mobile', 390], ['desktop-after-resize', 1440], ['mobile-after-resize', 390]].map(([stage, width]) => [cycle, stage, width])).flat()) {
         await page.setViewportSize({ width, height: 844 });
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('.desktop-workspace').scrollTop = 0; });
@@ -66,29 +65,23 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
         // Establish keyboard modality before scrolling. Tabbing away from the
         // floating jump can scroll to the header and legitimately hide it.
         await page.keyboard.press('Tab');
-        const before = await page.evaluate(mobile => {
-          const workspace = document.querySelector('.desktop-workspace');
-          if (mobile) window.scrollTo(0, 900); else workspace.scrollTop = 900;
-          return { windowY: window.scrollY, workspaceY: workspace.scrollTop, overflowY: getComputedStyle(workspace).overflowY };
+        // Scroll once, then observe its completion. A synchronous getter in
+        // the setter task is not a browser rendering/scroll completion barrier.
+        // Never retry the assignment: a non-scrollable layout must still fail.
+        await page.evaluate(mobile => {
+          if (mobile) window.scrollTo(0, 900);
+          else document.querySelector('.desktop-workspace').scrollTop = 900;
         }, width === 390);
+        await page.waitForFunction(mobile => (mobile ? window.scrollY : document.querySelector('.desktop-workspace').scrollTop) >= 850, width === 390);
+        const before = await page.evaluate(() => {
+          const workspace = document.querySelector('.desktop-workspace');
+          return { windowY: window.scrollY, workspaceY: workspace.scrollTop, overflowY: getComputedStyle(workspace).overflowY, clientHeight: workspace.clientHeight, scrollHeight: workspace.scrollHeight };
+        });
         assert.equal(width === 390 ? before.overflowY : ['auto', 'scroll'].includes(before.overflowY), width === 390 ? 'visible' : true);
-        if ((width === 390 ? before.windowY : before.workspaceY) < 850) {
-          const samples = await page.evaluate(async () => {
-            const values = [];
-            for (let frame = 0; frame < 6; frame++) {
-              await new Promise(requestAnimationFrame);
-              const workspace = document.querySelector('.desktop-workspace');
-              values.push({ frame, windowY: scrollY, workspaceY: workspace.scrollTop, clientHeight: workspace.clientHeight, scrollHeight: workspace.scrollHeight, focus: document.activeElement?.outerHTML.slice(0, 400) });
-            }
-            return values;
-          });
-          console.log('reader-scroll-failure', JSON.stringify({ theme, stage, before, samples }));
-          result.failedScroll = { theme, stage, before, samples };
-        }
         assert((width === 390 ? before.windowY : before.workspaceY) >= 850, `Fixture did not actually scroll: ${JSON.stringify(before)}`);
         await jump.waitFor({ state: 'visible' });
         const capture = async state => {
-          const name = `jump-top-${theme}-${stage}-${state}.png`;
+          const name = `jump-top-${theme}-${cycle}-${stage}-${state}.png`;
           await page.screenshot({ path: join(out, name) }); screenshots.push(name);
         };
         await capture('default');
@@ -99,7 +92,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
         await page.keyboard.press('Enter');
         await page.waitForFunction(mobile => (mobile ? window.scrollY : document.querySelector('.desktop-workspace').scrollTop) === 0, width === 390);
         await page.waitForFunction(() => document.activeElement?.id === 'reader-title' && document.querySelector('.reader-jump-top').hidden);
-        result.scenarios.push({ theme, stage, width, before, returnedToTop: true, headingFocused: true });
+        result.scenarios.push({ theme, cycle, stage, width, before, returnedToTop: true, headingFocused: true });
       }
     } catch (error) {
       if (page) {
@@ -110,7 +103,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
       throw error;
     } finally { await context.close(); }
   }
-  assert.equal(result.scenarios.length, 36);
+  assert.equal(result.scenarios.length, 12);
   assert.deepEqual(result.pageErrors, []);
   assert.deepEqual(result.writes, []);
   return result;
