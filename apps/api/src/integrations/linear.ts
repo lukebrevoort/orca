@@ -8,7 +8,7 @@ const LINEAR_GRAPHQL_ENDPOINT = "https://api.linear.app/graphql";
 const LINEAR_DESCRIPTION_LIMIT = 250_000;
 
 type DeliveryStage = "reconcile" | "upload_prepare" | "upload_put" | "create";
-type UploadFailureReason = "upload_graphql" | "upload_response" | "upload_url" | "asset_url" | "upload_headers";
+type UploadFailureReason = "upload_graphql" | "upload_response" | "upload_url_parse" | "upload_url_protocol" | "upload_url_userinfo" | "upload_url_port" | "upload_url_fragment" | "upload_url_bucket" | "upload_url_host" | "asset_url" | "upload_headers";
 class UploadPreparationError extends Error {
   constructor(readonly reason: UploadFailureReason) { super("Linear upload preparation failed"); }
 }
@@ -198,12 +198,19 @@ function markdownLabel(value: string) {
 }
 function validateUploadUrls(uploadUrl: string, assetUrl: string) {
   let upload: URL, asset: URL;
-  try { upload = new URL(uploadUrl); } catch { throw new UploadPreparationError("upload_url"); }
+  try { upload = new URL(uploadUrl); } catch { throw new UploadPreparationError("upload_url_parse"); }
   try { asset = new URL(assetUrl); } catch { throw new UploadPreparationError("asset_url"); }
   const secure = (url: URL) => url.protocol === "https:" && !url.username && !url.password && !url.port && !url.hash;
   const googleBucket = upload.hostname === "storage.googleapis.com" && /^\/linear-[a-z0-9-]+\//.test(upload.pathname);
   const googleBucketHost = /^linear-[a-z0-9-]+\.storage\.googleapis\.com$/.test(upload.hostname);
-  if (!secure(upload) || !(googleBucket || googleBucketHost || upload.hostname === "uploads.linear.app")) throw new UploadPreparationError("upload_url");
+  // Fixed codes only. Preserve parsing/check precedence and the existing allowlist.
+  if (upload.protocol !== "https:") throw new UploadPreparationError("upload_url_protocol");
+  if (upload.username || upload.password) throw new UploadPreparationError("upload_url_userinfo");
+  if (upload.port) throw new UploadPreparationError("upload_url_port");
+  if (upload.hash) throw new UploadPreparationError("upload_url_fragment");
+  if (!(googleBucket || googleBucketHost || upload.hostname === "uploads.linear.app")) {
+    throw new UploadPreparationError(upload.hostname === "storage.googleapis.com" ? "upload_url_bucket" : "upload_url_host");
+  }
   if (!secure(asset) || asset.hostname !== "uploads.linear.app" || asset.search || /\s/.test(assetUrl)) throw new UploadPreparationError("asset_url");
 }
 

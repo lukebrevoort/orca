@@ -388,8 +388,8 @@ test("upload preparation validates the response contract without disclosing priv
     [{ ...success(upload), errors: [{ extensions: { code: secret } }] }, "upload_graphql"],
     [{ ...success(upload), errors: { message: secret } }, "upload_graphql"],
     [success(null), "upload_response"], [success({ ...upload, uploadUrl: 42 }), "upload_response"],
-    [success({ ...upload, uploadUrl: "invalid:" + secret }), "upload_url"],
-    [success({ ...upload, uploadUrl: "https://untrusted.example/" + secret }), "upload_url"],
+    [success({ ...upload, uploadUrl: "invalid:" + secret }), "upload_url_protocol"],
+    [success({ ...upload, uploadUrl: "https://untrusted.example/" + secret }), "upload_url_host"],
     [success({ ...upload, assetUrl: upload.assetUrl + "?signature=" + secret }), "asset_url"],
     [success({ ...upload, headers: null }), "upload_headers"],
     [success({ ...upload, headers: [{ key: "authorization", value: secret }] }), "upload_headers"],
@@ -406,6 +406,95 @@ test("upload preparation validates the response contract without disclosing priv
         return true;
       });
       assert.equal(requests, 1, "No PUT or ticket create may follow rejected preparation");
+    }
+  } finally { globalThis.fetch = original; }
+});
+
+test("upload URL predicate diagnostics stay bounded and preserve rejection precedence", async () => {
+  const { feedbackDeliveryDiagnostic } = await import("./linear.ts");
+  const original = globalThis.fetch;
+  const secret = "private-feedback-user-filename-header-signature";
+  const asset = "https://uploads.linear.app/" + secret;
+  const cases: [string, string, string?][] = [
+    ["https://[" + secret, "upload_url_parse"],
+    ["http://uploads.linear.app/" + secret, "upload_url_protocol"],
+    ["invalid:" + secret, "upload_url_protocol"],
+    [`https://${secret}@uploads.linear.app/file`, "upload_url_userinfo"],
+    [`https://:${secret}@uploads.linear.app/file`, "upload_url_userinfo"],
+    [`https://uploads.linear.app:8443/${secret}`, "upload_url_port"],
+    [`https://uploads.linear.app/file#${secret}`, "upload_url_fragment"],
+    [`https://storage.googleapis.com/${secret}/file`, "upload_url_bucket"],
+    ["https://storage.googleapis.com/linear-/file", "upload_url_bucket"],
+    ["https://storage.googleapis.com/linear-production", "upload_url_bucket"],
+    ["https://storage.googleapis.com/linear-Production/file", "upload_url_bucket"],
+    [`https://${secret}.example/file`, "upload_url_host"],
+    ["https://linear-production.storage.googleapis.com.evil.example/file", "upload_url_host"],
+    ["https://uploads.linear.app.evil.example/file", "upload_url_host"],
+    ["https://linear-.storage.googleapis.com/file", "upload_url_host"],
+    // Preserve old parsing precedence: upload parse, asset parse, upload checks, asset checks.
+    ["https://[", "upload_url_parse", "https://["],
+    ["http://untrusted.example/file", "asset_url", "https://["],
+    [`http://${secret}@untrusted.example:8443/file#fragment`, "upload_url_protocol"],
+    [`https://${secret}@untrusted.example:8443/file#fragment`, "upload_url_userinfo"],
+    ["https://untrusted.example:8443/file#fragment", "upload_url_port"],
+    ["https://untrusted.example/file#fragment", "upload_url_fragment"],
+    ["https://untrusted.example/file", "upload_url_host", "http://uploads.linear.app/file"],
+    ["https://uploads.linear.app/file", "asset_url", asset + "?signature=" + secret],
+    ["https://uploads.linear.app/file", "asset_url", "https://untrusted.example/file"],
+  ];
+  try {
+    for (const [uploadUrl, reason, assetUrl = asset] of cases) {
+      let requests = 0;
+      globalThis.fetch = (async () => {
+        requests++;
+        return Response.json({ data: { fileUpload: { success: true, uploadFile: {
+          uploadUrl, assetUrl, headers: [{ key: "x-goog-meta-test", value: secret }],
+        } } } });
+      }) as unknown as typeof fetch;
+      const privateReport = { ...report, id: secret, description: secret,
+        attachments: [{ ...report.attachments[0]!, name: secret }] };
+      await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!(privateReport), error => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message, "Linear upload preparation failed");
+        assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage: "upload_prepare", status: 200, reason });
+        const event = JSON.stringify({ event: "feedback_delivery_failed", ...feedbackDeliveryDiagnostic(error) });
+        assert.ok(!event.includes(secret));
+        assert.deepEqual(Object.keys(JSON.parse(event)), ["event", "stage", "status", "reason"]);
+        return true;
+      });
+      assert.equal(requests, 1, "Rejected preparation must not PUT or create a ticket");
+    }
+  } finally { globalThis.fetch = original; }
+});
+
+test("accepted upload URL forms retain the exact PUT URL and redirect restriction", async () => {
+  const original = globalThis.fetch;
+  const urls = [
+    "https://storage.googleapis.com/linear-production/file?signature=private",
+    "https://linear-production.storage.googleapis.com/file?signature=private",
+    "https://uploads.linear.app/file?signature=private",
+    // URL parsing already normalizes default ports, host case, and empty fragments.
+    "https://UPLOADS.LINEAR.APP:443/file?signature=private#",
+    "https://storage.googleapis.com/linear-a-1/file",
+  ];
+  try {
+    for (const uploadUrl of urls) {
+      const calls: { url: string; init: RequestInit | undefined }[] = [];
+      globalThis.fetch = (async (url, init) => {
+        calls.push({ url: String(url), init });
+        if (calls.length === 1) return Response.json({ data: { fileUpload: { success: true, uploadFile: {
+          uploadUrl, assetUrl: "https://uploads.linear.app/private/file", headers: [],
+        } } } });
+        if (calls.length === 2) return new Response(null, { status: 200 });
+        return Response.json({ data: { issueCreate: { success: true, issue: {
+          identifier: "BRE-1", url: "https://linear.app/brevoort/issue/BRE-1", title: "Test",
+        } } } });
+      }) as typeof fetch;
+      await createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-key" })!(report);
+      assert.equal(calls.length, 3);
+      assert.equal(calls[1]!.url, uploadUrl, "Do not rewrite signed URLs");
+      assert.equal(calls[1]!.init?.method, "PUT");
+      assert.ok(calls.every(call => call.init?.redirect === "error"));
     }
   } finally { globalThis.fetch = original; }
 });
