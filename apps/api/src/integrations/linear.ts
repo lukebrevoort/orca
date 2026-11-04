@@ -8,7 +8,11 @@ const LINEAR_GRAPHQL_ENDPOINT = "https://api.linear.app/graphql";
 const LINEAR_DESCRIPTION_LIMIT = 250_000;
 
 type DeliveryStage = "reconcile" | "upload_prepare" | "upload_put" | "create";
-type DeliveryDiagnostic = { stage: DeliveryStage | "unknown"; status: number | null; reason: "timeout" | "failed" };
+type UploadFailureReason = "upload_graphql" | "upload_response" | "upload_url" | "asset_url" | "upload_headers";
+class UploadPreparationError extends Error {
+  constructor(readonly reason: UploadFailureReason) { super("Linear upload preparation failed"); }
+}
+type DeliveryDiagnostic = { stage: DeliveryStage | "unknown"; status: number | null; reason: "timeout" | "failed" | UploadFailureReason };
 const deliveryDiagnostics = new WeakMap<object, DeliveryDiagnostic>();
 
 // Never serialize upstream messages, URLs, GraphQL variables, or Error objects.
@@ -89,19 +93,6 @@ type LinearResponse = {
     };
   };
   errors?: LinearGraphQLError[];
-};
-
-type LinearUploadResponse = LinearResponse & {
-  data?: {
-    fileUpload?: {
-      success: boolean;
-      uploadFile?: {
-        uploadUrl: string;
-        assetUrl: string;
-        headers: Array<{ key: string; value: string }>;
-      } | null;
-    };
-  };
 };
 
 type LinearEnvironment = Record<string, string | undefined>;
@@ -206,13 +197,14 @@ function markdownLabel(value: string) {
   return value.replace(/[\\[\]()!*_<>`]/g, "\\$&").replace(/[\r\n]/g, " ");
 }
 function validateUploadUrls(uploadUrl: string, assetUrl: string) {
-  const upload = new URL(uploadUrl);
-  const asset = new URL(assetUrl);
+  let upload: URL, asset: URL;
+  try { upload = new URL(uploadUrl); } catch { throw new UploadPreparationError("upload_url"); }
+  try { asset = new URL(assetUrl); } catch { throw new UploadPreparationError("asset_url"); }
   const secure = (url: URL) => url.protocol === "https:" && !url.username && !url.password && !url.port && !url.hash;
   const googleBucket = upload.hostname === "storage.googleapis.com" && /^\/linear-[a-z0-9-]+\//.test(upload.pathname);
   const googleBucketHost = /^linear-[a-z0-9-]+\.storage\.googleapis\.com$/.test(upload.hostname);
-  if (!secure(upload) || !(googleBucket || googleBucketHost || upload.hostname === "uploads.linear.app")) throw new Error("Unexpected upload destination");
-  if (!secure(asset) || asset.hostname !== "uploads.linear.app" || asset.search || /\s/.test(assetUrl)) throw new Error("Unexpected asset destination");
+  if (!secure(upload) || !(googleBucket || googleBucketHost || upload.hostname === "uploads.linear.app")) throw new UploadPreparationError("upload_url");
+  if (!secure(asset) || asset.hostname !== "uploads.linear.app" || asset.search || /\s/.test(assetUrl)) throw new UploadPreparationError("asset_url");
 }
 
 async function uploadAttachment(
@@ -239,21 +231,26 @@ async function uploadAttachment(
     }),
   });
 
-  const payload = (await response.json().catch(() => ({}))) as LinearUploadResponse;
-  const errorMessage = linearErrorMessage(payload.errors);
-  const uploadFile = payload.data?.fileUpload?.uploadFile;
-  if (!response.ok || errorMessage || !payload.data?.fileUpload?.success || !uploadFile) {
-    throw new Error(errorMessage ?? `Linear attachment upload failed (${response.status}).`);
+  const payload: unknown = await response.json().catch(() => null);
+  const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+  if (!isObject(payload)) throw new UploadPreparationError("upload_response");
+  if ("errors" in payload && (!Array.isArray(payload.errors) || payload.errors.length > 0)) throw new UploadPreparationError("upload_graphql");
+  const result = isObject(payload.data) ? payload.data.fileUpload : undefined;
+  const uploadFile = isObject(result) ? result.uploadFile : undefined;
+  if (!response.ok || !isObject(result) || result.success !== true || !isObject(uploadFile) ||
+      typeof uploadFile.uploadUrl !== "string" || typeof uploadFile.assetUrl !== "string") {
+    throw new UploadPreparationError("upload_response");
   }
-
   validateUploadUrls(uploadFile.uploadUrl, uploadFile.assetUrl);
   const uploadHeaders = new Headers({
     "Content-Type": attachment.mimeType,
     "Cache-Control": "private, no-store",
   });
+  if (!Array.isArray(uploadFile.headers)) throw new UploadPreparationError("upload_headers");
   for (const header of uploadFile.headers) {
-    if (!/^(content-type|cache-control|x-goog-[a-z0-9-]+|x-amz-[a-z0-9-]+)$/i.test(header.key)) throw new Error("Unexpected upload header");
-    uploadHeaders.set(header.key, header.value);
+    if (!isObject(header) || typeof header.key !== "string" || typeof header.value !== "string" ||
+        !/^(content-type|cache-control|x-goog-[a-z0-9-]+|x-amz-[a-z0-9-]+)$/i.test(header.key)) throw new UploadPreparationError("upload_headers");
+    try { uploadHeaders.set(header.key, header.value); } catch { throw new UploadPreparationError("upload_headers"); }
   }
 
   const uploadResponse = await request("upload_put", uploadFile.uploadUrl, {
@@ -405,7 +402,7 @@ export function createLinearFeedbackSubmitter(
       };
     } catch (error) {
       if (error !== null && typeof error === "object") {
-        deliveryDiagnostics.set(error, { stage, status, reason: error instanceof Error && error.name === "TimeoutError" ? "timeout" : "failed" });
+        deliveryDiagnostics.set(error, { stage, status, reason: error instanceof UploadPreparationError ? error.reason : error instanceof Error && error.name === "TimeoutError" ? "timeout" : "failed" });
       }
       throw error;
     }

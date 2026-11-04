@@ -361,7 +361,7 @@ test("delivery diagnostics expose only stage, HTTP status and bounded reason", a
       const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!;
       // Create without reconciliation so its failure is the final failing operation.
       await assert.rejects(send(report, stage === "create" ? undefined : { issueId: "10000000-0000-4000-8000-000000000111" }), error => {
-        assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage, status: 403, reason: "failed" });
+        assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage, status: 403, reason: stage === "upload_prepare" ? "upload_graphql" : "failed" });
         assert.ok(!JSON.stringify(feedbackDeliveryDiagnostic(error)).includes(secret));
         return true;
       });
@@ -373,4 +373,39 @@ test("delivery diagnostics expose only stage, HTTP status and bounded reason", a
     });
     assert.deepEqual(feedbackDeliveryDiagnostic(new Error(secret)), { stage: "unknown", status: null, reason: "failed" });
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test("upload preparation validates the response contract without disclosing private metadata or uploading on failure", async () => {
+  const { feedbackDeliveryDiagnostic } = await import("./linear.ts");
+  const original = globalThis.fetch;
+  const secret = "private-signed-url-or-feedback";
+  const upload = { uploadUrl: "https://storage.googleapis.com/linear-production/file?signature=" + secret,
+    assetUrl: "https://uploads.linear.app/private/file", headers: [{ key: "x-goog-meta-test", value: secret }] };
+  const success = (file: unknown) => ({ data: { fileUpload: { success: true, uploadFile: file } } });
+  const cases: [unknown, string][] = [
+    [null, "upload_response"], [[], "upload_response"], [{}, "upload_response"],
+    [{ errors: [{ message: secret }] }, "upload_graphql"],
+    [{ ...success(upload), errors: [{ extensions: { code: secret } }] }, "upload_graphql"],
+    [{ ...success(upload), errors: { message: secret } }, "upload_graphql"],
+    [success(null), "upload_response"], [success({ ...upload, uploadUrl: 42 }), "upload_response"],
+    [success({ ...upload, uploadUrl: "invalid:" + secret }), "upload_url"],
+    [success({ ...upload, uploadUrl: "https://untrusted.example/" + secret }), "upload_url"],
+    [success({ ...upload, assetUrl: upload.assetUrl + "?signature=" + secret }), "asset_url"],
+    [success({ ...upload, headers: null }), "upload_headers"],
+    [success({ ...upload, headers: [{ key: "authorization", value: secret }] }), "upload_headers"],
+    [success({ ...upload, headers: [{ key: "x-goog-meta-test", value: "a\r\n" + secret }] }), "upload_headers"],
+    [success({ ...upload, headers: [null] }), "upload_headers"],
+  ];
+  try {
+    for (const [payload, reason] of cases) {
+      let requests = 0;
+      globalThis.fetch = (async () => { requests++; return Response.json(payload); }) as unknown as typeof fetch;
+      await assert.rejects(createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!(report), error => {
+        assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage: "upload_prepare", status: 200, reason });
+        assert.ok(!JSON.stringify(feedbackDeliveryDiagnostic(error)).includes(secret));
+        return true;
+      });
+      assert.equal(requests, 1, "No PUT or ticket create may follow rejected preparation");
+    }
+  } finally { globalThis.fetch = original; }
 });
