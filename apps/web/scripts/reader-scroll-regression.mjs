@@ -54,7 +54,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
       const jump = page.getByRole('button', { name: 'Jump to top', exact: true });
       // One reader stays mounted across both breakpoint transitions. Native
       // scrolling and computed layout are measured; no geometry is mocked.
-      for (const [stage, width] of [['mobile', 390], ['desktop-after-resize', 1440], ['mobile-after-resize', 390]]) {
+      for (const [stage, width] of Array.from({ length: 6 }, () => [['mobile', 390], ['desktop-after-resize', 1440], ['mobile-after-resize', 390]]).flat()) {
         await page.setViewportSize({ width, height: 844 });
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('.desktop-workspace').scrollTop = 0; });
@@ -68,10 +68,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
         await page.keyboard.press('Tab');
         const before = await page.evaluate(mobile => {
           const workspace = document.querySelector('.desktop-workspace');
-          const geometry = () => ({ width: innerWidth, height: innerHeight, clientHeight: workspace.clientHeight, scrollHeight: workspace.scrollHeight, documentHeight: document.documentElement.scrollHeight, bodyHeight: document.body.scrollHeight, focus: document.activeElement?.outerHTML.slice(0, 400), behavior: getComputedStyle(workspace).scrollBehavior });
-          const geometryBefore = geometry();
           if (mobile) window.scrollTo(0, 900); else workspace.scrollTop = 900;
-          console.log('reader-scroll-probe', JSON.stringify({ mobile, geometryBefore, geometryAfter: geometry(), windowY: window.scrollY, workspaceY: workspace.scrollTop }));
           return { windowY: window.scrollY, workspaceY: workspace.scrollTop, overflowY: getComputedStyle(workspace).overflowY };
         }, width === 390);
         assert.equal(width === 390 ? before.overflowY : ['auto', 'scroll'].includes(before.overflowY), width === 390 ? 'visible' : true);
@@ -113,7 +110,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
       throw error;
     } finally { await context.close(); }
   }
-  assert.equal(result.scenarios.length, 6);
+  assert.equal(result.scenarios.length, 36);
   assert.deepEqual(result.pageErrors, []);
   assert.deepEqual(result.writes, []);
   return result;
