@@ -24,6 +24,7 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
       assert(session.ok());
       assert.equal((await session.json()).user?.id, 'compose-fixture-user');
       page = await context.newPage();
+      page.on('console', message => { if (message.text().startsWith('reader-scroll-probe')) console.log(message.text()); });
       page.on('pageerror', error => result.pageErrors.push(error.message));
       page.on('request', request => {
         const url = new URL(request.url());
@@ -67,10 +68,26 @@ export async function checkReaderScroll({ browser, origin, out, screenshots }) {
         await page.keyboard.press('Tab');
         const before = await page.evaluate(mobile => {
           const workspace = document.querySelector('.desktop-workspace');
+          const geometry = () => ({ width: innerWidth, height: innerHeight, clientHeight: workspace.clientHeight, scrollHeight: workspace.scrollHeight, documentHeight: document.documentElement.scrollHeight, bodyHeight: document.body.scrollHeight, focus: document.activeElement?.outerHTML.slice(0, 400), behavior: getComputedStyle(workspace).scrollBehavior });
+          const geometryBefore = geometry();
           if (mobile) window.scrollTo(0, 900); else workspace.scrollTop = 900;
+          console.log('reader-scroll-probe', JSON.stringify({ mobile, geometryBefore, geometryAfter: geometry(), windowY: window.scrollY, workspaceY: workspace.scrollTop }));
           return { windowY: window.scrollY, workspaceY: workspace.scrollTop, overflowY: getComputedStyle(workspace).overflowY };
         }, width === 390);
         assert.equal(width === 390 ? before.overflowY : ['auto', 'scroll'].includes(before.overflowY), width === 390 ? 'visible' : true);
+        if ((width === 390 ? before.windowY : before.workspaceY) < 850) {
+          const samples = await page.evaluate(async () => {
+            const values = [];
+            for (let frame = 0; frame < 6; frame++) {
+              await new Promise(requestAnimationFrame);
+              const workspace = document.querySelector('.desktop-workspace');
+              values.push({ frame, windowY: scrollY, workspaceY: workspace.scrollTop, clientHeight: workspace.clientHeight, scrollHeight: workspace.scrollHeight, focus: document.activeElement?.outerHTML.slice(0, 400) });
+            }
+            return values;
+          });
+          console.log('reader-scroll-failure', JSON.stringify({ theme, stage, before, samples }));
+          result.failedScroll = { theme, stage, before, samples };
+        }
         assert((width === 390 ? before.windowY : before.workspaceY) >= 850, `Fixture did not actually scroll: ${JSON.stringify(before)}`);
         await jump.waitFor({ state: 'visible' });
         const capture = async state => {
