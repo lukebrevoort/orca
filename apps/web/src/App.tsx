@@ -2126,7 +2126,11 @@ export function InboxApp({
         readerMailboxSnapshotRef.current = request;
       })
       .catch((error) => {
-        if (!active || readerSilentRequestRef.current !== request || !requestGeneration.isCurrent() || hasVisibleDetail) return;
+        if (!active || readerSilentRequestRef.current !== request || !requestGeneration.isCurrent()) return;
+        if (error instanceof ApiRequestError && error.code === "payload_limit") {
+          cache.invalidate(reference);
+          setThreadDetail(null);
+        } else if (hasVisibleDetail) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
       })

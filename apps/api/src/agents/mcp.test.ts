@@ -25,7 +25,7 @@ import {
 import { createDatabaseClient } from "../db/client.ts";
 import { emailAttachments, emailLabels, labels, emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, mcpOrganizationApprovals, oauthAccounts, organizationChangeSets, organizationLanePolicies, organizationLanes, organizationMutationAttempts, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createSession } from "../auth/session-store.ts";
-import { createApp } from "../index.ts";
+import { createApp, threadDetailLimits } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
 import { createOrcaMcpHttpHandler, type OrcaMcpDataSource } from "./mcp.ts";
 import { getOAuthScopeForResourceScope, mapOAuthScopesToResourceScopes, type OrcaMcpTokenVerifier } from "./access-token.ts";
@@ -400,6 +400,18 @@ afterEach(() => {
 });
 
 describe("Orca scoped MCP server", () => {
+  test("get_thread reports the body budget without loading an oversized thread", async () => {
+    const { app, db, sqlite } = createFixture();
+    try {
+      db.update(emails).set({ bodyText: "x".repeat(threadDetailLimits.bodyBytes + 1) }).where(eq(emails.id, "message_a_1")).run();
+      const result = await rpcBody(await callMcp(app, await signToken(), "tools/call", {
+        name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" },
+      }));
+      assert.equal(result.result.isError, true);
+      assert.equal(JSON.parse(result.result.content[0].text).error.code, "payload_limit");
+    } finally { sqlite.close(); }
+  });
+
   test("get_thread preserves multiple messages with label and attachment fan-out", async () => {
     const { app, db, sqlite } = createFixture();
     try {

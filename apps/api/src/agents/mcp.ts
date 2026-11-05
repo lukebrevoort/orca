@@ -159,7 +159,7 @@ export type OrcaMcpDataSource = {
 
 export class McpReadError extends Error {
   constructor(
-    readonly code: Extract<McpToolErrorCode, "account_denied" | "invalid_cursor" | "not_found">,
+    readonly code: Extract<McpToolErrorCode, "account_denied" | "invalid_cursor" | "not_found" | "payload_limit">,
     message: string,
   ) {
     super(message);

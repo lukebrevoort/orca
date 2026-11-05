@@ -627,12 +627,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account || !allowedAccountIds.includes(account.id)) {
           throw new McpReadError("not_found", "Thread not found");
         }
-        const organized = createOrganization(createSqliteOrganizationRepository(db)).query({
-          scope: { actor: { id: userId, type: "agent" }, workspaceId: userId, accountIds: [...allowedAccountIds] },
-          query: { accountIds: [query.accountId], threadId: query.threadId, attention: "all", classification: "all", limit: 1 },
-        });
-        if (organized.threads.length === 0) throw new McpReadError("not_found", "Thread not found");
-        return readThreadDetail(db, account, serializeMailAccount(account), query.threadId);
+        return db.transaction(() => {
+          // Organization's authorization query also materializes message rows.
+          // Bound it before that query, in the same snapshot as the reader.
+          checkThreadDetailBudget(db, account.id, query.threadId);
+          const organized = createOrganization(createSqliteOrganizationRepository(db)).query({
+            scope: { actor: { id: userId, type: "agent" }, workspaceId: userId, accountIds: [...allowedAccountIds] },
+            query: { accountIds: [query.accountId], threadId: query.threadId, attention: "all", classification: "all", limit: 1 },
+          });
+          if (organized.threads.length === 0) throw new McpReadError("not_found", "Thread not found");
+          return readThreadDetailSnapshot(db, account, serializeMailAccount(account), query.threadId);
+        }, { behavior: "deferred" });
       } finally {
         sqlite.close();
       }
@@ -2417,6 +2422,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           if (error instanceof McpReadError && error.code === "not_found") {
             return c.json({ error: { code: error.code, message: error.message } }, 404);
           }
+          if (error instanceof McpReadError && error.code === "payload_limit") {
+            return c.json({ error: { code: error.code, message: error.message } }, 413);
+          }
           throw error;
         }
       } finally {
@@ -2458,6 +2466,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         } catch (error) {
           if (error instanceof McpReadError && error.code === "not_found") {
             return c.json({ error: { code: "not_found", message: "Conversation not found" } }, 404);
+          }
+          if (error instanceof McpReadError && error.code === "payload_limit") {
+            return c.json({ error: { code: error.code, message: error.message } }, 413);
           }
           throw error;
         }
@@ -3135,6 +3146,38 @@ function resolveSenderAttention(db: Database, accountId: string, address: string
   return resolvedSenderAttentionSchema.parse({ behavior: effective.behavior, rule: effective.rule });
 }
 
+export const threadDetailLimits = { messages: 100, bodyBytes: 2 * 1024 * 1024, totalBodyBytes: 8 * 1024 * 1024, associations: 1000 } as const;
+
+function checkThreadDetailBudget(db: Database, accountId: string, threadId: string) {
+  const bodySizes = db.select({
+    text: sql<number>`coalesce(length(cast(${emails.bodyText} as blob)), 0)`,
+    html: sql<number>`coalesce(length(cast(${emails.bodyHtml} as blob)), 0)`,
+  }).from(emails)
+    .where(and(eq(emails.threadId, threadId), eq(emails.accountId, accountId)))
+    .limit(threadDetailLimits.messages + 1).all();
+  let totalBodyBytes = 0;
+  for (const { text, html } of bodySizes) {
+    if (!Number.isSafeInteger(text) || !Number.isSafeInteger(html) || text < 0 || html < 0 ||
+        text > threadDetailLimits.bodyBytes || html > threadDetailLimits.bodyBytes) {
+      throw new McpReadError("payload_limit", "This conversation is too large to open in Orca.");
+    }
+    totalBodyBytes += text + html;
+  }
+  if (bodySizes.length > threadDetailLimits.messages || totalBodyBytes > threadDetailLimits.totalBodyBytes) {
+    throw new McpReadError("payload_limit", "This conversation is too large to open in Orca.");
+  }
+  const scope = and(eq(emails.threadId, threadId), eq(emails.accountId, accountId));
+  const links = db.select({ id: emailLabels.id }).from(emailLabels)
+    .innerJoin(emails, eq(emails.id, emailLabels.emailId)).where(scope)
+    .limit(threadDetailLimits.associations + 1).all();
+  const attachments = db.select({ id: emailAttachments.id }).from(emailAttachments)
+    .innerJoin(emails, eq(emails.id, emailAttachments.emailId)).where(scope)
+    .limit(threadDetailLimits.associations + 1).all();
+  if (links.length > threadDetailLimits.associations || attachments.length > threadDetailLimits.associations) {
+    throw new McpReadError("payload_limit", "This conversation is too large to open in Orca.");
+  }
+}
+
 function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string): ThreadDetail {
   return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId), { behavior: "deferred" });
 }
@@ -3148,6 +3191,10 @@ function readThreadDetailSnapshot(
   const thread = db.select().from(threads)
     .where(and(eq(threads.id, threadId), eq(threads.accountId, account.id))).get();
   if (!thread) throw new McpReadError("not_found", "Thread not found");
+
+  // Check bytes in SQLite before materializing bodies. The bounded probe and
+  // subsequent read share this transaction's snapshot, including under sync.
+  checkThreadDetailBudget(db, account.id, thread.id);
 
   const messageRows = db.select({
     id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName, createdAt: emails.createdAt,
