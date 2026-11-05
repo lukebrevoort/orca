@@ -6080,6 +6080,7 @@ export function MessageReader({
                     const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
                     const isOpen = openCards.has(messageKey);
+                    const imageReaderVisible = active && status === "ready" && isOpen && (showEarlier || messages.indexOf(message) >= entryIndex);
                     return (
                       <li className={`reader-message${!isOpen ? " reader-message-compact" : ""}${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
@@ -6119,7 +6120,7 @@ export function MessageReader({
                       <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                       <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
-                    {isOpen ? <MessageImageBody key={`${detail.account.id}:${message.id}:${message.imageSourceRevision ?? ""}`} accountId={detail.account.id} messageId={message.id} revision={message.imageSourceRevision} available={message.imageLoadAvailable} html={message.bodyHtml} text={message.bodyText} /> : <ReaderBody html={message.bodyHtml} text={message.bodyText} />}
+                    {imageReaderVisible ? <MessageImageBody key={`${detail.account.id}:${message.id}:${message.imageSourceRevision ?? ""}`} accountId={detail.account.id} messageId={message.id} revision={message.imageSourceRevision} available={message.imageLoadAvailable} html={message.bodyHtml} text={message.bodyText} /> : <ReaderBody html={message.bodyHtml} text={message.bodyText} />}
                     <VerificationCodeStrip messageId={messageKey} subject={message.subject} bodyText={message.bodyText} snippet={message.snippet} />
                     {message.attachments.length ? (
                       <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>

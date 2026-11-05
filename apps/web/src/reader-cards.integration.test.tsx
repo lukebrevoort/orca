@@ -24,7 +24,7 @@ const detail: ThreadDetail = {
 };
 function button(name: string) { const found = [...browser.document.querySelectorAll("button")].find(button => button.textContent?.trim() === name); expect(found).toBeDefined(); return found!; }
 async function click(name: string) { await act(async () => button(name).click()); }
-async function render(current: ThreadDetail = detail) { await act(async () => root.render(<TopLayerProvider><MessageReader detail={current} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={() => {}} onRetry={() => {}} status="ready" onAttentionChange={async () => "normal"} /></TopLayerProvider>)); }
+async function render(current: ThreadDetail = detail, active = true) { await act(async () => root.render(<TopLayerProvider><MessageReader active={active} detail={current} error={null} fallbackMessages={[]} fallbackTitle="Group note" onBack={() => {}} onRetry={() => {}} status="ready" onAttentionChange={async () => "normal"} /></TopLayerProvider>)); }
 beforeEach(() => {
   browser = new Window({ url: "http://localhost/" });
   for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : name === "getComputedStyle" ? browser.getComputedStyle.bind(browser) : name === "requestAnimationFrame" ? browser.requestAnimationFrame.bind(browser) : browser[name] });
@@ -80,6 +80,27 @@ test("an all-read conversation initially opens its latest message", async () => 
   await render({...detail, messages:[...messages, {...messages[23]!, id:"new-unread", receivedAt:"2026-10-09T01:00:00.000Z", unread:true}]});
   expect(button("Jump to unread").disabled).toBe(false);
   expect(browser.document.querySelector(".reader-unread-divider")).not.toBeNull();
+});
+
+test("hiding earlier messages cancels an in-flight image load for an open earlier card", async () => {
+  const original = globalThis.fetch; let signal: AbortSignal | undefined;
+  globalThis.fetch = ((path: RequestInfo | URL, init?: RequestInit) => {
+    if (String(path).includes('/images/v2?')) { signal = init?.signal ?? undefined; return new Promise<Response>(() => {}); }
+    return original(path, init);
+  }) as typeof fetch;
+  const messages = Array.from({length:3}, (_, index) => ({...detail.messages[0]!, id:`images-${index}`, receivedAt:`2026-10-08T0${index}:00:00.000Z`, unread:false, imageLoadAvailable:index===0, imageSourceRevision:'a'.repeat(64), bodyHtml:'<p>Synthetic</p>'}));
+  await render({...detail,messages});
+  await click('Expand all');
+  const card=browser.document.querySelector('#reader-card-images-0')!;
+  await act(async()=>{(card.querySelector('.reader-images-consent button') as HTMLButtonElement).click();});
+  expect(signal?.aborted).toBe(false);
+  const hide=browser.document.querySelector('[aria-label="Hide 2 earlier messages"]') as HTMLButtonElement;
+  expect(hide).not.toBeNull();await act(async()=>hide.click());
+  expect(signal?.aborted).toBe(true);expect(card.querySelector('.reader-images-consent')).toBeNull();
+  const show=browser.document.querySelector('[aria-label="Show 2 earlier messages"]') as HTMLButtonElement;
+  await act(async()=>show.click());await act(async()=>{(card.querySelector('.reader-images-consent button') as HTMLButtonElement).click();});
+  expect(signal?.aborted).toBe(false);await render({...detail,messages},false);
+  expect(signal?.aborted).toBe(true);expect(card.querySelector('.reader-images-consent')).toBeNull();
 });
 
 test("quiet controls move bulk actions into a labeled disclosure and retain card behavior", async () => {

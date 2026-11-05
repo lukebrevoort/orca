@@ -102,13 +102,13 @@ test("native POST resolves only an authenticated user's stored message, before a
  try{
   db.insert(users).values([{id:'owner',email:'owner@example.com'},{id:'stranger',email:'stranger@example.com'}]).run();db.insert(oauthAccounts).values({id:'account',userId:'owner',provider:'gmail',providerEmail:'owner@example.com',providerId:'provider'}).run();db.insert(threads).values({id:'thread',accountId:'account',providerThreadId:'thread'}).run();db.insert(emails).values({id:'message',accountId:'account',threadId:'thread',providerMessageId:'message',bodyHtml:'<img alt="Banner" src="https://images.example.org/banner.png">'}).run();
   const owner=createMobileSession(db,'owner'),stranger=createMobileSession(db,'stranger');let requests=0;const app=new Hono<{Variables:AuthVariables}>();registerMessageImageRoutes(app,{dbFactory:()=>createDatabaseClient(path),allowedOrigin:'https://orca.example',downloadImage:async()=>{requests++;return png}});
-  const endpoint='/v1/messages/message/images?accountId=account';
+  const endpoint='/v1/messages/message/images/v2?accountId=account';
   const revision=imageSourceRevision('<img alt="Banner" src="https://images.example.org/banner.png">');
   const post=(token:string, rev=revision)=>({method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({revision:rev})});
   expect((await app.request(endpoint,{method:'POST'})).status).toBe(401);
-  const legacy=await app.request(endpoint,{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(legacy.status).toBe(426);expect((await legacy.json()).error.code).toBe('image_upgrade_required');
+  const legacy=await app.request('/v1/messages/message/images?accountId=account',{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(legacy.status).toBe(426);expect((await legacy.json()).error.code).toBe('image_upgrade_required');
   expect((await app.request(endpoint,post(stranger.accessToken))).status).toBe(404);
-  expect((await app.request('/v1/messages/message/images?accountId=other',post(owner.accessToken))).status).toBe(404);
+  expect((await app.request('/v1/messages/message/images/v2?accountId=other',post(owner.accessToken))).status).toBe(404);
   expect((await app.request(endpoint,post(owner.accessToken,'0'.repeat(64)))).status).toBe(409);
   expect((await app.request(endpoint,{headers:{Authorization:`Bearer ${owner.accessToken}`}})).status).toBe(404);expect(requests).toBe(0);
   const response=await app.request(endpoint,post(owner.accessToken));expect(response.status).toBe(200);expect(response.headers.get('Cache-Control')).toBe('private, no-store');expect((await response.json()).loaded).toBe(1);expect(requests).toBe(1);
@@ -135,8 +135,8 @@ test("duplicate concurrent requests cannot start a second set of downloads",asyn
   const owner=createMobileSession(db,'owner');let release!:()=>void;let entered!:()=>void;const started=new Promise<void>(resolve=>{entered=resolve;});let calls=0;
   const app=new Hono<{Variables:AuthVariables}>();registerMessageImageRoutes(app,{dbFactory:()=>createDatabaseClient(path),downloadImage:async()=>{calls++;entered();await new Promise<void>(resolve=>{release=resolve;});return png;}});
   const post=()=>({method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({revision:imageSourceRevision(html)})});
-  const first=app.request('/v1/messages/message/images?accountId=account',post());await started;
-  expect((await app.request('/v1/messages/message/images?accountId=account',post())).status).toBe(429);expect(calls).toBe(1);
+  const first=app.request('/v1/messages/message/images/v2?accountId=account',post());await started;
+  expect((await app.request('/v1/messages/message/images/v2?accountId=account',post())).status).toBe(429);expect(calls).toBe(1);
   release();expect((await first).status).toBe(200);
  }finally{sqlite.close();rmSync(dir,{recursive:true,force:true});}
 });

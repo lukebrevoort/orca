@@ -22,7 +22,7 @@ export function MessageImageBody({ accountId, messageId, revision, available, ht
     const controller = new AbortController(); active.current = controller;
     setLoading(true); setStatus("");
     try {
-      const response = await fetch(`/v1/messages/${encodeURIComponent(messageId)}/images?${new URLSearchParams({ accountId })}`, {
+      const response = await fetch(`/v1/messages/${encodeURIComponent(messageId)}/images/v2?${new URLSearchParams({ accountId })}`, {
         method: "POST", credentials: "include", signal: controller.signal,
         headers: { "content-type": "application/json" }, body: JSON.stringify({ revision, retained:[...slots.current.keys()], seen:[...seen.current], remainingBytes:8*1024*1024-[...slots.current.values()].reduce((sum,item)=>sum+item.bytes,0) }),
       });

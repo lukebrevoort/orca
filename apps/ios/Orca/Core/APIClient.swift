@@ -92,6 +92,6 @@ struct ImageOutcomeReasons: Decodable { var ineligible: Int; var requestLimit: I
 extension APIClient {
     func loadMessageImages(_ id: String, accountId: String, revision: String, retained: [Int], seen: [Int], remainingBytes: Int) async throws -> LoadedMessageImages {
         struct Input: Encodable { var revision: String; var retained: [Int]; var seen: [Int]; var remainingBytes: Int }
-        return try await request("v1/messages", pathSuffix: [id, "images"], method: "POST", query: [.init(name: "accountId", value: accountId)], body: Input(revision: revision, retained: retained, seen: seen, remainingBytes: remainingBytes))
+        return try await request("v1/messages", pathSuffix: [id, "images", "v2"], method: "POST", query: [.init(name: "accountId", value: accountId)], body: Input(revision: revision, retained: retained, seen: seen, remainingBytes: remainingBytes))
     }
 }
