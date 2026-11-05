@@ -4,7 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import { requireAuth, type AuthVariables } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { emails, oauthAccounts } from "../../db/schema.ts";
-import { imageSourceRevision, renderRequestedImages, type ImageDownload } from "./render.ts";
+import { imageSourceRevision, imageSourceWithinLimit, renderRequestedImages, type ImageDownload } from "./render.ts";
 
 type Options={dbFactory?:typeof createDatabaseClient;downloadImage?:ImageDownload;allowedOrigin?:string};
 export function registerMessageImageRoutes(app:Hono<{Variables:AuthVariables}>,options:Options={}){
@@ -22,6 +22,7 @@ export function registerMessageImageRoutes(app:Hono<{Variables:AuthVariables}>,o
    if(!row)return c.json({error:{code:"not_found",message:"Message not found"}},404);
    html=row.html;
   }finally{sqlite.close();}
+  if(!imageSourceWithinLimit(html))return c.json({error:{code:"image_source_too_large",message:"Image loading is unavailable for this message."}},413);
   const key=JSON.stringify([accountId,c.req.param("id")]);
   if(active.has(key)||active.size>=4)return c.json({error:{code:"image_busy",message:"Image loading is already in progress. Try again shortly."}},429);
   active.add(key);
@@ -50,6 +51,7 @@ export function registerMessageImageRoutes(app:Hono<{Variables:AuthVariables}>,o
    if(!row)return c.json({error:{code:"not_found",message:"Message not found"}},404);
    html=row.html;
   }finally{sqlite.close();}
+  if(!imageSourceWithinLimit(html))return c.json({error:{code:"image_source_too_large",message:"Image loading is unavailable for this message."}},413);
   if(imageSourceRevision(html)!==revision)return c.json({error:{code:"stale_message",message:"Message changed. Reopen it before loading images."}},409);
   const key=JSON.stringify([accountId,c.req.param("id")]);
   if(active.has(key)||active.size>=4)return c.json({error:{code:"image_busy",message:"Image loading is already in progress. Try again shortly."}},429);

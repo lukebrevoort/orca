@@ -330,7 +330,7 @@ enum ImageLoadRecovery {
     }
     static func needsCapabilityCheck(_ error: Error) -> Bool {
         guard let error = error as? APIClient.ClientError else { return false }
-        if case let .http(status, _) = error { return status == 404 || status == 501 }
+        if case let .http(status, body) = error { return status == 404 || status == 501 || (status == 413 && body?.code == "image_source_too_large") }
         return false
     }
 }
@@ -353,7 +353,7 @@ private struct MessageImageBody: View {
         VStack(alignment: .leading, spacing: 12) {
             if item.imageLoadAvailable == true || (item.imageLoadAvailable == nil && (item.bodyHtml?.contains("class=\"orca-mail-image-note\"") ?? false)) {
                 if item.imageLoadAvailable == nil || item.imageSourceRevision == nil {
-                    Text("This message does not have the information needed to load images. Reconnect and refresh the message, or update the server.")
+                    Text("Image loading is unavailable for this message.")
                         .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                     refreshButton
                 } else if needsRefresh {

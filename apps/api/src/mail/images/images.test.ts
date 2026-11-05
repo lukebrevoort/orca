@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMobileSession } from "../../auth/mobile/store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
@@ -12,7 +13,7 @@ import { users, oauthAccounts, threads, emails } from "../../db/schema.ts";
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { registerMessageImageRoutes } from "./routes.ts";
 import { downloadRemoteImage, ImageFetchError, isPublicImageAddress, remoteImageURL, rasterType, validatedRasterType, imageByteLimit } from "./remote.ts";
-import { hasLoadableImages, imageSourceHash, imageSourceRevision, renderRequestedImages } from "./render.ts";
+import { hasLoadableImages, imageSourceHash, imageSourceRevision, imageSourceByteLimit, imageSourceWithinLimit, renderRequestedImages } from "./render.ts";
 import { createSession } from "../../auth/session-store.ts";
 import sharp from "sharp";
 import { sanitizeInboundHtml } from "../provider-html.ts";
@@ -25,6 +26,21 @@ function paddedPng(size:number) {
  return Buffer.concat([png.subarray(0,-12),chunk,png.subarray(-12)]);
 }
 const url=new URL("https://images.example.org/banner.png");
+
+test("oversized image sources are rejected before parsing, hashing or downloading",async()=>{
+ const prefix='<img src="https://images.example.org/a.png">';
+ const large=prefix+'x'.repeat(imageSourceByteLimit);
+ const multibyte=prefix+'😀'.repeat(Math.floor(imageSourceByteLimit/4));
+ for(const html of [large,multibyte]){
+  expect(imageSourceWithinLimit(html)).toBe(false);
+  expect(hasLoadableImages(html)).toBe(false);
+  expect(()=>imageSourceRevision(html)).toThrow("Image source exceeds the size limit");
+  expect(()=>imageSourceHash(html)).toThrow("Image source exceeds the size limit");
+  let calls=0;await expect(renderRequestedImages(html,async()=>{calls++;return png})).rejects.toThrow("Image source exceeds the size limit");expect(calls).toBe(0);
+ }
+ expect(imageSourceWithinLimit('x'.repeat(imageSourceByteLimit))).toBe(true);
+ expect(hasLoadableImages(prefix)).toBe(true);
+});
 
 test("public-only image URLs reject local, alternate, credential and redirect-style inputs",()=>{
  for(const value of ["http://public.example/x","https://127.0.0.1/x","https://2130706433/x","https://[::1]/x","https://user:pass@public.example/x","https://public.example:8443/x","https://public.example/x#y","file:///x","data:image/png,x","https://localhost/x","https://public.example./x"])expect(remoteImageURL(value)).toBeNull();
@@ -105,6 +121,12 @@ test("native POST resolves only an authenticated user's stored message, before a
   const endpoint='/v1/messages/message/images/v2?accountId=account';
   const revision=imageSourceRevision('<img alt="Banner" src="https://images.example.org/banner.png">');
   const post=(token:string, rev=revision)=>({method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({revision:rev})});
+  db.update(emails).set({bodyHtml:'<img src="https://images.example.org/a.png">'+ 'x'.repeat(imageSourceByteLimit)}).where(eq(emails.id,'message')).run();
+  const tooLarge=await app.request(endpoint,post(owner.accessToken));expect(tooLarge.status).toBe(413);expect((await tooLarge.json()).error.code).toBe('image_source_too_large');
+  const oldTooLarge=await app.request('/v1/messages/message/images?accountId=account',{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(oldTooLarge.status).toBe(413);expect(requests).toBe(0);
+  expect((await app.request(endpoint,post(stranger.accessToken))).status).toBe(404);
+  expect((await app.request('/v1/messages/message/images?accountId=account',{method:'POST',headers:{Authorization:`Bearer ${stranger.accessToken}`}})).status).toBe(404);
+  db.update(emails).set({bodyHtml:'<img alt="Banner" src="https://images.example.org/banner.png">'}).where(eq(emails.id,'message')).run();
   expect((await app.request(endpoint,{method:'POST'})).status).toBe(401);
   expect((await app.request(endpoint,{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`,'Content-Type':'application/json'},body:'{}'})).status).toBe(400);
   const legacyEndpoint='/v1/messages/message/images?accountId=account';

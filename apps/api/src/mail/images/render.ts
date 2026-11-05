@@ -3,8 +3,19 @@ import { createHash, randomUUID } from "node:crypto";
 import { sanitizeInboundHtml, sanitizeProviderHtml } from "../provider-html.ts";
 import { downloadRemoteImage, ImageFetchError, rasterType, validatedRasterType, remoteImageURL } from "./remote.ts";
 const {parseDocument,DomUtils}=createRequire(import.meta.url)("htmlparser2") as typeof import("htmlparser2");
+// Bound input before either sanitizer or DOM parser allocates from sender HTML.
+export const imageSourceByteLimit = 2 * 1024 * 1024;
+export function imageSourceWithinLimit(html: string | null) {
+  return !html || (html.length <= imageSourceByteLimit && Buffer.byteLength(html, "utf8") <= imageSourceByteLimit);
+}
+export class ImageSourceTooLargeError extends Error {
+  constructor() { super("Image source exceeds the size limit"); }
+}
+function assertImageSourceLimit(html: string | null) {
+  if (!imageSourceWithinLimit(html)) throw new ImageSourceTooLargeError();
+}
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
-function documentImages(html:string|null){const document=parseDocument(sanitizeProviderHtml(html)??"");return {document,images:DomUtils.findAll(n=>n.type==="tag"&&n.name==="img",document.children)};}
+function documentImages(html:string|null){assertImageSourceLimit(html);const document=parseDocument(sanitizeProviderHtml(html)??"");return {document,images:DomUtils.findAll(n=>n.type==="tag"&&n.name==="img",document.children)};}
 function candidate(image:ReturnType<typeof documentImages>["images"][number]) {
   if(image.type!=="tag") return null;
   for(const key of ["width","height"]) {const v=image.attribs[key];if(v && /^\d+(?:px)?$/.test(v) && parseInt(v)<=2)return null;}
@@ -15,12 +26,12 @@ export function hasLoadableImages(html: string | null) {
   // entity-decoded and the provider policy does not synthesize image tags.
   // Use their common prefix only to prove absence. A match is just a hint:
   // retain all sanitizer/URL/dimension checks, including malformed markup.
-  if (!html || !/<im/i.test(html)) return false;
+  if (!html || !imageSourceWithinLimit(html) || !/<im/i.test(html)) return false;
   return documentImages(html).images.some(candidate);
 }
-export function imageSourceHash(html:string|null){return createHash("sha256").update(sanitizeInboundHtml(html)??"").digest("hex");}
+export function imageSourceHash(html:string|null){assertImageSourceLimit(html);return createHash("sha256").update(sanitizeInboundHtml(html)??"").digest("hex");}
 /** Includes image URLs that are deliberately absent from the sanitized body. */
-export function imageSourceRevision(html:string|null){return createHash("sha256").update(html??"").digest("hex");}
+export function imageSourceRevision(html:string|null){assertImageSourceLimit(html);return createHash("sha256").update(html??"").digest("hex");}
 export type ImageDownload = typeof downloadRemoteImage;
 /** The default read path never calls this. Only an authorized explicit POST may resolve images. */
 export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage, requestSignal?:AbortSignal, retained:number[]=[], seen:number[]=[], remainingBytes=8*1024*1024, mode:"v2"|"legacy"="v2") {

@@ -6,12 +6,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import * as schema from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
 import * as providerHtml from "../provider-html.ts";
-import { hasLoadableImages, imageSourceRevision } from "./render.ts";
+import { hasLoadableImages, imageSourceRevision, imageSourceByteLimit } from "./render.ts";
 import { remoteImageURL } from "./remote.ts";
 
 const { parseDocument, DomUtils } = createRequire(import.meta.url)("htmlparser2") as typeof import("htmlparser2");
@@ -89,6 +90,8 @@ test("image-free eligibility avoids provider sanitizer work while possible tags 
     expect(calls).toBe(1);
     expect(hasLoadableImages(`<IMG src="${src}">`)).toBe(true);
     expect(calls).toBe(2);
+    expect(hasLoadableImages(`<IMG src="${src}">` + "x".repeat(imageSourceByteLimit))).toBe(false);
+    expect(calls).toBe(2);
   } finally { spy.mockRestore(); }
 });
 
@@ -140,6 +143,12 @@ test("long-thread GET retains image availability, inert bodies and account isola
     expect(optedDetail.messages[1]!.imageSourceRevision).toBe(imageSourceRevision(messages[1]!.bodyHtml));
     const oldParser=threadDetailSchema.extend({messages:z.array(threadDetailMessageSchema.omit({imageSourceRevision:true}))});
     expect(oldParser.safeParse(optedBody).success).toBe(false);
+    db.update(schema.emails).set({bodyHtml:`<img src="${src}">` + "x".repeat(imageSourceByteLimit)}).where(eq(schema.emails.id,"m-1")).run();
+    const oldLarge=await app.request('/v1/threads/thread?accountId=a',{headers});
+    expect(oldParser.safeParse(await oldLarge.json()).success).toBe(true);
+    const newLarge=await app.request('/v1/threads/thread?accountId=a',{headers:{...headers,'x-orca-image-version':'2'}});
+    const largeMessage=threadDetailSchema.parse(await newLarge.json()).messages.find(message=>message.id==="m-1")!;
+    expect(largeMessage.imageLoadAvailable).toBe(true);expect(largeMessage.imageSourceRevision).toBeUndefined();
     for (const url of ["/v1/threads/private?accountId=a", "/v1/threads/private?accountId=b"]) expect((await app.request(url, { headers })).status).toBe(404);
     expect((await app.request("/v1/threads/thread?accountId=a")).status).toBe(401);
     expect(downloads).toBe(0);

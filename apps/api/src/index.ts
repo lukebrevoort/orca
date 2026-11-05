@@ -1,6 +1,6 @@
 import { checkDraftQuota, draftStorageBytes, draftQuotaResponse } from "./draft-quota.ts";
 import { registerMessageImageRoutes } from "./mail/images/routes.ts";
-import { hasLoadableImages, imageSourceRevision } from "./mail/images/render.ts";
+import { hasLoadableImages, imageSourceRevision, imageSourceWithinLimit } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createLogoutApp } from "./auth/logout.ts";
@@ -3195,8 +3195,8 @@ function readThreadDetailSnapshot(
       id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
       from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
       to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
-      imageLoadAvailable: hasLoadableImages(message.bodyHtml),
-      ...(includeImageRevision ? { imageSourceRevision: imageSourceRevision(message.bodyHtml) } : {}),
+      imageLoadAvailable: imageSourceWithinLimit(message.bodyHtml) ? hasLoadableImages(message.bodyHtml) : true,
+      ...(includeImageRevision && imageSourceWithinLimit(message.bodyHtml) ? { imageSourceRevision: imageSourceRevision(message.bodyHtml) } : {}),
       subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
       unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
       internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),

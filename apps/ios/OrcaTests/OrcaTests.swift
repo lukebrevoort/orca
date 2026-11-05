@@ -42,6 +42,7 @@ final class OrcaTests: XCTestCase {
         XCTAssertFalse(ImageLoadRecovery.needsSnapshotRefresh(URLError(.notConnectedToInternet)))
         XCTAssertTrue(ImageLoadRecovery.needsCapabilityCheck(APIClient.ClientError.http(404, nil)))
         XCTAssertTrue(ImageLoadRecovery.needsCapabilityCheck(APIClient.ClientError.http(501, nil)))
+        XCTAssertTrue(ImageLoadRecovery.needsCapabilityCheck(APIClient.ClientError.http(413, APIErrorBody(code: "image_source_too_large", message: "Unavailable", retryable: false))))
         XCTAssertFalse(ImageLoadRecovery.needsCapabilityCheck(stale))
     }
     func testReaderQuotesPreserveExactTextAndInlineAnswers() {

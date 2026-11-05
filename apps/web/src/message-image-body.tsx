@@ -39,6 +39,12 @@ export function MessageImageBody({ accountId, messageId, revision, available, ht
             requireRefresh("This message changed. Refresh it, then choose whether to load images."); return;
           }
         }
+        if (response.status === 413) {
+          const envelope = await response.json().catch(() => null) as { error?: { code?: string } } | null;
+          if (!controller.signal.aborted && active.current === controller && envelope?.error?.code === "image_source_too_large") {
+            requireRefresh("Image loading is unavailable for this message. Refresh it to check."); return;
+          }
+        }
         if ((response.status === 404 || response.status === 501) && !controller.signal.aborted && active.current === controller) {
           requireRefresh("Image loading is unavailable for this message. Refresh it to check."); return;
         }
@@ -67,7 +73,7 @@ export function MessageImageBody({ accountId, messageId, revision, available, ht
   }
   const unavailable = (available === true || (available === undefined && Boolean(html?.includes('class="orca-mail-image-note"')))) && (!revision || available === undefined);
   return <>
-    {unavailable ? <div className="reader-images-consent"><p>Image loading is unavailable for this message version. Refresh the message or update the server.</p>{onRefresh ? <button type="button" onClick={onRefresh}>Refresh message</button> : null}</div> : null}
+    {unavailable ? <div className="reader-images-consent"><p>Image loading is unavailable for this message.</p>{onRefresh ? <button type="button" onClick={onRefresh}>Refresh message</button> : null}</div> : null}
     {!unavailable && needsRefresh && onRefresh ? <div className="reader-images-consent"><button type="button" onClick={onRefresh}>Refresh message</button></div> : null}
     {!unavailable && !needsRefresh && available && revision && (!status || retryable) ? <div className="reader-images-consent">
       <button type="button" disabled={loading} onClick={() => void load()}>{loading ? "Loading images…" : status ? "Retry images" : "Load images"}</button>

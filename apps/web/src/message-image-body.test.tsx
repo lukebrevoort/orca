@@ -69,3 +69,15 @@ test("missing capability does not start a remote request or silently fall back",
  expect(container.textContent).toContain('Image loading is unavailable');expect(container.querySelector('button')?.textContent).toBe('Refresh message');expect(calls).toBe(0);
  await act(async()=>container.querySelector('button')!.click());expect(refreshes).toBe(1);expect(calls).toBe(0);
 });
+test("oversized source requires refresh but an unrelated 413 remains retryable",async()=>{
+ let code="image_source_too_large",calls=0,refreshes=0;
+ Object.defineProperty(globalThis,"fetch",{configurable:true,writable:true,value:async()=>{calls++;return Response.json({error:{code}},{status:413});}});
+ await act(async()=>root.render(<MessageImageBody key="large" {...props} onRefresh={()=>{refreshes++;}}/>));
+ await act(async()=>container.querySelector('button')!.click());
+ expect(container.textContent).toContain('Image loading is unavailable');expect(container.querySelector('button')?.textContent).toBe('Refresh message');
+ await act(async()=>container.querySelector('button')!.click());expect(refreshes).toBe(1);expect(calls).toBe(1);
+ code="request_too_large";
+ await act(async()=>root.render(<MessageImageBody key="other" {...props} onRefresh={()=>{refreshes++;}}/>));
+ await act(async()=>container.querySelector('button')!.click());
+ expect(container.textContent).toContain('Images could not be loaded');expect(container.querySelector('button')?.textContent).toBe('Retry images');expect(calls).toBe(2);
+});
