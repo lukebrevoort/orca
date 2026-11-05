@@ -5803,8 +5803,8 @@ export function ThreadRecovery({ accountId, threadId }: { accountId: string; thr
         <button type="button" disabled={!page.earlier} onClick={() => page.earlier && void open(page.earlier)}>Earlier</button>
       </nav>
       {page.entries.map(entry => entry.kind === "unavailable"
-        ? <article key={entry.id}><p>This message is too large to display.</p></article>
-        : <article key={entry.id}><h2>{entry.subject || "(No subject)"}</h2><p>{entry.from}</p><ReaderBody html={entry.bodyHtml} text={entry.bodyText} /></article>)}
+        ? <article key={`unavailable:${entry.id}`}><p>This message is too large to display.</p></article>
+        : <article key={`message:${entry.id}`}><h2>{entry.subject || "(No subject)"}</h2><p>{entry.from}</p><ReaderBody html={entry.bodyHtml} text={entry.bodyText} /></article>)}
     </> : null}
   </section>;
 }

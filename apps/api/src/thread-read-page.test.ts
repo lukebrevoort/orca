@@ -19,17 +19,19 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
   const { db, sqlite } = createDatabaseClient(path);
   try {
     migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
-    const plan = sqlite.query("explain query plan select id from emails where account_id = ? and thread_id = ? and received_at is ? and created_at = ? and id > ? order by received_at desc, created_at desc, id asc limit 21").all("a", "t", 1, 1, "m") as Array<{ detail: string }>;
+    const plan = sqlite.query("explain query plan select case when octet_length(id) <= 1024 then id else null end as id from emails where account_id = ? and thread_id = ? and received_at is ? and created_at = ? and id > (select id from emails where rowid = ?) order by emails.received_at desc, emails.created_at desc, emails.id asc limit 21").all("a", "t", 1, 1, 1) as Array<{ detail: string }>;
     expect(plan.map(row => row.detail).join(" ")).toContain("received_at=? AND created_at=? AND id>?");
+    expect(plan.map(row => row.detail).join(" ")).not.toContain("TEMP B-TREE");
     db.insert(schema.users).values([{ id: "user", email: "user@example.com" }, { id: "other-user", email: "other@example.com" }]).run();
     db.insert(schema.oauthAccounts).values([{ id: "account", userId: "user", provider: "gmail", providerId: "account", providerEmail: "user@example.com" }, { id: "account2", userId: "other-user", provider: "gmail", providerId: "account2", providerEmail: "other@example.com" }]).run();
     db.insert(schema.threads).values([{ id: "thread", accountId: "account", providerThreadId: "thread", messageCount: 45 }, { id: "other", accountId: "account", providerThreadId: "other" }]).run();
     db.insert(schema.emails).values(Array.from({ length: 45 }, (_, i) => ({
-      id: `m${String(i).padStart(2, "0")}`, accountId: "account", threadId: "thread", providerMessageId: `m${i}`,
+      id: `m${String(i).padStart(2, "0")}${i === 19 ? "x".repeat(2048) : ""}`, accountId: "account", threadId: "thread", providerMessageId: `m${i}`,
       fromAddress: "sender@example.com", subject: "Hello", bodyText: i === 23 ? "x".repeat(2 * 1024 * 1024 + 1) : `body ${i}`,
       bodyHtml: i === 22 ? "<p>safe<img src=\"https://example.com/track\"></p>" : null,
       receivedAt: i >= 40 ? null : new Date(1000), createdAt: new Date(1000),
     }))).run();
+    const largeIdRow = (sqlite.query("select rowid as row from emails where provider_message_id = 'm19'").get() as { row: number }).row;
     sqlite.query("update emails set subject = ? where id = 'm00'").run("é".repeat(1024 * 1024 + 1));
     sqlite.query("update emails set body_text = ? where id = 'm24'").run("\0é");
     sqlite.query("update emails set body_html = ? where id = 'm25'").run("<p>" + "x".repeat(2 * 1024 * 1024));
@@ -45,6 +47,7 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     };
     const first = await fetchPage(); expect(first.res.status).toBe(200); expect(first.value!.entries.length).toBe(20); expect(first.value!.newer).toBeNull();
     expect(first.value!.entries[0]?.kind).toBe("unavailable");
+    expect(first.value!.entries[19]).toEqual({ kind: "unavailable", id: `row:${largeIdRow}` });
     const second = await fetchPage(first.value!.earlier!); expect(second.value!.entries.length).toBe(20);
     expect(second.value!.entries.find(x => x.id === "m23")?.kind).toBe("unavailable");
     expect(second.value!.entries.find(x => x.id === "m25")?.kind).toBe("unavailable");
@@ -54,7 +57,7 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     expect(html?.kind === "message" && html.bodyHtml).not.toContain("https://example.com/track");
     const third = await fetchPage(second.value!.earlier!); expect(third.value!.entries.length).toBe(5); expect(third.value!.earlier).toBeNull();
     const all = [...first.value!.entries, ...second.value!.entries, ...third.value!.entries];
-    expect(all.map(x => x.id)).toEqual(Array.from({ length: 45 }, (_, i) => `m${String(i).padStart(2, "0")}`));
+    expect(all.map(x => x.id)).toEqual(Array.from({ length: 45 }, (_, i) => i === 19 ? `row:${largeIdRow}` : `m${String(i).padStart(2, "0")}`));
     expect((await fetchPage(third.value!.newer!)).value!.entries.map(x => x.id)).toEqual(second.value!.entries.map(x => x.id));
     // Non-ordering sync/read changes do not invalidate or loop a cursor.
     sqlite.run("update emails set is_read = 1 where id = 'm01'");
@@ -96,6 +99,9 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
       expect(snapshot.entries.find(entry => entry.id === "m01")?.kind).toBe("message");
       expect((await fetchPage()).value!.entries.find(entry => entry.id === "m01")?.kind).toBe("unavailable");
     } finally { spy.mockRestore(); writer.sqlite.close(); }
+    const sync = createDatabaseClient(path);
+    try { sync.sqlite.query("delete from emails where rowid = ?").run(largeIdRow); } finally { sync.sqlite.close(); }
+    expect((await fetchPage(first.value!.earlier!)).res.status).toBe(400);
   } finally {
     sqlite.close(); rmSync(dir, { recursive: true, force: true });
     if (oldSecret === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = oldSecret;

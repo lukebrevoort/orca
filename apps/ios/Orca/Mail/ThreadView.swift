@@ -114,7 +114,7 @@ struct ThreadView: View {
                         Button("Newer") { Task { await loadPage(recovery.newer) } }.disabled(recovery.newer == nil)
                         Button("Earlier") { Task { await loadPage(recovery.earlier) } }.disabled(recovery.earlier == nil)
                     }
-                    ForEach(recovery.entries) { item in
+                    ForEach(recovery.entries, id: \.recoveryIdentity) { item in
                         VStack(alignment: .leading, spacing: 8) {
                             if item.kind == .unavailable { Text("This message is too large to display.") }
                             else {
