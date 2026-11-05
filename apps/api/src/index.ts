@@ -1,7 +1,7 @@
 import { checkDraftQuota, draftStorageBytes, draftQuotaResponse } from "./draft-quota.ts";
 import { registerMessageImageRoutes } from "./mail/images/routes.ts";
 import { readThreadPage, ThreadPageError } from "./thread-read-page.ts";
-import { hasLoadableImages } from "./mail/images/render.ts";
+import { hasLoadableImages, imageSourceRevision, imageSourceWithinLimit } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createLogoutApp } from "./auth/logout.ts";
@@ -292,7 +292,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerAttentionRoutingRoutes(app, { dbFactory });
   registerDestinationRoutes(app, { dbFactory });
   registerAttachmentRoutes(app, { dbFactory });
-  registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage });
+  registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage, allowedOrigin: serverConfig.webOrigin });
   app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
   registerMobilePushRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
@@ -2428,6 +2428,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountById(db, user, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
+          c.header("Cache-Control", "private, no-store");
           return c.json(readThreadPage(sqlite, { user, account: account.id, thread: c.req.param("threadId") }, c.req.valid("query").cursor));
         } catch (error) {
           if (error instanceof ThreadPageError) return c.json({ error: { code: error.code, message: error.message } }, error.code === "not_found" ? 404 : error.code === "invalid_cursor" ? 400 : 413);
@@ -2451,12 +2452,15 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
+          c.header("Cache-Control", "private, no-store");
+          c.header("Vary", "x-orca-image-version", { append: true });
           // The shared reader already applies threadDetailSchema, including its defaults and transforms.
           return c.json(readThreadDetail(
             db,
             account,
             serializeMailAccount(account),
             c.req.param("threadId"),
+            c.req.header("x-orca-image-version") === "2",
           ));
         } catch (error) {
           if (error instanceof McpReadError && error.code === "not_found") {
@@ -3232,8 +3236,8 @@ function checkThreadDetailBudget(db: Database, accountId: string, threadId: stri
   }
 }
 
-function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string): ThreadDetail {
-  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId), { behavior: "deferred" });
+function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string, includeImageRevision = false): ThreadDetail {
+  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId, includeImageRevision), { behavior: "deferred" });
 }
 
 function readThreadDetailSnapshot(
@@ -3241,6 +3245,7 @@ function readThreadDetailSnapshot(
   account: ConnectedAccount,
   serializedAccount: MailAccount,
   threadId: string,
+  includeImageRevision = false,
 ): ThreadDetail {
   // Check bytes in SQLite before materializing bodies. The bounded probe and
   // subsequent read share this transaction's snapshot, including under sync.
@@ -3290,7 +3295,8 @@ function readThreadDetailSnapshot(
       id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
       from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
       to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
-      imageLoadAvailable: hasLoadableImages(message.bodyHtml),
+      imageLoadAvailable: imageSourceWithinLimit(message.bodyHtml) ? hasLoadableImages(message.bodyHtml) : true,
+      ...(includeImageRevision && imageSourceWithinLimit(message.bodyHtml) ? { imageSourceRevision: imageSourceRevision(message.bodyHtml) } : {}),
       subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
       unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
       internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),

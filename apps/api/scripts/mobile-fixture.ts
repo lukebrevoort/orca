@@ -20,6 +20,12 @@ const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI
 if (imageFixture) setInterval(() => console.log(`[counter-heartbeat] epoch_ms=${Date.now()}`), 1000).unref();
 let imageDownloads = 0;
 let imageDelayMilliseconds = 0;
+let imageCapability = true;
+let imageSnapshotFailure = false;
+let imageSnapshotOverflow = false;
+let imageSnapshotDelayed = false;
+let imageSnapshotStarted = false;
+const fixtureImageHtml = (version: boolean, urlOnly = false) => `<p>${version && !urlOnly ? "Updated synthetic message." : "A synthetic image stays blocked until you choose to load it."}</p><img alt="Synthetic landscape" src="https://images.example.invalid/${version ? "landscape-v2.png" : "landscape.png"}"><p>End of image example.</p>`;
 const readOnly = process.argv.includes("--read-only");
 const directory = mkdtempSync(join(tmpdir(), "orca-ios-fixture-"));
 process.once("exit", () => rmSync(directory, { recursive: true, force: true }));
@@ -95,7 +101,7 @@ for (const [name, threadId] of [["Hub notifications", "ios-fixture-thread-2"], [
   } });
 }
 const credential = createMobileSession(db, userId);
-if (imageFixture) db.update(emails).set({ bodyHtml: '<p>A synthetic image stays blocked until you choose to load it.</p><img alt="Synthetic landscape" src="https://images.example.invalid/landscape.png"><p>End of image example.</p>' }).where(eq(emails.id, "ios-fixture-message-1")).run();
+if (imageFixture) db.update(emails).set({ bodyHtml: fixtureImageHtml(false) }).where(eq(emails.id, "ios-fixture-message-1")).run();
 sqlite.close();
 
 const sent: Array<{ accountId: string; draftId: string; subject: string }> = [];
@@ -126,7 +132,7 @@ const app = createApp({
     return { identifier: ticket.identifier, url: ticket.url };
   },
   downloadMessageImage: async (url, signal) => {
-    if (!imageFixture || url.href !== "https://images.example.invalid/landscape.png") throw new Error("Fixture image unavailable");
+    if (!imageFixture || !["https://images.example.invalid/landscape.png", "https://images.example.invalid/landscape-v2.png"].includes(url.href)) throw new Error("Fixture image unavailable");
     imageDownloads++;
     if (imageDelayMilliseconds) await new Promise(resolve => setTimeout(resolve, imageDelayMilliseconds));
     signal.throwIfAborted();
@@ -185,6 +191,30 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     imageDelayMilliseconds = 4000;
     return new Response(null, { status: 204 });
+  }
+  if (imageFixture && url.pathname === "/__fixture/image-source" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    const value = await request.json() as { changed?: boolean; urlOnly?: boolean };
+    imageDelayMilliseconds = 0;
+    const client = createDatabaseClient();
+    try { client.db.update(emails).set({ bodyHtml: fixtureImageHtml(value.changed === true, value.urlOnly === true) }).where(eq(emails.id, "ios-fixture-message-1")).run(); }
+    finally { client.sqlite.close(); }
+    return new Response(null, { status: 204 });
+  }
+  if (imageFixture && url.pathname === "/__fixture/image-capability" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    const value = await request.json() as { enabled?: boolean }; imageCapability = value.enabled !== false;
+    return new Response(null, { status: 204 });
+  }
+  if (imageFixture && url.pathname === "/__fixture/image-snapshot" && request.method === "POST") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    const value = await request.json() as { fail?: boolean; delayed?: boolean; overflow?: boolean };
+    imageSnapshotFailure = value.fail === true; imageSnapshotOverflow = value.overflow === true; imageSnapshotDelayed = value.delayed === true; imageSnapshotStarted = false;
+    return new Response(null, { status: 204 });
+  }
+  if (imageFixture && url.pathname === "/__fixture/image-snapshot-started" && request.method === "GET") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    return Response.json({ started: imageSnapshotStarted });
   }
   if (url.pathname === "/__fixture/image-downloads") {
     return fixtureCounterResponse(request, credential.accessToken, imageDownloads,
@@ -406,6 +436,18 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     }
     console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "response_ready", epoch_ms: Date.now(), path: url.pathname, status: response.status, messageIds })}`);
     return response;
+  }
+  if (imageFixture && (!imageCapability || imageSnapshotFailure || imageSnapshotOverflow || imageSnapshotDelayed) && request.method === "GET" && url.pathname === "/v1/threads/ios-fixture-thread-1") {
+    if (imageSnapshotOverflow) return Response.json({ error: { code: "payload_limit", message: "This conversation is too large to open in Orca." } }, { status: 413 });
+    if (imageSnapshotFailure) return Response.json({ error: { code: "unavailable", message: "Synthetic snapshot unavailable" } }, { status: 503 });
+    const response = await app.fetch(request);
+    if (!response.ok) return response;
+    const detail = await response.json() as ThreadDetail;
+    imageSnapshotStarted = true;
+    if (!imageCapability) for (const message of detail.messages) { delete message.imageSourceRevision; delete message.imageLoadAvailable; }
+    // Let the UI test observe the in-flight state before the old-server reply.
+    await new Promise(resolve => setTimeout(resolve, imageSnapshotDelayed ? 4_000 : 1_000));
+    return Response.json(detail, { headers: { "Cache-Control": "private, no-store" } });
   }
   return app.fetch(request);
 } });

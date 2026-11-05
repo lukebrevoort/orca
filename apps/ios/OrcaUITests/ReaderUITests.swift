@@ -141,6 +141,7 @@ final class ReaderUITests: XCTestCase {
         row.tap()
         let load = app.buttons["message.load-images"]
         XCTAssertTrue(load.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Images are blocked. Loading may tell the sender you opened this message."].exists)
         for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
         XCTAssertEqual(try imageDownloadCount(), initialDownloads, "Opening a message must not contact image hosts")
         screenshot("images-blocked-before-consent")
@@ -187,6 +188,185 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["message.images-status"].exists, "A previous reader's response must not restore images")
         screenshot("images-late-response-discarded")
+    }
+
+    func testChangedImageSourceRequiresSnapshotRefreshAndNewConsent() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        try requireFixtureTransportReady()
+        try setFixtureImageSource(changed: false)
+        try setFixtureImageCapability(enabled: true)
+        try setFixtureImageSnapshot(fail: false, delayed: false)
+        defer { try? setFixtureImageSource(changed: false); try? setFixtureImageCapability(enabled: true); try? setFixtureImageSnapshot(fail: false, delayed: false) }
+        let initial = try imageDownloadCount()
+        let app = try launchReader(htmlDiagnostics: true)
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        let load = app.buttons["message.load-images"]
+        XCTAssertTrue(load.waitForExistence(timeout: 10))
+        try setFixtureImageSource(changed: true)
+        for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
+        load.tap()
+        let refresh = app.buttons["message.refresh-images-source"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["message.images-status"].label.contains("This message changed"))
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial, "Rejecting a stale revision must not fetch images")
+        try setFixtureImageSnapshot(fail: true, delayed: false)
+        refresh.tap()
+        let failure = app.staticTexts["message.images-status"]
+        let failedRefresh = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Message could not be refreshed"), object: failure)
+        XCTAssertEqual(XCTWaiter.wait(for: [failedRefresh], timeout: 10), .completed)
+        XCTAssertEqual(try imageDownloadCount(), initial, "A failed snapshot refresh must not load images")
+        try setFixtureImageSnapshot(fail: false, delayed: false)
+        refresh.tap()
+        XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Updated synthetic message."].waitForExistence(timeout: 10))
+        XCTAssertEqual(try imageDownloadCount(), initial, "Refreshing a safe snapshot must not load images")
+        app.buttons["message.load-images"].tap()
+        let status = app.staticTexts["message.images-status"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue(status.label.contains("1 image loaded."))
+        XCTAssertEqual(try imageDownloadCount(), initial + 1)
+    }
+
+    func testOversizedImageSnapshotRefreshOffersReadOnlyRecovery() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        try requireFixtureTransportReady()
+        try setFixtureImageSource(changed: false)
+        try setFixtureImageCapability(enabled: true)
+        try setFixtureImageSnapshot(fail: false, delayed: false)
+        defer { try? setFixtureImageSource(changed: false); try? setFixtureImageSnapshot(fail: false, delayed: false) }
+        let initial = try imageDownloadCount()
+        let app = try launchReader()
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        let load = app.buttons["message.load-images"]
+        XCTAssertTrue(load.waitForExistence(timeout: 10))
+        try setFixtureImageSource(changed: true)
+        load.tap()
+        let refresh = app.buttons["message.refresh-images-source"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10))
+        try setFixtureImageSnapshot(fail: false, delayed: false, overflow: true)
+        refresh.tap()
+        let pages = app.buttons["Open in pages"]
+        XCTAssertTrue(pages.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Reply"].exists); XCTAssertFalse(app.buttons["Forward"].exists)
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        XCTAssertFalse(app.buttons["message.refresh-images-source"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial)
+        pages.tap()
+        XCTAssertTrue(app.staticTexts["Read-only pages"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Reply"].exists); XCTAssertFalse(app.buttons["Forward"].exists)
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial)
+        screenshot("image-refresh-overflow-read-only-pages")
+    }
+
+    func testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        try requireFixtureTransportReady()
+        try setFixtureImageSource(changed: false); try setFixtureImageCapability(enabled: true); try setFixtureImageSnapshot(fail: false, delayed: false)
+        defer { try? setFixtureImageSource(changed: false); try? setFixtureImageCapability(enabled: true); try? setFixtureImageSnapshot(fail: false, delayed: false) }
+        let initial = try imageDownloadCount()
+        let app = try launchReader(htmlDiagnostics: true)
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        let load = app.buttons["message.load-images"]
+        XCTAssertTrue(load.waitForExistence(timeout: 10))
+        try setFixtureImageSource(changed: true)
+        for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
+        load.tap()
+        let refresh = app.buttons["message.refresh-images-source"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10))
+        try setFixtureImageSnapshot(fail: false, delayed: true)
+        refresh.tap()
+        let refreshing = app.buttons.matching(identifier: "message.refresh-images-source").matching(NSPredicate(format: "label == %@", "Refreshing message…")).firstMatch
+        XCTAssertTrue(refreshing.waitForExistence(timeout: 10))
+        try waitForFixtureImageSnapshotStart()
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+        try setFixtureImageSource(changed: false); try setFixtureImageSnapshot(fail: false, delayed: false)
+        row.tap()
+        XCTAssertTrue(app.buttons["message.load-images"].waitForExistence(timeout: 10))
+        let late = expectation(description: "Earlier synthetic snapshot response has finished")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { late.fulfill() }
+        wait(for: [late], timeout: 7)
+        XCTAssertFalse(app.staticTexts["Updated synthetic message."].exists)
+        XCTAssertFalse(app.staticTexts["message.images-status"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial)
+    }
+
+    func testMissingImageCapabilityOffersRefreshWithoutLoading() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        try requireFixtureTransportReady()
+        try setFixtureImageSource(changed: false)
+        try setFixtureImageCapability(enabled: false)
+        try setFixtureImageSnapshot(fail: false, delayed: false)
+        defer { try? setFixtureImageCapability(enabled: true); try? setFixtureImageSnapshot(fail: false, delayed: false) }
+        let initial = try imageDownloadCount()
+        let app = try launchReader(htmlDiagnostics: true)
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        let refresh = app.buttons["message.refresh-images-source"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        refresh.tap()
+        let refreshing = app.buttons.matching(identifier: "message.refresh-images-source").matching(NSPredicate(format: "label == %@", "Refreshing message…")).firstMatch
+        XCTAssertTrue(refreshing.waitForExistence(timeout: 10))
+        let refreshed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@ AND enabled == true", "Refresh message"), object: refresh)
+        XCTAssertEqual(XCTWaiter.wait(for: [refreshed], timeout: 10), .completed)
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial)
+    }
+
+    private func setFixtureImageSource(changed: Bool) throws {
+        try setFixtureImageControl(path: "image-source", value: ["changed": changed])
+    }
+
+    private func setFixtureImageCapability(enabled: Bool) throws {
+        try setFixtureImageControl(path: "image-capability", value: ["enabled": enabled])
+    }
+
+    private func setFixtureImageSnapshot(fail: Bool, delayed: Bool, overflow: Bool = false) throws {
+        try setFixtureImageControl(path: "image-snapshot", value: ["fail": fail, "delayed": delayed, "overflow": overflow])
+    }
+
+    private func waitForFixtureImageSnapshotStart() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
+        let root = try XCTUnwrap(URL(string: base))
+        XCTAssertEqual(root.scheme, "http"); XCTAssertTrue(["127.0.0.1", "localhost"].contains(root.host ?? ""))
+        for _ in 0..<30 {
+            var request = URLRequest(url: root.appending(path: "__fixture/image-snapshot-started"))
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+            let done = expectation(description: "Check synthetic snapshot start")
+            var started = false
+            URLSession.shared.dataTask(with: request) { data, _, _ in
+                if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Bool] { started = json["started"] == true }
+                done.fulfill()
+            }.resume()
+            wait(for: [done], timeout: 5)
+            if started { return }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        XCTFail("Synthetic snapshot refresh did not start")
+    }
+
+    private func setFixtureImageControl(path: String, value: [String: Bool]) throws {
+        let environment = ProcessInfo.processInfo.environment
+        let base = try XCTUnwrap(environment["ORCA_FIXTURE_API_URL"])
+        let token = try XCTUnwrap(environment["ORCA_FIXTURE_ACCESS_TOKEN"])
+        let root = try XCTUnwrap(URL(string: base))
+        XCTAssertEqual(root.scheme, "http"); XCTAssertTrue(["127.0.0.1", "localhost"].contains(root.host ?? ""))
+        var request = URLRequest(url: root.appending(path: "__fixture/\(path)"))
+        request.httpMethod = "POST"; request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(value)
+        let done = expectation(description: "Configure synthetic image fixture")
+        var status: Int?
+        URLSession.shared.dataTask(with: request) { _, response, _ in status = (response as? HTTPURLResponse)?.statusCode; done.fulfill() }.resume()
+        wait(for: [done], timeout: 5); XCTAssertEqual(status, 204)
     }
 
     // Separate cold simulator transport readiness from image behavior. The

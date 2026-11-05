@@ -48,6 +48,9 @@ test("thread detail rejects count, individual and aggregate body overflows befor
       const response = await request();
       assert.equal(response.status, 413);
       assert.equal((await response.json()).error.code, "payload_limit");
+      const versioned = await app.request("/v1/threads/thread?accountId=a", { headers: { ...headers, "x-orca-image-version": "2" } });
+      assert.equal(versioned.status, 413);
+      assert.equal((await versioned.json()).error.code, "payload_limit");
       assert.equal(observed.some((query) => /^select\b/i.test(query) && /"body_text"\s*,\s*"body_html"/i.test(query.split(/\bfrom\b/i)[0]!)), false, "rejected thread must not fetch full bodies");
       assert.equal(observed.some((query) => /^select\b/i.test(query) && /"subject"\s*,\s*"snippet"/i.test(query.split(/\bfrom\b/i)[0]!)), false, "rejected thread must not fetch message metadata");
     };

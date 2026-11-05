@@ -1,16 +1,18 @@
 import { expect, spyOn, test } from "bun:test";
-import { threadDetailSchema } from "@orca/shared";
+import { threadDetailMessageSchema, threadDetailSchema, threadReadPageSchema } from "@orca/shared";
+import { z } from "zod";
 import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import * as schema from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
 import * as providerHtml from "../provider-html.ts";
-import { hasLoadableImages } from "./render.ts";
+import { hasLoadableImages, imageSourceRevision, imageSourceByteLimit } from "./render.ts";
 import { remoteImageURL } from "./remote.ts";
 
 const { parseDocument, DomUtils } = createRequire(import.meta.url)("htmlparser2") as typeof import("htmlparser2");
@@ -88,6 +90,8 @@ test("image-free eligibility avoids provider sanitizer work while possible tags 
     expect(calls).toBe(1);
     expect(hasLoadableImages(`<IMG src="${src}">`)).toBe(true);
     expect(calls).toBe(2);
+    expect(hasLoadableImages(`<IMG src="${src}">` + "x".repeat(imageSourceByteLimit))).toBe(false);
+    expect(calls).toBe(2);
   } finally { spy.mockRestore(); }
 });
 
@@ -119,9 +123,13 @@ test("long-thread GET retains image availability, inert bodies and account isola
     for (let read = 0; read < 2; read++) {
       const response = await app.request("/v1/threads/thread?accountId=a", { headers });
       expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('private, no-store');
+      expect(response.headers.get('vary')?.toLowerCase()).toContain('x-orca-image-version');
       const text = await response.text();
       if (read) expect(text).toBe(first); else first = text;
       const detail = threadDetailSchema.parse(JSON.parse(text));
+      const oldParser = threadDetailSchema.extend({ messages: z.array(threadDetailMessageSchema.omit({ imageSourceRevision: true })) });
+      expect(oldParser.safeParse(JSON.parse(text)).success).toBe(true);
       expect(detail.messages).toHaveLength(50);
       for (const [index, message] of detail.messages.entries()) {
         expect(message.accountId).toBe("a");
@@ -130,6 +138,29 @@ test("long-thread GET retains image availability, inert bodies and account isola
         expect(message.bodyHtml ?? "").not.toMatch(/<img|<script|PRIVATE/);
       }
     }
+    const optedIn=await app.request('/v1/threads/thread?accountId=a',{headers:{...headers,'x-orca-image-version':'2'}});
+    const optedBody=await optedIn.json();const optedDetail=threadDetailSchema.parse(optedBody);
+    expect(optedDetail.messages[1]!.imageSourceRevision).toBe(imageSourceRevision(messages[1]!.bodyHtml));
+    const oldParser=threadDetailSchema.extend({messages:z.array(threadDetailMessageSchema.omit({imageSourceRevision:true}))});
+    expect(oldParser.safeParse(optedBody).success).toBe(false);
+    db.update(schema.emails).set({bodyHtml:`<img src="${src}">` + "x".repeat(imageSourceByteLimit)}).where(eq(schema.emails.id,"m-1")).run();
+    const oldLarge=await app.request('/v1/threads/thread?accountId=a',{headers});
+    expect(oldLarge.status).toBe(413);expect((await oldLarge.json()).error.code).toBe('payload_limit');
+    const newLarge=await app.request('/v1/threads/thread?accountId=a',{headers:{...headers,'x-orca-image-version':'2'}});
+    expect(newLarge.status).toBe(413);expect((await newLarge.json()).error.code).toBe('payload_limit');
+    let cursor: string | null = null, recovered = 0, unavailable = false;
+    do {
+      const query=new URLSearchParams({accountId:'a'});if(cursor)query.set('cursor',cursor);
+      const response=await app.request(`/v1/threads/thread/messages?${query}`,{headers:{...headers,'x-orca-image-version':'2'}});
+      expect(response.status).toBe(200);const page=threadReadPageSchema.parse(await response.json());
+      for(const entry of page.entries){
+        recovered++;if(entry.id==='m-1'){expect(entry.kind).toBe('unavailable');unavailable=true;}
+        if(entry.kind==='message')expect(entry.bodyHtml??'').not.toMatch(/<img|<script/);
+        expect('imageSourceRevision' in entry).toBe(false);
+      }
+      cursor=page.earlier;
+    }while(cursor);
+    expect(recovered).toBe(50);expect(unavailable).toBe(true);
     for (const url of ["/v1/threads/private?accountId=a", "/v1/threads/private?accountId=b"]) expect((await app.request(url, { headers })).status).toBe(404);
     expect((await app.request("/v1/threads/thread?accountId=a")).status).toBe(401);
     expect(downloads).toBe(0);

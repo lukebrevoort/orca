@@ -18,7 +18,7 @@ test("recovery is opt-in, replaces pages and offers no compose actions", async (
     reads++;
     const cursor = new URL(String(input), "http://localhost").searchParams.get("cursor");
     return Response.json(cursor ? { entries: [{ kind: "unavailable", id: "too-large" }], earlier: null, newer: "newer" } : {
-      entries: [{ kind: "message", id: "m", from: "Dana", subject: "First page", receivedAt: null, bodyText: "one", bodyHtml: null, htmlPresent: false }], earlier: "earlier", newer: null,
+      entries: [{ kind: "message", id: "m", from: "Dana", subject: "First page", receivedAt: null, bodyText: "one", bodyHtml: '<p>one</p><span class="orca-mail-image-note">[Image blocked: Banner]</span>', htmlPresent: true }], earlier: "earlier", newer: null,
     });
   }) as typeof fetch;
   const button = (name: string) => [...browser.document.querySelectorAll("button")].find(b => b.textContent?.trim() === name)!;
@@ -28,6 +28,7 @@ test("recovery is opt-in, replaces pages and offers no compose actions", async (
     await act(async () => button("Open in pages").click());
     expect(reads).toBe(1); expect(browser.document.body.textContent).toContain("First page");
     expect(button("Reply")).toBeUndefined(); expect(button("Forward")).toBeUndefined();
+    expect(button("Load images")).toBeUndefined(); expect(button("Refresh message")).toBeUndefined();
     await act(async () => button("Earlier").click());
     expect(reads).toBe(2); expect(browser.document.body.textContent).not.toContain("First page");
     expect(browser.document.body.textContent).toContain("too large");

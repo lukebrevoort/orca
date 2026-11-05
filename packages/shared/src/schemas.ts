@@ -344,6 +344,7 @@ export const normalizedMessageSchema = inboxMessageSchema
     bodyText: z.string().nullable(),
     bodyHtml: z.string().nullable(),
     imageLoadAvailable: z.boolean().optional(),
+    imageSourceRevision: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     internetMessageId: z.string().nullable(),
     references: z.array(z.string()),
     classificationEvidence: humanClassificationEvidenceSchema.optional(),
