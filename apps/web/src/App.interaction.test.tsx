@@ -1948,7 +1948,7 @@ describe("Desktop evidence and navigation", () => {
       expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("drafts");
       expect(desktopWorkspace().querySelector(".drafts-view")).not.toBeNull();
       const summary = [...browserWindow.document.querySelectorAll("button.desktop-sidebar-item")].find(button => button.textContent === "Summary")!;
-      await act(async () => { (summary as HTMLButtonElement).click(); });
+      await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
       expect(desktopWorkspace().textContent).not.toContain("Maya Chen");
       expect(desktopWorkspace().querySelector(".summary-card")).toBeNull();
     } finally { globalThis.fetch = originalFetch; }
