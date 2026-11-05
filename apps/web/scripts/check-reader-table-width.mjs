@@ -38,7 +38,7 @@ try {
     }
     await page.screenshot({ path: `${out}/${theme}-${width}.png`, fullPage: true });
     const plain = sanitizeInboundHtml('<table width="100%"><tr><td width="10"><span>v12.345.6789</span></td><td width="10"> </td><td>Other details</td></tr></table>');
-    await page.setContent(`<!doctype html><style>${css}</style><div class="reader-formatted-region" tabindex="0"><div class="reader-body reader-body-html">${plain}</div></div>`);
+    await page.setContent(`<!doctype html><html data-theme="${theme}"><meta name="viewport" content="width=device-width"><style>${css}</style><div class="reader-formatted-region" tabindex="0"><div class="reader-body reader-body-html">${plain}</div></div></html>`);
     await page.locator('.reader-body').evaluate(markReadableTableCells);
     const plainResult = await page.evaluate(() => {
       const cell = document.querySelector('td');
