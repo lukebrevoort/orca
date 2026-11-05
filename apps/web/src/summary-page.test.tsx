@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { SummaryPage } from "./summary-page";
+import { accountFixture, inboxFixture } from "@orca/shared";
 const globals = ["window", "document", "navigator", "HTMLElement", "HTMLButtonElement", "HTMLTextAreaElement", "Event", "MouseEvent", "Node", "Element", "MutationObserver", "Text", "DocumentFragment", "IS_REACT_ACT_ENVIRONMENT"] as const;
 const originals = new Map(globals.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 let browser: Window, root: Root, container: HTMLElement, clock: number;
@@ -182,13 +183,37 @@ test("stopping tracking disables an unapproved follow-up textarea", async () => 
   expect(waiting.querySelector("textarea")!.disabled).toBe(true);
 });
 
-test("live Summary does not show sample data or stale draft records and opens Drafts", async () => {
-  let opened = 0;
-  await act(async () => root.render(<SummaryPage onOpenDrafts={() => opened++} />));
-  expect(text()).not.toContain("Demo data");
-  expect(text()).not.toContain("Maya Chen");
-  expect(container.querySelector(".summary-card")).toBeNull();
-  expect(text()).toContain("not available here yet");
-  await click("Open Drafts");
-  expect(opened).toBe(1);
+test("live Summary loads scoped mail and drafts, ignores interrupted account reads and retries errors", async () => {
+  const originalFetch = globalThis.fetch;
+  const mail = { ...inboxFixture[0]!, accountId: "b", subject: "Synthetic human mail" };
+  const draft = { id: "draft-b", accountId: "b", to: [], cc: [], bcc: [], subject: "Synthetic draft", body: { text: "Hi", html: null }, context: null, attachments: [], revision: 1, deliveryStatus: "draft", providerSyncStatus: "not_applicable", providerSyncError: null, providerDraftId: null, providerMessageId: null, providerThreadId: null, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+  const page = { accounts: [accountFixture], messages: [mail], nextCursor: null, counts: { attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 }, classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 } } };
+  const pending: Array<(response: Response) => void> = [];
+  let fail = false, opened = 0, draftSubject = "Synthetic draft";
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(String(input), "http://localhost");
+    if (url.searchParams.get("accountId") === "a") return new Promise<Response>(resolve => pending.push(resolve));
+    if (fail) return new Response("error", { status: 503 });
+    return Response.json(url.pathname === "/v1/drafts" ? [{ ...draft, subject: draftSubject }, { ...draft, id: "other", accountId: "a", subject: "Other account" }] : page);
+  }) as typeof fetch;
+  try {
+    await act(async () => root.render(<SummaryPage accountId="a" accountEmail="a@example.com" onOpenDrafts={() => opened++} />));
+    expect(text()).toContain("Loading mail");
+    await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} />); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Synthetic human mail"); expect(text()).toContain("Synthetic draft"); expect(text()).not.toContain("Other account");
+    await act(async () => { for (const resolve of pending) resolve(Response.json(page)); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("b@example.com"); expect(text()).not.toContain("a@example.com");
+    await click("Open Drafts"); expect(opened).toBe(1);
+    draftSubject = "Updated draft";
+    await click("Refresh Summary");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Updated draft"); expect(text()).not.toContain("Synthetic draft");
+    fail = true;
+    await act(async () => { root.render(<SummaryPage accountId="c" />); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Mail could not be loaded"); expect(text()).toContain("Drafts could not be loaded"); expect(text()).not.toContain("Synthetic draft");
+    fail = false;
+    await click("Try again");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("No saved drafts yet");
+  } finally { globalThis.fetch = originalFetch; }
 });
