@@ -30,17 +30,7 @@ export async function createSession(
   const now = Date.now();
   const pending = isPendingUser(db, userId);
   if (pending) {
-    try {
-      db.delete(users).where(inArray(users.id,
-        db.select({ id: users.id }).from(users).where(and(
-          like(users.email, pendingUserEmailPattern),
-          isNull(users.authenticatedAt),
-          lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
-          ne(users.id, userId),
-          notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
-        )).limit(stalePendingPurgeBatchSize),
-      )).run();
-    } catch {
+    try { purgeStalePendingUsers(db, now, userId); } catch {
       // Opportunistic cleanup must never prevent login.
     }
   }
@@ -65,6 +55,19 @@ export async function createSession(
     expiresAt,
     token,
   };
+}
+
+/** Delete only old, unauthenticated placeholders without provider accounts. */
+export function purgeStalePendingUsers(db: Pick<DatabaseClient, "delete" | "select">, now: number, exceptUserId: string) {
+  db.delete(users).where(inArray(users.id,
+    db.select({ id: users.id }).from(users).where(and(
+      like(users.email, pendingUserEmailPattern),
+      isNull(users.authenticatedAt),
+      lt(users.createdAt, new Date(now - stalePendingUserAgeMs)),
+      ne(users.id, exceptUserId),
+      notExists(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, users.id))),
+    )).limit(stalePendingPurgeBatchSize),
+  )).run();
 }
 
 export async function renewSession(

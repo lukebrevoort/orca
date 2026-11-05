@@ -1,6 +1,6 @@
 import { and, asc, eq, like, ne, not } from "drizzle-orm";
 import { createDatabaseClient } from "../db/client.ts";
-import { oauthAccounts, users } from "../db/schema.ts";
+import { oauthAccounts, pendingMailLogins, users } from "../db/schema.ts";
 import { isMailOAuthSessionActive, PENDING_EMAIL_LIKE, pendingUserWhere } from "./mail-oauth-transactions.ts";
 
 /** Promote only the exact still-pending user created for this login transaction. */
@@ -52,6 +52,7 @@ export function completeMailOAuthLogin(db: ReturnType<typeof createDatabaseClien
       tx.delete(users).where(pendingWhere).run();
       return { ok: false as const, reason: "account_exists" as const };
     }
+    tx.delete(pendingMailLogins).where(eq(pendingMailLogins.userId, input.userId)).run();
     tx.update(users).set({
       email: input.providerEmail, authenticatedAt: new Date(),
       ...(input.provider === "outlook" ? { onboardingCompletedAt: new Date() } : {}),
