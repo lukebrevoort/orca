@@ -197,6 +197,7 @@ function markdownLabel(value: string) {
   return value.replace(/[\\[\]()!*_<>`]/g, "\\$&").replace(/[\r\n]/g, " ");
 }
 function validateUploadUrls(uploadUrl: string, assetUrl: string) {
+  if (assetUrl.length > 2048) throw new UploadPreparationError("asset_url");
   let upload: URL, asset: URL;
   try { upload = new URL(uploadUrl); } catch { throw new UploadPreparationError("upload_url_parse"); }
   try { asset = new URL(assetUrl); } catch { throw new UploadPreparationError("asset_url"); }
@@ -321,6 +322,12 @@ export function createLinearFeedbackSubmitter(
       return response;
     };
     try {
+      // Check the complete description before even reconciling or allocating
+      // uploads. Reserve the maximum allowed URL length for every attachment.
+      const reservedUrls = new Map(report.attachments.map(file => [file.id, "x".repeat(2048)]));
+      if (formatDescription(report, reservedUrls).length > LINEAR_DESCRIPTION_LIMIT) {
+        throw new Error("Linear description is too long.");
+      }
       // A server-derived UUID is also the Linear issue ID. Retrying an uncertain
       // create cannot create a second issue; recover the receipt by that exact ID.
       // Filtered lookup has a documented empty connection for absence, avoiding

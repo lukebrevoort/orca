@@ -9,6 +9,44 @@ import { readBoundedRequestBody } from "./request-body.ts";
 const MAX_FEEDBACK_BODY_BYTES = 40 * 1024 * 1024;
 const MAX_FEEDBACK_RECEIPTS = 500;
 const FEEDBACK_RECEIPT_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+let activeFeedbackRequests = 0;
+const deliveryTimes: number[] = [];
+
+// Bound structured work before redaction, formatting, or any provider call.
+function boundedReport(report: FeedbackReport): boolean {
+  if (report.attachments.length > 4 || report.elements.length > 50) return false;
+  const ids = new Set<string>();
+  for (const file of report.attachments) {
+    if (!file || typeof file !== "object" || typeof file.id !== "string" || file.id.length > 128 || ids.has(file.id) ||
+        typeof file.name !== "string" || file.name.length > 180 || typeof file.mimeType !== "string" ||
+        !/^image\/[a-z0-9.+-]{1,64}$/i.test(file.mimeType) || typeof file.dataUrl !== "string" ||
+        !["upload", "clipboard", "automatic-screenshot"].includes(file.source)) return false;
+    ids.add(file.id);
+    const prefix = `data:${file.mimeType};base64,`;
+    if (!file.dataUrl.startsWith(prefix)) return false;
+    const encoded = file.dataUrl.slice(prefix.length);
+    if (encoded.length > 4 * Math.ceil(MAX_ATTACHMENT_BYTES / 3) || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) return false;
+    const bytes = Buffer.from(encoded, "base64");
+    if (!bytes.length || bytes.length > MAX_ATTACHMENT_BYTES || bytes.toString("base64") !== encoded) return false;
+  }
+  const stack: Array<[unknown, number]> = [[{ ...report, attachments: [] }, 0]];
+  let nodes = 0, characters = 0;
+  while (stack.length) {
+    const [value, depth] = stack.pop()!;
+    if (++nodes > 1000 || depth > 16) return false;
+    if (typeof value === "string") characters += value.length;
+    else if (value && typeof value === "object") {
+      for (const [key, child] of Object.entries(value)) {
+        characters += key.length;
+        stack.push([child, depth + 1]);
+        if (stack.length + nodes > 1000) return false;
+      }
+    }
+    if (characters > 100_000) return false;
+  }
+  return true;
+}
 
 export type FeedbackReceipt = {
   id: string;
@@ -66,6 +104,11 @@ export async function handleFeedbackRequest(
     return Response.json({ error: "Feedback is not enabled." }, { status: 404, headers });
   }
 
+  if (activeFeedbackRequests >= 4) {
+    return Response.json({ error: "Feedback is busy." }, { status: 429, headers });
+  }
+  activeFeedbackRequests++;
+
   try {
     const bytes = await readBoundedRequestBody(request, MAX_FEEDBACK_BODY_BYTES);
     if (bytes === null) {
@@ -114,6 +157,16 @@ export async function handleFeedbackRequest(
     ) {
       return Response.json({ error: "Feedback field is too long." }, { status: 400, headers });
     }
+    if (!boundedReport(validatedReport)) {
+      return Response.json({ error: "Feedback payload exceeds its limits or contains invalid attachments." }, { status: 400, headers });
+    }
+
+    if (options.onReport) {
+      const time = Date.now();
+      while (deliveryTimes.length && deliveryTimes[0]! <= time - 60 * 60 * 1000) deliveryTimes.shift();
+      if (deliveryTimes.length >= 20) return Response.json({ error: "Feedback delivery limit reached." }, { status: 429, headers });
+      deliveryTimes.push(time);
+    }
 
     const now = (options.now ?? (() => new Date()))();
     const report: FeedbackReport = {
@@ -156,5 +209,7 @@ export async function handleFeedbackRequest(
       },
       { status: 400, headers },
     );
+  } finally {
+    activeFeedbackRequests--;
   }
 }

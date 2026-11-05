@@ -45,6 +45,16 @@ const report: FeedbackReport = {
 };
 
 describe("Linear feedback integration", () => {
+  test("rejects an oversized description before any provider request", async () => {
+    const originalFetch = globalThis.fetch;
+    let requests = 0;
+    globalThis.fetch = (async () => { requests++; throw new Error("unexpected provider call"); }) as unknown as typeof fetch;
+    try {
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: "test-only" })!;
+      await assert.rejects(send({ ...report, description: "x".repeat(250_001) }));
+      assert.equal(requests, 0);
+    } finally { globalThis.fetch = originalFetch; }
+  });
   test("does nothing when the API key is absent", () => {
     assert.equal(createLinearFeedbackSubmitter({}), undefined);
   });

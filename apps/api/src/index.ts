@@ -981,11 +981,24 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   registerFeedbackTicketRoutes(app, { dbFactory, allowedOrigin: serverConfig.webOrigin, deliver: options.feedbackTicketDelivery, ownerUserId: options.feedbackTicketOwnerUserId });
 
-  app.all("/v1/feedback", (c) => handleFeedbackRequest(c.req.raw, {
-    allowedOrigin: serverConfig.webOrigin,
-    enabled: process.env.NODE_ENV !== "production",
-    onReport: linearFeedbackSubmitter,
-  }));
+  // The legacy developer widget can use the personal Linear workspace only
+  // when explicitly enabled and accessed by its configured Orca owner.
+  app.all("/v1/feedback", async (c, next) => {
+    if (process.env.NODE_ENV === "production" || process.env.LEGACY_FEEDBACK_ENABLED !== "true") {
+      return c.json({ error: "Feedback is not enabled." }, 404);
+    }
+    if (c.req.method === "OPTIONS") return handleFeedbackRequest(c.req.raw, { allowedOrigin: serverConfig.webOrigin });
+    return requireAuth({ dbFactory })(c, next);
+  }, (c) => {
+    const owner = process.env.LINEAR_FEEDBACK_OWNER_USER_ID?.trim();
+    if (!owner || c.get("auth").userId !== owner || c.req.header("origin") !== serverConfig.webOrigin) {
+      return c.json({ error: "Feedback is not available." }, 403);
+    }
+    return handleFeedbackRequest(c.req.raw, {
+      allowedOrigin: serverConfig.webOrigin,
+      onReport: linearFeedbackSubmitter,
+    });
+  });
 
   app.get("/v1/auth/session", requireAuth({ dbFactory }), (c) => {
     const auth = c.get("auth");

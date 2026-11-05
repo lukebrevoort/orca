@@ -200,7 +200,7 @@ describe("feedback bounds", () => {
   });
   test("keeps body size, optional origin, method and disabled controls", async () => {
     const cap = 40 * 1024 * 1024;
-    for (const [size, status] of [[cap + 1, 413], [cap - 1, 201]]) {
+    for (const [size, status] of [[cap + 1, 413], [cap - 1, 400]]) {
       const base = { ...report, id: `body-${size}`, description: "" };
       base.description = "x".repeat(size! - JSON.stringify(base).length);
       const body = JSON.stringify(base);
@@ -216,6 +216,35 @@ describe("feedback bounds", () => {
     const disabled = await handleFeedbackRequest(new Request("http://localhost/feedback", { method: "POST", body: JSON.stringify(report) }), { enabled: false });
     assert.equal(disabled.status, 404);
   });
+});
+
+test("rejects excessive attachments and structured work before delivery or retention", async () => {
+  const attachment = { id: "one", name: "image.png", mimeType: "image/png", source: "upload", dataUrl: "data:image/png;base64,YQ==" };
+  const deep: Record<string, unknown> = {};
+  let cursor = deep;
+  for (let i = 0; i < 20; i++) cursor = cursor.next = {} as Record<string, unknown>;
+  const invalid = [
+    { attachments: Array.from({ length: 5 }, (_, i) => ({ ...attachment, id: String(i) })) },
+    { attachments: [{ ...attachment, dataUrl: "data:image/png;base64," + "YQ==".repeat(3) }] },
+    { attachments: [{ ...attachment, dataUrl: "data:image/png;base64," + "A".repeat(4 * Math.ceil((8 * 1024 * 1024 + 1) / 3)) }] },
+    { state: deep },
+    { description: "x".repeat(100_001) },
+  ];
+  for (const [i, change] of invalid.entries()) {
+    let deliveries = 0;
+    const id = `rejected-resource-${i}`;
+    const response = await submit({ ...report, id, ...change } as typeof report, epoch, () => { deliveries++; });
+    assert.equal(response.status, 400);
+    assert.equal(deliveries, 0);
+    assert.equal(lookup(id, new Date(epoch)), undefined);
+  }
+  let deliveries = 0;
+  const accepted = await submit({ ...report, id: "valid-attachment", attachments: [attachment] } as typeof report, epoch, () => { deliveries++; });
+  assert.equal(accepted.status, 201);
+  assert.equal(deliveries, 1);
+  const large = { ...attachment, dataUrl: "data:image/png;base64," + Buffer.alloc(8 * 1024 * 1024).toString("base64") };
+  const largeResponse = await submit({ ...report, id: "valid-large-attachment", attachments: [large] } as typeof report, epoch);
+  assert.equal(largeResponse.status, 201);
 });
 
 describe("feedback string types", () => {
@@ -273,4 +302,20 @@ describe("feedback string types", () => {
       assert.equal(await response.text(), JSON.stringify({ error }));
     });
   }
+});
+
+test("delivery admission limits concurrent and repeated requests", async () => {
+  const releases: Array<() => void> = [];
+  const pending = Array.from({ length: 4 }, (_, i) => submit({ ...report, id: `pending-${i}` }, epoch, () => new Promise<void>(resolve => releases.push(resolve))));
+  while (releases.length < 4) await new Promise(resolve => setTimeout(resolve, 1));
+  assert.equal((await submit({ ...report, id: "busy" })).status, 429);
+  releases.forEach(release => release());
+  assert.deepEqual((await Promise.all(pending)).map(response => response.status), [201, 201, 201, 201]);
+  let sawLimit = false;
+  for (let i = 0; i < 21; i++) {
+    const response = await submit({ ...report, id: `quota-${i}` }, epoch, () => {});
+    if (response.status === 429) { sawLimit = true; break; }
+    assert.equal(response.status, 201);
+  }
+  assert.equal(sawLimit, true);
 });

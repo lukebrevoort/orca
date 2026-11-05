@@ -10,6 +10,8 @@ import { createSession } from "./auth/session-store.ts";
 import { createMobileSession } from "./auth/mobile/store.ts";
 import type { AuthVariables } from "./auth/middleware.ts";
 import { registerFeedbackTicketRoutes, feedbackTicketId, validFeedbackAttachment, type FeedbackTicketDelivery } from "./feedback-ticket.ts";
+import { createApp } from "./index.ts";
+import { getServerConfig } from "./config/server.ts";
 
 let dir: string, dbPath: string, cookie: string, otherCookie: string;
 let savedSecret: string | undefined, savedKey: string | undefined;
@@ -39,6 +41,28 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
   if (savedSecret === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = savedSecret;
   if (savedKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY; else process.env.TOKEN_ENCRYPTION_KEY = savedKey;
+});
+test("legacy feedback fails closed and requires the owner and web origin", async () => {
+  const saved = { enabled: process.env.LEGACY_FEEDBACK_ENABLED, env: process.env.NODE_ENV, owner: process.env.LINEAR_FEEDBACK_OWNER_USER_ID };
+  try {
+    delete process.env.NODE_ENV; delete process.env.LEGACY_FEEDBACK_ENABLED;
+    process.env.LINEAR_FEEDBACK_OWNER_USER_ID = "owner";
+    const a = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+    const body = JSON.stringify({ schemaVersion: 1, id: "legacy", project: { id: "orca", name: "Orca" }, title: "hello", description: "feedback", context: { route: "/", url: "/", userAgent: "test" }, attachments: [], elements: [] });
+    const headers = { cookie, origin: getServerConfig().webOrigin, "content-type": "application/json" };
+    expect((await a.request("/v1/feedback", { method: "POST", headers, body })).status).toBe(404);
+    process.env.LEGACY_FEEDBACK_ENABLED = "true";
+    expect((await a.request("/v1/feedback", { method: "POST", body })).status).toBe(401);
+    expect((await a.request("/v1/feedback", { method: "POST", headers: { ...headers, cookie: otherCookie }, body })).status).toBe(403);
+    expect((await a.request("/v1/feedback", { method: "POST", headers: { cookie }, body })).status).toBe(403);
+    expect((await a.request("/v1/feedback", { method: "POST", headers, body })).status).toBe(201);
+    process.env.NODE_ENV = "production";
+    expect((await a.request("/v1/feedback", { method: "POST", headers, body })).status).toBe(404);
+  } finally {
+    for (const [key, value] of Object.entries({ LEGACY_FEEDBACK_ENABLED: saved.enabled, NODE_ENV: saved.env, LINEAR_FEEDBACK_OWNER_USER_ID: saved.owner })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
 });
 test("authentication and origin are required; availability is private", async () => {
   const a = app();
