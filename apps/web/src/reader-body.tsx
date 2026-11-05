@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
+import { markReadableTableCells } from "./reader-table";
 
 /** Keep exact geometry after focus enters message content. The browser can
  * scroll before focusin; preserve its chosen visible offset while revealing bodies. Retain it until
@@ -55,6 +56,7 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
   useLayoutEffect(() => {
     const body = formattedBody.current;
     if (!body) return;
+    markReadableTableCells(body);
     // Only whitespace may follow history. Never fold a quote with an inline
     // answer or footer after it, or search inside arbitrary sender layouts.
     const meaningfulNodes = (element: Element) => [...element.childNodes].filter(node =>

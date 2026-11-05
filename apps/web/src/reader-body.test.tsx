@@ -285,3 +285,14 @@ describe("hostile blocked image placeholder text", () => {
     expect(enhancedChip?.getAttribute("aria-label")).toBe("Blocked image: " + alt);
   });
 });
+
+test("marks only short, unbroken text cells without changing message content", async () => {
+  const token = "v12.345.6789";
+  const longToken = "a".repeat(500);
+  await render("cell-width", `<table><tr><td><span>${token}</span></td><td> </td><td>${longToken}</td><td>Two words</td><td><table><tr><td>inner content</td></tr></table></td></tr></table>`, null);
+  const cells = container.querySelectorAll("td");
+  expect(cells[0]?.classList.contains("reader-short-cell-value")).toBe(true);
+  for (const cell of [...cells].slice(1)) expect(cell.classList.contains("reader-short-cell-value")).toBe(false);
+  expect(container.querySelector(".reader-body-html")?.textContent).toContain(token);
+  expect(container.querySelector(".reader-body-html")?.textContent).toContain(longToken);
+});
