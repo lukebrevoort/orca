@@ -2018,7 +2018,7 @@ export function InboxApp({
     const timer = setTimeout(() => {
       void threadDetailCacheRef.current?.prefetch(
         references,
-        (reference) => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+        (reference) => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema, undefined, { headers: { "x-orca-image-version": "2" } }),
         { concurrency: 3, shouldContinue: () => active },
       );
     }, recentThreadPrefetchDelayMs);
@@ -2069,7 +2069,7 @@ export function InboxApp({
     }
     const request = cache.load(
       reference,
-      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema, undefined, { headers: { "x-orca-image-version": "2" } }),
       { refresh: true, version: selectedThreadVersion },
     );
     const requestGeneration = cache.retainGeneration(reference);
@@ -2114,7 +2114,7 @@ export function InboxApp({
     const cache = threadDetailCacheRef.current!;
     const detailRequest = cache.load(
       reference,
-      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema, undefined, { headers: { "x-orca-image-version": "2" } }),
       { refresh: true, version: selectedThreadVersion },
     );
     const requestGeneration = cache.retainGeneration(reference);

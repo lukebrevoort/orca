@@ -43,3 +43,11 @@ test("unmount aborts pending work and stale results cannot replace a different m
  expect(signal?.aborted).toBe(true);await act(async()=>resolve(response(1,0)));
  expect(container.textContent).toContain("Other message");expect(container.textContent).not.toContain("Loaded fixture");
 });
+test("a rejected v2 load does not fall back to the legacy route",async()=>{
+ const paths:string[]=[];
+ Object.defineProperty(globalThis,"fetch",{configurable:true,writable:true,value:async(path:string)=>{paths.push(path);return new Response('{}',{status:409});}});
+ await act(async()=>root.render(<MessageImageBody {...props}/>));
+ await act(async()=>container.querySelector('button')!.click());
+ expect(paths).toEqual(['/v1/messages/message/images/v2?accountId=account']);
+ expect(container.textContent).toContain('Images could not be loaded');
+});

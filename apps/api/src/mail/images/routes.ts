@@ -10,11 +10,25 @@ type Options={dbFactory?:typeof createDatabaseClient;downloadImage?:ImageDownloa
 export function registerMessageImageRoutes(app:Hono<{Variables:AuthVariables}>,options:Options={}){
  const dbFactory=options.dbFactory??createDatabaseClient;
  const active=new Set<string>();
- // Legacy clients cannot attest the message revision that was shown. Never
- // fetch on this route: an updated server must fail them closed.
- app.post("/v1/messages/:id/images",requireAuth({dbFactory}),c=>{
-  c.header("Cache-Control","private, no-store");
-  return c.json({error:{code:"image_upgrade_required",message:"Update Orca before loading images."}},426);
+ // Preserve the shipped bearer-only contract for older native clients. This
+ // legacy path cannot bind a request to the source revision shown to the user.
+ app.post("/v1/messages/:id/images",requireAuth({dbFactory}),async c=>{
+  c.header("Cache-Control","private, no-store");c.header("X-Content-Type-Options","nosniff");
+  if(!/^Bearer [A-Za-z0-9_-]+$/i.test(c.req.header("authorization")??""))return c.json({error:{code:"image_consent_required",message:"Load images from the app."}},403);
+  const accountId=c.req.query("accountId");if(!accountId)return c.json({error:{code:"validation_error",message:"An accountId is required"}},400);
+  const {db,sqlite}=dbFactory();let html:string|null=null;
+  try{
+   const row=db.select({html:emails.bodyHtml}).from(emails).innerJoin(oauthAccounts,eq(oauthAccounts.id,emails.accountId)).where(and(eq(emails.id,c.req.param("id")),eq(emails.accountId,accountId),eq(oauthAccounts.userId,c.get("auth").userId))).get();
+   if(!row)return c.json({error:{code:"not_found",message:"Message not found"}},404);
+   html=row.html;
+  }finally{sqlite.close();}
+  const key=JSON.stringify([accountId,c.req.param("id")]);
+  if(active.has(key)||active.size>=4)return c.json({error:{code:"image_busy",message:"Image loading is already in progress. Try again shortly."}},429);
+  active.add(key);
+  try{
+   const result=await renderRequestedImages(html,options.downloadImage,c.req.raw.signal,[],[],undefined,"legacy");
+   return c.json({bodyHtml:result.bodyHtml,sourceHash:result.sourceHash,loaded:result.loaded,blocked:result.blocked});
+  }finally{active.delete(key);}
  });
  app.post("/v1/messages/:id/images/v2",requireAuth({dbFactory}),bodyLimit({maxSize:4096}),async c=>{
   c.header("Cache-Control","private, no-store");c.header("X-Content-Type-Options","nosniff");

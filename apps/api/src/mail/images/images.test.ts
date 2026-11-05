@@ -12,7 +12,7 @@ import { users, oauthAccounts, threads, emails } from "../../db/schema.ts";
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { registerMessageImageRoutes } from "./routes.ts";
 import { downloadRemoteImage, ImageFetchError, isPublicImageAddress, remoteImageURL, rasterType, validatedRasterType, imageByteLimit } from "./remote.ts";
-import { hasLoadableImages, imageSourceRevision, renderRequestedImages } from "./render.ts";
+import { hasLoadableImages, imageSourceHash, imageSourceRevision, renderRequestedImages } from "./render.ts";
 import { createSession } from "../../auth/session-store.ts";
 import sharp from "sharp";
 import { sanitizeInboundHtml } from "../provider-html.ts";
@@ -106,16 +106,23 @@ test("native POST resolves only an authenticated user's stored message, before a
   const revision=imageSourceRevision('<img alt="Banner" src="https://images.example.org/banner.png">');
   const post=(token:string, rev=revision)=>({method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({revision:rev})});
   expect((await app.request(endpoint,{method:'POST'})).status).toBe(401);
-  const legacy=await app.request('/v1/messages/message/images?accountId=account',{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(legacy.status).toBe(426);expect((await legacy.json()).error.code).toBe('image_upgrade_required');
+  expect((await app.request(endpoint,{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`,'Content-Type':'application/json'},body:'{}'})).status).toBe(400);
+  const legacyEndpoint='/v1/messages/message/images?accountId=account';
+  expect((await app.request(legacyEndpoint,{method:'POST',headers:{Authorization:`Bearer ${stranger.accessToken}`}})).status).toBe(404);
+  expect((await app.request('/v1/messages/message/images',{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}})).status).toBe(400);
   expect((await app.request(endpoint,post(stranger.accessToken))).status).toBe(404);
   expect((await app.request('/v1/messages/message/images/v2?accountId=other',post(owner.accessToken))).status).toBe(404);
   expect((await app.request(endpoint,post(owner.accessToken,'0'.repeat(64)))).status).toBe(409);
+  expect((await app.request(endpoint,post(owner.accessToken,imageSourceRevision('<img alt="Banner" src="https://images.example.org/other.png">')))).status).toBe(409);
   expect((await app.request(endpoint,{headers:{Authorization:`Bearer ${owner.accessToken}`}})).status).toBe(404);expect(requests).toBe(0);
   const response=await app.request(endpoint,post(owner.accessToken));expect(response.status).toBe(200);expect(response.headers.get('Cache-Control')).toBe('private, no-store');expect((await response.json()).loaded).toBe(1);expect(requests).toBe(1);
+  const legacy=await app.request(legacyEndpoint,{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(legacy.status).toBe(200);
+  const oldBody=await legacy.json();expect(Object.keys(oldBody).sort()).toEqual(['blocked','bodyHtml','loaded','sourceHash']);expect(oldBody.sourceHash).toBe(imageSourceHash('<img alt="Banner" src="https://images.example.org/banner.png">'));expect(oldBody.loaded).toBe(1);expect(requests).toBe(2);
   const oldSecret=process.env.SESSION_SECRET,oldKey=process.env.TOKEN_ENCRYPTION_KEY;
   process.env.SESSION_SECRET='images-test-session-secret-long-enough';process.env.TOKEN_ENCRYPTION_KEY=Buffer.alloc(32,7).toString('base64');
   try {
    const session=await createSession(db,'owner'); const cookie=`orca_session=${session.token}`;
+   expect((await app.request(legacyEndpoint,{method:'POST',headers:{cookie}})).status).toBe(403);
    const web=(origin?:string,contentType='application/json')=>({method:'POST',headers:{cookie,...(origin?{origin}:{}),'content-type':contentType},body:JSON.stringify({revision})});
    expect((await app.request(endpoint,web())).status).toBe(403);
    expect((await app.request(endpoint,web('https://evil.example'))).status).toBe(403);
@@ -123,8 +130,8 @@ test("native POST resolves only an authenticated user's stored message, before a
    const other=await createSession(db,'stranger');
    expect((await app.request(endpoint,{...web('https://orca.example'),headers:{cookie:`orca_session=${other.token}`,origin:'https://orca.example','content-type':'application/json'}})).status).toBe(404);
    expect((await app.request(endpoint,{method:'POST',headers:{cookie,origin:'https://orca.example','content-type':'application/json'},body:JSON.stringify({revision,padding:'x'.repeat(5000)})})).status).toBe(413);
-   expect(requests).toBe(1);
-   expect((await app.request(endpoint,web('https://orca.example'))).status).toBe(200);expect(requests).toBe(2);
+   expect(requests).toBe(2);
+   expect((await app.request(endpoint,web('https://orca.example'))).status).toBe(200);expect(requests).toBe(3);
   }finally{if(oldSecret===undefined)delete process.env.SESSION_SECRET;else process.env.SESSION_SECRET=oldSecret;if(oldKey===undefined)delete process.env.TOKEN_ENCRYPTION_KEY;else process.env.TOKEN_ENCRYPTION_KEY=oldKey;}
  }finally{sqlite.close();rmSync(dir,{recursive:true,force:true});}
 });
@@ -167,6 +174,8 @@ test("retry retains successful slots and prioritizes previously unattempted cand
  expect(second.bodyHtml).not.toContain('https://');
  const failures=await renderRequestedImages(html,async()=>{throw new ImageFetchError('dns')});
  expect(failures.attempted).toBe(12);expect(failures.failures.dns).toBe(12);expect(failures.reasons.byteBudget).toBe(0);
+ const legacy=await renderRequestedImages(html,async()=>{throw new ImageFetchError('dns');},undefined,[],[],undefined,'legacy');
+ expect(legacy.attempted).toBe(4);expect(legacy.reasons.byteBudget).toBe(22);
 });
 test("source revision changes when only an image URL changes",()=>{
  const a='<img alt="Banner" src="https://images.example.org/one.png">';

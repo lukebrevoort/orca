@@ -2406,12 +2406,15 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
+          c.header("Cache-Control", "private, no-store");
+          c.header("Vary", "x-orca-image-version", { append: true });
           // The shared reader already applies threadDetailSchema, including its defaults and transforms.
           return c.json(readThreadDetail(
             db,
             account,
             serializeMailAccount(account),
             c.req.param("threadId"),
+            c.req.header("x-orca-image-version") === "2",
           ));
         } catch (error) {
           if (error instanceof McpReadError && error.code === "not_found") {
@@ -3135,8 +3138,8 @@ function resolveSenderAttention(db: Database, accountId: string, address: string
   return resolvedSenderAttentionSchema.parse({ behavior: effective.behavior, rule: effective.rule });
 }
 
-function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string): ThreadDetail {
-  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId), { behavior: "deferred" });
+function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string, includeImageRevision = false): ThreadDetail {
+  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId, includeImageRevision), { behavior: "deferred" });
 }
 
 function readThreadDetailSnapshot(
@@ -3144,6 +3147,7 @@ function readThreadDetailSnapshot(
   account: ConnectedAccount,
   serializedAccount: MailAccount,
   threadId: string,
+  includeImageRevision: boolean,
 ): ThreadDetail {
   const thread = db.select().from(threads)
     .where(and(eq(threads.id, threadId), eq(threads.accountId, account.id))).get();
@@ -3192,7 +3196,7 @@ function readThreadDetailSnapshot(
       from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
       to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
       imageLoadAvailable: hasLoadableImages(message.bodyHtml),
-      imageSourceRevision: imageSourceRevision(message.bodyHtml),
+      ...(includeImageRevision ? { imageSourceRevision: imageSourceRevision(message.bodyHtml) } : {}),
       subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
       unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
       internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),

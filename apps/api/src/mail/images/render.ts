@@ -23,7 +23,7 @@ export function imageSourceHash(html:string|null){return createHash("sha256").up
 export function imageSourceRevision(html:string|null){return createHash("sha256").update(html??"").digest("hex");}
 export type ImageDownload = typeof downloadRemoteImage;
 /** The default read path never calls this. Only an authorized explicit POST may resolve images. */
-export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage, requestSignal?:AbortSignal, retained:number[]=[], seen:number[]=[], remainingBytes=8*1024*1024) {
+export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage, requestSignal?:AbortSignal, retained:number[]=[], seen:number[]=[], remainingBytes=8*1024*1024, mode:"v2"|"legacy"="v2") {
   const {document,images}=documentImages(html);const timeout=AbortSignal.timeout(20_000);
   const signal=requestSignal ? AbortSignal.any([timeout,requestSignal]) : timeout;
   const replacements=new Map<string,string>();let loaded=0,spentBytes=0,attempted=0,retainedCount=0;
@@ -60,7 +60,7 @@ export async function renderRequestedImages(html:string|null,download:ImageDownl
       // DNS and pre-response connection errors consume no response body.
       if(error instanceof ImageFetchError){
         failures[error.reason]++;
-        spentBytes+=(["dns","destination","network"].includes(error.reason) ? error.bytes : Math.max(error.bytes,maximumImageBytes));
+        spentBytes+=(mode==="legacy" ? Math.max(error.bytes,maximumImageBytes) : ["dns","destination","network"].includes(error.reason) ? error.bytes : Math.max(error.bytes,maximumImageBytes));
       }else{failures.unknown++;spentBytes+=maximumImageBytes;}
       reasons.downloadFailed++;
     }
