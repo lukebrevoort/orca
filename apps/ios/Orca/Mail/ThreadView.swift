@@ -359,8 +359,6 @@ private struct MessageImageBody: View {
                 } else if needsRefresh {
                     refreshButton
                 } else if status == nil || retryable {
-                    Text("Images are blocked. Loading may tell the sender you opened this message.")
-                        .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                     Button(loading ? "Loading images…" : (status == nil ? "Load images" : "Retry images")) { load() }
                         .buttonStyle(.bordered).tint(OrcaTheme.accent).disabled(loading)
                         .accessibilityIdentifier("message.load-images")

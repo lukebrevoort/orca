@@ -26,7 +26,7 @@ test("explicit consent, duplicate click, partial result and retry",async()=>{
  let calls=0,resolve!: (response:Response)=>void;
  Object.defineProperty(globalThis,"fetch",{configurable:true,writable:true,value:()=>{calls++;return new Promise<Response>(done=>{resolve=done;});}});
  await act(async()=>root.render(<MessageImageBody {...props}/>));
- expect(calls).toBe(0);expect(container.textContent).toContain("Images are blocked");
+ expect(calls).toBe(0);expect(container.querySelector("button")?.textContent).toBe("Load images");expect(container.textContent).not.toContain("Loading may tell the sender");
  await act(async()=>{const button=container.querySelector("button")!;button.click();button.click();});
  expect(calls).toBe(1);expect(container.textContent).toContain("Loading images");
  await act(async()=>resolve(response(1,1)));

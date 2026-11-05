@@ -141,6 +141,7 @@ final class ReaderUITests: XCTestCase {
         row.tap()
         let load = app.buttons["message.load-images"]
         XCTAssertTrue(load.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Images are blocked. Loading may tell the sender you opened this message."].exists)
         for _ in 0..<4 { if load.isHittable { break }; app.swipeUp() }
         XCTAssertEqual(try imageDownloadCount(), initialDownloads, "Opening a message must not contact image hosts")
         screenshot("images-blocked-before-consent")

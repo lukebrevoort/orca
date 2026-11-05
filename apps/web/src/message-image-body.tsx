@@ -49,7 +49,6 @@ export function MessageImageBody({ accountId, messageId, revision, available, ht
   }
   return <>
     {available && revision && (!status || retryable) ? <div className="reader-images-consent">
-      <p>Images are blocked. Loading may tell the sender you opened this message.</p>
       <button type="button" disabled={loading} onClick={() => void load()}>{loading ? "Loading images…" : status ? "Retry images" : "Load images"}</button>
     </div> : null}
     {status ? <p role="status">{status}</p> : null}
