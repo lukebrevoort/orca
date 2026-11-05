@@ -100,9 +100,7 @@
   padding: .35em 0;
 }
 .reader-body-html .orca-mail-image-note {
-  display: inline-flex;
-  align-items: baseline;
-  gap: .5em;
+  display: inline-block;
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--orca-border);
@@ -116,7 +114,7 @@
 }
 .reader-body-html .orca-mail-image-note::before {
   content: "▧";
-  flex: none;
+  margin-right: .5em;
 }
 .reader-images-hidden-note {
   color: var(--orca-muted);
@@ -136,3 +134,13 @@
     max-width: 100%;
   }
 }
+
+/* Keep short links and blocked-image labels in narrow digest cells legible.
+   Retain emergency word breaking for long links and alternative text. */
+.reader-body-html table:not(.orca-mail-layout) > tr > :is(td, th):has(a, .orca-mail-image-note),
+.reader-body-html table:not(.orca-mail-layout) > :is(thead, tbody, tfoot) > tr > :is(td, th):has(a, .orca-mail-image-note) {
+  min-width: 18ch;
+}
+/* The surrounding labelled region owns horizontal scrolling. A table-level
+   overflow clips cells before they can be reached by keyboard or touch. */
+.reader-body-html table { overflow: visible; }
