@@ -10,7 +10,7 @@ import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, sql, type SQLWrapper } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -3146,34 +3146,48 @@ function resolveSenderAttention(db: Database, accountId: string, address: string
   return resolvedSenderAttentionSchema.parse({ behavior: effective.behavior, rule: effective.rule });
 }
 
-export const threadDetailLimits = { messages: 100, bodyBytes: 2 * 1024 * 1024, totalBodyBytes: 8 * 1024 * 1024, associations: 1000 } as const;
+export const threadDetailLimits = { messages: 100, bodyBytes: 2 * 1024 * 1024, totalBodyBytes: 8 * 1024 * 1024, metadataBytes: 2 * 1024 * 1024, associations: 1000 } as const;
+
+function metadataSize(...columns: SQLWrapper[]) {
+  return sql<number>`${sql.join(columns.map((column) => sql`coalesce(length(cast(${column} as blob)), 0)`), sql` + `)}`;
+}
 
 function checkThreadDetailBudget(db: Database, accountId: string, threadId: string) {
+  const threadSize = db.select({ bytes: metadataSize(threads.id, threads.accountId, threads.providerThreadId, threads.subject) })
+    .from(threads).where(and(eq(threads.id, threadId), eq(threads.accountId, accountId))).get();
+  if (!threadSize) throw new McpReadError("not_found", "Thread not found");
+  let totalMetadataBytes = threadSize.bytes;
   const bodySizes = db.select({
     text: sql<number>`coalesce(length(cast(${emails.bodyText} as blob)), 0)`,
     html: sql<number>`coalesce(length(cast(${emails.bodyHtml} as blob)), 0)`,
+    metadata: metadataSize(emails.id, emails.accountId, emails.providerMessageId, emails.fromAddress, emails.fromName,
+      emails.toRecipients, emails.ccRecipients, emails.bccRecipients, emails.subject, emails.snippet,
+      emails.internetMessageId, emails.references, emails.humanClassification, emails.humanClassificationReasons, emails.humanClassifierVersion),
   }).from(emails)
     .where(and(eq(emails.threadId, threadId), eq(emails.accountId, accountId)))
     .limit(threadDetailLimits.messages + 1).all();
   let totalBodyBytes = 0;
-  for (const { text, html } of bodySizes) {
-    if (!Number.isSafeInteger(text) || !Number.isSafeInteger(html) || text < 0 || html < 0 ||
+  for (const { text, html, metadata } of bodySizes) {
+    if (!Number.isSafeInteger(text) || !Number.isSafeInteger(html) || !Number.isSafeInteger(metadata) || text < 0 || html < 0 || metadata < 0 ||
         text > threadDetailLimits.bodyBytes || html > threadDetailLimits.bodyBytes) {
       throw new McpReadError("payload_limit", "This conversation is too large to open in Orca.");
     }
     totalBodyBytes += text + html;
+    totalMetadataBytes += metadata;
   }
   if (bodySizes.length > threadDetailLimits.messages || totalBodyBytes > threadDetailLimits.totalBodyBytes) {
     throw new McpReadError("payload_limit", "This conversation is too large to open in Orca.");
   }
   const scope = and(eq(emails.threadId, threadId), eq(emails.accountId, accountId));
-  const links = db.select({ id: emailLabels.id }).from(emailLabels)
-    .innerJoin(emails, eq(emails.id, emailLabels.emailId)).where(scope)
+  const links = db.select({ bytes: metadataSize(emails.id, labels.name) }).from(emailLabels)
+    .innerJoin(emails, eq(emails.id, emailLabels.emailId)).innerJoin(labels, eq(labels.id, emailLabels.labelId)).where(scope)
     .limit(threadDetailLimits.associations + 1).all();
-  const attachments = db.select({ id: emailAttachments.id }).from(emailAttachments)
+  const attachments = db.select({ bytes: metadataSize(emailAttachments.id, emailAttachments.emailId, emailAttachments.filename, emailAttachments.mimeType) }).from(emailAttachments)
     .innerJoin(emails, eq(emails.id, emailAttachments.emailId)).where(scope)
     .limit(threadDetailLimits.associations + 1).all();
-  if (links.length > threadDetailLimits.associations || attachments.length > threadDetailLimits.associations) {
+  for (const { bytes } of [...links, ...attachments]) totalMetadataBytes += bytes;
+  if (links.length > threadDetailLimits.associations || attachments.length > threadDetailLimits.associations ||
+      !Number.isSafeInteger(totalMetadataBytes) || totalMetadataBytes < 0 || totalMetadataBytes > threadDetailLimits.metadataBytes) {
     throw new McpReadError("payload_limit", "This conversation is too large to open in Orca.");
   }
 }
@@ -3188,13 +3202,11 @@ function readThreadDetailSnapshot(
   serializedAccount: MailAccount,
   threadId: string,
 ): ThreadDetail {
-  const thread = db.select().from(threads)
-    .where(and(eq(threads.id, threadId), eq(threads.accountId, account.id))).get();
-  if (!thread) throw new McpReadError("not_found", "Thread not found");
-
   // Check bytes in SQLite before materializing bodies. The bounded probe and
   // subsequent read share this transaction's snapshot, including under sync.
-  checkThreadDetailBudget(db, account.id, thread.id);
+  checkThreadDetailBudget(db, account.id, threadId);
+  const thread = db.select().from(threads)
+    .where(and(eq(threads.id, threadId), eq(threads.accountId, account.id))).get()!;
 
   const messageRows = db.select({
     id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName, createdAt: emails.createdAt,

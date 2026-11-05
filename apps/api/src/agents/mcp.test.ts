@@ -410,6 +410,12 @@ describe("Orca scoped MCP server", () => {
       assert.equal(result.result.isError, true);
       assert.equal(JSON.parse(result.result.content[0].text).error.code, "payload_limit");
       assert.equal(result.result.structuredContent, undefined, "overflow must not return a partial thread");
+      db.update(emails).set({ bodyText: "Normal", snippet: "x".repeat(threadDetailLimits.metadataBytes + 1) }).where(eq(emails.id, "message_a_1")).run();
+      const metadataResult = await rpcBody(await callMcp(app, await signToken(), "tools/call", {
+        name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" },
+      }));
+      assert.equal(metadataResult.result.isError, true);
+      assert.equal(JSON.parse(metadataResult.result.content[0].text).error.code, "payload_limit");
     } finally { sqlite.close(); }
   });
 

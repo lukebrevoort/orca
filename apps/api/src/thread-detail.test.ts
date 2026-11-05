@@ -11,6 +11,7 @@ import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import * as schema from "./db/schema.ts";
 import { createApp, threadDetailLimits } from "./index.ts";
+import { persistGmailMessages } from "./providers/gmail/sync.ts";
 
 test("thread detail rejects count, individual and aggregate body overflows before fetching bodies", async () => {
   const oldSecret = process.env.SESSION_SECRET;
@@ -48,8 +49,40 @@ test("thread detail rejects count, individual and aggregate body overflows befor
       assert.equal(response.status, 413);
       assert.equal((await response.json()).error.code, "payload_limit");
       assert.equal(observed.some((query) => /^select\b/i.test(query) && /"body_text"\s*,\s*"body_html"/i.test(query.split(/\bfrom\b/i)[0]!)), false, "rejected thread must not fetch full bodies");
+      assert.equal(observed.some((query) => /^select\b/i.test(query) && /"subject"\s*,\s*"snippet"/i.test(query.split(/\bfrom\b/i)[0]!)), false, "rejected thread must not fetch message metadata");
     };
     assert.equal((await request()).status, 200);
+    // Each representation reaches a later SELECT; none may enter JS on overflow.
+    for (const column of ["subject", "snippet", "to_recipients", "cc_recipients", "bcc_recipients", "references"]) {
+      sqlite.query(`update emails set "${column}" = ? where id = 'm0'`).run("é".repeat(threadDetailLimits.metadataBytes / 2 + 1));
+      await reject();
+      sqlite.query(`update emails set "${column}" = null where id = 'm0'`).run();
+    }
+    sqlite.query("update threads set subject = ? where id = 'thread'").run("x".repeat(threadDetailLimits.metadataBytes + 1));
+    await reject();
+    sqlite.run("update threads set subject = null where id = 'thread'");
+    sqlite.query("update emails set subject = ?, snippet = ? where id = 'm0'").run("x".repeat(threadDetailLimits.metadataBytes / 2), "x".repeat(threadDetailLimits.metadataBytes / 2));
+    await reject();
+    sqlite.run("update emails set subject = 'Hello', snippet = 'A short preview' where id = 'm0'");
+    assert.equal((await request()).status, 200, "ordinary metadata remains readable");
+    db.insert(schema.labels).values({ id: "label", accountId: "a", providerLabelId: "label", name: "Work", type: "user" }).run();
+    db.insert(schema.emailLabels).values({ id: "link", emailId: "m0", labelId: "label" }).run();
+    db.insert(schema.emailAttachments).values({ id: "attachment", emailId: "m0", providerAttachmentId: "attachment", filename: "file.pdf", mimeType: "application/pdf", size: 1 }).run();
+    for (const [table, column] of [["labels", "name"], ["email_attachments", "filename"], ["email_attachments", "mime_type"]]) {
+      sqlite.query(`update ${table} set ${column} = ?`).run("x".repeat(threadDetailLimits.metadataBytes + 1));
+      await reject();
+      sqlite.query(`update ${table} set ${column} = ?`).run("normal");
+    }
+    sqlite.run("delete from email_attachments");
+    sqlite.run("delete from email_labels");
+    // Gmail sync persists provider snippet verbatim before this shared read.
+    await persistGmailMessages(db, { accountId: "a", accountEmail: "owner@example.com", gmailMessages: [{
+      id: "provider-message", threadId: "provider-thread", snippet: "x".repeat(threadDetailLimits.metadataBytes + 1),
+      payload: { headers: [{ name: "From", value: "sender@example.com" }, { name: "Subject", value: "Hello" }] },
+    }], labelList: [], now: new Date(), propagationTrigger: "sync", propagationOptions: { enabled: false } });
+    const providerResponse = await app.request("/v1/threads/gmail:a:provider-thread?accountId=a", { headers });
+    assert.equal(providerResponse.status, 413);
+    assert.equal((await providerResponse.json()).error.code, "payload_limit");
     // A sync commit between the probe and body SELECT cannot change the
     // snapshot being read. The next request sees and rejects the larger body.
     concurrentSync = true;
