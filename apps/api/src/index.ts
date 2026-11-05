@@ -9,6 +9,8 @@ import { registerMobilePushRoutes, createMobilePushScheduler } from "./mobile-pu
 import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
 import { createHash } from "node:crypto";
+import { queryWaitingSummary } from "./summary/query.ts";
+import { buildSummary } from "./summary/rules.ts";
 
 import { and, asc, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
@@ -95,6 +97,7 @@ import {
   legacyUserPreferencesResponseSchema,
   guidanceUserPreferencesResponseSchema,
   userPreferencesQuerySchema,
+  waitingSummarySchema,
 } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
@@ -2011,6 +2014,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post("/v1/reminders/:id/done", requireAuth({ dbFactory }), (c) => updateReminderTerminal(c, dbFactory, now, "completed"));
   app.delete("/v1/reminders/:id", requireAuth({ dbFactory }), (c) => updateReminderTerminal(c, dbFactory, now, "cancelled"));
+
+  app.get("/v1/summary/waiting", requireAuth({ dbFactory }), (c) => {
+    const accountId = c.req.query("accountId")?.trim();
+    if (!accountId) return c.json({ error: { code: "validation_error", message: "accountId is required" } }, 400);
+    const { db, sqlite } = dbFactory();
+    try {
+      const userId = c.get("auth").userId;
+      if (!getConnectedAccountById(db, userId, accountId)) return noConnectedAccount(c);
+      const timestamp = now();
+      const summary = buildSummary(queryWaitingSummary(db, userId, accountId, timestamp), timestamp);
+      return jsonWithSchema(c, waitingSummarySchema, { accountId, waitingOn: summary.waitingOn.map(({ source, title, days }) => ({ source, title, days })) });
+    } finally { sqlite.close(); }
+  });
 
   app.get("/v1/drafts", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();

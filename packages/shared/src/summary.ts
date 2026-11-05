@@ -19,3 +19,4 @@ export const summaryResponseSchema = z.object({
     ctx.addIssue({ code: "custom", message: "Tile counts must match their contents" });
 });
 export type SummaryResponse = z.infer<typeof summaryResponseSchema>;
+export const waitingSummarySchema = z.object({ accountId: z.string().min(1), waitingOn: z.array(z.object({ source, title: z.string(), days: count }).strict()).max(20) }).strict();

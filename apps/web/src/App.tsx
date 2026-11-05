@@ -2456,10 +2456,11 @@ export function InboxApp({
     }
   }
 
-  function openSavedViewThread(target: { accountId: string; threadId: string }) {
+  function openSavedViewThread(target: { accountId: string; threadId: string }, summaryOrigin?: { messageId: string; button: HTMLButtonElement }) {
     if (panelClosing) return;
     readerNavigationGenerationRef.current += 1;
-    surfaceHistoryRef.current?.openReader(target, captureSurfaceReturnContext(null));
+    if (summaryOrigin) summaryReaderOriginRef.current = summaryOrigin.button;
+    surfaceHistoryRef.current?.openReader(target, captureSurfaceReturnContext(summaryOrigin ? { kind: "message", id: accountScopedIdentityKey(target.accountId, summaryOrigin.messageId) } : null));
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
@@ -3361,7 +3362,7 @@ export function InboxApp({
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} onOpenDraft={(draft, origin) => { summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} /></div>}
+          {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} onOpenDraft={(draft, origin) => { summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} onOpenWaiting={(source, origin) => { if (account?.id) openSavedViewThread({ accountId: account.id, threadId: source.threadId }, { messageId: source.messageId, button: origin }); }} /></div>}
           {summaryOpen && !selectedThreadId ? null : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
