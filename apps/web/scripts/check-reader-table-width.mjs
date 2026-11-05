@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { sanitizeInboundHtml } from '../../api/src/mail/provider-html.ts';
+import { markReadableTableCells } from '../src/reader-table.ts';
 
 const css = ['styles', 'reader-body'].map(name => readFileSync(new URL(`../src/${name}.css`, import.meta.url), 'utf8').replace(/@import[^;]+;/g, '')).join('\n');
 const raw = '<table width="100%"><tr><td width="10"><div><img src="https://tracker.example.invalid/logo" alt="Microsoft"></div></td><td width="10"><span><a href="https://example.invalid/advisory">v12.345.6789</a></span></td><td>A synthetic security digest with readable advisory text.</td></tr></table>';
@@ -19,6 +20,7 @@ try {
     await page.route('**/*', route => { requests.push(route.request().url()); return route.abort(); });
     await page.setContent(`<!doctype html><html data-theme="${theme}"><meta name="viewport" content="width=device-width"><style>${css}</style><div class="reader-formatted-region" tabindex="0" role="region" aria-label="Formatted message"><div class="reader-body reader-body-html">${html}</div></div></html>`);
     await page.locator('.orca-mail-image-note').evaluate(note => { note.textContent = 'Microsoft'; }); // ReaderBody enhances the sanitizer placeholder.
+    await page.locator('.reader-body').evaluate(markReadableTableCells);
     const measures = await page.evaluate(() => {
       const rects = selector => { const node = document.querySelector(selector).firstChild; const range = document.createRange(); range.selectNodeContents(node); return [...range.getClientRects()].map(r => r.width); };
       const region = document.querySelector('.reader-formatted-region');
@@ -35,9 +37,20 @@ try {
       await page.locator('.reader-formatted-region').evaluate(el => { el.scrollLeft = 0; });
     }
     await page.screenshot({ path: `${out}/${theme}-${width}.png`, fullPage: true });
+    const plain = sanitizeInboundHtml('<table width="100%"><tr><td width="10"><span>v12.345.6789</span></td><td width="10"> </td><td>Other details</td></tr></table>');
+    await page.setContent(`<!doctype html><style>${css}</style><div class="reader-formatted-region" tabindex="0"><div class="reader-body reader-body-html">${plain}</div></div>`);
+    await page.locator('.reader-body').evaluate(markReadableTableCells);
+    const plainResult = await page.evaluate(() => {
+      const cell = document.querySelector('td');
+      const range = document.createRange(); range.selectNodeContents(cell.querySelector('span'));
+      return { lines: range.getClientRects().length, marked: cell.classList.contains('reader-short-cell-value'), spacer: document.querySelectorAll('td')[1].className };
+    });
+    assert.deepEqual(plainResult, { lines: 1, marked: true, spacer: '' }, `plain version at ${width}`);
+    if (width === 720) await page.screenshot({ path: `${out}/plain-${theme}.png`, fullPage: true });
     const longToken = 'a'.repeat(500);
     const nested = sanitizeInboundHtml(`<table role="presentation"><tr><td><table><tr><td><img src="https://tracker.example.invalid/long" alt="${longToken}"></td><td><a href="https://example.invalid/long">${longToken}</a></td></tr></table></td></tr></table>`);
     await page.setContent(`<!doctype html><html data-theme="${theme}"><meta name="viewport" content="width=device-width"><style>${css}</style><div class="reader-formatted-region" tabindex="0" role="region" aria-label="Formatted message"><div class="reader-body reader-body-html">${nested}</div></div></html>`);
+    await page.locator('.reader-body').evaluate(markReadableTableCells);
     const bounds = await page.evaluate(() => {
       const region = document.querySelector('.reader-formatted-region');
       const cells = [...region.querySelectorAll('td, a, .orca-mail-image-note')];

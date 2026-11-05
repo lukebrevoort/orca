@@ -135,10 +135,10 @@
   }
 }
 
-/* Keep short links and blocked-image labels in narrow digest cells legible.
+/* Keep short values, links and blocked-image labels in narrow digest cells legible.
    Retain emergency word breaking for long links and alternative text. */
-.reader-body-html table:not(.orca-mail-layout) > tr > :is(td, th):has(a, .orca-mail-image-note),
-.reader-body-html table:not(.orca-mail-layout) > :is(thead, tbody, tfoot) > tr > :is(td, th):has(a, .orca-mail-image-note) {
+.reader-body-html table:not(.orca-mail-layout) > tr > :is(td, th):is(:has(a, .orca-mail-image-note), .reader-short-cell-value),
+.reader-body-html table:not(.orca-mail-layout) > :is(thead, tbody, tfoot) > tr > :is(td, th):is(:has(a, .orca-mail-image-note), .reader-short-cell-value) {
   min-width: 18ch;
 }
 /* The surrounding labelled region owns horizontal scrolling. A table-level
