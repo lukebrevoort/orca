@@ -10,17 +10,25 @@ tested_sha="$(git rev-parse HEAD)"
 scratch="$(mktemp -d /tmp/orca-web-image-demo-XXXXXX)"
 fixture_pid=""
 cleanup() {
+  local result=$?
   if [[ -n "$fixture_pid" ]]; then kill -TERM "$fixture_pid" 2>/dev/null || true; wait "$fixture_pid" 2>/dev/null || true; fi
+  if [[ "$result" -ne 0 ]]; then
+    local failure_dir="${output}.failed-$(basename "$scratch")"
+    if mkdir "$failure_dir" 2>/dev/null; then
+      [[ ! -f "$scratch/build.log" ]] || cp "$scratch/build.log" "$failure_dir/build.log"
+      [[ ! -f "$scratch/fixture.log" ]] || cp "$scratch/fixture.log" "$failure_dir/fixture.log"
+      printf 'Synthetic fixture failed; logs retained at %s\n' "$failure_dir" >&2
+    fi
+  fi
   rm -rf "$scratch"
 }
 trap cleanup EXIT
 bun run build >"$scratch/build.log" 2>&1
 node --input-type=module - "$tested_sha" >"$scratch/build-proof.json" <<'JS'
-import {readFileSync} from 'node:fs';import {createHash} from 'node:crypto';
-const htmlPath='apps/web/dist/index.html';const html=readFileSync(htmlPath);
-const match=html.toString('utf8').match(/src="(\/assets\/index-[A-Za-z0-9_-]+\.js)"/);
-if(!match)throw new Error('Built entry bundle missing');
-const files={};for(const path of [htmlPath,'apps/web/dist'+match[1]])files[path]=createHash('sha256').update(readFileSync(path)).digest('hex');
+import {readFileSync,readdirSync} from 'node:fs';import {createHash} from 'node:crypto';
+function walk(directory){return readdirSync(directory,{withFileTypes:true}).flatMap(entry=>{if(entry.isSymbolicLink())throw new Error('Built output contains a symlink');const path=`${directory}/${entry.name}`;if(entry.isDirectory())return walk(path);if(entry.isFile())return [path];throw new Error('Unexpected built output');});}
+const files={};for(const path of walk('apps/web/dist').sort())files[path]=createHash('sha256').update(readFileSync(path)).digest('hex');
+if(!files['apps/web/dist/index.html'])throw new Error('Built index missing');
 console.log(JSON.stringify({commit:process.argv[2],files}));
 JS
 bun apps/api/scripts/compose-fixture.ts --images >"$scratch/fixture.log" 2>&1 &

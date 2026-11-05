@@ -4,7 +4,7 @@
  * in-process boundary. No real mailbox, DNS lookup or sender request is used.
  */
 import assert from 'node:assert/strict';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { resolve, join } from 'node:path';
@@ -16,11 +16,20 @@ assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),t
 assert.equal(execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),'', 'Fixture requires a clean checkout');
 const buildProof=JSON.parse(await readFile(process.env.ORCA_IMAGE_BUILD_PROOF ?? '', 'utf8'));
 assert.equal(buildProof.commit,testedSha,'Build proof must name the tested commit');
+async function filesIn(directory){
+ const paths=[];for(const entry of await readdir(directory,{withFileTypes:true})){
+  assert(!entry.isSymbolicLink(),'Built output must not contain symlinks');
+  const path=`${directory}/${entry.name}`;
+  if(entry.isDirectory())paths.push(...await filesIn(path));else if(entry.isFile())paths.push(path);else throw new Error('Unexpected built output');
+ }
+ return paths;
+}
+const actualFiles=(await filesIn('apps/web/dist')).sort();
+assert.deepEqual(Object.keys(buildProof.files).sort(),actualFiles,'Build proof must cover every built file');
 for(const [path,expected] of Object.entries(buildProof.files)){
- assert(/^apps\/web\/dist\/(?:index\.html|assets\/index-[A-Za-z0-9_-]+\.js)$/.test(path),'Unexpected build proof path');
  assert.equal(createHash('sha256').update(await readFile(path)).digest('hex'),expected,'Built asset changed after build');
 }
-assert.equal(Object.keys(buildProof.files).length,2,'Expected index and entry bundle hashes');
+assert(actualFiles.includes('apps/web/dist/index.html'),'Built index is missing');
 const fixture=JSON.parse(await readFile(connectionFile,'utf8'));const origin=new URL(fixture.url);
 assert.equal(origin.protocol,'http:');assert.equal(origin.hostname,'127.0.0.1');assert.equal(origin.pathname,'/');
 const output=resolve(evidenceDirectory);await mkdir(output,{recursive:false});
