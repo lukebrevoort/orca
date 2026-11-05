@@ -3178,6 +3178,14 @@ export function InboxApp({
   function navigateDesktopNow(destination: DesktopDestination, viewsRoute: ViewsManagementRoute | null = null) {
     setManageSpacesOpen(false);
     setManageToolsOpen(false);
+    // The active sidebar destination is also a way back from its reader.
+    // Dismiss the reader so its saved list position and focus are restored.
+    const sameDestination = destination === activeDesktopDestination
+      || (destination === "inbox" && activeDesktopDestination === `destination:${catalog.data?.fallbackDestinationId}`);
+    if (selectedThreadId && !panelMode && sameDestination && !viewsRoute) {
+      closeThread();
+      return;
+    }
     if (destination === "settings") {
       if (demoMode && !window.confirm("Opening sample Settings starts a new demo page and resets your demo view changes. Continue?")) return;
       window.location.assign(demoMode ? "/dev/settings" : "/settings");
