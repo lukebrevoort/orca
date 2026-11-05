@@ -2415,7 +2415,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     "/v1/threads/:threadId/messages",
     validator("query", (value, c) => {
       const result = threadQuerySchema.safeParse({ accountId: value.accountId });
-      if (!result.success || Object.keys(value).some(key => key !== "accountId" && key !== "cursor") || (value.cursor !== undefined && (typeof value.cursor !== "string" || value.cursor.length > 16384))) {
+      if (!result.success || Object.keys(value).some(key => key !== "accountId" && key !== "cursor") || (value.cursor !== undefined && (typeof value.cursor !== "string" || value.cursor.length === 0 || value.cursor.length > 16384))) {
         return c.json({ error: { code: "validation_error", message: "Invalid conversation page request" } }, 400);
       }
       return { ...result.data, cursor: value.cursor as string | undefined };

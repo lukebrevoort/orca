@@ -15,7 +15,7 @@ const maxMetadata = 2 * 1024 * 1024;
 const maxEncoded = 16 * 1024 * 1024;
 const maxIdBytes = 1024;
 type Key = { received: number | null; created: number; row: number };
-type Cursor = Key & { version: 1; direction: "earlier" | "newer" };
+type Cursor = Key & { version: 1; revision: number; direction: "earlier" | "newer" };
 type Probe = Key & { id: string | null; textBytes: number; htmlBytes: number; metadataBytes: number };
 
 export class ThreadPageError extends Error {
@@ -25,11 +25,11 @@ export class ThreadPageError extends Error {
 function cursorKey() {
   return createHmac("sha256", getAuthConfig().sessionSecret).update("orca-thread-page-encryption-v1").digest();
 }
-function makeCursor(key: Key, scope: { user: string; account: string; thread: string }, direction: Cursor["direction"]) {
+function makeCursor(key: Key, scope: { user: string; account: string; thread: string }, direction: Cursor["direction"], revision: number) {
   const nonce = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", cursorKey(), nonce);
   cipher.setAAD(Buffer.from(JSON.stringify(scope)));
-  const value = Buffer.from(JSON.stringify({ version: 1, received: key.received, created: key.created, row: key.row, direction }));
+  const value = Buffer.from(JSON.stringify({ version: 1, revision, received: key.received, created: key.created, row: key.row, direction }));
   const ciphertext = Buffer.concat([cipher.update(value), cipher.final()]);
   return [nonce, ciphertext, cipher.getAuthTag()].map(part => part.toString("base64url")).join(".");
 }
@@ -45,7 +45,7 @@ function readCursor(value: string, scope: { user: string; account: string; threa
     decipher.setAAD(Buffer.from(JSON.stringify(scope)));
     decipher.setAuthTag(tag);
     const data = JSON.parse(Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")) as Cursor;
-    if (data.version !== 1 ||
+    if (data.version !== 1 || !Number.isSafeInteger(data.revision) || data.revision < 1 ||
         !(data.direction === "earlier" || data.direction === "newer") ||
         !(data.received === null || Number.isSafeInteger(data.received)) || !Number.isSafeInteger(data.created) ||
         !Number.isSafeInteger(data.row) || data.row <= 0) throw Error();
@@ -55,10 +55,13 @@ function readCursor(value: string, scope: { user: string; account: string; threa
 
 export function readThreadPage(sqlite: Database, scope: { user: string; account: string; thread: string }, cursorValue?: string): ThreadReadPage {
   if (Buffer.byteLength(JSON.stringify(scope)) > 2048) throw new ThreadPageError("payload_limit", "This conversation has an unsupported identifier.");
-  const cursor = cursorValue ? readCursor(cursorValue, scope) : null;
+  const cursor = cursorValue === undefined ? null : readCursor(cursorValue, scope);
   const execute = sqlite.transaction(() => {
     const exists = sqlite.query("select 1 from threads where id = ? and account_id = ?").get(scope.thread, scope.account);
     if (!exists) throw new ThreadPageError("not_found", "Thread not found");
+    const revision = (sqlite.query("select revision from mailbox_revisions where account_id = ?").get(scope.account) as { revision: number } | null)?.revision;
+    if (!Number.isSafeInteger(revision) || revision! < 1) throw new ThreadPageError("payload_limit", "Conversation revision is unavailable.");
+    if (cursor && cursor.revision !== revision) throw new ThreadPageError("invalid_cursor", "Conversation changed. Restart pages to continue.");
     const reverse = cursor?.direction === "newer";
     const order = `emails.received_at ${reverse ? "asc" : "desc"}, emails.created_at ${reverse ? "asc" : "desc"}, emails.id ${reverse ? "desc" : "asc"}`;
     const projection = `select
@@ -115,7 +118,7 @@ export function readThreadPage(sqlite: Database, scope: { user: string; account:
     let encodedEntries = 0;
     const entries: ThreadReadPage["entries"] = selected.map(row => {
       const size = row.textBytes + row.htmlBytes;
-      const unavailableId = row.id ?? `unavailable:${createHmac("sha256", cursorKey()).update(JSON.stringify(scope)).update(`:${row.row}`).digest("base64url")}`;
+      const unavailableId = row.id ?? `unavailable:${createHmac("sha256", cursorKey()).update(JSON.stringify(scope)).update(`:${revision}:${row.row}`).digest("base64url")}`;
       if (row.id === null || row.textBytes > maxBody || row.htmlBytes > maxBody || row.metadataBytes > maxMetadata || 6 * (size + row.metadataBytes) > maxEncoded - 65536) { encodedEntries += 8192; return { kind: "unavailable", id: unavailableId }; }
       const message = sqlite.query("select from_address as address, from_name as name, subject, body_text as text, body_html as html from emails where account_id = ? and thread_id = ? and rowid = ?").get(scope.account, scope.thread, row.row) as { address: string | null; name: string | null; subject: string | null; text: string | null; html: string | null };
       const date = row.received === null ? null : new Date(row.received);
@@ -130,8 +133,8 @@ export function readThreadPage(sqlite: Database, scope: { user: string; account:
     const first = selected[0], last = selected.at(-1);
     const moreInDirection = candidates.length > selected.length;
     const page = threadReadPageSchema.parse({ entries,
-      earlier: last && (reverse || moreInDirection) ? makeCursor(last, scope, "earlier") : null,
-      newer: first && (!reverse && cursor || reverse && moreInDirection) ? makeCursor(first, scope, "newer") : null,
+      earlier: last && (reverse || moreInDirection) ? makeCursor(last, scope, "earlier", revision!) : null,
+      newer: first && (!reverse && cursor || reverse && moreInDirection) ? makeCursor(first, scope, "newer", revision!) : null,
     });
     if (Buffer.byteLength(JSON.stringify(page)) > maxEncoded) throw new ThreadPageError("payload_limit", "Conversation page is too large.");
     return page;

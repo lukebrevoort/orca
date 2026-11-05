@@ -64,13 +64,28 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     const all = [...first.value!.entries, ...second.value!.entries, ...third.value!.entries];
     expect(all.map(x => x.id)).toEqual(Array.from({ length: 45 }, (_, i) => i === 19 ? largeId.id : `m${String(i).padStart(2, "0")}`));
     expect((await fetchPage(third.value!.newer!)).value!.entries.map(x => x.id)).toEqual(second.value!.entries.map(x => x.id));
-    // Non-ordering sync/read changes do not invalidate or loop a cursor.
+    // A deleted anchor can be replaced with the same rowid and timestamps.
+    // The account revision must still reject the old cursor and card identity.
+    sqlite.query("delete from emails where rowid = ?").run(largeIdRow);
+    sqlite.query("insert into emails (rowid, id, account_id, thread_id, provider_message_id, received_at, created_at) values (?, ?, 'account', 'thread', 'replacement', 1000, 1000)")
+      .run(largeIdRow, `m19${"y".repeat(2048)}`);
+    expect((await fetchPage(first.value!.earlier!)).res.status).toBe(400);
+    const replacementPage = (await fetchPage()).value!;
+    expect(replacementPage.entries[19]!.kind).toBe("unavailable");
+    expect(replacementPage.entries[19]!.id).not.toBe(largeId.id);
+    // Mark-read and unrelated sync changes explicitly invalidate cursors; the
+    // user can restart, and recovery itself does not mark messages read.
     sqlite.run("update emails set is_read = 1 where id = 'm01'");
-    expect((await fetchPage(first.value!.earlier!)).value!.entries.map(x => x.id)).toEqual(second.value!.entries.map(x => x.id));
-    expect((await fetchPage(first.value!.earlier!, "other")).res.status).toBe(400);
-    expect((await app.request(`/v1/threads/thread/messages?accountId=account&cursor=${encodeURIComponent(first.value!.earlier!)}`, { headers: { cookie: `orca_session=${otherSession.token}` } })).status).toBe(404);
-    expect((await fetchPage(first.value!.earlier!.slice(0, -1) + "!" )).res.status).toBe(400);
-    const cursorParts = first.value!.earlier!.split(".");
+    expect((await fetchPage(replacementPage.earlier!)).res.status).toBe(400);
+    const beforeUnrelatedSync = (await fetchPage()).value!.earlier!;
+    db.insert(schema.emails).values({ id: "unrelated", accountId: "account", threadId: "other", providerMessageId: "unrelated" }).run();
+    expect((await fetchPage(beforeUnrelatedSync)).res.status).toBe(400);
+    const freshCursor = (await fetchPage()).value!.earlier!;
+    expect((await fetchPage(freshCursor, "other")).res.status).toBe(400);
+    expect((await app.request(`/v1/threads/thread/messages?accountId=account&cursor=${encodeURIComponent(freshCursor)}`, { headers: { cookie: `orca_session=${otherSession.token}` } })).status).toBe(404);
+    expect((await fetchPage(freshCursor.slice(0, -1) + "!" )).res.status).toBe(400);
+    expect((await app.request("/v1/threads/thread/messages?accountId=account&cursor=", { headers })).status).toBe(400);
+    const cursorParts = freshCursor.split(".");
     const alteredTag = (cursorParts[2]![0] === "A" ? "B" : "A") + cursorParts[2]!.slice(1);
     expect((await fetchPage(`${cursorParts[0]}.${cursorParts[1]}.${alteredTag}`)).res.status).toBe(400);
     expect((await app.request("/v1/threads/thread/messages?accountId=account")).status).toBe(401);
@@ -104,9 +119,6 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
       expect(snapshot.entries.find(entry => entry.id === "m01")?.kind).toBe("message");
       expect((await fetchPage()).value!.entries.find(entry => entry.id === "m01")?.kind).toBe("unavailable");
     } finally { spy.mockRestore(); writer.sqlite.close(); }
-    const sync = createDatabaseClient(path);
-    try { sync.sqlite.query("delete from emails where rowid = ?").run(largeIdRow); } finally { sync.sqlite.close(); }
-    expect((await fetchPage(first.value!.earlier!)).res.status).toBe(400);
   } finally {
     sqlite.close(); rmSync(dir, { recursive: true, force: true });
     if (oldSecret === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = oldSecret;
