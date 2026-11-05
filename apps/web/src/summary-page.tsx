@@ -26,7 +26,7 @@ function LiveSummary({ accountId, drafts, draftsStatus = "loading", onRetryDraft
   const visibleDrafts = drafts?.filter(draft => draft.accountId === accountId && draft.deliveryStatus === "draft") ?? [];
   return <section aria-labelledby="summary-title" className="summary-page">
     <header className="summary-intro"><h1 id="summary-title">Summary</h1><p>Your saved drafts, in one place.</p></header>
-    <section aria-labelledby="summary-drafted"><h2 id="summary-drafted">Drafted replies</h2>
+    <section aria-labelledby="summary-drafted"><h2 id="summary-drafted">Saved drafts</h2>
       {!accountId || draftsStatus === "loading" ? <p role="status">Loading your drafts…</p>
         : draftsStatus === "error" ? <><p role="alert">Your drafts could not be loaded.</p><button type="button" onClick={onRetryDrafts}>Try again</button></>
         : visibleDrafts.length ? <><p>{visibleDrafts.length} saved {visibleDrafts.length === 1 ? "draft" : "drafts"}.</p>
