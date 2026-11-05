@@ -57,6 +57,7 @@ test("default sanitization blocks images; explicit partial loading preserves saf
  expect(sanitizeInboundHtml(html)).not.toContain('<img');expect(hasLoadableImages(html)).toBe(true);
  let fetched=0;const result=await renderRequestedImages(html,async u=>{fetched++;if(u.pathname.includes('missing'))throw new Error('secret remote URL');return png});
  expect(fetched).toBe(2);expect(result.loaded).toBe(1);expect(result.blocked).toBe(3);expect(result.bodyHtml).toContain('src="data:image/png;base64,');expect(result.bodyHtml).toContain('[Image blocked: Failed]');expect(result.bodyHtml).not.toMatch(/<script|https:\/\/|cid:|secret remote/);expect(result.sourceHash).toHaveLength(64);
+ expect(result.attempted).toBe(2);expect(result.reasons).toEqual({ineligible:2,requestLimit:0,timeLimit:0,byteBudget:0,downloadFailed:1,invalidRaster:0});
 });
 test("image count and total byte budgets bound sender requests",async()=>{
  const html=Array.from({length:30},(_,i)=>`<img src="https://images.example.org/${i}" alt="Image">`).join('');let calls=0;
@@ -79,7 +80,9 @@ test("native POST resolves only an authenticated user's stored message, before a
 
 test("failed downloads spend their allowance and a partly used budget is never overrun",async()=>{
  const html=Array.from({length:30},(_,i)=>`<img src="https://images.example.org/${i}">`).join('');let calls=0;
- await renderRequestedImages(html,async()=>{calls++;throw new Error("stream failed after bytes");});expect(calls).toBe(4);
+ const failed=await renderRequestedImages(html,async()=>{calls++;throw new Error("secret sender URL");});expect(calls).toBe(4);
+ expect(failed.reasons.downloadFailed).toBe(4);expect(failed.reasons.byteBudget).toBe(26);
+ expect(JSON.stringify(failed.reasons)).not.toContain("secret");
  calls=0;let transferred=0;const almost=Buffer.alloc(2*1024*1024-100);png.copy(almost);
  await renderRequestedImages(html,async()=>{calls++;transferred+=almost.length;return almost;});expect(calls).toBe(4);expect(transferred).toBeLessThanOrEqual(8*1024*1024);
 });

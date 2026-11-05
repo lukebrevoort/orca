@@ -24,23 +24,31 @@ export type ImageDownload = typeof downloadRemoteImage;
 export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage) {
   const {document,images}=documentImages(html);const signal=AbortSignal.timeout(20_000);
   const replacements=new Map<string,string>();let loaded=0,spentBytes=0,attempted=0;
+  // Fixed categories only: never include sender-controlled URLs or error text.
+  const reasons={ineligible:0,requestLimit:0,timeLimit:0,byteBudget:0,downloadFailed:0,invalidRaster:0};
   const maximumImageBytes=2*1024*1024, transferBudget=8*1024*1024;
   for(const image of images){
-    const url=candidate(image);if(!url||attempted>=12||signal.aborted||spentBytes+maximumImageBytes>transferBudget)continue;attempted++;
+    const url=candidate(image);
+    if(!url){reasons.ineligible++;continue;}
+    if(attempted>=12){reasons.requestLimit++;continue;}
+    if(signal.aborted){reasons.timeLimit++;continue;}
+    if(spentBytes+maximumImageBytes>transferBudget){reasons.byteBudget++;continue;}
+    attempted++;
     try {
       const bytes=await download(url,signal);
       spentBytes+=bytes.length;
       const mime=rasterType(bytes);
-      if(!mime||bytes.length>maximumImageBytes)continue;
+      if(!mime||bytes.length>maximumImageBytes){reasons.invalidRaster++;continue;}
       const marker=`orca-image-${randomUUID()}`;const alt=image.attribs.alt??"";
       image.attribs={alt:marker};
       replacements.set(marker,`<img alt="${escape(alt)}" src="data:${mime};base64,${bytes.toString("base64")}" style="max-width:100%;height:auto">`);loaded++;
     }catch{
       // A failure may have consumed its entire streaming allowance. Charge it conservatively.
       spentBytes+=maximumImageBytes;
+      reasons.downloadFailed++;
     }
   }
   let bodyHtml=sanitizeInboundHtml(DomUtils.getOuterHTML(document))??"";
   for(const [marker,image] of replacements){bodyHtml=bodyHtml.replace(`<span class="orca-mail-image-note">[Image blocked: ${marker}]</span>`,image);}
-  return {bodyHtml,sourceHash:imageSourceHash(html),loaded,blocked:images.length-loaded};
+  return {bodyHtml,sourceHash:imageSourceHash(html),loaded,blocked:images.length-loaded,attempted,reasons};
 }
