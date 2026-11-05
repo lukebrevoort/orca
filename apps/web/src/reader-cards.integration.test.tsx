@@ -92,13 +92,13 @@ test("hiding earlier messages cancels an in-flight image load for an open earlie
   await render({...detail,messages});
   await click('Expand all');
   const card=browser.document.querySelector('#reader-card-images-0')!;
-  await act(async()=>{(card.querySelector('.reader-images-consent button') as HTMLButtonElement).click();});
+  await act(async()=>{(card.querySelector('.reader-images-consent button') as import('happy-dom').HTMLButtonElement).click();});
   expect(signal?.aborted).toBe(false);
-  const hide=browser.document.querySelector('[aria-label="Hide 2 earlier messages"]') as HTMLButtonElement;
+  const hide=browser.document.querySelector('[aria-label="Hide 2 earlier messages"]') as import('happy-dom').HTMLButtonElement;
   expect(hide).not.toBeNull();await act(async()=>hide.click());
   expect(signal?.aborted).toBe(true);expect(card.querySelector('.reader-images-consent')).toBeNull();
-  const show=browser.document.querySelector('[aria-label="Show 2 earlier messages"]') as HTMLButtonElement;
-  await act(async()=>show.click());await act(async()=>{(card.querySelector('.reader-images-consent button') as HTMLButtonElement).click();});
+  const show=browser.document.querySelector('[aria-label="Show 2 earlier messages"]') as import('happy-dom').HTMLButtonElement;
+  await act(async()=>show.click());await act(async()=>{(card.querySelector('.reader-images-consent button') as import('happy-dom').HTMLButtonElement).click();});
   expect(signal?.aborted).toBe(false);await render({...detail,messages},false);
   expect(signal?.aborted).toBe(true);expect(card.querySelector('.reader-images-consent')).toBeNull();
 });
