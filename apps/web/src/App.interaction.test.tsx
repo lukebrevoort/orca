@@ -3922,6 +3922,21 @@ describe("Inbox reader viewport restoration", () => {
     expect(workspace.scrollTop).not.toBe(321);
   });
 
+  test("Inbox sidebar leaves a search result opened from a different destination in Inbox", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const items = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')] as unknown as HTMLButtonElement[];
+    const all = items.find(item => item.textContent?.startsWith("All Mail"))!;
+    const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
+    await act(async () => all.click());
+    const message = inboxFixture[0]!;
+    const url = `/?destination=inbox&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`;
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.CustomEvent("orca:mail-search-result", { detail: { url }, cancelable: true })); });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    await act(async () => { inbox.click(); await new Promise<void>(resolve => setTimeout(resolve, 0)); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("inbox");
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
+  });
+
   test("re-arms the list return point when Forward reopens a reader", async () => {
     await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
     browserWindow.document.documentElement.dataset.motion = "reduced";

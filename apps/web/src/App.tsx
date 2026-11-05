@@ -2325,7 +2325,7 @@ export function InboxApp({
         ?? (eventTarget && eventNode?.isConnected ? { kind: "agent-event" as const, id: eventTarget.id } : null)
         ?? (messageTargetKey ? { kind: "message" as const, id: messageTargetKey } : null)
         ?? (eventTarget ? { kind: "agent-event" as const, id: eventTarget.id } : null);
-      history?.armReturnContext(captureSurfaceReturnContext(target));
+      if (!history?.hasReturnContext()) history?.armReturnContext(captureSurfaceReturnContext(target), activeDesktopDestination);
     }
     const leavingReader = Boolean(selectedThreadId) && !location.reader && !location.composer;
     pendingReturnContextRef.current = leavingReader
@@ -3180,10 +3180,20 @@ export function InboxApp({
     setManageToolsOpen(false);
     // The active sidebar destination is also a way back from its reader.
     // Dismiss the reader so its saved list position and focus are restored.
-    const sameDestination = destination === activeDesktopDestination
-      || (destination === "inbox" && activeDesktopDestination === `destination:${catalog.data?.fallbackDestinationId}`);
-    if (selectedThreadId && !panelMode && sameDestination && !viewsRoute) {
-      closeThread();
+    const isDestination = (actual: string | null) => destination === actual
+      || (destination === "inbox" && actual === `destination:${catalog.data?.fallbackDestinationId}`);
+    const history = surfaceHistoryRef.current;
+    if (selectedThreadId && !panelMode && isDestination(activeDesktopDestination) && isDestination(history?.returnDestination() ?? null) && !viewsRoute) {
+      pendingReaderRead.current = null;
+      readerNavigationGenerationRef.current += 1;
+      if (readerFocusFrameRef.current !== null) window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+      history?.navigate(destination);
+      pendingReturnContextRef.current = history?.consumeReturnContext() ?? null;
+      setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
+      setThreadDetail(null);
+      setReaderStatus("idle");
       return;
     }
     if (destination === "settings") {

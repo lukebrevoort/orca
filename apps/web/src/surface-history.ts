@@ -138,6 +138,7 @@ export class SurfaceHistory {
   readonly browser: SurfaceHistoryWindow;
   private readerReturnContext: SurfaceReturnContext | null = null;
   private readerReturnTarget: SurfaceReturnTarget | null = null;
+  private readerOriginDestination: string | null = null;
 
   constructor(browser: SurfaceHistoryWindow) {
     this.browser = browser;
@@ -212,10 +213,14 @@ export class SurfaceHistory {
     return returnContext;
   }
 
-  armReturnContext(returnContext: SurfaceReturnContext) {
+  armReturnContext(returnContext: SurfaceReturnContext, originDestination = this.read().destination) {
     this.readerReturnContext = returnContext;
     this.readerReturnTarget = returnContext.target;
+    this.readerOriginDestination = originDestination;
   }
+
+  hasReturnContext() { return this.readerReturnContext !== null; }
+  returnDestination() { return this.readerOriginDestination; }
 
   lastReturnTarget() {
     return this.readerReturnTarget;
