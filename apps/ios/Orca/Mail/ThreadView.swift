@@ -7,6 +7,7 @@ struct ThreadView: View {
     @State private var showEarlier = false
     @State private var entryID: String?
     @State private var unreadEntryID: String?
+    @State private var imageRefreshGeneration = UUID()
     @State private var messageFrames: [String: CGRect] = [:]
     private var visibleMessageIDs: Set<String> { Set(messageFrames.filter { ReaderNavigationVisibility.isVisible($0.value, viewportHeight: viewportHeight) }.map(\.key)) }
     @State private var viewportHeight: CGFloat = 0
@@ -80,7 +81,7 @@ struct ThreadView: View {
                                 if !item.cc.isEmpty { Text("Cc: " + item.cc.map(\.email).joined(separator: ", ")) }
                                 if !item.bcc.isEmpty { Text("Bcc: " + item.bcc.map(\.email).joined(separator: ", ")) }
                             }.font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
-                            MessageImageBody(item: item, accountId: accountId)
+                            MessageImageBody(item: item, accountId: accountId, refreshSnapshot: refreshImageSnapshot)
                                 .id(state.ownerScope + "|" + accountId + "|" + item.id + "|" + (item.bodyHtml ?? ""))
                             VerificationCodeStrip(codes: VerificationCode.detect(subject: item.subject, bodyText: item.bodyText, snippet: item.snippet))
                                 .id(state.ownerScope + "|" + accountId + "|" + item.id)
@@ -200,6 +201,19 @@ struct ThreadView: View {
         }
         detail = loaded
     }
+    /// Refresh only the authenticated, sanitized thread snapshot. Loading images
+    /// remains a separate explicit action after the updated message is visible.
+    @MainActor private func refreshImageSnapshot(_ messageID: String) async throws -> Bool {
+        guard !state.demoMode, let client = state.client, state.selectedAccount?.id == accountId else { return false }
+        let owner = state.ownerScope, attempt = UUID()
+        imageRefreshGeneration = attempt
+        let loaded = try await client.thread(threadId, accountId: accountId)
+        guard !Task.isCancelled, owner == state.ownerScope, state.selectedAccount?.id == accountId,
+              state.client === client, imageRefreshGeneration == attempt,
+              loaded.account.id == accountId, loaded.thread.id == threadId else { return false }
+        accept(loaded); error = nil
+        return loaded.messages.contains { $0.id == messageID }
+    }
     private func jump(_ id: String, proxy: ScrollViewProxy) {
         expanded.insert(id)
         // Scroll after the expanded card participates in layout.
@@ -306,22 +320,45 @@ enum ReaderNavigationVisibility {
 
 
 /// Image consent and bytes live only in this message's visible reader, never in the mail cache.
+enum ImageLoadRecovery {
+    static func needsSnapshotRefresh(_ error: Error) -> Bool {
+        guard let error = error as? APIClient.ClientError else { return false }
+        if case let .http(status, body) = error {
+            return status == 409 && body?.code == "stale_message"
+        }
+        return false
+    }
+    static func needsCapabilityCheck(_ error: Error) -> Bool {
+        guard let error = error as? APIClient.ClientError else { return false }
+        if case let .http(status, _) = error { return status == 404 || status == 501 }
+        return false
+    }
+}
+
 private struct MessageImageBody: View {
     @EnvironmentObject var state: AppState
     let item: ThreadMessage
     let accountId: String
+    let refreshSnapshot: @MainActor (String) async throws -> Bool
     @State private var html: String?
     @State private var status: String?
     @State private var loading = false
     @State private var retryable = false
+    @State private var needsRefresh = false
     @State private var slots: [Int: ImageSlot] = [:]
     @State private var seen: Set<Int> = []
     @State private var request: Task<Void, Never>?
     @State private var generation = UUID()
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if item.imageLoadAvailable == true && item.imageSourceRevision != nil {
-                if status == nil || retryable {
+            if item.imageLoadAvailable == true || (item.imageLoadAvailable == nil && (item.bodyHtml?.contains("class=\"orca-mail-image-note\"") ?? false)) {
+                if item.imageLoadAvailable == nil || item.imageSourceRevision == nil {
+                    Text("This message does not have the information needed to load images. Reconnect and refresh the message, or update the server.")
+                        .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                    refreshButton
+                } else if needsRefresh {
+                    refreshButton
+                } else if status == nil || retryable {
                     Text("Images are blocked. Loading may tell the sender you opened this message.")
                         .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                     Button(loading ? "Loading images…" : (status == nil ? "Load images" : "Retry images")) { load() }
@@ -337,7 +374,34 @@ private struct MessageImageBody: View {
         .onChange(of: accountId) { _, _ in reset() }
         .onChange(of: item.imageSourceRevision) { _, _ in reset() }
     }
-    private func reset() { request?.cancel(); generation = UUID(); html = nil; status = nil; loading = false; retryable = false; slots = [:]; seen = [] }
+    private var refreshButton: some View {
+        Button(loading ? "Refreshing message…" : "Refresh message") { refresh() }
+            .buttonStyle(.bordered).tint(OrcaTheme.accent).disabled(loading)
+            .accessibilityIdentifier("message.refresh-images-source")
+    }
+    private func reset() { request?.cancel(); generation = UUID(); html = nil; status = nil; loading = false; retryable = false; needsRefresh = false; slots = [:]; seen = [] }
+    private func requireRefresh(_ message: String = "This message changed. Refresh it, then choose whether to load images.") {
+        html = nil; slots = [:]; seen = []; retryable = false; needsRefresh = true
+        status = message
+    }
+    private func refresh() {
+        guard !loading, state.selectedAccount?.id == accountId else { return }
+        let owner = state.ownerScope, attempt = UUID()
+        generation = attempt; loading = true; status = nil
+        request = Task { @MainActor in
+            do {
+                let refreshed = try await refreshSnapshot(item.id)
+                guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                if refreshed {
+                    html = nil; slots = [:]; seen = []; retryable = false; needsRefresh = false; status = nil
+                } else { needsRefresh = true; status = "Message could not be refreshed. Try again." }
+            } catch {
+                guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                needsRefresh = true; status = "Message could not be refreshed. Try again."
+            }
+            loading = false
+        }
+    }
     private func load() {
         guard !loading, let client = state.client, state.selectedAccount?.id == accountId, let revision = item.imageSourceRevision else { return }
         let owner = state.ownerScope, attempt = UUID()
@@ -347,7 +411,7 @@ private struct MessageImageBody: View {
                 let budget = 8 * 1024 * 1024 - slots.values.reduce(0) { $0 + $1.bytes }
                 let result = try await client.loadMessageImages(item.id, accountId: accountId, revision: revision, retained: Array(slots.keys), seen: Array(seen), remainingBytes: budget)
                 guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
-                guard result.sourceRevision == revision else { status = "Message changed. Reopen it before loading images."; loading = false; return }
+                guard result.sourceRevision == revision else { requireRefresh(); loading = false; return }
                 for index in result.attemptedIndices { seen.insert(index) }
                 for slot in result.slots { slots[slot.index] = slot }
                 var combined = result.bodyHtml
@@ -363,8 +427,9 @@ private struct MessageImageBody: View {
                 status = "\(total) image\(total == 1 ? "" : "s") loaded." + pending + blocked
             } catch {
                 guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
-                retryable = true
-                status = "Images could not be loaded. You can try again."
+                if ImageLoadRecovery.needsSnapshotRefresh(error) { requireRefresh() }
+                else if ImageLoadRecovery.needsCapabilityCheck(error) { requireRefresh("Image loading is unavailable for this message. Refresh it to check.") }
+                else { retryable = true; status = "Images could not be loaded. You can try again." }
             }
             loading = false
         }

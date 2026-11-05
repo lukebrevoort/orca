@@ -34,6 +34,16 @@ private func requestBodyData(_ request: URLRequest) throws -> Data {
 }
 
 final class OrcaTests: XCTestCase {
+    func testImageStaleErrorRequiresRefreshInsteadOfRetry() {
+        let stale = APIClient.ClientError.http(409, APIErrorBody(code: "stale_message", message: "changed", retryable: false))
+        XCTAssertTrue(ImageLoadRecovery.needsSnapshotRefresh(stale))
+        XCTAssertFalse(ImageLoadRecovery.needsSnapshotRefresh(APIClient.ClientError.http(409, APIErrorBody(code: "image_busy", message: "busy", retryable: true))))
+        XCTAssertFalse(ImageLoadRecovery.needsSnapshotRefresh(APIClient.ClientError.http(500, nil)))
+        XCTAssertFalse(ImageLoadRecovery.needsSnapshotRefresh(URLError(.notConnectedToInternet)))
+        XCTAssertTrue(ImageLoadRecovery.needsCapabilityCheck(APIClient.ClientError.http(404, nil)))
+        XCTAssertTrue(ImageLoadRecovery.needsCapabilityCheck(APIClient.ClientError.http(501, nil)))
+        XCTAssertFalse(ImageLoadRecovery.needsCapabilityCheck(stale))
+    }
     func testReaderQuotesPreserveExactTextAndInlineAnswers() {
         let body = "  Reply\r\n\r\nOn Monday, Sam wrote:\r\n> old\r\n"
         let parts = ReaderQuoteParts.split(body)
