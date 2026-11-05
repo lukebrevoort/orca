@@ -1337,6 +1337,7 @@ export function InboxApp({
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
   const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
   const [drafts, setDrafts] = useState<MessageDraft[] | null>(demoMode ? demoDrafts : null);
+  const [draftsAccountId, setDraftsAccountId] = useState<string | null>(demoMode ? demoAccount.id : null);
   const [draftsStatus, setDraftsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
   const [draftsError, setDraftsError] = useState<string | null>(null);
   const [draftRefreshKey, setDraftRefreshKey] = useState(0);
@@ -1785,6 +1786,7 @@ export function InboxApp({
     }
     if (!account || status !== "ready") return;
     const controller = new AbortController();
+    setDraftsAccountId(account.id);
     setDraftsStatus("loading");
     setDraftsError(null);
     fetchJson(draftRequestPath(account.id), draftsResponseSchema, controller.signal)
@@ -3332,7 +3334,7 @@ export function InboxApp({
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {summaryOpen ? <SummaryPage /> : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {summaryOpen ? <SummaryPage demoMode={demoMode} accountId={account?.id} drafts={drafts} draftsStatus={account?.id === draftsAccountId ? draftsStatus : "loading"} onRetryDrafts={() => setDraftRefreshKey(key => key + 1)} onOpenDraft={id => openCompose(id)} /> : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}

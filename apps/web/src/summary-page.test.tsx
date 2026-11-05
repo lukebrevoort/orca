@@ -12,7 +12,7 @@ beforeEach(async () => {
   for (const name of globals) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "IS_REACT_ACT_ENVIRONMENT" ? true : browser[name] });
   container = document.createElement("div"); document.body.append(container);
   root = createRoot(container); clock = 0;
-  await act(async () => root.render(<SummaryPage now={now} />));
+  await act(async () => root.render(<SummaryPage demoMode now={now} />));
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -141,7 +141,7 @@ test("countdown refreshes and masks a revealed code at expiry", async () => {
       return originalSetInterval(callback, delay, ...args);
     }) as typeof setInterval;
     // Remount so the countdown effect registers its callback under the stub.
-    await act(async () => root.render(<SummaryPage key="countdown" now={now} />));
+    await act(async () => root.render(<SummaryPage demoMode key="countdown" now={now} />));
     await click("Reveal");
     expect(text()).toContain("482631");
     expect(tick).toBeDefined();
@@ -180,4 +180,31 @@ test("stopping tracking disables an unapproved follow-up textarea", async () => 
   expect(waiting.querySelector("textarea")!.disabled).toBe(false);
   await click("Stop tracking");
   expect(waiting.querySelector("textarea")!.disabled).toBe(true);
+});
+
+test("live Summary uses only selected account drafts, opens the real draft, and handles loading and failure", async () => {
+  const opened: string[] = [];
+  let retries = 0;
+  const draft = (id: string, accountId: string) => ({ id, accountId, subject: `Subject ${id}`, to: [{ email: `${id}@example.com`, name: null }], deliveryStatus: "draft" }) as unknown as import("@orca/shared").MessageDraft;
+  const drafts = [draft("one", "a"), draft("two", "b")];
+  const render = async (accountId: string, draftsStatus: "loading" | "ready" | "error") => act(async () => root.render(<SummaryPage accountId={accountId} drafts={drafts} draftsStatus={draftsStatus} onOpenDraft={id => opened.push(id)} onRetryDrafts={() => retries++} />));
+  await render("a", "loading");
+  expect(text()).toContain("Loading your drafts");
+  expect(text()).not.toContain("Subject one");
+  await render("a", "ready");
+  expect(text()).toContain("Subject one");
+  expect(text()).not.toContain("Subject two");
+  expect(text()).not.toContain("Demo data");
+  expect(text()).not.toContain("Maya Chen");
+  await click("Open draft");
+  expect(opened).toEqual(["one"]);
+  await render("b", "loading");
+  expect(text()).not.toContain("Subject one");
+  await render("b", "ready");
+  expect(text()).toContain("Subject two");
+  expect(text()).not.toContain("Subject one");
+  await render("b", "error");
+  expect(text()).not.toContain("Subject two");
+  await click("Try again");
+  expect(retries).toBe(1);
 });
