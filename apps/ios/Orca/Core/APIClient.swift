@@ -24,18 +24,19 @@ actor APIClient {
         self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
     }
     func updateBaseURL(_ url: URL) { baseURL = url }
-    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> T {
-        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body)
+    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> T {
+        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body, headers: headers)
         guard !data.isEmpty else { if T.self == EmptyResponse.self { return EmptyResponse() as! T }; throw ClientError.invalidResponse }
         do { return try decoder.decode(T.self, from: data) } catch { throw ClientError.decoding(error) }
     }
-    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil) async throws -> (Data, HTTPURLResponse) {
+    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> (Data, HTTPURLResponse) {
         let endpoint = pathSuffix.reduce(baseURL.appending(path: path)) { $0.appending(component: $1) }
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
         guard let url = components.url else { throw ClientError.invalidBaseURL }
         var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = path == "v1/feedback/ticket" && (body as? FeedbackTicketInput)?.attachments?.isEmpty == false ? 300 : 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
         if let body { request.httpBody = try encoder.encode(AnyEncodable(body)); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, response) = try await session.data(for: request)
@@ -63,7 +64,7 @@ extension APIClient {
         if let destinationId { q.append(.init(name: "destinationId", value: destinationId)) }
         return try await request("v1/inbox", query: q)
     }
-    func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)]) }
+    func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)], headers: ["x-orca-image-version": "2"]) }
     func markRead(_ id: String, accountId: String, isRead: Bool = true) async throws { struct Ack: Decodable { var ok: Bool }; let _: Ack = try await request("v1/threads/\(id)/read", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: ["isRead": isRead]) }
     // Sent rows supply delivery reconciliation metadata only; use draft(_:accountId:)
     // when full content is needed. Unresolved rows retain their complete writing.
@@ -86,9 +87,12 @@ extension APIClient {
     func unregisterDevice(installationId: String) async throws { let _: EmptyResponse = try await request("v1/mobile/devices/\(installationId)", method: "DELETE") }
 }
 
-struct LoadedMessageImages: Decodable { var bodyHtml: String; var sourceHash: String; var loaded: Int; var blocked: Int }
+struct LoadedMessageImages: Decodable { var bodyHtml: String; var sourceHash: String; var sourceRevision: String; var loaded: Int; var blocked: Int; var reasons: ImageOutcomeReasons; var slots: [ImageSlot]; var attemptedIndices: [Int] }
+struct ImageSlot: Decodable { var index: Int; var html: String; var bytes: Int }
+struct ImageOutcomeReasons: Decodable { var ineligible: Int; var requestLimit: Int; var stopped: Int; var byteBudget: Int; var downloadFailed: Int; var invalidRaster: Int }
 extension APIClient {
-    func loadMessageImages(_ id: String, accountId: String) async throws -> LoadedMessageImages {
-        try await request("v1/messages", pathSuffix: [id, "images"], method: "POST", query: [.init(name: "accountId", value: accountId)])
+    func loadMessageImages(_ id: String, accountId: String, revision: String, retained: [Int], seen: [Int], remainingBytes: Int) async throws -> LoadedMessageImages {
+        struct Input: Encodable { var revision: String; var retained: [Int]; var seen: [Int]; var remainingBytes: Int }
+        return try await request("v1/messages", pathSuffix: [id, "images", "v2"], method: "POST", query: [.init(name: "accountId", value: accountId)], body: Input(revision: revision, retained: retained, seen: seen, remainingBytes: remainingBytes))
     }
 }

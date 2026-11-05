@@ -47,6 +47,7 @@ import { resolveWritingReplyAction, type WritingPreferenceState } from "./writin
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
 import { ReaderBody, ReaderMessageList } from "./reader-body";
+import { MessageImageBody } from "./message-image-body";
 export { splitQuotedContent } from "./reader-body";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
@@ -2017,7 +2018,7 @@ export function InboxApp({
     const timer = setTimeout(() => {
       void threadDetailCacheRef.current?.prefetch(
         references,
-        (reference) => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+        (reference) => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema, undefined, { headers: { "x-orca-image-version": "2" } }),
         { concurrency: 3, shouldContinue: () => active },
       );
     }, recentThreadPrefetchDelayMs);
@@ -2068,7 +2069,7 @@ export function InboxApp({
     }
     const request = cache.load(
       reference,
-      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema, undefined, { headers: { "x-orca-image-version": "2" } }),
       { refresh: true, version: selectedThreadVersion },
     );
     const requestGeneration = cache.retainGeneration(reference);
@@ -2113,7 +2114,7 @@ export function InboxApp({
     const cache = threadDetailCacheRef.current!;
     const detailRequest = cache.load(
       reference,
-      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema),
+      () => fetchJson(buildThreadDetailRequest(reference), threadDetailSchema, undefined, { headers: { "x-orca-image-version": "2" } }),
       { refresh: true, version: selectedThreadVersion },
     );
     const requestGeneration = cache.retainGeneration(reference);
@@ -3444,7 +3445,7 @@ export function InboxApp({
             <MessageReader
               key={account?.id ?? "signedout"}
               sessions={readingSessions}
-              active={Boolean(selectedThreadId)}
+              active={Boolean(selectedThreadId && threadDetail?.thread.id === selectedThreadId && threadDetail?.account.id === readerAccountId)}
               detail={threadDetail}
               contacts={composeContacts}
               demoMode={demoMode}
@@ -6079,6 +6080,7 @@ export function MessageReader({
                     const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
                     const isOpen = openCards.has(messageKey);
+                    const imageReaderVisible = active && status === "ready" && isOpen && (showEarlier || messages.indexOf(message) >= entryIndex);
                     return (
                       <li className={`reader-message${!isOpen ? " reader-message-compact" : ""}${message.unread ? " reader-message-unread" : ""}`} hidden={!showEarlier && messages.indexOf(message) < entryIndex} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
@@ -6118,7 +6120,7 @@ export function MessageReader({
                       <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                       <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
-                    <ReaderBody html={message.bodyHtml} text={message.bodyText} />
+                    {imageReaderVisible ? <MessageImageBody key={`${detail.account.id}:${message.id}:${message.imageSourceRevision ?? ""}`} accountId={detail.account.id} messageId={message.id} revision={message.imageSourceRevision} available={message.imageLoadAvailable} html={message.bodyHtml} text={message.bodyText} onRefresh={onRetry} /> : <ReaderBody html={message.bodyHtml} text={message.bodyText} />}
                     <VerificationCodeStrip messageId={messageKey} subject={message.subject} bodyText={message.bodyText} snippet={message.snippet} />
                     {message.attachments.length ? (
                       <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>

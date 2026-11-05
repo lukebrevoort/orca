@@ -1,5 +1,13 @@
 /* Scoped to the message: keep inbox, composer, and HTML safety policy unchanged. */
 .reader-content { min-width: 0; }
+.reader-images-consent { color: var(--orca-muted); font: 400 12px/1.5 var(--orca-font-body); margin: 0 0 16px; }
+.reader-images-consent button {
+  min-height: 44px; padding: 9px 12px; border: 1px solid var(--orca-border); border-radius: 8px;
+  background: var(--orca-surface); color: var(--orca-ink); cursor: pointer; font: 500 12px/1.4 var(--orca-font-body);
+}
+.reader-images-consent button:hover:not(:disabled) { background: var(--orca-surface-hover); }
+.reader-images-consent button:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.reader-images-consent button:disabled { cursor: wait; opacity: .7; }
 /* Touch-sized original-text control; desktop geometry remains unchanged. */
 @media (max-width: 760px) {
   .reader-original-toggle {
