@@ -170,6 +170,7 @@ describe("BRE-269 prompt-injection and provider-write safety", () => {
       "simulate_organization",
       "search_mail",
       "get_thread",
+      "get_thread_page",
       "list_agent_events",
       "get_connection_status",
     ]);

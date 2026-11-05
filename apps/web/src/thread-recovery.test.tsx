@@ -18,7 +18,7 @@ test("recovery is opt-in, replaces pages and offers no compose actions", async (
     reads++;
     const cursor = new URL(String(input), "http://localhost").searchParams.get("cursor");
     return Response.json(cursor ? { entries: [{ kind: "unavailable", id: "too-large" }], earlier: null, newer: "newer" } : {
-      entries: [{ kind: "message", id: "m", from: "Dana", subject: "First page", receivedAt: null, bodyText: "one", bodyHtml: null }], earlier: "earlier", newer: null,
+      entries: [{ kind: "message", id: "m", from: "Dana", subject: "First page", receivedAt: null, bodyText: "one", bodyHtml: null, htmlPresent: false }], earlier: "earlier", newer: null,
     });
   }) as typeof fetch;
   const button = (name: string) => [...browser.document.querySelectorAll("button")].find(b => b.textContent?.trim() === name)!;

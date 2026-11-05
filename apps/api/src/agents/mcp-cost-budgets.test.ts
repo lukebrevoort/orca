@@ -98,7 +98,7 @@ function call(name: string, id: string | number = 1, modern = false) {
 
 describe("BRE-422 MCP numeric cost budgets", () => {
   test("cost lookup returns numeric weights only for own tool names and preserves no-name metadata cost", () => {
-    const expected = [1, 2, 10, 5, 5, 2, 2, 2, 1];
+    const expected = [1, 2, 10, 5, 5, 2, 2, 2, 2, 1];
     for (const [index, tool] of orcaMcpTools.entries()) assert.equal(mcpToolRequestCost(tool.name), expected[index]);
     for (const name of [...unknownNames, null]) assert.equal(mcpToolRequestCost(name), 1);
   });

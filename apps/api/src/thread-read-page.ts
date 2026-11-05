@@ -111,7 +111,7 @@ export function readThreadPage(sqlite: Database, scope: { user: string; account:
       if (row.id === null || row.textBytes > maxBody || row.htmlBytes > maxBody || row.metadataBytes > maxMetadata || 6 * (size + row.metadataBytes) > maxEncoded - 65536) { encodedEntries += 8192; return { kind: "unavailable", id: unavailableId }; }
       const message = sqlite.query("select from_address as address, from_name as name, subject, body_text as text, body_html as html from emails where account_id = ? and thread_id = ? and rowid = ?").get(scope.account, scope.thread, row.row) as { address: string | null; name: string | null; subject: string | null; text: string | null; html: string | null };
       const date = row.received === null ? null : new Date(row.received);
-      const entry = { kind: "message" as const, id: row.id, from: message.name || message.address || "Unknown sender", subject: message.subject || "", receivedAt: date && Number.isFinite(date.getTime()) ? date.toISOString() : null, bodyText: message.text, bodyHtml: sanitizeInboundHtml(message.html) };
+      const entry = { kind: "message" as const, id: row.id, from: message.name || message.address || "Unknown sender", subject: message.subject || "", receivedAt: date && Number.isFinite(date.getTime()) ? date.toISOString() : null, bodyText: message.text, bodyHtml: sanitizeInboundHtml(message.html), htmlPresent: row.htmlBytes > 0 };
       const encoded = Buffer.byteLength(JSON.stringify(entry)) + 1;
       if (encodedEntries + encoded > maxEncoded - 65536) { encodedEntries += 8192; return { kind: "unavailable", id: row.id }; }
       encodedEntries += encoded;

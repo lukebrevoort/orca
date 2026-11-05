@@ -5,6 +5,7 @@ import {
   type OrcaMcpScope,
   type OrcaMcpToolName,
   type PropagatedAgentEvent,
+  type ThreadReadPage,
 } from "@orca/shared";
 
 import { getAgentFeatureFlags } from "./config.ts";
@@ -396,6 +397,27 @@ export function projectMailForAgent(
       redactionsApplied: textual.redacted,
       truncatedFields: textual.truncatedFields,
     },
+  };
+}
+
+/** Recovery pages remain partial and expose only redacted plain text to agents. */
+export function projectThreadReadPageForAgent(page: ThreadReadPage, accountId: string, decision: AllowedAgentBoundaryDecision) {
+  if (decision.exposure !== "mail_content") throw new Error("Agent page projection requires mail content access");
+  assertProjectionAccount(accountId, decision.allowedAccountIds);
+  return {
+    entries: page.entries.map((entry) => {
+      if (entry.kind === "unavailable") return entry;
+      const textual = redactFields({ from: entry.from, subject: entry.subject, bodyExcerpt: entry.bodyText });
+      return {
+        kind: "message" as const, id: entry.id,
+        from: textual.fields.from!, subject: textual.fields.subject!, receivedAt: entry.receivedAt,
+        bodyExcerpt: textual.fields.bodyExcerpt,
+        bodyStatus: entry.bodyText !== null ? "plain_text" as const : entry.htmlPresent ? "html_only" as const : "empty" as const,
+        safety: { contentTrust: "untrusted_external_content" as const, redactionsApplied: textual.redacted, truncatedFields: textual.truncatedFields },
+      };
+    }),
+    earlier: page.earlier,
+    newer: page.newer,
   };
 }
 

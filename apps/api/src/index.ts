@@ -643,6 +643,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         sqlite.close();
       }
     },
+    getThreadPage({ userId, allowedAccountIds, query }) {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccountById(db, userId, query.accountId);
+        if (!account || !allowedAccountIds.includes(account.id)) throw new McpReadError("not_found", "Thread not found");
+        try {
+          return { accountId: account.id, threadId: query.threadId, page: readThreadPage(sqlite, { user: userId, account: account.id, thread: query.threadId }, query.cursor) };
+        } catch (error) {
+          if (error instanceof ThreadPageError) throw new McpReadError(error.code, error.message);
+          throw error;
+        }
+      } finally { sqlite.close(); }
+    },
     async listAgentEvents({ userId, allowedAccountIds, query }) {
       const { db, sqlite } = dbFactory();
       try {
