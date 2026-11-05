@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { SummaryPage } from "./summary-page";
+import { accountFixture, inboxFixture } from "@orca/shared";
 const globals = ["window", "document", "navigator", "HTMLElement", "HTMLButtonElement", "HTMLTextAreaElement", "Event", "MouseEvent", "Node", "Element", "MutationObserver", "Text", "DocumentFragment", "IS_REACT_ACT_ENVIRONMENT"] as const;
 const originals = new Map(globals.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 let browser: Window, root: Root, container: HTMLElement, clock: number;
@@ -12,7 +13,7 @@ beforeEach(async () => {
   for (const name of globals) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "IS_REACT_ACT_ENVIRONMENT" ? true : browser[name] });
   container = document.createElement("div"); document.body.append(container);
   root = createRoot(container); clock = 0;
-  await act(async () => root.render(<SummaryPage now={now} />));
+  await act(async () => root.render(<SummaryPage demoMode now={now} />));
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -141,7 +142,7 @@ test("countdown refreshes and masks a revealed code at expiry", async () => {
       return originalSetInterval(callback, delay, ...args);
     }) as typeof setInterval;
     // Remount so the countdown effect registers its callback under the stub.
-    await act(async () => root.render(<SummaryPage key="countdown" now={now} />));
+    await act(async () => root.render(<SummaryPage demoMode key="countdown" now={now} />));
     await click("Reveal");
     expect(text()).toContain("482631");
     expect(tick).toBeDefined();
@@ -180,4 +181,59 @@ test("stopping tracking disables an unapproved follow-up textarea", async () => 
   expect(waiting.querySelector("textarea")!.disabled).toBe(false);
   await click("Stop tracking");
   expect(waiting.querySelector("textarea")!.disabled).toBe(true);
+});
+
+test("live Summary loads scoped mail and drafts, ignores interrupted account reads and retries errors", async () => {
+  const originalFetch = globalThis.fetch;
+  const mail = { ...inboxFixture[0]!, accountId: "b", subject: "Synthetic human mail" };
+  const draft = { id: "draft-b", accountId: "b", to: [], cc: [], bcc: [], subject: "Synthetic draft", body: { text: "Hi", html: null }, context: null, attachments: [], revision: 1, deliveryStatus: "draft", providerSyncStatus: "not_applicable", providerSyncError: null, providerDraftId: null, providerMessageId: null, providerThreadId: null, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+  const page = { accounts: [accountFixture], messages: [mail], nextCursor: null, counts: { attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 }, classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 } } };
+  const pending: Array<(response: Response) => void> = [];
+  let fail = false, detailFail = false, opened = 0, openedId = "", draftSubject = "Synthetic draft";
+  let resolveDetail: ((response: Response) => void) | undefined;
+  const requestedViews: string[] = [];
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(String(input), "http://localhost");
+    if (url.pathname === "/v1/inbox") requestedViews.push(`${url.searchParams.get("accountId")}:${url.searchParams.get("view") ?? "human"}`);
+    if (url.searchParams.get("accountId") === "a") return new Promise<Response>(resolve => pending.push(resolve));
+    if (url.pathname === "/v1/drafts/draft-b") {
+      if (detailFail) return new Response("error", { status: 503 });
+      return new Promise<Response>(resolve => { resolveDetail = resolve; });
+    }
+    if (fail) return new Response("error", { status: 503 });
+    return Response.json(url.pathname === "/v1/drafts" ? [{ ...draft, subject: draftSubject }, { ...draft, id: "other", accountId: "a", subject: "Other account" }] : page);
+  }) as typeof fetch;
+  try {
+    await act(async () => root.render(<SummaryPage accountId="a" accountEmail="a@example.com" onOpenDrafts={() => opened++} />));
+    expect(text()).toContain("Loading mail");
+    await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} onOpenDraft={value => { openedId = value.id; }} />); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Synthetic human mail"); expect(text()).toContain("Synthetic draft"); expect(text()).not.toContain("Other account");
+    expect(requestedViews).toContain("b:focus"); expect(requestedViews).toContain("b:quiet");
+    await act(async () => { for (const resolve of pending) resolve(Response.json(page)); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("b@example.com"); expect(text()).not.toContain("a@example.com");
+    detailFail = true;
+    await click("Open draft");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Could not open this draft"); expect(openedId).toBe("");
+    detailFail = false;
+    await click("Open draft");
+    await act(async () => { resolveDetail!(Response.json(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(openedId).toBe("draft-b");
+    await click("Open draft");
+    await act(async () => { root.render(<SummaryPage accountId="c" />); resolveDetail!(Response.json(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(openedId).toBe("draft-b");
+    await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} />); await new Promise(resolve => setTimeout(resolve, 0)); });
+    await click("Open Drafts"); expect(opened).toBe(1);
+    draftSubject = "Updated draft";
+    await click("Refresh Summary");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Updated draft"); expect(text()).not.toContain("Synthetic draft");
+    fail = true;
+    await act(async () => { root.render(<SummaryPage accountId="c" />); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Mail could not be loaded"); expect(text()).toContain("Drafts could not be loaded"); expect(text()).not.toContain("Synthetic draft");
+    fail = false;
+    await click("Try again");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("No saved drafts yet");
+  } finally { globalThis.fetch = originalFetch; }
 });

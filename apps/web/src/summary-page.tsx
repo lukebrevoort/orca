@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { inboxClassificationResponseSchema, messageDraftSchema, type InboxMessage, type MessageDraft } from "@orca/shared";
 import { createFixtures } from "./summary-demo/fixtures";
 import { canApprove, categories, countdown, countdownTone, counts, isExpired, notificationLines, pluralize, transition, type AccountId, type Action, type Code, type Reply } from "./summary-demo/model";
 import { clipboardFeedback } from "./summary-demo/clipboard-feedback";
@@ -6,7 +7,109 @@ import "./summary-page.css";
 
 const systemNow = () => Date.now();
 const sectionIds = ["needs", "drafted", "waiting", "codes"];
-export function SummaryPage({ now = systemNow }: { now?: () => number }) {
+type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; onOpenDraft?: (draft: MessageDraft, origin: HTMLButtonElement) => void; };
+type Load<T> = { accountId: string; status: "loading" | "ready" | "error"; items: T[] };
+
+export function SummaryPage(props: SummaryPageProps) {
+  if (props.demoMode) return <SummaryDemo now={props.now} />;
+  return <LiveSummary {...props} />;
+}
+
+function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage, onOpenDraft }: SummaryPageProps) {
+  const [retry, setRetry] = useState(0);
+  const [openingDraft, setOpeningDraft] = useState<string | null>(null);
+  const [draftOpenError, setDraftOpenError] = useState<string | null>(null);
+  const activeAccount = useRef(accountId); activeAccount.current = accountId;
+  const draftOpenController = useRef<AbortController | null>(null);
+  const [mail, setMail] = useState<Load<InboxMessage> | null>(null);
+  const [drafts, setDrafts] = useState<Load<MessageDraft> | null>(null);
+  const [focus, setFocus] = useState<Load<InboxMessage> | null>(null);
+  const [quiet, setQuiet] = useState<Load<InboxMessage> | null>(null);
+  useEffect(() => {
+    if (!accountId) return;
+    const controller = new AbortController();
+    setOpeningDraft(null); setDraftOpenError(null);
+    setMail({ accountId, status: "loading", items: [] });
+    setDrafts({ accountId, status: "loading", items: [] });
+    setFocus({ accountId, status: "loading", items: [] });
+    setQuiet({ accountId, status: "loading", items: [] });
+    const read = async (url: string) => {
+      const response = await fetch(url, { credentials: "include", signal: controller.signal });
+      if (!response.ok) throw new Error("Request failed");
+      return response.json();
+    };
+    const params = new URLSearchParams({ classification: "human", limit: "5", accountId });
+    void read(`/v1/inbox?${params}`).then(value => {
+      const page = inboxClassificationResponseSchema.parse(value);
+      if (!controller.signal.aborted) setMail({ accountId, status: "ready", items: page.messages.filter(item => item.accountId === accountId) });
+    }).catch(() => { if (!controller.signal.aborted) setMail({ accountId, status: "error", items: [] }); });
+    for (const [view, setView] of [["focus", setFocus], ["quiet", setQuiet]] as const) {
+      const params = new URLSearchParams({ view, classification: "all", limit: "3", accountId });
+      void read(`/v1/inbox?${params}`).then(value => {
+        const page = inboxClassificationResponseSchema.parse(value);
+        if (!controller.signal.aborted) setView({ accountId, status: "ready", items: page.messages.filter(item => item.accountId === accountId) });
+      }).catch(() => { if (!controller.signal.aborted) setView({ accountId, status: "error", items: [] }); });
+    }
+    void read(`/v1/drafts?${new URLSearchParams({ accountId, omitSentContent: "true" })}`).then(value => {
+      if (!Array.isArray(value)) throw new Error("Invalid drafts");
+      const items = value.map(item => messageDraftSchema.parse(item)).filter(item => item.accountId === accountId && item.deliveryStatus === "draft");
+      if (!controller.signal.aborted) setDrafts({ accountId, status: "ready", items });
+    }).catch(() => { if (!controller.signal.aborted) setDrafts({ accountId, status: "error", items: [] }); });
+    return () => { controller.abort(); draftOpenController.current?.abort(); draftOpenController.current = null; };
+  }, [accountId, retry]);
+  const currentMail = mail?.accountId === accountId ? mail : null;
+  const currentDrafts = drafts?.accountId === accountId ? drafts : null;
+  async function openDraft(id: string, origin: HTMLButtonElement) {
+    if (!accountId || draftOpenController.current) return;
+    const controller = new AbortController();
+    draftOpenController.current = controller;
+    setOpeningDraft(id); setDraftOpenError(null);
+    try {
+      const response = await fetch(`/v1/drafts/${encodeURIComponent(id)}?${new URLSearchParams({ accountId })}`, { credentials: "include", signal: controller.signal });
+      if (!response.ok) throw new Error("Draft unavailable");
+      const draft = messageDraftSchema.parse(await response.json());
+      if (draft.accountId !== accountId || draft.id !== id || draft.deliveryStatus !== "draft") throw new Error("Draft unavailable");
+      if (!controller.signal.aborted && activeAccount.current === accountId) onOpenDraft?.(draft, origin);
+    } catch {
+      if (!controller.signal.aborted && activeAccount.current === accountId) setDraftOpenError("Could not open this draft. Refresh Summary and try again.");
+    } finally {
+      if (!controller.signal.aborted && activeAccount.current === accountId) { draftOpenController.current = null; setOpeningDraft(null); }
+    }
+  }
+  const retryButton = <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button>;
+  function attentionSection(label: string, state: Load<InboxMessage> | null) {
+    const current = state?.accountId === accountId ? state : null;
+    return <section aria-label={label}><h2>{label}</h2>
+      {!current || current.status === "loading" ? <p role="status">Loading {label.toLowerCase()}…</p> : current.status === "error" ? <><p role="alert">{label} could not be loaded.</p>{retryButton}</> : <>
+        <p>Up to three recent messages in this space.</p>
+        {current.items.length ? current.items.map(item => <article className="summary-card" key={`${item.accountId}:${item.id}`}><h3>{item.subject || "(no subject)"}</h3><p>{item.from.name || item.from.email}{item.unread ? " · Unread" : ""}</p><button type="button" aria-label={`Open message: ${item.subject || "no subject"}`} onClick={event => onOpenMessage?.(item, event.currentTarget)}>Open message</button></article>) : <p>No messages here.</p>}
+      </>}
+    </section>;
+  }
+
+  return <section aria-labelledby="summary-title" className="summary-page">
+    <header className="summary-intro"><h1 id="summary-title">Summary</h1><p>{accountEmail ? `For ${accountEmail}` : "Loading your account…"}</p><p>Snapshot loaded when you opened Summary. Refresh to see recent changes.</p><button type="button" disabled={!accountId} onClick={() => setRetry(value => value + 1)}>Refresh Summary</button></header>
+    <section aria-labelledby="summary-needs"><h2 id="summary-needs">Recent human Inbox mail</h2>
+      {!currentMail || currentMail.status === "loading" ? <p role="status">Loading mail…</p> : currentMail.status === "error" ? <><p role="alert">Mail could not be loaded.</p>{retryButton}</> : <>
+        <p>Up to five recent Inbox messages classified as likely human.</p>
+        {currentMail.items.length ? currentMail.items.map(item => <article className="summary-card" key={`${item.accountId}:${item.id}`}><h3>{item.subject || "(no subject)"}</h3><p>{item.from.name || item.from.email}{item.unread ? " · Unread" : ""}</p><button type="button" aria-label={`Open message: ${item.subject || "no subject"}`} onClick={event => onOpenMessage?.(item, event.currentTarget)}>Open message</button></article>) : <p>No recent human mail.</p>}
+        <button type="button" onClick={onOpenInbox}>Open Inbox</button>
+      </>}
+    </section>
+    <section aria-labelledby="summary-drafted"><h2 id="summary-drafted">Saved drafts</h2>
+      {!currentDrafts || currentDrafts.status === "loading" ? <p role="status">Loading drafts…</p> : currentDrafts.status === "error" ? <><p role="alert">Drafts could not be loaded.</p>{retryButton}</> : <>
+        {currentDrafts.items.length ? <><p>{currentDrafts.items.length} saved {currentDrafts.items.length === 1 ? "draft" : "drafts"}.{currentDrafts.items.length > 5 ? " Showing the first five." : ""}</p>{currentDrafts.items.slice(0, 5).map(item => <article className="summary-card" key={item.id}><h3>{item.subject.trim() || "(no subject)"}</h3><p>{item.to.length ? item.to.map(person => person.name || person.email).join(", ") : "No recipient yet"}</p><button type="button" aria-label={`Open draft: ${item.subject.trim() || "no subject"}`} disabled={openingDraft !== null} onClick={event => void openDraft(item.id, event.currentTarget)}>{openingDraft === item.id ? "Opening…" : "Open draft"}</button></article>)}</> : <p>No saved drafts yet.</p>}
+        {draftOpenError && <p role="alert">{draftOpenError}</p>}
+        <button type="button" onClick={onOpenDrafts}>Open Drafts</button>
+      </>}
+    </section>
+    {attentionSection("Focus", focus)}
+    {attentionSection("Quiet", quiet)}
+    <section aria-labelledby="summary-more"><h2 id="summary-more">More in Summary</h2><p>Waiting and codes are not available here yet.</p></section>
+  </section>;
+}
+
+function SummaryDemo({ now = systemNow }: { now?: () => number }) {
   const [state, setState] = useState(() => createFixtures(now()));
   const [accountId, setAccountId] = useState<AccountId>("work");
   const [digestByAccount, setDigestByAccount] = useState({ work: false, personal: false });

@@ -1935,6 +1935,114 @@ describe("Desktop evidence and navigation", () => {
     expect(summary.getAttribute("aria-current")).toBeNull();
   });
 
+  test("live Summary opens Drafts and returns without sample records", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([]))) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      expect(desktopWorkspace().textContent).not.toContain("Demo data");
+      const open = [...desktopWorkspace().querySelectorAll("button")].find(button => button.textContent === "Open Drafts")!;
+      expect(open).toBeDefined();
+      await act(async () => { open.click(); });
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("drafts");
+      expect(desktopWorkspace().querySelector(".drafts-view")).not.toBeNull();
+      const summary = [...browserWindow.document.querySelectorAll("button.desktop-sidebar-item")].find(button => button.textContent === "Summary")!;
+      await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
+      expect(desktopWorkspace().textContent).not.toContain("Demo data");
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
+  test("Summary opens a freshly revalidated draft despite an older list arriving later", async () => {
+    const originalFetch = globalThis.fetch;
+    const draft = { ...createTestMessageDraft("summary-draft", "Fresh draft subject"), accountId: accountFixture.id };
+    const stale = { ...draft, subject: "Old draft subject", revision: 0 };
+    const fallback = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    let resolveOld: ((response: Response) => void) | undefined;
+    let detailReads = 0;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/drafts" && url.searchParams.get("omitSentContent") === "true") return jsonResponse([draft]);
+      if (url.pathname === "/v1/drafts") return new Promise<Response>(resolve => { resolveOld = resolve; });
+      if (url.pathname === "/v1/drafts/summary-draft") { detailReads++; return jsonResponse(draft); }
+      return fallback(input, init);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && ![...desktopWorkspace().querySelectorAll("button")].some(item => item.textContent === "Open draft"); i++) await waitFor(0);
+      const open = [...desktopWorkspace().querySelectorAll("button")].find(item => item.textContent === "Open draft")!;
+      open.focus();
+      await act(async () => { open.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+      for (let i = 0; i < 10 && !browserWindow.document.querySelector('.compose-workspace'); i++) await waitFor(0);
+      expect(detailReads).toBe(1);
+      expect(new URL(browserWindow.location.href).searchParams.get("draft")).toBe("summary-draft");
+      expect(browserWindow.document.querySelector('input[value="Fresh draft subject"]')).not.toBeNull();
+      expect(resolveOld).toBeDefined();
+      await act(async () => { resolveOld!(jsonResponse([stale])); await new Promise(resolve => setTimeout(resolve, 0)); });
+      expect(browserWindow.document.querySelector('input[value="Fresh draft subject"]')).not.toBeNull();
+      expect(browserWindow.document.querySelector('input[value="Old draft subject"]')).toBeNull();
+      browserWindow.document.documentElement.dataset.motion = "reduced";
+      await act(async () => { (browserWindow.document.querySelector('[aria-label="Close panel"]') as unknown as HTMLButtonElement).click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+      await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+      expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(open);
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
+  test("leaving Summary cancels a pending draft open", async () => {
+    const originalFetch = globalThis.fetch;
+    const draft = { ...createTestMessageDraft("summary-draft", "Synthetic draft"), accountId: accountFixture.id };
+    const fallback = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    let finish: ((response: Response) => void) | undefined;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/drafts") return jsonResponse([draft]);
+      if (url.pathname === "/v1/drafts/summary-draft") return new Promise<Response>(resolve => { finish = resolve; });
+      return fallback(input, init);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && ![...desktopWorkspace().querySelectorAll("button")].some(item => item.textContent === "Open draft"); i++) await waitFor(0);
+      const open = [...desktopWorkspace().querySelectorAll("button")].find(item => item.textContent === "Open draft")!;
+      await act(async () => { open.click(); await Promise.resolve(); });
+      expect(finish).toBeDefined();
+      const inbox = [...browserWindow.document.querySelectorAll("button.desktop-sidebar-item")].find(item => item.textContent?.startsWith("Inbox"))!;
+      await act(async () => { (inbox as unknown as HTMLButtonElement).click(); finish!(jsonResponse(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("inbox");
+      expect(browserWindow.document.querySelector(".compose-workspace")).toBeNull();
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
+  test("live Summary opens source mail repeatedly and restores scroll and focus", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = inboxFixture[0]!;
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      const workspace = desktopWorkspace();
+      for (let i = 0; i < 10 && !workspace.querySelector('section[aria-label="Quiet"] .summary-card button'); i++) await waitFor(0);
+      const open = workspace.querySelector('section[aria-label="Quiet"] .summary-card button') as unknown as HTMLButtonElement;
+      expect(open?.textContent).toBe("Open message");
+      const focusCalls = trackFocus(open);
+      for (const offset of [319, 402]) {
+        workspace.scrollTop = offset; open.focus();
+        await act(async () => { open.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+        for (let i = 0; i < 10 && !browserWindow.document.querySelector("article.message-reader"); i++) await waitFor(0);
+        expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(message.subject);
+        expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBe(message.threadId);
+        workspace.scrollTop = 0;
+        await act(async () => { (browserWindow.document.querySelector(".reader-back") as unknown as HTMLButtonElement).click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+        await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+        expect(workspace.querySelector("#summary-title")).not.toBeNull();
+        expect(workspace.scrollTop).toBe(offset);
+        expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(open);
+        expect(focusCalls.some(options => options?.preventScroll)).toBe(true);
+      }
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
   test("Summary preview URL opens its demo in the workspace", async () => {
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=summary");
     await renderApp();

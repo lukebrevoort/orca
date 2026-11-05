@@ -1340,6 +1340,7 @@ export function InboxApp({
   const [draftsStatus, setDraftsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
   const [draftsError, setDraftsError] = useState<string | null>(null);
   const [draftRefreshKey, setDraftRefreshKey] = useState(0);
+  const [summaryDraftSeed, setSummaryDraftSeed] = useState<MessageDraft | null>(null);
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [agentEvents, setAgentEvents] = useState<PropagatedAgentEvent[]>(() => demoMode ? readDemoAgentEvents() : []);
@@ -1428,6 +1429,8 @@ export function InboxApp({
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
+  const summaryDraftOriginRef = useRef<HTMLButtonElement | null>(null);
+  const summaryReaderOriginRef = useRef<HTMLButtonElement | null>(null);
   const surfaceHistoryRef = useRef<SurfaceHistory | null>(null);
   if (typeof window !== "undefined" && !surfaceHistoryRef.current) surfaceHistoryRef.current = new SurfaceHistory(window);
   useLayoutEffect(() => installViewNavigationHistory(window), []);
@@ -1482,7 +1485,9 @@ export function InboxApp({
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const agentEventSourceRefs = useRef(new Map<string, HTMLButtonElement>());
   const writingPreferences = useWritingPreferences(status === "signedout" ? null : account, demoMode);
-  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts, { preferences: writingPreferences, enabled: panelMode === "compose" });
+  const composeSeed = summaryDraftSeed?.id === composeDraftId && summaryDraftSeed?.accountId === account?.id ? summaryDraftSeed : null;
+  const composeSeedList = useMemo(() => composeSeed ? [composeSeed] : null, [composeSeed]);
+  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeSeed ?? (composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined), composeSeedList ?? drafts, { preferences: writingPreferences, enabled: panelMode === "compose" });
   // Initial inbox loading resolves the workspace owner twice (/me, then inbox).
   // Never accept writing in the temporary preview scope or before recovery.
   const composeReady = Boolean(account && (demoMode || loadedInboxRef.current)
@@ -2162,7 +2167,7 @@ export function InboxApp({
         const origin = returnContext.target?.kind === "agent-event"
           ? agentEventSourceRefs.current.get(returnContext.target.id)
           : returnContext.target?.kind === "message"
-            ? messageRowRefs.current.get(returnContext.target.id)
+            ? (summaryOpen ? summaryReaderOriginRef.current : messageRowRefs.current.get(returnContext.target.id))
             : null;
         if (canRestoreSurfaceFocus(origin)) {
           restoreWorkspaceScroll(returnContext);
@@ -2338,14 +2343,15 @@ export function InboxApp({
     setZen(Boolean(location.composer?.zen));
     setPanelClosing(false);
     setZenClosing(false);
-    if (!location.composer) setShowSendPermission(false);
+    if (!location.composer) { setSummaryDraftSeed(null); setShowSendPermission(false); }
   }
 
-  function openCompose(draftId: string | null = null) {
+  function openCompose(draftId: string | null = null, seed: MessageDraft | null = null) {
     if (panelClosing) {
       return;
     }
 
+    setSummaryDraftSeed(seed);
     surfaceHistoryRef.current?.openComposer({ draftId, zen: preferences.composeZenByDefault });
     setPanelClosing(false);
     setZenClosing(false);
@@ -3355,7 +3361,8 @@ export function InboxApp({
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {summaryOpen ? <SummaryPage /> : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} onOpenDraft={(draft, origin) => { summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} /></div>}
+          {summaryOpen && !selectedThreadId ? null : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}
@@ -3496,7 +3503,7 @@ export function InboxApp({
             dismissible={!panelClosing}
             initialFocusSelector=".compose-recipient-row input"
             onClose={closePanel}
-            returnFocusRef={composeTriggerRef}
+            returnFocusRef={composeSeed ? summaryDraftOriginRef : composeTriggerRef}
           >
             <header className="panel-header">
               <h2>New message</h2>
