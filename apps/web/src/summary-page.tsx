@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import type { MessageDraft } from "@orca/shared";
 import { createFixtures } from "./summary-demo/fixtures";
 import { canApprove, categories, countdown, countdownTone, counts, isExpired, notificationLines, pluralize, transition, type AccountId, type Action, type Code, type Reply } from "./summary-demo/model";
 import { clipboardFeedback } from "./summary-demo/clipboard-feedback";
@@ -7,31 +6,14 @@ import "./summary-page.css";
 
 const systemNow = () => Date.now();
 const sectionIds = ["needs", "drafted", "waiting", "codes"];
-type SummaryPageProps = {
-  demoMode?: boolean;
-  now?: () => number;
-  accountId?: string;
-  drafts?: MessageDraft[] | null;
-  draftsStatus?: "loading" | "ready" | "error";
-  onRetryDrafts?: () => void;
-  onOpenDraft?: (id: string) => void;
-};
+type SummaryPageProps = { demoMode?: boolean; now?: () => number; onOpenDrafts?: () => void };
 
 export function SummaryPage(props: SummaryPageProps) {
   if (props.demoMode) return <SummaryDemo now={props.now} />;
-  return <LiveSummary {...props} />;
-}
-
-function LiveSummary({ accountId, drafts, draftsStatus = "loading", onRetryDrafts, onOpenDraft }: SummaryPageProps) {
-  const visibleDrafts = drafts?.filter(draft => draft.accountId === accountId && draft.deliveryStatus === "draft") ?? [];
   return <section aria-labelledby="summary-title" className="summary-page">
-    <header className="summary-intro"><h1 id="summary-title">Summary</h1><p>Your saved drafts, in one place.</p></header>
+    <header className="summary-intro"><h1 id="summary-title">Summary</h1><p>Your mail, in one place.</p></header>
     <section aria-labelledby="summary-drafted"><h2 id="summary-drafted">Saved drafts</h2>
-      {!accountId || draftsStatus === "loading" ? <p role="status">Loading your drafts…</p>
-        : draftsStatus === "error" ? <><p role="alert">Your drafts could not be loaded.</p><button type="button" onClick={onRetryDrafts}>Try again</button></>
-        : visibleDrafts.length ? <><p>{visibleDrafts.length} saved {visibleDrafts.length === 1 ? "draft" : "drafts"}.</p>
-          {visibleDrafts.map(draft => <article className="summary-card" key={draft.id}><h3>{draft.subject.trim() || "(no subject)"}</h3><p>{draft.to.length ? draft.to.map(recipient => recipient.name ?? recipient.email).join(", ") : "No recipient yet"}</p><button type="button" onClick={() => onOpenDraft?.(draft.id)}>Open draft</button></article>)}</>
-        : <p>No saved drafts yet.</p>}
+      <p>Continue writing in Drafts.</p><button type="button" onClick={props.onOpenDrafts}>Open Drafts</button>
     </section>
     <section aria-labelledby="summary-more"><h2 id="summary-more">More in Summary</h2><p>Attention, waiting, and codes are not available here yet.</p></section>
   </section>;

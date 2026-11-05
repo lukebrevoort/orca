@@ -1935,6 +1935,25 @@ describe("Desktop evidence and navigation", () => {
     expect(summary.getAttribute("aria-current")).toBeNull();
   });
 
+  test("live Summary opens Drafts and returns without sample records", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([]))) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      expect(desktopWorkspace().textContent).not.toContain("Demo data");
+      const open = [...desktopWorkspace().querySelectorAll("button")].find(button => button.textContent === "Open Drafts")!;
+      expect(open).toBeDefined();
+      await act(async () => { open.click(); });
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("drafts");
+      expect(desktopWorkspace().querySelector(".drafts-view")).not.toBeNull();
+      const summary = [...browserWindow.document.querySelectorAll("button.desktop-sidebar-item")].find(button => button.textContent === "Summary")!;
+      await act(async () => { (summary as HTMLButtonElement).click(); });
+      expect(desktopWorkspace().textContent).not.toContain("Maya Chen");
+      expect(desktopWorkspace().querySelector(".summary-card")).toBeNull();
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
   test("Summary preview URL opens its demo in the workspace", async () => {
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=summary");
     await renderApp();
