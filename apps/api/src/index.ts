@@ -1,5 +1,6 @@
 import { checkDraftQuota, draftStorageBytes, draftQuotaResponse } from "./draft-quota.ts";
 import { registerMessageImageRoutes } from "./mail/images/routes.ts";
+import { readThreadPage, ThreadPageError } from "./thread-read-page.ts";
 import { hasLoadableImages } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
@@ -2398,6 +2399,32 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   );
 
   app.get(
+    "/v1/threads/:threadId/messages",
+    validator("query", (value, c) => {
+      const result = threadQuerySchema.safeParse({ accountId: value.accountId });
+      if (!result.success || Object.keys(value).some(key => key !== "accountId" && key !== "cursor") || (value.cursor !== undefined && (typeof value.cursor !== "string" || value.cursor.length > 16384))) {
+        return c.json({ error: { code: "validation_error", message: "Invalid conversation page request" } }, 400);
+      }
+      return { ...result.data, cursor: value.cursor as string | undefined };
+    }),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const user = c.get("auth").userId;
+        const account = getConnectedAccountById(db, user, c.req.valid("query").accountId);
+        if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
+        try {
+          return c.json(readThreadPage(sqlite, { user, account: account.id, thread: c.req.param("threadId") }, c.req.valid("query").cursor));
+        } catch (error) {
+          if (error instanceof ThreadPageError) return c.json({ error: { code: error.code, message: error.message } }, error.code === "not_found" ? 404 : error.code === "invalid_cursor" ? 400 : 413);
+          throw error;
+        }
+      } finally { sqlite.close(); }
+    },
+  );
+
+  app.get(
     "/v1/threads/:threadId",
     validator("query", (value, c) => {
       const result = threadQuerySchema.safeParse(value);
@@ -3149,7 +3176,7 @@ function resolveSenderAttention(db: Database, accountId: string, address: string
 export const threadDetailLimits = { messages: 100, bodyBytes: 2 * 1024 * 1024, totalBodyBytes: 8 * 1024 * 1024, metadataBytes: 2 * 1024 * 1024, associations: 1000 } as const;
 
 function metadataSize(...columns: SQLWrapper[]) {
-  return sql<number>`${sql.join(columns.map((column) => sql`coalesce(length(cast(${column} as blob)), 0)`), sql` + `)}`;
+  return sql<number>`${sql.join(columns.map((column) => sql`coalesce(octet_length(${column}), 0)`), sql` + `)}`;
 }
 
 function checkThreadDetailBudget(db: Database, accountId: string, threadId: string) {
@@ -3158,8 +3185,8 @@ function checkThreadDetailBudget(db: Database, accountId: string, threadId: stri
   if (!threadSize) throw new McpReadError("not_found", "Thread not found");
   let totalMetadataBytes = threadSize.bytes;
   const bodySizes = db.select({
-    text: sql<number>`coalesce(length(cast(${emails.bodyText} as blob)), 0)`,
-    html: sql<number>`coalesce(length(cast(${emails.bodyHtml} as blob)), 0)`,
+    text: sql<number>`coalesce(octet_length(${emails.bodyText}), 0)`,
+    html: sql<number>`coalesce(octet_length(${emails.bodyHtml}), 0)`,
     metadata: metadataSize(emails.id, emails.accountId, emails.providerMessageId, emails.fromAddress, emails.fromName,
       emails.toRecipients, emails.ccRecipients, emails.bccRecipients, emails.subject, emails.snippet,
       emails.internetMessageId, emails.references, emails.humanClassification, emails.humanClassificationReasons, emails.humanClassifierVersion),

@@ -534,6 +534,17 @@ export const threadDetailSchema = z.object({
 }).strict();
 export type ThreadDetail = z.infer<typeof threadDetailSchema>;
 
+// Recovery pages are read-only and never satisfy the full ThreadDetail contract.
+export const threadReadPageSchema = z.object({
+  entries: z.array(z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("message"), id: z.string(), from: z.string(), subject: z.string(), receivedAt: z.string().nullable(), bodyText: z.string().nullable(), bodyHtml: z.string().nullable() }).strict(),
+    z.object({ kind: z.literal("unavailable"), id: z.string() }).strict(),
+  ])).max(100),
+  earlier: z.string().nullable(),
+  newer: z.string().nullable(),
+}).strict();
+export type ThreadReadPage = z.infer<typeof threadReadPageSchema>;
+
 export const authUserSchema = z
   .object({
     id: nonEmptyStringSchema,

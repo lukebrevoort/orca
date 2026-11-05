@@ -26,7 +26,8 @@ import {
   type SetStateAction,
 } from "react";
 import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, OrganizationViewPreparationInput, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, threadReadPageSchema, userPreferencesSchema } from "@orca/shared";
+import type { ThreadReadPage } from "@orca/shared";
 import {
   demoAccount, demoAttachments,
   demoAgentEvents,
@@ -1420,6 +1421,7 @@ export function InboxApp({
   useEffect(() => { pendingReaderRead.current = null; }, [account?.id, status === "signedout"]);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
+  const [readerOverflow, setReaderOverflow] = useState(false);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const [mailboxRefreshGeneration, setMailboxRefreshGeneration] = useState(0);
   const readerMailboxSnapshotRef = useRef<{ selectionKey: string; version: string } | null>(null);
@@ -2062,6 +2064,7 @@ export function InboxApp({
       setReaderStatus("loading");
     }
     setReaderError(null);
+    setReaderOverflow(false);
     if (cached) {
       markOpenedThreadRead(cached.detail);
       return;
@@ -2082,6 +2085,7 @@ export function InboxApp({
       .catch((error) => {
         if (!active || cached || !requestGeneration.isCurrent()) return;
         setReaderStatus("error");
+        setReaderOverflow(error instanceof ApiRequestError && error.code === "payload_limit");
         setReaderError(getErrorMessage(error));
       })
       .finally(() => { requestGeneration.release(); });
@@ -2130,6 +2134,7 @@ export function InboxApp({
         if (error instanceof ApiRequestError && error.code === "payload_limit") {
           cache.invalidate(reference);
           setThreadDetail(null);
+          setReaderOverflow(true);
         } else if (hasVisibleDetail) return;
         setReaderStatus("error");
         setReaderError(getErrorMessage(error));
@@ -3453,6 +3458,7 @@ export function InboxApp({
               contacts={composeContacts}
               demoMode={demoMode}
               error={readerError}
+              recovery={readerOverflow && readerAccountId && selectedThreadId ? { accountId: readerAccountId, threadId: selectedThreadId } : null}
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage ? selectedThreadLatestMessage.subject || "(no subject)" : null}
               originLabel={readerOriginLabel}
@@ -5766,12 +5772,50 @@ export function shouldShowReaderJumpToTop(scrollY: number, viewportHeight: numbe
   return scrollY > Math.max(360, viewportHeight * 0.4);
 }
 
+export function ThreadRecovery({ accountId, threadId }: { accountId: string; threadId: string }) {
+  const [page, setPage] = useState<ThreadReadPage | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const request = useRef<AbortController | null>(null);
+  useEffect(() => () => request.current?.abort(), []);
+  async function open(cursor?: string) {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setPage(null); setError(null); setLoading(true);
+    const query = new URLSearchParams({ accountId });
+    if (cursor) query.set("cursor", cursor);
+    try {
+      const result = await fetchJson(`/v1/threads/${encodeURIComponent(threadId)}/messages?${query}`, threadReadPageSchema, controller.signal);
+      if (!controller.signal.aborted) setPage(result);
+    } catch (failure) {
+      if (!controller.signal.aborted) setError(getErrorMessage(failure));
+    } finally { if (!controller.signal.aborted) setLoading(false); }
+  }
+  if (!page && !loading && !error) return <button type="button" onClick={() => void open()}>Open in pages</button>;
+  return <section aria-label="Read-only conversation pages">
+    <p>Read-only pages show message bodies. Recipients, attachments, reply, forwarding and guidance are unavailable here. Pages may change as mail syncs; restart to see the latest.</p>
+    {loading ? <p>Loading page…</p> : null}
+    {error ? <><p role="alert">{error}</p><button type="button" onClick={() => void open()}>Restart pages</button></> : null}
+    {page ? <>
+      <nav aria-label="Conversation pages">
+        <button type="button" disabled={!page.newer} onClick={() => page.newer && void open(page.newer)}>Newer</button>
+        <button type="button" disabled={!page.earlier} onClick={() => page.earlier && void open(page.earlier)}>Earlier</button>
+      </nav>
+      {page.entries.map(entry => entry.kind === "unavailable"
+        ? <article key={entry.id}><p>This message is too large to display.</p></article>
+        : <article key={entry.id}><h2>{entry.subject || "(No subject)"}</h2><p>{entry.from}</p><ReaderBody html={entry.bodyHtml} text={entry.bodyText} /></article>)}
+    </> : null}
+  </section>;
+}
+
 export function MessageReader({
   sessions,
   active = true,
   detail,
   contacts = [],
   error,
+  recovery = null,
   fallbackMessages,
   fallbackTitle,
   originLabel = "Inbox",
@@ -5792,6 +5836,7 @@ export function MessageReader({
   detail: ThreadDetail | null;
   contacts?: MailContact[];
   error: string | null;
+  recovery?: { accountId: string; threadId: string } | null;
   fallbackMessages: InboxMessage[];
   fallbackTitle: string | null;
   originLabel?: string;
@@ -6047,6 +6092,7 @@ export function MessageReader({
           <h1 id="reader-title">This conversation couldn’t open.</h1>
           <span><strong>Your place in {originLabel} is preserved.</strong> {error ?? "Orca could not load the message body."}</span>
           <button onClick={onRetry} type="button">Try again</button>
+          {recovery ? <ThreadRecovery key={`${recovery.accountId}|${recovery.threadId}`} {...recovery} /> : null}
         </section>
       ) : null}
       {status === "ready" && detail ? (
