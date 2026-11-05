@@ -416,6 +416,22 @@ test("upload URL predicate diagnostics stay bounded and preserve rejection prece
   const secret = "private-feedback-user-filename-header-signature";
   const asset = "https://uploads.linear.app/" + secret;
   const cases: [string, string, string?][] = [
+    ["https://storage.googleapis.com/uploads.linear.app.evil/file", "upload_url_bucket"],
+    ["https://storage.googleapis.com/uploadsXlinearXapp/file", "upload_url_bucket"],
+    ["https://storage.googleapis.com/uploads.linear.app", "upload_url_bucket"],
+    ["https://storage.googleapis.com/uploads.linear.app%2Ffile", "upload_url_bucket"],
+    ["https://storage.googleapis.com/Uploads.linear.app/file", "upload_url_bucket"],
+    ["https://storage.googleapis.com/uploads.linear.app/../other/file", "upload_url_bucket"],
+    ["https://storage.googleapis.com/other/file", "upload_url_bucket"],
+    ["https://storage.googleapis.com.evil.example/uploads.linear.app/file", "upload_url_host"],
+    ["https://uploads.linear.app.storage.googleapis.com/file", "upload_url_host"],
+    ["http://storage.googleapis.com/uploads.linear.app/file", "upload_url_protocol"],
+    ["https://private@storage.googleapis.com/uploads.linear.app/file", "upload_url_userinfo"],
+    ["https://:private@storage.googleapis.com/uploads.linear.app/file", "upload_url_userinfo"],
+    ["https://storage.googleapis.com:8443/uploads.linear.app/file", "upload_url_port"],
+    ["https://storage.googleapis.com/uploads.linear.app/file#private", "upload_url_fragment"],
+    ["https://storage.googleapis.com/uploads.linear.app/file", "asset_url", "https://uploads.linear.app/file?signature=private"],
+    ["https://storage.googleapis.com/uploads.linear.app/file", "asset_url", "https://storage.googleapis.com/uploads.linear.app/file"],
     ["https://[" + secret, "upload_url_parse"],
     ["http://uploads.linear.app/" + secret, "upload_url_protocol"],
     ["invalid:" + secret, "upload_url_protocol"],
@@ -470,6 +486,8 @@ test("upload URL predicate diagnostics stay bounded and preserve rejection prece
 test("accepted upload URL forms retain the exact PUT URL and redirect restriction", async () => {
   const original = globalThis.fetch;
   const urls = [
+    "https://storage.googleapis.com/uploads.linear.app/private%20file?X-Goog-Signature=private%2Bvalue&X-Goog-Credential=test",
+
     "https://storage.googleapis.com/linear-production/file?signature=private",
     "https://linear-production.storage.googleapis.com/file?signature=private",
     "https://uploads.linear.app/file?signature=private",
@@ -495,6 +513,69 @@ test("accepted upload URL forms retain the exact PUT URL and redirect restrictio
       assert.equal(calls[1]!.url, uploadUrl, "Do not rewrite signed URLs");
       assert.equal(calls[1]!.init?.method, "PUT");
       assert.ok(calls.every(call => call.init?.redirect === "error"));
+    }
+  } finally { globalThis.fetch = original; }
+});
+
+test("Content-Disposition is forwarded intact while unsafe headers fail privately before PUT", async () => {
+  const { feedbackDeliveryDiagnostic } = await import("./linear.ts");
+  const original = globalThis.fetch;
+  const secret = "private-filename-feedback-signature";
+  const disposition = `attachment; filename="${secret}.png"; filename*=UTF-8''${secret}%20image.png`;
+  const cases: [string, unknown, boolean][] = [
+    ["Content-Disposition", disposition, true],
+    ["content-disposition", disposition, true],
+    ["CoNtEnT-DiSpOsItIoN", disposition, true],
+    ["Content-Disposition", disposition + "\r\nx-injected: secret", false],
+    ["Content-Disposition", "\r\n" + disposition, false],
+    ["Content-Disposition", disposition + "\n", false],
+    ["Content-Disposition", disposition + "\r", false],
+    ["Content-Disposition", disposition + "\0", false],
+    ["Content-Disposition", 42, false],
+    ["Content-Disposition-Evil", disposition, false],
+    ["Content-Disposition ", disposition, false],
+    ["Authorization", secret, false],
+    ["Host", "evil.example", false],
+    ["Cookie", secret, false],
+  ];
+  try {
+    for (const [key, value, accepted] of cases) {
+      const calls: { url: string; init: RequestInit | undefined }[] = [];
+      const uploadUrl = `https://storage.googleapis.com/uploads.linear.app/${secret}?signature=${secret}%2Bsigned`;
+      globalThis.fetch = (async (url, init) => {
+        calls.push({ url: String(url), init });
+        if (calls.length === 1) return Response.json({ data: { fileUpload: { success: true, uploadFile: {
+          uploadUrl, assetUrl: "https://uploads.linear.app/private/file",
+          headers: [{ key, value }, { key: "x-goog-content-length-range", value: "4,4" }],
+        } } } });
+        if (calls.length === 2) return new Response(null, { status: 200 });
+        return Response.json({ data: { issueCreate: { success: true, issue: {
+          identifier: "BRE-1", url: "https://linear.app/brevoort/issue/BRE-1", title: "Test",
+        } } } });
+      }) as typeof fetch;
+      const send = createLinearFeedbackSubmitter({ LINEAR_API_KEY: secret })!;
+      if (accepted) {
+        await send(report);
+        assert.equal(calls.length, 3);
+        const put = calls[1]!;
+        assert.equal(put.url, uploadUrl);
+        assert.equal(put.init?.method, "PUT");
+        assert.ok(calls.every(call => call.init?.redirect === "error"));
+        const headers = new Headers(put.init?.headers);
+        assert.equal(headers.get("content-disposition"), disposition);
+        assert.equal(headers.get("x-goog-content-length-range"), "4,4");
+        assert.equal(headers.get("cache-control"), "private, no-store");
+        assert.equal(headers.get("authorization"), null);
+      } else {
+        await assert.rejects(send({ ...report, id: secret, description: secret }), error => {
+          assert.ok(error instanceof Error);
+          assert.equal(error.message, "Linear upload preparation failed");
+          assert.deepEqual(feedbackDeliveryDiagnostic(error), { stage: "upload_prepare", status: 200, reason: "upload_headers" });
+          assert.ok(!JSON.stringify(feedbackDeliveryDiagnostic(error)).includes(secret));
+          return true;
+        });
+        assert.equal(calls.length, 1, "Invalid headers must not PUT or create an issue");
+      }
     }
   } finally { globalThis.fetch = original; }
 });
