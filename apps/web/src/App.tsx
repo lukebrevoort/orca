@@ -2084,6 +2084,7 @@ export function InboxApp({
       })
       .catch((error) => {
         if (!active || cached || !requestGeneration.isCurrent()) return;
+        if (error instanceof ApiRequestError && error.code === "payload_limit") cache.invalidate(reference);
         setReaderStatus("error");
         setReaderOverflow(error instanceof ApiRequestError && error.code === "payload_limit");
         setReaderError(getErrorMessage(error));

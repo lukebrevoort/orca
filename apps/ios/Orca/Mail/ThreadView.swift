@@ -251,6 +251,9 @@ struct ThreadView: View {
             guard identityIsCurrent() else { return }
             if case let APIClient.ClientError.http(413, body) = error, body?.code == "payload_limit" {
                 detail = nil; recovery = nil; overflow = true; self.error = error.localizedDescription
+                await state.cache.remove(key: key)
+            } else if overflow {
+                self.error = error.localizedDescription
             } else if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
             else { self.error = error.localizedDescription }
         }
