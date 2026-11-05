@@ -49,7 +49,10 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     const cursorPayload = Buffer.from(first.value!.earlier!.split(".")[0]!, "base64url").toString("utf8");
     expect(cursorPayload).not.toContain("user"); expect(cursorPayload).not.toContain("account"); expect(cursorPayload).not.toContain("thread");
     expect(first.value!.entries[0]?.kind).toBe("unavailable");
-    expect(first.value!.entries[19]).toEqual({ kind: "unavailable", id: `row:${largeIdRow}` });
+    const largeId = first.value!.entries[19]!;
+    expect(largeId.kind).toBe("unavailable");
+    expect(largeId.id).toStartWith("unavailable:");
+    expect(largeId.id).not.toBe(`row:${largeIdRow}`);
     const second = await fetchPage(first.value!.earlier!); expect(second.value!.entries.length).toBe(20);
     expect(second.value!.entries.find(x => x.id === "m23")?.kind).toBe("unavailable");
     expect(second.value!.entries.find(x => x.id === "m25")?.kind).toBe("unavailable");
@@ -59,7 +62,7 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     expect(html?.kind === "message" && html.bodyHtml).not.toContain("https://example.com/track");
     const third = await fetchPage(second.value!.earlier!); expect(third.value!.entries.length).toBe(5); expect(third.value!.earlier).toBeNull();
     const all = [...first.value!.entries, ...second.value!.entries, ...third.value!.entries];
-    expect(all.map(x => x.id)).toEqual(Array.from({ length: 45 }, (_, i) => i === 19 ? `row:${largeIdRow}` : `m${String(i).padStart(2, "0")}`));
+    expect(all.map(x => x.id)).toEqual(Array.from({ length: 45 }, (_, i) => i === 19 ? largeId.id : `m${String(i).padStart(2, "0")}`));
     expect((await fetchPage(third.value!.newer!)).value!.entries.map(x => x.id)).toEqual(second.value!.entries.map(x => x.id));
     // Non-ordering sync/read changes do not invalidate or loop a cursor.
     sqlite.run("update emails set is_read = 1 where id = 'm01'");
@@ -68,8 +71,8 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     expect((await app.request(`/v1/threads/thread/messages?accountId=account&cursor=${encodeURIComponent(first.value!.earlier!)}`, { headers: { cookie: `orca_session=${otherSession.token}` } })).status).toBe(404);
     expect((await fetchPage(first.value!.earlier!.slice(0, -1) + "!" )).res.status).toBe(400);
     const cursorParts = first.value!.earlier!.split(".");
-    const alteredSignature = (cursorParts[1]![0] === "A" ? "B" : "A") + cursorParts[1]!.slice(1);
-    expect((await fetchPage(`${cursorParts[0]}.${alteredSignature}`)).res.status).toBe(400);
+    const alteredTag = (cursorParts[2]![0] === "A" ? "B" : "A") + cursorParts[2]!.slice(1);
+    expect((await fetchPage(`${cursorParts[0]}.${cursorParts[1]}.${alteredTag}`)).res.status).toBe(400);
     expect((await app.request("/v1/threads/thread/messages?accountId=account")).status).toBe(401);
     expect((await app.request("/v1/threads/thread/messages?accountId=missing", { headers })).status).toBe(404);
     for (let i = 1; i <= 5; i++) sqlite.query("update emails set body_text = ? where id = ?").run("x".repeat(1024 * 1024), `m${String(i).padStart(2, "0")}`);

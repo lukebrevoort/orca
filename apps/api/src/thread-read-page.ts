@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import { threadReadPageSchema, type ThreadReadPage } from "@orca/shared";
 import { getAuthConfig } from "./auth/config.ts";
@@ -15,32 +15,37 @@ const maxMetadata = 2 * 1024 * 1024;
 const maxEncoded = 16 * 1024 * 1024;
 const maxIdBytes = 1024;
 type Key = { received: number | null; created: number; row: number };
-type Cursor = Key & { version: 1; scope: string; direction: "earlier" | "newer" };
+type Cursor = Key & { version: 1; direction: "earlier" | "newer" };
 type Probe = Key & { id: string | null; textBytes: number; htmlBytes: number; metadataBytes: number };
 
 export class ThreadPageError extends Error {
   constructor(readonly code: "not_found" | "invalid_cursor" | "payload_limit", message: string) { super(message); }
 }
 
-function cursorMac(value: string) {
-  return createHmac("sha256", getAuthConfig().sessionSecret).update("orca-thread-page-v1\0").update(value).digest();
-}
-function scopeFingerprint(scope: { user: string; account: string; thread: string }) {
-  return createHmac("sha256", getAuthConfig().sessionSecret).update("orca-thread-page-scope-v1\0").update(JSON.stringify(scope)).digest("base64url");
+function cursorKey() {
+  return createHmac("sha256", getAuthConfig().sessionSecret).update("orca-thread-page-encryption-v1").digest();
 }
 function makeCursor(key: Key, scope: { user: string; account: string; thread: string }, direction: Cursor["direction"]) {
-  const value = Buffer.from(JSON.stringify({ version: 1, scope: scopeFingerprint(scope), received: key.received, created: key.created, row: key.row, direction })).toString("base64url");
-  return `${value}.${cursorMac(value).toString("base64url")}`;
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", cursorKey(), nonce);
+  cipher.setAAD(Buffer.from(JSON.stringify(scope)));
+  const value = Buffer.from(JSON.stringify({ version: 1, received: key.received, created: key.created, row: key.row, direction }));
+  const ciphertext = Buffer.concat([cipher.update(value), cipher.final()]);
+  return [nonce, ciphertext, cipher.getAuthTag()].map(part => part.toString("base64url")).join(".");
 }
 function readCursor(value: string, scope: { user: string; account: string; thread: string }): Cursor {
   try {
-    if (value.length > 16384 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)) throw Error();
-    const [payload, signature] = value.split(".") as [string, string];
-    const expected = cursorMac(payload);
-    const actual = Buffer.from(signature, "base64url");
-    if (actual.length !== expected.length || actual.toString("base64url") !== signature || !timingSafeEqual(expected, actual)) throw Error();
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Cursor;
-    if (data.version !== 1 || data.scope !== scopeFingerprint(scope) ||
+    if (value.length > 16384 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)) throw Error();
+    const parts = value.split(".");
+    const decoded = parts.map(part => Buffer.from(part, "base64url"));
+    if (decoded.some((part, index) => part.toString("base64url") !== parts[index])) throw Error();
+    const [nonce, ciphertext, tag] = decoded as [Buffer, Buffer, Buffer];
+    if (nonce.length !== 12 || tag.length !== 16) throw Error();
+    const decipher = createDecipheriv("aes-256-gcm", cursorKey(), nonce);
+    decipher.setAAD(Buffer.from(JSON.stringify(scope)));
+    decipher.setAuthTag(tag);
+    const data = JSON.parse(Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")) as Cursor;
+    if (data.version !== 1 ||
         !(data.direction === "earlier" || data.direction === "newer") ||
         !(data.received === null || Number.isSafeInteger(data.received)) || !Number.isSafeInteger(data.created) ||
         !Number.isSafeInteger(data.row) || data.row <= 0) throw Error();
@@ -110,7 +115,7 @@ export function readThreadPage(sqlite: Database, scope: { user: string; account:
     let encodedEntries = 0;
     const entries: ThreadReadPage["entries"] = selected.map(row => {
       const size = row.textBytes + row.htmlBytes;
-      const unavailableId = row.id ?? `row:${row.row}`;
+      const unavailableId = row.id ?? `unavailable:${createHmac("sha256", cursorKey()).update(JSON.stringify(scope)).update(`:${row.row}`).digest("base64url")}`;
       if (row.id === null || row.textBytes > maxBody || row.htmlBytes > maxBody || row.metadataBytes > maxMetadata || 6 * (size + row.metadataBytes) > maxEncoded - 65536) { encodedEntries += 8192; return { kind: "unavailable", id: unavailableId }; }
       const message = sqlite.query("select from_address as address, from_name as name, subject, body_text as text, body_html as html from emails where account_id = ? and thread_id = ? and rowid = ?").get(scope.account, scope.thread, row.row) as { address: string | null; name: string | null; subject: string | null; text: string | null; html: string | null };
       const date = row.received === null ? null : new Date(row.received);
