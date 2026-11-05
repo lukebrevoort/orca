@@ -21,6 +21,8 @@ test("thread detail rejects count, individual and aggregate body overflows befor
   const dbPath = join(directory, "test.sqlite");
   const { db, sqlite } = createDatabaseClient(dbPath);
   const observed: string[] = [];
+  let concurrentSync = false;
+  let briefInvocations = 0;
   try {
     migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
     db.insert(schema.users).values({ id: "owner", email: "owner@example.com" }).run();
@@ -28,9 +30,15 @@ test("thread detail rejects count, individual and aggregate body overflows befor
     db.insert(schema.threads).values({ id: "thread", accountId: "a", providerThreadId: "thread", messageCount: 1 }).run();
     db.insert(schema.emails).values({ id: "m0", accountId: "a", threadId: "thread", providerMessageId: "m0", bodyText: "hello", bodyHtml: "<p>hello</p>" }).run();
     const session = await createSession(db, "owner");
-    const app = createApp({ dbFactory: () => {
+    const app = createApp({ replyBriefAvailability: async () => { briefInvocations++; return null; }, dbFactory: () => {
       const client = createDatabaseClient(dbPath);
-      return { ...client, db: drizzle(client.sqlite, { schema, logger: { logQuery(query) { observed.push(query); } } }) };
+      return { ...client, db: drizzle(client.sqlite, { schema, logger: { logQuery(query) {
+        observed.push(query);
+        if (concurrentSync && /"body_text"\s*,\s*"body_html"/i.test(query.split(/\bfrom\b/i)[0]!)) {
+          concurrentSync = false;
+          sqlite.query("update emails set body_text = ? where id = 'm0'").run("x".repeat(threadDetailLimits.bodyBytes + 1));
+        }
+      } } }) };
     } });
     const headers = { cookie: `orca_session=${session.token}` };
     const request = () => app.request("/v1/threads/thread?accountId=a", { headers });
@@ -42,6 +50,14 @@ test("thread detail rejects count, individual and aggregate body overflows befor
       assert.equal(observed.some((query) => /^select\b/i.test(query) && /"body_text"\s*,\s*"body_html"/i.test(query.split(/\bfrom\b/i)[0]!)), false, "rejected thread must not fetch full bodies");
     };
     assert.equal((await request()).status, 200);
+    // A sync commit between the probe and body SELECT cannot change the
+    // snapshot being read. The next request sees and rejects the larger body.
+    concurrentSync = true;
+    const snapshot = await request();
+    assert.equal(snapshot.status, 200);
+    assert.equal((await snapshot.json()).messages[0].bodyText, "hello");
+    assert.equal(concurrentSync, false, "the concurrent write must happen before the body SELECT");
+    await reject();
     // Embedded NUL and multibyte characters must be counted as UTF-8 bytes.
     sqlite.query("update emails set body_text = ?, body_html = null where id = 'm0'").run("\0" + "é".repeat(threadDetailLimits.bodyBytes / 2));
     await reject();
@@ -61,6 +77,7 @@ test("thread detail rejects count, individual and aggregate body overflows befor
     });
     assert.equal(brief.status, 413);
     assert.equal((await brief.json()).error.code, "payload_limit");
+    assert.equal(briefInvocations, 0, "reply guidance must not process partial context after overflow");
     sqlite.run("delete from emails where id != 'm0'");
     sqlite.run("update emails set body_text = null where id = 'm0'");
     for (let i = 1; i <= threadDetailLimits.messages; i++) {

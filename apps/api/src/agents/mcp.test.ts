@@ -409,6 +409,7 @@ describe("Orca scoped MCP server", () => {
       }));
       assert.equal(result.result.isError, true);
       assert.equal(JSON.parse(result.result.content[0].text).error.code, "payload_limit");
+      assert.equal(result.result.structuredContent, undefined, "overflow must not return a partial thread");
     } finally { sqlite.close(); }
   });
 
