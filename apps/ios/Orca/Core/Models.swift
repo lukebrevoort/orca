@@ -52,7 +52,6 @@ struct ThreadReadPage: Decodable {
         enum Kind: String, Decodable { case message, unavailable }
         var kind: Kind; var id: String; var from: String?; var subject: String?; var receivedAt: String?
         var bodyText: String?; var bodyHtml: String?
-        var recoveryIdentity: String { "\(kind.rawValue):\(id)" }
     }
     var entries: [Entry]; var earlier: String?; var newer: String?
 }

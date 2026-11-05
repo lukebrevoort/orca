@@ -5776,13 +5776,14 @@ export function ThreadRecovery({ accountId, threadId }: { accountId: string; thr
   const [page, setPage] = useState<ThreadReadPage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pageVersion, setPageVersion] = useState(0);
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
   async function open(cursor?: string) {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
-    setPage(null); setError(null); setLoading(true);
+    setPage(null); setError(null); setLoading(true); setPageVersion(version => version + 1);
     const query = new URLSearchParams({ accountId });
     if (cursor) query.set("cursor", cursor);
     try {
@@ -5802,9 +5803,9 @@ export function ThreadRecovery({ accountId, threadId }: { accountId: string; thr
         <button type="button" disabled={!page.newer} onClick={() => page.newer && void open(page.newer)}>Newer</button>
         <button type="button" disabled={!page.earlier} onClick={() => page.earlier && void open(page.earlier)}>Earlier</button>
       </nav>
-      {page.entries.map(entry => entry.kind === "unavailable"
-        ? <article key={`unavailable:${entry.id}`}><p>This message is too large to display.</p></article>
-        : <article key={`message:${entry.id}`}><h2>{entry.subject || "(No subject)"}</h2><p>{entry.from}</p><ReaderBody html={entry.bodyHtml} text={entry.bodyText} /></article>)}
+      <div key={pageVersion}>{page.entries.map((entry, index) => entry.kind === "unavailable"
+        ? <article key={`unavailable:${entry.id}:${index}`}><p>This message is too large to display.</p></article>
+        : <article key={`message:${entry.id}:${index}`}><h2>{entry.subject || "(No subject)"}</h2><p>{entry.from}</p><ReaderBody html={entry.bodyHtml} text={entry.bodyText} /></article>)}</div>
     </> : null}
   </section>;
 }
