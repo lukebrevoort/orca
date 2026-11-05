@@ -201,9 +201,10 @@ function validateUploadUrls(uploadUrl: string, assetUrl: string) {
   try { upload = new URL(uploadUrl); } catch { throw new UploadPreparationError("upload_url_parse"); }
   try { asset = new URL(assetUrl); } catch { throw new UploadPreparationError("asset_url"); }
   const secure = (url: URL) => url.protocol === "https:" && !url.username && !url.password && !url.port && !url.hash;
-  const googleBucket = upload.hostname === "storage.googleapis.com" && /^\/linear-[a-z0-9-]+\//.test(upload.pathname);
+  const googleBucket = upload.hostname === "storage.googleapis.com" &&
+    (/^\/linear-[a-z0-9-]+\//.test(upload.pathname) || upload.pathname.startsWith("/uploads.linear.app/"));
   const googleBucketHost = /^linear-[a-z0-9-]+\.storage\.googleapis\.com$/.test(upload.hostname);
-  // Fixed codes only. Preserve parsing/check precedence and the existing allowlist.
+  // Fixed codes only. Preserve parsing/check precedence and restrict uploads to known destinations.
   if (upload.protocol !== "https:") throw new UploadPreparationError("upload_url_protocol");
   if (upload.username || upload.password) throw new UploadPreparationError("upload_url_userinfo");
   if (upload.port) throw new UploadPreparationError("upload_url_port");
@@ -256,7 +257,7 @@ async function uploadAttachment(
   if (!Array.isArray(uploadFile.headers)) throw new UploadPreparationError("upload_headers");
   for (const header of uploadFile.headers) {
     if (!isObject(header) || typeof header.key !== "string" || typeof header.value !== "string" ||
-        !/^(content-type|cache-control|x-goog-[a-z0-9-]+|x-amz-[a-z0-9-]+)$/i.test(header.key)) throw new UploadPreparationError("upload_headers");
+        !/^(content-type|content-disposition|cache-control|x-goog-[a-z0-9-]+|x-amz-[a-z0-9-]+)$/i.test(header.key) || /[\r\n\0]/.test(header.value)) throw new UploadPreparationError("upload_headers");
     try { uploadHeaders.set(header.key, header.value); } catch { throw new UploadPreparationError("upload_headers"); }
   }
 
