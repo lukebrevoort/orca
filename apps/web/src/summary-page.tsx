@@ -7,7 +7,7 @@ import "./summary-page.css";
 
 const systemNow = () => Date.now();
 const sectionIds = ["needs", "drafted", "waiting", "codes"];
-type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; };
+type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; onOpenDraft?: (draft: MessageDraft, origin: HTMLButtonElement) => void; };
 type Load<T> = { accountId: string; status: "loading" | "ready" | "error"; items: T[] };
 
 export function SummaryPage(props: SummaryPageProps) {
@@ -15,8 +15,12 @@ export function SummaryPage(props: SummaryPageProps) {
   return <LiveSummary {...props} />;
 }
 
-function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage }: SummaryPageProps) {
+function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage, onOpenDraft }: SummaryPageProps) {
   const [retry, setRetry] = useState(0);
+  const [openingDraft, setOpeningDraft] = useState<string | null>(null);
+  const [draftOpenError, setDraftOpenError] = useState<string | null>(null);
+  const activeAccount = useRef(accountId); activeAccount.current = accountId;
+  const draftOpenController = useRef<AbortController | null>(null);
   const [mail, setMail] = useState<Load<InboxMessage> | null>(null);
   const [drafts, setDrafts] = useState<Load<MessageDraft> | null>(null);
   const [focus, setFocus] = useState<Load<InboxMessage> | null>(null);
@@ -24,6 +28,7 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
   useEffect(() => {
     if (!accountId) return;
     const controller = new AbortController();
+    setOpeningDraft(null); setDraftOpenError(null);
     setMail({ accountId, status: "loading", items: [] });
     setDrafts({ accountId, status: "loading", items: [] });
     setFocus({ accountId, status: "loading", items: [] });
@@ -50,10 +55,27 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
       const items = value.map(item => messageDraftSchema.parse(item)).filter(item => item.accountId === accountId && item.deliveryStatus === "draft");
       if (!controller.signal.aborted) setDrafts({ accountId, status: "ready", items });
     }).catch(() => { if (!controller.signal.aborted) setDrafts({ accountId, status: "error", items: [] }); });
-    return () => controller.abort();
+    return () => { controller.abort(); draftOpenController.current?.abort(); draftOpenController.current = null; };
   }, [accountId, retry]);
   const currentMail = mail?.accountId === accountId ? mail : null;
   const currentDrafts = drafts?.accountId === accountId ? drafts : null;
+  async function openDraft(id: string, origin: HTMLButtonElement) {
+    if (!accountId || draftOpenController.current) return;
+    const controller = new AbortController();
+    draftOpenController.current = controller;
+    setOpeningDraft(id); setDraftOpenError(null);
+    try {
+      const response = await fetch(`/v1/drafts/${encodeURIComponent(id)}?${new URLSearchParams({ accountId })}`, { credentials: "include", signal: controller.signal });
+      if (!response.ok) throw new Error("Draft unavailable");
+      const draft = messageDraftSchema.parse(await response.json());
+      if (draft.accountId !== accountId || draft.id !== id || draft.deliveryStatus !== "draft") throw new Error("Draft unavailable");
+      if (!controller.signal.aborted && activeAccount.current === accountId) onOpenDraft?.(draft, origin);
+    } catch {
+      if (!controller.signal.aborted && activeAccount.current === accountId) setDraftOpenError("Could not open this draft. Refresh Summary and try again.");
+    } finally {
+      if (!controller.signal.aborted && activeAccount.current === accountId) { draftOpenController.current = null; setOpeningDraft(null); }
+    }
+  }
   const retryButton = <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button>;
   function attentionSection(label: string, state: Load<InboxMessage> | null) {
     const current = state?.accountId === accountId ? state : null;
@@ -76,7 +98,8 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
     </section>
     <section aria-labelledby="summary-drafted"><h2 id="summary-drafted">Saved drafts</h2>
       {!currentDrafts || currentDrafts.status === "loading" ? <p role="status">Loading drafts…</p> : currentDrafts.status === "error" ? <><p role="alert">Drafts could not be loaded.</p>{retryButton}</> : <>
-        {currentDrafts.items.length ? <><p>{currentDrafts.items.length} saved {currentDrafts.items.length === 1 ? "draft" : "drafts"}.{currentDrafts.items.length > 5 ? " Showing the first five." : ""}</p>{currentDrafts.items.slice(0, 5).map(item => <article className="summary-card" key={item.id}><h3>{item.subject.trim() || "(no subject)"}</h3><p>{item.to.length ? item.to.map(person => person.name || person.email).join(", ") : "No recipient yet"}</p></article>)}</> : <p>No saved drafts yet.</p>}
+        {currentDrafts.items.length ? <><p>{currentDrafts.items.length} saved {currentDrafts.items.length === 1 ? "draft" : "drafts"}.{currentDrafts.items.length > 5 ? " Showing the first five." : ""}</p>{currentDrafts.items.slice(0, 5).map(item => <article className="summary-card" key={item.id}><h3>{item.subject.trim() || "(no subject)"}</h3><p>{item.to.length ? item.to.map(person => person.name || person.email).join(", ") : "No recipient yet"}</p><button type="button" aria-label={`Open draft: ${item.subject.trim() || "no subject"}`} disabled={openingDraft !== null} onClick={event => void openDraft(item.id, event.currentTarget)}>{openingDraft === item.id ? "Opening…" : "Open draft"}</button></article>)}</> : <p>No saved drafts yet.</p>}
+        {draftOpenError && <p role="alert">{draftOpenError}</p>}
         <button type="button" onClick={onOpenDrafts}>Open Drafts</button>
       </>}
     </section>

@@ -189,23 +189,40 @@ test("live Summary loads scoped mail and drafts, ignores interrupted account rea
   const draft = { id: "draft-b", accountId: "b", to: [], cc: [], bcc: [], subject: "Synthetic draft", body: { text: "Hi", html: null }, context: null, attachments: [], revision: 1, deliveryStatus: "draft", providerSyncStatus: "not_applicable", providerSyncError: null, providerDraftId: null, providerMessageId: null, providerThreadId: null, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
   const page = { accounts: [accountFixture], messages: [mail], nextCursor: null, counts: { attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 }, classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 } } };
   const pending: Array<(response: Response) => void> = [];
-  let fail = false, opened = 0, draftSubject = "Synthetic draft";
+  let fail = false, detailFail = false, opened = 0, openedId = "", draftSubject = "Synthetic draft";
+  let resolveDetail: ((response: Response) => void) | undefined;
   const requestedViews: string[] = [];
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(String(input), "http://localhost");
     if (url.pathname === "/v1/inbox") requestedViews.push(`${url.searchParams.get("accountId")}:${url.searchParams.get("view") ?? "human"}`);
     if (url.searchParams.get("accountId") === "a") return new Promise<Response>(resolve => pending.push(resolve));
+    if (url.pathname === "/v1/drafts/draft-b") {
+      if (detailFail) return new Response("error", { status: 503 });
+      return new Promise<Response>(resolve => { resolveDetail = resolve; });
+    }
     if (fail) return new Response("error", { status: 503 });
     return Response.json(url.pathname === "/v1/drafts" ? [{ ...draft, subject: draftSubject }, { ...draft, id: "other", accountId: "a", subject: "Other account" }] : page);
   }) as typeof fetch;
   try {
     await act(async () => root.render(<SummaryPage accountId="a" accountEmail="a@example.com" onOpenDrafts={() => opened++} />));
     expect(text()).toContain("Loading mail");
-    await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} />); await new Promise(resolve => setTimeout(resolve, 0)); });
+    await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} onOpenDraft={value => { openedId = value.id; }} />); await new Promise(resolve => setTimeout(resolve, 0)); });
     expect(text()).toContain("Synthetic human mail"); expect(text()).toContain("Synthetic draft"); expect(text()).not.toContain("Other account");
     expect(requestedViews).toContain("b:focus"); expect(requestedViews).toContain("b:quiet");
     await act(async () => { for (const resolve of pending) resolve(Response.json(page)); await new Promise(resolve => setTimeout(resolve, 0)); });
     expect(text()).toContain("b@example.com"); expect(text()).not.toContain("a@example.com");
+    detailFail = true;
+    await click("Open draft");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(text()).toContain("Could not open this draft"); expect(openedId).toBe("");
+    detailFail = false;
+    await click("Open draft");
+    await act(async () => { resolveDetail!(Response.json(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(openedId).toBe("draft-b");
+    await click("Open draft");
+    await act(async () => { root.render(<SummaryPage accountId="c" />); resolveDetail!(Response.json(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(openedId).toBe("draft-b");
+    await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} />); await new Promise(resolve => setTimeout(resolve, 0)); });
     await click("Open Drafts"); expect(opened).toBe(1);
     draftSubject = "Updated draft";
     await click("Refresh Summary");
