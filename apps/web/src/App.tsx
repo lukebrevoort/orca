@@ -1428,6 +1428,7 @@ export function InboxApp({
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
+  const summaryReaderOriginRef = useRef<HTMLButtonElement | null>(null);
   const surfaceHistoryRef = useRef<SurfaceHistory | null>(null);
   if (typeof window !== "undefined" && !surfaceHistoryRef.current) surfaceHistoryRef.current = new SurfaceHistory(window);
   useLayoutEffect(() => installViewNavigationHistory(window), []);
@@ -2162,7 +2163,7 @@ export function InboxApp({
         const origin = returnContext.target?.kind === "agent-event"
           ? agentEventSourceRefs.current.get(returnContext.target.id)
           : returnContext.target?.kind === "message"
-            ? messageRowRefs.current.get(returnContext.target.id)
+            ? (summaryOpen ? summaryReaderOriginRef.current : messageRowRefs.current.get(returnContext.target.id))
             : null;
         if (canRestoreSurfaceFocus(origin)) {
           restoreWorkspaceScroll(returnContext);
@@ -3332,7 +3333,8 @@ export function InboxApp({
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {summaryOpen ? <SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} /> : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} /></div>}
+          {summaryOpen && !selectedThreadId ? null : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}
             {requestedDestinationId && !selectedDestination && <p role="status">{catalog.loading ? "Loading space…" : "This space is unavailable."}</p>}

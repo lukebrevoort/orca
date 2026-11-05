@@ -7,7 +7,7 @@ import "./summary-page.css";
 
 const systemNow = () => Date.now();
 const sectionIds = ["needs", "drafted", "waiting", "codes"];
-type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void };
+type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; };
 type Load<T> = { accountId: string; status: "loading" | "ready" | "error"; items: T[] };
 
 export function SummaryPage(props: SummaryPageProps) {
@@ -15,15 +15,19 @@ export function SummaryPage(props: SummaryPageProps) {
   return <LiveSummary {...props} />;
 }
 
-function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox }: SummaryPageProps) {
+function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage }: SummaryPageProps) {
   const [retry, setRetry] = useState(0);
   const [mail, setMail] = useState<Load<InboxMessage> | null>(null);
   const [drafts, setDrafts] = useState<Load<MessageDraft> | null>(null);
+  const [focus, setFocus] = useState<Load<InboxMessage> | null>(null);
+  const [quiet, setQuiet] = useState<Load<InboxMessage> | null>(null);
   useEffect(() => {
     if (!accountId) return;
     const controller = new AbortController();
     setMail({ accountId, status: "loading", items: [] });
     setDrafts({ accountId, status: "loading", items: [] });
+    setFocus({ accountId, status: "loading", items: [] });
+    setQuiet({ accountId, status: "loading", items: [] });
     const read = async (url: string) => {
       const response = await fetch(url, { credentials: "include", signal: controller.signal });
       if (!response.ok) throw new Error("Request failed");
@@ -34,6 +38,13 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox }: Sum
       const page = inboxClassificationResponseSchema.parse(value);
       if (!controller.signal.aborted) setMail({ accountId, status: "ready", items: page.messages.filter(item => item.accountId === accountId) });
     }).catch(() => { if (!controller.signal.aborted) setMail({ accountId, status: "error", items: [] }); });
+    for (const [view, setView] of [["focus", setFocus], ["quiet", setQuiet]] as const) {
+      const params = new URLSearchParams({ view, classification: "all", limit: "3", accountId });
+      void read(`/v1/inbox?${params}`).then(value => {
+        const page = inboxClassificationResponseSchema.parse(value);
+        if (!controller.signal.aborted) setView({ accountId, status: "ready", items: page.messages.filter(item => item.accountId === accountId) });
+      }).catch(() => { if (!controller.signal.aborted) setView({ accountId, status: "error", items: [] }); });
+    }
     void read(`/v1/drafts?${new URLSearchParams({ accountId, omitSentContent: "true" })}`).then(value => {
       if (!Array.isArray(value)) throw new Error("Invalid drafts");
       const items = value.map(item => messageDraftSchema.parse(item)).filter(item => item.accountId === accountId && item.deliveryStatus === "draft");
@@ -44,12 +55,22 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox }: Sum
   const currentMail = mail?.accountId === accountId ? mail : null;
   const currentDrafts = drafts?.accountId === accountId ? drafts : null;
   const retryButton = <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button>;
+  function attentionSection(label: string, state: Load<InboxMessage> | null) {
+    const current = state?.accountId === accountId ? state : null;
+    return <section aria-label={label}><h2>{label}</h2>
+      {!current || current.status === "loading" ? <p role="status">Loading {label.toLowerCase()}…</p> : current.status === "error" ? <><p role="alert">{label} could not be loaded.</p>{retryButton}</> : <>
+        <p>Up to three recent messages in this space.</p>
+        {current.items.length ? current.items.map(item => <article className="summary-card" key={`${item.accountId}:${item.id}`}><h3>{item.subject || "(no subject)"}</h3><p>{item.from.name || item.from.email}{item.unread ? " · Unread" : ""}</p><button type="button" aria-label={`Open message: ${item.subject || "no subject"}`} onClick={event => onOpenMessage?.(item, event.currentTarget)}>Open message</button></article>) : <p>No messages here.</p>}
+      </>}
+    </section>;
+  }
+
   return <section aria-labelledby="summary-title" className="summary-page">
     <header className="summary-intro"><h1 id="summary-title">Summary</h1><p>{accountEmail ? `For ${accountEmail}` : "Loading your account…"}</p><p>Snapshot loaded when you opened Summary. Refresh to see recent changes.</p><button type="button" disabled={!accountId} onClick={() => setRetry(value => value + 1)}>Refresh Summary</button></header>
     <section aria-labelledby="summary-needs"><h2 id="summary-needs">Recent human Inbox mail</h2>
       {!currentMail || currentMail.status === "loading" ? <p role="status">Loading mail…</p> : currentMail.status === "error" ? <><p role="alert">Mail could not be loaded.</p>{retryButton}</> : <>
         <p>Up to five recent Inbox messages classified as likely human.</p>
-        {currentMail.items.length ? currentMail.items.map(item => <article className="summary-card" key={`${item.accountId}:${item.id}`}><h3>{item.subject || "(no subject)"}</h3><p>{item.from.name || item.from.email}{item.unread ? " · Unread" : ""}</p></article>) : <p>No recent human mail.</p>}
+        {currentMail.items.length ? currentMail.items.map(item => <article className="summary-card" key={`${item.accountId}:${item.id}`}><h3>{item.subject || "(no subject)"}</h3><p>{item.from.name || item.from.email}{item.unread ? " · Unread" : ""}</p><button type="button" aria-label={`Open message: ${item.subject || "no subject"}`} onClick={event => onOpenMessage?.(item, event.currentTarget)}>Open message</button></article>) : <p>No recent human mail.</p>}
         <button type="button" onClick={onOpenInbox}>Open Inbox</button>
       </>}
     </section>
@@ -59,6 +80,8 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox }: Sum
         <button type="button" onClick={onOpenDrafts}>Open Drafts</button>
       </>}
     </section>
+    {attentionSection("Focus", focus)}
+    {attentionSection("Quiet", quiet)}
     <section aria-labelledby="summary-more"><h2 id="summary-more">More in Summary</h2><p>Waiting and codes are not available here yet.</p></section>
   </section>;
 }

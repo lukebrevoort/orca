@@ -1953,6 +1953,35 @@ describe("Desktop evidence and navigation", () => {
     } finally { globalThis.fetch = originalFetch; }
   });
 
+  test("live Summary opens source mail repeatedly and restores scroll and focus", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = inboxFixture[0]!;
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      const workspace = desktopWorkspace();
+      for (let i = 0; i < 10 && !workspace.querySelector('section[aria-label="Quiet"] .summary-card button'); i++) await waitFor(0);
+      const open = workspace.querySelector('section[aria-label="Quiet"] .summary-card button') as unknown as HTMLButtonElement;
+      expect(open?.textContent).toBe("Open message");
+      const focusCalls = trackFocus(open);
+      for (const offset of [319, 402]) {
+        workspace.scrollTop = offset; open.focus();
+        await act(async () => { open.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+        for (let i = 0; i < 10 && !browserWindow.document.querySelector("article.message-reader"); i++) await waitFor(0);
+        expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(message.subject);
+        expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBe(message.threadId);
+        workspace.scrollTop = 0;
+        await act(async () => { (browserWindow.document.querySelector(".reader-back") as unknown as HTMLButtonElement).click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+        await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+        expect(workspace.querySelector("#summary-title")).not.toBeNull();
+        expect(workspace.scrollTop).toBe(offset);
+        expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(open);
+        expect(focusCalls.some(options => options?.preventScroll)).toBe(true);
+      }
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
   test("Summary preview URL opens its demo in the workspace", async () => {
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=summary");
     await renderApp();

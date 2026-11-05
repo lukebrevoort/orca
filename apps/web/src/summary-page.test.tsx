@@ -190,8 +190,10 @@ test("live Summary loads scoped mail and drafts, ignores interrupted account rea
   const page = { accounts: [accountFixture], messages: [mail], nextCursor: null, counts: { attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 }, classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 } } };
   const pending: Array<(response: Response) => void> = [];
   let fail = false, opened = 0, draftSubject = "Synthetic draft";
+  const requestedViews: string[] = [];
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(String(input), "http://localhost");
+    if (url.pathname === "/v1/inbox") requestedViews.push(`${url.searchParams.get("accountId")}:${url.searchParams.get("view") ?? "human"}`);
     if (url.searchParams.get("accountId") === "a") return new Promise<Response>(resolve => pending.push(resolve));
     if (fail) return new Response("error", { status: 503 });
     return Response.json(url.pathname === "/v1/drafts" ? [{ ...draft, subject: draftSubject }, { ...draft, id: "other", accountId: "a", subject: "Other account" }] : page);
@@ -201,6 +203,7 @@ test("live Summary loads scoped mail and drafts, ignores interrupted account rea
     expect(text()).toContain("Loading mail");
     await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} />); await new Promise(resolve => setTimeout(resolve, 0)); });
     expect(text()).toContain("Synthetic human mail"); expect(text()).toContain("Synthetic draft"); expect(text()).not.toContain("Other account");
+    expect(requestedViews).toContain("b:focus"); expect(requestedViews).toContain("b:quiet");
     await act(async () => { for (const resolve of pending) resolve(Response.json(page)); await new Promise(resolve => setTimeout(resolve, 0)); });
     expect(text()).toContain("b@example.com"); expect(text()).not.toContain("a@example.com");
     await click("Open Drafts"); expect(opened).toBe(1);
