@@ -15,6 +15,9 @@ export function registerMessageImageRoutes(app:Hono<{Variables:AuthVariables}>,o
   // Cookies require an exact configured Origin and a non-simple JSON request.
   const bearer=/^Bearer [A-Za-z0-9_-]+$/i.test(c.req.header("authorization")??"");
   if(!bearer && (!options.allowedOrigin || c.req.header("origin")!==options.allowedOrigin))return c.json({error:{code:"invalid_origin",message:"Load images from Orca."}},403);
+  // Legacy native clients cannot attest which message revision the user saw.
+  // Fail closed with an explicit upgrade response; server/client rollout must be coordinated.
+  if(bearer&&!c.req.header("content-type"))return c.json({error:{code:"image_upgrade_required",message:"Update Orca before loading images."}},426);
   if(c.req.header("content-type")?.split(";")[0]?.trim().toLowerCase()!=="application/json")return c.json({error:{code:"validation_error",message:"A message revision is required."}},400);
   let payload:unknown;try{payload=await c.req.json();}catch{return c.json({error:{code:"validation_error",message:"A message revision is required."}},400);}
   const revision=(payload && typeof payload==="object" && "revision" in payload) ? (payload as {revision:unknown}).revision : null;

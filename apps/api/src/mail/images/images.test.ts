@@ -106,6 +106,7 @@ test("native POST resolves only an authenticated user's stored message, before a
   const revision=imageSourceRevision('<img alt="Banner" src="https://images.example.org/banner.png">');
   const post=(token:string, rev=revision)=>({method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({revision:rev})});
   expect((await app.request(endpoint,{method:'POST'})).status).toBe(401);
+  const legacy=await app.request(endpoint,{method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`}});expect(legacy.status).toBe(426);expect((await legacy.json()).error.code).toBe('image_upgrade_required');
   expect((await app.request(endpoint,post(stranger.accessToken))).status).toBe(404);
   expect((await app.request('/v1/messages/message/images?accountId=other',post(owner.accessToken))).status).toBe(404);
   expect((await app.request(endpoint,post(owner.accessToken,'0'.repeat(64)))).status).toBe(409);
