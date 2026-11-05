@@ -3937,6 +3937,25 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
   });
 
+  test("switching destinations interrupts a pending sidebar focus restore", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const workspace = desktopWorkspace();
+    const origin = messageRow("Luke Brevoort");
+    const focusCalls = trackFocus(origin);
+    const items = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')] as unknown as HTMLButtonElement[];
+    const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
+    const all = items.find(item => item.textContent?.startsWith("All Mail"))!;
+    workspace.scrollTop = 321;
+    await openMessage("Luke Brevoort");
+    await act(async () => inbox.click());
+    await act(async () => all.click());
+    workspace.scrollTop = 77;
+    await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("all");
+    expect(workspace.scrollTop).toBe(77);
+    expect(focusCalls).toHaveLength(0);
+  });
+
   test("re-arms the list return point when Forward reopens a reader", async () => {
     await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
     browserWindow.document.documentElement.dataset.motion = "reduced";

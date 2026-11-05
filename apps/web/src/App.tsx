@@ -3178,6 +3178,11 @@ export function InboxApp({
   function navigateDesktopNow(destination: DesktopDestination, viewsRoute: ViewsManagementRoute | null = null) {
     setManageSpacesOpen(false);
     setManageToolsOpen(false);
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+      readerNavigationGenerationRef.current += 1;
+    }
     // The active sidebar destination is also a way back from its reader.
     // Dismiss the reader so its saved list position and focus are restored.
     const isDestination = (actual: string | null) => destination === actual
