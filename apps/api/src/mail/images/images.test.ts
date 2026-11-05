@@ -86,6 +86,14 @@ test("failed downloads spend their allowance and a partly used budget is never o
  calls=0;let transferred=0;const almost=Buffer.alloc(2*1024*1024-100);png.copy(almost);
  await renderRequestedImages(html,async()=>{calls++;transferred+=almost.length;return almost;});expect(calls).toBe(4);expect(transferred).toBeLessThanOrEqual(8*1024*1024);
 });
+test("synthetic newsletter-shaped input exposes conservative failure budgeting without network access",async()=>{
+ const html=Array.from({length:26},(_,i)=>`<img src="https://images.example.org/${i}.png">`).join('')
+   + '<img width="3" height="1" src="https://images.example.org/pixel.gif">'.repeat(2);
+ let calls=0;
+ const result=await renderRequestedImages(html,async()=>{calls++;throw new Error('synthetic failure');});
+ expect(calls).toBe(4);expect(result.loaded).toBe(0);expect(result.reasons.downloadFailed).toBe(4);
+ expect(result.reasons.byteBudget).toBe(22);expect(result.reasons.ineligible).toBe(2);
+});
 test("global cancellation interrupts DNS before any socket is opened",async()=>{
  const controller=new AbortController();const wire=transport();const pending=downloadRemoteImage(url,controller.signal,{resolve:()=>new Promise(()=>{}),request:wire.request});controller.abort();await expect(pending).rejects.toThrow();expect(wire.calls).toBe(0);
 });
