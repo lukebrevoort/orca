@@ -3869,6 +3869,93 @@ describe("Inbox reader viewport restoration", () => {
     expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
   });
 
+  test("returning to the current Inbox from the sidebar restores its scroll position repeatedly", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const workspace = desktopWorkspace();
+    const inbox = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+      .find(item => item.textContent?.startsWith("Inbox")) as unknown as HTMLButtonElement;
+    for (const position of [319, 180]) {
+      workspace.scrollTop = position;
+      await openMessage("Luke Brevoort");
+      workspace.scrollTop = 700;
+      await act(async () => { inbox.click(); await new Promise<void>(resolve => setTimeout(resolve, 0)); });
+      await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+      expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
+      expect(workspace.scrollTop).toBe(position);
+    }
+  });
+
+  test("returning to a current custom destination restores its list position", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = { ...inboxFixture[0]!, attentionBehavior: "quiet" as const, unread: false };
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] });
+    browserWindow.history.replaceState({}, "", "/?destination=destination%3Aquiet");
+    try {
+      await renderApp({ ...defaultReaderPreferences, motion: "reduced" }, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 20 && !browserWindow.document.querySelector("button.message-row"); i++) await waitFor(0);
+      const workspace = desktopWorkspace();
+      workspace.scrollTop = 123;
+      await openMessage(message.from.name!);
+      workspace.scrollTop = 700;
+      const quiet = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+        .find(item => item.textContent?.startsWith("Quiet")) as unknown as HTMLButtonElement;
+      expect(quiet).toBeTruthy();
+      await act(async () => { quiet.click(); await new Promise<void>(resolve => setTimeout(resolve, 0)); });
+      await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+      expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
+      expect(workspace.scrollTop).toBe(123);
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("destination:quiet");
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
+  test("a different destination does not restore the reader's original list position", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const workspace = desktopWorkspace();
+    workspace.scrollTop = 321;
+    await openMessage("Luke Brevoort");
+    workspace.scrollTop = 70;
+    const all = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+      .find(item => item.textContent?.startsWith("All Mail")) as unknown as HTMLButtonElement;
+    await act(async () => { all.click(); await new Promise<void>(resolve => setTimeout(resolve, 0)); });
+    await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("all");
+    expect(workspace.scrollTop).not.toBe(321);
+  });
+
+  test("Inbox sidebar leaves a search result opened from a different destination in Inbox", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const items = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')] as unknown as HTMLButtonElement[];
+    const all = items.find(item => item.textContent?.startsWith("All Mail"))!;
+    const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
+    await act(async () => all.click());
+    const message = inboxFixture[0]!;
+    const url = `/?destination=inbox&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`;
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.CustomEvent("orca:mail-search-result", { detail: { url }, cancelable: true })); });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    await act(async () => { inbox.click(); await new Promise<void>(resolve => setTimeout(resolve, 0)); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("inbox");
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
+  });
+
+  test("switching destinations interrupts a pending sidebar focus restore", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const workspace = desktopWorkspace();
+    const origin = messageRow("Luke Brevoort");
+    const focusCalls = trackFocus(origin);
+    const items = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')] as unknown as HTMLButtonElement[];
+    const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
+    const all = items.find(item => item.textContent?.startsWith("All Mail"))!;
+    workspace.scrollTop = 321;
+    await openMessage("Luke Brevoort");
+    await act(async () => inbox.click());
+    await act(async () => all.click());
+    workspace.scrollTop = 77;
+    await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("all");
+    expect(workspace.scrollTop).toBe(77);
+    expect(focusCalls).toHaveLength(0);
+  });
+
   test("re-arms the list return point when Forward reopens a reader", async () => {
     await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
     browserWindow.document.documentElement.dataset.motion = "reduced";
