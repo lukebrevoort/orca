@@ -51,3 +51,21 @@ test("a rejected v2 load does not fall back to the legacy route",async()=>{
  expect(paths).toEqual(['/v1/messages/message/images/v2?accountId=account']);
  expect(container.textContent).toContain('Images could not be loaded');
 });
+test("stale source requires a snapshot refresh and a new consent click",async()=>{
+ const paths:string[]=[];let refreshes=0;
+ Object.defineProperty(globalThis,"fetch",{configurable:true,writable:true,value:async(path:string)=>{paths.push(path);return Response.json({error:{code:'stale_message',message:'changed'}},{status:409});}});
+ await act(async()=>root.render(<MessageImageBody key="old" {...props} onRefresh={()=>{refreshes++;}}/>));
+ await act(async()=>container.querySelector('button')!.click());
+ expect(paths).toHaveLength(1);expect(container.textContent).toContain('This message changed');expect(container.querySelector('button')?.textContent).toBe('Refresh message');
+ await act(async()=>container.querySelector('button')!.click());expect(refreshes).toBe(1);expect(paths).toHaveLength(1);
+ await act(async()=>root.render(<MessageImageBody key="new" {...props} revision={'b'.repeat(64)} onRefresh={()=>{refreshes++;}}/>));
+ expect(container.querySelector('button')?.textContent).toBe('Load images');expect(paths).toHaveLength(1);
+ await act(async()=>container.querySelector('button')!.click());expect(paths).toHaveLength(2);
+});
+test("missing capability does not start a remote request or silently fall back",async()=>{
+ let calls=0,refreshes=0;
+ Object.defineProperty(globalThis,"fetch",{configurable:true,writable:true,value:async()=>{calls++;return new Response('{}');}});
+ await act(async()=>root.render(<MessageImageBody {...props} revision={undefined} available={undefined} onRefresh={()=>{refreshes++;}}/>));
+ expect(container.textContent).toContain('Image loading is unavailable');expect(container.querySelector('button')?.textContent).toBe('Refresh message');expect(calls).toBe(0);
+ await act(async()=>container.querySelector('button')!.click());expect(refreshes).toBe(1);expect(calls).toBe(0);
+});

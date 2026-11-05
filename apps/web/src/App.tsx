@@ -3445,7 +3445,7 @@ export function InboxApp({
             <MessageReader
               key={account?.id ?? "signedout"}
               sessions={readingSessions}
-              active={Boolean(selectedThreadId)}
+              active={Boolean(selectedThreadId && threadDetail?.thread.id === selectedThreadId && threadDetail?.account.id === readerAccountId)}
               detail={threadDetail}
               contacts={composeContacts}
               demoMode={demoMode}
@@ -6120,7 +6120,7 @@ export function MessageReader({
                       <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                       <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
-                    {imageReaderVisible ? <MessageImageBody key={`${detail.account.id}:${message.id}:${message.imageSourceRevision ?? ""}`} accountId={detail.account.id} messageId={message.id} revision={message.imageSourceRevision} available={message.imageLoadAvailable} html={message.bodyHtml} text={message.bodyText} /> : <ReaderBody html={message.bodyHtml} text={message.bodyText} />}
+                    {imageReaderVisible ? <MessageImageBody key={`${detail.account.id}:${message.id}:${message.imageSourceRevision ?? ""}`} accountId={detail.account.id} messageId={message.id} revision={message.imageSourceRevision} available={message.imageLoadAvailable} html={message.bodyHtml} text={message.bodyText} onRefresh={onRetry} /> : <ReaderBody html={message.bodyHtml} text={message.bodyText} />}
                     <VerificationCodeStrip messageId={messageKey} subject={message.subject} bodyText={message.bodyText} snippet={message.snippet} />
                     {message.attachments.length ? (
                       <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>
