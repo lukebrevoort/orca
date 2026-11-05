@@ -15,7 +15,7 @@ const maxMetadata = 2 * 1024 * 1024;
 const maxEncoded = 16 * 1024 * 1024;
 const maxIdBytes = 1024;
 type Key = { received: number | null; created: number; row: number };
-type Cursor = Key & { version: 1; user: string; account: string; thread: string; direction: "earlier" | "newer" };
+type Cursor = Key & { version: 1; scope: string; direction: "earlier" | "newer" };
 type Probe = Key & { id: string | null; textBytes: number; htmlBytes: number; metadataBytes: number };
 
 export class ThreadPageError extends Error {
@@ -25,8 +25,11 @@ export class ThreadPageError extends Error {
 function cursorMac(value: string) {
   return createHmac("sha256", getAuthConfig().sessionSecret).update("orca-thread-page-v1\0").update(value).digest();
 }
+function scopeFingerprint(scope: { user: string; account: string; thread: string }) {
+  return createHmac("sha256", getAuthConfig().sessionSecret).update("orca-thread-page-scope-v1\0").update(JSON.stringify(scope)).digest("base64url");
+}
 function makeCursor(key: Key, scope: { user: string; account: string; thread: string }, direction: Cursor["direction"]) {
-  const value = Buffer.from(JSON.stringify({ version: 1, ...scope, received: key.received, created: key.created, row: key.row, direction })).toString("base64url");
+  const value = Buffer.from(JSON.stringify({ version: 1, scope: scopeFingerprint(scope), received: key.received, created: key.created, row: key.row, direction })).toString("base64url");
   return `${value}.${cursorMac(value).toString("base64url")}`;
 }
 function readCursor(value: string, scope: { user: string; account: string; thread: string }): Cursor {
@@ -37,7 +40,7 @@ function readCursor(value: string, scope: { user: string; account: string; threa
     const actual = Buffer.from(signature, "base64url");
     if (actual.length !== expected.length || actual.toString("base64url") !== signature || !timingSafeEqual(expected, actual)) throw Error();
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Cursor;
-    if (data.version !== 1 || data.user !== scope.user || data.account !== scope.account || data.thread !== scope.thread ||
+    if (data.version !== 1 || data.scope !== scopeFingerprint(scope) ||
         !(data.direction === "earlier" || data.direction === "newer") ||
         !(data.received === null || Number.isSafeInteger(data.received)) || !Number.isSafeInteger(data.created) ||
         !Number.isSafeInteger(data.row) || data.row <= 0) throw Error();

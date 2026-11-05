@@ -46,6 +46,8 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
       return { res, value: res.status === 200 ? threadReadPageSchema.parse(await res.json()) : null };
     };
     const first = await fetchPage(); expect(first.res.status).toBe(200); expect(first.value!.entries.length).toBe(20); expect(first.value!.newer).toBeNull();
+    const cursorPayload = Buffer.from(first.value!.earlier!.split(".")[0]!, "base64url").toString("utf8");
+    expect(cursorPayload).not.toContain("user"); expect(cursorPayload).not.toContain("account"); expect(cursorPayload).not.toContain("thread");
     expect(first.value!.entries[0]?.kind).toBe("unavailable");
     expect(first.value!.entries[19]).toEqual({ kind: "unavailable", id: `row:${largeIdRow}` });
     const second = await fetchPage(first.value!.earlier!); expect(second.value!.entries.length).toBe(20);

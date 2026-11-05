@@ -422,6 +422,7 @@ describe("Orca scoped MCP server", () => {
       assert.equal(page.complete, false); assert.equal(page.readOnly, true);
       assert.equal(page.entries.length, 20);
       assert.ok(page.earlier); assert.equal(page.newer, null);
+      assert.doesNotMatch(Buffer.from(page.earlier.split(".")[0], "base64url").toString("utf8"), /user_a|account_a|thread_a_1/);
       assert.match(page.entries[0].bodyExcerpt, /\[REDACTED\]/);
       assert.equal(page.entries[0].safety.redactionsApplied, true);
       assert.equal(page.entries[0].safety.contentTrust, "untrusted_external_content");
