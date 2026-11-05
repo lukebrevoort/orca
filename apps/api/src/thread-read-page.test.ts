@@ -62,6 +62,9 @@ test("recovery pages advance across oversized messages and preserve scoped keyse
     expect((await fetchPage(first.value!.earlier!, "other")).res.status).toBe(400);
     expect((await app.request(`/v1/threads/thread/messages?accountId=account&cursor=${encodeURIComponent(first.value!.earlier!)}`, { headers: { cookie: `orca_session=${otherSession.token}` } })).status).toBe(404);
     expect((await fetchPage(first.value!.earlier!.slice(0, -1) + "!" )).res.status).toBe(400);
+    const cursorParts = first.value!.earlier!.split(".");
+    const alteredSignature = (cursorParts[1]![0] === "A" ? "B" : "A") + cursorParts[1]!.slice(1);
+    expect((await fetchPage(`${cursorParts[0]}.${alteredSignature}`)).res.status).toBe(400);
     expect((await app.request("/v1/threads/thread/messages?accountId=account")).status).toBe(401);
     expect((await app.request("/v1/threads/thread/messages?accountId=missing", { headers })).status).toBe(404);
     for (let i = 1; i <= 5; i++) sqlite.query("update emails set body_text = ? where id = ?").run("x".repeat(1024 * 1024), `m${String(i).padStart(2, "0")}`);

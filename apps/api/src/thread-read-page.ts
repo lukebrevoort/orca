@@ -35,7 +35,7 @@ function readCursor(value: string, scope: { user: string; account: string; threa
     const [payload, signature] = value.split(".") as [string, string];
     const expected = cursorMac(payload);
     const actual = Buffer.from(signature, "base64url");
-    if (actual.length !== expected.length || !timingSafeEqual(expected, actual)) throw Error();
+    if (actual.length !== expected.length || actual.toString("base64url") !== signature || !timingSafeEqual(expected, actual)) throw Error();
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Cursor;
     if (data.version !== 1 || data.user !== scope.user || data.account !== scope.account || data.thread !== scope.thread ||
         !(data.direction === "earlier" || data.direction === "newer") ||
