@@ -1,6 +1,6 @@
 import { checkDraftQuota, draftStorageBytes, draftQuotaResponse } from "./draft-quota.ts";
 import { registerMessageImageRoutes } from "./mail/images/routes.ts";
-import { hasLoadableImages } from "./mail/images/render.ts";
+import { hasLoadableImages, imageSourceRevision } from "./mail/images/render.ts";
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createLogoutApp } from "./auth/logout.ts";
@@ -291,7 +291,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerAttentionRoutingRoutes(app, { dbFactory });
   registerDestinationRoutes(app, { dbFactory });
   registerAttachmentRoutes(app, { dbFactory });
-  registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage });
+  registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage, allowedOrigin: serverConfig.webOrigin });
   app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
   registerMobilePushRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
@@ -3192,6 +3192,7 @@ function readThreadDetailSnapshot(
       from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
       to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
       imageLoadAvailable: hasLoadableImages(message.bodyHtml),
+      imageSourceRevision: imageSourceRevision(message.bodyHtml),
       subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
       unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
       internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),

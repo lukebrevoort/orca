@@ -46,7 +46,8 @@ import { invalidateWritingPreferences, useWritingPreferences } from "./use-writi
 import { resolveWritingReplyAction, type WritingPreferenceState } from "./writing-preferences";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
-import { ReaderBody, ReaderMessageList } from "./reader-body";
+import { ReaderMessageList } from "./reader-body";
+import { MessageImageBody } from "./message-image-body";
 export { splitQuotedContent } from "./reader-body";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
@@ -6118,7 +6119,7 @@ export function MessageReader({
                       <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                       <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
-                    <ReaderBody html={message.bodyHtml} text={message.bodyText} />
+                    {isOpen ? <MessageImageBody key={`${detail.account.id}:${message.id}:${message.imageSourceRevision ?? ""}`} accountId={detail.account.id} messageId={message.id} revision={message.imageSourceRevision} available={message.imageLoadAvailable} html={message.bodyHtml} text={message.bodyText} /> : null}
                     <VerificationCodeStrip messageId={messageKey} subject={message.subject} bodyText={message.bodyText} snippet={message.snippet} />
                     {message.attachments.length ? (
                       <section className="reader-attachments" aria-labelledby={`reader-attachments-title-${message.id}`}>

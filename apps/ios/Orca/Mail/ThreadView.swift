@@ -1,5 +1,4 @@
 import SwiftUI
-import CryptoKit
 
 struct ThreadView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -314,16 +313,18 @@ private struct MessageImageBody: View {
     @State private var html: String?
     @State private var status: String?
     @State private var loading = false
+    @State private var retryable = false
+    @State private var slots: [Int: ImageSlot] = [:]
+    @State private var seen: Set<Int> = []
     @State private var request: Task<Void, Never>?
     @State private var generation = UUID()
-    private var sourceHash: String { SHA256.hash(data: Data((item.bodyHtml ?? "").utf8)).map { String(format: "%02x", $0) }.joined() }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if item.imageLoadAvailable == true {
-                if html == nil {
+            if item.imageLoadAvailable == true && item.imageSourceRevision != nil {
+                if status == nil || retryable {
                     Text("Images are blocked. Loading may tell the sender you opened this message.")
                         .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
-                    Button(loading ? "Loading images…" : "Load images") { load() }
+                    Button(loading ? "Loading images…" : (status == nil ? "Load images" : "Retry images")) { load() }
                         .buttonStyle(.bordered).tint(OrcaTheme.accent).disabled(loading)
                         .accessibilityIdentifier("message.load-images")
                 }
@@ -331,21 +332,38 @@ private struct MessageImageBody: View {
             }
             NativeReaderBody(html: html ?? item.bodyHtml, text: item.bodyText)
         }
-        .onDisappear { request?.cancel(); generation = UUID(); html = nil; status = nil; loading = false }
+        .onDisappear { reset() }
+        .onChange(of: item.id) { _, _ in reset() }
+        .onChange(of: accountId) { _, _ in reset() }
+        .onChange(of: item.imageSourceRevision) { _, _ in reset() }
     }
+    private func reset() { request?.cancel(); generation = UUID(); html = nil; status = nil; loading = false; retryable = false; slots = [:]; seen = [] }
     private func load() {
-        guard !loading, let client = state.client, state.selectedAccount?.id == accountId else { return }
-        let owner = state.ownerScope, revision = sourceHash, attempt = UUID()
+        guard !loading, let client = state.client, state.selectedAccount?.id == accountId, let revision = item.imageSourceRevision else { return }
+        let owner = state.ownerScope, attempt = UUID()
         generation = attempt; loading = true; status = nil
         request = Task { @MainActor in
             do {
-                let result = try await client.loadMessageImages(item.id, accountId: accountId)
+                let budget = 8 * 1024 * 1024 - slots.values.reduce(0) { $0 + $1.bytes }
+                let result = try await client.loadMessageImages(item.id, accountId: accountId, revision: revision, retained: Array(slots.keys), seen: Array(seen), remainingBytes: budget)
                 guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
-                guard result.sourceHash == revision else { status = "Message changed. Reopen it before loading images."; loading = false; return }
-                if result.loaded > 0 { html = result.bodyHtml }
-                status = result.loaded > 0 ? "\(result.loaded) image\(result.loaded == 1 ? "" : "s") loaded." + (result.blocked > 0 ? " \(result.blocked) remain blocked." : "") : "Images could not be loaded. You can try again."
+                guard result.sourceRevision == revision else { status = "Message changed. Reopen it before loading images."; loading = false; return }
+                for index in result.attemptedIndices { seen.insert(index) }
+                for slot in result.slots { slots[slot.index] = slot }
+                var combined = result.bodyHtml
+                for (index, slot) in slots { combined = combined.replacingOccurrences(of: "<span data-orca-retained-slot=\"\(index)\"></span>", with: slot.html) }
+                if !slots.isEmpty { html = combined }
+                let r = result.reasons
+                let remaining = r.requestLimit + r.stopped + r.byteBudget + r.downloadFailed + r.invalidRaster
+                let availableBytes = 8 * 1024 * 1024 - slots.values.reduce(0) { $0 + $1.bytes }
+                retryable = remaining > 0 && availableBytes >= 2 * 1024 * 1024 && seen.count <= 200 && slots.count <= 200
+                let total = slots.count
+                let pending = remaining > 0 ? " \(remaining) remain unloaded." + (retryable ? " Retry remaining images." : " Image limit reached.") : ""
+                let blocked = r.ineligible > 0 ? " \(r.ineligible) remain blocked for privacy or unsupported content." : ""
+                status = "\(total) image\(total == 1 ? "" : "s") loaded." + pending + blocked
             } catch {
                 guard !Task.isCancelled, generation == attempt, owner == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+                retryable = true
                 status = "Images could not be loaded. You can try again."
             }
             loading = false

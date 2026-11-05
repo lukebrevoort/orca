@@ -86,9 +86,12 @@ extension APIClient {
     func unregisterDevice(installationId: String) async throws { let _: EmptyResponse = try await request("v1/mobile/devices/\(installationId)", method: "DELETE") }
 }
 
-struct LoadedMessageImages: Decodable { var bodyHtml: String; var sourceHash: String; var loaded: Int; var blocked: Int }
+struct LoadedMessageImages: Decodable { var bodyHtml: String; var sourceHash: String; var sourceRevision: String; var loaded: Int; var blocked: Int; var reasons: ImageOutcomeReasons; var slots: [ImageSlot]; var attemptedIndices: [Int] }
+struct ImageSlot: Decodable { var index: Int; var html: String; var bytes: Int }
+struct ImageOutcomeReasons: Decodable { var ineligible: Int; var requestLimit: Int; var stopped: Int; var byteBudget: Int; var downloadFailed: Int; var invalidRaster: Int }
 extension APIClient {
-    func loadMessageImages(_ id: String, accountId: String) async throws -> LoadedMessageImages {
-        try await request("v1/messages", pathSuffix: [id, "images"], method: "POST", query: [.init(name: "accountId", value: accountId)])
+    func loadMessageImages(_ id: String, accountId: String, revision: String, retained: [Int], seen: [Int], remainingBytes: Int) async throws -> LoadedMessageImages {
+        struct Input: Encodable { var revision: String; var retained: [Int]; var seen: [Int]; var remainingBytes: Int }
+        return try await request("v1/messages", pathSuffix: [id, "images"], method: "POST", query: [.init(name: "accountId", value: accountId)], body: Input(revision: revision, retained: retained, seen: seen, remainingBytes: remainingBytes))
     }
 }
