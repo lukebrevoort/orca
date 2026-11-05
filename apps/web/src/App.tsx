@@ -1430,6 +1430,8 @@ export function InboxApp({
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
   const summaryDraftOriginRef = useRef<HTMLButtonElement | null>(null);
+  // Invalidates delayed Summary draft opens whenever the user changes surface.
+  const summaryDraftOpenGenerationRef = useRef(0);
   const summaryReaderOriginRef = useRef<HTMLButtonElement | null>(null);
   const surfaceHistoryRef = useRef<SurfaceHistory | null>(null);
   if (typeof window !== "undefined" && !surfaceHistoryRef.current) surfaceHistoryRef.current = new SurfaceHistory(window);
@@ -2271,6 +2273,7 @@ export function InboxApp({
   }
 
   function synchronizeSurfaceLocation(location: SurfaceLocation) {
+    summaryDraftOpenGenerationRef.current += 1;
     pendingReaderRead.current = null;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
@@ -2347,6 +2350,7 @@ export function InboxApp({
   }
 
   function openCompose(draftId: string | null = null, seed: MessageDraft | null = null) {
+    summaryDraftOpenGenerationRef.current += 1;
     if (panelClosing) {
       return;
     }
@@ -2389,6 +2393,7 @@ export function InboxApp({
   }
 
   function openThread(message: InboxMessage) {
+    summaryDraftOpenGenerationRef.current += 1;
     if (panelClosing) {
       return;
     }
@@ -2457,6 +2462,7 @@ export function InboxApp({
   }
 
   function openSavedViewThread(target: { accountId: string; threadId: string }) {
+    summaryDraftOpenGenerationRef.current += 1;
     if (panelClosing) return;
     readerNavigationGenerationRef.current += 1;
     surfaceHistoryRef.current?.openReader(target, captureSurfaceReturnContext(null));
@@ -2469,6 +2475,7 @@ export function InboxApp({
   }
 
   function openAgentEventSource(event: PropagatedAgentEvent) {
+    summaryDraftOpenGenerationRef.current += 1;
     if (panelClosing) return;
     readerNavigationGenerationRef.current += 1;
     if (readerFocusFrameRef.current !== null) {
@@ -3031,6 +3038,7 @@ export function InboxApp({
   }
 
   function selectPin(pin: Pin) {
+    summaryDraftOpenGenerationRef.current += 1;
     if (pin.kind === "view") {
       const mailbox = pin.targetId as Mailbox;
       if (mailbox === "hidden") selectMailbox(mailbox);
@@ -3170,10 +3178,12 @@ export function InboxApp({
   }
 
   function navigateDesktop(destination: DesktopDestination) {
+    summaryDraftOpenGenerationRef.current += 1;
     requestViewNavigation(() => navigateDesktopNow(destination));
   }
 
   function navigateViews(editViewId: string | null = null) {
+    summaryDraftOpenGenerationRef.current += 1;
     requestViewNavigation(() => {
       // A deliberate Edit entry must reopen even after Cancel at this same URL.
       setViewsEntryVersion(value => value + 1);
@@ -3361,7 +3371,7 @@ export function InboxApp({
           />
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} onOpenDraft={(draft, origin) => { summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} /></div>}
+          {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} startDraftOpen={() => ++summaryDraftOpenGenerationRef.current} onOpenDraft={(draft, origin, generation) => { if (generation !== summaryDraftOpenGenerationRef.current) return; summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} /></div>}
           {summaryOpen && !selectedThreadId ? null : organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Organization</button><OrganizationStudio key={viewsEntryVersion} interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} viewsRoute={viewsManagementRoute} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? undefined : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {catalog.error && <p role="alert">Spaces could not load. <button onClick={() => void catalog.refresh().catch(() => {})}>Retry spaces</button></p>}

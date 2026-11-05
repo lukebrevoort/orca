@@ -7,7 +7,7 @@ import "./summary-page.css";
 
 const systemNow = () => Date.now();
 const sectionIds = ["needs", "drafted", "waiting", "codes"];
-type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; onOpenDraft?: (draft: MessageDraft, origin: HTMLButtonElement) => void; };
+type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; startDraftOpen?: () => number; onOpenDraft?: (draft: MessageDraft, origin: HTMLButtonElement, generation: number) => void; };
 type Load<T> = { accountId: string; status: "loading" | "ready" | "error"; items: T[] };
 
 export function SummaryPage(props: SummaryPageProps) {
@@ -15,12 +15,13 @@ export function SummaryPage(props: SummaryPageProps) {
   return <LiveSummary {...props} />;
 }
 
-function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage, onOpenDraft }: SummaryPageProps) {
+function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage, startDraftOpen, onOpenDraft }: SummaryPageProps) {
   const [retry, setRetry] = useState(0);
   const [openingDraft, setOpeningDraft] = useState<string | null>(null);
   const [draftOpenError, setDraftOpenError] = useState<string | null>(null);
   const activeAccount = useRef(accountId); activeAccount.current = accountId;
   const draftOpenController = useRef<AbortController | null>(null);
+  const cancelDraftOpen = useRef<(() => void) | null>(null);
   const [mail, setMail] = useState<Load<InboxMessage> | null>(null);
   const [drafts, setDrafts] = useState<Load<MessageDraft> | null>(null);
   const [focus, setFocus] = useState<Load<InboxMessage> | null>(null);
@@ -55,25 +56,43 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
       const items = value.map(item => messageDraftSchema.parse(item)).filter(item => item.accountId === accountId && item.deliveryStatus === "draft");
       if (!controller.signal.aborted) setDrafts({ accountId, status: "ready", items });
     }).catch(() => { if (!controller.signal.aborted) setDrafts({ accountId, status: "error", items: [] }); });
-    return () => { controller.abort(); draftOpenController.current?.abort(); draftOpenController.current = null; };
+    return () => { controller.abort(); cancelDraftOpen.current?.(); };
   }, [accountId, retry]);
   const currentMail = mail?.accountId === accountId ? mail : null;
   const currentDrafts = drafts?.accountId === accountId ? drafts : null;
   async function openDraft(id: string, origin: HTMLButtonElement) {
     if (!accountId || draftOpenController.current) return;
+    const generation = startDraftOpen?.() ?? 0;
     const controller = new AbortController();
     draftOpenController.current = controller;
+    const removeInterruptionListeners = () => {
+      window.removeEventListener("click", interrupt, true);
+      window.removeEventListener("keydown", interrupt, true);
+      window.removeEventListener("popstate", interrupt, true);
+    };
+    const cancel = () => {
+      controller.abort(); removeInterruptionListeners();
+      if (draftOpenController.current === controller) draftOpenController.current = null;
+      if (cancelDraftOpen.current === cancel) cancelDraftOpen.current = null;
+    };
+    const interrupt = () => { cancel(); setOpeningDraft(null); setDraftOpenError(null); };
+    cancelDraftOpen.current = cancel;
+    // The initiating click has already passed window capture. Any later action
+    // belongs to a newer user intent, even if that surface is closed again.
+    window.addEventListener("click", interrupt, true);
+    window.addEventListener("keydown", interrupt, true);
+    window.addEventListener("popstate", interrupt, true);
     setOpeningDraft(id); setDraftOpenError(null);
     try {
       const response = await fetch(`/v1/drafts/${encodeURIComponent(id)}?${new URLSearchParams({ accountId })}`, { credentials: "include", signal: controller.signal });
       if (!response.ok) throw new Error("Draft unavailable");
       const draft = messageDraftSchema.parse(await response.json());
       if (draft.accountId !== accountId || draft.id !== id || draft.deliveryStatus !== "draft") throw new Error("Draft unavailable");
-      if (!controller.signal.aborted && activeAccount.current === accountId) onOpenDraft?.(draft, origin);
+      if (!controller.signal.aborted && activeAccount.current === accountId) onOpenDraft?.(draft, origin, generation);
     } catch {
       if (!controller.signal.aborted && activeAccount.current === accountId) setDraftOpenError("Could not open this draft. Refresh Summary and try again.");
     } finally {
-      if (!controller.signal.aborted && activeAccount.current === accountId) { draftOpenController.current = null; setOpeningDraft(null); }
+      if (!controller.signal.aborted && activeAccount.current === accountId) { removeInterruptionListeners(); draftOpenController.current = null; cancelDraftOpen.current = null; setOpeningDraft(null); }
     }
   }
   const retryButton = <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button>;
