@@ -57,7 +57,7 @@ export function MessageImageBody({ accountId, messageId, revision, available, ht
         const r = result.reasons;
         const remaining = r.requestLimit + r.stopped + r.byteBudget + r.downloadFailed + r.invalidRaster;
         const room=8*1024*1024-[...slots.current.values()].reduce((sum,item)=>sum+item.bytes,0);
-        const canRetry=remaining>0&&room>=2*1024*1024&&seen.current.size<=200&&slots.current.size<=200;
+        const canRetry=remaining>0&&room>=2*1024*1024&&seen.current.size<=200&&slots.current.size<=200&&[...seen.current].every(index=>index<10000)&&[...slots.current.keys()].every(index=>index<10000);
         setRetryable(canRetry);
         const total=slots.current.size;
         setStatus(`${total} ${total === 1 ? "image" : "images"} loaded.${remaining ? ` ${remaining} remain unloaded.${canRetry ? " Retry remaining images." : " Image limit reached."}` : ""}${r.ineligible ? ` ${r.ineligible} remain blocked for privacy or unsupported content.` : ""}`);
@@ -91,7 +91,7 @@ export function MessageImageBody({ accountId, messageId, revision, available, ht
       if(error instanceof ImageStreamRevisionError && !controller.signal.aborted && active.current===controller){requireRefresh("This message changed. Refresh it, then choose whether to load images.");return;}
       if (!controller.signal.aborted && active.current === controller) {
         const count=slots.current.size,room=8*1024*1024-[...slots.current.values()].reduce((sum,item)=>sum+item.bytes,0);
-        const canRetry=room>=2*1024*1024&&seen.current.size<=200&&slots.current.size<=200;
+        const canRetry=room>=2*1024*1024&&seen.current.size<=200&&slots.current.size<=200&&[...seen.current].every(index=>index<10000)&&[...slots.current.keys()].every(index=>index<10000);
         setRetryable(canRetry);
         setStatus(count ? `${count} ${count===1?"image":"images"} loaded. Image loading was interrupted.${canRetry?" Retry remaining images.":" Image limit reached."}` : "Images could not be loaded. You can try again.");
       }

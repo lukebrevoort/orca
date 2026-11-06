@@ -3,6 +3,7 @@ export type ImageSlot = {index:number;html:string;bytes:number};
 export type ImageSummary = {sourceRevision:string;loaded:number;attempted:number;reasons:ImageReasons;attemptedIndices:number[]};
 export type ImageStreamEvent = {type:'start';sourceRevision:string;bodyHtml:string} | {type:'image';sourceRevision:string;slot:ImageSlot} | ({type:'complete'} & ImageSummary);
 export class ImageStreamRevisionError extends Error {}
+const maximumSourcePosition=2*1024*1024; // Output positions are bounded by the existing raw-source byte cap.
 const integer=(value:unknown,max:number):value is number=>Number.isSafeInteger(value)&&Number(value)>=0&&Number(value)<=max;
 const reasonNames=['ineligible','requestLimit','stopped','byteBudget','downloadFailed','invalidRaster'] as const;
 /** Allow source escaping (up to 6x 2MiB) plus base64 (up to 4/3 x 8MiB),
@@ -26,7 +27,7 @@ export async function readImageStream(response:Response,revision:string,signal:A
   if(!started)throw new Error('Missing image template');
   if(value.type==='image'){
    const slot=value.slot as ImageSlot|undefined;
-   if(!slot||!integer(slot.index,9999)||indices.has(slot.index)||!integer(slot.bytes,2*1024*1024-1)||slot.bytes===0||typeof slot.html!=='string'||slot.html.length>16*1024*1024||++slots>12)throw new Error('Invalid image slot');
+   if(!slot||!integer(slot.index,maximumSourcePosition)||indices.has(slot.index)||!integer(slot.bytes,2*1024*1024-1)||slot.bytes===0||typeof slot.html!=='string'||slot.html.length>16*1024*1024||++slots>12)throw new Error('Invalid image slot');
    const match=/^<img alt="([^"]*)" src="data:image\/(?:png|jpeg);base64,([A-Za-z0-9+/]+={0,2})" style="max-width:100%;height:auto">$/.exec(slot.html);
    slotBytes+=slot.bytes;
    if(!match||/[<>]/.test(match[1])||match[1].replace(/&(?:amp|lt|gt|quot|#39);/g,'').includes('&')||match[2].length!==Math.ceil(slot.bytes/3)*4||slotBytes>8*1024*1024)throw new Error('Invalid image data');
@@ -34,7 +35,7 @@ export async function readImageStream(response:Response,revision:string,signal:A
   }
   if(value.type==='complete'){
    const reasons=value.reasons as ImageReasons|undefined,attempted=value.attemptedIndices;
-   if(!integer(value.loaded,12)||value.loaded!==slots||!integer(value.attempted,12)||!reasons||!reasonNames.every(key=>integer(reasons[key],2*1024*1024))||!Array.isArray(attempted)||attempted.length!==value.attempted||!attempted.every(index=>integer(index,9999))||new Set(attempted).size!==attempted.length||[...indices].some(index=>!attempted.includes(index)))throw new Error('Invalid image summary');
+   if(!integer(value.loaded,12)||value.loaded!==slots||!integer(value.attempted,12)||!reasons||!reasonNames.every(key=>integer(reasons[key],2*1024*1024))||!Array.isArray(attempted)||attempted.length!==value.attempted||!attempted.every(index=>integer(index,maximumSourcePosition))||new Set(attempted).size!==attempted.length||[...indices].some(index=>!attempted.includes(index)))throw new Error('Invalid image summary');
    complete=true;onEvent(value as ImageStreamEvent);return;
   }
   throw new Error('Unknown image event');

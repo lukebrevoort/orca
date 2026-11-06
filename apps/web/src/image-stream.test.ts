@@ -30,3 +30,9 @@ test('NDJSON accepts bounded server-escaped long alt text without lowering image
  const long=slot();long.slot.html=long.slot.html.replace('Fixture 0','&quot;'.repeat(600000));
  const events:unknown[]=[];await readImageStream(response([start,long,complete],1024*1024),revision,new AbortController().signal,event=>events.push(event));expect(events).toHaveLength(3);
 });
+
+test('stream accepts source-bounded positions beyond the existing retry-input limit',async()=>{
+ const events:unknown[]=[];
+ await readImageStream(response([start,slot(10000),{...complete,attemptedIndices:[10000]}]),revision,new AbortController().signal,event=>events.push(event));expect(events).toHaveLength(3);
+ await expect(readImageStream(response([start,slot(2*1024*1024+1)]),revision,new AbortController().signal,()=>{})).rejects.toThrow();
+});

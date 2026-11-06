@@ -114,3 +114,10 @@ test('switching accounts cancels progressive consumption and clears every prior 
  await act(async()=>root.render(<MessageImageBody key="second" {...props} accountId="other" html="<p>Other account</p>"/>));
  expect(signal?.aborted).toBe(true);expect(cancelled).toBe(1);expect(calls).toBe(1);expect(container.querySelectorAll('img')).toHaveLength(0);expect(container.textContent).toContain('Other account');expect(container.querySelector('button')?.textContent).toBe('Load images');
 });
+
+test('large source positions display an image and truthfully stop unsupported selective retry',async()=>{
+ const events=[{type:'start',sourceRevision:revision,bodyHtml:'<span data-orca-image-slot="10000">not loaded</span>'},{type:'image',sourceRevision:revision,slot:{index:10000,bytes:1,html:'<img alt="Far image" src="data:image/png;base64,AA==" style="max-width:100%;height:auto">'}},{type:'complete',sourceRevision:revision,loaded:1,attempted:1,attemptedIndices:[10000],reasons:{...reasons,requestLimit:1}}];
+ Object.defineProperty(globalThis,'fetch',{configurable:true,writable:true,value:async()=>new Response(events.map(event=>JSON.stringify(event)).join('\n'),{headers:{'content-type':'application/x-ndjson'}})});
+ await act(async()=>root.render(<MessageImageBody {...props}/>));await act(async()=>container.querySelector('button')!.click());
+ expect(container.querySelectorAll('img')).toHaveLength(1);expect(container.textContent).toContain('Image limit reached');expect(container.querySelector('.reader-images-consent button')).toBeNull();
+});

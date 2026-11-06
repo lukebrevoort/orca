@@ -269,3 +269,10 @@ test('failed legacy images preserve original blocked-note presentation, includin
  const result=await renderRequestedImages(html,async()=>{throw new ImageFetchError('dns');},undefined,[],[],undefined,'legacy');
  expect(result.bodyHtml).toBe(sanitizeInboundHtml(html)??"");expect(result.sourceHash).toBe(imageSourceHash(html));
 });
+
+test('a valid image after many blocked images keeps its source position',async()=>{
+ const html='<img src="cid:blocked">'.repeat(10000)+'<img src="https://images.example.org/banner.png">';
+ const progress:number[]=[];let calls=0;
+ const result=await renderRequestedImages(html,async()=>{calls++;return png;},undefined,[],[],undefined,'v2',{concurrency:2,progressive:async event=>{if(event.type==='image')progress.push(event.slot.index);}});
+ expect(calls).toBe(1);expect(progress).toEqual([10000]);expect(result.loaded).toBe(1);expect(result.reasons.ineligible).toBe(10000);
+});
