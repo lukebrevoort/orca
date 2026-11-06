@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { createHash, randomUUID } from "node:crypto";
 import { sanitizeInboundHtml, sanitizeProviderHtml } from "../provider-html.ts";
 import { downloadRemoteImage, ImageFetchError, rasterType, validatedRasterType, remoteImageURL } from "./remote.ts";
+import { withImagePermit } from "./permits.ts";
 const {parseDocument,DomUtils}=createRequire(import.meta.url)("htmlparser2") as typeof import("htmlparser2");
 // Bound input before either sanitizer or DOM parser allocates from sender HTML.
 export const imageSourceByteLimit = 2 * 1024 * 1024;
@@ -33,50 +34,93 @@ export function imageSourceHash(html:string|null){assertImageSourceLimit(html);r
 /** Includes image URLs that are deliberately absent from the sanitized body. */
 export function imageSourceRevision(html:string|null){assertImageSourceLimit(html);return createHash("sha256").update(html??"").digest("hex");}
 export type ImageDownload = typeof downloadRemoteImage;
+export type ImageSlot = { index: number; html: string; bytes: number };
+export type ImageProgress =
+  | { type: "start"; sourceRevision: string; bodyHtml: string }
+  | { type: "image"; sourceRevision: string; slot: ImageSlot };
+export type ImageRenderOptions = { progressive?: (event: ImageProgress) => Promise<void>; concurrency?: 1 | 2 };
 /** The default read path never calls this. Only an authorized explicit POST may resolve images. */
-export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage, requestSignal?:AbortSignal, retained:number[]=[], seen:number[]=[], remainingBytes=8*1024*1024, mode:"v2"|"legacy"="v2") {
-  const {document,images}=documentImages(html);const timeout=AbortSignal.timeout(20_000);
-  const signal=requestSignal ? AbortSignal.any([timeout,requestSignal]) : timeout;
-  const replacements=new Map<string,string>();let loaded=0,spentBytes=0,attempted=0,retainedCount=0;
-  const retainedSet=new Set(retained),seenSet=new Set(seen), slots:Array<{index:number;html:string;bytes:number}>=[],attemptedIndices:number[]=[];
+export async function renderRequestedImages(html:string|null,download:ImageDownload=downloadRemoteImage, requestSignal?:AbortSignal, retained:number[]=[], seen:number[]=[], remainingBytes=8*1024*1024, mode:"v2"|"legacy"="v2", options:ImageRenderOptions={}) {
+  const {document,images}=documentImages(html);
+  const cancel = new AbortController();
+  const signal=AbortSignal.any([AbortSignal.timeout(20_000),cancel.signal,...(requestSignal ? [requestSignal] : [])]);
+  const revision=imageSourceRevision(html), replacements=new Map<string,string>();
+  let loaded=0,spentBytes=0,reservedBytes=0,attempted=0,retainedCount=0;
+  const retainedSet=new Set(retained),seenSet=new Set(seen),slots:ImageSlot[]=[],attemptedIndices:number[]=[];
   // Fixed categories only: never include sender-controlled URLs or error text.
   const reasons={ineligible:0,requestLimit:0,stopped:0,byteBudget:0,downloadFailed:0,invalidRaster:0};
   const failures={dns:0,destination:0,network:0,response:0,size:0,raster:0,cancelled:0,unknown:0};
-  const maximumImageBytes=2*1024*1024, transferBudget=Math.min(8*1024*1024,remainingBytes);
-  const ordered=images.map((image,index)=>({image,index})).sort((a,b)=>Number(seenSet.has(a.index))-Number(seenSet.has(b.index)));
-  for(const {image,index} of ordered){
-    const url=candidate(image);
-    if(!url){reasons.ineligible++;continue;}
-    if(retainedSet.has(index)){
-      retainedCount++;
-      const marker=`orca-image-${randomUUID()}`;image.attribs={alt:marker};
-      replacements.set(marker,`<span data-orca-retained-slot="${index}"></span>`);continue;
-    }
-    if(attempted>=12){reasons.requestLimit++;continue;}
-    if(signal.aborted){reasons.stopped++;continue;}
-    if(spentBytes+maximumImageBytes>transferBudget){reasons.byteBudget++;continue;}
-    attempted++;attemptedIndices.push(index);
-    try {
-      const bytes=await download(url,signal);
-      spentBytes+=bytes.length;
-      const mime=download===downloadRemoteImage ? rasterType(bytes) : await validatedRasterType(bytes,signal);
-      if(signal.aborted){reasons.stopped++;continue;}
-      if(!mime||bytes.length>maximumImageBytes){reasons.invalidRaster++;continue;}
-      const marker=`orca-image-${randomUUID()}`;const alt=image.attribs.alt??"";
-      image.attribs={alt:marker};
-      const tag=`<img alt="${escape(alt)}" src="data:${mime};base64,${bytes.toString("base64")}" style="max-width:100%;height:auto">`;
-      replacements.set(marker,tag);slots.push({index,html:tag,bytes:bytes.length});loaded++;
-    }catch(error){
-      // Unclassified errors and incomplete responses are charged conservatively;
-      // DNS and pre-response connection errors consume no response body.
-      if(error instanceof ImageFetchError){
-        failures[error.reason]++;
-        spentBytes+=(mode==="legacy" ? Math.max(error.bytes,maximumImageBytes) : ["dns","destination","network"].includes(error.reason) ? error.bytes : Math.max(error.bytes,maximumImageBytes));
-      }else{failures.unknown++;spentBytes+=maximumImageBytes;}
-      reasons.downloadFailed++;
-    }
+  const maximumImageBytes=2*1024*1024,transferBudget=Math.min(8*1024*1024,remainingBytes);
+  const entries=images.map((image,index)=>({image,index,url:candidate(image),alt:image.attribs.alt??"",marker:""}))
+    .sort((a,b)=>Number(seenSet.has(a.index))-Number(seenSet.has(b.index)));
+  let selected=0;
+  for(const entry of entries){
+    if(!entry.url)continue;
+    if(!retainedSet.has(entry.index)&&selected++>=12)continue;
+    entry.marker=`orca-image-${randomUUID()}`;entry.image.attribs={alt:entry.marker};
+    replacements.set(entry.marker,retainedSet.has(entry.index)
+      ? `<span data-orca-retained-slot="${entry.index}"></span>`
+      : `<span class="orca-mail-image-note">[Image blocked: ${escape(entry.alt)}]</span>`);
   }
-  let bodyHtml=sanitizeInboundHtml(DomUtils.getOuterHTML(document))??"";
-  for(const [marker,image] of replacements){bodyHtml=bodyHtml.replace(`<span class="orca-mail-image-note">[Image blocked: ${marker}]</span>`,image);}
-  return {bodyHtml,sourceHash:imageSourceHash(html),sourceRevision:imageSourceRevision(html),loaded,blocked:images.length-loaded-retainedCount,attempted,reasons,failures,slots,attemptedIndices};
+  const baseBody=sanitizeInboundHtml(DomUtils.getOuterHTML(document))??"";
+  function body(progressive=false){
+    let result=baseBody;
+    for(const entry of entries){if(!entry.marker)continue;
+      const value=progressive ? `<span class="orca-mail-image-note" data-orca-image-slot="${entry.index}">[Image blocked: ${escape(entry.alt)}]</span>` : replacements.get(entry.marker)!;
+      result=result.replace(`<span class="orca-mail-image-note">[Image blocked: ${entry.marker}]</span>`,value);
+    }
+    return result;
+  }
+  type Entry=typeof entries[number];
+  type Completed={entry:Entry;bytes?:Buffer;mime?:string|null;error?:unknown;failed:boolean};
+  const inFlight=new Map<number,Promise<Completed>>();
+  async function fetchImage(entry:Entry):Promise<Completed>{
+    try{return await withImagePermit(signal,async()=>{
+      const bytes=await download(entry.url!,signal);
+      const mime=download===downloadRemoteImage ? rasterType(bytes) : await validatedRasterType(bytes,signal);
+      return {entry,bytes,mime,failed:false};
+    });}catch(error){return {entry,error,failed:true};}
+  }
+  let cursor=0;
+  try {
+    if(options.progressive)await options.progressive({type:"start",sourceRevision:revision,bodyHtml:body(true)});
+    while(cursor<entries.length || inFlight.size){
+      while(cursor<entries.length && inFlight.size<(options.concurrency??1)){
+        const entry=entries[cursor]!;
+        if(!entry.url){reasons.ineligible++;cursor++;continue;}
+        if(retainedSet.has(entry.index)){retainedCount++;cursor++;continue;}
+        if(attempted>=12){reasons.requestLimit++;cursor++;continue;}
+        if(signal.aborted){reasons.stopped++;cursor++;continue;}
+        if(spentBytes+reservedBytes+maximumImageBytes>transferBudget){
+          if(inFlight.size)break;
+          reasons.byteBudget++;cursor++;continue;
+        }
+        cursor++;attempted++;attemptedIndices.push(entry.index);reservedBytes+=maximumImageBytes;
+        inFlight.set(entry.index,fetchImage(entry));
+      }
+      if(!inFlight.size)continue;
+      const result=await Promise.race(inFlight.values());
+      const {entry}=result;inFlight.delete(entry.index);reservedBytes-=maximumImageBytes;
+      if(result.failed){
+        const error=result.error;
+        if(error instanceof ImageFetchError){
+          failures[error.reason]++;
+          spentBytes+=(mode==="legacy" ? Math.max(error.bytes,maximumImageBytes) : ["dns","destination","network"].includes(error.reason) ? error.bytes : Math.max(error.bytes,maximumImageBytes));
+        }else{failures.unknown++;spentBytes+=maximumImageBytes;}
+        reasons.downloadFailed++;continue;
+      }
+      const bytes=result.bytes!;spentBytes+=bytes.length;
+      if(signal.aborted){reasons.stopped++;continue;}
+      if(!result.mime||bytes.length>maximumImageBytes){reasons.invalidRaster++;continue;}
+      const tag=`<img alt="${escape(entry.alt)}" src="data:${result.mime};base64,${bytes.toString("base64")}" style="max-width:100%;height:auto">`;
+      const slot={index:entry.index,html:tag,bytes:bytes.length};
+      replacements.set(entry.marker,tag);slots.push(slot);loaded++;
+      if(options.progressive)await options.progressive({type:"image",sourceRevision:revision,slot});
+    }
+    return {bodyHtml:body(),sourceHash:imageSourceHash(html),sourceRevision:revision,loaded,blocked:images.length-loaded-retainedCount,attempted,reasons,failures,slots,attemptedIndices};
+  } finally {
+    cancel.abort();
+    // Keep the route's message lock and global permits until every started task settles.
+    await Promise.allSettled(inFlight.values());
+  }
 }

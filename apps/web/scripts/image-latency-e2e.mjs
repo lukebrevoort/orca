@@ -47,7 +47,7 @@ try {
    assert.equal((await ledger()).events.length,0);assert.equal(await page.locator('.reader-body-html img').count(),0);
    if(run===0)await page.waitForTimeout(400);
    await page.getByRole('button',{name:'Load images',exact:true}).click();
-   await page.waitForFunction(()=>{const statuses=[...document.querySelectorAll('[role="status"]')];return statuses.some(n=>/images? loaded\./.test(n.textContent??''));});
+   await page.waitForFunction(()=>{const statuses=[...document.querySelectorAll('[role="status"]')];return statuses.some(n=>/images? loaded\./.test(n.textContent??'')&&!/Loading remaining/.test(n.textContent??''));});
    await page.waitForFunction(()=>window.__imageMeasure.first!==null);
    const client=await page.evaluate(()=>({firstVisibleMs:window.__imageMeasure.first-window.__imageMeasure.clicked,settledMs:performance.now()-window.__imageMeasure.clicked}));
    const server=await ledger();assert.equal(server.active,0);
