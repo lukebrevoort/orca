@@ -4,6 +4,8 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 output="${1:?A new evidence directory is required}"
+mode="${2:-flow}"
+if [[ "$mode" != flow && "$mode" != latency ]]; then printf '%s\n' 'Unknown image fixture mode.' >&2; exit 1; fi
 if [[ -e "$output" ]]; then printf '%s\n' 'Evidence directory must not exist.' >&2; exit 1; fi
 if [[ -n "$(git status --porcelain)" ]]; then printf '%s\n' 'A clean checkout is required.' >&2; exit 1; fi
 tested_sha="$(git rev-parse HEAD)"
@@ -31,7 +33,9 @@ const files={};for(const path of walk('apps/web/dist').sort())files[path]=create
 if(!files['apps/web/dist/index.html'])throw new Error('Built index missing');
 console.log(JSON.stringify({commit:process.argv[2],files}));
 JS
-bun apps/api/scripts/compose-fixture.ts --images >"$scratch/fixture.log" 2>&1 &
+fixture_flag="--images"
+[[ "$mode" != latency ]] || fixture_flag="--image-latency"
+bun apps/api/scripts/compose-fixture.ts "$fixture_flag" >"$scratch/fixture.log" 2>&1 &
 fixture_pid=$!
 for _ in {1..100}; do
   if [[ -s "$scratch/fixture.log" ]]; then break; fi
@@ -40,6 +44,8 @@ for _ in {1..100}; do
 done
 connection="$(head -n 1 "$scratch/fixture.log")"
 if [[ ! -f "$connection" ]]; then printf '%s\n' 'Synthetic fixture did not start.' >&2; exit 1; fi
-ORCA_IMAGE_BUILD_PROOF="$scratch/build-proof.json" node apps/web/scripts/image-fixture-e2e.mjs "$connection" "$output" "$tested_sha"
+browser_script="apps/web/scripts/image-fixture-e2e.mjs"
+[[ "$mode" != latency ]] || browser_script="apps/web/scripts/image-latency-e2e.mjs"
+ORCA_IMAGE_BUILD_PROOF="$scratch/build-proof.json" node "$browser_script" "$connection" "$output" "$tested_sha"
 cp "$scratch/build.log" "$output/build.log"
 cp "$scratch/build-proof.json" "$output/build-proof.json"
