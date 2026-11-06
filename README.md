@@ -350,7 +350,12 @@ Authenticated `GET /v1/feedback/ticket` reports availability; `POST` accepts
 the Linear receipt, including after API restart. Drafts remain in memory across
 composer dismissal, but not app termination. No mail, screenshots or account
 details are automatically attached. The older development-only `POST /v1/feedback`
-endpoint remains available but is not used by the corner composer.
+endpoint is not used by the corner composer. To use it locally, set
+`LEGACY_FEEDBACK_ENABLED=true` in a non-production API environment and sign in
+as the configured `LINEAR_FEEDBACK_OWNER_USER_ID`. Requests must come from the
+configured web origin. The endpoint limits concurrent requests, delivery rate,
+report structure and image attachments; limits are per API process and reset
+on restart. The legacy route is disabled by default and in production.
 
 ## Workspace Layout
 
