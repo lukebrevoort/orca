@@ -78,13 +78,22 @@ final class OrcaUITests: XCTestCase {
         }
         guard tapFeedbackPickerAsset(videoQuery.firstMatch, in: app) else { return }
         attachScreenshot(named: "feedback-system-picker-selected-media")
+        if feedbackFixtureDiagnosticsAllowed() {
+            // System image nodes may not expose selection reliably; these are
+            // observations only and never replace the two-preview assertion.
+            let photo = photoQuery.firstMatch, video = videoQuery.firstMatch
+            let photoExists = photo.exists, videoExists = video.exists
+            print("[feedback picker selection] photo_exists=\(photoExists) photo_selected=\(photoExists && photo.isSelected) video_exists=\(videoExists) video_selected=\(videoExists && video.isSelected)")
+        }
         logFeedbackPicker(in: app)
         let finishSelection = app.buttons["Done"]
         XCTAssertTrue(finishSelection.waitForExistence(timeout: 5))
         XCTAssertTrue(finishSelection.isEnabled); finishSelection.tap()
         let previews = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "feedback.preview."))
-        expectation(for: NSPredicate(format: "count == 2"), evaluatedWith: previews)
-        waitForExpectations(timeout: 10)
+        let previewsReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 2"), object: previews)
+        let previewWait = XCTWaiter.wait(for: [previewsReady], timeout: 10)
+        if previewWait != .completed { logFeedbackImportState(in: app, previews: previews) }
+        XCTAssertEqual(previewWait, .completed, "Expected two selected media previews within 10 seconds")
         XCTAssertEqual(previews.count, 2); XCTAssertFalse(submit.isEnabled)
         for (index, identifier) in previews.allElementsBoundByIndex.map({ $0.identifier }).enumerated() {
             let preview = app.buttons[identifier]
@@ -213,11 +222,24 @@ final class OrcaUITests: XCTestCase {
         return true
     }
 
+    private func feedbackFixtureDiagnosticsAllowed() -> Bool {
+        guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
+              let url = URL(string: raw), url.scheme == "http" else { return false }
+        return ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "")
+    }
+
+    private func logFeedbackImportState(in app: XCUIApplication, previews: XCUIElementQuery) {
+        guard feedbackFixtureDiagnosticsAllowed() else { return }
+        // Counts and fixed UI state only: do not print feedback or media labels.
+        let importing = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Adding selected files…")).count
+        let photos = app.buttons["feedback.photos"]
+        let submit = app.buttons["feedback.submit"]
+        print("[feedback import] preview_count=\(previews.count) importing_nodes=\(importing) error_exists=\(app.staticTexts["feedback.error"].exists) composer_exists=\(app.descendants(matching: .any)["feedback.composer"].exists) photos_exists=\(photos.exists) photos_enabled=\(photos.exists && photos.isEnabled) submit_exists=\(submit.exists) submit_enabled=\(submit.exists && submit.isEnabled) picker_done_exists=\(app.buttons["Done"].exists)")
+    }
+
     private func logFeedbackPicker(in app: XCUIApplication) {
         // Diagnostics only run against the explicitly supplied loopback fixture.
-        guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
-              let url = URL(string: raw), url.scheme == "http",
-              ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "") else { return }
+        guard feedbackFixtureDiagnosticsAllowed() else { return }
         let kinds: [(String, XCUIElement.ElementType)] = [("Button", .button), ("StaticText", .staticText), ("Image", .image), ("Cell", .cell),
                                                           ("CollectionView", .collectionView), ("ScrollView", .scrollView), ("Sheet", .sheet), ("Other", .other)]
         var remaining = 40
