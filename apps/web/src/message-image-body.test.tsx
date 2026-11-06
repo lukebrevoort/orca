@@ -103,3 +103,14 @@ test("truncated progressive response retains successful slots for an explicit re
  await act(async()=>wire.close());expect(container.querySelectorAll('img')).toHaveLength(1);expect(container.textContent).toContain('Image loading was interrupted');
  await act(async()=>container.querySelector('button')!.click());expect(JSON.parse(requests[1]!.body as string).retained).toEqual([0]);expect(container.querySelectorAll('img')).toHaveLength(2);
 });
+
+test('switching accounts cancels progressive consumption and clears every prior image',async()=>{
+ let wire!:ReadableStreamDefaultController<Uint8Array>,signal:AbortSignal|undefined,cancelled=0,calls=0;
+ Object.defineProperty(globalThis,'fetch',{configurable:true,writable:true,value:async(_path:string,init:RequestInit)=>{calls++;signal=init.signal??undefined;return new Response(new ReadableStream<Uint8Array>({start(controller){wire=controller;},cancel(){cancelled++;}}),{headers:{'content-type':'application/x-ndjson'}});}});
+ await act(async()=>root.render(<MessageImageBody key="first" {...props}/>));
+ await act(async()=>{const button=container.querySelector('button')!;button.click();button.click();});expect(calls).toBe(1);
+ await act(async()=>wire.enqueue(new TextEncoder().encode(JSON.stringify({type:'start',sourceRevision:revision,bodyHtml:'<span data-orca-image-slot="0">not loaded</span>'})+'\n'+JSON.stringify({type:'image',sourceRevision:revision,slot:{index:0,bytes:1,html:'<img alt="Fixture 0" src="data:image/png;base64,AA==" style="max-width:100%;height:auto">'}})+'\n')));
+ expect(container.querySelectorAll('img')).toHaveLength(1);
+ await act(async()=>root.render(<MessageImageBody key="second" {...props} accountId="other" html="<p>Other account</p>"/>));
+ expect(signal?.aborted).toBe(true);expect(cancelled).toBe(1);expect(calls).toBe(1);expect(container.querySelectorAll('img')).toHaveLength(0);expect(container.textContent).toContain('Other account');expect(container.querySelector('button')?.textContent).toBe('Load images');
+});

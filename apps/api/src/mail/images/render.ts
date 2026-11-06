@@ -15,8 +15,15 @@ export class ImageSourceTooLargeError extends Error {
 function assertImageSourceLimit(html: string | null) {
   if (!imageSourceWithinLimit(html)) throw new ImageSourceTooLargeError();
 }
+const escapeText=(s:string)=>s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 function documentImages(html:string|null){assertImageSourceLimit(html);const document=parseDocument(sanitizeProviderHtml(html)??"");return {document,images:DomUtils.findAll(n=>n.type==="tag"&&n.name==="img",document.children)};}
+function blockedNote(image:ReturnType<typeof documentImages>["images"][number]) {
+  let linked=false;
+  for(let parent=image.parent;parent;parent=parent.parent){if(parent.type==="tag"&&parent.name==="a"&&parent.attribs.href){linked=true;break;}}
+  const alt=image.attribs.alt?.trim() || (linked ? "Open linked image" : "");
+  return alt ? DomUtils.getOuterHTML(parseDocument(`<span class="orca-mail-image-note">[Image blocked: ${escapeText(alt)}]</span>`)) : "";
+}
 function candidate(image:ReturnType<typeof documentImages>["images"][number]) {
   if(image.type!=="tag") return null;
   for(const key of ["width","height"]) {const v=image.attribs[key];if(v && /^\d+(?:px)?$/.test(v) && parseInt(v)<=2)return null;}
@@ -51,22 +58,22 @@ export async function renderRequestedImages(html:string|null,download:ImageDownl
   const reasons={ineligible:0,requestLimit:0,stopped:0,byteBudget:0,downloadFailed:0,invalidRaster:0};
   const failures={dns:0,destination:0,network:0,response:0,size:0,raster:0,cancelled:0,unknown:0};
   const maximumImageBytes=2*1024*1024,transferBudget=Math.min(8*1024*1024,remainingBytes);
-  const entries=images.map((image,index)=>({image,index,url:candidate(image),alt:image.attribs.alt??"",marker:""}))
+  const entries=images.map((image,index)=>({image,index,url:candidate(image),alt:image.attribs.alt??"",note:"",marker:""}))
     .sort((a,b)=>Number(seenSet.has(a.index))-Number(seenSet.has(b.index)));
   let selected=0;
   for(const entry of entries){
     if(!entry.url)continue;
     if(!retainedSet.has(entry.index)&&selected++>=12)continue;
-    entry.marker=`orca-image-${randomUUID()}`;entry.image.attribs={alt:entry.marker};
+    entry.note=blockedNote(entry.image);entry.marker=`orca-image-${randomUUID()}`;entry.image.attribs={alt:entry.marker};
     replacements.set(entry.marker,retainedSet.has(entry.index)
       ? `<span data-orca-retained-slot="${entry.index}"></span>`
-      : `<span class="orca-mail-image-note">[Image blocked: ${escape(entry.alt)}]</span>`);
+      : entry.note);
   }
   const baseBody=sanitizeInboundHtml(DomUtils.getOuterHTML(document))??"";
   function body(progressive=false){
     let result=baseBody;
     for(const entry of entries){if(!entry.marker)continue;
-      const value=progressive ? `<span class="orca-mail-image-note" data-orca-image-slot="${entry.index}">[Image blocked: ${escape(entry.alt)}]</span>` : replacements.get(entry.marker)!;
+      const value=progressive ? `<span data-orca-image-slot="${entry.index}">${entry.note || "Image not loaded"}</span>` : replacements.get(entry.marker)!;
       result=result.replace(`<span class="orca-mail-image-note">[Image blocked: ${entry.marker}]</span>`,value);
     }
     return result;

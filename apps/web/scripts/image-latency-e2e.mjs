@@ -59,7 +59,7 @@ try {
     return new Response(observed,{status:response.status,statusText:response.statusText,headers:response.headers});
    };
    document.addEventListener('click',e=>{if(e.target instanceof HTMLButtonElement&&e.target.textContent==='Load images')window.__imageMeasure.clicked=performance.now();},true);
-   const observe=()=>{const state=window.__imageMeasure;if(state.clicked!==null&&state.first===null){const img=[...document.querySelectorAll('.reader-body-html img')].find(image=>image.complete&&image.naturalWidth>0);if(img)state.first=performance.now();}requestAnimationFrame(observe);};requestAnimationFrame(observe);
+   const observe=()=>{const state=window.__imageMeasure;if(state.clicked!==null&&state.first===null){const img=[...document.querySelectorAll('.reader-body-html img')].find(image=>{const rect=image.getBoundingClientRect();return image.complete&&image.naturalWidth>0&&rect.width>0&&rect.height>0&&rect.top<innerHeight&&rect.left<innerWidth&&rect.bottom>0&&rect.right>0&&!image.closest('[hidden]');});if(img)state.first=performance.now();}requestAnimationFrame(observe);};requestAnimationFrame(observe);
   });
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   const ledger=async()=>{const response=await context.request.get(new URL('/__fixture/image-timings',origin).href);assert.equal(response.status(),200);return response.json();};
