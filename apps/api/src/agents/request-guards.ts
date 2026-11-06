@@ -174,6 +174,7 @@ export function mcpToolRequestCost(name: string | null): number {
     revert_organization: 5,
     search_mail: 2,
     get_thread: 2,
+    get_thread_page: 2,
     list_agent_events: 2,
     get_connection_status: 1,
   } as const satisfies Record<OrcaMcpToolName, number>;

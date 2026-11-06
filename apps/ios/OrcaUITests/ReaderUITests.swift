@@ -229,6 +229,39 @@ final class ReaderUITests: XCTestCase {
         XCTAssertEqual(try imageDownloadCount(), initial + 1)
     }
 
+    func testOversizedImageSnapshotRefreshOffersReadOnlyRecovery() throws {
+        guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
+        try requireFixtureTransportReady()
+        try setFixtureImageSource(changed: false)
+        try setFixtureImageCapability(enabled: true)
+        try setFixtureImageSnapshot(fail: false, delayed: false)
+        defer { try? setFixtureImageSource(changed: false); try? setFixtureImageSnapshot(fail: false, delayed: false) }
+        let initial = try imageDownloadCount()
+        let app = try launchReader()
+        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        let load = app.buttons["message.load-images"]
+        XCTAssertTrue(load.waitForExistence(timeout: 10))
+        try setFixtureImageSource(changed: true)
+        load.tap()
+        let refresh = app.buttons["message.refresh-images-source"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10))
+        try setFixtureImageSnapshot(fail: false, delayed: false, overflow: true)
+        refresh.tap()
+        let pages = app.buttons["Open in pages"]
+        XCTAssertTrue(pages.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Reply"].exists); XCTAssertFalse(app.buttons["Forward"].exists)
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        XCTAssertFalse(app.buttons["message.refresh-images-source"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial)
+        pages.tap()
+        XCTAssertTrue(app.staticTexts["Read-only pages"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Reply"].exists); XCTAssertFalse(app.buttons["Forward"].exists)
+        XCTAssertFalse(app.buttons["message.load-images"].exists)
+        XCTAssertEqual(try imageDownloadCount(), initial)
+        screenshot("image-refresh-overflow-read-only-pages")
+    }
+
     func testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages() throws {
         guard ProcessInfo.processInfo.environment["ORCA_FIXTURE_IMAGES"] == "1" else { throw XCTSkip("Requires the isolated image fixture") }
         try requireFixtureTransportReady()
@@ -294,8 +327,8 @@ final class ReaderUITests: XCTestCase {
         try setFixtureImageControl(path: "image-capability", value: ["enabled": enabled])
     }
 
-    private func setFixtureImageSnapshot(fail: Bool, delayed: Bool) throws {
-        try setFixtureImageControl(path: "image-snapshot", value: ["fail": fail, "delayed": delayed])
+    private func setFixtureImageSnapshot(fail: Bool, delayed: Bool, overflow: Bool = false) throws {
+        try setFixtureImageControl(path: "image-snapshot", value: ["fail": fail, "delayed": delayed, "overflow": overflow])
     }
 
     private func waitForFixtureImageSnapshotStart() throws {

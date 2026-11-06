@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
-import { threadDetailMessageSchema, threadDetailSchema } from "@orca/shared";
+import { threadDetailMessageSchema, threadDetailSchema, threadReadPageSchema } from "@orca/shared";
 import { z } from "zod";
 import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -145,10 +145,22 @@ test("long-thread GET retains image availability, inert bodies and account isola
     expect(oldParser.safeParse(optedBody).success).toBe(false);
     db.update(schema.emails).set({bodyHtml:`<img src="${src}">` + "x".repeat(imageSourceByteLimit)}).where(eq(schema.emails.id,"m-1")).run();
     const oldLarge=await app.request('/v1/threads/thread?accountId=a',{headers});
-    expect(oldParser.safeParse(await oldLarge.json()).success).toBe(true);
+    expect(oldLarge.status).toBe(413);expect((await oldLarge.json()).error.code).toBe('payload_limit');
     const newLarge=await app.request('/v1/threads/thread?accountId=a',{headers:{...headers,'x-orca-image-version':'2'}});
-    const largeMessage=threadDetailSchema.parse(await newLarge.json()).messages.find(message=>message.id==="m-1")!;
-    expect(largeMessage.imageLoadAvailable).toBe(true);expect(largeMessage.imageSourceRevision).toBeUndefined();
+    expect(newLarge.status).toBe(413);expect((await newLarge.json()).error.code).toBe('payload_limit');
+    let cursor: string | null = null, recovered = 0, unavailable = false;
+    do {
+      const query=new URLSearchParams({accountId:'a'});if(cursor)query.set('cursor',cursor);
+      const response=await app.request(`/v1/threads/thread/messages?${query}`,{headers:{...headers,'x-orca-image-version':'2'}});
+      expect(response.status).toBe(200);const page=threadReadPageSchema.parse(await response.json());
+      for(const entry of page.entries){
+        recovered++;if(entry.id==='m-1'){expect(entry.kind).toBe('unavailable');unavailable=true;}
+        if(entry.kind==='message')expect(entry.bodyHtml??'').not.toMatch(/<img|<script/);
+        expect('imageSourceRevision' in entry).toBe(false);
+      }
+      cursor=page.earlier;
+    }while(cursor);
+    expect(recovered).toBe(50);expect(unavailable).toBe(true);
     for (const url of ["/v1/threads/private?accountId=a", "/v1/threads/private?accountId=b"]) expect((await app.request(url, { headers })).status).toBe(404);
     expect((await app.request("/v1/threads/thread?accountId=a")).status).toBe(401);
     expect(downloads).toBe(0);

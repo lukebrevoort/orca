@@ -47,6 +47,14 @@ struct ThreadMessage: Codable, Identifiable, Hashable {
 struct NormalizedThread: Codable, Hashable { var id: String; var provider: String; var providerThreadId: String; var subject: String; var latestReceivedAt: String; var messageCount: Int; var labels: [String]; var participants: [MailContact]; var readState: String; var attention: ThreadAttention }
 struct ThreadAttention: Codable, Hashable { var attentionBehavior: String?; var hasUnread: Bool; var hasStarred: Bool; var hasDraft: Bool; var humanSignal: Int? }
 struct ThreadDetail: Codable { var account: MailAccount; var thread: NormalizedThread; var messages: [ThreadMessage] }
+struct ThreadReadPage: Decodable {
+    struct Entry: Decodable, Identifiable {
+        enum Kind: String, Decodable { case message, unavailable }
+        var kind: Kind; var id: String; var from: String?; var subject: String?; var receivedAt: String?
+        var bodyText: String?; var bodyHtml: String?
+    }
+    var entries: [Entry]; var earlier: String?; var newer: String?
+}
 
 struct Recipient: Codable, Hashable {
     var name: String?; var email: String

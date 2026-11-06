@@ -4,6 +4,10 @@ struct ThreadView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; let accountId: String; let threadId: String; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
     @State private var expanded: Set<String> = []
+    @State private var overflow = false
+    @State private var recovery: ThreadReadPage?
+    @State private var recoveryLoading = false
+    @State private var recoveryRequest = UUID()
     @State private var showEarlier = false
     @State private var entryID: String?
     @State private var unreadEntryID: String?
@@ -102,9 +106,32 @@ struct ThreadView: View {
                 .onGeometryChange(for: CGFloat.self) { geometry in
                     geometry.frame(in: .named("threadViewport")).minY
                 } action: { headerOffset = $0 }
+            } else if let recovery {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Read-only pages").font(OrcaTheme.ui(16, weight: .semibold))
+                    Text("Pages show message bodies. Recipients, attachments, reply, forwarding and guidance are unavailable here. Pages may change as mail syncs; reopen to see the latest.").font(OrcaTheme.ui(12))
+                    HStack {
+                        Button("Newer") { Task { await loadPage(recovery.newer) } }.disabled(recovery.newer == nil)
+                        Button("Earlier") { Task { await loadPage(recovery.earlier) } }.disabled(recovery.earlier == nil)
+                    }
+                    ForEach(Array(recovery.entries.enumerated()), id: \.offset) { _, item in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if item.kind == .unavailable { Text("This message is too large to display.") }
+                            else {
+                                Text(item.subject?.isEmpty == false ? item.subject! : "(No subject)").font(OrcaTheme.ui(16, weight: .semibold))
+                                Text(item.from ?? "Unknown sender").font(OrcaTheme.ui(12))
+                                if let html = item.bodyHtml, !html.isEmpty { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) }
+                                else { Text(item.bodyText ?? "").textSelection(.enabled) }
+                            }
+                        }.padding(16).background(OrcaTheme.surface, in: RoundedRectangle(cornerRadius: 16))
+                    }
+                }.padding(24).id(recoveryRequest)
+            } else if recoveryLoading {
+                ProgressView("Loading page").padding(.top, 80)
             } else if let error {
                 ContentUnavailableView("Conversation unavailable", systemImage: "exclamationmark.bubble", description: Text(error))
                 Button("Try again") { Task { await load() } }
+                if overflow { Button("Open in pages") { Task { await loadPage(nil) } } }
             } else { ProgressView("Getting conversation").padding(.top, 80) }
         }.background(OrcaTheme.paper)
         .coordinateSpace(name: "threadViewport")
@@ -155,7 +182,7 @@ struct ThreadView: View {
                     .overlay(alignment: .top) { Rectangle().fill(OrcaTheme.border).frame(height: 1) }
             }
         }
-        .task { await load() }.sheet(isPresented: .constant(shareURL != nil), onDismiss: { if let shareURL { try? FileManager.default.removeItem(at: shareURL.deletingLastPathComponent()) }; shareURL = nil }) { if let shareURL { ShareSheet(items: [shareURL]) } }
+        .task { await load() }.onDisappear { recoveryRequest = UUID() }.sheet(isPresented: .constant(shareURL != nil), onDismiss: { if let shareURL { try? FileManager.default.removeItem(at: shareURL.deletingLastPathComponent()) }; shareURL = nil }) { if let shareURL { ShareSheet(items: [shareURL]) } }
     }
     @ViewBuilder
     private func replyActions(_ detail: ThreadDetail) -> some View {
@@ -207,12 +234,28 @@ struct ThreadView: View {
         guard !state.demoMode, let client = state.client, state.selectedAccount?.id == accountId else { return false }
         let owner = state.ownerScope, attempt = UUID()
         imageRefreshGeneration = attempt
-        let loaded = try await client.thread(threadId, accountId: accountId)
-        guard !Task.isCancelled, owner == state.ownerScope, state.selectedAccount?.id == accountId,
-              state.client === client, imageRefreshGeneration == attempt,
-              loaded.account.id == accountId, loaded.thread.id == threadId else { return false }
-        accept(loaded); error = nil
-        return loaded.messages.contains { $0.id == messageID }
+        func identityIsCurrent() -> Bool {
+            !Task.isCancelled && owner == state.ownerScope && state.selectedAccount?.id == accountId
+                && state.client === client && imageRefreshGeneration == attempt
+        }
+        do {
+            let loaded = try await client.thread(threadId, accountId: accountId)
+            guard identityIsCurrent(), loaded.account.id == accountId, loaded.thread.id == threadId else { return false }
+            accept(loaded); error = nil
+            return loaded.messages.contains { $0.id == messageID }
+        } catch {
+            guard identityIsCurrent() else { return false }
+            if await handleThreadOverflow(error) { return false }
+            throw error
+        }
+    }
+    @MainActor private func handleThreadOverflow(_ failure: Error) async -> Bool {
+        guard case let APIClient.ClientError.http(413, body) = failure, body?.code == "payload_limit" else { return false }
+        let key = "\(state.ownerScope)|\(accountId)|thread|\(threadId)"
+        imageRefreshGeneration = UUID()
+        detail = nil; recovery = nil; overflow = true; error = failure.localizedDescription
+        await state.cache.remove(key: key)
+        return true
     }
     private func jump(_ id: String, proxy: ScrollViewProxy) {
         expanded.insert(id)
@@ -230,13 +273,29 @@ struct ThreadView: View {
         func identityIsCurrent() -> Bool { !Task.isCancelled && scope == state.ownerScope && state.selectedAccount?.id == accountId }
         do {
             let loaded = try await client.thread(threadId, accountId: accountId)
-            guard identityIsCurrent() else { return }; accept(loaded); error = nil
+            guard identityIsCurrent() else { return }; accept(loaded); error = nil; overflow = false; recovery = nil
             try? await state.cache.save(loaded, key: key)
             guard identityIsCurrent() else { return }; try? await state.markThreadRead(threadId, accountID: accountId)
         } catch {
             guard identityIsCurrent() else { return }
-            if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
+            if await handleThreadOverflow(error) { return }
+            if overflow {
+                self.error = error.localizedDescription
+            } else if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
             else { self.error = error.localizedDescription }
+        }
+    }
+    func loadPage(_ cursor: String?) async {
+        guard let client = state.client, state.selectedAccount?.id == accountId else { return }
+        let scope = state.ownerScope, request = UUID(); recoveryRequest = request
+        recovery = nil; recoveryLoading = true; error = nil
+        do {
+            let page = try await client.threadPage(threadId, accountId: accountId, cursor: cursor)
+            guard !Task.isCancelled, request == recoveryRequest, scope == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+            recovery = page; recoveryLoading = false
+        } catch {
+            guard !Task.isCancelled, request == recoveryRequest, scope == state.ownerScope, state.selectedAccount?.id == accountId else { return }
+            recoveryLoading = false; self.error = error.localizedDescription
         }
     }
     func download(_ attachment: MailAttachment) async {

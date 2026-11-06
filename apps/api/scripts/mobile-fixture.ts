@@ -22,6 +22,7 @@ let imageDownloads = 0;
 let imageDelayMilliseconds = 0;
 let imageCapability = true;
 let imageSnapshotFailure = false;
+let imageSnapshotOverflow = false;
 let imageSnapshotDelayed = false;
 let imageSnapshotStarted = false;
 const fixtureImageHtml = (version: boolean, urlOnly = false) => `<p>${version && !urlOnly ? "Updated synthetic message." : "A synthetic image stays blocked until you choose to load it."}</p><img alt="Synthetic landscape" src="https://images.example.invalid/${version ? "landscape-v2.png" : "landscape.png"}"><p>End of image example.</p>`;
@@ -207,8 +208,8 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
   }
   if (imageFixture && url.pathname === "/__fixture/image-snapshot" && request.method === "POST") {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
-    const value = await request.json() as { fail?: boolean; delayed?: boolean };
-    imageSnapshotFailure = value.fail === true; imageSnapshotDelayed = value.delayed === true; imageSnapshotStarted = false;
+    const value = await request.json() as { fail?: boolean; delayed?: boolean; overflow?: boolean };
+    imageSnapshotFailure = value.fail === true; imageSnapshotOverflow = value.overflow === true; imageSnapshotDelayed = value.delayed === true; imageSnapshotStarted = false;
     return new Response(null, { status: 204 });
   }
   if (imageFixture && url.pathname === "/__fixture/image-snapshot-started" && request.method === "GET") {
@@ -436,7 +437,8 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     console.log(`[search-fixture-server] ${JSON.stringify({ trace, event: "response_ready", epoch_ms: Date.now(), path: url.pathname, status: response.status, messageIds })}`);
     return response;
   }
-  if (imageFixture && (!imageCapability || imageSnapshotFailure || imageSnapshotDelayed) && request.method === "GET" && url.pathname === "/v1/threads/ios-fixture-thread-1") {
+  if (imageFixture && (!imageCapability || imageSnapshotFailure || imageSnapshotOverflow || imageSnapshotDelayed) && request.method === "GET" && url.pathname === "/v1/threads/ios-fixture-thread-1") {
+    if (imageSnapshotOverflow) return Response.json({ error: { code: "payload_limit", message: "This conversation is too large to open in Orca." } }, { status: 413 });
     if (imageSnapshotFailure) return Response.json({ error: { code: "unavailable", message: "Synthetic snapshot unavailable" } }, { status: 503 });
     const response = await app.fetch(request);
     if (!response.ok) return response;

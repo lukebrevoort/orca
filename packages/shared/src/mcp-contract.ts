@@ -309,6 +309,27 @@ export const mcpGetThreadOutputSchema = z.object({
 }).strict();
 export type McpGetThreadOutput = z.infer<typeof mcpGetThreadOutputSchema>;
 
+export const mcpGetThreadPageInputSchema = mcpGetThreadInputSchema.extend({
+  cursor: z.string().min(1).max(16384).optional(),
+}).strict();
+export type McpGetThreadPageInput = z.infer<typeof mcpGetThreadPageInputSchema>;
+export const mcpGetThreadPageOutputSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  threadId: nonEmptyStringSchema,
+  sourceUrl: z.string().url(),
+  complete: z.literal(false),
+  readOnly: z.literal(true),
+  entries: z.array(z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("unavailable"), id: nonEmptyStringSchema }).strict(),
+    z.object({ kind: z.literal("message"), id: nonEmptyStringSchema, from: z.string(), subject: z.string(),
+      receivedAt: isoDateTimeStringSchema.nullable(), bodyExcerpt: z.string().nullable(),
+      bodyStatus: z.enum(["plain_text", "html_only", "empty"]), safety: mcpContentSafetySchema }).strict(),
+  ])).max(20),
+  earlier: z.string().nullable(),
+  newer: z.string().nullable(),
+}).strict();
+export type McpGetThreadPageOutput = z.infer<typeof mcpGetThreadPageOutputSchema>;
+
 export const mcpListAgentEventsInputSchema = z.object({
   accountId: nonEmptyStringSchema.optional(),
   states: z.array(agentEventLifecycleStateSchema).max(7).optional(),

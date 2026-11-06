@@ -25,7 +25,7 @@ import {
 import { createDatabaseClient } from "../db/client.ts";
 import { emailAttachments, emailLabels, labels, emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, mcpOrganizationApprovals, oauthAccounts, organizationChangeSets, organizationLanePolicies, organizationLanes, organizationMutationAttempts, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createSession } from "../auth/session-store.ts";
-import { createApp } from "../index.ts";
+import { createApp, threadDetailLimits } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
 import { createOrcaMcpHttpHandler, type OrcaMcpDataSource } from "./mcp.ts";
 import { getOAuthScopeForResourceScope, mapOAuthScopesToResourceScopes, type OrcaMcpTokenVerifier } from "./access-token.ts";
@@ -194,6 +194,7 @@ function createProjectionTestHandler(
   describeOutput: OrganizationDescribeResponse,
   queryOutput: OrganizationQueryResponse,
   onQuery?: (query: McpQueryOrganizationInput) => void,
+  pageOutput?: { accountId: string; threadId: string; page: import("@orca/shared").ThreadReadPage },
 ) {
   const unavailable = () => { throw new Error("not used by this projection test"); };
   const dataSource: OrcaMcpDataSource = {
@@ -208,6 +209,7 @@ function createProjectionTestHandler(
     revertOrganization: unavailable,
     searchMail: unavailable,
     getThread: unavailable,
+    getThreadPage: () => pageOutput ?? unavailable(),
     listAgentEvents: unavailable,
     getConnectionStatus: unavailable,
     sourceUrl: () => "https://orca.test/",
@@ -400,6 +402,97 @@ afterEach(() => {
 });
 
 describe("Orca scoped MCP server", () => {
+  test("get_thread_page authorizes and redacts bounded partial pages", async () => {
+    const oldSecret = process.env.SESSION_SECRET, oldKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "mcp-thread-page-test-secret-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const { app, db, sqlite } = createFixture();
+    try {
+      db.insert(emails).values(Array.from({ length: 22 }, (_, i) => ({
+        id: `page-${String(i).padStart(2, "0")}`, accountId: "account_a", threadId: "thread_a_1", providerMessageId: `page-${i}`,
+        fromAddress: "sender@example.com", subject: "Page", receivedAt: new Date("2026-11-01T00:00:00Z"), createdAt: new Date("2026-11-01T00:00:00Z"),
+        bodyText: i === 0 ? "refresh_token=private-secret-value" : i === 1 ? "x".repeat(threadDetailLimits.bodyBytes + 1) : i === 2 || i === 4 ? null : i === 3 ? "z".repeat(20001) : "Normal",
+        bodyHtml: i === 2 ? "<p>HTML only</p>" : i === 4 ? "<script>discarded</script>" : i === 5 ? "x".repeat(threadDetailLimits.bodyBytes + 1) : null,
+      }))).run();
+      const token = await signToken();
+      const call = async (arguments_: Record<string, unknown>, accessToken = token) => rpcBody(await callMcp(app, accessToken, "tools/call", { name: "get_thread_page", arguments: arguments_ }));
+      const first = await call({ accountId: "account_a", threadId: "thread_a_1" });
+      assert.ok(!first.result.isError, JSON.stringify(first));
+      const page = first.result.structuredContent;
+      assert.equal(page.complete, false); assert.equal(page.readOnly, true);
+      assert.equal(page.entries.length, 20);
+      assert.ok(page.earlier); assert.equal(page.newer, null);
+      assert.doesNotMatch(Buffer.from(page.earlier.split(".")[0], "base64url").toString("utf8"), /user_a|account_a|thread_a_1/);
+      assert.match(page.entries[0].bodyExcerpt, /\[REDACTED\]/);
+      assert.equal(page.entries[0].safety.redactionsApplied, true);
+      assert.equal(page.entries[0].safety.contentTrust, "untrusted_external_content");
+      assert.equal(page.entries[1].kind, "unavailable");
+      assert.equal(page.entries[2].bodyStatus, "html_only");
+      assert.equal(page.entries[2].bodyExcerpt, null);
+      assert.match(page.entries[3].bodyExcerpt, /\[TRUNCATED\]$/);
+      assert.ok(page.entries[3].safety.truncatedFields.includes("bodyExcerpt"));
+      assert.equal(page.entries[4].bodyStatus, "html_only");
+      assert.equal(page.entries[4].bodyExcerpt, null);
+      assert.equal(page.entries[5].kind, "unavailable", "oversized HTML does not silently become a plain-text alternative");
+      assert.doesNotMatch(JSON.stringify(page), /private-secret-value|bodyHtml|HTML only/);
+      const next = await call({ accountId: "account_a", threadId: "thread_a_1", cursor: page.earlier });
+      assert.ok(!next.result.isError); assert.ok(next.result.structuredContent.newer);
+      const wrongThread = await call({ accountId: "account_a", threadId: "thread_b", cursor: page.earlier });
+      assert.equal(wrongThread.result.isError, true);
+      const noContent = await call({ accountId: "account_a", threadId: "thread_a_1" }, await signToken({ scopes: ["orca:mail.metadata:read"] }));
+      assert.equal(noContent.result.isError, true);
+      assert.equal(JSON.parse(noContent.result.content[0].text).error.code, "insufficient_scope");
+      const tampered = await call({ accountId: "account_a", threadId: "thread_a_1", cursor: `${page.earlier}!` });
+      assert.equal(tampered.result.isError, true);
+      const otherAccount = await call({ accountId: "account_b", threadId: "thread_b" });
+      assert.equal(otherAccount.result.isError, true);
+    } finally {
+      sqlite.close();
+      if (oldSecret === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = oldSecret;
+      if (oldKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY; else process.env.TOKEN_ENCRYPTION_KEY = oldKey;
+    }
+  });
+
+  test("get_thread reports the body budget without loading an oversized thread", async () => {
+    const { app, db, sqlite } = createFixture();
+    try {
+      db.update(emails).set({ bodyText: "x".repeat(threadDetailLimits.bodyBytes + 1) }).where(eq(emails.id, "message_a_1")).run();
+      const result = await rpcBody(await callMcp(app, await signToken(), "tools/call", {
+        name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" },
+      }));
+      assert.equal(result.result.isError, true);
+      assert.equal(JSON.parse(result.result.content[0].text).error.code, "payload_limit");
+      assert.equal(result.result.structuredContent, undefined, "overflow must not return a partial thread");
+      db.update(emails).set({ bodyText: "Normal", snippet: "x".repeat(threadDetailLimits.metadataBytes + 1) }).where(eq(emails.id, "message_a_1")).run();
+      const metadataResult = await rpcBody(await callMcp(app, await signToken(), "tools/call", {
+        name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" },
+      }));
+      assert.equal(metadataResult.result.isError, true);
+      assert.equal(JSON.parse(metadataResult.result.content[0].text).error.code, "payload_limit");
+    } finally { sqlite.close(); }
+  });
+
+  test("get_thread admits provider metadata with many labels but rejects raw metadata overflow", async () => {
+    const { app, db, sqlite } = createFixture();
+    try {
+      const labelList = Array.from({ length: 24 }, (_, i) => ({ id: `many-${i}`, name: `Label ${i}`, type: "user" as const }));
+      await persistGmailMessages(db, { accountId: "account_a", accountEmail: "a@example.com", labelList,
+        gmailMessages: [{ id: "wide", threadId: "wide", snippet: "A normal preview", labelIds: labelList.map(label => label.id),
+          payload: { headers: [{ name: "Subject", value: "s".repeat(128 * 1024) }, { name: "From", value: "sender@example.com" }] } }],
+        now: new Date(), propagationTrigger: "sync", propagationOptions: { enabled: false } });
+      const args = { accountId: "account_a", threadId: "gmail:account_a:wide" };
+      const call = async (token?: string) => rpcBody(await callMcp(app, token ?? await signToken(), "tools/call", { name: "get_thread", arguments: args }));
+      const result = await call();
+      assert.ok(!result.result.isError, JSON.stringify(result));
+      assert.equal(result.result.structuredContent.messages.length, 1);
+      assert.equal((await call(await signToken({ accountIds: ["account_b"] }))).result.isError, true);
+      db.update(emails).set({ snippet: "x".repeat(threadDetailLimits.metadataBytes + 1) }).where(eq(emails.id, "gmail:account_a:wide")).run();
+      const oversized = await call();
+      assert.equal(oversized.result.isError, true);
+      assert.equal(JSON.parse(oversized.result.content[0].text).error.code, "payload_limit");
+    } finally { sqlite.close(); }
+  });
+
   test("get_thread preserves multiple messages with label and attachment fan-out", async () => {
     const { app, db, sqlite } = createFixture();
     try {
@@ -615,7 +708,7 @@ describe("Orca scoped MCP server", () => {
       const body = await rpcBody(tools);
       assert.ok(body.result, JSON.stringify(body));
       assert.deepEqual(body.result.tools.map((tool: { name: string }) => tool.name), [
-        "describe_organization", "query_organization", "simulate_organization", "apply_organization", "revert_organization", "search_mail", "get_thread", "list_agent_events", "get_connection_status",
+        "describe_organization", "query_organization", "simulate_organization", "apply_organization", "revert_organization", "search_mail", "get_thread", "get_thread_page", "list_agent_events", "get_connection_status",
       ]);
       const toolNames = body.result.tools.map((tool: { name: string }) => tool.name);
       assert.deepEqual(toolNames.filter((name: string) => name.endsWith("_organization")), [
@@ -715,6 +808,20 @@ describe("Orca scoped MCP server", () => {
       assert.equal(JSON.parse(body.result.content[0].text).error.code, "account_denied");
       assert.equal(body.result.structuredContent, undefined);
     }
+  });
+
+  test("fails closed when a thread page data source returns another scope", async () => {
+    const handler = createProjectionTestHandler(organizationDescribeFixture, organizationQueryFixture, undefined, {
+      accountId: "account_b", threadId: "thread_b", page: { entries: [], earlier: null, newer: null },
+    });
+    const response = await handler.fetch(new Request(resource, {
+      method: "POST", headers: { accept: "application/json, text/event-stream", "content-type": "application/json", authorization: `Bearer ${await signToken()}`, host: new URL(resource).host },
+      body: rpc("tools/call", { name: "get_thread_page", arguments: { accountId: "account_a", threadId: "thread_a_1" } }),
+    }));
+    const body = await rpcBody(response);
+    assert.equal(body.result.isError, true);
+    assert.equal(JSON.parse(body.result.content[0].text).error.code, "account_denied");
+    assert.equal(body.result.structuredContent, undefined);
   });
 
   test("keeps every tool and source link inside the live user/account intersection", async () => {

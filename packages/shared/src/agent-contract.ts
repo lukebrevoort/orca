@@ -331,6 +331,7 @@ export const orcaMcpToolNameSchema = z.enum([
   "revert_organization",
   "search_mail",
   "get_thread",
+  "get_thread_page",
   "list_agent_events",
   "get_connection_status",
 ]);
@@ -381,6 +382,13 @@ export const orcaMcpTools = Object.freeze([
   },
   {
     name: "get_thread",
+    action: "mail.read",
+    exposure: "mail_content",
+    requiredScopes: ["orca:mail.content:read"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "get_thread_page",
     action: "mail.read",
     exposure: "mail_content",
     requiredScopes: ["orca:mail.content:read"],

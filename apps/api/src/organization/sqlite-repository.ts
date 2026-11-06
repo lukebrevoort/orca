@@ -1,5 +1,5 @@
 import { loadAttentionRouting } from "../attention/routing.ts";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import {
   attentionBehaviorSchema,
   humanClassificationAssessmentSchema,
@@ -194,31 +194,46 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
           ))
           .orderBy(desc(threads.latestReceivedAt), asc(threads.id))
           .all();
-        const messageRows = db.select({
-          id: emails.id,
-          accountId: emails.accountId,
-          threadId: emails.threadId,
-          sourceId: emails.providerMessageId,
-          fromName: emails.fromName,
-          fromAddress: emails.fromAddress,
-          subject: emails.subject,
-          snippet: emails.snippet,
-          receivedAt: emails.receivedAt,
-          isRead: emails.isRead,
-          humanSignal: emails.humanSignal,
-          humanClassification: emails.humanClassification,
-          humanClassificationReasons: emails.humanClassificationReasons,
-          humanClassifierVersion: emails.humanClassifierVersion,
-          labelName: labels.name,
-        }).from(emails)
-          .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
-          .leftJoin(labels, eq(labels.id, emailLabels.labelId))
-          .where(and(
-            eq(emails.accountId, accountId),
-            ...(filter?.threadId ? [eq(emails.threadId, filter.threadId)] : []),
-          ))
-          .orderBy(desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id), asc(labels.name))
-          .all();
+        // Materialize wide metadata once per message, never once per label.
+        // Keep both reads in one snapshot for direct and snapshot callers.
+        const { messageRows, labelRows } = db.transaction(() => {
+          const scope = and(eq(emails.accountId, accountId),
+            ...(filter?.threadId ? [eq(emails.threadId, filter.threadId)] : []));
+          const messageRows = db.select({
+            rowId: sql<string>`cast(${emails}.rowid as text)`,
+            id: emails.id,
+            accountId: emails.accountId,
+            threadId: emails.threadId,
+            sourceId: emails.providerMessageId,
+            fromName: emails.fromName,
+            fromAddress: emails.fromAddress,
+            subject: emails.subject,
+            snippet: emails.snippet,
+            receivedAt: emails.receivedAt,
+            isRead: emails.isRead,
+            humanSignal: emails.humanSignal,
+            humanClassification: emails.humanClassification,
+            humanClassificationReasons: emails.humanClassificationReasons,
+            humanClassifierVersion: emails.humanClassifierVersion,
+          }).from(emails)
+            .where(scope)
+            .orderBy(desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id))
+            .all();
+          // A bounded decimal anchor avoids repeating a large provider ID and
+          // preserves SQLite row IDs beyond JavaScript's safe integer range.
+          const labelRows = db.select({ rowId: sql<string>`cast(${emails}.rowid as text)`, name: labels.name })
+            .from(emailLabels).innerJoin(emails, eq(emails.id, emailLabels.emailId))
+            .innerJoin(labels, eq(labels.id, emailLabels.labelId))
+            .where(scope).orderBy(asc(labels.name)).all();
+          return { messageRows, labelRows };
+        }, { behavior: "deferred" });
+        const labelsByRow = new Map<string, Set<string>>();
+        for (const row of labelRows) {
+          if (!row.name) continue;
+          const names = labelsByRow.get(row.rowId) ?? new Set<string>();
+          names.add(row.name);
+          labelsByRow.set(row.rowId, names);
+        }
         const overrideRecords = db.select().from(humanClassificationOverrides)
           .where(eq(humanClassificationOverrides.accountId, accountId)).all();
         const overrides = new Map(overrideRecords.map((record) => [overrideKey(record.targetType, record.targetValue), record]));
@@ -251,11 +266,6 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         const threadIdByMessageId = new Map<string, string>();
         for (const row of messageRows) {
           threadIdByMessageId.set(row.id, row.threadId);
-          const current = messagesById.get(row.id);
-          if (current) {
-            if (row.labelName && !current.labels.includes(row.labelName)) current.labels.push(row.labelName);
-            continue;
-          }
           const humanClassification = resolveClassification(row, overrides);
           messagesById.set(row.id, {
             id: row.id,
@@ -265,7 +275,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
             snippet: row.snippet ?? "",
             receivedAt: (row.receivedAt ?? new Date(0)).toISOString(),
             unread: !row.isRead,
-            labels: row.labelName ? [row.labelName] : [],
+            labels: [...(labelsByRow.get(row.rowId) ?? [])],
             humanSignal: humanClassification.effective.score,
             humanClassification,
           });

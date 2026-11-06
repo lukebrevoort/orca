@@ -65,6 +65,11 @@ extension APIClient {
         return try await request("v1/inbox", query: q)
     }
     func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)], headers: ["x-orca-image-version": "2"]) }
+    func threadPage(_ id: String, accountId: String, cursor: String?) async throws -> ThreadReadPage {
+        var query = [URLQueryItem(name: "accountId", value: accountId)]
+        if let cursor { query.append(.init(name: "cursor", value: cursor)) }
+        return try await request("v1/threads/\(id)/messages", query: query)
+    }
     func markRead(_ id: String, accountId: String, isRead: Bool = true) async throws { struct Ack: Decodable { var ok: Bool }; let _: Ack = try await request("v1/threads/\(id)/read", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: ["isRead": isRead]) }
     // Sent rows supply delivery reconciliation metadata only; use draft(_:accountId:)
     // when full content is needed. Unresolved rows retain their complete writing.
