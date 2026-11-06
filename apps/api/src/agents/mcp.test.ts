@@ -472,6 +472,27 @@ describe("Orca scoped MCP server", () => {
     } finally { sqlite.close(); }
   });
 
+  test("get_thread admits provider metadata with many labels but rejects raw metadata overflow", async () => {
+    const { app, db, sqlite } = createFixture();
+    try {
+      const labelList = Array.from({ length: 24 }, (_, i) => ({ id: `many-${i}`, name: `Label ${i}`, type: "user" as const }));
+      await persistGmailMessages(db, { accountId: "account_a", accountEmail: "a@example.com", labelList,
+        gmailMessages: [{ id: "wide", threadId: "wide", snippet: "A normal preview", labelIds: labelList.map(label => label.id),
+          payload: { headers: [{ name: "Subject", value: "s".repeat(128 * 1024) }, { name: "From", value: "sender@example.com" }] } }],
+        now: new Date(), propagationTrigger: "sync", propagationOptions: { enabled: false } });
+      const args = { accountId: "account_a", threadId: "gmail:account_a:wide" };
+      const call = async (token?: string) => rpcBody(await callMcp(app, token ?? await signToken(), "tools/call", { name: "get_thread", arguments: args }));
+      const result = await call();
+      assert.ok(!result.result.isError, JSON.stringify(result));
+      assert.equal(result.result.structuredContent.messages.length, 1);
+      assert.equal((await call(await signToken({ accountIds: ["account_b"] }))).result.isError, true);
+      db.update(emails).set({ snippet: "x".repeat(threadDetailLimits.metadataBytes + 1) }).where(eq(emails.id, "gmail:account_a:wide")).run();
+      const oversized = await call();
+      assert.equal(oversized.result.isError, true);
+      assert.equal(JSON.parse(oversized.result.content[0].text).error.code, "payload_limit");
+    } finally { sqlite.close(); }
+  });
+
   test("get_thread preserves multiple messages with label and attachment fan-out", async () => {
     const { app, db, sqlite } = createFixture();
     try {
