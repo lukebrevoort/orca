@@ -25,3 +25,8 @@ test('aborting an idle NDJSON reader cancels it without awaiting another network
  const pending=readImageStream(new Response(new ReadableStream({cancel(){cancelled=true;}})),revision,controller.signal,()=>{});
  controller.abort();await expect(pending).rejects.toThrow();expect(cancelled).toBe(true);
 });
+
+test('NDJSON accepts bounded server-escaped long alt text without lowering image limits',async()=>{
+ const long=slot();long.slot.html=long.slot.html.replace('Fixture 0','&quot;'.repeat(600000));
+ const events:unknown[]=[];await readImageStream(response([start,long,complete],1024*1024),revision,new AbortController().signal,event=>events.push(event));expect(events).toHaveLength(3);
+});

@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-const [connectionFile,directory,sha]=process.argv.slice(2);
+const [connectionFile,directory,sha,baselineConnection]=process.argv.slice(2);
 assert(/^[a-f0-9]{40}$/.test(sha??''));
 assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
 assert.equal(execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),'');
@@ -16,6 +16,20 @@ assert.deepEqual(Object.keys(proof.files).sort(),(await walk('apps/web/dist')).s
 for(const [path,hash] of Object.entries(proof.files))assert.equal(createHash('sha256').update(await readFile(path)).digest('hex'),hash);
 const fixture=JSON.parse(await readFile(connectionFile,'utf8')), origin=new URL(fixture.url);
 assert.equal(origin.protocol,'http:');assert.equal(origin.hostname,'127.0.0.1');
+const phases=[{phase:'candidate',origin,sha}];
+if(baselineConnection){
+ const baselineRoot=process.env.ORCA_IMAGE_BASELINE_ROOT;
+ assert(baselineRoot,'Baseline checkout is required');
+ const baselineProof=JSON.parse(await readFile(process.env.ORCA_IMAGE_BASELINE_PROOF,'utf8'));
+ assert.equal(execFileSync('git',['-C',baselineRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),baselineProof.commit);
+ assert.equal(execFileSync('git',['-C',baselineRoot,'status','--porcelain'],{encoding:'utf8'}).trim(),'');
+ const baselineFiles=(await walk(join(baselineRoot,'apps/web/dist'))).map(path=>path.slice(baselineRoot.length+1));
+ assert.deepEqual(Object.keys(baselineProof.files).sort(),baselineFiles.sort());
+ for(const [path,hash] of Object.entries(baselineProof.files))assert.equal(createHash('sha256').update(await readFile(join(baselineRoot,path))).digest('hex'),hash);
+ const baseline=JSON.parse(await readFile(baselineConnection,'utf8')),baselineOrigin=new URL(baseline.url);
+ assert.equal(baselineOrigin.protocol,'http:');assert.equal(baselineOrigin.hostname,'127.0.0.1');
+ phases.unshift({phase:'baseline',origin:baselineOrigin,sha:baselineProof.commit});
+}
 const output=resolve(directory);await mkdir(output,{recursive:false});
 const mod=process.env.ORCA_PLAYWRIGHT_MODULE;
 const {chromium}=await import(mod?.startsWith('/')?pathToFileURL(mod).href:mod??'playwright');
@@ -23,7 +37,8 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.OR
 const measurements=[],errors=[];let blocked=0;
 const scenarioNames=['small','many','slowFirst','slowLastFailure'];
 try {
- for(const scenario of scenarioNames){for(let run=0;run<3;run++){
+ for(const scenario of scenarioNames){for(let run=0;run<3;run++){for(const selected of (run%2?[...phases].reverse():phases)){
+  const {origin,phase,sha:applicationSha}=selected;
   const context=await browser.newContext({viewport:{width:1280,height:1000},serviceWorkers:'block',...(run===0?{recordVideo:{dir:output,size:{width:1280,height:1000}}}:{})});
   await context.route('**/*',route=>{if(new URL(route.request().url()).origin===origin.origin)return route.continue();blocked++;return route.abort();});
   await context.addInitScript(()=>{
@@ -34,9 +49,9 @@ try {
   });
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   const ledger=async()=>{const response=await context.request.get(new URL('/__fixture/image-timings',origin).href);assert.equal(response.status(),200);return response.json();};
-  let requestStart=null,headersAt=null,responseFinished=null;
+  let requestStart=null,headersAt=null,responseFinished=null,imageResponse=null;
   page.on('request',request=>{if(request.url().includes('/images/v2?'))requestStart=performance.now();});
-  page.on('response',response=>{if(response.url().includes('/images/v2?'))headersAt=performance.now();});
+  page.on('response',response=>{if(response.url().includes('/images/v2?')){headersAt=performance.now();imageResponse=response;}});
   page.on('requestfinished',request=>{if(request.url().includes('/images/v2?'))responseFinished=performance.now();});
   try {
    await page.goto(new URL('/__fixture/login',origin).href);
@@ -50,17 +65,21 @@ try {
    await page.waitForFunction(()=>{const statuses=[...document.querySelectorAll('[role="status"]')];return statuses.some(n=>/images? loaded\./.test(n.textContent??'')&&!/Loading remaining/.test(n.textContent??''));});
    await page.waitForFunction(()=>window.__imageMeasure.first!==null);
    const client=await page.evaluate(()=>({firstVisibleMs:window.__imageMeasure.first-window.__imageMeasure.clicked,settledMs:performance.now()-window.__imageMeasure.clicked}));
+   assert(imageResponse,'Image response not observed');
+   assert.equal(await imageResponse.finished(),null,'Image HTTP response must finish normally');
+   const timing=imageResponse.request().timing();
+   if(responseFinished===null)responseFinished=performance.now();
    const server=await ledger();assert.equal(server.active,0);
    const starts=server.events.map(e=>e.start),ends=server.events.map(e=>e.end);
    const success=server.events.filter(e=>!e.failed);
    const expected=scenario==='many'?12:scenario==='small'?2:scenario==='slowLastFailure'?3:4;
    assert.equal(await page.locator('.reader-body-html img').count(),expected);
-   measurements.push({scenario,run,...client,requestToHeadersMs:headersAt-requestStart,requestToResponseEndMs:responseFinished-requestStart,serverWindowMs:Math.max(...ends)-Math.min(...starts),serverFirstSuccessMs:Math.min(...success.map(e=>e.end))-Math.min(...starts),maxActive:server.maxActive,attempted:server.events.length,loaded:success.length});
-   if(run===0){await page.screenshot({path:join(output,`${scenario}.png`),fullPage:true});await page.waitForTimeout(500);}
+   measurements.push({phase,applicationSha,scenario,run,...client,requestToHeadersMs:timing.responseStart>=0?timing.responseStart:headersAt-requestStart,requestToResponseEndMs:timing.responseEnd>=0?timing.responseEnd:responseFinished-requestStart,networkTiming:timing.responseEnd>=0?'Chromium request timing':'Playwright observed completion',serverWindowMs:Math.max(...ends)-Math.min(...starts),serverFirstSuccessMs:Math.min(...success.map(e=>e.end))-Math.min(...starts),maxActive:server.maxActive,attempted:server.events.length,loaded:success.length});
+   if(run===0){await page.screenshot({path:join(output,`${phase}-${scenario}.png`),fullPage:true});await page.waitForTimeout(500);}
    const video=page.video();await page.close();if(video)measurements.at(-1).videoPath=await video.path();
   }finally{await context.close();}
- }}
+ }}}
  assert.deepEqual(errors,[]);
- await writeFile(join(output,'measurements.json'),JSON.stringify({sha,syntheticOnly:true,scope:'Actual built app and loopback API/SQLite/auth; injected synthetic image bytes and delays; no remote sender/DNS network',delayMs:{small:[150,150],many:Array(12).fill(150),slowFirst:[2500,150,150,150],slowLastFailure:[150,150,150,2500]},samplesPerScenario:3,browser:browser.version(),blockedExternalRequests:blocked,measurements},null,2));
+ await writeFile(join(output,'measurements.json'),JSON.stringify({sha,syntheticOnly:true,scope:'Actual built app and loopback API/SQLite/auth; injected synthetic image bytes and delays; no remote sender/DNS network',delayMs:{small:[150,150],many:Array(12).fill(150),slowFirst:[2500,150,150,150],slowLastFailure:[150,150,150,2500]},samplesPerScenario:3,order:'baseline/candidate, candidate/baseline, baseline/candidate per scenario',browser:browser.version(),blockedExternalRequests:blocked,measurements},null,2));
  console.log(JSON.stringify({status:'pass',sha,measurements}));
 }finally{await browser.close();}

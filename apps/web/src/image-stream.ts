@@ -5,7 +5,8 @@ export type ImageStreamEvent = {type:'start';sourceRevision:string;bodyHtml:stri
 export class ImageStreamRevisionError extends Error {}
 const integer=(value:unknown,max:number):value is number=>Number.isSafeInteger(value)&&Number(value)>=0&&Number(value)<=max;
 const reasonNames=['ineligible','requestLimit','stopped','byteBudget','downloadFailed','invalidRaster'] as const;
-/** Bounded, ordered NDJSON; a truncated response is never a completed image load. */
+/** Allow source escaping (up to 6x 2MiB) plus base64 (up to 4/3 x 8MiB),
+ * including one template and one copy of each slot. Bounded, ordered NDJSON; a truncated response is never a completed image load. */
 export async function readImageStream(response:Response,revision:string,signal:AbortSignal,onEvent:(event:ImageStreamEvent)=>void) {
  if(!response.body)throw new Error('Missing image stream');
  const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
@@ -25,10 +26,10 @@ export async function readImageStream(response:Response,revision:string,signal:A
   if(!started)throw new Error('Missing image template');
   if(value.type==='image'){
    const slot=value.slot as ImageSlot|undefined;
-   if(!slot||!integer(slot.index,9999)||indices.has(slot.index)||!integer(slot.bytes,2*1024*1024-1)||slot.bytes===0||typeof slot.html!=='string'||slot.html.length>3*1024*1024||++slots>12)throw new Error('Invalid image slot');
-   const match=/^<img alt="(?:[^"&<>]|&(?:amp|lt|gt|quot|#39);)*" src="data:image\/(?:png|jpeg);base64,([A-Za-z0-9+/]+={0,2})" style="max-width:100%;height:auto">$/.exec(slot.html);
+   if(!slot||!integer(slot.index,9999)||indices.has(slot.index)||!integer(slot.bytes,2*1024*1024-1)||slot.bytes===0||typeof slot.html!=='string'||slot.html.length>16*1024*1024||++slots>12)throw new Error('Invalid image slot');
+   const match=/^<img alt="([^"]*)" src="data:image\/(?:png|jpeg);base64,([A-Za-z0-9+/]+={0,2})" style="max-width:100%;height:auto">$/.exec(slot.html);
    slotBytes+=slot.bytes;
-   if(!match||match[1].length!==Math.ceil(slot.bytes/3)*4||slotBytes>8*1024*1024)throw new Error('Invalid image data');
+   if(!match||/[<>]/.test(match[1])||match[1].replace(/&(?:amp|lt|gt|quot|#39);/g,'').includes('&')||match[2].length!==Math.ceil(slot.bytes/3)*4||slotBytes>8*1024*1024)throw new Error('Invalid image data');
    indices.add(slot.index);onEvent(value as ImageStreamEvent);return;
   }
   if(value.type==='complete'){
@@ -43,7 +44,7 @@ export async function readImageStream(response:Response,revision:string,signal:A
    if(signal.aborted)throw new Error('Image request cancelled');
    const {value,done}=await reader.read();
    if(done){buffered+=decoder.decode();if(buffered)consume(buffered);break;}
-   received+=value.byteLength;if(received>32*1024*1024)throw new Error('Image stream too large');
+   received+=value.byteLength;if(received>40*1024*1024)throw new Error('Image stream too large');
    buffered+=decoder.decode(value,{stream:true});
    let end:number;while((end=buffered.indexOf('\n'))>=0){const line=buffered.slice(0,end);buffered=buffered.slice(end+1);if(line.length>16*1024*1024)throw new Error('Image event too large');consume(line);}
    if(buffered.length>16*1024*1024)throw new Error('Image event too large');
