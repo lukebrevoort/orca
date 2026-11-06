@@ -267,5 +267,5 @@ test('streaming v2 retains auth guards and the message lock until consumer cance
 test('failed legacy images preserve original blocked-note presentation, including absent and linked alt',async()=>{
  const html='<p>Body</p><img src="https://images.example.org/empty.png"><a href="https://example.org"><img src="https://images.example.org/linked.png"></a><img alt="  A &quot;quote&quot; résumé 😀 &apos;  " src="https://images.example.org/alt.png">';
  const result=await renderRequestedImages(html,async()=>{throw new ImageFetchError('dns');},undefined,[],[],undefined,'legacy');
- expect(result.bodyHtml).toBe(sanitizeInboundHtml(html));expect(result.sourceHash).toBe(imageSourceHash(html));
+ expect(result.bodyHtml).toBe(sanitizeInboundHtml(html)??"");expect(result.sourceHash).toBe(imageSourceHash(html));
 });
