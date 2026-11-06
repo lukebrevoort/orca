@@ -2014,11 +2014,46 @@ describe("Desktop evidence and navigation", () => {
       await act(async () => { body.textContent = "My ongoing writing"; body.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true })); });
       const toInput = browserWindow.document.querySelector(".compose-recipient-row input") as unknown as HTMLInputElement;
       await enterInput(toInput, "pending@example.com");
+      const fileInput = browserWindow.document.querySelector('.compose-workspace input[type="file"]') as unknown as HTMLInputElement;
+      const file = new browserWindow.File(["synthetic attachment bytes"], "race-evidence.txt", { type: "text/plain" });
+      const transfer = new browserWindow.DataTransfer();
+      transfer.items.add(file);
+      await act(async () => { fileInput.files = transfer.files as unknown as FileList; fileInput.dispatchEvent(new browserWindow.Event("change", { bubbles: true }) as unknown as Event); });
+      expect(browserWindow.document.querySelector('[aria-label="1 attachment"]')?.textContent).toContain("race-evidence.txt");
       expect(body.textContent).toBe("My ongoing writing");
       await act(async () => { finish!(jsonResponse(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
       expect(new URL(browserWindow.location.href).searchParams.get("draft")).toBeNull();
       expect(browserWindow.document.querySelector('[aria-label="Message body"]')?.textContent).toBe("My ongoing writing");
       expect((browserWindow.document.querySelector(".compose-recipient-row input") as unknown as HTMLInputElement).value).toBe("pending@example.com");
+      expect(browserWindow.document.querySelector('[aria-label="1 attachment"]')?.textContent).toContain("race-evidence.txt");
+      expect(browserWindow.document.querySelector('[aria-label="Remove race-evidence.txt"]')).not.toBeNull();
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
+  test("pointer down on Compose cancels a pending Summary draft before the click", async () => {
+    const originalFetch = globalThis.fetch;
+    const draft = { ...createTestMessageDraft("summary-draft", "Old summary draft"), accountId: accountFixture.id };
+    const fallback = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    let finish: ((response: Response) => void) | undefined;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/drafts") return jsonResponse([draft]);
+      if (url.pathname === "/v1/drafts/summary-draft") return new Promise<Response>(resolve => { finish = resolve; });
+      return fallback(input, init);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && ![...desktopWorkspace().querySelectorAll("button")].some(item => item.textContent === "Open draft"); i++) await waitFor(0);
+      const open = [...desktopWorkspace().querySelectorAll("button")].find(item => item.textContent === "Open draft")!;
+      await act(async () => { open.click(); await Promise.resolve(); });
+      expect(finish).toBeDefined();
+      const compose = browserWindow.document.querySelector('button[aria-label="Compose"]') as unknown as HTMLButtonElement;
+      await act(async () => { compose.dispatchEvent(new browserWindow.Event("pointerdown", { bubbles: true }) as unknown as Event); finish!(jsonResponse(draft)); await new Promise(resolve => setTimeout(resolve, 0)); });
+      expect(new URL(browserWindow.location.href).searchParams.get("draft")).toBeNull();
+      await act(async () => { compose.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+      expect(Boolean(browserWindow.document.querySelector('.compose-workspace'))).toBe(true);
+      expect(new URL(browserWindow.location.href).searchParams.get("draft")).toBeNull();
     } finally { globalThis.fetch = originalFetch; }
   });
 

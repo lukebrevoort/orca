@@ -66,6 +66,7 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
     const controller = new AbortController();
     draftOpenController.current = controller;
     const removeInterruptionListeners = () => {
+      window.removeEventListener("pointerdown", interrupt, true);
       window.removeEventListener("click", interrupt, true);
       window.removeEventListener("keydown", interrupt, true);
       window.removeEventListener("popstate", interrupt, true);
@@ -79,6 +80,7 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
     cancelDraftOpen.current = cancel;
     // The initiating click has already passed window capture. Any later action
     // belongs to a newer user intent, even if that surface is closed again.
+    window.addEventListener("pointerdown", interrupt, true);
     window.addEventListener("click", interrupt, true);
     window.addEventListener("keydown", interrupt, true);
     window.addEventListener("popstate", interrupt, true);
