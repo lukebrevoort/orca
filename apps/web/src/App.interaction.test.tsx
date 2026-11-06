@@ -2014,6 +2014,30 @@ describe("Desktop evidence and navigation", () => {
     } finally { globalThis.fetch = originalFetch; }
   });
 
+  test("Summary opens a possible follow-up and returns to its source button", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = inboxFixture[0]!;
+    const fallback = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message] });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/summary/waiting") return jsonResponse({ accountId: message.accountId, waitingOn: [{ source: { messageId: message.id, threadId: message.threadId }, title: "Synthetic follow-up", days: 4 }] });
+      return fallback(input, init);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/?destination=summary");
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let i = 0; i < 10 && !desktopWorkspace().querySelector('[aria-label="Open conversation: Synthetic follow-up"]'); i++) await waitFor(0);
+      const open = desktopWorkspace().querySelector('[aria-label="Open conversation: Synthetic follow-up"]') as unknown as HTMLButtonElement;
+      expect(open).not.toBeNull(); open.focus();
+      await act(async () => { open.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+      for (let i = 0; i < 10 && !browserWindow.document.querySelector("article.message-reader"); i++) await waitFor(0);
+      expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBe(message.threadId);
+      await act(async () => { (browserWindow.document.querySelector(".reader-back") as unknown as HTMLButtonElement).click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+      await act(async () => { for (let i = 0; i < 5 && frameCallbacks.size; i++) flushAnimationFrames(); });
+      expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(open);
+    } finally { globalThis.fetch = originalFetch; }
+  });
+
   test("live Summary opens source mail repeatedly and restores scroll and focus", async () => {
     const originalFetch = globalThis.fetch;
     const message = inboxFixture[0]!;

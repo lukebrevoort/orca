@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { inboxClassificationResponseSchema, messageDraftSchema, type InboxMessage, type MessageDraft } from "@orca/shared";
+import { inboxClassificationResponseSchema, messageDraftSchema, waitingSummarySchema, type InboxMessage, type MessageDraft } from "@orca/shared";
 import { createFixtures } from "./summary-demo/fixtures";
 import { canApprove, categories, countdown, countdownTone, counts, isExpired, notificationLines, pluralize, transition, type AccountId, type Action, type Code, type Reply } from "./summary-demo/model";
 import { clipboardFeedback } from "./summary-demo/clipboard-feedback";
@@ -7,7 +7,7 @@ import "./summary-page.css";
 
 const systemNow = () => Date.now();
 const sectionIds = ["needs", "drafted", "waiting", "codes"];
-type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; onOpenDraft?: (draft: MessageDraft, origin: HTMLButtonElement) => void; };
+type SummaryPageProps = { demoMode?: boolean; now?: () => number; accountId?: string; accountEmail?: string; onOpenDrafts?: () => void; onOpenInbox?: () => void; onOpenMessage?: (message: InboxMessage, origin: HTMLButtonElement) => void; onOpenDraft?: (draft: MessageDraft, origin: HTMLButtonElement) => void; onOpenWaiting?: (source: { messageId: string; threadId: string }, origin: HTMLButtonElement) => void; };
 type Load<T> = { accountId: string; status: "loading" | "ready" | "error"; items: T[] };
 
 export function SummaryPage(props: SummaryPageProps) {
@@ -15,7 +15,7 @@ export function SummaryPage(props: SummaryPageProps) {
   return <LiveSummary {...props} />;
 }
 
-function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage, onOpenDraft }: SummaryPageProps) {
+function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpenMessage, onOpenDraft, onOpenWaiting }: SummaryPageProps) {
   const [retry, setRetry] = useState(0);
   const [openingDraft, setOpeningDraft] = useState<string | null>(null);
   const [draftOpenError, setDraftOpenError] = useState<string | null>(null);
@@ -25,6 +25,7 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
   const [drafts, setDrafts] = useState<Load<MessageDraft> | null>(null);
   const [focus, setFocus] = useState<Load<InboxMessage> | null>(null);
   const [quiet, setQuiet] = useState<Load<InboxMessage> | null>(null);
+  const [waiting, setWaiting] = useState<Load<ReturnType<typeof waitingSummarySchema.parse>["waitingOn"][number]> | null>(null);
   useEffect(() => {
     if (!accountId) return;
     const controller = new AbortController();
@@ -33,12 +34,18 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
     setDrafts({ accountId, status: "loading", items: [] });
     setFocus({ accountId, status: "loading", items: [] });
     setQuiet({ accountId, status: "loading", items: [] });
+    setWaiting({ accountId, status: "loading", items: [] });
     const read = async (url: string) => {
       const response = await fetch(url, { credentials: "include", signal: controller.signal });
       if (!response.ok) throw new Error("Request failed");
       return response.json();
     };
     const params = new URLSearchParams({ classification: "human", limit: "5", accountId });
+    void read(`/v1/summary/waiting?${new URLSearchParams({ accountId })}`).then(value => {
+      const result = waitingSummarySchema.parse(value);
+      if (result.accountId !== accountId) throw new Error("Wrong account");
+      if (!controller.signal.aborted) setWaiting({ accountId, status: "ready", items: result.waitingOn });
+    }).catch(() => { if (!controller.signal.aborted) setWaiting({ accountId, status: "error", items: [] }); });
     void read(`/v1/inbox?${params}`).then(value => {
       const page = inboxClassificationResponseSchema.parse(value);
       if (!controller.signal.aborted) setMail({ accountId, status: "ready", items: page.messages.filter(item => item.accountId === accountId) });
@@ -59,6 +66,7 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
   }, [accountId, retry]);
   const currentMail = mail?.accountId === accountId ? mail : null;
   const currentDrafts = drafts?.accountId === accountId ? drafts : null;
+  const currentWaiting = waiting?.accountId === accountId ? waiting : null;
   async function openDraft(id: string, origin: HTMLButtonElement) {
     if (!accountId || draftOpenController.current) return;
     const controller = new AbortController();
@@ -105,7 +113,11 @@ function LiveSummary({ accountId, accountEmail, onOpenDrafts, onOpenInbox, onOpe
     </section>
     {attentionSection("Focus", focus)}
     {attentionSection("Quiet", quiet)}
-    <section aria-labelledby="summary-more"><h2 id="summary-more">More in Summary</h2><p>Waiting and codes are not available here yet.</p></section>
+    <section aria-labelledby="summary-waiting"><h2 id="summary-waiting">Possible follow-ups</h2>
+      <p>Estimates from up to 500 messages in the last 14 days: the latest message appears to be from your address and is over three days old. This does not establish that a reply is expected.</p>
+      {!currentWaiting || currentWaiting.status === "loading" ? <p role="status">Loading possible follow-ups…</p> : currentWaiting.status === "error" ? <><p role="alert">Possible follow-ups could not be loaded.</p>{retryButton}</> : currentWaiting.items.length ? currentWaiting.items.map(item => <article className="summary-card" key={item.source.threadId}><h3>{item.title || "(no subject)"}</h3><p>Last observed {item.days} days ago</p><button type="button" aria-label={`Open conversation: ${item.title || "no subject"}`} onClick={event => onOpenWaiting?.(item.source, event.currentTarget)}>Open conversation</button></article>) : <p>No possible follow-ups found in this window.</p>}
+    </section>
+    <section aria-labelledby="summary-more"><h2 id="summary-more">More in Summary</h2><p>Codes are not available here yet.</p></section>
   </section>;
 }
 

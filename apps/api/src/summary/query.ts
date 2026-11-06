@@ -4,6 +4,23 @@ import { agentEvents, emails, oauthAccounts, threadReminders, threads } from "..
 import { summaryMessageLimit, summaryWindowMs, type SummaryInput } from "./rules.ts";
 
 type Db = ReturnType<typeof createDatabaseClient>["db"];
+/** A bounded source-only read for the waiting estimate; no message bodies or unrelated events. */
+export function queryWaitingSummary(db: Db, userId: string, accountId: string, now: Date): SummaryInput {
+  if (!Number.isFinite(now.getTime())) throw new RangeError("Invalid summary time");
+  return db.transaction(tx => {
+    const account = tx.select({ id: oauthAccounts.id, userId: oauthAccounts.userId, providerEmail: oauthAccounts.providerEmail }).from(oauthAccounts)
+      .where(and(eq(oauthAccounts.id, accountId), eq(oauthAccounts.userId, userId))).get();
+    if (!account) throw new Error("Mail account was not found");
+    const messages = tx.select({ id: emails.id, accountId: emails.accountId, threadId: emails.threadId, fromAddress: emails.fromAddress,
+      toRecipients: emails.toRecipients, subject: sql<string | null>`substr(${emails.subject}, 1, 300)`, snippet: sql<string | null>`substr(${emails.snippet}, 1, 500)`,
+      bodyText: sql<null>`null`, receivedAt: emails.receivedAt, isRead: emails.isRead, humanSignal: emails.humanSignal,
+      humanClassification: emails.humanClassification, humanClassificationReasons: emails.humanClassificationReasons,
+    }).from(emails).innerJoin(threads, and(eq(threads.id, emails.threadId), eq(threads.accountId, accountId)))
+      .where(and(eq(emails.accountId, accountId), eq(emails.isDraft, false), gte(emails.receivedAt, new Date(now.getTime() - summaryWindowMs)), lte(emails.receivedAt, now)))
+      .orderBy(desc(emails.receivedAt), desc(emails.id)).limit(summaryMessageLimit).all();
+    return { userId, account, messages, events: [], reminders: [] };
+  }, { behavior: "deferred" });
+}
 /** Read a single owned account in a consistent snapshot. Message text fields are truncated in
  * SQL, before materialization. All windows and auxiliary lists are bounded. */
 export function querySummary(db: Db, userId: string, accountId: string, now: Date): SummaryInput {

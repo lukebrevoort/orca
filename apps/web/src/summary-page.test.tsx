@@ -196,6 +196,7 @@ test("live Summary loads scoped mail and drafts, ignores interrupted account rea
     const url = new URL(String(input), "http://localhost");
     if (url.pathname === "/v1/inbox") requestedViews.push(`${url.searchParams.get("accountId")}:${url.searchParams.get("view") ?? "human"}`);
     if (url.searchParams.get("accountId") === "a") return new Promise<Response>(resolve => pending.push(resolve));
+    if (url.pathname === "/v1/summary/waiting") return Response.json({ accountId: url.searchParams.get("accountId"), waitingOn: [{ source: { messageId: "m-b", threadId: "thread-b" }, title: "Possible reply", days: 4 }] });
     if (url.pathname === "/v1/drafts/draft-b") {
       if (detailFail) return new Response("error", { status: 503 });
       return new Promise<Response>(resolve => { resolveDetail = resolve; });
@@ -208,6 +209,7 @@ test("live Summary loads scoped mail and drafts, ignores interrupted account rea
     expect(text()).toContain("Loading mail");
     await act(async () => { root.render(<SummaryPage accountId="b" accountEmail="b@example.com" onOpenDrafts={() => opened++} onOpenDraft={value => { openedId = value.id; }} />); await new Promise(resolve => setTimeout(resolve, 0)); });
     expect(text()).toContain("Synthetic human mail"); expect(text()).toContain("Synthetic draft"); expect(text()).not.toContain("Other account");
+    expect(text()).toContain("Possible reply"); expect(text()).toContain("does not establish that a reply is expected");
     expect(requestedViews).toContain("b:focus"); expect(requestedViews).toContain("b:quiet");
     await act(async () => { for (const resolve of pending) resolve(Response.json(page)); await new Promise(resolve => setTimeout(resolve, 0)); });
     expect(text()).toContain("b@example.com"); expect(text()).not.toContain("a@example.com");
