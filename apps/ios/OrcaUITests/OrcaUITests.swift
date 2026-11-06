@@ -53,7 +53,18 @@ final class OrcaUITests: XCTestCase {
         // followed immediately by time, excluding older stock photos with a year.
         let photoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
                                                         "PXGGridLayout-Info", "Photo, \(escapedDay), [0-9]{1,2}:.*"))
-        let photoExists = photoQuery.firstMatch.waitForExistence(timeout: 10)
+        // Keep the usual 10-second lookup; extend only the observed system
+        // Loading... state, with a 60-second monotonic wait budget. XCTest
+        // accessibility queries may add overhead beyond the wait budget.
+        let readinessDeadline = ProcessInfo.processInfo.systemUptime + 60
+        var photoExists = photoQuery.firstMatch.waitForExistence(timeout: 10)
+        if !photoExists && app.staticTexts["Loading..."].exists {
+            let remaining = max(0, readinessDeadline - ProcessInfo.processInfo.systemUptime)
+            if remaining > 0 {
+                if feedbackFixtureDiagnosticsAllowed() { print("[feedback picker] loading observed; waiting for fixture photo within 60-second readiness bound") }
+                photoExists = photoQuery.firstMatch.waitForExistence(timeout: remaining)
+            }
+        }
         attachScreenshot(named: "feedback-system-picker-before-selection")
         guard photoExists, photoQuery.count == 1 else {
             logFeedbackPicker(in: app)
