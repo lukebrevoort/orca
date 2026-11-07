@@ -1389,6 +1389,12 @@ export const messageDrafts = sqliteTable(
   }),
 );
 
+/** Marks only principals allocated by the public mail login starter. */
+export const pendingMailLogins = sqliteTable("pending_mail_logins", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  pendingEmail: text("pending_email").notNull(),
+});
+
 export const mailOAuthTransactions = sqliteTable("mail_oauth_transactions", {
   stateHash: text("state_hash").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

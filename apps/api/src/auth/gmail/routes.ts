@@ -16,6 +16,8 @@ import {
 import { createGmailOAuthService, type FetchLike } from "./oauth.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { users } from "../../db/schema.ts";
+import { eq } from "drizzle-orm";
+import { admitPendingMailLogin, mailLoginRetryAfterSeconds } from "../mail-oauth-admission.ts";
 import { buildSessionCookie, getSessionCookieOptions } from "../jwt.ts";
 import { createSession } from "../session-store.ts";
 
@@ -128,17 +130,22 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
 
     const { db, sqlite } = dbFactory();
     try {
-      const userId = `user_${crypto.randomUUID()}`;
-      const pendingEmail = `pending-${crypto.randomUUID()}@orca.invalid`;
-      db.insert(users).values({
-        id: userId,
-        email: pendingEmail,
-      }).run();
-      const session = await createSession(db, userId);
-      c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
-      const returnTo = c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`;
-      const result = service.getAuthorizationUrl(session, returnTo, "connect", null, pendingEmail);
-      return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
+      const pending = admitPendingMailLogin(db);
+      if (!pending) {
+        c.header("Retry-After", String(mailLoginRetryAfterSeconds));
+        return c.json({ error: { code: "login_capacity", message: "Sign-in is busy. Please try again later.", retryable: true } }, 503);
+      }
+      const { userId, pendingEmail } = pending;
+      try {
+        const session = await createSession(db, userId);
+        const returnTo = c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`;
+        const result = service.getAuthorizationUrl(session, returnTo, "connect", null, pendingEmail);
+        c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+        return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
+      } catch (error) {
+        db.delete(users).where(eq(users.id, userId)).run();
+        throw error;
+      }
     } finally {
       sqlite.close();
     }

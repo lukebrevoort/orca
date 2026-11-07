@@ -365,6 +365,13 @@
       "when": 1791648000000,
       "tag": "0051_focus_is_attention",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1791734400000,
+      "tag": "0052_pending_mail_logins",
+      "breakpoints": true
     }
   ]
 }

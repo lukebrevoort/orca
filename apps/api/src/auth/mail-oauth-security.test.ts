@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, mailOAuthTransactions, oauthAccounts, threads, users } from "../db/schema.ts";
+import { emails, mailOAuthTransactions, oauthAccounts, sessions, threads, users } from "../db/schema.ts";
 import { createSession, getSessionFromToken, invalidateSession, renewSession } from "./session-store.ts";
 import { buildSessionCookie } from "./jwt.ts";
 import { createGmailAuthApp } from "./gmail/routes.ts";
@@ -15,6 +15,7 @@ import { DatabaseMailOAuthTransactionStore } from "./mail-oauth-transactions.ts"
 import { completeMailOAuthLogin } from "./mail-oauth-login.ts";
 import type { GmailOAuthConfig } from "./gmail/config.ts";
 import type { OutlookOAuthConfig } from "./outlook/config.ts";
+import { maxPendingMailLogins } from "./mail-oauth-admission.ts";
 import { createMobileSession } from "./mobile/store.ts";
 
 const key = Buffer.alloc(32, 7).toString("base64");
@@ -289,4 +290,48 @@ describe("Gmail returning-login scope reporting", () => {
       } finally { verification.sqlite.close(); }
     });
   }
+});
+
+
+test("shared login admission bounds abandoned allocations and recovers after expiry", async () => {
+  const f = await fixture("gmail");
+  const client = f.dbFactory();
+  try {
+    client.db.transaction((tx) => {
+      for (let i = 0; i < maxPendingMailLogins - 1; i++) {
+        tx.insert(users).values({ id: `filler-${i}`, email: `pending-filler-${i}@orca.invalid` }).run();
+      }
+    });
+    const gmail = createGmailAuthApp({ config: gmailConfig, dbFactory: f.dbFactory });
+    const outlook = createOutlookAuthApp({ config: outlookConfig, dbFactory: f.dbFactory });
+    const concurrent = await Promise.all([gmail.request("/login"), outlook.request("/login")]);
+    expect(concurrent.map(response => response.status).sort()).toEqual([200, 503]);
+    const first = concurrent.find(response => response.status === 200)!;
+    expect(first.status).toBe(200);
+    expect(first.headers.get("set-cookie")).toBeTruthy();
+    const state = await first.json() as { state: string };
+    const counts = () => [client.db.select().from(users).all().length, client.db.select().from(sessions).all().length, client.db.select().from(mailOAuthTransactions).all().length];
+    const before = counts();
+    for (const app of [outlook, gmail]) {
+      const response = await app.request("/login", { headers: { cookie: f.cookie(f.victim.token), "x-forwarded-for": crypto.randomUUID() } });
+      expect(response.status).toBe(503);
+      expect(response.headers.get("retry-after")).toBe("60");
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(await response.json()).toMatchObject({ error: { code: "login_capacity", retryable: true } });
+      expect(counts()).toEqual(before);
+    }
+    // The established session and account remain usable at capacity.
+    expect((await gmail.request("/connect", { headers: { cookie: f.cookie(f.victim.token) } })).status).toBe(200);
+    const pending = client.db.select().from(mailOAuthTransactions).all().find(row => row.pendingEmail)!;
+    // Model an interrupted callback after provider grant persistence.
+    client.db.insert(oauthAccounts).values({ id: "orphan-grant", userId: pending.userId, provider: "gmail", providerId: "orphan", providerEmail: "orphan@example.test" }).run();
+    client.db.update(users).set({ createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) }).where(eq(users.id, pending.userId)).run();
+    const retried = await outlook.request("/login");
+    expect(retried.status).toBe(200);
+    expect(client.db.select().from(users).where(eq(users.id, pending.userId)).get()).toBeUndefined();
+    expect(client.db.select().from(sessions).where(eq(sessions.userId, pending.userId)).all()).toHaveLength(0);
+    expect(client.db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, pending.userId)).all()).toHaveLength(0);
+    expect(client.db.select().from(mailOAuthTransactions).where(eq(mailOAuthTransactions.userId, pending.userId)).all()).toHaveLength(0);
+    expect(state.state).toBeTruthy();
+  } finally { client.sqlite.close(); }
 });
