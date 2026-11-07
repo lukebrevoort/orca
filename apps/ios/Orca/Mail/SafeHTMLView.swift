@@ -50,6 +50,8 @@ struct SafeHTMLView: UIViewRepresentable {
             table.orca-mail-spacer-table{table-layout:auto!important}
             /* A preferred width only: retain intrinsic minimums and descendants. */
             td.orca-mail-spacer-cell{width:0!important}
+            /* Only structurally blank gutters may shed nested 100% widths. */
+            td.orca-mail-spacer-cell table{width:auto!important}
             col,colgroup,th,td{width:auto!important;min-width:0!important;max-width:100%!important}
             th,td{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
             /* Only API-validated presentation tables receive these classes.
