@@ -144,6 +144,58 @@ final class SafeHTMLOverflowTests: XCTestCase {
         }
     }
 
+    // BRE-444 regression-first diagnostic. The production shell is deliberately
+    // unchanged: current main is expected to fail the readable-width assertions.
+    // This literal is checked against the real API sanitizer by its contract test.
+    func testUnmarkedDigestUsesAvailableWidthInsteadOfEqualSpacerColumns() async throws {
+        // BEGIN API UNMARKED DIGEST FIXTURE
+        let html = """
+
+        <table border="0" cellspacing="0" width="100%"><tr><td>
+          <table width="100%"><tr><td></td><td width="650" align="center" style="text-align:center;padding:20px 0;font-family:Arial,sans-serif"><a href="https://example.invalid/community" style="font-size:22px;text-decoration:none" target="_blank" rel="noopener noreferrer"><strong>Example Developer Community</strong></a></td><td></td></tr></table>
+          <table width="100%" style="padding:0;border-spacing:0;font-family:Arial,sans-serif;font-size:14px;line-height:1.3"><tr>
+            <td style="padding:0"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
+            <td width="650" style="padding:0;font-family:Arial,sans-serif">
+              <p>Since your last visit</p>
+              <table style="table-layout:fixed;width:100%;min-width:100%"><tr>
+                <td style="text-align:center;font-size:36px"><a href="https://example.invalid/new" target="_blank" rel="noopener noreferrer"><strong>123</strong></a></td>
+                <td style="text-align:center;font-size:36px"><a href="https://example.invalid/users" target="_blank" rel="noopener noreferrer"><strong>459</strong></a></td>
+              </tr><tr><td style="text-align:center;font-size:14px">New topics</td><td style="text-align:center;font-size:14px">New users</td></tr></table>
+              <p>Every word in this synthetic digest should remain easy to read.</p>
+            </td>
+            <td style="padding:0"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
+          </tr></table>
+          <table><caption>Synthetic checks</caption><tr><th>Check</th><th>Status</th></tr><tr><td>Build</td><td>Passed</td></tr></table>
+          <p><span class="orca-mail-image-note">[Image blocked: Synthetic digest banner]</span></p>
+          <p>End of synthetic digest.</p>
+        </td><td></td></tr></table>
+
+        """
+        // END API UNMARKED DIGEST FIXTURE
+        for width in [CGFloat(272), 342, 700] {
+            for size in [CGFloat(22), 44] {
+                for theme in [ColorScheme.light, .dark] {
+                    let metrics = try await render(html, width: width, size: size, theme: theme, evidenceName: "unmarked-digest")
+                    assertFits(metrics, width: width, size: size)
+                    XCTAssertGreaterThanOrEqual(number(metrics, "digestTitleContentWidth"), Double(width) * 0.8,
+                        "Empty spacer columns must yield available width to digest content: \(metrics)")
+                    XCTAssertLessThanOrEqual(number(metrics, "digestTitleLineCount"), 3,
+                        "The short digest title must wrap as words, not narrow character stacks")
+                    XCTAssertEqual(metrics["digestStatLineCounts"] as? [Int], [1, 1],
+                        "Short numeric statistics must stay on one line")
+                    XCTAssertEqual(metrics["captionedTableDisplay"] as? String, "table")
+                    XCTAssertEqual(metrics["headers"] as? [String], ["Check", "Status"])
+                    XCTAssertEqual(number(metrics, "imageCount"), 0, "Remote image remains a blocked placeholder")
+                    XCTAssertEqual(metrics["links"] as? [String], ["https://example.invalid/community", "https://example.invalid/new", "https://example.invalid/users"])
+                    let text = metrics["bodyText"] as? String ?? ""
+                    for expected in ["Example Developer Community", "123", "459", "New topics", "New users", "Synthetic checks", "Build", "Passed", "Synthetic digest banner", "End of synthetic digest."] {
+                        XCTAssertTrue(text.contains(expected), "Missing synthetic digest content: \(expected)")
+                    }
+                }
+            }
+        }
+    }
+
     func testOrdinaryEmailAndLongThreadKeepReaderTypographyAndContent() async throws {
         let replies = (1...30).map { "<blockquote><p>Reply \($0): A longer conversation remains readable.</p></blockquote>" }.joined()
         for (width, size, theme) in layouts {
@@ -215,7 +267,28 @@ final class SafeHTMLOverflowTests: XCTestCase {
         const dataTable = document.querySelector('table:not(.orca-mail-layout)');
         const layoutCells = Array.from(document.querySelectorAll('table.orca-mail-layout > tbody > tr > td'));
         const layoutBounds = layoutCells.map(cell => cell.getBoundingClientRect());
+        // Measure rendered text fragments, not the anchor's inline bounding box.
+        // Deduplicate line positions because nested strong elements share a line.
+        const lineCount = element => {
+          if (!element) return -1;
+          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          const tops = new Set();
+          while (walker.nextNode()) {
+            if (!walker.currentNode.textContent.trim()) continue;
+            const range = document.createRange(); range.selectNodeContents(walker.currentNode);
+            for (const rect of range.getClientRects()) if (rect.width > 0 && rect.height > 0) tops.add(Math.round(rect.top));
+          }
+          return tops.size;
+        };
+        const digestTitle = document.querySelector('a[href="https://example.invalid/community"]');
+        const digestCell = digestTitle?.closest('td');
+        const digestCellStyle = digestCell ? getComputedStyle(digestCell) : null;
+        const captionedTable = document.querySelector('caption')?.parentElement;
         return {
+          digestTitleContentWidth: digestCell ? digestCell.clientWidth - parseFloat(digestCellStyle.paddingLeft) - parseFloat(digestCellStyle.paddingRight) : 0,
+          digestTitleLineCount: lineCount(digestTitle),
+          digestStatLineCounts: ['new', 'users'].map(path => lineCount(document.querySelector('a[href="https://example.invalid/' + path + '"]'))),
+          captionedTableDisplay: captionedTable ? getComputedStyle(captionedTable).display : '',
           documentWidth: document.documentElement.scrollWidth,
           bodyFontSize: parseFloat(getComputedStyle(document.body).fontSize),
           bodyFontFamily: getComputedStyle(document.body).fontFamily,

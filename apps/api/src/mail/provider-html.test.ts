@@ -73,6 +73,21 @@ describe("inbound readable formatting and privacy", () => {
     expect(literal).toBe(sanitizeInboundHtml(raw)!);
   });
 
+  test("native unmarked digest diagnostic uses exact production sanitizer output", () => {
+    const raw = readFileSync(new URL("../../../../diagnostics/mobile-email/fixtures/unmarked-digest.html", import.meta.url), "utf8");
+    const html = sanitizeInboundHtml(raw)!;
+    const swift = readFileSync(new URL("../../../ios/OrcaTests/SafeHTMLOverflowTests.swift", import.meta.url), "utf8");
+    const marked = swift.split('// BEGIN API UNMARKED DIGEST FIXTURE')[1]!.split('// END API UNMARKED DIGEST FIXTURE')[0]!;
+    const literal = marked.split('"""')[1]!.replace(/^\n/, '').replace(/\n *$/, '').split('\n').map(line => line.replace(/^ {8}/, '')).join('\n');
+    expect(literal).toBe(html);
+    expect(html).not.toContain('orca-mail-layout');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('[Image blocked: Synthetic digest banner]');
+    expect(html).toContain('<caption>Synthetic checks</caption>');
+    expect(html).toContain('<th>Check</th><th>Status</th>');
+    expect(html).toContain('href="https://example.invalid/community"');
+  });
+
   test("structured fallback preserves paragraphs, destinations, table rows, and code whitespace", () => {
     const text = readableHtmlText('<p>First paragraph</p><p><a href="https://example.invalid/details">Details</a></p><table><tr><th>Job</th><th>Status</th></tr><tr><td>Build</td><td>Passed</td></tr></table><pre>    const x = 1;\n\n    return x;</pre>')!;
     expect(text).toContain('First paragraph\nDetails (https://example.invalid/details)\n');
