@@ -1,6 +1,8 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { markReadableTableCells } from "./reader-table";
+import type { ImageSlot } from "./image-stream";
+const noImageSlots:ImageSlot[]=[];
 
 /** Keep exact geometry after focus enters message content. The browser can
  * scroll before focusin; preserve its chosen visible offset while revealing bodies. Retain it until
@@ -46,7 +48,7 @@ export function splitQuotedContent(body: string) {
 /** Presentation only: HTML must already have passed the API's providerHtmlPolicy.
  * Switching alternatives preserves content, links, and reply source data.
  * Keep formatted DOM mounted while hidden: toggles must not refetch images. */
-export function ReaderBody({ html, text }: { html: string | null; text: string | null }) {
+export function ReaderBody({ html, text, imageSlots=noImageSlots }: { html: string | null; text: string | null; imageSlots?:ImageSlot[] }) {
   const [preferredView, setPreferredView] = useState<"formatted" | "text">(() => text && splitQuotedContent(text).quoted ? "text" : "formatted");
   const bodyId = useId();
   const [showOriginal, setShowOriginal] = useState(false);
@@ -114,6 +116,19 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
     }
   }, [html]);
   useLayoutEffect(() => {
+    // Replace only server-generated placeholders: progressive arrival must not
+    // remount successful images, focused links or expanded quoted history.
+    const body=formattedBody.current;
+    if(!body)return;
+    for(const slot of imageSlots){
+      const target=body.querySelector(`[data-orca-image-slot="${slot.index}"]`);
+      if(!target)continue;
+      const template=document.createElement("template");template.innerHTML=slot.html;
+      const image=template.content.firstElementChild;
+      if(image)target.replaceWith(image);
+    }
+  },[html,imageSlots]);
+  useLayoutEffect(() => {
     const notes = formattedBody.current?.querySelectorAll("span.orca-mail-image-note");
     setHasBlockedImages(Boolean(notes?.length));
     notes?.forEach(note => {
@@ -125,7 +140,7 @@ export function ReaderBody({ html, text }: { html: string | null; text: string |
       note.setAttribute("data-orca-image-note", "enhanced");
       note.setAttribute("aria-label", `Blocked image: ${alt}`);
     });
-  }, [html]);
+  }, [html,imageSlots]);
   const hasHtml = Boolean(html?.trim());
   const hasText = Boolean(text?.trim());
   const showHtml = hasHtml && (preferredView === "formatted" || !hasText);

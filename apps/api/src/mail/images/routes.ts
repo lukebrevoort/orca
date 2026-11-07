@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { stream } from "hono/streaming";
 import { requireAuth, type AuthVariables } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { emails, oauthAccounts } from "../../db/schema.ts";
@@ -56,6 +57,34 @@ export function registerMessageImageRoutes(app:Hono<{Variables:AuthVariables}>,o
   const key=JSON.stringify([accountId,c.req.param("id")]);
   if(active.has(key)||active.size>=4)return c.json({error:{code:"image_busy",message:"Image loading is already in progress. Try again shortly."}},429);
   active.add(key);
+  if(c.req.header("accept")?.split(",").some(value=>value.trim()==="application/x-ndjson")){
+   c.header("Content-Type","application/x-ndjson; charset=utf-8");
+   c.header("X-Accel-Buffering","no");
+   return stream(c,async output=>{
+    const controller=new AbortController();
+    output.onAbort(()=>controller.abort());
+    const signal=AbortSignal.any([c.req.raw.signal,controller.signal,AbortSignal.timeout(20_000)]);
+    const abort=()=>output.abort();signal.addEventListener("abort",abort,{once:true});
+    const write=async(event:unknown)=>{
+     if(signal.aborted||output.aborted)throw new Error("Image stream cancelled");
+     await new Promise<void>((resolve,reject)=>{
+      const stopped=()=>reject(new Error("Image stream cancelled"));
+      signal.addEventListener("abort",stopped,{once:true});
+      void output.write(JSON.stringify(event)+"\n").then(()=>resolve(),()=>reject(new Error("Image stream unavailable"))).finally(()=>signal.removeEventListener("abort",stopped));
+      if(signal.aborted)stopped();
+     });
+    };
+    try{
+     const result=await renderRequestedImages(html,options.downloadImage,signal,lists.retained as number[]??[],lists.seen as number[]??[],lists.remainingBytes as number??undefined,"v2",{
+      concurrency:2,progressive:write,
+     });
+     if(!output.aborted)await write({type:"complete",sourceRevision:result.sourceRevision,loaded:result.loaded,attempted:result.attempted,reasons:result.reasons,failures:result.failures,attemptedIndices:result.attemptedIndices});
+    }catch{
+     controller.abort();
+     if(!output.aborted)try{await write({type:"error"});}catch{/* disconnected consumer */}
+    }finally{signal.removeEventListener("abort",abort);controller.abort();active.delete(key);}
+   });
+  }
   try{return c.json(await renderRequestedImages(html,options.downloadImage,c.req.raw.signal,lists.retained as number[]??[],lists.seen as number[]??[],lists.remainingBytes as number??undefined));}
   finally{active.delete(key);}
  });

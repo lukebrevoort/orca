@@ -213,3 +213,66 @@ test("cancellation prevents later candidates from starting",async()=>{
  const result=await renderRequestedImages(html,async()=>{calls++;controller.abort();throw new ImageFetchError('cancelled');},controller.signal);
  expect(calls).toBe(1);expect(result.reasons.stopped).toBe(4);expect(result.failures.cancelled).toBe(1);
 });
+
+test('progressive rendering shows healthy images while an earlier image waits',async()=>{
+ let release!:()=>void,notify!:()=>void;const firstReady=new Promise<void>(resolve=>{notify=resolve;});
+ const held=new Promise<void>(resolve=>{release=resolve;});const events:number[]=[];let active=0,maxActive=0;
+ const html=Array.from({length:4},(_,index)=>`<img src="https://images.example.org/${index}.png">`).join('');
+ const pending=renderRequestedImages(html,async url=>{active++;maxActive=Math.max(maxActive,active);try{if(url.pathname==='/0.png')await held;return png;}finally{active--;}},undefined,[],[],undefined,'v2',{concurrency:2,progressive:async event=>{if(event.type==='image'){events.push(event.slot.index);notify();}}});
+ await firstReady;expect(events[0]).toBe(1);expect(active).toBe(1);release();const result=await pending;
+ expect(result.loaded).toBe(4);expect(maxActive).toBe(2);expect(result.attemptedIndices).toEqual([0,1,2,3]);
+});
+test('parallel byte reservations preserve the aggregate transfer budget',async()=>{
+ const html=Array.from({length:12},(_,index)=>`<img src="https://images.example.org/${index}.png">`).join('');
+ const large=paddedPng(2*1024*1024-1);let calls=0,bytes=0;
+ const result=await renderRequestedImages(html,async()=>{calls++;bytes+=large.length;return large;},undefined,[],[],undefined,'v2',{concurrency:2});
+ expect(calls).toBe(4);expect(bytes).toBeLessThanOrEqual(8*1024*1024);expect(result.loaded).toBe(4);expect(result.reasons.byteBudget).toBe(8);
+});
+test('legacy, JSON and progressive requests share the four-task process ceiling',async()=>{
+ let active=0,maximum=0;
+ const html=Array.from({length:4},(_,index)=>`<img src="https://images.example.org/${index}.png">`).join('');
+ const download=async()=>{active++;maximum=Math.max(maximum,active);try{await new Promise(resolve=>setTimeout(resolve,10));return png;}finally{active--;}};
+ const results=await Promise.all([
+  renderRequestedImages(html,download,undefined,[],[],undefined,'legacy'),
+  renderRequestedImages(html,download),
+  renderRequestedImages(html,download,undefined,[],[],undefined,'v2',{concurrency:2}),
+  renderRequestedImages(html,download,undefined,[],[],undefined,'v2',{concurrency:2}),
+ ]);
+ expect(maximum).toBe(4);expect(active).toBe(0);expect(results.every(result=>result.loaded===4)).toBe(true);
+});
+test('streaming v2 retains auth guards and the message lock until consumer cancellation settles',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'orca-images-stream-')),path=join(dir,'db.sqlite');const {db,sqlite}=createDatabaseClient(path);migrate(db,{migrationsFolder:resolve(import.meta.dir,'../../../drizzle')});
+ try{
+  db.insert(users).values({id:'owner',email:'owner@example.com'}).run();db.insert(oauthAccounts).values({id:'account',userId:'owner',provider:'gmail',providerEmail:'owner@example.com',providerId:'provider'}).run();db.insert(threads).values({id:'thread',accountId:'account',providerThreadId:'thread'}).run();
+  const html='<img src="https://images.example.org/fast.png"><img src="https://images.example.org/slow.png">';
+  db.insert(emails).values({id:'message',accountId:'account',threadId:'thread',providerMessageId:'message',bodyHtml:html}).run();
+  const owner=createMobileSession(db,'owner');let calls=0,cancelled=false;
+  const app=new Hono<{Variables:AuthVariables}>();registerMessageImageRoutes(app,{dbFactory:()=>createDatabaseClient(path),downloadImage:async(url,signal)=>{
+   calls++;if(url.pathname==='/slow.png')await new Promise<void>((_resolve,reject)=>{const abort=()=>{cancelled=true;reject(new ImageFetchError('cancelled'));};signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();});return png;
+  }});
+  const endpoint='/v1/messages/message/images/v2?accountId=account';
+  const post=(revision=imageSourceRevision(html),remainingBytes=8*1024*1024)=>({method:'POST',headers:{Authorization:`Bearer ${owner.accessToken}`,'Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify({revision,remainingBytes})});
+  expect((await app.request(endpoint,post('0'.repeat(64)))).status).toBe(409);expect(calls).toBe(0);
+  const response=await app.request(endpoint,post());expect(response.status).toBe(200);expect(response.headers.get('content-type')).toContain('application/x-ndjson');
+  const reader=response.body!.getReader();let text='';
+  while(!text.includes('"type":"image"'))text+=new TextDecoder().decode((await reader.read()).value);
+  expect(text).toContain('"type":"start"');expect(text).not.toContain('"type":"complete"');expect(calls).toBe(2);
+  expect((await app.request(endpoint,post())).status).toBe(429);
+  await reader.cancel();for(let i=0;i<20&&!cancelled;i++)await new Promise(resolve=>setTimeout(resolve,1));expect(cancelled).toBe(true);
+  await new Promise(resolve=>setTimeout(resolve,5));
+  const again=await app.request(endpoint,post(imageSourceRevision(html),0));expect(again.status).toBe(200);expect(await again.text()).toContain('"type":"complete"');expect(calls).toBe(2);
+ }finally{sqlite.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('failed legacy images preserve original blocked-note presentation, including absent and linked alt',async()=>{
+ const html='<p>Body</p><img src="https://images.example.org/empty.png"><a href="https://example.org"><img src="https://images.example.org/linked.png"></a><img alt="  A &quot;quote&quot; résumé 😀 &apos;  " src="https://images.example.org/alt.png">';
+ const result=await renderRequestedImages(html,async()=>{throw new ImageFetchError('dns');},undefined,[],[],undefined,'legacy');
+ expect(result.bodyHtml).toBe(sanitizeInboundHtml(html)??"");expect(result.sourceHash).toBe(imageSourceHash(html));
+});
+
+test('a valid image after many blocked images keeps its source position',async()=>{
+ const html='<img src="cid:blocked">'.repeat(10000)+'<img src="https://images.example.org/banner.png">';
+ const progress:number[]=[];let calls=0;
+ const result=await renderRequestedImages(html,async()=>{calls++;return png;},undefined,[],[],undefined,'v2',{concurrency:2,progressive:async event=>{if(event.type==='image')progress.push(event.slot.index);}});
+ expect(calls).toBe(1);expect(progress).toEqual([10000]);expect(result.loaded).toBe(1);expect(result.reasons.ineligible).toBe(10000);
+});

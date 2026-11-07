@@ -81,3 +81,43 @@ test("oversized source requires refresh but an unrelated 413 remains retryable",
  await act(async()=>container.querySelector('button')!.click());
  expect(container.textContent).toContain('Images could not be loaded');expect(container.querySelector('button')?.textContent).toBe('Retry images');expect(calls).toBe(2);
 });
+
+test("progressive slots preserve loaded DOM, expanded history and link focus",async()=>{
+ let wire!:ReadableStreamDefaultController<Uint8Array>;
+ Object.defineProperty(globalThis,"fetch",{configurable:true,writable:true,value:async()=>new Response(new ReadableStream<Uint8Array>({start(controller){wire=controller;}}),{headers:{'content-type':'application/x-ndjson'}})});
+ const send=async(event:unknown)=>act(async()=>{wire.enqueue(new TextEncoder().encode(JSON.stringify(event)+'\n'));});
+ await act(async()=>root.render(<MessageImageBody {...props}/>));await act(async()=>container.querySelector('button')!.click());
+ await send({type:'start',sourceRevision:revision,bodyHtml:'<p>Original</p><a href="https://example.com">Focus link</a><span class="orca-mail-image-note" data-orca-image-slot="0">[Image blocked: one]</span><span class="orca-mail-image-note" data-orca-image-slot="1">[Image blocked: two]</span><blockquote>Quoted history</blockquote>'});
+ const history=container.querySelector('details')!;history.open=true;const link=container.querySelector('a')!;link.focus();
+ const image=(index:number)=>({type:'image',sourceRevision:revision,slot:{index,bytes:1,html:`<img alt="Fixture ${index}" src="data:image/png;base64,AA==" style="max-width:100%;height:auto">`}});
+ await send(image(0));const first=container.querySelector('img');expect(first).not.toBeNull();expect(container.textContent).toContain('Loading remaining images');
+ await send(image(1));expect(container.querySelector('img')).toBe(first);expect(container.querySelector('details')).toBe(history);expect(history.open).toBe(true);expect(document.activeElement).toBe(link);
+ await send({type:'complete',sourceRevision:revision,loaded:2,attempted:2,attemptedIndices:[0,1],reasons});
+ await act(async()=>wire.close());expect(container.textContent).toContain('2 images loaded.');expect(container.textContent).not.toContain('Loading remaining images');
+});
+test("truncated progressive response retains successful slots for an explicit retry",async()=>{
+ let wire!:ReadableStreamDefaultController<Uint8Array>;const requests:RequestInit[]=[];
+ Object.defineProperty(globalThis,'fetch',{configurable:true,writable:true,value:async(_path:string,init:RequestInit)=>{requests.push(init);if(requests.length>1)return response(1,0,1);return new Response(new ReadableStream<Uint8Array>({start(controller){wire=controller;}}),{headers:{'content-type':'application/x-ndjson'}});}});
+ await act(async()=>root.render(<MessageImageBody {...props}/>));await act(async()=>container.querySelector('button')!.click());
+ await act(async()=>{wire.enqueue(new TextEncoder().encode(JSON.stringify({type:'start',sourceRevision:revision,bodyHtml:'<span data-orca-image-slot="0">one</span>'})+'\n'+JSON.stringify({type:'image',sourceRevision:revision,slot:{index:0,bytes:1,html:'<img alt="Fixture 0" src="data:image/png;base64,AA==" style="max-width:100%;height:auto">'}})+'\n'));});
+ await act(async()=>wire.close());expect(container.querySelectorAll('img')).toHaveLength(1);expect(container.textContent).toContain('Image loading was interrupted');
+ await act(async()=>container.querySelector('button')!.click());expect(JSON.parse(requests[1]!.body as string).retained).toEqual([0]);expect(container.querySelectorAll('img')).toHaveLength(2);
+});
+
+test('switching accounts cancels progressive consumption and clears every prior image',async()=>{
+ let wire!:ReadableStreamDefaultController<Uint8Array>,signal:AbortSignal|undefined,cancelled=0,calls=0;
+ Object.defineProperty(globalThis,'fetch',{configurable:true,writable:true,value:async(_path:string,init:RequestInit)=>{calls++;signal=init.signal??undefined;return new Response(new ReadableStream<Uint8Array>({start(controller){wire=controller;},cancel(){cancelled++;}}),{headers:{'content-type':'application/x-ndjson'}});}});
+ await act(async()=>root.render(<MessageImageBody key="first" {...props}/>));
+ await act(async()=>{const button=container.querySelector('button')!;button.click();button.click();});expect(calls).toBe(1);
+ await act(async()=>wire.enqueue(new TextEncoder().encode(JSON.stringify({type:'start',sourceRevision:revision,bodyHtml:'<span data-orca-image-slot="0">not loaded</span>'})+'\n'+JSON.stringify({type:'image',sourceRevision:revision,slot:{index:0,bytes:1,html:'<img alt="Fixture 0" src="data:image/png;base64,AA==" style="max-width:100%;height:auto">'}})+'\n')));
+ expect(container.querySelectorAll('img')).toHaveLength(1);
+ await act(async()=>root.render(<MessageImageBody key="second" {...props} accountId="other" html="<p>Other account</p>"/>));
+ expect(signal?.aborted).toBe(true);expect(cancelled).toBe(1);expect(calls).toBe(1);expect(container.querySelectorAll('img')).toHaveLength(0);expect(container.textContent).toContain('Other account');expect(container.querySelector('button')?.textContent).toBe('Load images');
+});
+
+test('large source positions display an image and truthfully stop unsupported selective retry',async()=>{
+ const events=[{type:'start',sourceRevision:revision,bodyHtml:'<span data-orca-image-slot="10000">not loaded</span>'},{type:'image',sourceRevision:revision,slot:{index:10000,bytes:1,html:'<img alt="Far image" src="data:image/png;base64,AA==" style="max-width:100%;height:auto">'}},{type:'complete',sourceRevision:revision,loaded:1,attempted:1,attemptedIndices:[10000],reasons:{...reasons,requestLimit:1}}];
+ Object.defineProperty(globalThis,'fetch',{configurable:true,writable:true,value:async()=>new Response(events.map(event=>JSON.stringify(event)).join('\n'),{headers:{'content-type':'application/x-ndjson'}})});
+ await act(async()=>root.render(<MessageImageBody {...props}/>));await act(async()=>container.querySelector('button')!.click());
+ expect(container.querySelectorAll('img')).toHaveLength(1);expect(container.textContent).toContain('Image limit reached');expect(container.querySelector('.reader-images-consent button')).toBeNull();
+});

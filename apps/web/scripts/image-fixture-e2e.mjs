@@ -38,7 +38,8 @@ const {chromium}=await import(moduleName?.startsWith('/') ? pathToFileURL(module
 const browser=await chromium.launch({headless:true,executablePath:process.env.ORCA_CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox','--disable-background-networking']});
 const context=await browser.newContext({viewport:{width:1280,height:1000},serviceWorkers:'block',recordVideo:{dir:output,size:{width:1280,height:1000}}});
 const blocked=[],errors=[];
-await context.addInitScript(()=>localStorage.setItem('orca-reader-preferences',JSON.stringify({theme:'light',motion:'reduced'})));
+const theme=process.env.ORCA_IMAGE_THEME??'light';assert(['light','dark'].includes(theme));
+await context.addInitScript(theme=>localStorage.setItem('orca-reader-preferences',JSON.stringify({theme,motion:'reduced'})),theme);
 await context.route('**/*',route=>{const url=new URL(route.request().url());if(url.origin===origin.origin)return route.continue();blocked.push(url.origin);return route.abort();});
 const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
 const counts=async()=>{const response=await context.request.get(new URL('/__fixture/image-counts',origin).href);assert.equal(response.status(),200);return response.json();};
@@ -88,6 +89,6 @@ try {
   assert.equal(await page.locator('.reader-body-html img').count(),0);await capture('07-switched-back');await pause();
   assert.deepEqual(errors,[],'Browser must not report JavaScript errors');
   const video=page.video();await page.close();const videoPath=await video.path();
-  await writeFile(join(output,'manifest.json'),JSON.stringify({commit:testedSha,buildProof,syntheticOnly:true,scope:'Full built Orca web app, real local API/SQLite/auth/origin and revision handling; image download boundary injected with synthetic bytes/failure and no sender/DNS network',browser:browser.version(),videoPath,externalOriginsBlocked:blocked.length,counts:await counts(),checks:['zero pre-consent requests','stale refresh requires new consent','PNG/JPEG partial and retry','retained PNG is not fetched again','leaving and reopening a different message cancels a pending synthetic image load']},null,2));
+  await writeFile(join(output,'manifest.json'),JSON.stringify({commit:testedSha,buildProof,syntheticOnly:true,theme,scope:'Full built Orca web app, real local API/SQLite/auth/origin and revision handling; image download boundary injected with synthetic bytes/failure and no sender/DNS network',browser:browser.version(),videoPath,externalOriginsBlocked:blocked.length,counts:await counts(),checks:['zero pre-consent requests','stale refresh requires new consent','PNG/JPEG partial and retry','retained PNG is not fetched again','leaving and reopening a different message cancels a pending synthetic image load']},null,2));
   console.log(JSON.stringify({status:'pass',commit:testedSha,videoPath,externalOriginsBlocked:blocked.length}));
 } finally { await context.close();await browser.close(); }
