@@ -157,17 +157,18 @@ function isLayoutTable(table: Tag) {
 // A narrow sizing hint, not presentation-table classification. Keep table
 // semantics and all sender content; only blank structural gutters may yield
 // their equal fixed-layout share to the row's single content cell.
-function isSpacerTable(table: Tag, blank: (node: Node) => boolean) {
-  if (table.attribs.role) return false;
+function spacerGutters(table: Tag, blank: (node: Node) => boolean) {
+  if (table.attribs.role) return null;
   if (table.attribs.width?.trim() !== "100%"
-    && !/(?:^|;)\s*width\s*:\s*100%\s*(?:!important\s*)?(?:;|$)/i.test(table.attribs.style ?? "")) return false;
+    && !/(?:^|;)\s*width\s*:\s*100%\s*(?:!important\s*)?(?:;|$)/i.test(table.attribs.style ?? "")) return null;
   const parts = tableParts(table);
   if (parts.some(node => ["th", "caption", "thead", "tfoot", "col", "colgroup"].includes(node.name)
-    || "rowspan" in node.attribs || "colspan" in node.attribs)) return false;
+    || "rowspan" in node.attribs || "colspan" in node.attribs)) return null;
   const rows = parts.filter(node => node.name === "tr");
-  if (rows.length !== 1) return false;
+  if (rows.length !== 1) return null;
   const cells = rows[0]!.children.filter((node): node is Tag => isTag(node) && node.name === "td");
-  return cells.length >= 2 && cells.filter(cell => !blank(cell)).length === 1;
+  const gutters = cells.filter(blank);
+  return cells.length >= 2 && gutters.length === cells.length - 1 ? gutters : null;
 }
 
 export function sanitizeInboundHtml(value: string | null): string | null {
@@ -209,14 +210,15 @@ export function sanitizeInboundHtml(value: string | null): string | null {
     }
     if (node.name === "table") {
       inLayout = isLayoutTable(node);
-      const spacer = !inLayout && isSpacerTable(node, blank);
+      const gutters = !inLayout ? spacerGutters(node, blank) : null;
       delete node.attribs.role;
       if (inLayout) {
         hasLayout = true;
         node.attribs.class = "orca-mail-layout";
         node.attribs.role = "presentation";
-      } else if (spacer) {
+      } else if (gutters) {
         node.attribs.class = "orca-mail-spacer-table";
+        for (const gutter of gutters) gutter.attribs.class = "orca-mail-spacer-cell";
       }
     }
     if (inLayout && !["pre", "code"].includes(node.name)) {

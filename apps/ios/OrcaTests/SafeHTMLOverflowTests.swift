@@ -152,9 +152,9 @@ final class SafeHTMLOverflowTests: XCTestCase {
         let html = """
 
         <table border="0" cellspacing="0" width="100%" class="orca-mail-spacer-table"><tr><td>
-          <table width="100%" class="orca-mail-spacer-table"><tr><td></td><td width="650" align="center" style="text-align:center;padding:20px 0;font-family:Arial,sans-serif"><a href="https://example.invalid/community" style="font-size:22px;text-decoration:none" target="_blank" rel="noopener noreferrer"><strong>Example Developer Community</strong></a></td><td></td></tr></table>
+          <table width="100%" class="orca-mail-spacer-table"><tr><td class="orca-mail-spacer-cell"></td><td width="650" align="center" style="text-align:center;padding:20px 0;font-family:Arial,sans-serif"><a href="https://example.invalid/community" style="font-size:22px;text-decoration:none" target="_blank" rel="noopener noreferrer"><strong>Example Developer Community</strong></a></td><td class="orca-mail-spacer-cell"></td></tr></table>
           <table width="100%" style="padding:0;border-spacing:0;font-family:Arial,sans-serif;font-size:14px;line-height:1.3" class="orca-mail-spacer-table"><tr>
-            <td style="padding:0"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
+            <td style="padding:0" class="orca-mail-spacer-cell"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
             <td width="650" style="padding:0;font-family:Arial,sans-serif">
               <p>Since your last visit</p>
               <table style="table-layout:fixed;width:100%;min-width:100%"><tr>
@@ -163,12 +163,12 @@ final class SafeHTMLOverflowTests: XCTestCase {
               </tr><tr><td style="text-align:center;font-size:14px">New topics</td><td style="text-align:center;font-size:14px">New users</td></tr></table>
               <p>Every word in this synthetic digest should remain easy to read.</p>
             </td>
-            <td style="padding:0"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
+            <td style="padding:0" class="orca-mail-spacer-cell"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
           </tr></table>
           <table><caption>Synthetic checks</caption><tr><th>Check</th><th>Status</th></tr><tr><td>Build</td><td>Passed</td></tr></table>
           <p><span class="orca-mail-image-note">[Image blocked: Synthetic digest banner]</span></p>
           <p>End of synthetic digest.</p>
-        </td><td></td></tr></table>
+        </td><td class="orca-mail-spacer-cell"></td></tr></table>
 
         """
         // END API UNMARKED DIGEST FIXTURE
@@ -179,6 +179,8 @@ final class SafeHTMLOverflowTests: XCTestCase {
                     assertFits(metrics, width: width, size: size)
                     XCTAssertGreaterThanOrEqual(number(metrics, "digestTitleContentWidth"), Double(width) * 0.8,
                         "Empty spacer columns must yield available width to digest content: \(metrics)")
+                    XCTAssertGreaterThanOrEqual(number(metrics, "digestBodyContentWidth"), Double(width) * 0.8,
+                        "Nested blank gutters must yield available width to body content: \(metrics)")
                     XCTAssertLessThanOrEqual(number(metrics, "digestTitleLineCount"), 3,
                         "The short digest title must wrap as words, not narrow character stacks")
                     XCTAssertEqual(metrics["digestStatLineCounts"] as? [Int], [1, 1],
@@ -289,9 +291,19 @@ final class SafeHTMLOverflowTests: XCTestCase {
         const digestCellStyle = digestCell ? getComputedStyle(digestCell) : null;
         const captionedTable = document.querySelector('caption')?.parentElement;
         const statsTable = document.querySelector('a[href="https://example.invalid/new"]')?.closest('table');
+        const digestBodyCell = statsTable?.closest('td');
+        const digestBodyTable = digestBodyCell?.closest('table');
+        const digestBodyStyle = digestBodyCell ? getComputedStyle(digestBodyCell) : null;
+        const digestGutters = digestBodyCell ? Array.from(digestBodyCell.parentElement.cells).filter(cell => cell !== digestBodyCell) : [];
         const statRows = statsTable ? Array.from(statsTable.rows) : [];
         const statBounds = statRows.map(row => Array.from(row.cells).map(cell => cell.getBoundingClientRect()));
         return {
+          digestBodyContentWidth: digestBodyCell ? digestBodyCell.clientWidth - parseFloat(digestBodyStyle.paddingLeft) - parseFloat(digestBodyStyle.paddingRight) : 0,
+          digestBodyTableLayout: digestBodyTable ? getComputedStyle(digestBodyTable).tableLayout : '',
+          digestGutterWidths: digestGutters.map(cell => cell.getBoundingClientRect().width),
+          digestGutterComputedWidths: digestGutters.map(cell => getComputedStyle(cell).width),
+          digestGutterNestedTableWidths: digestGutters.flatMap(cell => Array.from(cell.querySelectorAll('table')).map(table => table.getBoundingClientRect().width)),
+          digestGutterNestedTableLayouts: digestGutters.flatMap(cell => Array.from(cell.querySelectorAll('table')).map(table => getComputedStyle(table).tableLayout)),
           digestStatsTableDisplay: statsTable ? getComputedStyle(statsTable).display : '',
           digestStatsColumnCount: statRows.map(row => row.cells.length),
           digestStatsStayInColumns: statBounds.length === 2 && statBounds.every(row => row.length === 2

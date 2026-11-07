@@ -299,10 +299,10 @@ test("image loading retains table-role exclusions until inbound classification",
   const blocked=sanitizeInboundHtml(html)!;
   const failed=await renderRequestedImages(html,async()=>{throw Error('Synthetic failure');});
   expect(failed.bodyHtml).toBe(blocked);
-  expect(failed.bodyHtml).not.toContain('orca-mail-spacer-table');
+  expect(failed.bodyHtml).not.toMatch(/orca-mail-spacer-(?:table|cell)/);
   const loaded=await renderRequestedImages(html,async()=>png);
   expect(loaded.loaded).toBe(1);
-  expect(loaded.bodyHtml).not.toContain('orca-mail-spacer-table');
+  expect(loaded.bodyHtml).not.toMatch(/orca-mail-spacer-(?:table|cell)/);
   expect(loaded.bodyHtml.includes('orca-mail-layout')).toBe(['presentation','none'].includes(role));
   expect(loaded.bodyHtml).not.toMatch(/role="(?:grid|table)"|https:\/\/images.example.org/);
  }
@@ -314,9 +314,9 @@ test("a nested semantic table never becomes a blank gutter after image loading",
   const html=`<table width="100%"><tr><td><table role="${role}"><tr><td></td></tr></table></td><td>Content<img alt="Banner" src="https://images.example.org/banner.png"></td></tr></table>`;
   const failed=await renderRequestedImages(html,async()=>{throw Error('Synthetic failure');});
   expect(failed.bodyHtml).toBe(sanitizeInboundHtml(html)!);
-  expect(failed.bodyHtml).not.toContain('orca-mail-spacer-table');
+  expect(failed.bodyHtml).not.toMatch(/orca-mail-spacer-(?:table|cell)/);
   const loaded=await renderRequestedImages(html,async()=>png);
   expect(loaded.loaded).toBe(1);
-  expect(loaded.bodyHtml).not.toContain('orca-mail-spacer-table');
+  expect(loaded.bodyHtml).not.toMatch(/orca-mail-spacer-(?:table|cell)/);
  }
 });
