@@ -45,6 +45,13 @@ struct SafeHTMLView: UIViewRepresentable {
             pre{max-width:100%!important;min-width:0!important;box-sizing:border-box}
             pre,pre *{white-space:break-spaces!important;overflow-wrap:anywhere!important}
             table{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important;font:inherit}
+            /* API-validated single-content rows let blank gutters yield width.
+               Keep data/statistics tables fixed and semantic; do not flatten. */
+            table.orca-mail-spacer-table{table-layout:auto!important}
+            /* A preferred width only: retain intrinsic minimums and descendants. */
+            td.orca-mail-spacer-cell{width:0!important}
+            /* Only structurally blank gutters may shed nested 100% widths. */
+            td.orca-mail-spacer-cell table{width:auto!important}
             col,colgroup,th,td{width:auto!important;min-width:0!important;max-width:100%!important}
             th,td{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
             /* Only API-validated presentation tables receive these classes.
