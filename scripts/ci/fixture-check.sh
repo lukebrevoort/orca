@@ -15,13 +15,19 @@ evidence=${ORCA_CI_EVIDENCE_DIR:-${RUNNER_TEMP:-/tmp}/orca-ci-evidence}
 # Refuse to mix this run's artifacts with any existing data.
 mkdir "$evidence"
 fixture_pid= connection= simulator=
+# Fixed stage names only: command output and fixture credentials stay in the
+# private logs until the existing sanitizer exports them. These markers survive
+# an outer runner timeout that kills the shell before its EXIT trap can export.
+progress() { printf '[fixture stage] phase=%s\n' "$1"; }
 cleanup() {
   status=$?
   trap - EXIT INT TERM
   set +e
+  progress evidence_export_started
   # Export before stopping the fixture (which removes its connection metadata).
   python3 scripts/ci/export-evidence.py "$work" "$evidence" "$connection" "$status" "$simulator"
   export_status=$?
+  progress evidence_export_finished
   if [[ -n "$fixture_pid" ]]; then kill "$fixture_pid" 2>/dev/null; wait "$fixture_pid" 2>/dev/null; fi
   if [[ -n "$simulator" ]]; then
     xcrun simctl shutdown "$simulator" >/dev/null 2>&1
@@ -56,8 +62,10 @@ if [[ "$mode" == browser ]]; then
 else
   fixture=mobile-fixture.ts
   xcodebuild -version >> "$work/identity.log"
+  progress xcode_preflight_started
   python3 scripts/ci/test-ios-readiness.py >> "$work/checks.log" 2>&1
   python3 scripts/ci/ios-readiness.py --first-launch >> "$work/checks.log" 2>&1
+  progress xcode_preflight_finished
   # Discover a compatible available iPhone/runtime, then create our own device.
   xcrun simctl list --json > "$work/simulators.json"
   python3 - "$work/simulators.json" "$work/destination.json" <<'PY'
@@ -82,9 +90,12 @@ PY
   cat "$work/destination.json" >> "$work/identity.log"
   echo >> "$work/identity.log"
   echo "simulator=$simulator" >> "$work/identity.log"
+  progress simulator_boot_started
   xcrun simctl boot "$simulator"
   xcrun simctl bootstatus "$simulator" -b
+  progress simulator_boot_finished
 fi
+progress fixture_starting
 TMPDIR="$work" bun --no-env-file "apps/api/scripts/$fixture" > "$work/fixture.log" 2>&1 &
 fixture_pid=$!
 for ((attempt=0; attempt<60; attempt++)); do
@@ -94,6 +105,7 @@ for ((attempt=0; attempt<60; attempt++)); do
   sleep 1
 done
 [[ -n "$connection" ]] || { echo 'Synthetic fixture readiness timed out.' >&2; exit 1; }
+progress fixture_ready
 # Metadata is private; never print it or include it in an artifact.
 if [[ "$mode" == browser ]]; then
   node apps/web/scripts/compose-fixture-e2e.mjs "$connection" "$work/browser" > "$work/checks.log" 2>&1
@@ -101,8 +113,12 @@ if [[ "$mode" == browser ]]; then
   node apps/web/scripts/catchup-fixture-e2e.mjs "$connection" "$work/reader" head >> "$work/checks.log" 2>&1
 else
   # Exercise the production Swift client against this same isolated API before UI tests.
+  progress swift_contract_started
   bash apps/ios/Tools/check-api.sh "$connection" >> "$work/checks.log" 2>&1
-  ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
-    zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" >> "$work/checks.log" 2>&1
+  progress swift_contract_finished
+  progress ios_suite_started
+  ORCA_CI_PROGRESS=1 ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
+    zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" 3>&1 >> "$work/checks.log" 2>&1
+  progress ios_suite_finished
 fi
 

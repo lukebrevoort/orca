@@ -12,3 +12,9 @@
 - Cleanup: both comparison servers and browser were owned and cleaned by the runner; light/dark flow runners also exited0 and cleaned. Intermediate hung harness was stopped through the verified child browser; its logs/video retained. No unrelated fixture was stopped.
 - Next: applicable aggregate checks on final documentation head, authorized push/draft PR, then existing hosted checks through success or a concrete blocker. CLI Git authentication failed during a read-only fetch; the connected GitHub read confirmed unchanged main. No credential configuration was changed.
 - Limits: synthetic small samples, no production proxy or actual newsletter diagnosis, no new native client protocol. See performance note for phase-measurement limits and preserved legacy exception.
+
+## Hosted iOS diagnostic follow-up
+
+PR #302 at 8968adc passed unit, browser/API and native reader/image checks, but its general iOS fixture was cancelled at the configured 60-minute limit. The visible log confirms simulator boot finished; the subsequent private checks log was not exported, so neither a boot timeout nor a Photos-picker failure is established. No unchanged retry was performed. The shared Photos-picker work in PR #301 now has a green run at 4d63cf2; its test changes are not copied into this branch without a matching failure.
+
+Add fixed live stage markers around boot, Swift contract, Xcode discovery/build, light/dark tests and evidence export. Raw command output, launch arguments and fixture credentials remain in private logs for the existing sanitizer. Tests, assertions, timeout and product code are unchanged. Shell syntax, 11 readiness tests and 25 evidence-export tests passed before review; the next automatically triggered exact-head fixture must pass before merge. Preserve the existing Library demo identity and measured application commit because this follow-up changes diagnostics only.

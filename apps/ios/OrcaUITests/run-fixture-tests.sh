@@ -13,6 +13,15 @@ connection_file=${1:A}
 simulator_udid=$2
 derived_data=${3:-"${TMPDIR%/}/OrcaDerivedData"}
 
+# Only the CI wrapper opens descriptor 3 for fixed, nonprivate progress markers.
+# Preserve raw output in the private checks.log; never tee launch arguments.
+progress() {
+  print -r -- "[fixture stage] phase=$1"
+  if [[ ${ORCA_CI_PROGRESS:-0} == 1 ]]; then
+    print -r -u3 -- "[fixture stage] phase=$1"
+  fi
+}
+
 if [[ ! -f $connection_file ]]; then
   print -u2 "fixture metadata not found: $connection_file"
   exit 66
@@ -20,7 +29,9 @@ fi
 
 # Preserve the runner's wait for a caller-supplied booting simulator, before
 # requiring post-boot diagnostics or asking Xcode to build for that device.
+progress owned_simulator_recheck_started
 xcrun simctl bootstatus "$simulator_udid" -b
+progress owned_simulator_recheck_finished
 # fixture-check.sh boots this exact CI-owned simulator before invoking us.
 # Observe both CoreSimulator and Xcode: bootstatus has reported Finished while
 # Xcode could see no concrete destination. Never substitute another device.
@@ -45,6 +56,7 @@ PYDIAGNOSTIC
 xcrun --find xcodebuild
 xcodebuild -version
 xcodebuild -showsdks
+progress xcode_destination_started
 if ! /usr/bin/python3 "$ios_dir/../../scripts/ci/ios-readiness.py" \
   --project "$ios_dir/Orca.xcodeproj" --udid "$simulator_udid" \
   --log "$derived_data/fixture-xcode-destinations.log"; then
@@ -53,13 +65,16 @@ if ! /usr/bin/python3 "$ios_dir/../../scripts/ci/ios-readiness.py" \
   exit 70
 fi
 cat "$derived_data/fixture-xcode-destinations.log"
+progress xcode_destination_finished
 
+progress build_for_testing_started
 xcodebuild build-for-testing \
   -project "$ios_dir/Orca.xcodeproj" \
   -scheme Orca \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -derivedDataPath "$derived_data" \
   CODE_SIGNING_ALLOWED=NO
+progress build_for_testing_finished
 
 products_dir="$derived_data/Build/Products"
 base_xctestrun=($products_dir/Orca_iphonesimulator*.xctestrun(N[1]))
@@ -147,6 +162,7 @@ fi
 # Run the changed feedback contract and real Photos picker before the longer
 # compose suite. Every other existing test still runs after this gate succeeds.
 if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
+  progress capture_light_started
   xcodebuild test-without-building \
     -xctestrun "$injected_xctestrun" \
     -destination "platform=iOS Simulator,id=$simulator_udid" \
@@ -154,30 +170,37 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
     -resultBundlePath "$result_dir/DirectCaptureLight.xcresult" \
     -only-testing:OrcaTests/FeedbackTicketTests \
     -only-testing:OrcaUITests/OrcaUITests/test39FeedbackCapturesCurrentOrcaScreen
+  progress capture_light_finished
   # Isolate current-screen capture from any preceding system Photos session.
   # Photos import remains a required independent gate, not a skipped fallback.
+  progress feedback_light_started
   xcodebuild test-without-building \
     -xctestrun "$injected_xctestrun" \
     -destination "platform=iOS Simulator,id=$simulator_udid" \
     -parallel-testing-enabled NO \
     -resultBundlePath "$result_dir/FeedbackLight.xcresult" \
     -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket
+  progress feedback_light_finished
   light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 
+progress suite_light_started
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -parallel-testing-enabled NO \
   -resultBundlePath "$result_bundle" \
   "${light_tests[@]}"
+progress suite_light_finished
 
 xcrun simctl ui "$simulator_udid" appearance dark
+progress suite_dark_started
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -parallel-testing-enabled NO \
   -resultBundlePath "$result_dir/OrcaDark.xcresult" \
   "${dark_tests[@]}"
+progress suite_dark_finished
 
 print "Result bundle: $result_bundle"
