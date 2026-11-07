@@ -144,16 +144,16 @@ final class SafeHTMLOverflowTests: XCTestCase {
         }
     }
 
-    // BRE-444 regression-first diagnostic. The production shell is deliberately
-    // unchanged: current main is expected to fail the readable-width assertions.
+    // BRE-444: the unchanged baseline failed these readable-width assertions.
+    // Keep the same fixture and thresholds while checking the scoped sizing hint.
     // This literal is checked against the real API sanitizer by its contract test.
     func testUnmarkedDigestUsesAvailableWidthInsteadOfEqualSpacerColumns() async throws {
         // BEGIN API UNMARKED DIGEST FIXTURE
         let html = """
 
-        <table border="0" cellspacing="0" width="100%"><tr><td>
-          <table width="100%"><tr><td></td><td width="650" align="center" style="text-align:center;padding:20px 0;font-family:Arial,sans-serif"><a href="https://example.invalid/community" style="font-size:22px;text-decoration:none" target="_blank" rel="noopener noreferrer"><strong>Example Developer Community</strong></a></td><td></td></tr></table>
-          <table width="100%" style="padding:0;border-spacing:0;font-family:Arial,sans-serif;font-size:14px;line-height:1.3"><tr>
+        <table border="0" cellspacing="0" width="100%" class="orca-mail-spacer-table"><tr><td>
+          <table width="100%" class="orca-mail-spacer-table"><tr><td></td><td width="650" align="center" style="text-align:center;padding:20px 0;font-family:Arial,sans-serif"><a href="https://example.invalid/community" style="font-size:22px;text-decoration:none" target="_blank" rel="noopener noreferrer"><strong>Example Developer Community</strong></a></td><td></td></tr></table>
+          <table width="100%" style="padding:0;border-spacing:0;font-family:Arial,sans-serif;font-size:14px;line-height:1.3" class="orca-mail-spacer-table"><tr>
             <td style="padding:0"><table style="border-spacing:0;padding:0;width:100%"><tr><td height="400" style="height:400px;padding:0">&#xa0;</td></tr></table></td>
             <td width="650" style="padding:0;font-family:Arial,sans-serif">
               <p>Since your last visit</p>
@@ -183,6 +183,10 @@ final class SafeHTMLOverflowTests: XCTestCase {
                         "The short digest title must wrap as words, not narrow character stacks")
                     XCTAssertEqual(metrics["digestStatLineCounts"] as? [Int], [1, 1],
                         "Short numeric statistics must stay on one line")
+                    XCTAssertEqual(metrics["digestStatsTableDisplay"] as? String, "table")
+                    XCTAssertEqual(metrics["digestStatsColumnCount"] as? [Int], [2, 2])
+                    XCTAssertEqual(metrics["digestStatsStayInColumns"] as? Bool, true,
+                        "Headerless statistics must keep two aligned columns and their labels")
                     XCTAssertEqual(metrics["captionedTableDisplay"] as? String, "table")
                     XCTAssertEqual(metrics["headers"] as? [String], ["Check", "Status"])
                     XCTAssertEqual(number(metrics, "imageCount"), 0, "Remote image remains a blocked placeholder")
@@ -284,7 +288,15 @@ final class SafeHTMLOverflowTests: XCTestCase {
         const digestCell = digestTitle?.closest('td');
         const digestCellStyle = digestCell ? getComputedStyle(digestCell) : null;
         const captionedTable = document.querySelector('caption')?.parentElement;
+        const statsTable = document.querySelector('a[href="https://example.invalid/new"]')?.closest('table');
+        const statRows = statsTable ? Array.from(statsTable.rows) : [];
+        const statBounds = statRows.map(row => Array.from(row.cells).map(cell => cell.getBoundingClientRect()));
         return {
+          digestStatsTableDisplay: statsTable ? getComputedStyle(statsTable).display : '',
+          digestStatsColumnCount: statRows.map(row => row.cells.length),
+          digestStatsStayInColumns: statBounds.length === 2 && statBounds.every(row => row.length === 2
+            && Math.abs(row[0].top - row[1].top) <= 1 && row[0].right <= row[1].left + 1)
+            && statBounds[1].every((cell, index) => Math.abs(cell.left - statBounds[0][index].left) <= 1),
           digestTitleContentWidth: digestCell ? digestCell.clientWidth - parseFloat(digestCellStyle.paddingLeft) - parseFloat(digestCellStyle.paddingRight) : 0,
           digestTitleLineCount: lineCount(digestTitle),
           digestStatLineCounts: ['new', 'users'].map(path => lineCount(document.querySelector('a[href="https://example.invalid/' + path + '"]'))),

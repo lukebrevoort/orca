@@ -276,3 +276,47 @@ test('a valid image after many blocked images keeps its source position',async()
  const result=await renderRequestedImages(html,async()=>{calls++;return png;},undefined,[],[],undefined,'v2',{concurrency:2,progressive:async event=>{if(event.type==='image')progress.push(event.slot.index);}});
  expect(calls).toBe(1);expect(progress).toEqual([10000]);expect(result.loaded).toBe(1);expect(result.reasons.ineligible).toBe(10000);
 });
+
+test("spacer sizing remains consistent in blocked and explicitly loaded image bodies", async () => {
+ const html='<table width="100%"><tr><td></td><td><p>Digest</p><img alt="Banner" src="https://images.example.org/banner.png"></td><td></td></tr></table>';
+ const blocked=sanitizeInboundHtml(html)!;
+ expect(blocked).toContain('class="orca-mail-spacer-table"');
+ expect(blocked).not.toContain('<img');
+ let downloads=0;
+ const loaded=await renderRequestedImages(html,async()=>{downloads++;return png;});
+ expect(downloads).toBe(1);expect(loaded.loaded).toBe(1);
+ expect(loaded.bodyHtml).toContain('class="orca-mail-spacer-table"');
+ expect(loaded.bodyHtml).toContain('src="data:image/png;base64,');
+ expect(loaded.sourceHash).toBe(imageSourceHash(html));
+ expect(loaded.sourceRevision).toBe(imageSourceRevision(html));
+ expect(loaded.bodyHtml).not.toContain('https://images.example.org');
+});
+
+
+test("image loading retains table-role exclusions until inbound classification", async () => {
+ for (const role of ['grid', 'table', 'presentation', 'none']) {
+  const html=`<table role="${role}" width="100%"><tr><td></td><td style="padding:4px">Content<img alt="Banner" src="https://images.example.org/banner.png"></td></tr></table>`;
+  const blocked=sanitizeInboundHtml(html)!;
+  const failed=await renderRequestedImages(html,async()=>{throw Error('Synthetic failure');});
+  expect(failed.bodyHtml).toBe(blocked);
+  expect(failed.bodyHtml).not.toContain('orca-mail-spacer-table');
+  const loaded=await renderRequestedImages(html,async()=>png);
+  expect(loaded.loaded).toBe(1);
+  expect(loaded.bodyHtml).not.toContain('orca-mail-spacer-table');
+  expect(loaded.bodyHtml.includes('orca-mail-layout')).toBe(['presentation','none'].includes(role));
+  expect(loaded.bodyHtml).not.toMatch(/role="(?:grid|table)"|https:\/\/images.example.org/);
+ }
+});
+
+
+test("a nested semantic table never becomes a blank gutter after image loading", async () => {
+ for (const role of ['grid', 'table']) {
+  const html=`<table width="100%"><tr><td><table role="${role}"><tr><td></td></tr></table></td><td>Content<img alt="Banner" src="https://images.example.org/banner.png"></td></tr></table>`;
+  const failed=await renderRequestedImages(html,async()=>{throw Error('Synthetic failure');});
+  expect(failed.bodyHtml).toBe(sanitizeInboundHtml(html)!);
+  expect(failed.bodyHtml).not.toContain('orca-mail-spacer-table');
+  const loaded=await renderRequestedImages(html,async()=>png);
+  expect(loaded.loaded).toBe(1);
+  expect(loaded.bodyHtml).not.toContain('orca-mail-spacer-table');
+ }
+});
