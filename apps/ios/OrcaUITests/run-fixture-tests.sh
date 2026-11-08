@@ -187,13 +187,20 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
   light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 
+# Mailbox evidence must include both appearances even when one suite fails.
+# Keep other scopes fail-fast and retain the original failing exit status.
+light_exit=0
+dark_exit=0
 progress suite_light_started
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -parallel-testing-enabled NO \
   -resultBundlePath "$result_bundle" \
-  "${light_tests[@]}"
+  "${light_tests[@]}" || {
+    light_exit=$?
+    if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$light_exit"; fi
+  }
 progress suite_light_finished
 
 xcrun simctl ui "$simulator_udid" appearance dark
@@ -203,7 +210,16 @@ xcodebuild test-without-building \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -parallel-testing-enabled NO \
   -resultBundlePath "$result_dir/OrcaDark.xcresult" \
-  "${dark_tests[@]}"
+  "${dark_tests[@]}" || {
+    dark_exit=$?
+    if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$dark_exit"; fi
+  }
 progress suite_dark_finished
 
 print "Result bundle: $result_bundle"
+if [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
+  print "Dark result bundle: $result_dir/OrcaDark.xcresult"
+  print "Mailbox suite exit codes: light=$light_exit dark=$dark_exit"
+  if (( light_exit != 0 )); then exit "$light_exit"; fi
+  if (( dark_exit != 0 )); then exit "$dark_exit"; fi
+fi
