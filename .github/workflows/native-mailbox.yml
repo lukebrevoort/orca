@@ -1,0 +1,56 @@
+name: Native Mailbox Checks
+
+on:
+  pull_request:
+    paths:
+      - 'apps/ios/Orca/Mail/InboxView.swift'
+      - 'apps/ios/Orca/Mail/MailboxViews.swift'
+      - 'apps/ios/Orca/Core/OrcaTheme.swift'
+      - 'apps/ios/OrcaUITests/**'
+      - 'apps/ios/Orca.xcodeproj/**'
+      - 'apps/api/scripts/mobile-fixture.ts'
+      - 'apps/api/scripts/inbox-refresh-gate*'
+      - 'scripts/ci/**'
+      - '.github/workflows/native-mailbox.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-mailbox-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  mailbox:
+    name: Native mailbox light/dark UI
+    runs-on: macos-26
+    timeout-minutes: 50
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+      ORCA_CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      ORCA_CI_UI_TEST_SCOPE: mailbox
+      ORCA_FIXTURE_MAILBOX_CONTROLS: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Verify appearance result handling
+        run: python3 scripts/ci/test-ios-mailbox-phases.py
+      - name: Test exact source on a fresh CI-owned simulator
+        # Leave job time for the existing signal/EXIT cleanup and artifact upload.
+        # The fixture still errors at its fixed per-scenario deadline.
+        timeout-minutes: 45
+        run: bash scripts/ci/fixture-check.sh ios
+      - name: Upload sanitized synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-mailbox-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/orca-ci-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
