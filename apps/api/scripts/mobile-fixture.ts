@@ -84,7 +84,12 @@ db.insert(emails).values({
 db.update(threads).set({ messageCount: 2 }).where(eq(threads.id, "ios-fixture-thread-1")).run();
 // Real workspace destinations make notification selection testable without static UI mocks.
 const destinations = createDestinations(db, userId);
-for (const name of ["Projects", "Friends"]) {
+const fixtureDestinationNames = ["Projects", "Friends"];
+// Opt-in synthetic stress case for the mailbox control's native text layout.
+if (process.env.ORCA_FIXTURE_MAILBOX_CONTROLS === "1") {
+  fixtureDestinationNames.push("Research planning and weekly product follow-ups");
+}
+for (const name of fixtureDestinationNames) {
   destinations.create({ expectedRevision: destinations.list().revision, name });
 }
 // Match a migrated workspace's Focus mapping, without touching a real mailbox.

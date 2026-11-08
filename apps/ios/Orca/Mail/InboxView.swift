@@ -173,8 +173,9 @@ struct InboxView: View {
             .pickerStyle(.menu).font(OrcaTheme.ui(12, weight: .semibold))
             .tint(OrcaTheme.ink)
             .padding(.horizontal, 8).frame(minHeight: 44)
-            .background(OrcaTheme.selected, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(OrcaTheme.border))
+            .contentShape(Rectangle())
+            // This is a navigation choice, not a selected card. Keep the native
+            // menu, disclosure and selection semantics on the quiet paper surface.
             .accessibilityIdentifier("inbox.view-picker")
             Spacer(minLength: 8)
             Button { state.selectedTab = "settings" } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }

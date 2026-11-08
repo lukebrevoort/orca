@@ -1594,6 +1594,102 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
     }
 
+    /// Native Picker semantics and real hit testing, reused in both appearances.
+    func test40MailboxSelectorCancelsAndSwitchesRepeatedly() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let picker = app.buttons["inbox.view-picker"]
+        assertMailboxControl("Inbox", in: app)
+        attachScreenshot(named: "mailbox-selector-inbox")
+
+        // Tap near the top edge rather than only the native text's center.
+        picker.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+        XCTAssertTrue(app.buttons["All Mail"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "mailbox-selector-open")
+        // A tap outside the native menu dismisses it without selecting an item.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9)).tap()
+        XCTAssertTrue(app.buttons["All Mail"].waitForNonExistence(timeout: 5))
+        assertMailboxControl("Inbox", in: app)
+        XCTAssertTrue(app.navigationBars["Inbox"].exists)
+        attachScreenshot(named: "mailbox-selector-cancelled")
+
+        for title in ["All Mail", "Focus", "Inbox", "All Mail", "Inbox", "Inbox"] {
+            chooseMailbox(title, in: app)
+            assertMailboxControl(title, in: app)
+            if title == "Focus" { attachScreenshot(named: "mailbox-selector-focus-selected") }
+        }
+        attachScreenshot(named: "mailbox-selector-repeated-return")
+        app.buttons["inbox.visible-views"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["Inbox"].tap()
+        assertMailboxControl("Inbox", in: app)
+        attachScreenshot(named: "mailbox-selector-settings-return")
+    }
+
+    func test41MailboxSelectorLongNameAtLargestAccessibilitySize() throws {
+        let app = try launchApp(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+        XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20))
+        let name = "Research planning and weekly product follow-ups"
+        let picker = app.buttons["inbox.view-picker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        let option = app.buttons.matching(identifier: name).firstMatch
+        // Catalog loading is independent of the navigation title. Native menus
+        // may snapshot their options, so reopen within a bounded readiness wait.
+        for attempt in 0..<4 {
+            picker.tap()
+            if option.waitForExistence(timeout: 3) { break }
+            if attempt < 3 {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9)).tap()
+                XCTAssertTrue(app.buttons["All Mail"].waitForNonExistence(timeout: 5))
+            }
+        }
+        XCTAssertTrue(option.exists, "Run with the opt-in mailbox-control fixture; its catalog must load")
+        attachScreenshot(named: "mailbox-selector-accessibility-menu")
+        option.tap()
+        assertMailboxControl(name, in: app)
+        attachScreenshot(named: "mailbox-selector-accessibility-long-name")
+        chooseMailbox("Inbox", in: app)
+        assertMailboxControl("Inbox", in: app)
+        attachScreenshot(named: "mailbox-selector-accessibility-return")
+    }
+
+    func test42MailboxSwitchWhileInboxRefreshIsPending() throws {
+        let app = try launchApp()
+        assertInboxLoaded(in: app)
+        let list = app.collectionViews["inbox.list"]
+        try refreshFixture("arm", method: "POST")
+        addTeardownBlock { try self.refreshFixture("release", method: "POST") }
+        let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+        let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        try refreshFixture("wait", method: "GET")
+        chooseMailbox("All Mail", in: app)
+        assertMailboxControl("All Mail", in: app)
+        attachScreenshot(named: "mailbox-selector-switched-during-refresh")
+        try refreshFixture("release", method: "POST")
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
+        assertMailboxControl("All Mail", in: app)
+        chooseMailbox("Inbox", in: app)
+        assertMailboxControl("Inbox", in: app)
+        attachScreenshot(named: "mailbox-selector-refresh-switch-return")
+    }
+
+    private func assertMailboxControl(_ title: String, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let picker = app.buttons["inbox.view-picker"]
+        let settings = app.buttons["inbox.visible-views"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10), file: file, line: line)
+        XCTAssertTrue(picker.isHittable, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(picker.frame.height, 44, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(picker.frame.width, 44, file: file, line: line)
+        // Native Picker exposes its selection as its label or value by OS version.
+        let accessibleText = picker.label + " " + (picker.value as? String ?? "")
+        XCTAssertTrue(accessibleText.contains(title), "Full mailbox name must remain accessible: \(accessibleText)", file: file, line: line)
+        XCTAssertTrue(settings.isHittable, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(settings.frame.minX, picker.frame.maxX, file: file, line: line)
+        XCTAssertTrue(app.frame.contains(picker.frame), file: file, line: line)
+        XCTAssertTrue(app.frame.contains(settings.frame), file: file, line: line)
+    }
+
     private func launchApp(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false) throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
