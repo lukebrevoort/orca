@@ -959,7 +959,7 @@ final class OrcaUITests: XCTestCase {
         let initialPickerY = picker.frame.minY
         let initialTitleY = title.frame.minY
 
-        try refreshFixture("arm", method: "POST")
+        try refreshFixture("arm", method: "POST", scenario: "controls")
         // Release the pending response even if an assertion fails.
         addTeardownBlock { try self.refreshFixture("release", method: "POST") }
         let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
@@ -995,14 +995,18 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "29-inbox-refresh-recovered")
     }
 
-    private func refreshFixture(_ action: String, method: String) throws {
+    private func refreshFixture(_ action: String, method: String, scenario: String? = nil) throws {
         let environment = ProcessInfo.processInfo.environment
         guard let base = environment["ORCA_FIXTURE_API_URL"], let url = URL(string: base),
               ["127.0.0.1", "localhost"].contains(url.host ?? ""),
               let token = environment["ORCA_FIXTURE_ACCESS_TOKEN"] else {
             throw TestConfigurationError.missingFixtureEnvironment
         }
-        var request = URLRequest(url: url.appendingPathComponent("__fixture/inbox-refresh/\(action)"))
+        var endpoint = url.appendingPathComponent("__fixture/inbox-refresh/\(action)")
+        if let scenario {
+            endpoint.append(queryItems: [URLQueryItem(name: "scenario", value: scenario)])
+        }
+        var request = URLRequest(url: endpoint)
         request.httpMethod = method
         request.timeoutInterval = 8
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -1669,7 +1673,7 @@ final class OrcaUITests: XCTestCase {
         let app = try launchApp()
         assertInboxLoaded(in: app)
         let list = app.collectionViews["inbox.list"]
-        try refreshFixture("arm", method: "POST")
+        try refreshFixture("arm", method: "POST", scenario: "switch")
         addTeardownBlock { try self.refreshFixture("release", method: "POST") }
         let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
         let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))

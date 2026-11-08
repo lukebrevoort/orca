@@ -24,7 +24,7 @@ jobs:
   mailbox:
     name: Native mailbox light/dark UI
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
       ORCA_CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -42,6 +42,9 @@ jobs:
       - name: Verify appearance result handling
         run: python3 scripts/ci/test-ios-mailbox-phases.py
       - name: Test exact source on a fresh CI-owned simulator
+        # Leave job time for the existing signal/EXIT cleanup and artifact upload.
+        # The fixture still errors at its fixed per-scenario deadline.
+        timeout-minutes: 45
         run: bash scripts/ci/fixture-check.sh ios
       - name: Upload sanitized synthetic evidence
         if: always()

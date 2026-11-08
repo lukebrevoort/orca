@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import type { ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
 import { fixtureCounterResponse } from "./fixture-counter.ts";
-import { InboxRefreshGate } from "./inbox-refresh-gate.ts";
+import { InboxRefreshGate, inboxRefreshDeadlines, inboxRefreshScenario, inboxRefreshArmBodyIsEmpty } from "./inbox-refresh-gate.ts";
 
 const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI_TEST_SCOPE === "images";
 // A timestamp-only heartbeat distinguishes a live event loop from a stalled or
@@ -383,10 +383,19 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
       return new Response(null, { status: 401 });
     }
     if (request.method === "POST" && url.pathname.endsWith("/arm")) {
+      // Reject arbitrary durations/body input before touching an existing gate.
+      if (!await inboxRefreshArmBodyIsEmpty(request)) return new Response(null, { status: 400 });
+      let scenario: ReturnType<typeof inboxRefreshScenario>;
+      try { scenario = inboxRefreshScenario(url.searchParams); }
+      catch { return new Response(null, { status: 400 }); }
       refreshGate?.cancel();
-      const gate = new InboxRefreshGate();
+      const armedAt = performance.now();
+      const gate = new InboxRefreshGate({ deadlineMs: inboxRefreshDeadlines[scenario] });
       refreshGate = gate;
-      void gate.finished.then(reason => console.log(`[inbox-refresh-fixture] terminal=${reason}`));
+      const logStage = (stage: string) => console.log(`[inbox-refresh-fixture] scenario=${scenario} ${stage} elapsed_ms=${Math.round(performance.now() - armedAt)}`);
+      logStage("stage=arm");
+      void gate.started.then(() => logStage("stage=start"));
+      void gate.finished.then(reason => logStage(`stage=terminal reason=${reason}`));
       return new Response(null, { status: 204 });
     }
     if (request.method === "POST" && url.pathname.endsWith("/release")) {

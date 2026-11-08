@@ -1,6 +1,54 @@
 /** Synthetic loopback fixture only: keep a JSON response incomplete during UI inspection. */
 export type InboxRefreshTerminalReason = "explicit" | "expired" | "cancelled";
 
+// Empirical XCTest budgets: three/five possible 60s idle waits plus 60s overhead.
+// These affect only synthetic fixture response lifetime, never app networking.
+export const inboxRefreshDeadlines = Object.freeze({ default: 120_000, controls: 240_000, switch: 360_000 });
+export type InboxRefreshScenario = keyof typeof inboxRefreshDeadlines;
+
+export function inboxRefreshScenario(parameters: URLSearchParams): InboxRefreshScenario {
+  if ([...parameters.keys()].some(key => key !== "scenario") || parameters.getAll("scenario").length > 1) {
+    throw new RangeError("Only one named refresh scenario is accepted");
+  }
+  const scenario = parameters.get("scenario") ?? "default";
+  if (scenario !== "default" && scenario !== "controls" && scenario !== "switch") {
+    throw new RangeError("Unknown refresh scenario");
+  }
+  return scenario;
+}
+
+/** Empty POSTs can have a non-null body stream (runtime/transport dependent). */
+export async function inboxRefreshArmBodyIsEmpty(request: Request, timeoutMs = 250): Promise<boolean> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 250) throw new RangeError("Invalid arm body read budget");
+  const length = request.headers.get("Content-Length");
+  if (length !== null && !/^0+$/.test(length.trim())) {
+    void request.body?.cancel().catch(() => {});
+    return false;
+  }
+  if (request.body === null) return true;
+  const reader = request.body.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let complete = false;
+  const expired = new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), timeoutMs); });
+  try {
+    // Do not aggregate an arbitrary body. Stop at its first nonempty chunk;
+    // cap zero-sized chunks too, so an adversarial source cannot starve timers.
+    for (let reads = 0; reads < 16; reads += 1) {
+      const chunk = await Promise.race([reader.read(), expired]);
+      if (chunk === null) return false;
+      if (chunk.done) { complete = true; return true; }
+      if (chunk.value.byteLength !== 0) return false;
+    }
+    return false;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+    if (!complete) void reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
 export class InboxRefreshGate {
   readonly started: Promise<void>;
   readonly finished: Promise<InboxRefreshTerminalReason>;
@@ -19,10 +67,10 @@ export class InboxRefreshGate {
 
   constructor(options: { keepAliveMs?: number; deadlineMs?: number } = {}) {
     this.keepAliveMs = options.keepAliveMs ?? 5_000;
-    const deadlineMs = options.deadlineMs ?? 120_000;
+    const deadlineMs = options.deadlineMs ?? inboxRefreshDeadlines.default;
     if (!Number.isFinite(this.keepAliveMs) || this.keepAliveMs < 1 || this.keepAliveMs > 5_000
-      || !Number.isFinite(deadlineMs) || deadlineMs < 1 || deadlineMs > 120_000) {
-      throw new RangeError("Refresh gate timings must be positive and bounded (5s heartbeat, 120s deadline)");
+      || !Number.isFinite(deadlineMs) || deadlineMs < 1 || deadlineMs > inboxRefreshDeadlines.switch) {
+      throw new RangeError("Refresh gate timings must be positive and bounded (5s heartbeat, 360s deadline)");
     }
     this.started = new Promise(resolve => { this.markStarted = resolve; });
     this.finished = new Promise(resolve => { this.markFinished = resolve; });
