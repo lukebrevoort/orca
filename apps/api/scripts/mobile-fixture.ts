@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import type { ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
 import { fixtureCounterResponse } from "./fixture-counter.ts";
+import { InboxRefreshGate } from "./inbox-refresh-gate.ts";
 
 const imageFixture = process.argv.includes("--images") || process.env.ORCA_CI_UI_TEST_SCOPE === "images";
 // A timestamp-only heartbeat distinguishes a live event loop from a stalled or
@@ -170,7 +171,7 @@ type RefreshGate = {
   release: () => void;
   pending: boolean;
 };
-let refreshGate: RefreshGate | undefined;
+let refreshGate: InboxRefreshGate | undefined;
 // A single held create request reproduces Back/reopen while the server draft
 // identity is not yet known to the app. Synthetic loopback mailbox only.
 let draftLifecycleCreateGate: RefreshGate | undefined;
@@ -382,41 +383,37 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
       return new Response(null, { status: 401 });
     }
     if (request.method === "POST" && url.pathname.endsWith("/arm")) {
-      refreshGate?.release();
-      let markStarted!: () => void;
-      let release!: () => void;
-      const started = new Promise<void>((resolve) => { markStarted = resolve; });
-      const released = new Promise<void>((resolve) => { release = resolve; });
-      refreshGate = { started, markStarted, released, release, pending: false };
+      refreshGate?.cancel();
+      const gate = new InboxRefreshGate();
+      refreshGate = gate;
+      void gate.finished.then(reason => console.log(`[inbox-refresh-fixture] terminal=${reason}`));
       return new Response(null, { status: 204 });
     }
     if (request.method === "POST" && url.pathname.endsWith("/release")) {
-      refreshGate?.release();
+      const gate = refreshGate;
+      if (!gate) return new Response(null, { status: 204 }); // Idempotent teardown.
+      const released = gate.release();
       refreshGate = undefined;
-      return new Response(null, { status: 204 });
+      gate.cancel();
+      return new Response(null, { status: released ? 204 : 409 });
     }
     if (request.method === "GET" && url.pathname.endsWith("/wait")) {
       const gate = refreshGate;
       if (!gate) return new Response(null, { status: 409 });
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        await Promise.race([gate.started, new Promise<void>((resolve) => { timer = setTimeout(resolve, 5_000); })]);
-        return new Response(null, { status: gate.pending ? 204 : 408 });
+        await Promise.race([gate.waitForStart(), new Promise<void>((resolve) => { timer = setTimeout(resolve, 5_000); })]);
+        return new Response(null, { status: gate.active ? 204 : 408 });
       } finally { clearTimeout(timer); }
     }
     return new Response(null, { status: 404 });
   }
-  if (request.method === "GET" && url.pathname === "/v1/inbox" && !url.searchParams.has("cursor") && refreshGate) {
+  if (request.method === "GET" && url.pathname === "/v1/inbox" && !url.searchParams.has("cursor")) {
     const gate = refreshGate;
-    gate.pending = true;
-    gate.markStarted();
-    // Fail open if the test exits before cleanup; remain below the client's 30s timeout.
-    const timer = setTimeout(gate.release, 20_000);
-    try { await gate.released; }
-    finally {
-      clearTimeout(timer);
-      gate.pending = false;
-      if (refreshGate === gate) refreshGate = undefined;
+    if (gate?.claim()) {
+      // Hold only the first real response. Whitespace keeps the JSON incomplete
+      // through XCTest's idle wait without changing production client timeouts.
+      return gate.hold(await app.fetch(request), request.signal);
     }
   }
   if (request.method === "PUT" && url.pathname === "/v1/destinations/routing") {
@@ -463,6 +460,7 @@ console.log(`iOS fixture API: ${metadata.apiURL}`);
 console.log(`Synthetic connection details: ${metadataPath}`);
 console.log("Only fixture data is used. Provider send and draft operations are simulated.");
 for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => {
+  refreshGate?.cancel();
   server.stop(true);
   rmSync(directory, { recursive: true, force: true });
   process.exit(0);

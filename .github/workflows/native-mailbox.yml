@@ -9,6 +9,7 @@ on:
       - 'apps/ios/OrcaUITests/**'
       - 'apps/ios/Orca.xcodeproj/**'
       - 'apps/api/scripts/mobile-fixture.ts'
+      - 'apps/api/scripts/inbox-refresh-gate*'
       - 'scripts/ci/**'
       - '.github/workflows/native-mailbox.yml'
 

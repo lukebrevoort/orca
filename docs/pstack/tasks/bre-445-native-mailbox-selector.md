@@ -14,3 +14,19 @@
 
 - Source review disposition: independent review of `46f8ed3` found no source-level draft blocker. Addressed catalog/menu snapshot readiness with bounded dismiss/reopen; the refresh-switch test proves navigation availability and eventual return, not stale-response data isolation (the fixture holds both reads and shares messages). No stronger data-order claim is made. Final revised patch re-review requested.
 - Completed local helper checks: exporter 25 tests and iOS-readiness 11 tests passed in the write-enabled execution; `git diff --check` passed. These are fixture lifecycle checks, not product/native verification.
+
+## First native run and supported revision
+
+Published first candidate `fd5a7968db2f680ac8b246d986d56de4315012d1` has the exact reviewed local tree `e35d10bc5eea1dd24774c46465b39a5ca711c42e`. [Draft #304](https://github.com/lukebrevoort/orca/pull/304) remains unmerged.
+
+[Native Mailbox 42496574358](https://github.com/lukebrevoort/orca/actions/runs/42496574358) built on Xcode 26.4.1, iPhone 17 / iOS 26.4.1, then passed 161 tests and failed 3 in light; dark did not run. [Artifact](https://github.com/lukebrevoort/orca/actions/runs/42496574358/artifacts/13623538825) ZIP hash `f28c807ea6debb0ddcd22cfd09fde9e8979d0a4b61fae0c826a2194a6a8813a7` and exact-head identity verified after download.
+
+- The top-edge tap could not open the picker. Its outer padded frame/contentShape was not its actual activation area.
+- Screenshot `Orca-20.png` shows a long name fragmented down the screen at Accessibility XXXL; `Orca-3.png` also clips Inbox. Passing numeric accessibility/frame assertions did not prove usable text. Actual pixels were inspected independently.
+- Tests 13/42's pending probe returned 409 after XCTest's gesture idle synchronization outlasted the fixture's 20s response gate. These failures are preserved, not waived.
+
+Revised product: native Menu wrapping the same selection-bound Picker, with a two-line/tail-truncated Sora title, single muted SF disclosure, complete accessible value, and 44pt padding/frame/contentShape inside the label. Flexible width leaves the fixed Tune target available. Top and bottom edge taps remain required; long-text screenshots remain a visual gate.
+
+Revised fixture: only the first matching synthetic Inbox response is held. The finite real JSON body/status/security headers are retained; bounded JSON-whitespace heartbeats allow the request to stay incomplete through XCTest synchronization without changing production URLSession timeouts. Explicit release, 120s deadline and cancellation are distinct; expiry errors rather than pretending success. Pending probes remain strict before/after interaction. Helper 11 Node24 contract tests pass. These transport mechanics still require native execution; they are not assumed to solve the test.
+
+Other first-head results: Typecheck/Unit 2177 pass; Native Reader success; Fixture browser/API success. General native Fixture stopped at unchanged Photos import test 38 (zero previews/two importing nodes instead of two previews within 10s), so later compose tests did not run. No flakiness/root-cause claim and no gate changes for that separate failure. All first-head runs finished before the revised publication; no unchanged reruns.

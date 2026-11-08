@@ -1612,6 +1612,11 @@ final class OrcaUITests: XCTestCase {
         assertMailboxControl("Inbox", in: app)
         XCTAssertTrue(app.navigationBars["Inbox"].exists)
         attachScreenshot(named: "mailbox-selector-cancelled")
+        // The opposite padded edge must activate the same native menu too.
+        picker.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92)).tap()
+        XCTAssertTrue(app.buttons["All Mail"].waitForExistence(timeout: 5))
+        app.buttons["All Mail"].tap()
+        assertMailboxControl("All Mail", in: app)
 
         for title in ["All Mail", "Focus", "Inbox", "All Mail", "Inbox", "Inbox"] {
             chooseMailbox(title, in: app)
@@ -1648,6 +1653,13 @@ final class OrcaUITests: XCTestCase {
         option.tap()
         assertMailboxControl(name, in: app)
         attachScreenshot(named: "mailbox-selector-accessibility-long-name")
+        // Keep all rendered title lines inside the fixed controls row. The
+        // previous native Picker fragmented text far outside its reported frame;
+        // this bound supplements, but does not replace, pixel review.
+        XCTAssertLessThanOrEqual(picker.frame.height, 160)
+        let content = app.collectionViews["inbox.list"]
+        XCTAssertTrue(content.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(content.frame.minY, picker.frame.maxY)
         chooseMailbox("Inbox", in: app)
         assertMailboxControl("Inbox", in: app)
         attachScreenshot(named: "mailbox-selector-accessibility-return")
@@ -1666,6 +1678,7 @@ final class OrcaUITests: XCTestCase {
         chooseMailbox("All Mail", in: app)
         assertMailboxControl("All Mail", in: app)
         attachScreenshot(named: "mailbox-selector-switched-during-refresh")
+        try refreshFixture("wait", method: "GET")
         try refreshFixture("release", method: "POST")
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
         assertMailboxControl("All Mail", in: app)

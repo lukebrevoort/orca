@@ -167,17 +167,34 @@ struct InboxView: View {
 
     private var mailboxControls: some View {
         HStack {
-            Picker("Mailbox view", selection: $mailboxes.selectedID) {
-                ForEach(mailboxes.options) { option in Text(option.name).tag(option.id) }
+            Menu {
+                Picker("Mailbox view", selection: $mailboxes.selectedID) {
+                    ForEach(mailboxes.options) { option in Text(option.name).tag(option.id) }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Text(mailboxes.title)
+                        .font(OrcaTheme.ui(14, weight: .semibold))
+                        .lineLimit(2).truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(OrcaTheme.muted)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(OrcaTheme.ink)
+                .padding(.vertical, 8)
+                // Put the interaction area inside the Menu label. An outer
+                // Picker frame reports 44pt but leaves its padded edge inert.
+                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .pickerStyle(.menu).font(OrcaTheme.ui(12, weight: .semibold))
-            .tint(OrcaTheme.ink)
-            .padding(.horizontal, 8).frame(minHeight: 44)
-            .contentShape(Rectangle())
-            // This is a navigation choice, not a selected card. Keep the native
-            // menu, disclosure and selection semantics on the quiet paper surface.
+            .buttonStyle(.plain)
+            .accessibilityLabel("Mailbox view")
+            .accessibilityValue(mailboxes.title)
+            .accessibilityHint("Choose which mail to show")
             .accessibilityIdentifier("inbox.view-picker")
-            Spacer(minLength: 8)
             Button { state.selectedTab = "settings" } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }
                 .foregroundStyle(OrcaTheme.accent).accessibilityLabel("Choose visible views")
                 .accessibilityIdentifier("inbox.visible-views")
