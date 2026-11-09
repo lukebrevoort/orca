@@ -222,8 +222,12 @@ final class SafeHTMLOverflowTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(number(metrics, "scale"), 0.99, "Do not shrink the entire message to fit wide content", file: file, line: line)
     }
 
-    private func number(_ metrics: [String: Any], _ key: String) -> Double {
-        (metrics[key] as? NSNumber)?.doubleValue ?? .infinity
+    private func number(_ metrics: [String: Any], _ key: String, file: StaticString = #filePath, line: UInt = #line) -> Double {
+        guard let value = (metrics[key] as? NSNumber)?.doubleValue, value.isFinite else {
+            XCTFail("Missing or nonfinite reader metric: \(key)", file: file, line: line)
+            return .nan
+        }
+        return value
     }
 
     private func render(_ html: String, width: CGFloat, size: CGFloat, theme: ColorScheme, evidenceName: String = "overflow") async throws -> [String: Any] {

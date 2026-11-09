@@ -66,7 +66,7 @@ struct SafeHTMLView: UIViewRepresentable {
             </style>
             """ + html
 #if DEBUG
-            (view as? ContentSizedWebView)?.fixtureDiagnosticPhase = "requested"
+            (view as? ContentSizedWebView)?.recordFixtureEvent(.requested)
 #endif
             view.loadHTMLString(shell, baseURL: nil)
         }
@@ -74,31 +74,38 @@ struct SafeHTMLView: UIViewRepresentable {
 #if DEBUG
         // Scalars only; never inspect or export the document, URL or error text.
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "started"
+            (webView as? ContentSizedWebView)?.recordFixtureEvent(.started)
         }
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "committed"
+            (webView as? ContentSizedWebView)?.recordFixtureEvent(.committed)
         }
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "finished"
+            (webView as? ContentSizedWebView)?.recordFixtureEvent(.finished)
         }
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "failed"
+            (webView as? ContentSizedWebView)?.recordFixtureEvent(.failed, errorCode: (error as NSError).code)
         }
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "provisional-failed"
+            (webView as? ContentSizedWebView)?.recordFixtureEvent(.provisionalfailed, errorCode: (error as NSError).code)
         }
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-            (webView as? ContentSizedWebView)?.fixtureDiagnosticPhase = "process-terminated"
+            (webView as? ContentSizedWebView)?.recordFixtureEvent(.processterminated)
         }
 #endif
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if action.navigationType == .linkActivated, let url = action.request.url, ["http", "https", "mailto"].contains(url.scheme) {
                 UIApplication.shared.open(url)
+#if DEBUG
+                (webView as? ContentSizedWebView)?.recordFixtureEvent(.policyCancel)
+#endif
                 decisionHandler(.cancel)
             } else {
-                decisionHandler(action.request.url?.scheme == "about" ? .allow : .cancel)
+                let policy: WKNavigationActionPolicy = action.request.url?.scheme == "about" ? .allow : .cancel
+#if DEBUG
+                (webView as? ContentSizedWebView)?.recordFixtureEvent(policy == .allow ? .policyAllow : .policyCancel)
+#endif
+                decisionHandler(policy)
             }
         }
     }
@@ -115,7 +122,35 @@ private final class ContentSizedWebView: WKWebView {
               !args[token + 1].isEmpty else { return false }
         return true
     }()
-    var fixtureDiagnosticPhase = "created" { didSet { updateFixtureDiagnostics() } }
+    // Fixed event names and numeric scalars only. A generation identifies the
+    // latest request at callback time, not proof that a callback belongs to it.
+    enum FixtureEvent: String {
+        case requested, started, committed, finished, failed
+        case provisionalfailed = "provisional-failed"
+        case processterminated = "process-terminated"
+        case policyAllow = "policy-allow", policyCancel = "policy-cancel"
+    }
+    private var fixtureDiagnosticPhase = "created"
+    private var fixtureGeneration = 0
+    private var fixtureRequestedMS: Int64 = 0
+    private var fixtureCallbackMS: Int64 = 0
+    private var fixtureHistory: [String] = []
+    func recordFixtureEvent(_ event: FixtureEvent, errorCode: Int = 0) {
+        guard fixtureDiagnosticsEnabled else { return }
+        let now = Int64(ProcessInfo.processInfo.systemUptime * 1_000)
+        if event == .requested {
+            fixtureGeneration += 1
+            fixtureRequestedMS = now
+        } else {
+            fixtureCallbackMS = now
+        }
+        if event != .policyAllow && event != .policyCancel {
+            fixtureDiagnosticPhase = event.rawValue
+        }
+        fixtureHistory.append("\(event.rawValue):\(fixtureGeneration):\(now):\(errorCode)")
+        fixtureHistory = Array(fixtureHistory.suffix(8))
+        updateFixtureDiagnostics()
+    }
     override func layoutSubviews() {
         super.layoutSubviews()
         updateFixtureDiagnostics()
@@ -124,7 +159,7 @@ private final class ContentSizedWebView: WKWebView {
         guard fixtureDiagnosticsEnabled else { return }
         // Identifier carries bounded metadata without changing labels, values,
         // navigation, sizing or the WebView's accessibility children.
-        accessibilityIdentifier = "fixture-html-state phase=\(fixtureDiagnosticPhase) loading=\(isLoading) bounds=\(bounds.size) content=\(scrollView.contentSize)"
+        accessibilityIdentifier = "fixture-html-state phase=\(fixtureDiagnosticPhase) loading=\(isLoading) bounds=\(bounds.size) content=\(scrollView.contentSize) generation=\(fixtureGeneration) requested_ms=\(fixtureRequestedMS) callback_ms=\(fixtureCallbackMS) history=\(fixtureHistory.joined(separator: ","))"
     }
 #endif
     private var observation: NSKeyValueObservation?

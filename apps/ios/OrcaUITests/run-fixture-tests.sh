@@ -136,6 +136,9 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test01InboxSearchReplyDraftSurvivesReopenAndSendsOnceInLightMode -only-testing:OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade -only-testing:OrcaUITests/OrcaUITests/test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain -only-testing:OrcaUITests/OrcaUITests/test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent -only-testing:OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch -only-testing:OrcaUITests/OrcaUITests/test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination -only-testing:OrcaUITests/OrcaUITests/test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice -only-testing:OrcaUITests/OrcaUITests/test31SentServerDraftDoesNotRemainAnEditableLocalCopy -only-testing:OrcaUITests/OrcaUITests/test32SentServerPreservesUnsentLocalEditsUntilExplicitCopy -only-testing:OrcaUITests/OrcaUITests/test33RichDraftRequiresConfirmationAndCancelPreservesHTML -only-testing:OrcaUITests/OrcaUITests/test34RichDraftExplicitConversionPersistsAfterReopen -only-testing:OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test20EmptyInboxCanRefreshIntoMail -only-testing:OrcaUITests/OrcaUITests/test21MoveCatalogLoadCanBeCancelledAndReopened -only-testing:OrcaUITests/OrcaUITests/test22SenderViewCatalogLoadCanBeSwipedAway -only-testing:OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket -only-testing:OrcaUITests/OrcaUITests/test39FeedbackCapturesCurrentOrcaScreen)
+elif [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
+  light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing -only-testing:OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly -only-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing -only-testing:OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly -only-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == overscroll ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
@@ -155,7 +158,7 @@ elif [[ $read_only == 1 ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
 else
-  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
+  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
 fi
 
@@ -184,13 +187,20 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
   light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 
+# Mailbox evidence must include both appearances even when one suite fails.
+# Keep other scopes fail-fast and retain the original failing exit status.
+light_exit=0
+dark_exit=0
 progress suite_light_started
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -parallel-testing-enabled NO \
   -resultBundlePath "$result_bundle" \
-  "${light_tests[@]}"
+  "${light_tests[@]}" || {
+    light_exit=$?
+    if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$light_exit"; fi
+  }
 progress suite_light_finished
 
 xcrun simctl ui "$simulator_udid" appearance dark
@@ -200,7 +210,16 @@ xcodebuild test-without-building \
   -destination "platform=iOS Simulator,id=$simulator_udid" \
   -parallel-testing-enabled NO \
   -resultBundlePath "$result_dir/OrcaDark.xcresult" \
-  "${dark_tests[@]}"
+  "${dark_tests[@]}" || {
+    dark_exit=$?
+    if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$dark_exit"; fi
+  }
 progress suite_dark_finished
 
 print "Result bundle: $result_bundle"
+if [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
+  print "Dark result bundle: $result_dir/OrcaDark.xcresult"
+  print "Mailbox suite exit codes: light=$light_exit dark=$dark_exit"
+  if (( light_exit != 0 )); then exit "$light_exit"; fi
+  if (( dark_exit != 0 )); then exit "$dark_exit"; fi
+fi

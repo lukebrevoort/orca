@@ -1,10 +1,18 @@
 # BRE-444: native digest width regression and scoped candidate
 
 - Intent / playbook: regression-first investigation and bounded fix for narrow character stacks in the iOS reader.
-- Status: **running**. The baseline reproduced the synthetic defect. The first candidate widened the header but left narrow statistics wrapping; the cell-only experiment also failed. The next nested-table width experiment awaits independent review and one new-head native run. Keep PR #303 draft and unmerged until verification is complete.
-- Base: `faf41b80a1ec3149ee34d9782235c889023d59ea`; PR branch `codex/bre-444-native-width-diagnostic`.
+- Status: **running**. The scoped width fix passed the November 7 native, image and general fixture checks at `3dcde9b8030a9fee5e8fbafd72cb10db5f34ba85`. November 9 work integrates current main and hardens metric validation; that new revision requires fresh hosted checks. Keep PR #303 draft and unmerged.
+- Original base: `faf41b80a1ec3149ee34d9782235c889023d59ea`; current integrated main: `9ec3ca31afecc28a4af2bf8b40c48a5f1fb9a311`; PR branch `codex/bre-444-native-width-diagnostic`.
 - Ownership: implementation owner and independent source/test reviewer. Held PRs #295/#298 and PR #292–#295 descriptions/media remain untouched.
 - Source: [BRE-444](https://linear.app/brevoort/issue/BRE-444/feedback-look-at-this-compilation-the-text-isnt-readable). Exact original email HTML and installed app revision remain unknown. No private content or screenshot is included in these artifacts.
+
+## November 9 current-main verification
+
+Main advanced through BRE-445 / PR #304 after the original width evidence. The current candidate cleanly combines original draft head `3dcde9b` with main `9ec3ca31`. The BRE-444 production delta remains unchanged. The combined tree includes main's bounded reader-readiness diagnostics and mailbox fixture checks.
+
+Independent source review found no blocking correctness or privacy issue. It identified a test-hardening gap: the numeric metric helper returned infinity when a key was missing, allowing lower-bound readability assertions to pass on absent values. The final metric helper explicitly fails absent or nonfinite metrics and returns NaN; independent re-review found no further issues. All original thresholds, fixtures, timeouts and test scopes remain intact. Native compilation/execution must validate this final test change. This is an independent agent review, not formal GitHub approval.
+
+Existing native reading artifact [13583464304](https://github.com/lukebrevoort/orca/actions/runs/42395734772/artifacts/13583464304) was downloaded again on November 9. Its ZIP SHA-256 `1d3bfebf6370f651c9d0fd6c4deef0ab57c145fbf242f64828408a86a538ff54` and source identity match the published November 7 head. Its full-width dark digest screenshot visibly retains readable title/statistic/body text and vertical sender spacer whitespace. It verifies that earlier head only. Fresh integrated-head native artifacts and final CI results will be recorded in the PR description; pending checks are not a pass.
 
 ## Confirmed synthetic baseline
 

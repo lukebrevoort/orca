@@ -158,7 +158,17 @@ final class ReaderUITests: XCTestCase {
         let landscape = app.images["Synthetic landscape"]
         for _ in 0..<4 { if landscape.exists && landscape.isHittable { break }; app.swipeUp() }
         let landscapeVisible = landscape.exists && landscape.isHittable
-        if !landscapeVisible { captureReaderFailure(in: app, stage: "image-landscape-visible") }
+        if !landscapeVisible {
+            // Record the original failure before observing asynchronous WebKit.
+            // Late rendering is diagnostic evidence, never a successful retry.
+            continueAfterFailure = true
+            XCTAssertTrue(landscapeVisible)
+            continueAfterFailure = false
+            captureReaderFailure(in: app, stage: "image-landscape-visible")
+            observeLateLandscape(in: app, landscape: landscape)
+            captureReaderFailure(in: app, stage: "image-landscape-after-observation")
+            return
+        }
         XCTAssertTrue(landscapeVisible)
         XCTAssertEqual(try imageDownloadCount(), initialDownloads + 1)
         screenshot("images-loaded-after-consent")
@@ -521,6 +531,18 @@ final class ReaderUITests: XCTestCase {
         return visible && text.isHittable
     }
 
+    private func observeLateLandscape(in app: XCUIApplication, landscape: XCUIElement) {
+        // Passive, bounded observation only: no gestures, reloads or state changes.
+        let started = ProcessInfo.processInfo.systemUptime
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            landscape.exists && landscape.isHittable
+        }, object: nil)
+        let result = XCTWaiter.wait(for: [ready], timeout: 15)
+        let elapsedMS = Int64((ProcessInfo.processInfo.systemUptime - started) * 1_000)
+        print("[reader-fixture-late-render] elapsed_ms=\(elapsedMS) visible=\(result == .completed)")
+        screenshot("reader-image-after-passive-observation")
+    }
+
     private func readerAction(_ stage: String) {
         // No additional AX queries, retries or waits before the original action.
         print("[reader-fixture-action] epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000)) stage=\(stage)")
@@ -556,7 +578,7 @@ final class ReaderUITests: XCTestCase {
         for webView in app.webViews.allElementsBoundByIndex.prefix(4) {
             let identifier = webView.identifier
             if identifier.hasPrefix("fixture-html-state ") {
-                lines.append(String(identifier.prefix(300)))
+                lines.append(String(identifier.prefix(1_200)))
                 lines.append("webview-subtree (relative depth starts at 10)")
                 visit(webView, depth: 10)
             }
