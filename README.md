@@ -50,12 +50,12 @@ device setup and manual checks. Simulator tests do not establish device signing,
 production authentication, or real push delivery. Outlook sync and sending remain
 unimplemented in the current provider adapter.
 
-Orca is a messaging product focused on human-written communication. This repo starts as a Bun workspace with a Hono API, a React/Vite web app, and a shared TypeScript package for cross-app types.
+Orca is a messaging product focused on human-written communication. This repo is a Gmail-first Bun workspace with a Hono API, a React/Vite web app, and a shared TypeScript package for cross-app types.
 
 ## Prerequisites
 
-- Bun 1.2 or newer
-- Node 22 or newer for editor tooling compatibility
+- Bun 1.3.14 (pinned in `package.json` and CI)
+- Node 24 for tooling and fixture checks (matching CI)
 
 Install dependencies:
 
@@ -69,8 +69,10 @@ Copy the example environment file before running the API:
 cp .env.example .env
 ```
 
-The API scripts load this workspace-root `.env` file automatically, including
-when they run from `apps/api`.
+The API development, database migration, and database verification scripts
+explicitly load this workspace-root `.env` file, including when they run from
+`apps/api`. The production `start` command expects configuration in the service
+environment.
 
 ## Development
 
@@ -93,15 +95,16 @@ During local development, open `http://localhost:5173/dev/inbox` to review the f
 inbox with fake email data. This route bypasses OAuth only in Vite development mode;
 production builds keep the inbox protected by the normal session check.
 
-The Vercel project described by `vercel.json` builds both the static web bundle
-and the Hono API bridge. `/v1/...` requests are rewritten to the generated
-`api/index.js` function, while browser routes fall back to `apps/web/dist` so
-`/login` and `/onboarding` survive a direct refresh. A `READY` deployment now
-includes both the web bundle and the API function, but it is not proof that the
-OAuth flow has been exercised.
+The Vercel configuration in `vercel.json` serves `apps/web/dist` and forwards
+`/v1/...` requests to the configured Railway API. Other browser routes fall back
+to `index.html` so `/login` and `/onboarding` survive a direct refresh. It does
+not deploy a local Hono serverless bridge. A successful web deployment alone
+does not verify API persistence, OAuth, Gmail delivery, or native acceptance.
 
-The API applies any pending local SQLite migrations before it starts. This
-makes a fresh or reset development database ready for auth and OAuth flows.
+`railway.json` starts the API with `bun --cwd apps/api start`. Both API `start`
+and `dev` scripts apply pending SQLite migrations before launching the server.
+The standalone entrypoint starts Gmail sync and mobile push schedulers; importing
+the Hono app alone does not start them.
 
 Default local URLs:
 
@@ -109,6 +112,11 @@ Default local URLs:
 - Web: `http://localhost:5173`
 
 ## Connected accounts API
+
+Gmail is the implemented mail provider for sync, draft mirroring, and sending.
+Outlook OAuth is available, but its adapter does not implement sync or draft/send
+transport. Read/unread changes and organization actions affect Orca locally; they
+do not provide Gmail mailbox mutation parity.
 
 `GET /v1/accounts` returns every Gmail and Outlook account connected to the
 authenticated Orca user as a provider-neutral account page. `DELETE
@@ -151,16 +159,14 @@ bun run test:smoke
 
 ## Database Foundation
 
-The API workspace now includes a Drizzle + SQLite persistence foundation for
-future auth and sync work. By default it writes to
+The API uses Drizzle + SQLite for accounts, sessions, cached mail, revisioned
+drafts, and local organization state. By default it writes to
 `apps/api/data/orca.sqlite`. Relative `DATABASE_PATH` values are anchored to the
 API workspace, so API requests and startup migrations use the same file even
-when the process is launched from the repository root. Override that with
-`DATABASE_PATH` if needed. Production deployments must point it at durable
-storage shared by every API instance; the Vercel bridge falls back to
-`/tmp/orca.sqlite` only to keep previews bootable, and an ephemeral/serverless
-filesystem will lose sessions and connected accounts between instances or
-restarts.
+when the process is launched from the repository root. Set `DATABASE_PATH` to
+a path on durable storage for a deployed API. The checked-in Railway config does
+not provision that storage. Ephemeral filesystems lose persisted state on
+replacement or restart; do not assume separate API instances share a SQLite file.
 
 Useful commands:
 
@@ -179,7 +185,7 @@ Variables used by the current local boot flow:
 
 - `PORT`: API port. Defaults to `3000`.
 - `WEB_ORIGIN`: browser origin allowed by API CORS. Defaults to `http://localhost:5173`.
-- `DATABASE_PATH`: SQLite file path used by the API workspace. Relative paths resolve from `apps/api`; the default local value is `./data/orca.sqlite`. Production must use durable shared storage.
+- `DATABASE_PATH`: SQLite file path used by the API workspace. Relative paths resolve from `apps/api`; the default local value is `./data/orca.sqlite`. Deployed APIs must use durable storage.
 
 Variables required by the auth/session foundation when that code path is exercised:
 
@@ -199,12 +205,12 @@ Variables for the default-off M6 ChatGPT/Codex MCP OAuth boundary:
 - `ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS`: optional rotating refresh-token lifetime, capped at 30 days.
 - `ORCA_M6_MCP_AUTHORIZATION_CODE_TTL_SECONDS`: optional single-use authorization-code lifetime; defaults to 300 seconds.
 
-Variables reserved for the upcoming Gmail connect flow:
+Variables for the implemented Gmail connect flow:
 
 - `GMAIL_CLIENT_ID`
 - `GMAIL_CLIENT_SECRET`
 - `GMAIL_REDIRECT_URI`
-- `GMAIL_OAUTH_SCOPES`: optional space- or comma-delimited scopes. Defaults to `https://www.googleapis.com/auth/gmail.readonly` and `https://www.googleapis.com/auth/userinfo.email`.
+- `GMAIL_OAUTH_SCOPES`: optional space- or comma-delimited scopes. Defaults to `https://www.googleapis.com/auth/gmail.readonly`, `https://www.googleapis.com/auth/userinfo.email`, and `https://www.googleapis.com/auth/userinfo.profile`.
 
 Variables for the separate Google Calendar availability connection:
 
@@ -220,7 +226,7 @@ Local validation notes:
 
 - The API now validates `PORT` and `WEB_ORIGIN` at startup.
 - The auth/session layer validates `SESSION_SECRET` and `TOKEN_ENCRYPTION_KEY` when auth/token code is invoked.
-- The current persistence branch does not force `DATABASE_PATH`; it falls back to `./data/orca.sqlite` for local development.
+- The API does not require an explicit `DATABASE_PATH`; it falls back to `./data/orca.sqlite` for local development.
 
 ## Gmail OAuth Login
 

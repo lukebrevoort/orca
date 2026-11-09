@@ -68,7 +68,6 @@ import {
   normalizeOrganizationSavedQueryDefinition,
   organizationSavedQueryDefinitionFromLegacyPinFilter,
   organizationAuthorityTraceSchema,
-  pinFilterSchema,
   listHumanClassificationOverridesSchema,
   resolveHumanClassificationSchema,
   resolveSenderAttentionSchema,
@@ -2817,12 +2816,9 @@ export type ClassificationEmailRecord = Pick<typeof emails.$inferSelect,
   "id" | "accountId" | "fromAddress" | "humanSignal" | "humanClassification" | "humanClassificationReasons" | "humanClassifierVersion"
 >;
 type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
-type CollectionRecord = typeof collections.$inferSelect;
 type PinRecord = typeof pins.$inferSelect;
 type ReminderRecord = typeof threadReminders.$inferSelect;
 type MessageDraftRecord = typeof messageDrafts.$inferSelect;
-
-class OrganizationTargetError extends Error {}
 
 function validateJson<T>(c: Context, schema: { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } } }, value: unknown) {
   const result = schema.safeParse(value);
@@ -2873,13 +2869,6 @@ function asTransportError(error: unknown) {
     : error instanceof ProviderNotImplementedError
       ? new GmailTransportError(`${providerDisplayName(error.provider)} transport is not implemented`, "rejected", false)
     : new GmailTransportError("The delivery outcome could not be confirmed", "ambiguous", true);
-}
-
-function transportError(c: Context, error: unknown) {
-  const transport = asTransportError(error);
-  const code = transport.kind === "ambiguous" ? "ambiguous_delivery" : "provider_rejected";
-  const status = transport.kind === "auth" ? 401 : transport.kind === "rate_limit" ? 429 : transport.kind === "ambiguous" ? 503 : 422;
-  return c.json({ error: { code, message: transport.message, retryable: transport.retryable } }, status);
 }
 
 function getMessageDraft(db: Database, accountId: string, id: string) {
@@ -3499,25 +3488,6 @@ function getCollection(db: Database, accountId: string, id: string) {
   return db.select().from(collections).where(and(eq(collections.accountId, accountId), eq(collections.id, id))).get();
 }
 
-function updateCollectionRecord(db: Database, accountId: string, current: CollectionRecord, input: { name?: string; color?: string; position?: number }) {
-  const records = listCollectionRecords(db, accountId);
-  const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
-  db.transaction((tx) => {
-    if (nextPosition !== current.position) {
-      tx.update(collections).set({ position: -1 }).where(eq(collections.id, current.id)).run();
-      const moving = records.filter((item) => item.id !== current.id && (
-        nextPosition < current.position
-          ? item.position >= nextPosition && item.position < current.position
-          : item.position > current.position && item.position <= nextPosition
-      ));
-      for (const item of moving.sort((a, b) => nextPosition < current.position ? b.position - a.position : a.position - b.position)) {
-        tx.update(collections).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(collections.id, item.id)).run();
-      }
-    }
-    tx.update(collections).set({ name: input.name?.trim() ?? current.name, color: input.color ?? current.color, position: nextPosition, updatedAt: new Date() }).where(eq(collections.id, current.id)).run();
-  });
-}
-
 function listPins(db: Database, accountId: string) {
   return db.select().from(pins).where(eq(pins.accountId, accountId)).orderBy(asc(pins.position)).all();
 }
@@ -3545,75 +3515,11 @@ function toPin(db: Database, pin: PinRecord) {
   });
 }
 
-function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; icon?: string; color?: string; position?: number }) {
-  let updated = false;
-  db.transaction((tx) => {
-    // Re-read both the target row and the ordered list after the transaction
-    // starts. The request may have waited behind another reorder, so using the
-    // route-level snapshot here can shift rows into occupied unique positions.
-    const freshCurrent = tx.select().from(pins).where(and(eq(pins.accountId, accountId), eq(pins.id, current.id))).get();
-    if (!freshCurrent) return;
-    const records = tx.select().from(pins).where(eq(pins.accountId, accountId)).orderBy(asc(pins.position)).all();
-    const nextPosition = Math.min(input.position ?? freshCurrent.position, Math.max(records.length - 1, 0));
-    if (nextPosition !== freshCurrent.position) {
-      tx.update(pins).set({ position: -1 }).where(and(eq(pins.accountId, accountId), eq(pins.id, freshCurrent.id))).run();
-      const moving = records.filter((item) => item.id !== freshCurrent.id && (
-        nextPosition < freshCurrent.position
-          ? item.position >= nextPosition && item.position < freshCurrent.position
-          : item.position > freshCurrent.position && item.position <= nextPosition
-      ));
-      for (const item of moving.sort((a, b) => nextPosition < freshCurrent.position ? b.position - a.position : a.position - b.position)) {
-        tx.update(pins).set({ position: item.position + (nextPosition < freshCurrent.position ? 1 : -1) }).where(and(eq(pins.accountId, accountId), eq(pins.id, item.id))).run();
-      }
-    }
-    tx.update(pins).set({
-      label: input.label?.trim() ?? freshCurrent.label,
-      icon: input.icon ?? freshCurrent.icon,
-      color: input.color ?? freshCurrent.color,
-      position: nextPosition,
-      updatedAt: new Date(),
-    }).where(and(eq(pins.accountId, accountId), eq(pins.id, freshCurrent.id))).run();
-    updated = true;
-  });
-  return updated;
-}
-
 function defaultPinIcon(kind: "sender" | "thread" | "view" | "filter") {
   if (kind === "sender") return "person" as const;
   if (kind === "thread") return "thread" as const;
   if (kind === "filter") return "search" as const;
   return "grid" as const;
-}
-
-function validatePinTarget(db: Database, accountId: string, kind: "sender" | "thread" | "view" | "filter", targetId: string) {
-  const target = targetId.trim();
-  if (kind === "thread" && !db.select({ id: threads.id }).from(threads).where(and(eq(threads.accountId, accountId), eq(threads.id, target))).get()) {
-    throw new OrganizationTargetError("Thread pins must refer to a thread in this account");
-  }
-  if (kind === "sender" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) {
-    throw new OrganizationTargetError("Sender pins must contain an email address");
-  }
-  if (kind === "view" && !["inbox", "focus", "quiet", "hidden", "all"].includes(target)) {
-    throw new OrganizationTargetError("View pins must refer to an Orca attention view");
-  }
-  if (kind === "filter") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(target);
-    } catch {
-      throw new OrganizationTargetError("Filter pins must contain a valid filter definition");
-    }
-    if (!pinFilterSchema.safeParse(parsed).success) {
-      throw new OrganizationTargetError("Filter pins must contain a supported filter definition");
-    }
-  }
-}
-
-function organizationConflict(c: Context, error: unknown, message: string) {
-  if (error instanceof Error && /UNIQUE constraint failed/.test(error.message)) {
-    return c.json({ error: { code: "conflict", message } }, 409);
-  }
-  throw error;
 }
 
 function providerDisplayName(provider: MailProvider) {
