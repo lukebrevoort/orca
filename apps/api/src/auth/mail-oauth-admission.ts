@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, like, lt, notExists, or } from "drizzle-orm";
 import type { createDatabaseClient } from "../db/client.ts";
-import { oauthAccounts, pendingMailLogins, users } from "../db/schema.ts";
+import { oauthAccounts, organizationThreadLaneStates, pendingMailLogins, users } from "../db/schema.ts";
 import { pendingUserEmailPattern } from "./pending-user.ts";
 import { purgeStalePendingUsers, stalePendingPurgeBatchSize } from "./session-store.ts";
 
@@ -16,11 +16,18 @@ export function admitPendingMailLogin(db: ReturnType<typeof createDatabaseClient
     const now = Date.now();
     // A marker proves this is a principal created by this starter, even if a
     // callback persisted a provider grant before it could promote the user.
-    tx.delete(users).where(inArray(users.id, tx.select({ id: users.id }).from(users)
+    const staleUserIds = tx.select({ id: users.id }).from(users)
       .innerJoin(pendingMailLogins, eq(pendingMailLogins.userId, users.id))
       .where(and(eq(users.email, pendingMailLogins.pendingEmail), isNull(users.authenticatedAt),
         isNull(users.onboardingCompletedAt), lt(users.createdAt, new Date(now - maxPendingAgeMs))))
-      .limit(stalePendingPurgeBatchSize))).run();
+      .limit(stalePendingPurgeBatchSize).all().map(({ id }) => id);
+    if (staleUserIds.length) {
+      // Interrupted callbacks can already have synced threads. Remove their
+      // lane references before the user cascade reaches RESTRICTed lanes.
+      // Selection and deletion share the immediate transaction's write lock.
+      tx.delete(organizationThreadLaneStates).where(inArray(organizationThreadLaneStates.workspaceId, staleUserIds)).run();
+      tx.delete(users).where(inArray(users.id, staleUserIds)).run();
+    }
     purgeStalePendingUsers(tx, now, userId);
     const pending = tx.select({ id: users.id }).from(users).where(and(
       like(users.email, pendingUserEmailPattern), isNull(users.authenticatedAt),
