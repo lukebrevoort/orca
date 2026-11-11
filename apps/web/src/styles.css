@@ -5089,7 +5089,12 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .compose-workspace-zen .compose-carbon-toggle,
 .compose-workspace-zen .compose-recipient-chip button { height: auto; min-height: 44px; min-width: 44px; }
 .compose-workspace-zen .compose-formatting button,
-.compose-workspace-zen .compose-delivery-actions button { font-size: 14px; }
+.compose-workspace-zen .compose-delivery-actions button,
+.compose-workspace-zen .compose-conflict button,
+.compose-workspace-zen .compose-carbon-toggle,
+.compose-workspace-zen .writing-format-choice select { font-size: 14px; }
+.compose-workspace-zen .writing-format-choice,
+.compose-workspace-zen .compose-formatting > .compose-formatting-hint { font-size: 13px; line-height: 1.5; }
 .compose-workspace-zen .compose-formatting button:disabled,
 .compose-workspace-zen .compose-delivery-actions button:disabled { color: var(--orca-muted); opacity: 1; }
 .compose-workspace-zen .compose-conflict { flex-wrap: wrap; }
@@ -5098,7 +5103,7 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .compose-workspace-zen .compose-conflict strong,
 .compose-workspace-zen .compose-conflict span { font-size: 13px; }
 .compose-zen-header { flex-shrink: 0; }
-.compose-zen-header .zen-back { height: auto; min-height: 44px; }
+.compose-zen-header .zen-back { font-size: 14px; height: auto; min-height: 44px; }
 .compose-workspace-zen .compose-attachment-chips button:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 2px; }
 
 @media (max-width: 760px) {
