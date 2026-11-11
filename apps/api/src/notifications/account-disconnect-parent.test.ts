@@ -8,8 +8,8 @@ import { createSession } from "../auth/session-store.ts";
 import { createApp } from "../index.ts";
 
 // Independent BRE-464 regression: no 0054 notification schema/fixtures required.
-// Both historical baselines demonstrate the actual HTTP500 before applying 0055.
-for (const cutoff of [51, 53]) test(`BRE-464 authenticated retained-mail disconnect on <=005${cutoff === 51 ? "1" : "3"} upgrades independently through 0055`, async () => {
+// Both historical baselines demonstrate the actual HTTP500 before applying 0054.
+for (const cutoff of [51, 53]) test(`BRE-464 authenticated retained-mail disconnect on <=005${cutoff === 51 ? "1" : "3"} upgrades independently through 0054`, async () => {
   const prior = process.env.SESSION_SECRET; process.env.SESSION_SECRET = "bre464-synthetic-session-secret-long-enough";
   const dir = mkdtempSync(join(tmpdir(), "orca-bre464-"));
   const path = join(dir, "test.sqlite"), client = createDatabaseClient(path);
@@ -17,9 +17,9 @@ for (const cutoff of [51, 53]) test(`BRE-464 authenticated retained-mail disconn
   const journal = JSON.parse(readFileSync(join(source, "meta/_journal.json"), "utf8"));
   function subset(includeFix: boolean) {
     const destination = join(dir, includeFix ? "fixed" : "baseline"); mkdirSync(join(destination, "meta"), { recursive: true });
-    const entries = journal.entries.filter((e: { idx: number }) => e.idx <= cutoff || (includeFix && e.idx === 55));
+    const entries = journal.entries.filter((e: { idx: number }) => e.idx <= cutoff || (includeFix && e.idx === 54));
     writeFileSync(join(destination, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
-    for (const file of readdirSync(source)) if (file.endsWith(".sql") && (Number(file.slice(0, 4)) <= cutoff || (includeFix && file.startsWith("0055_")))) copyFileSync(join(source, file), join(destination, file));
+    for (const file of readdirSync(source)) if (file.endsWith(".sql") && (Number(file.slice(0, 4)) <= cutoff || (includeFix && file.startsWith("0054_")))) copyFileSync(join(source, file), join(destination, file));
     return destination;
   }
   try {
