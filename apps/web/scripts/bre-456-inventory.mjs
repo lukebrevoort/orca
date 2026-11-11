@@ -13,6 +13,7 @@ try{for(const name of ['baseline','candidate']){
  await page.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  await page.goto(origin);await page.setContent((await readFile(join(out,name+'.html'),'utf8')).replace('<head>','<head><base href="'+origin+'">'));await page.evaluate(()=>document.fonts.ready);
  const buttons=await page.locator('nav[aria-label="Primary navigation"] button:visible').allTextContents();
- result.inventory.push({name,visibleButtons:buttons.map(label=>label.replace(/\s+/g,' ').trim()),count:buttons.length});
+ const controls=await page.locator('nav[aria-label="Primary navigation"] :is(button,a[href],summary):visible').allTextContents();
+ result.inventory.push({name,visibleButtons:buttons.map(label=>label.replace(/\s+/g,' ').trim()),count:buttons.length,visibleControls:controls.map(label=>label.replace(/\s+/g,' ').trim()),controlCount:controls.length});
  await page.screenshot({path:join(out,name+'.png')});await page.close();
 }}finally{await browser.close();await writeFile(join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));}

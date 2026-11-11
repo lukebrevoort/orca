@@ -198,7 +198,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Important", "All Mail", "Inbox", "Focus", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Summary", "Manage spaces", "Customize tools", "Organize", "Advanced Organization", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Important", "All Mail", "Inbox", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Summary", "Manage spaces", "Customize tools", "Organize", "Advanced Organization", "Settings", "Account · Maya Chen"]);
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
     expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
 

@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { chromium } from 'playwright';
 const [connection,out]=process.argv.slice(2),fixture=JSON.parse(await readFile(connection,'utf8')),origin=fixture.url;
 assert(['127.0.0.1','localhost'].includes(new URL(origin).hostname));await mkdir(out,{recursive:true});
-const result={revision:await webSourceIdentity(),commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scenarios:[],assertions:0,failures:[],requests:[],pageErrors:[],screenshots:[],separateCoverage:[{journey:'F04',script:'bre-455-browser.mjs',scope:'Actual native constructor and server ledger; no OS display proof.'}]};
+const result={revision:await webSourceIdentity(),commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scenarios:[],assertions:0,failures:[],requests:[],pageErrors:[],screenshots:[],userSteps:[],separateCoverage:[{journey:'F04',script:'bre-455-browser.mjs',scope:'Actual native constructor and server ledger; no OS display proof.'}]};
 const check=(ok,label,detail)=>{result.assertions++;if(!ok)throw new Error(label+': '+JSON.stringify(detail));};
 function db(sql,params=[]){return JSON.parse(execFileSync('python3',['-c','import sqlite3,json,sys; c=sqlite3.connect(sys.argv[1]); c.row_factory=sqlite3.Row; print(json.dumps([dict(r) for r in c.execute(sys.argv[2],json.loads(sys.argv[3]))])); c.commit()',join(fixture.directory,'mail.sqlite'),sql,JSON.stringify(params)],{encoding:'utf8'}));}
 async function screenshot(page,name){await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,name+'.png')});result.screenshots.push(name+'.png');}
@@ -22,6 +22,7 @@ try{for(const theme of ['light','dark']){
  page.on('pageerror',error=>result.pageErrors.push(error.message));
  page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/v1/'))result.requests.push({theme,path:new URL(request.url()).pathname,method:request.method()});});
  async function api(path,body){const response=await context.request.fetch(origin+path,body?{method:'POST',data:body}:{});check(response.ok(),path,await response.clone?.()?.text?.());return response.json();}
+ async function step(task,action,run){const entry={theme,task,action,completed:false};result.userSteps.push(entry);await run();entry.completed=true;}
  try{
  // Reset each scenario's preconditions through revision-guarded commands, even
  // when an earlier theme stopped before cleanup. Retain server tombstones.
@@ -34,7 +35,7 @@ try{for(const theme of ['light','dark']){
  await page.goto(origin+'/');await page.getByRole('heading',{name:'No important conversations yet',exact:true}).waitFor();
  const primaryCount=await page.locator('.desktop-sidebar-content button:visible').count();
  await screenshot(page,theme+'-important-empty-desktop');
- await page.getByRole('button',{name:'Review All Mail',exact:true}).click();
+ await step('Empty Important to All Mail','Review All Mail',()=>page.getByRole('button',{name:'Review All Mail',exact:true}).click());
  const row=page.locator('.message-row-wrap').filter({has:page.getByRole('button',{name:/first account conversation/})}).first();
  // Actual fixture state before a list-only correction (no reader activation).
  const before=db('select id,account_id,is_read from emails order by id');
@@ -92,22 +93,22 @@ try{for(const theme of ['light','dark']){
  await page.goto(origin+'/?destination=drafts');await page.getByRole('heading',{name:'Drafts',exact:true}).waitFor();await screenshot(page,theme+'-drafts-mobile');
  // F03/P02/P07/P08: actual search, read-only preview, explicit refinement/save, reopen.
  await page.goto(origin+'/?destination=all');
- await page.getByRole('textbox',{name:'Search mail',exact:true}).fill('conversation');
- await page.getByRole('textbox',{name:'Search mail',exact:true}).press('Enter');
+ await step('Search to saved View','Enter query',()=>page.getByRole('textbox',{name:'Search mail',exact:true}).fill('conversation'));
+ await step('Search to saved View','Submit search',()=>page.getByRole('textbox',{name:'Search mail',exact:true}).press('Enter'));
  await page.getByRole('button',{name:'Save as View',exact:true}).waitFor();
  const viewsBefore=db('select * from organization_views order by id');
  const placementBeforeView=db('select * from email_labels order by id');
  const importanceBeforeView=db('select * from importance_choices order by account_id,kind,target');
- await page.getByRole('button',{name:'Save as View',exact:true}).click();
+ await step('Search to saved View','Save as View',()=>page.getByRole('button',{name:'Save as View',exact:true}).click());
  const author=page.locator('.search-view-authoring');
- await author.getByRole('textbox',{name:/^View name(?:\s|$)/}).fill('Correspondence '+theme);
+ await step('Search to saved View','Name the view',()=>author.getByRole('textbox',{name:/^View name(?:\s|$)/}).fill('Correspondence '+theme));
  const refinement=author.getByRole('button',{name:'Replace with subject contains “conversation”',exact:true});
- await refinement.click();
+ await step('Search to saved View','Explicit supported refinement',()=>refinement.click());
  const saveView=author.getByRole('button',{name:'Save View',exact:true});
  await saveView.waitFor();await page.waitForFunction(()=>{const button=document.querySelector('.search-view-authoring .view-save');return button&&!button.disabled;});
  check(JSON.stringify(db('select * from organization_views order by id'))===JSON.stringify(viewsBefore),'F03 preview creates no saved view');
  await screenshot(page,theme+'-view-preview-mobile');
- await saveView.click();await page.waitForURL(url=>url.searchParams.get('destination')?.startsWith('view:'));
+ await step('Search to saved View','Explicit Save View',()=>saveView.click());await page.waitForURL(url=>url.searchParams.get('destination')?.startsWith('view:'));
  await page.getByRole('heading',{name:'Correspondence '+theme,exact:true}).waitFor();
  const view=db('select * from organization_views where name=?',['Correspondence '+theme])[0];
  check(Boolean(view)&&view.skip_inbox===0,'F03 explicit Save persists a view without placement policy');
@@ -116,10 +117,10 @@ try{for(const theme of ['light','dark']){
  await page.reload();await page.getByRole('heading',{name:'Correspondence '+theme,exact:true}).waitFor();
  await screenshot(page,theme+'-saved-view-mobile');
  await page.goto(origin+'/settings#writing');
- const signature=page.getByRole('textbox',{name:'Default signature',exact:true});await signature.fill('BRE456 '+theme+' signature');
- await page.getByRole('combobox',{name:'Settings section',exact:true}).selectOption('appearance');
+ const signature=page.getByRole('textbox',{name:'Default signature',exact:true});await step('Save choices from another Settings section','Edit signature',()=>signature.fill('BRE456 '+theme+' signature'));
+ await step('Save choices from another Settings section','Switch section',()=>page.getByRole('combobox',{name:'Settings section',exact:true}).selectOption('appearance'));
  check(await signature.isVisible()===false,'P11 one active panel');
- await page.getByRole('button',{name:'Save account choices',exact:true}).click();
+ await step('Save choices from another Settings section','Shared Save',()=>page.getByRole('button',{name:'Save account choices',exact:true}).click());
  await page.getByText('Account preferences saved.',{exact:false}).waitFor();
  const preferences=await api('/v1/preferences');check(preferences.signature==='BRE456 '+theme+' signature','P11 shared Save persists inactive section');
  for(const section of ['account','appearance','attention','writing','notifications','connected','agents','privacy']){

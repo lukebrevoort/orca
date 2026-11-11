@@ -1,0 +1,11 @@
+{
+  "rawPath": "/tmp/bre456-scoped-settings-nav-green-1.log",
+  "sha256": "7d14252bc55bc4258171b26e65e994d4f9c4b96268271299a0109b808e290224",
+  "summary": [
+    "166 pass",
+    "0 fail",
+    "1269 expect() calls",
+    "Ran 166 tests across 2 files. [14.43s]"
+  ],
+  "failures": []
+}

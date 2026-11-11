@@ -91,11 +91,11 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <Item active={active === "important"} icon={<NavIcon name="inbox"/>} label="Important" onClick={()=>go("important")}/>
       <Item active={active === "all"} icon={<NavIcon name="all"/>} label="All Mail" onClick={()=>go("all")}/>
       <Item active={active === "inbox" || active === `destination:${fallbackDestination?.id}`} count={inboxCount} icon={<NavIcon name="inbox"/>} label={fallbackDestination?.name??"Inbox"} onClick={()=>go("inbox")}/>
-      <Item active={active === "focus"} icon={<NavIcon name="view"/>} label="Focus" onClick={()=>go("focus")}/>
+      {!spaces.some(space=>destinationForSpace(space)==="focus")?<Item active={active === "focus"} icon={<NavIcon name="view"/>} label="Focus" onClick={()=>go("focus")}/>:null}
       {visibleSpaces.map(space=><Item active={active === destinationForSpace(space)} count={space.count} icon={<ToolIcon space={space}/>} key={destinationForSpace(space)} label={space.label} savedView={space.kind === "view"} onClick={()=>go(destinationForSpace(space))}/>)}
       <Item active={active === "summary"} icon={<NavIcon name="all"/>} label="Summary" onClick={()=>go("summary")}/>
       <Item active={false} icon={<NavIcon name="settings"/>} label="Manage spaces" onClick={()=>{setMobileMenuOpen(false);onManageSpaces();}}/>
-      {onManageViews?<button type="button" onClick={()=>{setMobileMenuOpen(false);onManageViews();}}>Manage saved views</button>:null}
+      {onManageViews?<Item active={false} icon={<NavIcon name="view"/>} label="Manage saved views" onClick={()=>{setMobileMenuOpen(false);onManageViews();}}/>:null}
       {onManageTools?<Item active={false} icon={<NavIcon name="settings"/>} label="Customize tools" onClick={()=>{setMobileMenuOpen(false);onManageTools();}}/>:null}
       <Item active={active === "attention"} icon={<NavIcon name="organization"/>} label="Organize" onClick={()=>go("attention")}/>
       <Item active={active === "organization-studio"} icon={<NavIcon name="organization"/>} label="Advanced Organization" onClick={()=>go("organization-studio")}/>

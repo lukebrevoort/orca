@@ -9,6 +9,7 @@ import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
 import { demoStore } from "./demo-store";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
+import { useImportantNotifications } from "./important-notifications";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -355,8 +356,14 @@ async function renderSettingsHome(theme: "light" | "dark" = "light", demoMode = 
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
+  function SettingsControllerFixture() {
+    // Keep these scoped read/retry counts about the Settings controllers. The
+    // real notification runtime has its own HTTP/SQLite browser integration.
+    const notifications = useImportantNotifications(false);
+    return <SettingsHome notificationClient={notifications} demoMode={demoMode} preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />;
+  }
   await act(async () => {
-    root!.render(<SettingsHome demoMode={demoMode} preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />);
+    root!.render(<SettingsControllerFixture />);
   });
   return container;
 }

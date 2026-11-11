@@ -1,0 +1,13 @@
+{
+  "rawPath": "/tmp/bre456-navigation-red-aed8563d.log",
+  "sha256": "e8c0e6a90be526c7a953f3fb4c2856218e3d7741217b9c120c321b5c9c9c58a2",
+  "summary": [
+    "12 pass",
+    "1 fail",
+    "252 expect() calls",
+    "Ran 13 tests across 1 file. [1.66s]"
+  ],
+  "failures": [
+    "(fail) AppSidebar mobile navigation > includes saved-view management in arrow navigation and marks only the actual advanced destination current [7.71ms]"
+  ]
+}
