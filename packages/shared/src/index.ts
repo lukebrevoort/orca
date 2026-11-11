@@ -106,6 +106,7 @@ export {
 } from "./organization-contract.ts";
 
 export * from "./organization-collections-pins.ts";
+export * from "./organization-saved-query-results.ts";
 export * from "./organization-collections-pins-fixtures.ts";
 export * from "./organization-contexts.ts";
 export * from "./organization-contexts-fixtures.ts";

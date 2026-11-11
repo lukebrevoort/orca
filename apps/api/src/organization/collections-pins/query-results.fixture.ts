@@ -54,6 +54,8 @@ export async function createQueryResultsFixture() {
   const calls = { network: 0, sync: 0, transport: 0 };
   const connectionChanges: number[] = [];
   let querySequence = 0;
+  let requestConnectionCount = 0;
+  let beforeSnapshot: (() => void) | undefined;
   const close = () => {
     globalThis.fetch = networkFetch;
     client.sqlite.close();
@@ -160,6 +162,13 @@ export async function createQueryResultsFixture() {
     const headers = { cookie: `orca_session=${session.token}` };
     const dbFactory = () => {
       const connection = createDatabaseClient(databasePath);
+      // Deterministic synthetic concurrent actor between middleware auth and
+      // the new route's own snapshot. Never used by production composition.
+      if (++requestConnectionCount === 2 && beforeSnapshot) {
+        const change = beforeSnapshot;
+        beforeSnapshot = undefined;
+        change();
+      }
       const originalClose = connection.sqlite.close.bind(connection.sqlite);
       connection.sqlite.close = (...args: Parameters<typeof connection.sqlite.close>) => {
         const row = connection.sqlite.query("SELECT total_changes() AS changes").get() as { changes: number };
@@ -186,9 +195,11 @@ export async function createQueryResultsFixture() {
     }
     async function request(path: string, requestHeaders: Record<string, string> = headers) {
       const start = connectionChanges.length;
+      requestConnectionCount = 0;
       try {
         return await app.request(path, { headers: requestHeaders });
       } finally {
+        beforeSnapshot = undefined;
         const changes = connectionChanges.slice(start);
         assert.deepEqual(changes.filter(value => value !== 0), [], "Fresh-session reads must perform zero SQLite DML, including trigger/rolled-back changes");
         assert.deepEqual(calls, { network: 0, sync: 0, transport: 0 });
@@ -217,7 +228,11 @@ export async function createQueryResultsFixture() {
       assert.deepEqual(observedBehaviors, { notify: "notify", focus: "focus", normal: "normal", "quiet-new": "quiet", "hidden-new": "hidden" });
       receipt({ name: "real-auth-catalog-query-mailbox-preconditions", unauthenticatedStatus: 401, catalogStatus: 200, inboxStatus: 200, allMailStatus: 200, observedBehaviors, queryId: catalogQueryId, objectRevision: 7, schemaRevision: 1, connectionChanges, providerCalls: calls });
     }
-    return { ...client, app, directory, session, otherSession, foreignSession, headers, query, rawQuery, url, request, preconditions, catalogQueryId, calls, connectionChanges, close };
+    return {
+      ...client, app, directory, session, otherSession, foreignSession, headers, query, rawQuery, url, request,
+      preconditions, catalogQueryId, calls, connectionChanges, close, seedMessage: message,
+      beforeNextResultSnapshot(change: () => void) { beforeSnapshot = change; },
+    };
   } catch (error) {
     close();
     throw error;
