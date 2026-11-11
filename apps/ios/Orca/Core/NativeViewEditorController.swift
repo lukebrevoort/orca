@@ -215,14 +215,14 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
               !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, id.utf16.count <= 200,
               journal.context.accountId == selection?.accountId,
               journal.command?.body["retryKey"].text == command.body["retryKey"].text,
-              let key = command.body["retryKey"].text, !key.isEmpty,
+              let key = command.body["retryKey"].text, !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, key.utf16.count <= 200,
               let w = command.body["expectedRevisions"]["workspace"].integer, w > 0, w < 9_007_199_254_740_991 else { return nil }
         if case .null = command.body["expectedRevisions"]["view"] {
-            guard command.body["draft"]["mode"].text == "create", case .null = command.body["draft"]["viewId"] else { return nil }
+            guard command.body["draft"]["mode"].text == "create", case .null = command.body["draft"]["viewId"], case .null = command.body["draft"]["viewRevision"] else { return nil }
             return (id, w + 1, 1)
         }
         guard let v = command.body["expectedRevisions"]["view"].integer, v > 0, v < 9_007_199_254_740_991,
-              command.body["draft"]["mode"].text == "update", command.body["draft"]["viewId"].text == id else { return nil }
+              command.body["draft"]["mode"].text == "update", command.body["draft"]["viewId"].text == id, command.body["draft"]["viewRevision"].integer == v else { return nil }
         return (id, w + 1, v + 1)
     }
     private func validatedAcknowledgement(_ value: MailActionJSON, command: MailActionJSON) -> (id: String, workspace: Int, view: Int)? {

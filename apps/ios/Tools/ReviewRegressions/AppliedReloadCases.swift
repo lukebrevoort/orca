@@ -36,6 +36,7 @@ import Foundation
         editor.name = "Submitted before read failure " + kind; editor.subject = "Subject"; editor.replaceSearch = true; editor.edited(); await editor.review()
         try await control("drop-next-commit"); _ = await editor.save()
         let original = journal(defaults)["command"]["body"], saved = try await snapshot()
+        check("478-unresolved-" + kind + "-reachable-check-action", editor.recoveryActionTitle == "Check Save outcome" && editor.appliedTarget == nil, "View binds this public action title/handler while outcome is still unresolved; hosted tap proof remains pending")
         guard case .array(let ledger) = saved["ledger"], let id = ledger.last?["response"]["view"]["id"].text else { throw APIClient.ClientError.invalidResponse }
         let advanced = try await advance(id)
         let desired = "Newer retained local edits " + kind
@@ -51,6 +52,7 @@ import Foundation
         editor.close()
         let reopened = NativeViewEditorController(defaults: defaults)
         await reopened.open(selection: selection, state: state)
+        check("478-applied-" + kind + "-reachable-reload-action", reopened.recoveryActionTitle == "Reload saved View" && reopened.appliedTarget == id, "same actual View button is labeled Reload and invokes the tested public handler for a known applied ID")
         let proof: ViewCommitStatus = try await client.request("v1/organization/views/commit-status", method: "POST", body: original)
         if case .unknown = proof.outcome { check("478-applied-" + kind + "-status-conservative", true, "real status stays unknown after account addition; existing original ID remains authoritative") }
         else { check("478-applied-" + kind + "-status-conservative", false, "fixture requires conservative account-scope status") }
