@@ -116,7 +116,7 @@ final class OrcaUITests: XCTestCase {
 
     func test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity() throws {
         for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
-            let name = "Native editor " + UUID().uuidString.prefix(8)
+            let name = "Native editor " + String(UUID().uuidString.prefix(8))
             func ownedViews() throws -> [[String: Any]] {
                 let catalog = try composeFixtureRequest("/v1/organization/views")
                 return (catalog["items"] as? [[String: Any]] ?? []).filter { $0["name"] as? String == name }
@@ -152,6 +152,9 @@ final class OrcaUITests: XCTestCase {
             for _ in 0..<5 { if save.isHittable { break }; app.swipeUp() }
             XCTAssertTrue(save.waitForExistence(timeout: 10)); XCTAssertTrue(save.isEnabled)
             attachScreenshot(named: "bre457-native-editor-reviewed-" + size); save.tap()
+            let searchField = app.searchFields["Search All Mail"]
+            XCTAssertTrue(searchField.waitForExistence(timeout: 10))
+            XCTAssertTrue(searchField.buttons["Clear text"].exists); searchField.buttons["Clear text"].tap()
             let edit = app.buttons["view.edit"]
             XCTAssertTrue(edit.waitForExistence(timeout: 15))
             let created = try ownedViews(); XCTAssertEqual(created.count, 1)
