@@ -1,0 +1,20 @@
+ 98 |  for(const w of workloads){
+ 99 |   let signature='';
+100 |   for(let pair=-1;pair<6;pair++){
+101 |    for(const label of pair%2===0?['A','B']:['B','A']){
+102 |     const r=await request(`/v1/threads/${w.name}?accountId=account`);
+103 |     assert.equal(r.status,200);assert.equal(r.scanCalls,w.count);assert.equal(r.scanBytes,w.count*Buffer.byteLength(w.html??''));
+                 ^
+AssertionError: Expected values to be strictly equal:
+
+413 !== 200
+
+ generatedMessage: true,
+     actual: 413,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/orca/apps/api/benchmarks/image-eligibility.ts:103:12
+
+Bun v1.3.14 (macOS arm64)
