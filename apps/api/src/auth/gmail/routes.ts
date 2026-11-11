@@ -16,7 +16,8 @@ import {
 import { createGmailOAuthService, type FetchLike } from "./oauth.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { users } from "../../db/schema.ts";
-import { buildSessionCookie, getSessionCookieOptions } from "../jwt.ts";
+import { createSessionToken } from "../jwt.ts";
+import { clearBrowserSessionCookies, setBrowserSessionCookies, setPendingBrowserSessionCookies } from "../browser-auth-context.ts";
 import { createSession } from "../session-store.ts";
 
 type GmailAuthAppOptions = {
@@ -135,7 +136,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
         email: pendingEmail,
       }).run();
       const session = await createSession(db, userId);
-      c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+      setPendingBrowserSessionCookies(c, session);
       const returnTo = c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`;
       const result = service.getAuthorizationUrl(session, returnTo, "connect", null, pendingEmail);
       return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
@@ -166,7 +167,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
           ...result.account,
         });
         if (!completion.ok && completion.reason === "account_exists") {
-          c.header("Set-Cookie", buildSessionCookie("", new Date(0), getSessionCookieOptions()));
+          if (c.get("authSource") === "cookie") clearBrowserSessionCookies(c);
           if (result.redirectUrl) {
             const url = new URL(result.redirectUrl);
             url.searchParams.set("status", "account_exists");
@@ -177,8 +178,11 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
         if (!completion.ok) return c.json({ ok: false, error: "invalid_state", message: "The pending login is no longer available. Try again from Orca." }, 400);
         if (completion.returningUserId) {
           const session = await createSession(db, completion.returningUserId);
-          c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+          if (c.get("authSource") === "cookie") setBrowserSessionCookies(c, session);
           if (result.redirectUrl) return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
+        } else if (c.get("authSource") === "cookie") {
+          // Promotion retains the pending session ID; now its owner is verified.
+          setBrowserSessionCookies(c, { ...auth, token: await createSessionToken(auth) });
         }
       } finally { sqlite.close(); }
     }

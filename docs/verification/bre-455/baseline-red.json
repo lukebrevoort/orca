@@ -1,0 +1,11 @@
+{
+  "head": "29e345e3c8943acc68e884d68dacd302c8a5c3a4",
+  "clean": true,
+  "command": "bun test apps/api/src/notifications/important-routes.test.ts",
+  "exitCode": 1,
+  "scope": "Actual authenticated HTTP+freshSQLite: GET missing policy status returns404, expected200; no production policy route existed. Remaining adoption/retry assertions not reached.",
+  "log": "/tmp/bre455-red-29e345e3.log",
+  "logSha256": "6a31edda3e5d40b4fb8a6057daa4a0581324106697e51254e2c53b82cf168729",
+  "retainedLog": "baseline-red.log",
+  "originalLogHashCoversResourceLines": true
+}

@@ -1,0 +1,62 @@
+{
+  "sha": "ee2962c40414d22b3035471bd1c7cdc59fdd2a38",
+  "stages": [
+    {
+      "name": "runtime-node",
+      "exit": 0,
+      "command": [
+        "node",
+        "--version"
+      ]
+    },
+    {
+      "name": "runtime-bun",
+      "exit": 0,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "--version"
+      ]
+    },
+    {
+      "name": "focused",
+      "exit": 0,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "test",
+        "apps/api/src/auth/",
+        "apps/api/src/notifications/"
+      ]
+    },
+    {
+      "name": "api-types",
+      "exit": 2,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--cwd",
+        "apps/api",
+        "typecheck"
+      ]
+    },
+    {
+      "name": "shared-types",
+      "exit": 0,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--cwd",
+        "packages/shared",
+        "typecheck"
+      ]
+    },
+    {
+      "name": "http-proof",
+      "exit": 0,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "apps/api/scripts/browser-owner-boundary-proof.ts",
+        "/tmp/bre455-api-owner-green-ee2962c4/http-proof.json"
+      ]
+    }
+  ]
+}

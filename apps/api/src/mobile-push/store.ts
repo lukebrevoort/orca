@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 
+import { policyRow, registrationBarrier } from "../notifications/policy.ts";
 import { decryptToken, encryptToken } from "../auth/token-crypto.ts";
 import { resolveNotificationSpaceSelection } from "./catalog.ts";
 
@@ -58,19 +59,24 @@ export async function registerDevice(sqlite: Database, input: {
   const tokenHash = hashDeviceToken(input.token);
   const now = input.now.getTime();
   sqlite.transaction(() => {
-    const spaces = resolveNotificationSpaceSelection(sqlite, input.userId, input.notificationSelection.spaceIds);
     const current = sqlite.query(`SELECT ${deviceProjection} FROM mobile_push_devices WHERE user_id = ? AND installation_id = ?`)
       .get(input.userId, input.installationId) as StoredDeviceRow | null;
     const currentSpaceIds = current ? listDeviceSpaceIds(sqlite, input.userId, input.installationId) : [];
+    const adopted = policyRow(sqlite, { userId: input.userId, installationId: input.installationId, channel: "apns" });
+    // Old clients may refresh credentials, but cannot replace adopted policy or
+    // erase the retained legacy selection used for review/rollback.
+    const selection = adopted ? { inbox: current ? Boolean(current.notifyInbox) : false, spaceIds: currentSpaceIds } : input.notificationSelection;
+    const spaces = adopted ? sqlite.query("SELECT space_id id,kind,resource_id resourceId FROM mobile_push_device_spaces WHERE user_id=? AND installation_id=? ORDER BY space_id LIMIT 100").all(input.userId, input.installationId) as ReturnType<typeof resolveNotificationSpaceSelection>
+      : resolveNotificationSpaceSelection(sqlite, input.userId, selection.spaceIds);
     const nextSpaceIds = spaces.map((space) => space.id).sort();
     const selectionChanged = current
-      ? Boolean(current.notifyInbox) !== input.notificationSelection.inbox || JSON.stringify(currentSpaceIds) !== JSON.stringify(nextSpaceIds)
+      ? Boolean(current.notifyInbox) !== selection.inbox || JSON.stringify(currentSpaceIds) !== JSON.stringify(nextSpaceIds)
       : true;
     const registrationChanged = current
-      ? current.tokenHash !== tokenHash || current.environment !== input.environment || current.sessionId !== input.sessionId || selectionChanged
+      ? current.tokenHash !== tokenHash || current.environment !== input.environment || current.sessionId !== input.sessionId || current.disabledAt !== null || selectionChanged
       : true;
     const wasEnabled = current ? Boolean(current.notifyInbox) || currentSpaceIds.length > 0 : false;
-    const isEnabled = input.notificationSelection.inbox || nextSpaceIds.length > 0;
+    const isEnabled = selection.inbox || nextSpaceIds.length > 0;
     const modeEnabled = Boolean(current) && !wasEnabled && isEnabled;
     const resetWatermark = !current || modeEnabled || current.sessionId !== input.sessionId;
     const generation = current ? current.generation + (registrationChanged ? 1 : 0) : 1;
@@ -97,13 +103,14 @@ export async function registerDevice(sqlite: Database, input: {
       watermark_email_id=CASE WHEN ? THEN '' ELSE mobile_push_devices.watermark_email_id END,
       last_seen_at=excluded.last_seen_at, updated_at=excluded.updated_at, disabled_at=NULL, disabled_reason=NULL`)
       .run(input.userId, input.installationId, input.sessionId, tokenEncrypted, tokenHash, input.environment, isEnabled ? "all" : "off",
-        input.notificationSelection.inbox ? 1 : 0, generation,
+        selection.inbox ? 1 : 0, generation,
         now, currentPushSequence, now, current?.registeredAt ?? now, now, now, resetWatermark ? 1 : 0, resetWatermark ? 1 : 0,
         resetWatermark ? 1 : 0, resetWatermark ? 1 : 0);
     sqlite.query("DELETE FROM mobile_push_device_spaces WHERE user_id=? AND installation_id=?").run(input.userId, input.installationId);
     const insertSpace = sqlite.query(`INSERT INTO mobile_push_device_spaces
       (user_id,installation_id,space_id,kind,resource_id) VALUES (?,?,?,?,?)`);
     for (const space of spaces) insertSpace.run(input.userId, input.installationId, space.id, space.kind, space.resourceId);
+    if (registrationChanged && adopted) registrationBarrier(sqlite, input.userId, input.installationId, input.sessionId, now);
     if (registrationChanged && current) {
       sqlite.query("UPDATE mobile_push_outbox SET state='dead', last_error='registration_updated', updated_at=? WHERE user_id=? AND installation_id=? AND state IN ('pending','delivering') AND device_generation<>?")
         .run(now, input.userId, input.installationId, generation);

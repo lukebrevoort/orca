@@ -1,0 +1,40 @@
+{
+  "sha": "21106209ef364c36272f0f926fed67bed32d79ca",
+  "stages": [
+    {
+      "name": "runtime-node",
+      "exit": 0,
+      "command": [
+        "node",
+        "--version"
+      ]
+    },
+    {
+      "name": "runtime-bun",
+      "exit": 0,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "--version"
+      ]
+    },
+    {
+      "name": "install",
+      "exit": 0,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "install",
+        "--frozen-lockfile"
+      ]
+    },
+    {
+      "name": "focused-red",
+      "exit": 1,
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "test",
+        "apps/api/src/auth/browser-owner-boundary.test.ts",
+        "apps/api/src/auth/mail-oauth-security.test.ts"
+      ]
+    }
+  ]
+}

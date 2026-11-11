@@ -8,6 +8,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { createDatabaseClient } from "../db/client.ts";
 import { emails, mailOAuthTransactions, oauthAccounts, threads, users } from "../db/schema.ts";
 import { createSession, getSessionFromToken, invalidateSession, renewSession } from "./session-store.ts";
+import { createBrowserAuthContext } from "./browser-auth-context.ts";
 import { buildSessionCookie } from "./jwt.ts";
 import { createGmailAuthApp } from "./gmail/routes.ts";
 import { createOutlookAuthApp } from "./outlook/routes.ts";
@@ -138,6 +139,42 @@ for (const provider of ["gmail", "outlook"] as const) {
       expect((await f.callback(authorization.state, authorization.cookie)).status).toBe(302);
     });
 
+    test("BRE-455 pending login and account-exists refusal clear the witness as a pair", async () => {
+      const f = await fixture(provider, "victim@example.com");
+      const pending = await f.makeApp().request("/login");
+      expect(pending.status).toBe(200);
+      expect(pending.headers.getSetCookie()).toHaveLength(2);
+      expect(pending.headers.getSetCookie()[1]).toStartWith("orca_browser_auth_context=; Path=/; SameSite=Lax;");
+      const { state } = await pending.json() as { state: string };
+      const response = await f.callback(state, pending.headers.getSetCookie()[0]!.split(";", 1)[0]!);
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toContain("status=account_exists");
+      const cookies = response.headers.getSetCookie();
+      expect(cookies).toHaveLength(2);
+      expect(cookies[0]).toStartWith("orca_session=; HttpOnly; Path=/;");
+      expect(cookies[1]).toStartWith("orca_browser_auth_context=; Path=/;");
+      for (const cookie of cookies) expect(cookie).toContain("Max-Age=0");
+    });
+
+    test("BRE-455 completed real browser login pairs its verified context witness", async () => {
+      const f = await fixture(provider);
+      const authorization = await f.start("login");
+      const response = await f.callback(authorization.state, authorization.cookie);
+      expect(response.status).toBe(302);
+      const cookies = response.headers.getSetCookie();
+      expect(cookies).toHaveLength(2);
+      expect(cookies[0]).toMatch(/^orca_session=.+; HttpOnly; Path=\//);
+      expect(cookies[1]).toMatch(/^orca_browser_auth_context=v1\.[A-Za-z0-9_-]{43}; Path=\//);
+      expect(cookies[1]).not.toContain("HttpOnly");
+      const client = f.dbFactory();
+      try {
+        const token = cookies[0]!.split(";", 1)[0]!.slice("orca_session=".length);
+        const verified = await getSessionFromToken(client.db, token);
+        expect(verified).not.toBeNull();
+        expect(cookies[1]).toStartWith(`orca_browser_auth_context=${createBrowserAuthContext(verified!)};`);
+      } finally { client.sqlite.close(); }
+    });
+
     test("legitimate login survives a new service instance, uses private PKCE, and rejects replay", async () => {
       const f = await fixture(provider);
       const authorization = await f.start("login");
@@ -203,7 +240,10 @@ for (const provider of ["gmail", "outlook"] as const) {
       const verify = f.dbFactory();
       try {
         const token = rotatedCookie.slice(rotatedCookie.indexOf("=") + 1);
-        expect((await getSessionFromToken(verify.db, token))?.userId).toBe("victim");
+        const session = await getSessionFromToken(verify.db, token);
+        expect(session?.userId).toBe("victim");
+        expect(response.headers.getSetCookie()).toHaveLength(2);
+        expect(response.headers.getSetCookie()[1]).toStartWith(`orca_browser_auth_context=${createBrowserAuthContext(session!)};`);
         const account = verify.db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "victim-account")).get()!;
         expect(account.syncCursor).toBe("cached-cursor");
         expect(account.accessTokenEncrypted).not.toBe("old-access");
@@ -228,6 +268,8 @@ for (const provider of ["gmail", "outlook"] as const) {
       const { state } = await start.json() as { state: string };
       const callback = await f.makeApp().request(`/callback?state=${state}&code=code`, { headers: { authorization: `Bearer ${mobile.accessToken}` } });
       expect(callback.status).toBe(302);
+      expect(start.headers.getSetCookie()).toEqual([]);
+      expect(callback.headers.getSetCookie()).toEqual([]);
       expect(f.snapshot().user!.email).toBe("victim@example.com");
     });
 

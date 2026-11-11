@@ -1,0 +1,50 @@
+[Orca resources] {"time": 1794387986.183981, "stage": "before", "ownerPid": 43605, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", " 1152  20.3  21568 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "37901   9.0 650528 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15382   8.4 1017024 codex", "15249   6.2 372624 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)", "  416   6.0  22096 /usr/sbin/coreaudiod", "25406   4.6 578768 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"], "memory": "System-wide memory free percentage: 75%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/notifications/legacy-policy-red.test.ts:
+16 |     f.sqlite.query(`INSERT INTO important_notification_accounts VALUES('u','apns','phone','a',1000,0,0)`).run();
+17 |     seedMessage(f.sqlite, { id: "human-unreviewed", accountId: "a", createdAt: 2000 });
+18 |     const counts = { attempts: 0, deliveries: 0 };
+19 |     scanAndEnqueue(f.sqlite, { now: new Date(3000), batchSize: 100 });
+20 |     const delivery = await deliverReady(f.sqlite, { now: new Date(3000), batchSize: 100, config: testConfig, transport: { async send() { counts.attempts++; counts.deliveries++; return { outcome: "success", status: 200 }; } } });
+21 |     assert.deepEqual({ delivery, ...counts }, { delivery: { delivered: 0, retried: 0, discarded: 0, disabledDevices: 0 }, attempts: 0, deliveries: 0 }, "Human authorship and Inbox placement cannot authorize Important-only delivery");
+                ^
+AssertionError: Human authorship and Inbox placement cannot authorize Important-only delivery
++ actual - expected
+
+  {
++   attempts: 1,
++   deliveries: 1,
+-   attempts: 0,
+-   deliveries: 0,
+    delivery: {
++     delivered: 1,
+-     delivered: 0,
+      disabledDevices: 0,
+      discarded: 0,
+      retried: 0
+    }
+  }
+
+ generatedMessage: false,
+     actual: {
+  delivery: [Object ...],
+  attempts: 1,
+  deliveries: 1,
+},
+   expected: {
+  delivery: [Object ...],
+  attempts: 0,
+  deliveries: 0,
+},
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/legacy-policy-red.test.ts:21:12
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-455 an adopted Important-only installation must not send an unreviewed human Inbox message [65.65ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [185.00ms]
+[Orca resources] {"time": 1794387986.416169, "stage": "after", "ownerPid": 43605, "childPid": 43608, "command": "bun", "exitCode": 1, "cpuRssTop": ["  PID  %CPU    RSS COMM", " 1152  19.5  21568 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "43605   5.5  17520 /opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python", "  416   4.9  22096 /usr/sbin/coreaudiod", "15382   4.3 1017024 codex", "25406   4.0 578768 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15249   3.7 372624 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)"], "memory": "System-wide memory free percentage: 75%"}

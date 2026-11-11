@@ -47,6 +47,10 @@ export function registerOrganizationViewRoutes(app: OrganizationApp, options: { 
     const current = open(c.get("auth").userId);
     try { return c.json(current.organization.senderCandidates({ scope: current.scope, request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
   });
+  app.post("/v1/organization/views/commit-status", requireAuth({ dbFactory }), async (c) => {
+    const current = open(c.get("auth").userId);
+    try { return c.json(current.organization.commitStatus({ scope: current.scope, request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
+  });
   app.post("/v1/organization/views/commit", requireAuth({ dbFactory }), async (c) => {
     const current = open(c.get("auth").userId);
     try { return c.json(current.organization.commit({ scope: current.scope, request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }

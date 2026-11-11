@@ -5,6 +5,7 @@ import {
   growOrganizationViewSenders,
   senderGrowthBlocker,
   organizationViewCommitRequestSchema,
+  type OrganizationViewCommitStatusResponse,
   organizationViewDefinitionSchema,
   organizationViewDefinitionKind,
   organizationViewDraftInputSchema,
@@ -105,7 +106,19 @@ export type OrganizationViewEvaluationPage = {
   authorizedScopeDigest: string;
 };
 
+/** The canonical persisted lower-level mutation, shared by commit and status. */
+export type OrganizationViewCommitMutation =
+  | { kind: "create"; request: OrganizationViewCreateRequest }
+  | { kind: "update"; viewId: string; request: OrganizationViewUpdateRequest };
+
+/** Only /views/commit rejects an unchanged full patch; PATCH itself still increments revisions. */
+export function isUnchangedOrganizationViewCommit(current: OrganizationView, request: OrganizationViewUpdateRequest) {
+  return canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, skipInbox: current.skipInbox, definition: current.definition })
+    === canonicalOrganizationJson(request.patch);
+}
+
 export type OrganizationViewsRepository = {
+  commitStatus(input: { scope: OrganizationViewScope; mutation: OrganizationViewCommitMutation; authorization: OrganizationViewQueryAuthorization }): OrganizationViewCommitStatusResponse;
   senderCandidates(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; target: OrganizationViewSenderCandidatesRequest["target"]; authorization: OrganizationViewQueryAuthorization }): Omit<OrganizationViewSenderCandidatesResponse, "target" | "provenance"> & { authorizedScopeDigest: string };
   list(workspaceId: string): OrganizationView[];
   get(workspaceId: string, viewId: string): OrganizationView | null;
@@ -341,17 +354,15 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
     }), preparationNotices: [] };
   }
 
-  function reviewDraft(scope: OrganizationViewScope, input: unknown, validate = true, preparationNotices: OrganizationViewPreparationNotice[] = []): { draft: OrganizationViewReviewedDraft; authorization: OrganizationViewQueryAuthorization; workspaceRevision: number } {
+  function canonicalDraft(scope: OrganizationViewScope, input: unknown, preparationNotices: OrganizationViewPreparationNotice[] = []): { draft: OrganizationViewReviewedDraft; authorization: OrganizationViewQueryAuthorization } {
     const candidate = organizationViewDraftInputSchema.parse(input);
     const definition = organizationViewDefinitionSchema.parse(candidate.definition);
     const definitionDigest = digestOrganizationViewDefinition(definition);
     const effectiveAccountIds = authorizedAccountIds(scope, definition.accountIds);
     if (effectiveAccountIds.length === 0) throw new OrganizationViewAccessError("A View requires at least one currently authorized Account");
     const authorization = authorizeQuery(scope, definition, dependencies.agentCapabilitySource);
-    if (validate) repository.validateDefinition({ scope, definition, definitionDigest, authorization });
     return {
       authorization,
-      workspaceRevision: repository.getWorkspaceRevision(scope.workspaceId),
       draft: {
         ...candidate,
         preparationNotices,
@@ -363,6 +374,12 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         saveEligibility: saveEligibility(definition, candidate.unsupportedClauses),
       },
     };
+  }
+
+  function reviewDraft(scope: OrganizationViewScope, input: unknown, validate = true, preparationNotices: OrganizationViewPreparationNotice[] = []) {
+    const reviewed = canonicalDraft(scope, input, preparationNotices);
+    if (validate) repository.validateDefinition({ scope, definition: reviewed.draft.definition, definitionDigest: reviewed.draft.definitionDigest, authorization: reviewed.authorization });
+    return { ...reviewed, workspaceRevision: repository.getWorkspaceRevision(scope.workspaceId) };
   }
 
   function evaluateDraft(scope: OrganizationViewScope, input: unknown, query: OrganizationViewResultQuery) {
@@ -378,7 +395,57 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
     return { ...reviewed, results };
   }
 
+  function bindCommit(scope: OrganizationViewScope, input: unknown) {
+    const request = organizationViewCommitRequestSchema.parse(input);
+    const reviewed = canonicalDraft(scope, {
+      mode: request.draft.mode,
+      viewId: request.draft.viewId,
+      viewRevision: request.draft.viewRevision,
+      source: request.draft.source,
+      identity: request.draft.identity,
+      skipInbox: request.draft.skipInbox,
+      definition: request.draft.definition,
+      unsupportedClauses: request.draft.unsupportedClauses,
+    });
+    const derived = reviewed.draft;
+    if (request.draft.definitionDigest !== derived.definitionDigest
+      || request.draft.definitionKind !== derived.definitionKind
+      || canonicalOrganizationJson(request.draft.effectiveAccountIds) !== canonicalOrganizationJson(derived.effectiveAccountIds)
+      || canonicalOrganizationJson(request.draft.summary) !== canonicalOrganizationJson(derived.summary)
+      || canonicalOrganizationJson(request.draft.saveEligibility) !== canonicalOrganizationJson(derived.saveEligibility)) {
+      throw new OrganizationViewValidationError("The reviewed View draft no longer matches its canonical definition digest and scope");
+    }
+    if (request.expectedRevisions.view !== derived.viewRevision) throw new OrganizationViewValidationError("The expected View revision must match the prepared draft identity");
+    if (!derived.saveEligibility.allowed) throw new OrganizationViewValidationError(derived.saveEligibility.detail);
+    const mutation: OrganizationViewCommitMutation = derived.mode === "update"
+      ? (() => {
+          if (!derived.viewId || request.expectedRevisions.view === null) throw new OrganizationViewValidationError("An update draft requires its View identity and revision");
+          const mutationRequest = organizationViewUpdateRequestSchema.parse({
+            idempotencyKey: request.retryKey,
+            expectedWorkspaceRevision: request.expectedRevisions.workspace,
+            expectedRevision: request.expectedRevisions.view,
+            patch: { ...derived.identity, skipInbox: derived.skipInbox, definition: derived.definition },
+          });
+          return { kind: "update" as const, viewId: derived.viewId, request: mutationRequest };
+        })()
+      : (() => {
+          const mutationRequest = organizationViewCreateRequestSchema.parse({
+            idempotencyKey: request.retryKey,
+            expectedWorkspaceRevision: request.expectedRevisions.workspace,
+            ...derived.identity,
+            skipInbox: derived.skipInbox,
+            definition: derived.definition,
+          });
+          return { kind: "create" as const, request: mutationRequest };
+        })();
+    return { request, reviewed, derived, mutation };
+  }
+
   const module = {
+    commitStatus(input: { scope: OrganizationViewScope; request: unknown }) {
+      const { reviewed, mutation } = bindCommit(input.scope, input.request);
+      return repository.commitStatus({ scope: input.scope, mutation, authorization: reviewed.authorization });
+    },
     senderCandidates(input: { scope: OrganizationViewScope; request: unknown }) {
       const request = organizationViewSenderCandidatesRequestSchema.parse(input.request);
       const reviewed = reviewDraft(input.scope, request.draft, false);
@@ -415,49 +482,8 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       };
     },
     commit(input: { scope: OrganizationViewScope; request: unknown }) {
-      const request = organizationViewCommitRequestSchema.parse(input.request);
-      const reviewed = reviewDraft(input.scope, {
-        mode: request.draft.mode,
-        viewId: request.draft.viewId,
-        viewRevision: request.draft.viewRevision,
-        source: request.draft.source,
-        identity: request.draft.identity,
-        skipInbox: request.draft.skipInbox,
-        definition: request.draft.definition,
-        unsupportedClauses: request.draft.unsupportedClauses,
-      }, false);
-      const derived = reviewed.draft;
-      if (request.draft.definitionDigest !== derived.definitionDigest
-        || request.draft.definitionKind !== derived.definitionKind
-        || canonicalOrganizationJson(request.draft.effectiveAccountIds) !== canonicalOrganizationJson(derived.effectiveAccountIds)
-        || canonicalOrganizationJson(request.draft.summary) !== canonicalOrganizationJson(derived.summary)
-        || canonicalOrganizationJson(request.draft.saveEligibility) !== canonicalOrganizationJson(derived.saveEligibility)) {
-        throw new OrganizationViewValidationError("The reviewed View draft no longer matches its canonical definition digest and scope");
-      }
-      if (request.expectedRevisions.view !== derived.viewRevision) throw new OrganizationViewValidationError("The expected View revision must match the prepared draft identity");
-      if (!derived.saveEligibility.allowed) throw new OrganizationViewValidationError(derived.saveEligibility.detail);
-      const mutation = derived.mode === "update"
-        ? (() => {
-            if (!derived.viewId || request.expectedRevisions.view === null) throw new OrganizationViewValidationError("An update draft requires its View identity and revision");
-            const mutationRequest = organizationViewUpdateRequestSchema.parse({
-              idempotencyKey: request.retryKey,
-              expectedWorkspaceRevision: request.expectedRevisions.workspace,
-              expectedRevision: request.expectedRevisions.view,
-              patch: { ...derived.identity, skipInbox: derived.skipInbox, definition: derived.definition },
-            });
-            return { kind: "update" as const, viewId: derived.viewId, request: mutationRequest, boundRequest: { kind: "update", viewId: derived.viewId, request: mutationRequest } };
-          })()
-        : (() => {
-            const mutationRequest = organizationViewCreateRequestSchema.parse({
-              idempotencyKey: request.retryKey,
-              expectedWorkspaceRevision: request.expectedRevisions.workspace,
-              ...derived.identity,
-              skipInbox: derived.skipInbox,
-              definition: derived.definition,
-            });
-            return { kind: "create" as const, request: mutationRequest, boundRequest: { kind: "create", request: mutationRequest } };
-          })();
-      const existing = replay(input.scope, request.retryKey, mutation.boundRequest);
+      const { request, reviewed, derived, mutation } = bindCommit(input.scope, input.request);
+      const existing = replay(input.scope, request.retryKey, mutation);
       let saved = existing.found ? existing.response as OrganizationView : null;
       if (!saved) {
         const zeroCheck = repository.evaluate({
@@ -478,9 +504,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
           const current = repository.get(input.scope.workspaceId, mutation.viewId);
           if (!current) throw new OrganizationViewNotFoundError();
           if (current.revision !== mutation.request.expectedRevision) throw new OrganizationViewConflictError();
-          const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, skipInbox: current.skipInbox, definition: current.definition })
-            === canonicalOrganizationJson({ ...derived.identity, skipInbox: derived.skipInbox, definition: derived.definition });
-          if (isNoOp) throw new OrganizationViewValidationError("Change at least one View field before saving");
+          if (isUnchangedOrganizationViewCommit(current, mutation.request)) throw new OrganizationViewValidationError("Change at least one View field before saving");
           saved = module.update({ scope: input.scope, viewId: mutation.viewId, request: mutation.request });
         }
       } else if (!saved) saved = module.create({ scope: input.scope, request: mutation.request });

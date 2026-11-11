@@ -358,6 +358,54 @@ export const organizationViewCommitResponseSchema = z.object({
 }).strict();
 export type OrganizationViewCommitResponse = z.infer<typeof organizationViewCommitResponseSchema>;
 
+/** Proof for this exact /views/commit operation within one preserved Workspace/database lifetime.
+ * It does not certify the lower-level PATCH operation or receipt-bind review-only fields.
+ */
+const viewCommitStatusBinding = {
+  operation: z.literal("view_commit"),
+  workspaceId: identifierSchema,
+  retryKey: identifierSchema,
+  expectedRevisions: z.object({
+    workspace: z.number().int().positive(),
+    view: z.number().int().positive().nullable(),
+  }).strict(),
+};
+export const organizationViewCommitStatusResponseSchema = z.discriminatedUnion("outcome", [
+  z.object({
+    ...viewCommitStatusBinding,
+    outcome: z.literal("applied"),
+    viewId: identifierSchema,
+    committedWorkspaceRevision: z.number().int().positive(),
+    committedViewRevision: z.number().int().positive(),
+  }).strict(),
+  z.object({
+    ...viewCommitStatusBinding,
+    outcome: z.literal("not_applied"),
+    reason: z.enum(["workspace_advanced", "unchanged_view"]),
+    observedWorkspaceRevision: z.number().int().positive(),
+    observedViewRevision: z.number().int().positive().nullable(),
+  }).strict(),
+  z.object({
+    ...viewCommitStatusBinding,
+    outcome: z.literal("unknown"),
+    reason: z.enum(["eligible_or_unresolved", "future_revision", "command_mismatch", "incompatible_reservation", "invalid_receipt", "workspace_unavailable"]),
+  }).strict(),
+]).superRefine((value, context) => {
+  if (value.outcome === "applied"
+    && (value.committedWorkspaceRevision !== value.expectedRevisions.workspace + 1
+      || value.committedViewRevision !== (value.expectedRevisions.view === null ? 1 : value.expectedRevisions.view + 1))) {
+    context.addIssue({ code: "custom", message: "Applied proof must carry the original commit revisions" });
+  }
+  if (value.outcome === "not_applied") {
+    const safe = value.reason === "workspace_advanced"
+      ? value.observedWorkspaceRevision > value.expectedRevisions.workspace
+      : value.expectedRevisions.view !== null && value.observedViewRevision === value.expectedRevisions.view
+        && value.observedWorkspaceRevision >= value.expectedRevisions.workspace;
+    if (!safe) context.addIssue({ code: "custom", message: "Not-applied proof requires a durable View commit fence" });
+  }
+});
+export type OrganizationViewCommitStatusResponse = z.infer<typeof organizationViewCommitStatusResponseSchema>;
+
 const correctionTargetSchema = z.object({ accountId: identifierSchema, threadId: identifierSchema }).strict();
 export const organizationViewSenderCandidatesRequestSchema = z.object({
   draft: organizationViewDraftInputSchema,

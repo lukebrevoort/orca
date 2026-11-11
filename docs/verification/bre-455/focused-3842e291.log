@@ -1,0 +1,194 @@
+[Orca resources] {"time": 1794389268.115123, "stage": "before", "ownerPid": 52933, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "    1  17.6  23328 /sbin/launchd", " 1152  14.1  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "  416   5.4  22128 /usr/sbin/coreaudiod", " 1046   4.7 792112 /Applications/Zen.app/Contents/MacOS/zen", "15382   4.6 1029344 codex", "25406   4.5 585600 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"], "memory": "System-wide memory free percentage: 76%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/importance/incremental.test.ts:
+(pass) BRE-461 incremental metadata stays equivalent to retained source mail through mixed address/label/draft/account/delete transitions [180.87ms]
+(pass) BRE-461 upgrades an existing 0052 database without rewriting mail, choices, receipts or tombstones [61.04ms]
+
+apps/api/src/importance/routes.test.ts:
+(pass) BRE-454 durable conversation choices, independent DB/read projections and no mail side effects [142.02ms]
+(pass) BRE-454 exact sender inheritance, distinct inbound aggregation, future mail and reset [167.57ms]
+(pass) BRE-454 sender preview is read only, explains overrides/other participants, and requires current confirmation [123.20ms]
+(pass) BRE-454 guarded Undo, ABA tombstones, retries and ambiguous-response reconciliation cannot overwrite newer choices [143.16ms]
+(pass) BRE-454 authorization, unknown/malformed targets, exact address and account isolation [110.29ms]
+(pass) BRE-454 Important retained-mail pages ignore provider placement, have scoped stale-safe cursors and load no bodies [150.63ms]
+(pass) BRE-454 revisions remain monotonic through reset/recreate and stale Undo, with current reset inheritance [116.12ms]
+140 |   if (current.revision !== input.expectedRevision) throw new ImportanceError("stale_revision", "Choice changed. Read the current choice before trying again.", current);
+141 |   if (current.revision >= Number.MAX_SAFE_INTEGER) throw new ImportanceError("stale_revision", "Revision exhausted", current);
+142 |   const next = current.revision + 1;
+143 |   sqlite.query(`INSERT INTO importance_choices(account_id,kind,target,choice,revision,updated_at) VALUES(?,?,?,?,?,?)
+144 |     ON CONFLICT(account_id,kind,target) DO UPDATE SET choice=excluded.choice,revision=excluded.revision,updated_at=excluded.updated_at`).run(scope.accountId, input.target.kind, value, input.choice, next, now);
+145 |   sqlite.query("INSERT INTO importance_operations VALUES(?,?,?,?,?,?,?,?,?,?)").run(scope.accountId, input.operationId, scope.userId, input.target.kind, value, input.choice, current.choice, next, fingerprint, now);
+                                                                                      ^
+SQLiteError: synthetic write failure
+      errno: 1811,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_TRIGGER"
+
+      at #run (bun:sqlite:185:20)
+      at apply (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/importance/store.ts:145:81)
+      at transaction (bun:sqlite:416:27)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/importance/routes.ts:57:25)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/hono-base.js:118:73)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/importance/routes.ts:20:13)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/hono-base.js:118:73)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+
+(pass) BRE-454 failed transaction rolls back; dropped response reconciles after restart without replaying over a newer write [95.16ms]
+(pass) BRE-454 provider SENT/draft transitions, sender updates/deletion, account address changes and cascades update participants [119.85ms]
+(pass) BRE-454 invalid JSON, content type, oversized body, operation ownership and cursor tampering are rejected [91.42ms]
+(pass) BRE-454 preview and immediate Undo expire, concurrent initial writes serialize, and replay remains reconciliation [88.39ms]
+(pass) BRE-454 existing routing/rule/read/provider state survives automated Important and human Not important choices [98.66ms]
+(pass) BRE-454 provenance is bounded and truthful while aggregate counts include every distinct exact participant [85.65ms]
+(pass) BRE-454 projection opt-in preserves strict legacy mailbox/thread/page wire shapes [97.78ms]
+(pass) BRE-454 deleted/recreated local conversation identity keeps an ABA barrier and rejects old Undo [88.13ms]
+(pass) BRE-454 Undo restores an explicit choice, so null inherits current preferences and sender Undo preserves overrides [112.14ms]
+
+apps/api/src/importance/migration.test.ts:
+(pass) BRE-454 additive migration backfills existing retained mail without changing legacy state; rerun is stable [63.65ms]
+
+apps/api/src/mobile-push/scheduler.test.ts:
+(pass) mobile push scheduler > isolates users, suppresses registration backfill, and deduplicates repeated scans [64.78ms]
+(pass) mobile push scheduler > uses actual Inbox routing instead of provider labels or Human Signal [74.06ms]
+(pass) mobile push scheduler > notifies selected Spaces outside Inbox, ignores unselected Spaces, and deduplicates overlap [91.70ms]
+(pass) mobile push scheduler > rechecks current mail and Space eligibility under the delivery lease [67.50ms]
+(pass) mobile push scheduler > delivers only each device's selected destinations, with one preview per matching message [78.95ms]
+(pass) mobile push scheduler > deselecting one Space suppresses its queued and future alerts while another remains enabled [82.96ms]
+(pass) mobile push scheduler > retries transient failures with backoff and succeeds later [60.45ms]
+(pass) mobile push scheduler > disables invalid tokens but cannot disable a concurrently refreshed registration [61.93ms]
+(pass) mobile push scheduler > removes stale registrations and their outbox rows [54.26ms]
+(pass) mobile push scheduler > suppresses queued and future pushes after the bound session is revoked or expired [52.69ms]
+(pass) mobile push scheduler > preference changes invalidate queued alerts, including off then on before delivery [50.51ms]
+(pass) mobile push scheduler > uses the production mobile session checker before scan and queued delivery [56.76ms]
+(pass) mobile push scheduler > atomically reassigns a token on account switch and removes the former owner's outbox [53.26ms]
+(pass) mobile push scheduler > uses a fresh lease timestamp for every serial delivery claim [55.19ms]
+(pass) mobile push scheduler > does not let a stale lease owner overwrite the current owner's completion [54.12ms]
+(pass) mobile push scheduler > scans newly committed mail by insertion order across accounts [53.97ms]
+
+apps/api/src/mobile-push/payload.test.ts:
+(pass) notification preview contains sender, subject and snippet with unchanged conversation routing [0.13ms]
+(pass) missing content uses sender address, plain-text fallback, then readable placeholders [0.05ms]
+(pass) preview normalizes whitespace and control characters without interpreting plain text as HTML [0.23ms]
+(pass) Gmail snippet entities decode once before normalization and truncation [0.59ms]
+(pass) entity-only snippet whitespace falls back without decoding literal body or header text [0.04ms]
+(pass) long Unicode previews remain valid and fit Apple's 4096-byte payload limit [0.61ms]
+
+apps/api/src/mobile-push/routes.test.ts:
+(pass) mobile push routes > requires authentication and keeps installation registrations isolated per user [117.68ms]
+(pass) mobile push routes > reports a clear disabled state when APNs credentials are absent [55.21ms]
+
+apps/api/src/mobile-push/migration.test.ts:
+(pass) mobile push commit-order migration replays from the earliest unprocessed sequence [59.85ms]
+
+apps/api/src/mobile-push/apns.test.ts:
+(pass) APNs configuration and response handling > disables delivery without throwing for absent, partial, or malformed credentials [0.30ms]
+(pass) APNs configuration and response handling > accepts a complete token-auth configuration and bounds scheduler settings [0.05ms]
+(pass) APNs configuration and response handling > distinguishes retryable, permanent, and token-invalidating APNs responses [0.09ms]
+
+apps/api/src/mobile-push/device-limit.test.ts:
+(pass) per-user cap rejects new devices without writes, permits refresh, and frees slots only on real deletion [150.68ms]
+(pass) capped account switching preserves the other user's device, spaces and pending outbox; store throws DeviceLimitError [123.08ms]
+(pass) reinstall at the cap replaces the same token and cascades the old registration [121.85ms]
+(pass) store permits reinstall at the cap but different environments and new tokens leave the database unchanged [119.19ms]
+(pass) concurrent processes competing for the last device slot respect the write lock [375.86ms]
+
+apps/api/src/notifications/account-disconnect-parent.test.ts:
+83 |     return rows.map((row) => mapResultRow(fields, row, joinsNotNullableMap));
+84 |   }
+85 |   get(placeholderValues) {
+86 |     const params = fillPlaceholders(this.query.params, placeholderValues ?? {});
+87 |     this.logger.logQuery(this.query.sql, params);
+88 |     const row = this.stmt.values(...params)[0];
+                               ^
+SQLiteError: FOREIGN KEY constraint failed
+      errno: 787,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_FOREIGNKEY"
+
+      at get (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/drizzle-orm/bun-sqlite/session.js:88:27)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/index.ts:1222:10)
+      at dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/auth/middleware.ts:111:13)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/account-disconnect-parent.test.ts:37:23)
+
+(pass) BRE-464 authenticated retained-mail disconnect on <=0051 upgrades independently through 0054 [77.64ms]
+83 |     return rows.map((row) => mapResultRow(fields, row, joinsNotNullableMap));
+84 |   }
+85 |   get(placeholderValues) {
+86 |     const params = fillPlaceholders(this.query.params, placeholderValues ?? {});
+87 |     this.logger.logQuery(this.query.sql, params);
+88 |     const row = this.stmt.values(...params)[0];
+                               ^
+SQLiteError: FOREIGN KEY constraint failed
+      errno: 787,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_FOREIGNKEY"
+
+      at get (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/drizzle-orm/bun-sqlite/session.js:88:27)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/index.ts:1222:10)
+      at dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/auth/middleware.ts:111:13)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/account-disconnect-parent.test.ts:37:23)
+
+(pass) BRE-464 authenticated retained-mail disconnect on <=0053 upgrades independently through 0054 [93.74ms]
+
+apps/api/src/notifications/database.test.ts:
+(pass) BRE-455 migration enforces owner/account/message boundaries and leaves stable importance migrations intact [53.06ms]
+(pass) BRE-455 upgrade from installed parent0054 applies feature0055 once without skipping policy tables [60.28ms]
+
+apps/api/src/notifications/loop.test.ts:
+(pass) BRE-455 real authenticated browser feed claims important automated archived arrivals and records constructor reports [101.72ms]
+(pass) BRE-455 old mark before first scan, human unreviewed/not-important, unknown direction and read arrivals stay quiet [89.33ms]
+(pass) BRE-455 persistent cooldown suppresses arrivals permanently and allows exact fifteen-minute boundary [90.23ms]
+(pass) BRE-455 identical save retains fresh pending, disable/re-enable and new accounts do not replay backlog [109.50ms]
+(pass) BRE-455 correction, lease expiry, permission and stale generations prevent claim retry/report reuse [121.10ms]
+(pass) BRE-455 authorization, foreign scopes, operation conflicts and malformed/oversized bodies fail closed [100.68ms]
+(pass) BRE-455 exact-sender inheritance uses all retained participants and conversation override wins [84.72ms]
+(pass) BRE-455 concurrent browser claims and foreign-device reports cannot duplicate or steal envelopes [94.22ms]
+(pass) BRE-455 new selected account gets its own boundary and provider thread IDs do not cross-suppress [98.63ms]
+(pass) BRE-455 initially read, corrected-back and read-back arrivals cannot resurrect an interruption [90.04ms]
+
+apps/api/src/notifications/work.test.ts:
+BRE455_SQL_WORK {"arrivals":202,"scanRows":20,"envelopes":19,"reads":34,"returnedRows":141,"plan":[{"id":7,"parent":0,"notused":50,"detail":"SEARCH a USING INDEX important_notification_arrivals_account_idx (account_id=? AND sequence>?)"},{"id":16,"parent":0,"notused":46,"detail":"SEARCH e USING INDEX emails_account_thread_id_unique_idx (account_id=? AND thread_id=? AND id=?)"},{"id":37,"parent":0,"notused":0,"detail":"CORRELATED SCALAR SUBQUERY 1"},{"id":43,"parent":37,"notused":55,"detail":"SEARCH el USING COVERING INDEX email_labels_email_label_unique_idx (email_id=?)"},{"id":47,"parent":37,"notused":46,"detail":"SEARCH l USING INDEX sqlite_autoindex_labels_1 (id=?)"},{"id":64,"parent":0,"notused":0,"detail":"CORRELATED SCALAR SUBQUERY 2"},{"id":69,"parent":64,"notused":39,"detail":"SEARCH own USING INDEX sqlite_autoindex_oauth_accounts_1 (id=?)"}]}
+(pass) BRE-455 200-arrival account scan examines at most twenty per browser claim with metadata-only indexed SQL [122.80ms]
+
+apps/api/src/notifications/apns.test.ts:
+(pass) BRE-455 actual APNs policy dispatch sends automated Important archived incoming exactly once while U/N/unknown stay quiet [84.48ms]
+(pass) BRE-455 legacy choices survive status/cancel/adoption and older clients cannot downgrade or re-enable [100.35ms]
+(pass) BRE-455 correction/read/revoke/account removal during asynchronous decryption prevents provider I/O [458.11ms]
+(pass) BRE-455 concurrent workers share one lease and retry with a stable APNs ID [74.35ms]
+(pass) BRE-455 unchanged refresh preserves pending; replacement token creates a freshness barrier; deletion retains adoption tombstone [117.62ms]
+(pass) BRE-455 real opaque mobile-session adoption and revocation use mobile_sessions, not browser cookies [77.32ms]
+(pass) BRE-455 a fresh Important arrival after moving outside Inbox ignores placement and legacy selection [87.35ms]
+(pass) BRE-455 obsolete legacy selected Space does not block adopted token refresh or change saved intent [76.63ms]
+
+apps/api/src/notifications/important-routes.test.ts:
+(pass) BRE-455 explicit open-app adoption persists and reconciles without replaying old settings [75.96ms]
+
+apps/api/src/notifications/account-disconnect.test.ts:
+(pass) BRE-455/BRE-464 real authenticated nonempty account disconnect cascades queued deliveries without recreating revisions [94.09ms]
+
+apps/api/src/notifications/legacy-policy-red.test.ts:
+(pass) BRE-455 an adopted Important-only installation must not send an unreviewed human Inbox message [55.79ms]
+
+apps/api/src/notifications/provenance.test.ts:
+(pass) BRE-455 SMTP metadata is exact-account bounded evidence independent of Inbox [0.22ms]
+(pass) BRE-455 original ordered duplicate headers cannot override earlier delivery evidence [0.08ms]
+(pass) BRE-455 imported old date, missing invalid time, duplicated From and trailing fake headers remain unknown [0.08ms]
+
+ 81 pass
+ 0 fail
+ 1155 expect() calls
+Ran 81 tests across 18 files. [7.22s]
+[Orca resources] {"time": 1794389275.453225, "stage": "after", "ownerPid": 52933, "childPid": 52936, "command": "bun", "exitCode": 0, "cpuRssTop": ["  PID  %CPU    RSS COMM", " 1152  16.1  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "22755   6.9  14336 /Library/Apple/System/Library/PrivateFrameworks/RemotePairing.framework/Versions/A/XPCServices/remotepairingd.xpc/Contents/MacOS/remotepairingd", "  416   4.1  22128 /usr/sbin/coreaudiod", " 1046   4.1 803792 /Applications/Zen.app/Contents/MacOS/zen", "15232   3.9 539344 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "25406   3.5 585632 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"], "memory": "System-wide memory free percentage: 74%"}
