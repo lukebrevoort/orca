@@ -4,13 +4,15 @@ import { once } from 'node:events';
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
-import { webSourceIdentity } from './verification-revision.mjs';
+import { webSourceIdentity, webBundleIdentity } from './verification-revision.mjs';
 const [script, output, ...args] = process.argv.slice(2);
 if (!script || !output) throw new Error('script and new evidence directory required');
 const identity=await webSourceIdentity();
 const built=JSON.parse(await readFile('apps/web/dist/bre456-source.json','utf8'));
 assert.equal(built.sourceSha256,identity.sourceSha256,'Web bundle is stale. Run build-bre-456.mjs through the heavy slot first.');
-const fixture = spawn('/opt/homebrew/bin/bun', ['apps/api/scripts/compose-fixture.ts'], {stdio:['ignore','pipe','inherit']});
+assert.equal(built.sharedSourceSha256,identity.sharedSourceSha256,'Shared source changed since build. Rebuild first.');
+assert.equal(built.bundleSha256,(await webBundleIdentity()).bundleSha256,'Built asset bytes changed since the recorded build. Rebuild first.');
+const fixture = spawn('/opt/homebrew/bin/bun', [process.env.ORCA_FIXTURE_SCRIPT ?? 'apps/api/scripts/compose-fixture.ts'], {stdio:['ignore','pipe','inherit']});
 let connection = '', buffer = '';
 try {
   await new Promise((done, reject) => {

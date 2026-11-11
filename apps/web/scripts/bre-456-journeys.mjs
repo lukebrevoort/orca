@@ -1,6 +1,6 @@
 import { webSourceIdentity } from './verification-revision.mjs';
 /** Production UI + real synthetic API, independently reopened SQLite and provider ledger.
- * F04 is a recorded dependency, never simulated delivery. No live mail or credentials. */
+ * F04 uses the separate real notification browser fixture. No live mail or credentials. */
 import assert from 'node:assert/strict';
 import { readFile,mkdir,writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { chromium } from 'playwright';
 const [connection,out]=process.argv.slice(2),fixture=JSON.parse(await readFile(connection,'utf8')),origin=fixture.url;
 assert(['127.0.0.1','localhost'].includes(new URL(origin).hostname));await mkdir(out,{recursive:true});
-const result={revision:await webSourceIdentity(),commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scenarios:[],assertions:0,failures:[],requests:[],pageErrors:[],screenshots:[],blocked:[{journey:'F04',reason:'BRE-455 notification contract not committed. No browser delivery enabled.'}]};
+const result={revision:await webSourceIdentity(),commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scenarios:[],assertions:0,failures:[],requests:[],pageErrors:[],screenshots:[],separateCoverage:[{journey:'F04',script:'bre-455-browser.mjs',scope:'Actual native constructor and server ledger; no OS display proof.'}]};
 const check=(ok,label,detail)=>{result.assertions++;if(!ok)throw new Error(label+': '+JSON.stringify(detail));};
 function db(sql,params=[]){return JSON.parse(execFileSync('python3',['-c','import sqlite3,json,sys; c=sqlite3.connect(sys.argv[1]); c.row_factory=sqlite3.Row; print(json.dumps([dict(r) for r in c.execute(sys.argv[2],json.loads(sys.argv[3]))])); c.commit()',join(fixture.directory,'mail.sqlite'),sql,JSON.stringify(params)],{encoding:'utf8'}));}
 async function screenshot(page,name){await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,name+'.png')});result.screenshots.push(name+'.png');}
@@ -23,6 +23,12 @@ try{for(const theme of ['light','dark']){
  page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/v1/'))result.requests.push({theme,path:new URL(request.url()).pathname,method:request.method()});});
  async function api(path,body){const response=await context.request.fetch(origin+path,body?{method:'POST',data:body}:{});check(response.ok(),path,await response.clone?.()?.text?.());return response.json();}
  try{
+ // Reset each scenario's preconditions through revision-guarded commands, even
+ // when an earlier theme stopped before cleanup. Retain server tombstones.
+ for(const target of [{kind:'conversation',threadId:'first-thread'},{kind:'sender',address:'maya@example.com'}]){
+  if(target.kind==='sender'){const preview=await api('/v1/importance/preview',{accountId:'first',address:target.address,choice:null});await api('/v1/importance/choices',{accountId:'first',target,choice:null,expectedRevision:preview.current.revision,operationId:crypto.randomUUID(),confirmation:preview.confirmation});}
+  else{const snapshot=await api('/v1/importance/conversations/first-thread?accountId=first');await api('/v1/importance/choices',{accountId:'first',target,choice:null,expectedRevision:snapshot.importance.conversation.revision,operationId:crypto.randomUUID()});}
+ }
  db("delete from email_labels where email_id='first-message'");
  db("update emails set is_read=0 where id='first-message'");db("update threads set is_read=0 where id='first-thread'");
  await page.goto(origin+'/');await page.getByRole('heading',{name:'No important conversations yet',exact:true}).waitFor();
@@ -94,9 +100,9 @@ try{for(const theme of ['light','dark']){
  const importanceBeforeView=db('select * from importance_choices order by account_id,kind,target');
  await page.getByRole('button',{name:'Save as View',exact:true}).click();
  const author=page.locator('.search-view-authoring');
- await author.getByRole('textbox',{name:'View name',exact:true}).fill('Correspondence '+theme);
+ await author.getByRole('textbox',{name:/^View name(?:\s|$)/}).fill('Correspondence '+theme);
  const refinement=author.getByRole('button',{name:'Replace with subject contains “conversation”',exact:true});
- if(await refinement.count()) await refinement.click();
+ await refinement.click();
  const saveView=author.getByRole('button',{name:'Save View',exact:true});
  await saveView.waitFor();await page.waitForFunction(()=>{const button=document.querySelector('.search-view-authoring .view-save');return button&&!button.disabled;});
  check(JSON.stringify(db('select * from organization_views order by id'))===JSON.stringify(viewsBefore),'F03 preview creates no saved view');
@@ -129,11 +135,6 @@ try{for(const theme of ['light','dark']){
  }
  const providers=await api('/__fixture/deliveries');check(providers.length===0,'No provider sends in read/importance/settings journeys',providers.length);
  result.scenarios.push({theme,primaryControlCount:primaryCount,journeys:['F01','F03 sender preview','F05','P11 cross-section save'],providerRequests:providers.length});
- // Reset through actual revision-guarded API for the next theme.
- for(const target of [{kind:'conversation',threadId:'first-thread'},{kind:'sender',address:'maya@example.com'}]){
-  if(target.kind==='sender'){const preview=await api('/v1/importance/preview',{accountId:'first',address:target.address,choice:null});await api('/v1/importance/choices',{accountId:'first',target,choice:null,expectedRevision:preview.current.revision,operationId:crypto.randomUUID(),confirmation:preview.confirmation});}
-  else{const snapshot=await api('/v1/importance/conversations/first-thread?accountId=first');await api('/v1/importance/choices',{accountId:'first',target,choice:null,expectedRevision:snapshot.importance.conversation.revision,operationId:crypto.randomUUID()});}
- }
  }catch(error){result.failures.push({theme,message:error.message,stack:error.stack});await screenshot(page,theme+'-failure');}
  await context.close();
 }}finally{await browser.close();await writeFile(join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({scenarios:result.scenarios.length,assertions:result.assertions,failures:result.failures}));}

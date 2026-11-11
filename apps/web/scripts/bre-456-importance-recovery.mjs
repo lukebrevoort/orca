@@ -69,11 +69,13 @@ try{for(const theme of ['light','dark']){
   check(JSON.stringify(choices().filter(choice=>choice.kind==='sender'))===JSON.stringify(before),'Stale sender preview cannot write a preference');check((await read()).importance.effective==='important','Newer conversation state remains current');
  });
  await scenario(theme,'old-account-page',async({page,change})=>{
-  await change('important');let release,started;const gate=new Promise(r=>release=r),requested=new Promise(r=>started=r);
-  await page.route('**/v1/important?*',async route=>{if(new URL(route.request().url()).searchParams.get('accountId')==='first'){const response=await route.fetch();started();await gate;await route.fulfill({response});}else await route.continue();});
+  await change('important');let release,started,finished;const gate=new Promise(r=>release=r),requested=new Promise(r=>started=r),staleCompleted=new Promise(r=>finished=r);
+  await page.route('**/v1/important?*',async route=>{if(new URL(route.request().url()).searchParams.get('accountId')==='first'){const response=await route.fetch();started();await gate;await route.fulfill({response});finished();}else await route.continue();});
   await page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'Important',exact:true}).click();await requested;
   await page.getByRole('combobox',{name:'Important mail account',exact:true}).selectOption('second');await page.getByRole('heading',{name:'No important conversations yet',exact:true}).waitFor();
-  const completed=page.waitForResponse(r=>new URL(r.url()).pathname==='/v1/important'&&new URL(r.url()).searchParams.get('accountId')==='first');release();await completed;
+  // The owner switch aborts the old browser request. Wait for our real server
+  // response barrier to be released; an aborted fetch need not emit response.
+  release();await staleCompleted;
   check(await page.locator('.important-row').count()===0,'Old account response never installs in the new account');check(await page.getByRole('combobox',{name:'Important mail account',exact:true}).inputValue()==='second','Current account selection stays second');
  });
 }}finally{await browser.close();await writeFile(join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({scenarios:result.scenarios.length,assertions:result.assertions,failures:result.failures,pageErrors:result.pageErrors}));}

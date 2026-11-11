@@ -5135,7 +5135,7 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .settings-home-layout { gap: 68px; grid-template-columns: 170px minmax(0, 760px); margin: 64px auto 0; max-width: 1010px; }
 .settings-home-nav { top: 26px; }
 .settings-home-nav a { border-left: 2px solid transparent; font-size: 12px; padding: 8px 11px; }
-.settings-home-nav a:first-of-type { border-color: var(--orca-accent); color: var(--orca-ink); font-weight: 600; }
+.settings-home-nav a[aria-current="page"] { border-color: var(--orca-accent); color: var(--orca-ink); font-weight: 600; }
 .settings-home-intro { margin-bottom: 36px; max-width: 600px; }
 .settings-home-intro h1 { font-family: var(--orca-font-display); font-size: 38px; font-weight: 600; letter-spacing: -.045em; line-height: 1.05; margin: 12px 0 18px; }
 .settings-home-intro h1 br { display: none; }

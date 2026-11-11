@@ -236,6 +236,25 @@ describe("AppSidebar mobile navigation", () => {
     expect(browserWindow.document.querySelector('[aria-label="Mailboxes"]')).toBeNull();
     expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("Quiet");
   });
+
+  test("includes saved-view management in arrow navigation and marks only the actual advanced destination current", async () => {
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><AppSidebar
+      theme="light" onCompose={() => {}} onManageSpaces={() => {}}
+      onManageViews={() => {}} onManageTools={() => {}} onNavigate={() => {}}
+      projection={{ account: { displayName: "Owner", email: "owner@example.com", accountCount: 1, health: "synced" }, active: "organization-studio", online: true, spaces: [] }}
+    /></TopLayerProvider>));
+    await click(container.querySelector('.desktop-mobile-more') as unknown as HTMLButtonElement);
+    const menu = browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement;
+    expect([...menu.querySelectorAll('[aria-current="page"]')].map(node => node.textContent?.trim())).toEqual(["Advanced Organization"]);
+    const manage = [...menu.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.trim() === "Manage spaces")!;
+    manage.focus();
+    menu.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowDown" }) as unknown as Event);
+    expect(browserWindow.document.activeElement?.textContent?.trim()).toBe("Manage saved views");
+    expect(browserWindow.document.activeElement?.getAttribute("role")).toBe("menuitem");
+  });
 });
 
 describe("OrganizationStudio integration", () => {

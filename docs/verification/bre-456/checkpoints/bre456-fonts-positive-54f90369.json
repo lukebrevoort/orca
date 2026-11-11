@@ -1,0 +1,15 @@
+{
+  "commit": "54f90369de5f0348ff82b373ca55397d5bfa3360",
+  "mode": "candidate",
+  "syntheticOnly": true,
+  "assertions": 3186,
+  "failures": [],
+  "externalRequests": [],
+  "pageErrors": [],
+  "browserVersion": "157.0.8103.50",
+  "nodeVersion": "v24.22.1",
+  "scenarioCount": 164,
+  "screenshotCount": 168,
+  "rawPath": "/tmp/bre456-fonts-positive-54f90369/results.json",
+  "rawSha256": "33e981cf632e79999d89f3a380c06bbfda07dcc89b6f8000e383375b350b1b98"
+}

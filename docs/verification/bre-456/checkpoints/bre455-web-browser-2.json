@@ -1,0 +1,203 @@
+{
+  "revision": {
+    "head": "4c4a61e87a1d71fbbcbd19192f4686d7c34315a7",
+    "sourceSha256": "b477a42154a0a91c9c89fb4ea46c08ba26b40650c6d38803e972391217075c6c",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": [
+      "M apps/web/scripts/bre-456-importance-recovery.mjs",
+      " M apps/web/scripts/build-bre-456.mjs",
+      " M apps/web/scripts/run-bre-456.mjs",
+      " M apps/web/scripts/verification-revision.mjs",
+      " M apps/web/src/App.tsx",
+      " M apps/web/src/styles.css",
+      " M docs/verification/bre-456/README.md",
+      "?? apps/web/scripts/bre-455-browser-fixture.ts",
+      "?? apps/web/scripts/bre-455-browser.mjs",
+      "?? apps/web/scripts/bre-456-settings-index.mjs",
+      "?? apps/web/src/important-notifications.css",
+      "?? apps/web/src/important-notifications.tsx",
+      "?? docs/verification/bre-456/checkpoints/"
+    ]
+  },
+  "scope": "Real browser constructor and server report; no OS display or closed-tab delivery proof",
+  "assertions": 66,
+  "failures": [],
+  "pageErrors": [],
+  "scenarios": [
+    {
+      "theme": "light",
+      "name": "adoption-reconcile-freshness-cooldown-correction-owner",
+      "installationId": "ff329aef-d0d0-4cee-a8f1-14e145c41074",
+      "actualConstructors": [
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt browser-fresh-light\nOpen Orca to read this message.",
+            "tag": "2102e5f545020551c1328be2db1ae7f38c81629207dc68e85010f4f86f06d40e",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:browser-main-light"
+            }
+          },
+          "native": true
+        },
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt browser-boundary-light\nOpen Orca to read this message.",
+            "tag": "2102e5f545020551c1328be2db1ae7f38c81629207dc68e85010f4f86f06d40e",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:browser-main-light"
+            }
+          },
+          "native": true
+        }
+      ],
+      "providerCalls": 0
+    },
+    {
+      "theme": "dark",
+      "name": "adoption-reconcile-freshness-cooldown-correction-owner",
+      "installationId": "4344b261-1d70-4706-920c-47b7ed565350",
+      "actualConstructors": [
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt browser-fresh-dark\nOpen Orca to read this message.",
+            "tag": "b14542c3574e4adf17ffa0bdf61eedc984443d7a508ad26dd6249ddfe695e592",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:browser-main-dark"
+            }
+          },
+          "native": true
+        },
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt browser-boundary-dark\nOpen Orca to read this message.",
+            "tag": "b14542c3574e4adf17ffa0bdf61eedc984443d7a508ad26dd6249ddfe695e592",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:browser-main-dark"
+            }
+          },
+          "native": true
+        }
+      ],
+      "providerCalls": 0
+    },
+    {
+      "theme": "light",
+      "name": "claim-report-response-loss",
+      "actualConstructors": [
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt fresh-claim-report-response-loss-light\nOpen Orca to read this message.",
+            "tag": "c8311db8413df49b5b687fdddef6ef0d41156eea41fe7365424710a6ad585887",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:claim-report-response-loss-light"
+            }
+          },
+          "native": true
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "name": "lease-expiry",
+      "actualConstructors": []
+    },
+    {
+      "theme": "light",
+      "name": "same-policy-save",
+      "actualConstructors": [
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt fresh-same-policy-save-light\nOpen Orca to read this message.",
+            "tag": "84aa9734077870d1566b99d4c2fc71240cee8390026b0349dedde3c5312f2717",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:same-policy-save-light"
+            }
+          },
+          "native": true
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "name": "constructor-failure",
+      "actualConstructors": []
+    },
+    {
+      "theme": "light",
+      "name": "superseded-settings",
+      "actualConstructors": []
+    },
+    {
+      "theme": "dark",
+      "name": "claim-report-response-loss",
+      "actualConstructors": [
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt fresh-claim-report-response-loss-dark\nOpen Orca to read this message.",
+            "tag": "de7b4a155c2e5ed8568cdceae5cacec99923f0d9636fe7d8fc12cdd01e0a26f2",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:claim-report-response-loss-dark"
+            }
+          },
+          "native": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "name": "lease-expiry",
+      "actualConstructors": []
+    },
+    {
+      "theme": "dark",
+      "name": "same-policy-save",
+      "actualConstructors": [
+        {
+          "title": "Receipt robot",
+          "options": {
+            "body": "Receipt fresh-same-policy-save-dark\nOpen Orca to read this message.",
+            "tag": "75047e1a22faa621930e4c56a5960e0a359206f57bb5c096881eeb093f5f1042",
+            "data": {
+              "accountId": "a",
+              "threadId": "gmail:a:same-policy-save-dark"
+            }
+          },
+          "native": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "name": "constructor-failure",
+      "actualConstructors": []
+    },
+    {
+      "theme": "dark",
+      "name": "superseded-settings",
+      "actualConstructors": []
+    },
+    {
+      "name": "permission-default"
+    },
+    {
+      "name": "permission-unavailable"
+    }
+  ],
+  "browserNotificationRequestCount": 158,
+  "rawPath": "/tmp/bre455-web-browser-2/results.json",
+  "rawSha256": "dea5988c27d9657ffd6b703d279f9d737dd8f6449fbb5b8b133a6c873c6ea2cf"
+}

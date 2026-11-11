@@ -1,0 +1,17 @@
+{
+  "revision": {
+    "head": "54f90369de5f0348ff82b373ca55397d5bfa3360",
+    "sourceSha256": "cb5b131de85814e396ecd1d468158cc41fd69b84a63ea41ee6041fe853df0c08",
+    "dirty": [
+      "M apps/web/scripts/bre-456-journeys.mjs",
+      "?? apps/web/scripts/bre-456-importance-recovery.mjs"
+    ]
+  },
+  "commit": "54f90369de5f0348ff82b373ca55397d5bfa3360",
+  "mode": "candidate",
+  "failures": [],
+  "assertions": 38,
+  "scenarioCount": 2,
+  "rawPath": "/tmp/bre456-expanded-54f90369/results.json",
+  "rawSha256": "8cdaab104243a8865f944046113b133156d8f3e5fe6eda8e07dccab84ab4fd3f"
+}

@@ -1,3 +1,4 @@
+import { ImportantNotificationSettings, useImportantNotifications } from "./important-notifications";
 import { ImportanceControl, ImportanceProvider, ImportantMail, importanceChanged } from "./importance";
 import { SettingsLeaveDialog, useSettingsNavigationGuard } from "./settings-navigation-guard";
 import { VerificationCodeStrip } from "./verification-code-strip";
@@ -430,6 +431,7 @@ export function App() {
   const onboardingPreview = isOnboardingDevPreviewRoute();
   const calendarPreview = isCalendarSettingsDevPreviewRoute();
   const availabilityPreview = isSchedulingAvailabilityDevPreviewRoute();
+  const importantNotifications = useImportantNotifications(!devPreview && !onboardingPreview && !calendarPreview && !availabilityPreview && !isSettingsDevPreviewRoute() && !isLoginRoute() && !isMobileAuthRoute());
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -499,7 +501,7 @@ export function App() {
   }
 
   if (isSettingsRoute()) {
-    return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} />;
+    return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} notificationClient={importantNotifications} />;
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
@@ -524,7 +526,7 @@ export function App() {
     return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Attention views"><AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} /></DesktopSettingsFrame>;
   }
 
-  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
+  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} notificationClient={importantNotifications} />;
 
   async function completeOnboarding() {
     const response = await fetch("/v1/auth/onboarding/complete", {
@@ -668,15 +670,18 @@ function buildSettingsReadIssue(resource: SettingsReadResource, error: unknown):
   return { kind: "server", title: copy.serverTitle, detail, preserved: copy.preserved, effect: copy.effect, actionLabel: copy.retryLabel };
 }
 
-export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false }: {
+export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false, notificationClient }: {
   preferences: ReaderPreferences;
   setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
   systemTheme: Theme;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
   demoMode?: boolean;
+  notificationClient?: ReturnType<typeof useImportantNotifications>;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const ownNotifications = useImportantNotifications(!demoMode && !notificationClient);
+  const importantNotifications = notificationClient ?? ownNotifications;
   const sectionFromHash = () => settingsSections.find(([id]) => `#${id}` === (typeof window === "undefined" ? "" : window.location.hash))?.[0] ?? "account";
   const [activeSection, setActiveSection] = useState<string>(sectionFromHash);
   useEffect(() => { const update = () => setActiveSection(sectionFromHash()); window.addEventListener("hashchange", update); window.addEventListener("popstate", update); return () => { window.removeEventListener("hashchange", update); window.removeEventListener("popstate", update); }; }, []);
@@ -957,7 +962,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
             <label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>This device choice stays available even if account choices cannot load.</small></span></label>
           </div>
         </SettingsSection>
-        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><p className="settings-section-copy">Important-only new-mail notifications are not available in this build. No browser delivery is enabled. Manual reminders are separate from new-mail importance.</p><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Saves your reminder intent. Browser reminder delivery is unavailable; reminders still resurface in Later.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
+        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><ImportantNotificationSettings client={importantNotifications}/><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Saves your reminder intent. Browser reminder delivery is unavailable; reminders still resurface in Later.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
         <SettingsSection id="connected" title="Connected accounts" note="Provider access">
           <p className="settings-section-copy">Gmail supports mail sync, drafts and sending with the required permissions. Outlook sign-in is supported, but Outlook mail sync and sending are unavailable. Calendar free/busy access is separate from mail access.</p>
           <div aria-live="polite" className="settings-account-list">
@@ -1300,6 +1305,7 @@ export function InboxApp({
   setTheme,
   bulkAttentionClient,
   initialDemoMessages,
+  notificationClient,
 }: {
   demoMode?: boolean;
   preferences?: ReaderPreferences;
@@ -1307,6 +1313,7 @@ export function InboxApp({
   setTheme: Dispatch<SetStateAction<Theme>>;
   bulkAttentionClient?: BulkAttentionClient;
   initialDemoMessages?: InboxMessage[];
+  notificationClient?: ReturnType<typeof useImportantNotifications>;
 }) {
   const topLayerActive = useTopLayerActive();
   const online = useOnlineStatus();
@@ -1341,6 +1348,7 @@ export function InboxApp({
   const [classificationActionMessage, setClassificationActionMessage] = useState<string | null>(null);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">(demoMode ? "ready" : "loading");
+  useImportantNotifications(!demoMode && !notificationClient && status !== "signedout");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);

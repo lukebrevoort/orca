@@ -1,0 +1,34 @@
+{
+  "commit": "54f90369de5f0348ff82b373ca55397d5bfa3360",
+  "mode": "font-negative",
+  "syntheticOnly": true,
+  "assertions": 4,
+  "failures": [
+    {
+      "label": "light/cold: both bundled faces loaded rather than fallback-only readiness",
+      "detail": [
+        {
+          "family": "Sora",
+          "status": "error"
+        },
+        {
+          "family": "Newsreader",
+          "status": "error"
+        }
+      ]
+    },
+    {
+      "label": "driver completed all scenarios",
+      "detail": "Intentional font-404 negative control: verifier rejected fallback-only readiness"
+    }
+  ],
+  "externalRequests": [],
+  "pageErrors": [],
+  "browserVersion": "157.0.8103.50",
+  "nodeVersion": "v24.22.1",
+  "scenarioCount": 1,
+  "screenshotCount": 1,
+  "rawPath": "/tmp/bre456-fonts-404-54f90369/results.json",
+  "rawSha256": "bbf14df1dc5c539998238be416cdf0af4bfdc89f283340a4bd48f2886d75ca34",
+  "expectedOutcome": "exit 1: actual Sora and Newsreader load failure, followed by intentional driver stop"
+}
