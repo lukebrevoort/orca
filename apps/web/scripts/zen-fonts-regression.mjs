@@ -22,7 +22,7 @@ let activePage;
 function check(value, label, detail) { results.assertions++; if (!value) results.failures.push({ label, detail }); }
 async function screenshot(page, name) {
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: join(out, name + '.png'), fullPage: true, timeout: 5000 });
+  await page.screenshot({ path: join(out, name + '.png'), fullPage: false, timeout: 5000 });
   results.screenshots.push(name + '.png');
 }
 async function contextFor(theme, viewport, fontPath = 'blocked') {
