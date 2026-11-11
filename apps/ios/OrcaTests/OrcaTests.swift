@@ -3514,3 +3514,17 @@ final class NativeNotificationIdentityTests: XCTestCase {
         XCTAssertNil(store.saved(scope: formerScope)); XCTAssertNil(store.saved(scope: fixture.state.ownerScope)); XCTAssertEqual(writes, 0)
     }
 }
+
+extension NativePreferenceTests {
+    @MainActor func testNotificationRouteCannotLeaveUnsavedAccountChoices() {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let preferences = AccountPreferencesController()
+        fixture.state.accountPreferences = preferences
+        preferences.edits = .init(signature: "Unsaved notification navigation", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)
+        fixture.state.selectedTab = "settings"
+        fixture.state.routeNotification(["threadId": "notification-thread", "accountId": "demo-account"])
+        XCTAssertEqual(fixture.state.selectedTab, "settings")
+        XCTAssertNil(fixture.state.routedThread)
+        XCTAssertTrue(preferences.dirty)
+    }
+}
