@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
@@ -58,7 +58,9 @@ async function fixture() {
 async function status(f: Awaited<ReturnType<typeof fixture>>, command: OrganizationViewCommitRequest) {
   const response = await f.post("commit-status", command);
   assert.equal(response.status, 200, await response.clone().text());
-  return organizationViewCommitStatusResponseSchema.parse(await response.json());
+  const proof = organizationViewCommitStatusResponseSchema.parse(await response.json());
+  if (process.env.BRE478_PROOF_LOG) appendFileSync(process.env.BRE478_PROOF_LOG, `${JSON.stringify(proof)}\n`);
+  return proof;
 }
 
 test("BRE-478 no-op rejection has a read-only unchanged_view proof that fences the late original", async () => {
@@ -69,7 +71,8 @@ test("BRE-478 no-op rejection has a read-only unchanged_view proof that fences t
   const command = await f.prepare("", saved.view.id);
   const before = f.snapshot();
   assert.equal((await f.post("commit", command)).status, 400);
-  const proof = await status(f, command);
+  assert.equal(new Response("lost rejection", { status: 503 }).status, 503);
+  const proof = await status(f, structuredClone(command));
   assert.equal(proof.outcome, "not_applied");
   if (proof.outcome === "not_applied") assert.equal(proof.reason, "unchanged_view");
   assert.equal(proof.operation, "view_commit");
@@ -85,7 +88,8 @@ test("BRE-478 stale create has a workspace_advanced proof and fresh save preserv
   assert.equal((await f.post("commit", await f.prepare("Competing"))).status, 200);
   const before = f.snapshot();
   assert.equal((await f.post("commit", command)).status, 409);
-  const proof = await status(f, command);
+  assert.equal(new Response("lost rejection", { status: 503 }).status, 503);
+  const proof = await status(f, structuredClone(command));
   assert.equal(proof.outcome, "not_applied");
   if (proof.outcome === "not_applied") assert.equal(proof.reason, "workspace_advanced");
   assert.equal((await f.post("commit", command)).status, 409);
@@ -248,7 +252,8 @@ test("BRE-478 corrupt receipt/authority/revision/response cannot fall through to
     const corruptions: Array<[string, string | number]> = [
       ["command_json", "{"], ["command_json", "{}"], ["command_json", JSON.stringify({ request: JSON.parse(String(row.command_json)).request, response: null })],
       ["authority_trace", "{}"], ["authority_trace", "{"], ["command_digest", `sha256:${"0".repeat(64)}`],
-      ["workspace_revision_before", 999], ["workspace_revision_after", 999], ["operation", "revert"],
+      ["workspace_revision_before", 999], ["workspace_revision_after", 999], ["operation", "revert"], ["status", "pending"],
+      ["command_json", JSON.stringify({ request: JSON.parse(String(row.command_json)).request, response: { ...JSON.parse(String(row.command_json)).response, id: "wrong-original-id" } })],
     ];
     for (const [column, value] of corruptions) {
       db.sqlite.query(`UPDATE organization_change_sets SET ${column}=? WHERE idempotency_key=?`).run(value, command.retryKey);
@@ -424,4 +429,115 @@ test("BRE-478 stale proof remains durable after subsequent competing workspace w
   const before = f.snapshot();
   assert.equal((await f.post("commit", original)).status, 409);
   assert.deepEqual(f.snapshot(), before);
+});
+
+async function holdOriginal(f: Awaited<ReturnType<typeof fixture>>, command: OrganizationViewCommitRequest) {
+  let opened!: () => void;
+  const ready = new Promise<void>((resolveReady) => { opened = resolveReady; });
+  let opens = 0;
+  const app = new Hono<{ Variables: AuthVariables }>();
+  registerOrganizationViewRoutes(app, { dbFactory: () => {
+    const client = createDatabaseClient(f.path);
+    if (++opens === 2) queueMicrotask(opened);
+    return client;
+  } });
+  let body!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({ start(controller) { body = controller; } });
+  const pending = app.request(new Request("http://localhost/v1/organization/views/commit", { method: "POST", headers: f.headers, body: stream, duplex: "half" } as RequestInit));
+  await ready;
+  return async () => { body.enqueue(new TextEncoder().encode(JSON.stringify(command))); body.close(); return pending; };
+}
+
+test("BRE-478 original HTTP request held before execution remains fenced when released after proof", async () => {
+  const f = await fixture();
+  const saved = await (await f.post("commit", await f.prepare())).json();
+  const noop = await f.prepare("", saved.view.id);
+  const finishNoop = await holdOriginal(f, noop);
+  assert.equal((await status(f, noop)).outcome, "not_applied");
+  const beforeNoop = f.snapshot();
+  assert.equal((await finishNoop()).status, 400);
+  assert.deepEqual(f.snapshot(), beforeNoop);
+  const stale = await f.prepare();
+  const finishStale = await holdOriginal(f, stale);
+  assert.equal((await f.post("commit", await f.prepare("Intervening mutation"))).status, 200);
+  assert.equal((await status(f, stale)).outcome, "not_applied");
+  const beforeStale = f.snapshot();
+  assert.equal((await finishStale()).status, 409);
+  assert.deepEqual(f.snapshot(), beforeStale);
+});
+
+test("BRE-478 missing/foreign target without matching receipt stays unproven even after Workspace advances", async () => {
+  const f = await fixture();
+  const saved = await (await f.post("commit", await f.prepare())).json();
+  const original = await f.prepare("", saved.view.id);
+  assert.equal((await f.post("commit", await f.prepare("Advance"))).status, 200);
+  const foreign = { ...original, draft: { ...original.draft, viewId: "foreign-or-missing" } };
+  const before = f.snapshot();
+  const response = await f.post("commit-status", foreign);
+  assert.equal(response.status, 404, await response.clone().text());
+  assert.equal(organizationViewCommitStatusResponseSchema.safeParse(await response.json()).success, false);
+  assert.deepEqual(f.snapshot(), before);
+});
+
+test("BRE-478 existing expiring-session renewal changes authentication only, outside domain classifier", async () => {
+  const f = await fixture();
+  const command = await f.prepare();
+  const client = createDatabaseClient(f.path);
+  const session = await createSession(client.db, "owner", 60_000);
+  client.sqlite.close();
+  const before = f.snapshot();
+  const response = await f.app.request("/v1/organization/views/commit-status", {
+    method: "POST", headers: { ...f.headers, cookie: `orca_session=${session.token}` }, body: JSON.stringify(command),
+  });
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.ok(response.headers.get("set-cookie"));
+  const after = f.snapshot();
+  assert.notDeepEqual(after.find(([name]) => name === "sessions"), before.find(([name]) => name === "sessions"));
+  assert.deepEqual(after.filter(([name]) => name !== "sessions"), before.filter(([name]) => name !== "sessions"), "renewal cannot mutate Views, receipts, reservations, Workspace, messages or other domain state");
+});
+
+test("BRE-478 recovery and fresh save preserve every advanced definition facet", async () => {
+  const f = await fixture();
+  const client = createDatabaseClient(f.path);
+  const now = Date.parse("2026-11-11T00:00:00Z");
+  let laneId: string;
+  try {
+    laneId = (client.sqlite.query("SELECT id FROM organization_lanes WHERE workspace_id='owner' ORDER BY position LIMIT 1").get() as { id: string }).id;
+    client.sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run("facet", "owner", "Urgency", 0, JSON.stringify({ kind: "text", maxLength: 200 }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_workflow_states (id,workspace_id,name,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run("workflow", "owner", "Waiting", 0, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_context_types (workspace_id,id,name,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run("owner", "context-type", "Project", 0, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_context_relationship_types (workspace_id,id,context_type_id,name,inverse_name,direction,position,maximum_per_thread,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+      .run("owner", "relationship", "context-type", "concerns", "has work", "thread_to_context", 0, 10, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_contexts (workspace_id,id,context_type_id,name,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run("owner", "context", "context-type", "Orca", 1, now, now);
+  } finally { client.sqlite.close(); }
+  const definition = {
+    revision: 1, accountIds: ["account"], laneIds: [laneId], facetFilters: [{ facetId: "facet", operator: "equals", value: "urgent" }],
+    contextFilters: [{ context: { contextTypeId: "context-type", contextId: "context" }, relationshipTypeId: "relationship", direction: "thread_to_context" }],
+    workflowStateIds: ["workflow"], humanSignal: { minimumScore: 3, maximumScore: 9, classifications: ["likely_human"], evidenceReasonCodes: ["direct_recipient"] },
+    sender: { addresses: ["human@example.com", "other@example.com"], domains: ["example.com"] },
+    date: { receivedAfter: "2026-01-01T00:00:00.000Z", receivedBefore: "2026-12-31T00:00:00.000Z" },
+    thread: { subjectContains: "Advanced", readState: "unread" },
+  };
+  const preparedResponse = await f.post("prepare", { kind: "typed_definition", source: { kind: "search", label: "Advanced source" }, identity: { name: "Advanced", description: "Complete definition", color: "#123456", position: 0 }, skipInbox: true, definition });
+  assert.equal(preparedResponse.status, 200, await preparedResponse.clone().text());
+  const prepared = await preparedResponse.json();
+  const command = { draft: prepared.draft, retryKey: "advanced-create", expectedRevisions: { workspace: prepared.workspaceRevision, view: null }, confirmedZeroMatchDigest: prepared.draft.definitionDigest };
+  const savedResponse = await f.post("commit", command);
+  assert.equal(savedResponse.status, 200, await savedResponse.clone().text());
+  const saved = await savedResponse.json();
+  assert.deepEqual(saved.view.definition, definition);
+  const noop = await f.prepare("", saved.view.id);
+  assert.equal((await f.post("commit", noop)).status, 400);
+  assert.equal((await status(f, noop)).outcome, "not_applied");
+  const newer = await changed(f, await f.prepare("", saved.view.id), (draft) => { draft.identity.name = "Newer user edits preserved"; });
+  const updatedResponse = await f.post("commit", newer);
+  assert.equal(updatedResponse.status, 200, await updatedResponse.clone().text());
+  const updated = await updatedResponse.json();
+  assert.equal(updated.view.name, "Newer user edits preserved");
+  assert.deepEqual(updated.view.definition, definition);
+  assert.equal((await f.post("commit", noop)).status, 409, "old original stays fenced after fresh save");
 });
