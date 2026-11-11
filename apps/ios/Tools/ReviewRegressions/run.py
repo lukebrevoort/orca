@@ -16,7 +16,7 @@ with tempfile.TemporaryDirectory(prefix='bre457-review-run-') as scratch:
         original = subprocess.check_output(['git','show',args.importance_ref+':apps/ios/Orca/Core/Importance.swift'],cwd=root)
         frozen = scratch/'Importance.swift'; frozen.write_bytes(original)
         compile_sources[sources.index('Orca/Core/Importance.swift')] = str(frozen)
-        manifest['importanceSourceRef'] = args.importance_ref
+        manifest['importanceSourceRef'] = subprocess.check_output(['git','rev-parse',args.importance_ref],cwd=root,text=True).strip()
         manifest['sourceHashes']['Orca/Core/Importance.swift'] = hashlib.sha256(original).hexdigest()
     with (out/'compile.log').open('w') as log:
         code = subprocess.run(['/usr/bin/xcrun','swiftc','-swift-version','5','-parse-as-library',*compile_sources,'-o',str(exe)],cwd=root,stdout=log,stderr=subprocess.STDOUT).returncode
