@@ -53,11 +53,23 @@ struct MainView: View {
     private var captureScope: String { state.ownerScope + "|" + (state.selectedAccount?.id ?? "") }
     @State private var feedbackPresented = false
     var body: some View {
-        TabView(selection: $state.selectedTab) {
-            InboxView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox")
-            DraftsView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
-            SettingsView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
+        // NavigationStack destinations own their reading/writing insets. An
+        // inset outside those stacks can be reset by destination/tab-bar layout,
+        // painting Feedback over the destination's actions above the keyboard.
+        // A sibling takes real height out of the navigation proposal instead.
+        // Keyboard avoidance and Dynamic Type resize this one shared row;
+        // there is no per-screen visibility bookkeeping or guessed padding.
+        VStack(spacing: 0) {
+            TabView(selection: $state.selectedTab) {
+                InboxView().tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox")
+                DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
+                SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
+            }
+            feedbackCorner
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .background(OrcaTheme.paper)
         .environmentObject(mailboxes)
         .background(FeedbackWindowProbe(reference: captureWindow).frame(width: 0, height: 0))
         .sheet(isPresented: $feedbackPresented, onDismiss: performCaptureAfterDismissal) {
@@ -100,6 +112,7 @@ struct MainView: View {
                 }
             }
         }
+        .modifier(FeedbackShortLayoutFixture())
     }
     private func performCaptureAfterDismissal() {
         guard let action = captureRequest else { return }
@@ -156,6 +169,37 @@ struct MainView: View {
                 .padding(.trailing, 16).padding(.vertical, 4)
         }
     }
+}
+
+/// Only the authenticated loopback UI harness can request a shorter proposal.
+/// This drives the real navigation/footer/keyboard hierarchy on the hosted
+/// phone; it does not substitute a screenshot or change production sizing.
+private struct FeedbackShortLayoutFixture: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+#if DEBUG
+        if Self.enabled {
+            GeometryReader { geometry in
+                content
+                    .frame(height: max(1, geometry.size.height - 120))
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        } else { content }
+#else
+        content
+#endif
+    }
+#if DEBUG
+    private static var enabled: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("--fixture-short-layout"),
+              let index = args.firstIndex(of: "--fixture-api-url"), args.indices.contains(index + 1),
+              let url = URL(string: args[index + 1]), url.scheme == "http",
+              ["127.0.0.1", "localhost"].contains(url.host),
+              let tokenIndex = args.firstIndex(of: "--fixture-access-token"), args.indices.contains(tokenIndex + 1),
+              !args[tokenIndex + 1].isEmpty else { return false }
+        return true
+    }
+#endif
 }
 
 private struct FeedbackPickedMedia: Transferable {
