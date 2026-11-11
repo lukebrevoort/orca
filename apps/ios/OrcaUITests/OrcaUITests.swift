@@ -1,6 +1,7 @@
 import XCTest
 
 final class OrcaUITests: XCTestCase {
+    private var boundaryDiagnostics = false
     private enum Fixture {
         static let inboxMessageID = "ios-fixture-message-1"
         static let searchResultMessageID = "ios-fixture-message-2"
@@ -15,6 +16,7 @@ final class OrcaUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        boundaryDiagnostics = false
     }
 
     func test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy() throws {
@@ -353,6 +355,7 @@ final class OrcaUITests: XCTestCase {
 
     /// Runs in both themes against the authenticated loopback fixture only.
     func test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes() throws {
+        boundaryDiagnostics = true
         try setFixtureSending(true)
         addTeardownBlock { try self.restoreFixtureSending() }
         for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
@@ -764,6 +767,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade() throws {
+        boundaryDiagnostics = true
         try setFixtureSending(false)
         addTeardownBlock { try self.restoreFixtureSending() }
         let app = try launchApp(); assertInboxLoaded(in: app)
@@ -825,6 +829,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test16AttachmentRemovalPersistsAndOnlyRemainingFileIsSent() throws {
+        boundaryDiagnostics = true
         try setFixtureSending(true)
         addTeardownBlock { try self.restoreFixtureSending() }
         let attachments: [[String: Any]] = ["remove", "keep"].map { name in
@@ -840,7 +845,9 @@ final class OrcaUITests: XCTestCase {
         let remove = app.buttons["compose.attachment.remove.remove"]
         for _ in 0..<5 { if remove.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(remove.isHittable); remove.tap()
-        XCTAssertTrue(remove.waitForNonExistence(timeout: 5))
+        let removedAfterTap = remove.waitForNonExistence(timeout: 5)
+        captureComposeBoundary(in: app, stage: "attachment-after-original-removal-wait", observed: ["original_removal_result": String(removedAfterTap)])
+        XCTAssertTrue(removedAfterTap)
         let keep = app.buttons["compose.attachment.remove.keep"]
         revealComposeControl(keep, in: app, scrollUp: true)
         XCTAssertTrue(keep.exists)
@@ -861,6 +868,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test17ForegroundRefreshUnlocksSendingWithoutRelaunch() throws {
+        boundaryDiagnostics = true
         try setFixtureSending(false)
         addTeardownBlock { try self.restoreFixtureSending() }
         let app = try launchApp(); assertInboxLoaded(in: app)
@@ -1081,6 +1089,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test36SentRecoveryStatusAtAccessibilitySize() throws {
+        boundaryDiagnostics = true
         try exerciseSentLocalEditsRecovery(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
     }
 
@@ -1146,6 +1155,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test35RichDraftConversionAtAccessibilitySize() throws {
+        boundaryDiagnostics = true
         try exerciseRichDraftConversion(confirm: false, contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
     }
 
@@ -1269,7 +1279,9 @@ final class OrcaUITests: XCTestCase {
     private func revealComposeControl(_ control: XCUIElement, in app: XCUIApplication, scrollUp: Bool,
                                       file: StaticString = #filePath, line: UInt = #line) {
         let form = app.scrollViews["compose.form"]
-        XCTAssertTrue(form.waitForExistence(timeout: 10), file: file, line: line)
+        let originalFormFound = form.waitForExistence(timeout: 10)
+        if !originalFormFound { captureComposeBoundary(in: app, stage: "original-form-wait-failed", observed: ["original_10s_result": "false"]) }
+        XCTAssertTrue(originalFormFound, file: file, line: line)
         let status = app.descendants(matching: .any)["compose.save-status"]
         for attempt in 0..<10 {
             let top = app.navigationBars.firstMatch.frame.maxY + 8
@@ -1299,32 +1311,48 @@ final class OrcaUITests: XCTestCase {
         let body = messageBody(in: app)
         let form = app.scrollViews["compose.form"]
         let status = app.descendants(matching: .any)["compose.save-status"]
-        XCTAssertTrue(form.waitForExistence(timeout: 10), file: file, line: line)
+        let originalFormFound = form.waitForExistence(timeout: 10)
+        if !originalFormFound { captureComposeBoundary(in: app, stage: "original-form-wait-failed", observed: ["original_10s_result": "false"]) }
+        XCTAssertTrue(originalFormFound, file: file, line: line)
         for _ in 0..<12 {
             let top = max(form.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 2
             let bottom = min(form.frame.maxY, status.frame.minY) - 2
             let viewport = CGRect(x: form.frame.minX, y: top, width: form.frame.width, height: max(0, bottom - top))
             let visible = body.exists ? body.frame.intersection(viewport) : .null
+            if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() { print("[native-writing-area] viewport=\(viewport) intersection=\(visible)") }
             if body.exists && body.isHittable && !visible.isNull && visible.width >= 44 && visible.height >= 44 {
                 // TextEditor is taller than the keyboard-reduced viewport.
                 // XCTest's default center may be behind the fixed footer;
                 // tap its actual visible writing area, as a user does.
                 let offset = CGVector(dx: (visible.midX - body.frame.minX) / body.frame.width,
                                       dy: (visible.midY - body.frame.minY) / body.frame.height)
+                if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() {
+                    print("[native-writing-tap] viewport=\(viewport) body=\(body.frame) intersection=\(visible) normalized=\(offset) absolute_x=\(visible.midX) absolute_y=\(visible.midY)")
+                }
                 body.coordinate(withNormalizedOffset: offset).tap()
+                if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() {
+                    let firstPublicUIFocus = body.hasFocus
+                    let firstKeyboardExists = app.keyboards.firstMatch.exists
+                    captureComposeBoundary(in: app, stage: "after-original-body-tap", observed: [
+                        "first_public_ui_focus": String(firstPublicUIFocus), "first_keyboard_exists": String(firstKeyboardExists)
+                    ])
+                }
                 return
             }
             let up = !body.exists || body.frame.minY >= top
             form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.75 : 0.25))
                 .press(forDuration: 0.05, thenDragTo: form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.25 : 0.75)))
         }
+        captureComposeBoundary(in: app, stage: "original-writing-area-attempts-exhausted")
         attachScreenshot(named: "bre-459-writing-area-unreachable")
         XCTFail("Message body needs a visible 44pt writing area above the fixed actions", file: file, line: line)
     }
 
     private func revealComposeBody(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let form = app.scrollViews["compose.form"]
-        XCTAssertTrue(form.waitForExistence(timeout: 10), file: file, line: line)
+        let originalFormFound = form.waitForExistence(timeout: 10)
+        if !originalFormFound { captureComposeBoundary(in: app, stage: "original-form-wait-failed", observed: ["original_10s_result": "false"]) }
+        XCTAssertTrue(originalFormFound, file: file, line: line)
         for _ in 0..<12 {
             if messageBody(in: app).exists { return }
             let start = form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.75))
@@ -1936,8 +1964,18 @@ final class OrcaUITests: XCTestCase {
             if app.buttons["Show 21 earlier messages"].isHittable { break }
             app.swipeDown()
         }
+        captureHistoryBoundary(in: app, stage: "history-before-show21")
         app.buttons["Show 21 earlier messages"].tap()
-        XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
+        let firstShowAfterTap = app.buttons["Show 21 earlier messages"].exists
+        let firstHideAfterTap = app.buttons["Hide 21 earlier messages"].exists
+        // Keep the original5s predicate and capture its result before the
+        // expensive hierarchy/PNG work. Diagnostics cannot rescue a failure.
+        let unreadJumpAfterHistory = jumpUnread.waitForExistence(timeout: 5)
+        captureHistoryBoundary(in: app, stage: "history-after-original-wait", observed: [
+            "first_show_after_tap": String(firstShowAfterTap), "first_hide_after_tap": String(firstHideAfterTap),
+            "original_5s_jump_result": String(unreadJumpAfterHistory)
+        ])
+        XCTAssertTrue(unreadJumpAfterHistory)
         XCTAssertTrue(jumpLatest.isHittable)
         attachScreenshot(named: "reader-jumps-earlier-history")
         assertFeedbackClear(of: [jumpUnread, jumpLatest, app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
@@ -2224,9 +2262,84 @@ final class OrcaUITests: XCTestCase {
         return app
     }
 
+    private func captureHistoryBoundary(in app: XCUIApplication, stage: String, observed: [String: String] = [:]) {
+        captureSyntheticBoundary(in: app, stage: stage, targets: [
+            ("show21", app.buttons["Show 21 earlier messages"]), ("hide21", app.buttons["Hide 21 earlier messages"]),
+            ("earliest-sender", app.staticTexts["Reader sender 1"]), ("unread-sender", app.staticTexts["Reader sender 22"]),
+            ("latest-sender", app.staticTexts["Reader sender 24"]),
+            ("earliest-header", app.buttons.matching(NSPredicate(format: "label MATCHES %@", ".*Reader sender 1([^0-9].*)?")).firstMatch),
+            ("unread-header", app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Reader sender 22")).firstMatch),
+            ("latest-header", app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Reader sender 24")).firstMatch),
+            ("jump-unread", app.buttons["thread.jump-unread"]), ("jump-latest", app.buttons["thread.jump-latest"]),
+            ("reader", app.descendants(matching: .any)["thread.reader"]), ("navigation", app.navigationBars.firstMatch),
+            ("reply", app.buttons["Reply"]), ("feedback", app.buttons["feedback.open"])
+        ], observed: observed)
+    }
+
+    private func captureComposeBoundary(in app: XCUIApplication, stage: String, observed: [String: String] = [:]) {
+        guard boundaryDiagnostics else { return }
+        captureSyntheticBoundary(in: app, stage: stage, targets: [
+            ("form", app.scrollViews["compose.form"]), ("body", messageBody(in: app)),
+            ("navigation", app.navigationBars.firstMatch), ("inbox-nav", app.navigationBars["Inbox"]),
+            ("drafts-nav", app.navigationBars["Drafts"]), ("footer-status", app.descendants(matching: .any)["compose.save-status"]),
+            ("send", app.buttons["compose.send"]), ("done", app.buttons["compose.keyboard-done"]),
+            ("keyboard", app.keyboards.firstMatch), ("feedback", app.buttons["feedback.open"]),
+            ("removed-attachment", app.buttons["compose.attachment.remove.remove"]),
+            ("retained-attachment", app.buttons["compose.attachment.remove.keep"])
+        ], observed: observed)
+    }
+
+    /// Read-only evidence for the explicitly configured loopback fixture.
+    /// No message text, addresses, identifiers, token or arbitrary value output.
+    private func captureSyntheticBoundary(in app: XCUIApplication, stage: String,
+        targets: [(String, XCUIElement)], observed: [String: String] = [:]) {
+        guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
+              let url = URL(string: raw), url.scheme == "http",
+              ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "") else { return }
+        var lines = ["[native-boundary] stage=\(stage) epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000))"]
+        for key in observed.keys.sorted() { lines.append("observed_\(key)=\(observed[key]!)") }
+        for (name, element) in targets {
+            let exists = element.exists
+            lines.append("target=\(name) exists=\(exists)")
+            if exists {
+                lines.append("type=\(element.elementType.rawValue) frame=\(element.frame) enabled=\(element.isEnabled) hittable=\(element.isHittable) selected=\(element.isSelected) public_ui_focus=\(element.hasFocus)")
+            }
+        }
+        // One public snapshot supplies a bounded structural hierarchy. Omit
+        // labels/values/identifiers rather than truncating potentially private text.
+        if let snapshot = try? app.snapshot() {
+            var nodes = 0
+            func visit(_ node: XCUIElementSnapshot, depth: Int) {
+                guard nodes < 60, depth < 28 else { return }
+                nodes += 1
+                lines.append("node=\(nodes) depth=\(depth) type=\(node.elementType.rawValue) frame=\(node.frame)")
+                for child in node.children.prefix(10) { visit(child, depth: depth + 1) }
+            }
+            visit(snapshot, depth: 0)
+        }
+        let diagnostic = String(lines.joined(separator: "\n").prefix(16_000))
+        print(diagnostic)
+        let text = XCTAttachment(string: diagnostic); text.name = "native-boundary-" + stage
+        text.lifetime = .keepAlways; add(text)
+        let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        image.name = "native-boundary-" + stage; image.lifetime = .keepAlways; add(image)
+    }
+
     private func assertInboxLoaded(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20), file: file, line: line)
-        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 20), file: file, line: line)
+        let firstRowFound = app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 20)
+        if !firstRowFound && boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() {
+            let id = "inbox.message." + Fixture.inboxMessageID
+            captureSyntheticBoundary(in: app, stage: "initial-ax-inbox-row-missing", targets: [
+                ("row-any", app.descendants(matching: .any)[id]), ("row-button", app.buttons[id]),
+                ("list", app.descendants(matching: .any)["inbox.list"]), ("navigation", app.navigationBars.firstMatch),
+                ("mail-tab", app.tabBars.buttons["Mail"]), ("drafts-tab", app.tabBars.buttons["Drafts"]),
+                ("settings-tab", app.tabBars.buttons["Settings"])
+            ], observed: ["original_20s_result": String(firstRowFound),
+                "button_count": String(app.buttons.matching(identifier: id).count),
+                "any_count": String(app.descendants(matching: .any).matching(identifier: id).count)])
+        }
+        XCTAssertTrue(firstRowFound, file: file, line: line)
         // List realizes rows within its viewport. At accessibility sizes the
         // attention/date headings can put the second fixture below that viewport.
         let secondRow = app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"]

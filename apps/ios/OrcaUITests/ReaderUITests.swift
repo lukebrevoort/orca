@@ -168,8 +168,13 @@ final class ReaderUITests: XCTestCase {
             let wide = app.switches["Keep tables and code wide"]
             revealReaderControl(wide, in: app, scrollUp: true)
             XCTAssertEqual(wide.value as? String, "0")
+            captureToolsBoundary(in: app, wide: wide, stage: "wide-before-first-tap-" + size)
             wide.tap()
-            XCTAssertEqual(wide.value as? String, "1")
+            // Preserve the first immediately observed value BEFORE screenshots
+            // or diagnostics. Later publication cannot turn an initial0 green.
+            let firstWideValue = wide.value as? String
+            captureToolsBoundary(in: app, wide: wide, stage: "wide-after-first-tap-" + size, firstValue: firstWideValue)
+            XCTAssertEqual(firstWideValue, "1")
             XCTAssertTrue(app.staticTexts["Scroll within this message to reach wide content. Ordinary prose keeps the reading width."].exists)
             revealReaderControl(tools, in: app, scrollUp: false); tools.tap()
             XCTAssertEqual(tools.value as? String, "Collapsed")
@@ -216,6 +221,60 @@ final class ReaderUITests: XCTestCase {
             captureReaderGeometry(in: app, first: first, stage: "tools-restored-\(size)")
             app.terminate()
         }
+    }
+
+    private func captureToolsBoundary(in app: XCUIApplication, wide: XCUIElement, stage: String, firstValue: String? = nil) {
+        func safeValue(_ value: String?) -> String { ["0", "1"].contains(value ?? "") ? value! : (value == nil ? "missing" : "other") }
+        let tools = app.buttons["reader.tools"]
+        let toolsValue = tools.exists ? tools.value as? String : nil
+        let safeTools = ["Collapsed", "Expanded"].contains(toolsValue ?? "") ? toolsValue! : "unavailable"
+        let descendants = wide.exists ? wide.descendants(matching: .any) : app.switches.matching(identifier: "unavailable-synthetic-target")
+        captureSyntheticBoundary(in: app, stage: stage, targets: [
+            ("wide-switch", wide), ("tools", tools), ("reader", app.descendants(matching: .any)["thread.reader"]),
+            ("html-body", app.webViews.firstMatch), ("reply", app.buttons["Reply"]),
+            ("navigation", app.navigationBars.firstMatch)
+        ] + descendants.allElementsBoundByIndex.prefix(8).enumerated().map { ("wide-child-\($0.offset)", $0.element) }, observed: [
+            "first_value": safeValue(firstValue), "current_value": safeValue(wide.exists ? wide.value as? String : nil),
+            "switch_count": String(app.switches.matching(NSPredicate(format: "identifier == %@ OR label == %@", "Keep tables and code wide", "Keep tables and code wide")).count),
+            "any_count": String(app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ OR label == %@", "Keep tables and code wide", "Keep tables and code wide")).count),
+            "descendant_count": String(descendants.count), "tools_state": safeTools
+        ])
+    }
+
+    /// Read-only evidence for the explicitly configured loopback fixture.
+    /// No message text, addresses, identifiers, token or arbitrary value output.
+    private func captureSyntheticBoundary(in app: XCUIApplication, stage: String,
+        targets: [(String, XCUIElement)], observed: [String: String] = [:]) {
+        guard let raw = ProcessInfo.processInfo.environment["ORCA_FIXTURE_API_URL"],
+              let url = URL(string: raw), url.scheme == "http",
+              ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "") else { return }
+        var lines = ["[native-boundary] stage=\(stage) epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1000))"]
+        for key in observed.keys.sorted() { lines.append("observed_\(key)=\(observed[key]!)") }
+        for (name, element) in targets {
+            let exists = element.exists
+            lines.append("target=\(name) exists=\(exists)")
+            if exists {
+                lines.append("type=\(element.elementType.rawValue) frame=\(element.frame) enabled=\(element.isEnabled) hittable=\(element.isHittable) selected=\(element.isSelected) public_ui_focus=\(element.hasFocus)")
+            }
+        }
+        // One public snapshot supplies a bounded structural hierarchy. Omit
+        // labels/values/identifiers rather than truncating potentially private text.
+        if let snapshot = try? app.snapshot() {
+            var nodes = 0
+            func visit(_ node: XCUIElementSnapshot, depth: Int) {
+                guard nodes < 60, depth < 28 else { return }
+                nodes += 1
+                lines.append("node=\(nodes) depth=\(depth) type=\(node.elementType.rawValue) frame=\(node.frame)")
+                for child in node.children.prefix(10) { visit(child, depth: depth + 1) }
+            }
+            visit(snapshot, depth: 0)
+        }
+        let diagnostic = String(lines.joined(separator: "\n").prefix(16_000))
+        print(diagnostic)
+        let text = XCTAttachment(string: diagnostic); text.name = "native-boundary-" + stage
+        text.lifetime = .keepAlways; add(text)
+        let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        image.name = "native-boundary-" + stage; image.lifetime = .keepAlways; add(image)
     }
 
     private func openMessageTools(in app: XCUIApplication) {
