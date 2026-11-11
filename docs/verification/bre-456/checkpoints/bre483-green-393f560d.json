@@ -1,0 +1,15 @@
+{
+  "revision": {
+    "head": "393f560dd4b7bf78b27077e5eaad42a7313dfc49",
+    "sourceSha256": "8e8a6d46cb15c25ea09c7f5da82769182e6948e2645c1abaadbbbf0fe855a80f",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "scenarios": 4,
+  "assertions": 160,
+  "failures": [],
+  "pageErrors": [],
+  "raw": "/tmp/bre456-483-guidance-393f560d/entry/results.json",
+  "rawSha256": "a073c9aae04e24f780e93a8916473a0aaa14ebdb40cc45d3d5f28866e610a343",
+  "scope": "Visible subject target for compound conversation button; all utility button centers; first/last/mobile/Later; zero rail overlap; actual reader click/Back/source focus, keyboard Enter/Back/source focus, Snooze/Done and independent reminder/importance readback. Broad button center observations retained in raw; unobstructed whole-button rectangle is NOT claimed."
+}
