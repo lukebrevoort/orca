@@ -108,3 +108,16 @@ test("BRE-455 obsolete legacy selected Space does not block adopted token refres
   const current = await (await f.request("/v1/notifications/installations/phone?channel=apns")).json();
   expect(current.revision).toBe(1); expect(current.policy.enabled).toBe(true); expect(current.previousSelection).toEqual({ inbox: false, spaceIds: ["collection:legacy"] });
 }));
+
+test("BRE-455 configuration loss and token decryption failure cannot start provider I/O or leave unbounded token retries", async () => {
+  for (const failure of ["configuration", "decryption"]) await fixture(async f => {
+    await phone(f); await f.adopt("apns", "phone"); await f.fresh(`queued-${failure}`); expect(scan(f).enqueued).toBe(1);
+    const l = ledger(), config = { ...testConfig };
+    const result = await deliverReady(f.sqlite, { now: new Date(f.state.now), batchSize: 100, config, transport: l.transport, readToken: async (...args) => {
+      if (failure === "decryption") throw Error("synthetic decryption failure");
+      const value = await readDeviceToken(...args); config.configured = false; return value;
+    } });
+    expect(l.attempts).toHaveLength(0); expect(result.discarded).toBe(1);
+    expect(f.sqlite.query("SELECT state FROM mobile_push_outbox").get()).toEqual({ state: "dead" });
+  });
+});
