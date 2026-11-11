@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B45700000000000000000009 /* InboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000009 /* InboxViewModel.swift */; };
+		B45700000000000000000008 /* NativeViewEditorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000008 /* NativeViewEditorController.swift */; };
+		B45700000000000000000007 /* MailActionJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000007 /* MailActionJSON.swift */; };
 		B45700000000000000000006 /* NotificationIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000006 /* NotificationIdentity.swift */; };
 		B45700000000000000000005 /* MailSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000005 /* MailSearchView.swift */; };
 		B45700000000000000000004 /* NativeViewEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000004 /* NativeViewEditor.swift */; };
@@ -65,6 +68,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B45710000000000000000009 /* InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxViewModel.swift; sourceTree = "<group>"; };
+		B45710000000000000000008 /* NativeViewEditorController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeViewEditorController.swift; sourceTree = "<group>"; };
+		B45710000000000000000007 /* MailActionJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailActionJSON.swift; sourceTree = "<group>"; };
 		B45710000000000000000006 /* NotificationIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationIdentity.swift; sourceTree = "<group>"; };
 		B45710000000000000000005 /* MailSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailSearchView.swift; sourceTree = "<group>"; };
 		B45710000000000000000004 /* NativeViewEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeViewEditor.swift; sourceTree = "<group>"; };
@@ -136,6 +142,9 @@
 		2DED08717BC463CBFCC5F794 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000009 /* InboxViewModel.swift */,
+				B45710000000000000000008 /* NativeViewEditorController.swift */,
+				B45710000000000000000007 /* MailActionJSON.swift */,
 				B45710000000000000000006 /* NotificationIdentity.swift */,
 				B45710000000000000000002 /* AccountPreferences.swift */,
 				B45710000000000000000001 /* Importance.swift */,
@@ -380,6 +389,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B45700000000000000000009 /* InboxViewModel.swift in Sources */,
+				B45700000000000000000008 /* NativeViewEditorController.swift in Sources */,
+				B45700000000000000000007 /* MailActionJSON.swift in Sources */,
 				B45700000000000000000006 /* NotificationIdentity.swift in Sources */,
 				B45700000000000000000005 /* MailSearchView.swift in Sources */,
 				B45700000000000000000004 /* NativeViewEditor.swift in Sources */,
