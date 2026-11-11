@@ -1,0 +1,96 @@
+[Orca resources] {"time": 1794393097.12743, "stage": "before", "ownerPid": 85373, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  35.7 546944 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", " 1152  14.7  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15382  12.3 976144 codex", "15214  11.5  97664 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", "15249   7.1 379536 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)", "  416   5.7  22096 /usr/sbin/coreaudiod"], "memory": "System-wide memory free percentage: 75%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/index.test.ts:
+(pass) Orca API > requires a session before returning auth state [8.72ms]
+(pass) Orca API > requires a session before returning an account [0.13ms]
+(pass) Orca API > lists every connected provider and disconnects only owned accounts with local data [114.52ms]
+(pass) Orca API > keeps Gmail-only routes on Gmail when Outlook was connected first [134.25ms]
+(pass) Orca API > requires a session before returning inbox data [0.15ms]
+(pass) Orca API > persists account-level writing and reminder preferences [69.22ms]
+(pass) Orca API > BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings [109.86ms]
+(pass) Orca API > persists onboarding completion and exposes it on later session checks [66.84ms]
+(pass) Orca API > creates account-owned drafts with revisions and a safe delivery boundary [133.54ms]
+(pass) Orca API > persists Gmail drafts and sends exactly once after reserving the idempotency key [87.38ms]
+(pass) Orca API > marks an unconfirmed Gmail send as ambiguous instead of retrying it [66.22ms]
+(pass) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable [116.79ms]
+(pass) Orca API > dispatches account lifecycle through a partial custom registry [107.37ms]
+outlook sync failed {
+  userId: "outlook_user",
+  error: 12 | export const outlookProvider: MailProviderAdapter = {
+13 |   provider: "outlook",
+14 |   createOAuthApp: createOutlookAuthApp,
+15 |   detectCapabilities: detectOutlookCapabilities,
+16 |   async syncPage() {
+17 |     throw new ProviderNotImplementedError("outlook", "sync");
+               ^
+ProviderNotImplementedError: outlook sync is not implemented
+  provider: "outlook",
+ operation: "sync",
+
+      at syncPage (/Users/lbrevoort/orca/apps/api/src/providers/outlook/provider.ts:17:11)
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/index.ts:2703:47)
+      at dispatch (/Users/lbrevoort/orca/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/middleware.ts:111:13)
+      at async dispatch (/Users/lbrevoort/orca/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/Users/lbrevoort/orca/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/Users/lbrevoort/orca/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/orca/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/Users/lbrevoort/orca/apps/api/src/index.test.ts:757:42)
+,
+}
+(pass) Orca API > dispatches a registered Outlook account and keeps unsupported sync explicit [61.91ms]
+(pass) Orca API > rejects blank inbox cursors [0.38ms]
+(pass) Orca API > returns an account-scoped, chronological reader snapshot with sanitized HTML [104.67ms]
+(pass) Orca API > filters and deterministically sorts explainable attention views [100.32ms]
+(pass) Orca API > merges two owned accounts with account-local attention rules, metadata, and cursors [177.04ms]
+(pass) Orca API > filters effective Human Inbox and Tideline classes before pagination without crossing accounts or filter modes [129.40ms]
+(pass) Orca API > serves the shared M5 matrix across providers with counts, cursors, overrides, and mixed threads [106.71ms]
+(pass) Orca API > resolves classification for a mailbox-sized page with account overrides loaded once [95.49ms]
+(pass) Orca API > keeps collections additive, orders pins deterministically, and deletes only organization metadata [150.05ms]
+(pass) Orca API > imports selected Gmail labels once, supports skip, and handles accounts with no user labels [132.83ms]
+(pass) Orca API > schedules, resurfaces, completes, and cancels thread reminders with a controllable clock [94.63ms]
+(pass) Orca API > upgrades a database at migration 0003 with the reader storage migrations [49.10ms]
+(pass) Orca API > runs the manual Gmail sync endpoint for an authenticated user [68.75ms]
+(pass) Orca API > runs manual Gmail sync against the selected stacked account [67.48ms]
+(pass) Orca API > serializes manual Gmail sync behind existing account work [69.13ms]
+(pass) Orca API > reports per-account sync status and last successful sync time [61.69ms]
+gmail sync failed {
+  userId: "user_1",
+  error: 1836 | 
+1837 |       const session = await createSession(db, "user_1");
+1838 |       const testApp = createApp({
+1839 |         dbFactory: () => createDatabaseClient(dbPath),
+1840 |         syncPage: async () => {
+1841 |           throw new GmailSyncError("raw upstream detail acct_1", "provider_error");
+                       ^
+GmailSyncError: raw upstream detail acct_1
+ code: "provider_error"
+
+      at syncPage (/Users/lbrevoort/orca/apps/api/src/index.test.ts:1841:17)
+      at syncIncrementalPages (/Users/lbrevoort/orca/apps/api/src/providers/gmail/sync-runtime.ts:224:26)
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/providers/gmail/sync-runtime.ts:179:29)
+      at drainOwned (/Users/lbrevoort/orca/apps/api/src/providers/gmail/sync-coordinator.ts:233:32)
+      at drainAccount (/Users/lbrevoort/orca/apps/api/src/providers/gmail/sync-coordinator.ts:215:19)
+,
+}
+(pass) Orca API > maps provider sync failures to a bounded public error response [67.07ms]
+(pass) Orca API > persists account-scoped sender rules, resolves precedence, and resets to the next rule [90.19ms]
+(pass) Orca API > validates, authorizes, and canonically reconciles account-scoped batch sender attention changes [84.46ms]
+(pass) Orca API > persists presentation independently of attention behavior [66.53ms]
+(pass) Orca API > keeps local human classification overrides account-scoped and resolves precedence without provider mutations [191.10ms]
+(pass) Orca API > resolves a large message batch from one preloaded classification override map [0.67ms]
+(pass) Orca API > marks entire thread as read including all emails [63.72ms]
+
+apps/api/src/preferences-owner.test.ts:
+(pass) BRE-469 replacement cookie cannot read or write the original preference owner's draft [64.32ms]
+(pass) BRE-469 replacement mobile bearer cannot apply the original owner's preferences [54.31ms]
+(pass) BRE-469 same-owner and legacy requests retain strict preference shapes [69.73ms]
+(pass) BRE-469 malformed preconditions and unauthenticated requests never access preferences [66.24ms]
+(pass) BRE-469 CORS accepts the owner precondition without widening allowed origins [1.46ms]
+
+ 41 pass
+ 0 fail
+ 40 expect() calls
+Ran 41 tests across 2 files. [3.63s]
+[Orca resources] {"time": 1794393100.828521, "stage": "after", "ownerPid": 85373, "childPid": 85376, "command": "bun", "exitCode": 0, "cpuRssTop": ["  PID  %CPU    RSS COMM", " 1152  19.8  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "  416   4.0  22096 /usr/sbin/coreaudiod", "25406   3.9 577856 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15232   3.8 547968 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "  404   3.4 125104 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer", " 1046   3.2 851440 /Applications/Zen.app/Contents/MacOS/zen"], "memory": "System-wide memory free percentage: 75%"}

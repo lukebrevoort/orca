@@ -1,0 +1,56 @@
+[Orca resources] {"time": 1794393023.5475562, "stage": "before", "ownerPid": 84897, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  27.0 546160 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "15249  25.1 325728 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)", " 1152  11.7  22240 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15382  11.1 976192 codex", "15214  10.8  93616 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", "  404   7.3 125104 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"], "memory": "System-wide memory free percentage: 75%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/preferences-owner.test.ts:
+53 |   expect((await capturedU.json()).signature).toBe("Original U");
+54 |   expect(f.preferenceAccess.length).toBeGreaterThan(0);
+55 |   const before = f.snapshot(); f.preferenceAccess.length = 0;
+56 |   for (const method of ["GET", "PATCH"] as const) {
+57 |     const response = await f.request("v", "u", method);
+58 |     expect(response.status).toBe(409);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 409
+Received: 200
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:58:29)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:44:11)
+(fail) BRE-469 replacement cookie cannot read or write the original preference owner's draft [87.10ms]
+64 | }));
+65 | 
+66 | test("BRE-469 replacement mobile bearer cannot apply the original owner's preferences", () => fixture(async f => {
+67 |   const before = f.snapshot();
+68 |   const response = await f.request(null, "u", "PATCH", "?include=first_view_guidance", f.tokenV);
+69 |   expect(response.status).toBe(409);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: 409
+Received: 200
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:69:27)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:44:11)
+(fail) BRE-469 replacement mobile bearer cannot apply the original owner's preferences [60.78ms]
+(pass) BRE-469 same-owner and legacy requests retain strict preference shapes [76.27ms]
+83 |   }
+84 | }));
+85 | 
+86 | test("BRE-469 malformed preconditions and unauthenticated requests never access preferences", () => fixture(async f => {
+87 |   const before = f.snapshot();
+88 |   for (const value of ["", "u v", "u".repeat(257)]) for (const method of ["GET", "PATCH"] as const) expect((await f.request("u", value, method)).status).toBe(400);
+                                                                                                                                                              ^
+error: expect(received).toBe(expected)
+
+Expected: 400
+Received: 200
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:88:154)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:44:11)
+(fail) BRE-469 malformed preconditions and unauthenticated requests never access preferences [58.21ms]
+
+ 1 pass
+ 3 fail
+ 13 expect() calls
+Ran 4 tests across 1 file. [524.00ms]
+[Orca resources] {"time": 1794393024.121511, "stage": "after", "ownerPid": 84897, "childPid": 84900, "command": "bun", "exitCode": 1, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  28.4 546784 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", " 1152  19.4  22240 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15249   9.6 325728 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)", "  416   4.5  22080 /usr/sbin/coreaudiod", "  404   4.2 125104 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer", "25406   4.1 577296 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"], "memory": "System-wide memory free percentage: 75%"}
