@@ -1,0 +1,8 @@
+{
+  "sha": "d36b39572307f30b979a0271f505eefe38a6ee88",
+  "exit": 1,
+  "seconds": 0.9502004999958444,
+  "cleanAfter": true,
+  "node": "v24.22.1",
+  "bun": "1.3.14"
+}
