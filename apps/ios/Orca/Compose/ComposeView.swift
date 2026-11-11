@@ -119,6 +119,8 @@ struct ComposeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                fromIdentity
+                Divider().overlay(OrcaTheme.border)
                 VStack(spacing: 0) {
                     recipientField("To", text: $to, field: .to)
                         .textContentType(.emailAddress)
@@ -314,6 +316,21 @@ struct ComposeView: View {
             Text("This permanently removes formatting and embedded links from this draft. The plain text shown in the message body will be kept. This cannot be undone.")
         }
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in if case let .success(urls) = result { Task { await attach(urls) } } }
+    }
+    private var fromIdentity: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("From").font(OrcaTheme.ui(12, weight: .semibold)).foregroundStyle(OrcaTheme.muted)
+            if draftOwnerScope == state.ownerScope, let id = draftAccountID,
+               let account = state.accounts.first(where: { $0.id == id }) {
+                Text(account.email).font(OrcaTheme.ui(14)).foregroundStyle(OrcaTheme.ink).textSelection(.enabled)
+                Text(account.provider.lowercased() == "gmail" ? "Gmail" : (account.provider.lowercased() == "outlook" ? "Outlook" : account.provider))
+                    .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            } else {
+                Text(preparing && draftAccountID == nil ? "Resolving From account…" : "From account unavailable")
+                    .font(OrcaTheme.ui(14)).foregroundStyle(OrcaTheme.muted)
+            }
+        }.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.vertical, 10).accessibilityElement(children: .combine).accessibilityIdentifier("compose.from")
     }
     private var saveStatus: some View {
         Label(status, systemImage: status.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle")

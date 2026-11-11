@@ -14,10 +14,10 @@ struct DraftsView: View {
                     else { ContentUnavailableView("No drafts", systemImage: "doc.text", description: Text("Anything you start writing will be saved immediately.")) }
                 } else {
                     List {
-                        if !localDrafts.isEmpty { Section { ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: localStatus(draft.deliveryState)) }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } header: { DraftSectionHeader(title: "On this device", scope: "Protected local writing") } }
+                        if !localDrafts.isEmpty { Section { ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: localStatus(draft.deliveryState), account: state.accounts.first(where: { $0.id == draft.accountId })?.email ?? "Account unavailable", preview: draft.content.body.text, savedAt: draft.modifiedAt, attachmentCount: draft.content.attachments.count) }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } header: { DraftSectionHeader(title: "On this device", scope: "Protected local writing") } }
                         let localServerIDs = Set(localDrafts.compactMap(\.serverID))
                         let cloud = serverDrafts.filter { !localServerIDs.contains($0.id) }
-                        if !cloud.isEmpty { Section { ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: serverStatus(draft)) }.accessibilityIdentifier("draft.\(draft.id)") } } header: { DraftSectionHeader(title: "On server", scope: "Synced with your provider") } }
+                        if !cloud.isEmpty { Section { ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: serverStatus(draft), account: state.accounts.first(where: { $0.id == draft.accountId })?.email ?? "Account unavailable", preview: draft.body.text, savedAt: MailDate.parse(draft.updatedAt), attachmentCount: draft.attachments.count) }.accessibilityIdentifier("draft.\(draft.id)") } } header: { DraftSectionHeader(title: "On server", scope: "Stored in Orca") } }
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -83,6 +83,7 @@ struct DraftsView: View {
 }
 private struct DraftRow: View {
     var subject: String; var recipients: [String]; var status: String
+    var account: String; var preview: String; var savedAt: Date?; var attachmentCount: Int
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(subject.isEmpty ? "(No subject)" : subject)
@@ -93,6 +94,18 @@ private struct DraftRow: View {
                 .font(OrcaTheme.ui(12))
                 .foregroundStyle(OrcaTheme.muted)
                 .lineLimit(1)
+            Text(account).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if !preview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(preview).font(OrcaTheme.ui(13)).foregroundStyle(OrcaTheme.muted).lineLimit(2)
+            }
+            if let savedAt {
+                (Text("Saved ") + Text(savedAt, style: .relative)).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            } else { Text("Saved time unavailable").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted) }
+            if attachmentCount > 0 {
+                Label("\(attachmentCount) \(attachmentCount == 1 ? "attachment" : "attachments")", systemImage: "paperclip")
+                    .font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+            }
             Text(status)
                 .font(OrcaTheme.ui(10, weight: .semibold))
                 .foregroundStyle(status.contains("uncertain") || status.contains("attention") ? .orange : OrcaTheme.muted)
