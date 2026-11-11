@@ -459,9 +459,9 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         };
         const binding = { operation: "view_commit" as const, workspaceId: scope.workspaceId, retryKey: mutation.request.idempotencyKey, expectedRevisions };
         const unknown = (reason: Extract<OrganizationViewCommitStatusResponse, { outcome: "unknown" }>["reason"]): OrganizationViewCommitStatusResponse => ({ ...binding, outcome: "unknown", reason });
-        const reservation = sqlite.query("SELECT id,resource_family,operation,command_json,command_digest,authority_trace,workspace_revision_before,workspace_revision_after FROM organization_change_sets WHERE workspace_id=? AND idempotency_key=?")
+        const reservation = sqlite.query("SELECT id,resource_family,operation,status,command_json,command_digest,authority_trace,workspace_revision_before,workspace_revision_after FROM organization_change_sets WHERE workspace_id=? AND idempotency_key=?")
           .get(scope.workspaceId, binding.retryKey) as {
-            id: string; resource_family: string; operation: string; command_json: string; command_digest: string; authority_trace: string;
+            id: string; resource_family: string; operation: string; status: string; command_json: string; command_digest: string; authority_trace: string;
             workspace_revision_before: number; workspace_revision_after: number;
           } | null;
         if (reservation) {
@@ -480,7 +480,9 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
           verifyReplayAuthorization(sqlite, scope, authorization.agentCapabilitySource, { ...stored, authorityTrace: trace });
           const response = organizationViewSchema.safeParse(stored.response);
           if (!response.success
-            || reservation.operation !== "apply"
+            || reservation.operation !== "apply" || reservation.status !== "applied"
+            || !trace.requestedResourceFamilies.includes("view") || !trace.requestedActionFamilies.includes("organization_structure")
+            || !trace.requestedResourceIds.includes(`view:${response.data.id}`)
             || trace.decision !== "allowed" || trace.denialCode !== null || trace.operation !== "apply"
             || canonicalOrganizationJson(trace.actor) !== canonicalOrganizationJson(scope.actor)
             || trace.scope.workspaceId !== scope.workspaceId
@@ -508,6 +510,9 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         const workspace = sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id=?").get(scope.workspaceId) as { revision: number } | null;
         if (!workspace) return unknown("workspace_unavailable");
         const target = mutation.kind === "update" ? get(scope.workspaceId, mutation.viewId) : null;
+        // An absent/foreign target is not an ownership certificate. A matching
+        // original receipt above is the only proof allowed after deletion.
+        if (mutation.kind === "update" && !target) throw new OrganizationViewNotFoundError();
         const observed = { observedWorkspaceRevision: workspace.revision, observedViewRevision: target?.revision ?? null };
         if (workspace.revision > expectedRevisions.workspace) return organizationViewCommitStatusResponseSchema.parse({ ...binding, ...observed, outcome: "not_applied", reason: "workspace_advanced" });
         if (workspace.revision < expectedRevisions.workspace) return unknown("future_revision");
