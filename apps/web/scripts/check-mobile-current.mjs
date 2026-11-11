@@ -19,7 +19,7 @@ try {
    const page = await browser.newPage({viewport:{width,height:900},colorScheme:theme, ...(width===390 && theme==='light' ? {recordVideo:{dir:join(output,'video'),size:{width:390,height:900}}} : {})});
    await page.goto(`${base}/dev/inbox`);
    await page.locator('.desktop-mobile-more').waitFor({state:width===390?'visible':'attached'});
-   if (theme==='dark') await page.getByRole('button',{name:'Switch to Orca Black',exact:true}).click();
+   if (await page.locator('html').getAttribute('data-theme') !== theme) await page.getByRole('button',{name:theme==='dark'?'Switch to Orca Black':'Switch to Light',exact:true}).click();
    await page.waitForTimeout(350);
    const nav = page.getByRole('navigation',{name:width===390?'Mobile primary':'Primary navigation',exact:true,includeHidden:true});
    const inbox = nav.getByRole('button',{name:/^Inbox/});
