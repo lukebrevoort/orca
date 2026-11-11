@@ -215,3 +215,24 @@ describe("BRE-413 additive sender growth", () => {
     }
   });
 });
+
+test("BRE-478 strict View commit status proofs reject unsafe revisions, foreign operation and extra fields", async () => {
+  const { organizationViewCommitStatusResponseSchema: schema } = await import("./organization-views.ts");
+  const binding = { operation: "view_commit", workspaceId: "workspace", retryKey: "immutable-key", expectedRevisions: { workspace: 5, view: null } };
+  const applied = { ...binding, outcome: "applied", viewId: "original", committedWorkspaceRevision: 6, committedViewRevision: 1 };
+  assert.equal(schema.safeParse(applied).success, true);
+  assert.equal(schema.safeParse({ ...applied, committedWorkspaceRevision: 5 }).success, false);
+  assert.equal(schema.safeParse({ ...applied, committedViewRevision: 2 }).success, false);
+  assert.equal(schema.safeParse({ ...applied, currentView: {} }).success, false);
+  assert.equal(schema.safeParse({ ...applied, operation: "view_patch" }).success, false);
+  const advanced = { ...binding, outcome: "not_applied", reason: "workspace_advanced", observedWorkspaceRevision: 6, observedViewRevision: null };
+  assert.equal(schema.safeParse(advanced).success, true);
+  for (const revision of [4, 5]) assert.equal(schema.safeParse({ ...advanced, observedWorkspaceRevision: revision }).success, false);
+  const noop = { ...binding, expectedRevisions: { workspace: 5, view: 2 }, outcome: "not_applied", reason: "unchanged_view", observedWorkspaceRevision: 5, observedViewRevision: 2 };
+  assert.equal(schema.safeParse(noop).success, true);
+  assert.equal(schema.safeParse({ ...noop, observedWorkspaceRevision: 4 }).success, false);
+  assert.equal(schema.safeParse({ ...noop, observedViewRevision: 3 }).success, false);
+  assert.equal(schema.safeParse({ ...noop, expectedRevisions: binding.expectedRevisions }).success, false);
+  assert.equal(schema.safeParse({ ...binding, outcome: "unknown", reason: "command_mismatch" }).success, true);
+  assert.equal(schema.safeParse({ ...binding, outcome: "not_applied", reason: "validation_error" }).success, false);
+});

@@ -4,7 +4,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import type { OrganizationViewCommitRequest } from "@orca/shared";
+import { organizationViewCommitStatusResponseSchema, type OrganizationCapabilitySnapshot, type OrganizationViewCommitRequest } from "@orca/shared";
+import { Hono } from "hono";
+import type { AuthVariables } from "../../auth/middleware.ts";
+import { registerOrganizationViewRoutes } from "./routes.ts";
+import { createOrganizationViews, OrganizationViewAccessError } from "./module.ts";
+import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
@@ -53,7 +58,7 @@ async function fixture() {
 async function status(f: Awaited<ReturnType<typeof fixture>>, command: OrganizationViewCommitRequest) {
   const response = await f.post("commit-status", command);
   assert.equal(response.status, 200, await response.clone().text());
-  return response.json();
+  return organizationViewCommitStatusResponseSchema.parse(await response.json());
 }
 
 test("BRE-478 no-op rejection has a read-only unchanged_view proof that fences the late original", async () => {
@@ -66,7 +71,7 @@ test("BRE-478 no-op rejection has a read-only unchanged_view proof that fences t
   assert.equal((await f.post("commit", command)).status, 400);
   const proof = await status(f, command);
   assert.equal(proof.outcome, "not_applied");
-  assert.equal(proof.reason, "unchanged_view");
+  if (proof.outcome === "not_applied") assert.equal(proof.reason, "unchanged_view");
   assert.equal(proof.operation, "view_commit");
   assert.equal(proof.workspaceId, "owner");
   assert.equal(proof.retryKey, command.retryKey);
@@ -82,7 +87,7 @@ test("BRE-478 stale create has a workspace_advanced proof and fresh save preserv
   assert.equal((await f.post("commit", command)).status, 409);
   const proof = await status(f, command);
   assert.equal(proof.outcome, "not_applied");
-  assert.equal(proof.reason, "workspace_advanced");
+  if (proof.outcome === "not_applied") assert.equal(proof.reason, "workspace_advanced");
   assert.equal((await f.post("commit", command)).status, 409);
   assert.deepEqual(f.snapshot(), before);
   const fresh = await f.prepare("Newer edits");
@@ -91,7 +96,9 @@ test("BRE-478 stale create has a workspace_advanced proof and fresh save preserv
   const saved = await response.json();
   assert.equal(saved.view.name, "Newer edits");
   assert.deepEqual(saved.view.definition, command.draft.definition);
-  assert.equal((await status(f, fresh)).viewId, saved.view.id);
+  const applied = await status(f, fresh);
+  assert.equal(applied.outcome, "applied");
+  if (applied.outcome === "applied") assert.equal(applied.viewId, saved.view.id);
 });
 
 test("BRE-478 lost acknowledgement resolves to original receipt even after current View deletion", async () => {
@@ -106,7 +113,7 @@ test("BRE-478 lost acknowledgement resolves to original receipt even after curre
   const before = f.snapshot();
   const proof = await status(f, structuredClone(command));
   assert.equal(proof.outcome, "applied");
-  assert.equal(proof.viewId, original.view.id);
+  if (proof.outcome === "applied") assert.equal(proof.viewId, original.view.id);
   assert.deepEqual(await status(f, command), proof);
   assert.deepEqual(f.snapshot(), before);
   const removed = await f.app.request(`/v1/organization/views/${original.view.id}?expectedRevision=${original.view.revision}&expectedWorkspaceRevision=${original.workspaceRevision}&idempotencyKey=delete-original`, { method: "DELETE", headers: f.headers });
@@ -114,4 +121,307 @@ test("BRE-478 lost acknowledgement resolves to original receipt even after curre
   const afterDelete = f.snapshot();
   assert.deepEqual(await status(f, command), proof);
   assert.deepEqual(f.snapshot(), afterDelete, "receipt proof must never recreate the deleted View");
+});
+
+function service(f: Awaited<ReturnType<typeof fixture>>) {
+  const client = createDatabaseClient(f.path);
+  const scope = { workspaceId: "owner", accountIds: ["account"], actor: { id: "owner", type: "human" as const } };
+  return { ...client, scope, views: createOrganizationViews(createSqliteOrganizationViewsRepository(client.sqlite)) };
+}
+
+async function changed(f: Awaited<ReturnType<typeof fixture>>, original: OrganizationViewCommitRequest, change: (draft: OrganizationViewCommitRequest["draft"]) => void) {
+  const draft = structuredClone(original.draft);
+  change(draft);
+  const { definitionDigest: _digest, definitionKind: _kind, effectiveAccountIds: _accounts, summary: _summary, saveEligibility: _eligibility, preparationNotices: _notices, ...input } = draft;
+  const preview = await f.post("preview", { draft: input, page: { limit: 1 } });
+  assert.equal(preview.status, 200, await preview.clone().text());
+  const reviewed = await preview.json();
+  return { ...original, draft: reviewed.draft, confirmedZeroMatchDigest: reviewed.draft.definitionDigest } as OrganizationViewCommitRequest;
+}
+
+test("BRE-478 eligible creates, changed updates and future revisions stay unproven", async () => {
+  const f = await fixture();
+  const create = await f.prepare();
+  assert.deepEqual(await status(f, create), { operation: "view_commit", workspaceId: "owner", retryKey: create.retryKey, expectedRevisions: create.expectedRevisions, outcome: "unknown", reason: "eligible_or_unresolved" });
+  const future = { ...create, expectedRevisions: { workspace: create.expectedRevisions.workspace + 1, view: null } };
+  assert.equal((await status(f, future)).outcome, "unknown");
+  const saved = await (await f.post("commit", create)).json();
+  const edit = await f.prepare("", saved.view.id);
+  const edited = await changed(f, edit, (draft) => { draft.identity.name = "Changed"; });
+  assert.equal((await status(f, edited)).outcome, "unknown");
+  const futureNoop = { ...edit, expectedRevisions: { ...edit.expectedRevisions, workspace: edit.expectedRevisions.workspace + 1 } };
+  assert.equal((await status(f, futureNoop)).outcome, "unknown", "future equality is possible, including unchanged Views");
+  assert.equal((await f.post("commit", edited)).status, 200, "unknown does not cancel an eligible command");
+});
+
+test("BRE-478 same-key different mutation and other resource-family reservations never certify absence", async () => {
+  const f = await fixture();
+  const command = await f.prepare();
+  assert.equal((await f.post("commit", command)).status, 200);
+  const other = await changed(f, command, (draft) => { draft.identity.name = "Different body"; });
+  assert.deepEqual(await status(f, other), { operation: "view_commit", workspaceId: "owner", retryKey: other.retryKey, expectedRevisions: other.expectedRevisions, outcome: "unknown", reason: "command_mismatch" });
+  const db = createDatabaseClient(f.path);
+  try { db.sqlite.query("UPDATE organization_change_sets SET resource_family='context' WHERE workspace_id='owner' AND idempotency_key=?").run(command.retryKey); }
+  finally { db.sqlite.close(); }
+  assert.equal((await status(f, command)).outcome, "unknown");
+  const reserved = await status(f, command);
+  if (reserved.outcome === "unknown") assert.equal(reserved.reason, "incompatible_reservation");
+});
+
+test("BRE-478 original update receipt wins over unchanged/stale observations and later edits", async () => {
+  const f = await fixture();
+  const created = await (await f.post("commit", await f.prepare())).json();
+  const update = await changed(f, await f.prepare("", created.view.id), (draft) => { draft.skipInbox = false; draft.identity.name = "Updated"; });
+  const response = await f.post("commit", update);
+  assert.equal(response.status, 200, await response.clone().text());
+  const saved = await response.json();
+  const proof = await status(f, update);
+  assert.equal(proof.outcome, "applied");
+  if (proof.outcome === "applied") {
+    assert.equal(proof.viewId, created.view.id);
+    assert.equal(proof.committedViewRevision, saved.view.revision);
+    assert.equal(proof.committedWorkspaceRevision, saved.workspaceRevision);
+  }
+  const fresh = await changed(f, await f.prepare("", saved.view.id), (draft) => { draft.identity.description = "Later mutation"; });
+  assert.equal((await f.post("commit", fresh)).status, 200);
+  assert.deepEqual(await status(f, update), proof);
+  // Review-only fields are validated, but were never stored in the lower-level receipt binding.
+  assert.deepEqual(await status(f, { ...update, confirmedZeroMatchDigest: null, draft: { ...update.draft, source: { kind: "manual", label: "Reopened" } } }), proof);
+});
+
+test("BRE-478 no-op predicate includes every persisted field and complete definition, exclusively for commit", async () => {
+  const f = await fixture();
+  const saved = await (await f.post("commit", await f.prepare())).json();
+  const original = await f.prepare("", saved.view.id);
+  const variants: Array<(draft: OrganizationViewCommitRequest["draft"]) => void> = [
+    (draft) => { draft.identity.name = "Other"; },
+    (draft) => { draft.identity.description = "Other"; },
+    (draft) => { draft.identity.color = "#123456"; },
+    (draft) => { draft.identity.position += 1; },
+    (draft) => { draft.skipInbox = !draft.skipInbox; },
+    (draft) => { draft.definition.thread!.subjectContains = "Other"; },
+    (draft) => { draft.definition.sender!.addresses!.push("other@example.com"); },
+  ];
+  for (const change of variants) assert.equal((await status(f, await changed(f, original, change))).outcome, "unknown");
+  const db = service(f);
+  try {
+    const lower = db.views.update({ scope: db.scope, viewId: saved.view.id, request: {
+      idempotencyKey: "lower-patch-is-not-commit", expectedWorkspaceRevision: original.expectedRevisions.workspace, expectedRevision: original.expectedRevisions.view,
+      patch: { ...original.draft.identity, skipInbox: original.draft.skipInbox, definition: original.draft.definition },
+    } });
+    assert.equal(lower.revision, saved.view.revision + 1, "equivalent lower-level PATCH is intentionally a write");
+  } finally { db.sqlite.close(); }
+  assert.equal((await status(f, original)).outcome, "not_applied", "workspace advancement still fences the original commit");
+});
+
+test("BRE-478 malformed binding, foreign account, and unauthenticated requests provide no proof", async () => {
+  const f = await fixture();
+  const command = await f.prepare();
+  const before = f.snapshot();
+  const invalid = [
+    { ...command, workspaceId: "foreign" },
+    { ...command, actor: { type: "human", id: "foreign" } },
+    { ...command, draft: { ...command.draft, summary: ["forged"] } },
+    { ...command, draft: { ...command.draft, definitionDigest: `sha256:${"0".repeat(64)}` } },
+    { ...command, draft: { ...command.draft, effectiveAccountIds: ["foreign-account"] } },
+  ];
+  for (const body of invalid) {
+    const response = await f.post("commit-status", body);
+    assert.equal(response.status, 400);
+    assert.equal(organizationViewCommitStatusResponseSchema.safeParse(await response.json()).success, false);
+  }
+  const unauthorized = await f.app.request("/v1/organization/views/commit-status", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(command) });
+  assert.equal(unauthorized.status, 401);
+  const db = service(f);
+  try { assert.throws(() => db.views.commitStatus({ scope: { ...db.scope, workspaceId: "foreign" }, request: command }), OrganizationViewAccessError); }
+  finally { db.sqlite.close(); }
+  assert.deepEqual(f.snapshot(), before);
+});
+
+test("BRE-478 corrupt receipt/authority/revision/response cannot fall through to not_applied", async () => {
+  const f = await fixture();
+  const command = await f.prepare();
+  assert.equal((await f.post("commit", command)).status, 200);
+  const db = createDatabaseClient(f.path);
+  try {
+    const row = db.sqlite.query("SELECT * FROM organization_change_sets WHERE idempotency_key=?").get(command.retryKey) as Record<string, string | number>;
+    const corruptions: Array<[string, string | number]> = [
+      ["command_json", "{"], ["command_json", "{}"], ["command_json", JSON.stringify({ request: JSON.parse(String(row.command_json)).request, response: null })],
+      ["authority_trace", "{}"], ["authority_trace", "{"], ["command_digest", `sha256:${"0".repeat(64)}`],
+      ["workspace_revision_before", 999], ["workspace_revision_after", 999], ["operation", "revert"],
+    ];
+    for (const [column, value] of corruptions) {
+      db.sqlite.query(`UPDATE organization_change_sets SET ${column}=? WHERE idempotency_key=?`).run(value, command.retryKey);
+      const before = f.snapshot();
+      const proof = await status(f, command);
+      assert.equal(proof.outcome, "unknown", column);
+      if (proof.outcome === "unknown") assert.equal(proof.reason, "invalid_receipt", column);
+      assert.deepEqual(f.snapshot(), before);
+      db.sqlite.query(`UPDATE organization_change_sets SET ${column}=? WHERE idempotency_key=?`).run(row[column]!, command.retryKey);
+    }
+  } finally { db.sqlite.close(); }
+});
+
+test("BRE-478 status executes with SQLite writes disabled, no lazy state, no body reads; guard has positive control", async () => {
+  const f = await fixture();
+  const command = await f.prepare();
+  const statements: string[] = [];
+  const changes: number[] = [];
+  const readonlyApp = createApp({ dbFactory: () => {
+    const client = createDatabaseClient(f.path);
+    client.sqlite.exec("PRAGMA query_only=ON");
+    const query = client.sqlite.query.bind(client.sqlite);
+    client.sqlite.query = ((sql: string) => { statements.push(sql); return query(sql); }) as typeof client.sqlite.query;
+    const close = client.sqlite.close.bind(client.sqlite);
+    client.sqlite.close = (() => {
+      changes.push((query("SELECT total_changes() AS count").get() as { count: number }).count);
+      close();
+    }) as typeof client.sqlite.close;
+    return client;
+  } });
+  const before = f.snapshot();
+  const response = await readonlyApp.request("/v1/organization/views/commit-status", { method: "POST", headers: f.headers, body: JSON.stringify(command) });
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal((await response.json()).outcome, "unknown");
+  assert.ok(changes.length >= 2, "auth and status connections were independently observed");
+  assert.ok(changes.every((count) => count === 0));
+  assert.equal(statements.some((sql) => /\b(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(sql)), false);
+  assert.equal(statements.some((sql) => /\b(emails|body_text|body_html|provider_payload)\b/i.test(sql)), false);
+  assert.deepEqual(f.snapshot(), before);
+  const control = createDatabaseClient(f.path);
+  try {
+    control.sqlite.exec("PRAGMA query_only=ON");
+    assert.throws(() => control.sqlite.query("UPDATE organization_workspace_states SET revision=revision WHERE workspace_id='owner'").run(), /readonly|read-only/i);
+    control.sqlite.exec("PRAGMA query_only=OFF");
+    control.sqlite.query("DELETE FROM organization_workspace_states WHERE workspace_id='owner'").run();
+  } finally { control.sqlite.close(); }
+  const noStateBefore = f.snapshot();
+  const noStateResponse = await readonlyApp.request("/v1/organization/views/commit-status", { method: "POST", headers: f.headers, body: JSON.stringify(command) });
+  assert.equal(noStateResponse.status, 200, await noStateResponse.clone().text());
+  assert.equal((await noStateResponse.json()).reason, "workspace_unavailable");
+  assert.deepEqual(f.snapshot(), noStateBefore, "missing workspace state is never lazily inserted");
+  const db = service(f);
+  try {
+    const repository = createSqliteOrganizationViewsRepository(db.sqlite);
+    const forbidden = () => { throw new Error("status must not evaluate mail or use independent reads"); };
+    const isolated = createOrganizationViews({ ...repository, evaluate: forbidden, validateDefinition: forbidden, replay: forbidden, get: forbidden, getWorkspaceRevision: forbidden, getAuthorityState: forbidden, list: forbidden });
+    assert.equal(isolated.commitStatus({ scope: db.scope, request: command }).outcome, "unknown");
+  } finally { db.sqlite.close(); }
+});
+
+test("BRE-478 Account revoked while route req.json is held is rechecked before proof", async () => {
+  const f = await fixture();
+  const command = await f.prepare();
+  let opened!: () => void;
+  const ready = new Promise<void>((resolveReady) => { opened = resolveReady; });
+  let opens = 0;
+  const app = new Hono<{ Variables: AuthVariables }>();
+  registerOrganizationViewRoutes(app, { dbFactory: () => {
+    const client = createDatabaseClient(f.path);
+    if (++opens === 2) queueMicrotask(opened);
+    return client;
+  } });
+  let body!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({ start(controller) { body = controller; } });
+  const pending = app.request(new Request("http://localhost/v1/organization/views/commit-status", { method: "POST", headers: f.headers, body: stream, duplex: "half" } as RequestInit));
+  await ready;
+  const db = createDatabaseClient(f.path);
+  try { db.sqlite.query("DELETE FROM oauth_accounts WHERE id='account'").run(); } finally { db.sqlite.close(); }
+  const before = f.snapshot();
+  body.enqueue(new TextEncoder().encode(JSON.stringify(command))); body.close();
+  const response = await pending;
+  assert.equal(response.status, 403, await response.clone().text());
+  assert.equal(organizationViewCommitStatusResponseSchema.safeParse(await response.json()).success, false);
+  assert.deepEqual(f.snapshot(), before);
+});
+
+function agentService(f: Awaited<ReturnType<typeof fixture>>, afterSnapshot?: () => void) {
+  const client = createDatabaseClient(f.path);
+  const scope = { workspaceId: "owner", accountIds: ["account"], actor: { id: "agent", type: "agent" as const } };
+  const snapshot: OrganizationCapabilitySnapshot = {
+    id: "grant", revision: 1, actor: scope.actor, scope: { workspaceId: "owner", accountIds: ["account"] },
+    operations: ["query", "apply"], resourceFamilies: ["mail", "thread", "view"], actionFamilies: ["organization_read", "organization_structure"],
+  };
+  let revoked = false;
+  let inTransaction = 0;
+  const source = { load(_scope: unknown, executor?: unknown) {
+    if (executor) { inTransaction++; afterSnapshot?.(); }
+    return { snapshot, revokedAt: revoked ? "2026-11-11T00:00:00Z" : null };
+  } };
+  const views = createOrganizationViews(createSqliteOrganizationViewsRepository(client.sqlite), { agentCapabilitySource: source });
+  const command = () => {
+    const prepared = views.prepare({ scope, input: { kind: "typed_definition", source: { kind: "manual", label: "Agent synthetic" }, identity: { name: "Agent View" }, definition: { revision: 1, accountIds: ["account"], thread: { subjectContains: "Agent" } } } });
+    return { draft: prepared.draft, retryKey: crypto.randomUUID(), expectedRevisions: { workspace: prepared.workspaceRevision, view: null }, confirmedZeroMatchDigest: prepared.draft.definitionDigest };
+  };
+  return { ...client, scope, snapshot, views, command, revoke: () => { revoked = true; }, transactionLoads: () => inTransaction };
+}
+
+test("BRE-478 live agent grant and receipt actor authority are required inside status snapshot", async () => {
+  const f = await fixture();
+  const agent = agentService(f);
+  try {
+    const command = agent.command();
+    agent.views.commit({ scope: agent.scope, request: command });
+    assert.equal(agent.views.commitStatus({ scope: agent.scope, request: command }).outcome, "applied");
+    const before = f.snapshot();
+    agent.revoke();
+    assert.throws(() => agent.views.commitStatus({ scope: agent.scope, request: command }), OrganizationViewAccessError);
+    assert.ok(agent.transactionLoads() > 0);
+    const human = service(f);
+    try { assert.equal(human.views.commitStatus({ scope: human.scope, request: command }).outcome, "unknown", "human cannot claim another actor's receipt"); }
+    finally { human.sqlite.close(); }
+    assert.deepEqual(f.snapshot(), before);
+  } finally { agent.sqlite.close(); }
+  let enabled = false;
+  let revoke!: () => void;
+  const racing = agentService(f, () => { if (enabled) revoke(); });
+  revoke = racing.revoke;
+  try {
+    const command = racing.command();
+    enabled = true;
+    assert.throws(() => racing.views.commitStatus({ scope: racing.scope, request: command }), OrganizationViewAccessError, "revocation after preflight must be observed by transaction-live grant load");
+  } finally { racing.sqlite.close(); }
+});
+
+test("BRE-478 single snapshot cannot mix absent receipt with revision from a competing original commit", async () => {
+  const f = await fixture();
+  let enabled = false;
+  let original!: OrganizationViewCommitRequest;
+  let competingViews!: ReturnType<typeof createOrganizationViews>;
+  let competingScope!: ReturnType<typeof agentService>["scope"];
+  let committed = false;
+  const primary = agentService(f, () => {
+    if (enabled && !committed) {
+      committed = true;
+      competingViews.commit({ scope: competingScope, request: original });
+    }
+  });
+  const competing = agentService(f);
+  competingViews = competing.views; competingScope = competing.scope;
+  try {
+    original = primary.command();
+    enabled = true;
+    // The transaction has already read owner before its live grant callback:
+    // a separate WAL writer now commits while the read snapshot stays old.
+    const proof = primary.views.commitStatus({ scope: primary.scope, request: original });
+    assert.equal(committed, true);
+    assert.equal(proof.outcome, "unknown", "must not combine old absence with new advanced revision into false not_applied");
+    const after = f.snapshot();
+    assert.equal(primary.views.commitStatus({ scope: primary.scope, request: original }).outcome, "applied");
+    assert.deepEqual(f.snapshot(), after);
+    const replay = competing.views.commit({ scope: competing.scope, request: original });
+    assert.equal(replay.view.id, (competing.sqlite.query("SELECT id FROM organization_views WHERE workspace_id='owner'").get() as { id: string }).id);
+    assert.equal((competing.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE idempotency_key=?").get(original.retryKey) as { count: number }).count, 1);
+  } finally { primary.sqlite.close(); competing.sqlite.close(); }
+});
+
+test("BRE-478 stale proof remains durable after subsequent competing workspace writes", async () => {
+  const f = await fixture();
+  const original = await f.prepare();
+  assert.equal((await f.post("commit", await f.prepare("First competing"))).status, 200);
+  assert.equal((await status(f, original)).outcome, "not_applied");
+  assert.equal((await f.post("commit", await f.prepare("Second competing"))).status, 200);
+  const before = f.snapshot();
+  assert.equal((await f.post("commit", original)).status, 409);
+  assert.deepEqual(f.snapshot(), before);
 });

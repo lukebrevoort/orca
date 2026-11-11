@@ -4,6 +4,9 @@ import type { Database } from "bun:sqlite";
 
 import {
   organizationViewBounds,
+  organizationAuthorityTraceSchema,
+  organizationViewCommitStatusResponseSchema,
+  type OrganizationViewCommitStatusResponse,
   organizationViewDefinitionSchema,
   organizationViewResultItemSchema,
   organizationViewResultPageSchema,
@@ -21,7 +24,7 @@ import {
 import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
 import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
 import { loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
-import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewSelectionError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewQueryAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
+import { isUnchangedOrganizationViewCommit, digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewSelectionError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewQueryAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
@@ -428,6 +431,92 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
     get,
     getWorkspaceRevision(workspaceId) { return workspaceRevision(sqlite, workspaceId); },
     getAuthorityState(workspaceId) { return authorityState(sqlite, workspaceId); },
+    commitStatus({ scope, mutation, authorization }) {
+      // Every authoritative read (including live ownership/grants and ALL key
+      // reservations) belongs to this single deferred SQLite read snapshot.
+      // Do not call verifyAuthorization: that write path lazily creates state.
+      return sqlite.transaction((): OrganizationViewCommitStatusResponse => {
+        const owner = sqlite.query("SELECT id FROM users WHERE id=?").get(scope.workspaceId);
+        if (!owner || (scope.actor.type === "human" && scope.actor.id !== scope.workspaceId)
+          || (scope.actor.type !== "human" && scope.actor.type !== "agent")) {
+          throw new OrganizationViewAccessError("The authenticated Workspace owner is unavailable", "resource_denied");
+        }
+        const owned = sqlite.query("SELECT id FROM oauth_accounts WHERE user_id=? ORDER BY id").all(scope.workspaceId) as { id: string }[];
+        const ownedIds = new Set(owned.map((account) => account.id));
+        if (scope.accountIds.length === 0 || new Set(scope.accountIds).size !== scope.accountIds.length
+          || scope.accountIds.some((id) => !ownedIds.has(id))) throw new OrganizationViewAccessError();
+        verifyQueryAuthorization(sqlite, scope, authorization);
+        const definition = mutation.kind === "create" ? mutation.request.definition : mutation.request.patch.definition;
+        if (!definition) throw new OrganizationViewValidationError("A View commit requires its complete definition");
+        assertOwnedDefinition(sqlite, scope.workspaceId, definition, scope.accountIds);
+        if (scope.actor.type === "agent" && !loadAuthorizedOrganizationAgentCapability(
+          { ...scope, actor: scope.actor as typeof scope.actor & { type: "agent" } }, authorization.agentCapabilitySource, sqlite,
+          { operation: "apply", resourceFamily: "view", actionFamily: "organization_structure" },
+        )) throw new OrganizationViewAccessError("The live grant no longer authorizes View commit", "resource_denied");
+        const expectedRevisions = {
+          workspace: mutation.request.expectedWorkspaceRevision,
+          view: mutation.kind === "update" ? mutation.request.expectedRevision : null,
+        };
+        const binding = { operation: "view_commit" as const, workspaceId: scope.workspaceId, retryKey: mutation.request.idempotencyKey, expectedRevisions };
+        const unknown = (reason: Extract<OrganizationViewCommitStatusResponse, { outcome: "unknown" }>["reason"]): OrganizationViewCommitStatusResponse => ({ ...binding, outcome: "unknown", reason });
+        const reservation = sqlite.query("SELECT id,resource_family,operation,command_json,command_digest,authority_trace,workspace_revision_before,workspace_revision_after FROM organization_change_sets WHERE workspace_id=? AND idempotency_key=?")
+          .get(scope.workspaceId, binding.retryKey) as {
+            id: string; resource_family: string; operation: string; command_json: string; command_digest: string; authority_trace: string;
+            workspace_revision_before: number; workspace_revision_after: number;
+          } | null;
+        if (reservation) {
+          if (reservation.resource_family !== "view") return unknown("incompatible_reservation");
+          let stored: { request: unknown; response: unknown };
+          let trace;
+          try {
+            const parsed: unknown = JSON.parse(reservation.command_json);
+            if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)
+              || Object.keys(parsed).length !== 2 || !("request" in parsed) || !("response" in parsed)) return unknown("invalid_receipt");
+            stored = parsed as typeof stored;
+            trace = organizationAuthorityTraceSchema.parse(JSON.parse(reservation.authority_trace));
+          } catch { return unknown("invalid_receipt"); }
+          // A reservation for a different canonical mutation is never absence.
+          if (canonicalOrganizationJson(stored.request) !== canonicalOrganizationJson(mutation)) return unknown("command_mismatch");
+          verifyReplayAuthorization(sqlite, scope, authorization.agentCapabilitySource, { ...stored, authorityTrace: trace });
+          const response = organizationViewSchema.safeParse(stored.response);
+          if (!response.success
+            || reservation.operation !== "apply"
+            || trace.decision !== "allowed" || trace.denialCode !== null || trace.operation !== "apply"
+            || canonicalOrganizationJson(trace.actor) !== canonicalOrganizationJson(scope.actor)
+            || trace.scope.workspaceId !== scope.workspaceId
+            || canonicalOrganizationJson([...trace.scope.accountIds].sort()) !== canonicalOrganizationJson([...scope.accountIds].sort())
+            || canonicalOrganizationJson(trace.capabilitySnapshot.actor) !== canonicalOrganizationJson(scope.actor)
+            || canonicalOrganizationJson(trace.capabilitySnapshot.scope) !== canonicalOrganizationJson(trace.scope)
+            || !trace.capabilitySnapshot.operations.includes("apply")
+            || !trace.capabilitySnapshot.resourceFamilies.includes("view")
+            || !trace.capabilitySnapshot.actionFamilies.includes("organization_structure")
+            || trace.command.id !== reservation.id || trace.command.digest !== reservation.command_digest
+            || trace.expectedRevisions.workspace !== expectedRevisions.workspace
+            || reservation.workspace_revision_before !== expectedRevisions.workspace
+            || reservation.workspace_revision_after !== expectedRevisions.workspace + 1
+            || response.data.workspaceId !== scope.workspaceId
+            || response.data.revision !== (expectedRevisions.view === null ? 1 : expectedRevisions.view + 1)
+            || (mutation.kind === "update" && (response.data.id !== mutation.viewId || trace.expectedRevisions.resources[`view:${mutation.viewId}`] !== mutation.request.expectedRevision))) return unknown("invalid_receipt");
+          const proposed = mutation.kind === "create" ? mutation.request : mutation.request.patch;
+          if (canonicalOrganizationJson({ name: response.data.name, description: response.data.description, color: response.data.color, skipInbox: response.data.skipInbox, definition: response.data.definition })
+            !== canonicalOrganizationJson({ name: proposed.name, description: proposed.description, color: proposed.color, skipInbox: proposed.skipInbox, definition: proposed.definition })) return unknown("invalid_receipt");
+          // Original receipt wins over stale/no-op observations and survives
+          // later updates/deletion. Never reload or recreate the current View.
+          return organizationViewCommitStatusResponseSchema.parse({ ...binding, outcome: "applied", viewId: response.data.id,
+            committedWorkspaceRevision: reservation.workspace_revision_after, committedViewRevision: response.data.revision });
+        }
+        const workspace = sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id=?").get(scope.workspaceId) as { revision: number } | null;
+        if (!workspace) return unknown("workspace_unavailable");
+        const target = mutation.kind === "update" ? get(scope.workspaceId, mutation.viewId) : null;
+        const observed = { observedWorkspaceRevision: workspace.revision, observedViewRevision: target?.revision ?? null };
+        if (workspace.revision > expectedRevisions.workspace) return organizationViewCommitStatusResponseSchema.parse({ ...binding, ...observed, outcome: "not_applied", reason: "workspace_advanced" });
+        if (workspace.revision < expectedRevisions.workspace) return unknown("future_revision");
+        if (mutation.kind === "update" && target?.revision === mutation.request.expectedRevision && isUnchangedOrganizationViewCommit(target, mutation.request)) {
+          return organizationViewCommitStatusResponseSchema.parse({ ...binding, ...observed, outcome: "not_applied", reason: "unchanged_view" });
+        }
+        return unknown("eligible_or_unresolved");
+      })();
+    },
     replay(input) {
       return sqlite.transaction(() => {
         const executor = sqlite;
