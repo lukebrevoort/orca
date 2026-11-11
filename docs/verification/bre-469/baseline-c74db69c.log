@@ -1,0 +1,56 @@
+[Orca resources] {"time": 1794392981.586656, "stage": "before", "ownerPid": 84610, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  46.1 498544 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "15249  27.0 374784 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)", " 1152  17.1  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", " 4080  10.1  22240 /System/Library/PrivateFrameworks/DataAccess.framework/Support/dataaccessd", "15382   8.8 976208 codex", "15214   8.6  93888 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper"], "memory": "System-wide memory free percentage: 75%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/preferences-owner.test.ts:
+49 |   const capturedU = await f.request("u", "u");
+50 |   expect((await capturedU.json()).signature).toBe("Original U");
+51 |   const before = f.snapshot(); f.preferenceAccess.length = 0;
+52 |   for (const method of ["GET", "PATCH"] as const) {
+53 |     const response = await f.request("v", "u", method);
+54 |     expect(response.status).toBe(409);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 409
+Received: 200
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:54:29)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:41:11)
+(fail) BRE-469 replacement cookie cannot read or write the original preference owner's draft [89.28ms]
+60 | }));
+61 | 
+62 | test("BRE-469 replacement mobile bearer cannot apply the original owner's preferences", () => fixture(async f => {
+63 |   const before = f.snapshot();
+64 |   const response = await f.request(null, "u", "PATCH", "?include=first_view_guidance", f.tokenV);
+65 |   expect(response.status).toBe(409);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: 409
+Received: 200
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:65:27)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:41:11)
+(fail) BRE-469 replacement mobile bearer cannot apply the original owner's preferences [61.03ms]
+(pass) BRE-469 same-owner and legacy requests retain strict preference shapes [75.07ms]
+79 |   }
+80 | }));
+81 | 
+82 | test("BRE-469 malformed preconditions and unauthenticated requests never access preferences", () => fixture(async f => {
+83 |   const before = f.snapshot();
+84 |   for (const value of ["", "u v", "u".repeat(257)]) for (const method of ["GET", "PATCH"] as const) expect((await f.request("u", value, method)).status).toBe(400);
+                                                                                                                                                              ^
+error: expect(received).toBe(expected)
+
+Expected: 400
+Received: 200
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:84:154)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/preferences-owner.test.ts:41:11)
+(fail) BRE-469 malformed preconditions and unauthenticated requests never access preferences [58.07ms]
+
+ 1 pass
+ 3 fail
+ 12 expect() calls
+Ran 4 tests across 1 file. [508.00ms]
+[Orca resources] {"time": 1794392982.17166, "stage": "after", "ownerPid": 84610, "childPid": 84613, "command": "bun", "exitCode": 1, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  21.2 500224 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", " 1152  14.7  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", " 1296   9.1 628336 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", " 4080   8.0  22256 /System/Library/PrivateFrameworks/DataAccess.framework/Support/dataaccessd", "  636   7.8  12528 /usr/libexec/trustd", "  404   4.9 125088 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"], "memory": "System-wide memory free percentage: 75%"}
