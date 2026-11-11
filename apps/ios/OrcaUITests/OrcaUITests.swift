@@ -17,6 +17,23 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// BRE-457 acceptance baseline. Runs against real native controls, never source text.
+    func test44MailStartsImportantAndKeepsAllMailReachable() throws {
+        let app = try launchApp()
+        XCTAssertTrue(app.buttons["inbox.view-picker"].waitForExistence(timeout: 20))
+        attachScreenshot(named: "bre457-mail-entry-before-choice")
+        XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, "The primary native destination is Mail.")
+        let picker = app.buttons["inbox.view-picker"]
+        XCTAssertTrue((picker.label + " " + (picker.value as? String ?? "")).contains("Important"), "Launch opens Important, independently of Inbox placement.")
+        let all = app.buttons["mail.filter.all"]
+        XCTAssertTrue(all.isHittable, "All Mail must remain one action away even with no Important conversations.")
+        all.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 15))
+        attachScreenshot(named: "bre457-all-mail-recovery")
+        app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].press(forDuration: 1)
+        XCTAssertTrue(app.buttons["Importance…"].waitForExistence(timeout: 5), "Importance must be distinct from Move mail.")
+    }
+
     /// Runs in both themes against the authenticated loopback fixture only.
     func test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes() throws {
         try setFixtureSending(true)
