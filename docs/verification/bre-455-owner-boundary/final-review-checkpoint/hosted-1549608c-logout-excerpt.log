@@ -1,0 +1,46 @@
+2026-11-11T12:33:16.1177793Z @orca/api test: ::group::src/logout-route.test.ts:
+2026-11-11T12:33:16.1540680Z @orca/web test: (pass) Inbox row action affordances > presents thread saving as an immediate, accessible collection checklist [95.82ms]
+2026-11-11T12:33:16.3505525Z @orca/web test: (pass) Desktop evidence and navigation > view mutation supersedes a delayed provider Inbox snapshot [197.21ms]
+2026-11-11T12:33:16.4686373Z @orca/web test: (pass) Desktop evidence and navigation > view mutation refreshes Inbox messages and destination counts without provider sync [118.11ms]
+2026-11-11T12:33:16.6660011Z @orca/web test: (pass) Desktop evidence and navigation > keeps evidence modal, closes the top layer with Escape, and restores trigger focus [195.42ms]
+2026-11-11T12:33:16.7066864Z @orca/api test: (pass) origin guard: rejects https://evil.example before opening the handler database [584.48ms]
+2026-11-11T12:33:16.8628639Z @orca/api test: (pass) origin guard: rejects missing Origin before opening the handler database [156.12ms]
+2026-11-11T12:33:16.8940283Z @orca/web test: (pass) Desktop evidence and navigation > preserves advanced Safety Lock without duplicate placement controls from the current Thread experience [227.62ms]
+2026-11-11T12:33:17.0359798Z @orca/api test: (pass) origin guard: rejects null before opening the handler database [172.82ms]
+2026-11-11T12:33:17.1584842Z @orca/web test: (pass) Desktop evidence and navigation > contains Lane drawer focus in both directions and restores the trigger after Escape [266.55ms]
+2026-11-11T12:33:17.2004971Z @orca/api test: (pass) origin guard: rejects http://localhost:5173.evil.example before opening the handler database [164.67ms]
+2026-11-11T12:33:17.3090693Z @orca/web test: (pass) Desktop evidence and navigation > writes stable destinations and follows browser history [149.62ms]
+2026-11-11T12:33:17.3193126Z @orca/api test: (pass) origin guard: rejects http://localhost:5173/ before opening the handler database [118.70ms]
+2026-11-11T12:33:17.4427475Z @orca/api test: 65 | test("revocation through real wiring: matching Origin clears cookie and old token receives 401", async () => {
+2026-11-11T12:33:17.4428670Z @orca/api test: 66 |   const cookie = `orca_session=${fixture.session.token}`;
+2026-11-11T12:33:17.4429790Z @orca/api test: 67 |   const response = await fixture.app.request("/v1/auth/logout", { method: "POST", headers: { origin, cookie } });
+2026-11-11T12:33:17.4430793Z @orca/api test: 68 |   expect(response.status).toBe(200);
+2026-11-11T12:33:17.4431483Z @orca/api test: 69 |   expect(await response.json()).toEqual({ ok: true });
+2026-11-11T12:33:17.4432634Z @orca/api test: 70 |   expect(response.headers.get("set-cookie")).toBe(buildClearedSessionCookie(getSessionCookieOptions()));
+2026-11-11T12:33:17.4433552Z @orca/api test:                                                   ^
+2026-11-11T12:33:17.4434534Z @orca/api test: error: expect(received).toBe(expected)
+2026-11-11T12:33:17.4435320Z @orca/api test: 
+2026-11-11T12:33:17.4436058Z @orca/api test: Expected: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+2026-11-11T12:33:17.4437604Z @orca/api test: Received: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT, orca_browser_auth_context=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+2026-11-11T12:33:17.4439028Z @orca/api test: 
+2026-11-11T12:33:17.4439855Z @orca/api test:       at <anonymous> (/home/runner/work/orca/orca/apps/api/src/logout-route.test.ts:70:46)
+2026-11-11T12:33:17.4440653Z @orca/api test: 
+2026-11-11T12:33:17.4443021Z @orca/api test: ::error file=apps/api/src/logout-route.test.ts,line=70,col=46,title=error: expect(received).toBe(expected)::Expected: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"%0AReceived: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT, orca_browser_auth_context=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"%0A%0A      at <anonymous> (/home/runner/work/orca/orca/apps/api/src/logout-route.test.ts:70:46)
+2026-11-11T12:33:17.4445805Z @orca/api test: (fail) revocation through real wiring: matching Origin clears cookie and old token receives 401 [123.60ms]
+2026-11-11T12:33:17.5488069Z @orca/api test: 74 | 
+2026-11-11T12:33:17.5510611Z @orca/api test: 75 | test("matching Origin with no cookie succeeds and clears the cookie", async () => {
+2026-11-11T12:33:17.5511696Z @orca/api test: 76 |   const response = await fixture.app.request("/v1/auth/logout", { method: "POST", headers: { origin } });
+2026-11-11T12:33:17.5512544Z @orca/api test: 77 |   expect(response.status).toBe(200);
+2026-11-11T12:33:17.5513159Z @orca/api test: 78 |   expect(await response.json()).toEqual({ ok: true });
+2026-11-11T12:33:17.5514137Z @orca/api test: 79 |   expect(response.headers.get("set-cookie")).toBe(buildClearedSessionCookie(getSessionCookieOptions()));
+2026-11-11T12:33:17.5514973Z @orca/api test:                                                   ^
+2026-11-11T12:33:17.5515528Z @orca/api test: error: expect(received).toBe(expected)
+2026-11-11T12:33:17.5516022Z @orca/api test: 
+2026-11-11T12:33:17.5516704Z @orca/api test: Expected: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+2026-11-11T12:33:17.5518011Z @orca/api test: Received: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT, orca_browser_auth_context=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+2026-11-11T12:33:17.5519254Z @orca/api test: 
+2026-11-11T12:33:17.5519886Z @orca/api test:       at <anonymous> (/home/runner/work/orca/orca/apps/api/src/logout-route.test.ts:79:46)
+2026-11-11T12:33:17.5520622Z @orca/api test: 
+2026-11-11T12:33:17.5522775Z @orca/api test: ::error file=apps/api/src/logout-route.test.ts,line=79,col=46,title=error: expect(received).toBe(expected)::Expected: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"%0AReceived: "orca_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT, orca_browser_auth_context=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"%0A%0A      at <anonymous> (/home/runner/work/orca/orca/apps/api/src/logout-route.test.ts:79:46)
+2026-11-11T12:33:17.5535584Z @orca/api test: (fail) matching Origin with no cookie succeeds and clears the cookie [106.06ms]
+2026-11-11T12:33:17.5559299Z @orca/web test: (pass) Desktop evidence and navigation > returns from a Search result to Search, then restores the mounted source Reader [247.75ms]
