@@ -8,6 +8,7 @@ final class ReaderUITests: XCTestCase {
         addTeardownBlock { try self.setLongReader(false) }
         let app = try launchReader(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
         let row = app.buttons["inbox.message.ios-fixture-message-1"]
+        revealInboxRow("inbox.message.ios-fixture-message-1", in: app)
         XCTAssertTrue(row.waitForExistence(timeout: 20))
         row.tap()
         let toggle = app.buttons["Show 21 earlier messages"]
@@ -79,6 +80,7 @@ final class ReaderUITests: XCTestCase {
             openHTML(in: app)
             let first = app.staticTexts["Explicit dark foreground stays readable."]
             XCTAssertTrue(first.waitForExistence(timeout: 10))
+            captureReaderGeometry(in: app, first: first, stage: "standard-initial-\(pass)")
             XCTAssertTrue(isVisible(first, in: app), "Every open should begin at the top of this HTML message")
             let reply = app.buttons["Reply"]
             let replyTitle = reply.staticTexts["Reply"]
@@ -115,7 +117,9 @@ final class ReaderUITests: XCTestCase {
         openHTML(in: app)
         let first = app.staticTexts["Explicit dark foreground stays readable."]
         XCTAssertTrue(first.waitForExistence(timeout: 10))
+        captureReaderGeometry(in: app, first: first, stage: "accessibility-initial")
         reveal(first, in: app)
+        captureReaderGeometry(in: app, first: first, stage: "accessibility-revealed")
         screenshot("reader-accessibility-visibility-check")
         XCTAssertTrue(isVisible(first, in: app))
         let labels = ["Reply", "Reply all", "Forward"]
@@ -150,6 +154,57 @@ final class ReaderUITests: XCTestCase {
         }
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 10))
+    }
+
+    func testMessageToolsPreserveFindFormattingAndWideContentChoices() throws {
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
+            let app = try launchReader(contentSize: size)
+            openHTML(in: app)
+            let tools = app.buttons["reader.tools"]
+            XCTAssertFalse(app.buttons["reader.find"].exists)
+            openMessageTools(in: app)
+            let find = app.buttons["reader.find"]
+            XCTAssertTrue(find.exists)
+            let wide = app.switches["Keep tables and code wide"]
+            revealReaderControl(wide, in: app, scrollUp: true)
+            XCTAssertEqual(wide.value as? String, "0")
+            wide.tap()
+            XCTAssertEqual(wide.value as? String, "1")
+            XCTAssertTrue(app.staticTexts["Scroll within this message to reach wide content. Ordinary prose keeps the reading width."].exists)
+            wide.tap()
+            XCTAssertEqual(wide.value as? String, "0")
+            let plain = app.buttons["Plain text"]
+            revealReaderControl(plain, in: app, scrollUp: true); plain.tap()
+            let plainFind = app.buttons["Find in message"]
+            revealReaderControl(plainFind, in: app, scrollUp: false); plainFind.tap()
+            let query = app.textFields["reader.find-query"]
+            revealReaderControl(query, in: app, scrollUp: true)
+            XCTAssertTrue(query.exists); query.tap(); query.typeText("protect")
+            XCTAssertTrue(app.staticTexts["1 matches in the complete message"].exists)
+            let close = app.buttons["Close Find"]
+            revealReaderControl(close, in: app, scrollUp: false); close.tap()
+            let formatted = app.buttons["Formatted message"]
+            revealReaderControl(formatted, in: app, scrollUp: true); formatted.tap()
+            XCTAssertTrue(app.buttons["reader.find"].exists)
+            revealReaderControl(tools, in: app, scrollUp: false); tools.tap()
+            XCTAssertEqual(tools.value as? String, "Collapsed")
+            XCTAssertFalse(app.switches["Keep tables and code wide"].exists)
+            let first = app.staticTexts["Explicit dark foreground stays readable."]
+            XCTAssertTrue(first.exists)
+            reveal(first, in: app)
+            XCTAssertTrue(isVisible(first, in: app))
+            captureReaderGeometry(in: app, first: first, stage: "tools-restored-\(size)")
+            app.terminate()
+        }
+    }
+
+    private func openMessageTools(in app: XCUIApplication) {
+        let tools = app.buttons["reader.tools"]
+        revealReaderControl(tools, in: app, scrollUp: true)
+        XCTAssertGreaterThanOrEqual(tools.frame.height, 44)
+        XCTAssertEqual(tools.value as? String, "Collapsed")
+        tools.tap()
+        XCTAssertEqual(tools.value as? String, "Expanded")
     }
 
     func testImagesRequireExplicitLoadingAndResetOnReopen() throws {
@@ -510,19 +565,66 @@ final class ReaderUITests: XCTestCase {
     }
 
     private func openHTML(in app: XCUIApplication) {
-        let row = app.descendants(matching: .any)["inbox.message.ios-fixture-message-3"]
-        let list = app.descendants(matching: .any)["inbox.list"]
-        XCTAssertTrue(list.waitForExistence(timeout: 10))
-        // At large text sizes SwiftUI virtualizes this row until it scrolls
-        // into the list. Waiting for its existence first can never reveal it.
-        for _ in 0..<12 {
-            if row.exists && row.isHittable { break }
-            list.swipeUp()
-        }
+        let row = app.buttons["inbox.message.ios-fixture-message-3"]
+        revealInboxRow("inbox.message.ios-fixture-message-3", in: app)
         screenshot("reader-inbox-before-open")
         XCTAssertTrue(row.exists && row.isHittable)
         row.tap()
         XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+    }
+
+    private func revealInboxRow(_ identifier: String, in app: XCUIApplication,
+                                file: StaticString = #filePath, line: UInt = #line) {
+        let list = app.descendants(matching: .any)["inbox.list"]
+        let row = app.buttons[identifier]
+        XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
+        func record(_ stage: String, hierarchy: Bool = false) {
+            let anyCount = app.descendants(matching: .any).matching(identifier: identifier).count
+            let buttonCount = app.buttons.matching(identifier: identifier).count
+            print("[reader-list] stage=\(stage) row_id=\(identifier) button_count=\(buttonCount) any_count=\(anyCount) app=\(app.frame) list=\(list.exists ? list.frame : .zero) navigation=\(app.navigationBars.firstMatch.frame) tabs=\(app.tabBars.firstMatch.frame) row=\(row.exists ? row.frame : .zero) mail_selected=\(app.tabBars.buttons["Mail"].isSelected)")
+            screenshot("reader-list-\(identifier)-\(stage)")
+            if hierarchy { print("[reader-list-hierarchy] stage=\(stage)\n\(app.debugDescription)") }
+        }
+        record("before", hierarchy: true)
+        for attempt in 0..<12 {
+            XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, "A content gesture must not navigate to another tab", file: file, line: line)
+            guard list.exists, app.tabBars.buttons["Mail"].isSelected else { break }
+            let top = max(list.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 8
+            let bottom = min(list.frame.maxY, app.tabBars.firstMatch.frame.minY) - 8
+            if row.exists, row.isHittable, row.frame.midY >= top, row.frame.midY <= bottom { break }
+            guard bottom - top > 80 else {
+                XCTFail("Mail needs an unobscured content gesture region", file: file, line: line); break
+            }
+            var up = true
+            if row.exists, !row.frame.isEmpty { up = row.frame.midY > bottom }
+            // Like the draft-row helper, use a short drag inside actual content,
+            // clamped above native tab chrome. A tab-bar hit in08f is unproven.
+            let height = bottom - top
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let x = max(list.frame.minX + 8, min(list.frame.maxX - 8, app.frame.width * 0.7))
+            let start = origin.withOffset(CGVector(dx: x, dy: top + height * (up ? 0.7 : 0.3)))
+            let end = origin.withOffset(CGVector(dx: x, dy: top + height * (up ? 0.3 : 0.7)))
+            print("[reader-list-gesture] attempt=\(attempt) top=\(top) bottom=\(bottom) x=\(x) up=\(up)")
+            start.press(forDuration: 0.05, thenDragTo: end)
+            record("after-\(attempt)")
+            XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, "Mail must remain selected after the bounded content gesture", file: file, line: line)
+        }
+        record("final", hierarchy: true)
+        XCTAssertEqual(app.buttons.matching(identifier: identifier).count, 1, "Keep the real row Button identity", file: file, line: line)
+        XCTAssertTrue(row.exists && row.isHittable, file: file, line: line)
+        XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, file: file, line: line)
+    }
+
+    private func captureReaderGeometry(in app: XCUIApplication, first: XCUIElement, stage: String) {
+        let header = app.staticTexts["thread.subject"]
+        let account = app.staticTexts["thread.account"]
+        let body = app.webViews.firstMatch
+        let importance = app.buttons["thread.importance"]
+        let tools = app.buttons["reader.tools"].firstMatch
+        let reply = app.buttons["Reply"], feedback = app.buttons["feedback.open"]
+        let headerFrame = [header, account, importance].filter(\.exists).reduce(CGRect.null) { $0.union($1.frame) }
+        print("[reader-chrome] stage=\(stage) app=\(app.frame) header=\(headerFrame) subject=\(header.exists ? header.frame : .zero) account=\(account.exists ? account.frame : .zero) importance=\(importance.exists ? importance.frame : .zero) tools=\(tools.exists ? tools.frame : .zero) body=\(body.exists ? body.frame : .zero) first=\(first.exists ? first.frame : .zero) reply=\(reply.exists ? reply.frame : .zero) feedback=\(feedback.exists ? feedback.frame : .zero)")
+        screenshot("reader-chrome-\(stage)")
     }
 
     private func reveal(_ text: XCUIElement, in app: XCUIApplication) {

@@ -30,6 +30,8 @@ The current published API parent, latest Feedback follow-up and wired BRE-455 ch
 
 ## Remaining gates and rollback
 
+[The compact P03 reader follow-up](compact-reader.md) retains the full08f hosted failure inventory and inspected screenshot scope, preserves the initial/reopen paragraph assertion, and adds bounded AX list diagnostics. Candidate hosted UI/layout evidence is pending; prior controller passes do not establish reader runtime acceptance.
+
 All 33 canonical requirements remain unverified at the product level until the final combined revision has hosted runtime, inspected light/dark standard/accessibility screenshots, independent correctness/security reviews and root acceptance. The coverage map distinguishes applicable native behavior from canonical web-only surfaces; explanatory availability is not implementation parity for a web-only tool.
 
 No local native runtime, authorized real mail, physical APNs, signed distribution, processing, tester availability, merge, deployment or release is claimed. Root owns current exact-head runtime and independent reviews. A failed/canceled/blocked workflow is not a pass.

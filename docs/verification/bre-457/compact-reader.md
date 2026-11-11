@@ -1,0 +1,27 @@
+# Compact P03 reader follow-up
+
+User authorized this narrow layout change after the actual [08f hosted red](hosted-red-08f0db15/triage.md). Canonical authority is [P03](../../ixd/bre-453/phase4-page-specs/page-P03.md): body owns the reading column; details/history stay contextual; native standard/accessibility sizes retain complete content/actions. D1/D2 remain Important-first Mail, All Mail one action away, conversation/account correction by default and separately confirmed exact-sender preferences.
+
+## Root cause and scope
+
+The first LongHTML open found its first paragraph at y818..878 outside y116..720. No body scroll, Back or reopen had occurred. The contextual [standard HTML screenshot](hosted-red-08f0db15/reading-Orca-103.png), inspected by native and root, shows multiple chrome/utility rows preceding the message. It is not uniquely mapped to the failure. This supports compacting chrome, not a claimed scroll-restoration bug. The initial/reopen first-paragraph assertion remains unchanged with no corrective test scrolling.
+
+Subject remains first. Account and effective importance share the existing labeled entry with a minimum44pt hit region and wrapping; that same entry still opens ImportanceView. Its real conversation Important/Not important, current scope/provenance, pending/error/receipt/Undo and separate sender preview/confirmation logic are unchanged. Sender name, actual address and time remain readable; full recipients and the Attention explanation move into Message details. No type size is reduced or accessibility line count capped. Smaller gaps/padding and one collapsed44pt Message tools disclosure remove redundant chrome. Tools retains Find, formatted/plain and complete-original text controls, and the optional wide-content setting. Initial reflow, body/HTML semantics, consent/source/account/session guards, chronology, Reply/Feedback, jump and delivery logic are unchanged.
+
+The new UI journey explicitly opens Tools, checks wide off/on/off and its explanation, switches to plain, searches the actual complete message for `protect` (one match), closes Find, returns to formatted content, closes Tools and verifies the HTML paragraph remains reachable. It runs standard and accessibility sizes in each existing reading theme phase. Hosted execution and actual screenshot inspection are pending; grammar parsing cannot verify these SwiftUI or XCTest behaviors.
+
+## AX diagnostics and bounded gestures
+
+EarlierMessages failed row Button **existence** before opening a conversation. HTML AX lost inbox.list after its first generic list swipe; the failure hierarchy had Drafts selected. Actual API logs returned all five expected rows in both cases. A tab-bar coordinate hit is an unproven hypothesis; source changes make no product-navigation fix claim.
+
+The test-only reveal helper retains the actual row Button query and existence/hittability assertions. It records Button/any-type counts, full hierarchy and list/navigation/tab/row frames before/final, plus pre/post gesture screenshots. Short content drags clamp to the real list/navigation/tab viewport and assert Mail stays selected. It uses the existing draft-row gesture pattern, not hidden navigation or a longer row timeout. Initial standard/reopened and AX before/after reader snapshots record header/subject/account/importance/tools/body/first-paragraph/Reply/Feedback rectangles before the strong visibility assertion can fail. Both themes remain required.
+
+## Compose transport is separate
+
+Historical light test18 failed its first capabilities control before app launch; source specifies POST, while NSError exposes only URL. Dark actually passed test18 with40 geometry assertions, zero overlapping controls, one synthetic send/delivery. [The inspected dark checkpoint](hosted-red-08f0db15/compose-FeedbackLayoutdark-2.png) does not verify test43, light or the full compose suite. FeedbackLayout explicitly intends test18; no selection bug is established. Compose artifact tested merge8864 differs from declared08f head; native tree equality is not established locally.
+
+The native helper adds only method/path/start/end/epoch/elapsed/status/error-code diagnostics; no URL queries, request headers, bodies or tokens. The8s request/10s wait, first failure and business assertions are unchanged. Root owns the separate fixture ingress/body-read/response-ready logging patch; until its verified publication/integration, no server logging or timeout fix is claimed.
+
+## Verification status and rollback
+
+Historical08f reading184 passed/3 failed/5 image-scope skips is retained completely in the summary. Actual test nodes show prior InboxRecovery/NativeViewEditorRecovery and04/07/37 passes; the three current reader failures remain the baseline. Prior125-case Foundation evidence atc2 is historical and cannot be relabeled a current-head pass. This follow-up awaits its allocated clean-head125-case API/controller gate and36-file grammar parse, hosted SwiftUI/XCTest, standard/AX light/dark inspected screenshots, and fresh independent review/root acceptance. No CI retry, dispatch, push or local Apple runtime is authorized here. Rollback is this native layout/test follow-up only, preserving inherited importance/privacy/controller fixes and parent ancestry.

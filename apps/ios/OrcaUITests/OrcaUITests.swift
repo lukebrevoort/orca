@@ -1246,9 +1246,16 @@ final class OrcaUITests: XCTestCase {
         var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = 8
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        // Only the fixed route, method and timing/error code are diagnostic.
+        // Never print the request, URL query, headers, body or credentials.
+        let diagnosticPath = url.path
+        let started = ProcessInfo.processInfo.systemUptime
+        print("[compose-fixture-transport] event=start method=\(method) path=\(diagnosticPath) epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1_000))")
         let completed = expectation(description: "Compose fixture \(path)")
         var output: [String: Any] = [:]
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            let failure = error as NSError?
+            print("[compose-fixture-transport] event=end method=\(method) path=\(diagnosticPath) epoch_ms=\(Int64(Date().timeIntervalSince1970 * 1_000)) elapsed_ms=\(Int64((ProcessInfo.processInfo.systemUptime - started) * 1_000)) status=\((response as? HTTPURLResponse)?.statusCode ?? 0) error_code=\(failure?.code ?? 0)")
             XCTAssertNil(error)
             XCTAssertTrue((200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0), "Fixture \(path) returned HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             if let data, !data.isEmpty {

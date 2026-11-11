@@ -28,18 +28,17 @@ struct ThreadView: View {
         ScrollViewReader { proxy in
         ScrollView {
             if let detail {
-                LazyVStack(alignment: .leading, spacing: 28) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("CONVERSATION").font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.5).foregroundStyle(OrcaTheme.accent)
-                        DisclosureGroup("Attention: " + (detail.thread.attention.attentionBehavior ?? "normal").capitalized) {
-                            Text("Unread Focus and Notify conversations appear first in Inbox, newest first. Read conversations return to date order and keep their attention setting. Focus filters the same Inbox without moving mail. The winning rule is unavailable in this response.").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
-                        }.font(OrcaTheme.ui(12))
-                        Text(detail.account.email).font(.subheadline).textSelection(.enabled)
-                        Button { importanceTarget = .init(accountId: accountId, threadId: threadId, subject: detail.thread.subject) } label: {
-                            Label("Importance: " + ((detail.importance ?? detail.thread.importance)?.effective.title ?? "Review current choice"), systemImage: "flag")
-                                .frame(minHeight: 44)
-                        }.accessibilityIdentifier("thread.importance")
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(detail.thread.subject.isEmpty ? "(No subject)" : detail.thread.subject).font(OrcaTheme.reader(34)).tracking(-0.6).foregroundStyle(OrcaTheme.ink).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("thread.subject")
+                        Button { importanceTarget = .init(accountId: accountId, threadId: threadId, subject: detail.thread.subject) } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(detail.account.email).font(.subheadline).accessibilityIdentifier("thread.account")
+                                Label("Importance: " + ((detail.importance ?? detail.thread.importance)?.effective.title ?? "Review current choice"), systemImage: "flag")
+                            }.fixedSize(horizontal: false, vertical: true).frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                        }.accessibilityIdentifier("thread.importance")
+                            .accessibilityHint("Review this conversation's importance in " + detail.account.email)
                     }
                     if let error { Label(error, systemImage: "info.circle").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("thread.status") }
                     let messages = detail.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
@@ -70,31 +69,37 @@ struct ThreadView: View {
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, item in
                         if showEarlier || index >= firstIndex {
-                        VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Button {
                                 if expanded.contains(item.id) { expanded.remove(item.id) } else { expanded.insert(item.id) }
                             } label: {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
+                                    HStack(alignment: .top) {
                                         ContactGlyph(contact: item.from)
-                                        Text(item.from.name ?? item.from.email).font(OrcaTheme.ui(13, weight: .semibold))
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.from.name ?? item.from.email).font(OrcaTheme.ui(13, weight: .semibold))
+                                            if item.from.name != nil { Text(item.from.email).font(OrcaTheme.ui(13)) }
+                                            Text(MailDate.full(item.receivedAt)).font(OrcaTheme.ui(11))
+                                            if item.unread { Text("Unread").font(OrcaTheme.ui(11, weight: .semibold)) }
+                                        }.fixedSize(horizontal: false, vertical: true)
                                         Spacer()
                                         Image(systemName: expanded.contains(item.id) ? "chevron.up" : "chevron.down")
                                     }
-                                    Text(MailDate.full(item.receivedAt)).font(OrcaTheme.ui(11))
-                                    Text("To " + item.to.map { $0.name ?? $0.email }.joined(separator: ", ")).font(OrcaTheme.ui(12))
-                                    if item.unread { Text("Unread").font(OrcaTheme.ui(11, weight: .semibold)) }
                                     if !expanded.contains(item.id) { Text(MailPreview.decode(item.snippet)).font(OrcaTheme.ui(13)).lineLimit(2) }
                                 }.foregroundStyle(OrcaTheme.ink).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                             }.buttonStyle(.plain)
                                 .accessibilityValue(expanded.contains(item.id) ? "Expanded" : "Collapsed")
                                 .accessibilityFocused($focusedMessage, equals: item.id)
                             if expanded.contains(item.id) {
-                            DisclosureGroup("Message details") {
+                            DisclosureGroup {
                                 Text("From: " + item.from.email)
-                                Text("To: " + item.to.map(\.email).joined(separator: ", "))
+                                Text("To: " + item.to.map { recipient in recipient.name.map { $0 + " <" + recipient.email + ">" } ?? recipient.email }.joined(separator: ", "))
                                 if !item.cc.isEmpty { Text("Cc: " + item.cc.map(\.email).joined(separator: ", ")) }
                                 if !item.bcc.isEmpty { Text("Bcc: " + item.bcc.map(\.email).joined(separator: ", ")) }
+                                Text("Attention: " + (detail.thread.attention.attentionBehavior ?? "normal").capitalized)
+                                Text("Unread Focus and Notify conversations appear first in Inbox, newest first. Read conversations return to date order and keep their attention setting. Focus filters the same Inbox without moving mail. The winning rule is unavailable in this response.")
+                            } label: {
+                                Text("Message details").frame(minHeight: 44).contentShape(Rectangle())
                             }.font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                             MessageImageBody(item: item, accountId: accountId, refreshSnapshot: refreshImageSnapshot)
                                 .id(state.ownerScope + "|" + accountId + "|" + item.id + "|" + (item.bodyHtml ?? ""))
@@ -113,7 +118,7 @@ struct ThreadView: View {
                             })
                         }
                     }
-                }.padding(24)
+                }.padding(.horizontal, 24).padding(.vertical, 16)
                 .onGeometryChange(for: CGFloat.self) { geometry in
                     geometry.frame(in: .named("threadViewport")).minY
                 } action: { headerOffset = $0 }
@@ -376,31 +381,56 @@ private struct NativeReaderBody: View {
     @State private var wideContent = false
     @State private var findingText = false
     @State private var query = ""
+    @State private var toolsExpanded = false
     var body: some View {
         let showPlain = plain ?? (text.map { ReaderQuoteParts.split($0).quoted != nil } ?? false)
         VStack(alignment: .leading, spacing: 12) {
+            Button { toolsExpanded.toggle() } label: {
+                HStack {
+                    Text("Message tools")
+                    Spacer()
+                    Image(systemName: toolsExpanded ? "chevron.up" : "chevron.down")
+                }.frame(minHeight: 44).contentShape(Rectangle())
+            }.buttonStyle(.plain).foregroundStyle(OrcaTheme.ink)
+                .accessibilityIdentifier("reader.tools")
+                .accessibilityValue(toolsExpanded ? "Expanded" : "Collapsed")
+            if toolsExpanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let html, !html.isEmpty, !showPlain {
+                        Button { findRequest = UUID() } label: {
+                            Text("Find in message").frame(minHeight: 44).contentShape(Rectangle())
+                        }.accessibilityIdentifier("reader.find")
+                        Toggle("Keep tables and code wide", isOn: $wideContent).font(.subheadline).frame(minHeight: 44)
+                        if wideContent { Text("Scroll within this message to reach wide content. Ordinary prose keeps the reading width.").font(.caption) }
+                    } else if text != nil {
+                        Button { findingText.toggle(); query = "" } label: {
+                            Text(findingText ? "Close Find" : "Find in message").frame(minHeight: 44).contentShape(Rectangle())
+                        }
+                        if findingText {
+                            TextField("Find in complete message", text: $query).textFieldStyle(.roundedBorder).accessibilityIdentifier("reader.find-query")
+                            Text("\(ReaderFind.count(query, in: text ?? "")) matches in the complete message").font(.caption)
+                        }
+                        Button { original.toggle() } label: {
+                            Text(original ? "Return to reading view" : "Show complete original text").frame(minHeight: 44).contentShape(Rectangle())
+                        }.font(OrcaTheme.ui(12))
+                    }
+                    if let text, !text.isEmpty, let html, !html.isEmpty {
+                        Button { plain = !showPlain } label: {
+                            Text(showPlain ? "Formatted message" : "Plain text").frame(minHeight: 44).contentShape(Rectangle())
+                        }.font(OrcaTheme.ui(12))
+                    }
+                }
+            }
             if let html, !html.isEmpty, !showPlain {
-                Button("Find in message") { findRequest = UUID() }.frame(minHeight: 44).accessibilityIdentifier("reader.find")
-                Toggle("Keep tables and code wide", isOn: $wideContent).font(.subheadline)
-                if wideContent { Text("Scroll within this message to reach wide content. Ordinary prose keeps the reading width.").font(.caption) }
                 SafeHTMLView(html: html, findRequest: findRequest, wideContent: wideContent).fixedSize(horizontal: false, vertical: true)
             }
             else if let text {
                 let parts = ReaderQuoteParts.split(text)
-                Button(findingText ? "Close Find" : "Find in message") { findingText.toggle(); query = "" }.frame(minHeight: 44)
-                if findingText {
-                    TextField("Find in complete message", text: $query).textFieldStyle(.roundedBorder).accessibilityIdentifier("reader.find-query")
-                    Text("\(ReaderFind.count(query, in: text)) matches in the complete message").font(.caption)
-                }
                 ReaderFind.displayText(query, in: original || !query.isEmpty ? text : parts.current).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled)
                 if !original, query.isEmpty, let quote = parts.quoted {
                     DisclosureGroup("Show quoted history") { Text(quote).font(OrcaTheme.reader(20)).textSelection(.enabled) }
                 }
-                Button(original ? "Return to reading view" : "Show complete original text") { original.toggle() }.font(OrcaTheme.ui(12))
             } else { Text("Readable body unavailable").foregroundStyle(OrcaTheme.muted) }
-            if let text, !text.isEmpty, let html, !html.isEmpty {
-                Button(showPlain ? "Formatted message" : "Plain text") { plain = !showPlain }.font(OrcaTheme.ui(12))
-            }
         }
     }
 }
