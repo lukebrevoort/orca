@@ -50,7 +50,10 @@ export function gmailArrivalEvidence(message: GmailMessage, accountEmail: string
 export function captureArrivals(sqlite: Database, input: { accountId: string; accountEmail: string; messages: GmailMessage[]; now: number }) {
   if (!input.messages.length) return;
   const owner = sqlite.query("SELECT provider_email FROM oauth_accounts WHERE id=? AND provider='gmail'").get(input.accountId) as { provider_email: string } | null;
-  if (!owner || owner.provider_email.toLowerCase() !== input.accountEmail.toLowerCase()) throw Error("Arrival account mismatch");
+  // Notification evidence must never make previously valid mail ingestion fail.
+  // A stale/non-authoritative caller hint cannot establish delivery to this
+  // account; retain Unknown and let the existing core ownership/FKs govern mail.
+  const accountReason = !owner ? "provider_account_unavailable" : owner.provider_email.trim().toLowerCase() !== input.accountEmail.trim().toLowerCase() ? "account_metadata_mismatch" : null;
   const counts = new Map<string, number>();
   for (const message of input.messages) counts.set(message.id, (counts.get(message.id) ?? 0) + 1);
   for (let start = 0; start < input.messages.length; start += 100) {
@@ -59,7 +62,7 @@ export function captureArrivals(sqlite: Database, input: { accountId: string; ac
     const importance = readImportance(sqlite, targets);
     const values = messages.map(message => {
       const threadId = `gmail:${input.accountId}:${message.threadId}`, messageId = `gmail:${input.accountId}:${message.id}`;
-      const proof = counts.get(message.id) === 1 ? gmailArrivalEvidence(message, owner.provider_email, input.now) : unknown("duplicate_provider_message");
+      const proof = accountReason ? unknown(accountReason) : counts.get(message.id) === 1 ? gmailArrivalEvidence(message, owner!.provider_email, input.now) : unknown("duplicate_provider_message");
       return [messageId, input.accountId, threadId, input.now, proof.receivedAt, proof.evidence, proof.reason,
         Number(message.labelIds?.includes("UNREAD")), Number(importance.get(importanceKey(input.accountId, threadId))?.effective === "important")];
     });

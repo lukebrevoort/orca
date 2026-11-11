@@ -126,3 +126,14 @@ test("BRE-455 initially read, corrected-back and read-back arrivals cannot resur
   f.state.now += 1000; await f.persist(f.message("read-back", "conversation")); f.sqlite.query("UPDATE emails SET is_read=1 WHERE id='gmail:a:read-back'").run(); f.sqlite.query("UPDATE emails SET is_read=0 WHERE id='gmail:a:read-back'").run();
   expect((await claim(f)).notifications).toHaveLength(0);
 }));
+
+test("BRE-455 stale provider account-email hint preserves ingestion but permanently records unknown arrival evidence", () => fixture(async f => {
+  const { persistGmailMessages } = await import("../providers/gmail/sync.ts");
+  await f.adopt(); await f.persist(f.message("seed-mismatch", "mismatch")); await f.important("gmail:a:mismatch"); f.state.now += 1000;
+  const message = f.message("mismatch", "mismatch");
+  await persistGmailMessages(f.db, { accountId: "a", accountEmail: "stale@example.com", gmailMessages: [message], labelList: [], now: new Date(f.state.now), propagationTrigger: "sync", propagationOptions: { enabled: false } });
+  expect(f.sqlite.query("SELECT id FROM emails WHERE id='gmail:a:mismatch'").get()).toEqual({ id: "gmail:a:mismatch" });
+  expect(f.sqlite.query("SELECT evidence,reason FROM important_notification_arrivals WHERE message_id='gmail:a:mismatch'").get()).toEqual({ evidence: "unknown", reason: "account_metadata_mismatch" });
+  expect((await claim(f)).notifications).toHaveLength(0);
+  await f.persist(message); expect((await claim(f)).notifications).toHaveLength(0);
+}));

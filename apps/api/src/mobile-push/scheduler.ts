@@ -211,6 +211,14 @@ function finishDelivery(sqlite: Database, row: OutboxRow, delivery: ApnsDelivery
   return sqlite.transaction(() => {
     const ownsLease = sqlite.query("SELECT 1 FROM mobile_push_outbox WHERE id=? AND state='delivering' AND lease_owner=?").get(row.id, workerId);
     if (!ownsLease) return null;
+    if (delivery.outcome === "suppressed") {
+      // No provider attempt occurred. An expired/replaced worker must leave the
+      // row available to its current owner or a subsequent legitimate claim.
+      const discarded = sqlite.query(`UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL,
+        lease_expires_at=NULL, last_error=? WHERE id=? AND state='delivering' AND lease_owner=? AND lease_expires_at>?`)
+        .run(now, delivery.reason, row.id, workerId, now).changes;
+      return discarded ? "discarded" as const : null;
+    }
     if (delivery.outcome === "success") {
       sqlite.query("UPDATE mobile_push_outbox SET state='sent', attempt_count=attempt_count+1, sent_at=?, updated_at=?, lease_owner=NULL, lease_expires_at=NULL, last_status=200, last_error=NULL WHERE id=?")
         .run(now, now, row.id);
@@ -267,7 +275,9 @@ export async function deliverReady(sqlite: Database, options: { now: Date | (() 
       counts.discarded += discarded;
       continue;
     }
-    const token = await (options.readToken ?? readDeviceToken)(sqlite, row.userId, row.installationId, row.deviceGeneration);
+    let token: string | null;
+    try { token = await (options.readToken ?? readDeviceToken)(sqlite, row.userId, row.installationId, row.deviceGeneration); }
+    catch { token = null; }
     if (!token) {
       const discarded = sqlite.query("UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL, last_error='token_unavailable' WHERE id=? AND state='delivering' AND lease_owner=?")
         .run(readNow().getTime(), row.id, workerId).changes;
@@ -282,34 +292,34 @@ export async function deliverReady(sqlite: Database, options: { now: Date | (() 
       counts.discarded += discarded;
       continue;
     }
-    // Recheck after async token decryption and immediately before network I/O.
-    // Logout, account switching, or token refresh during claim processing must
-    // suppress this old generation rather than relying on APNs to reject it.
-    const current = sqlite.query(`SELECT session_id AS sessionId FROM mobile_push_devices
-      WHERE user_id=? AND installation_id=? AND generation=? AND disabled_at IS NULL AND environment=? AND (? IS NOT NULL OR notify_inbox=1 OR EXISTS (
-        SELECT 1 FROM mobile_push_device_spaces selected WHERE selected.user_id=mobile_push_devices.user_id
-          AND selected.installation_id=mobile_push_devices.installation_id))`)
-      .get(row.userId, row.installationId, row.deviceGeneration, row.environment, row.importantGeneration) as { sessionId: string } | null;
-    if (!current || !(options.isSessionActive ?? (row.importantGeneration === null ? isLegacySessionActive : isMobilePushSessionActive))(sqlite, { userId: row.userId, sessionId: current.sessionId, now: readNow() })) {
-      const discarded = sqlite.query("UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL, last_error='registration_inactive' WHERE id=? AND state='delivering' AND lease_owner=?")
-        .run(readNow().getTime(), row.id, workerId).changes;
-      counts.discarded += discarded;
+    // One synchronous check is shared by the post-decryption gate and the
+    // production transport's post-signing request boundary. No await may follow
+    // the transport's check before opening its HTTP/2 connection/request.
+    const dispatchBlock = (): string | null => {
+      const now = readNow();
+      if (!sqlite.query("SELECT 1 FROM mobile_push_outbox WHERE id=? AND state='delivering' AND lease_owner=? AND lease_expires_at>?").get(row.id, workerId, now.getTime())) return "lease_lost";
+      if (!options.config.configured) return "configuration_unavailable";
+      const current = sqlite.query(`SELECT session_id AS sessionId, notify_inbox AS notifyInbox FROM mobile_push_devices
+        WHERE user_id=? AND installation_id=? AND generation=? AND disabled_at IS NULL AND environment=? AND (? IS NOT NULL OR notify_inbox=1 OR EXISTS (
+          SELECT 1 FROM mobile_push_device_spaces selected WHERE selected.user_id=mobile_push_devices.user_id
+            AND selected.installation_id=mobile_push_devices.installation_id))`)
+        .get(row.userId, row.installationId, row.deviceGeneration, row.environment, row.importantGeneration) as { sessionId: string; notifyInbox: number } | null;
+      if (!current || !(options.isSessionActive ?? (row.importantGeneration === null ? isLegacySessionActive : isMobilePushSessionActive))(sqlite, { userId: row.userId, sessionId: current.sessionId, now })) return "registration_inactive";
+      if (!apnsPolicyEligible(sqlite, row, now.getTime()) || (row.importantGeneration === null && !messageStillEligible(sqlite, { userId: row.userId, installationId: row.installationId, notifyInbox: current.notifyInbox }, row))) return "message_no_longer_eligible";
+      return null;
+    };
+    const blocked = dispatchBlock();
+    if (blocked) {
+      if (blocked !== "lease_lost") counts.discarded += sqlite.query(`UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL,
+        lease_expires_at=NULL, last_error=? WHERE id=? AND state='delivering' AND lease_owner=? AND lease_expires_at>?`)
+        .run(readNow().getTime(), blocked, row.id, workerId, readNow().getTime()).changes;
       continue;
     }
-    if (!apnsPolicyEligible(sqlite, row, readNow().getTime()) || (row.importantGeneration === null && !messageStillEligible(sqlite, { userId: row.userId, installationId: row.installationId, notifyInbox: device.notifyInbox }, row))) {
-      const discarded = sqlite.query(`UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL,
-        last_error='message_no_longer_eligible' WHERE id=? AND state='delivering' AND lease_owner=?`)
-        .run(readNow().getTime(), row.id, workerId).changes;
-      counts.discarded += discarded;
-      continue;
-    }
-    // A worker that lost/expired its lease during asynchronous decryption has
-    // no authority to start another provider attempt.
-    if (!sqlite.query("SELECT 1 FROM mobile_push_outbox WHERE id=? AND state='delivering' AND lease_owner=? AND lease_expires_at>?").get(row.id, workerId, readNow().getTime())) continue;
     let delivery: ApnsDeliveryResult;
     try {
       delivery = await options.transport.send({
         token, environment: row.environment, payload, apnsId: row.apnsId,
+        canDispatch: () => dispatchBlock() === null,
         collapseId: createHash("sha256").update(JSON.stringify([row.accountId, row.threadId])).digest("hex"),
       });
     } catch (error) {
