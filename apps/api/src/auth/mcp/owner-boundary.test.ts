@@ -90,7 +90,7 @@ test("BRE-469 MCP same-owner revoke-all revokes only that owner's connection and
   const current = snapshot() as typeof old;
   for (const key of ["connections", "access", "refresh"] as const) {
     expect(current[key].find(row => row.id.startsWith("v-"))).toEqual(old[key].find(row => row.id.startsWith("v-")));
-    expect(current[key].find(row => row.id.startsWith("u-"))?.revoked_at).not.toBeNull();
+    expect(typeof current[key].find(row => row.id.startsWith("u-"))?.revoked_at).toBe("number");
   }
   const repeated = await app.request("/v1/mcp/connections/revoke-all", { method: "POST", headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u" } });
   expect(repeated.status).toBe(200); expect(await repeated.json()).toEqual({ revoked: 0 });

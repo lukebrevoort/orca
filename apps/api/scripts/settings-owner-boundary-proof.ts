@@ -42,7 +42,7 @@ try {
   const afterOwn = snapshot();
   for (const rows of [afterOwn.connections, afterOwn.access, afterOwn.refresh]) {
     const typed = rows as { id: string; revoked_at: number | null }[];
-    assert.notEqual(typed.find(row => row.id.startsWith("u-"))?.revoked_at, null);
+    assert.equal(typeof typed.find(row => row.id.startsWith("u-"))?.revoked_at, "number");
     assert.equal(typed.find(row => row.id.startsWith("v-"))?.revoked_at, null);
   }
   const positiveStart = await outlook.request("/connect", { headers: own });
