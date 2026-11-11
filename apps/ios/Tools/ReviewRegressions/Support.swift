@@ -52,6 +52,8 @@ func body(_ request: URLRequest) throws -> Data {
 
 actor PreferenceCredentialHold {
     private var count = 0
+    private let first: String, second: String
+    init(first: String = "owner-a-token", second: String = "owner-b-token") { self.first = first; self.second = second }
     private var held = false
     private var continuation: CheckedContinuation<Void, Never>?
     private var started: CheckedContinuation<Void, Never>?
@@ -60,9 +62,9 @@ actor PreferenceCredentialHold {
         if count == 2 {
             held = true; started?.resume(); started = nil
             await withCheckedContinuation { continuation = $0 }
-            return "owner-b-token"
+            return second
         }
-        return "owner-a-token"
+        return count >= 2 ? second : first
     }
     func waitUntilHeld() async { if !held { await withCheckedContinuation { started = $0 } } }
     func release() { continuation?.resume(); continuation = nil }

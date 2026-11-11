@@ -99,6 +99,25 @@ import Foundation
             do {
             state.client = APIClient(baseURL: URL(string: connection.baseURL)!) { connection.token }
             let client = state.client!
+            let authenticated: AuthSession = try await client.request("v1/auth/session")
+            let apiHold = PreferenceCredentialHold(first: connection.token, second: connection.otherToken)
+            let realPreferencesState = AppState(cache: state.cache)
+            realPreferencesState.userID = authenticated.user?.id
+            realPreferencesState.ownerScope = connection.baseURL + "|" + (authenticated.user?.id ?? "unknown")
+            realPreferencesState.client = APIClient(baseURL: URL(string: connection.baseURL)!) { await apiHold.token() }
+            let realPreferences = AccountPreferencesController()
+            let preferencesBefore: MailActionJSON = try await client.request("__bre457/state")
+            await realPreferences.load(state: realPreferencesState)
+            realPreferences.edits?.signature = "Owner A attempted save under B credential"
+            let heldSave = Task { await realPreferences.save(state: realPreferencesState) }
+            await apiHold.waitUntilHeld(); await apiHold.release(); await heldSave.value
+            let preferencesAfter: MailActionJSON = try await client.request("__bre457/state")
+            let canonical = JSONEncoder(); canonical.outputFormatting = .sortedKeys
+            check("469-real-server-held-token-zero-preference-writes", try canonical.encode(preferencesBefore["preferences"]) == canonical.encode(preferencesAfter["preferences"]), "actual independent SQLite preference rows for A and B remain byte-equivalent")
+            if case .array(let requests) = preferencesAfter["requests"] {
+                let wrongOwner = requests.filter { $0["path"].text == "/v1/preferences" && $0["fixtureOwner"].text == "owner-b" }
+                check("469-real-server-rejects-patch-and-recovery", wrongOwner.count == 2 && wrongOwner.allSatisfy { $0["status"].integer == 409 && $0["expectedOwner"].text == authenticated.user?.id && ($0["error"].text ?? "").contains("session_owner_changed") }, "actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409")
+            }
             let selection = NativeViewSelection(query: "Subject", accountId: "account")
             let view = NativeViewEditorController(defaults: defaults)
             await view.open(selection: selection, state: state)
@@ -145,12 +164,56 @@ import Foundation
             let latest: MailActionJSON = try await client.request("__bre457/state")
             check("466-advanced-update-no-extra-creation", latest["count"].integer == (committed["count"].integer ?? 0) + 1, "one recovered View plus one intentional advanced fixture, updates retain both IDs")
             check("466-provider-boundary", latest["providerCalls"].integer == 0, "synthetic provider calls = \(latest["providerCalls"].integer ?? -1)")
+            func createFixtureView(_ name: String) async throws -> String {
+                let input: MailActionJSON = .object(["kind": .string("typed_definition"), "source": .object(["kind": .string("manual"), "label": .string("Rejected-commit fixture")]), "identity": .object(["name": .string(name)]), "definition": definition])
+                let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: input)
+                let editable = prepared["draft"].keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
+                let preview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": editable, "page": .object(["limit": .number(25)])]))
+                let saved: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object(["draft": preview["draft"], "expectedRevisions": .object(["workspace": preview["workspaceRevision"], "view": preview["draft"]["viewRevision"]]), "retryKey": .string(UUID().uuidString), "confirmedZeroMatchDigest": preview["draft"]["definitionDigest"]]))
+                return saved["view"]["id"].text!
+            }
+            let noopSuite = suite + ".noop", noopDefaults = UserDefaults(suiteName: noopSuite)!
+            defer { noopDefaults.removePersistentDomain(forName: noopSuite) }
+            let noop = NativeViewEditorController(defaults: noopDefaults)
+            await noop.open(selection: .init(viewId: advancedID, accountId: "account"), state: state)
+            await noop.review(); _ = await noop.save()
+            let rejectedNoop: MailActionJSON = try await client.request("__bre457/state")
+            if case .array(let ledger) = rejectedNoop["ledger"] {
+                check("478-noop-actual-terminal-400", ledger.last?["actualStatus"].integer == 400 && rejectedNoop["count"].integer == latest["count"].integer, "actual API no-op rejection writes no View")
+            }
+            noop.name = "Noop recovery preserves latest edit"; noop.edited(); noop.close()
+            let noopReopened = NativeViewEditorController(defaults: noopDefaults)
+            await noopReopened.open(selection: .init(viewId: advancedID, accountId: "account"), state: state)
+            check("478-noop-reopen-unlocks-preview", noopReopened.pendingTarget == nil && noopReopened.name == "Noop recovery preserves latest edit", "definitive rejection must recover current authorized saved identity without dropping newer edits")
+            await noopReopened.review(); let noopSaved = await noopReopened.save()
+            let afterNoop: MailActionJSON = try await client.request("__bre457/state")
+            check("478-noop-recovery-updates-same-id", noopSaved == advancedID && afterNoop["count"].integer == latest["count"].integer, "fresh explicit preview/update retains original ID and creation count")
+            let staleSuite = suite + ".stale", staleDefaults = UserDefaults(suiteName: staleSuite)!
+            defer { staleDefaults.removePersistentDomain(forName: staleSuite) }
+            let createSelection = NativeViewSelection(query: "Subject", accountId: "account")
+            let stale = NativeViewEditorController(defaults: staleDefaults)
+            await stale.open(selection: createSelection, state: state)
+            stale.name = "Stale original"; stale.replaceSearch = true; stale.subject = "Subject"; stale.edited(); await stale.review()
+            _ = try await createFixtureView("Independent workspace revision advance")
+            let beforeStale: MailActionJSON = try await client.request("__bre457/state")
+            _ = await stale.save()
+            let rejectedStale: MailActionJSON = try await client.request("__bre457/state")
+            if case .array(let ledger) = rejectedStale["ledger"] {
+                check("478-stale-create-actual-terminal-409", ledger.last?["actualStatus"].integer == 409 && rejectedStale["count"].integer == beforeStale["count"].integer, "actual stale workspace rejection creates nothing")
+            }
+            stale.name = "Stale recovery preserves latest edit"; stale.edited(); stale.close()
+            let staleReopened = NativeViewEditorController(defaults: staleDefaults)
+            await staleReopened.open(selection: createSelection, state: state)
+            check("478-stale-reopen-preserves-ready-edits", staleReopened.pendingTarget == nil && staleReopened.name == "Stale recovery preserves latest edit" && staleReopened.replaceSearch, "recovery must retain explicitly chosen predicate and editable draft")
+            await staleReopened.review(); let createdAfterConflict = await staleReopened.save()
+            let afterStale: MailActionJSON = try await client.request("__bre457/state")
+            check("478-stale-recovery-creates-exactly-once", createdAfterConflict != nil && afterStale["count"].integer == (beforeStale["count"].integer ?? 0) + 1, "one creation only after fresh preview/explicit Save")
             } catch { check("466-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
         if results.contains(where: { $0["pass"] as? Bool == false }) { exit(1) }
     }
-    struct Connection: Decodable { var baseURL: String; var token: String }
+    struct Connection: Decodable { var baseURL: String; var token: String; var otherToken: String }
     static func json(_ value: [String: Any]) throws -> Data { try JSONSerialization.data(withJSONObject: value) }
     static func resolution(_ effective: String, revision: Int) -> [String: Any] {
         ["effective": effective, "source": revision > 0 ? "conversation" : "unreviewed", "conversation": ["choice": revision > 0 ? "important" as Any : NSNull(), "revision": revision], "inherited": "unreviewed", "participantCounts": ["important": 0,"notImportant": 0,"unreviewed": 1,"total": 1], "preferences": [], "preferencesTruncated": false, "accountRevision": revision]
