@@ -330,10 +330,13 @@ extension NativeMailboxProjection {
         ]
     }
     static func hidden(destinations: [MailboxOption], views: [SavedMailboxView], enabledIDs: Set<String>, hiddenIDs: Set<String>, catalog: NativeMailCatalog?) -> [MailboxOption] {
-        (enabledIDs.contains("focus") ? [] : [MailboxOption(id: "focus", name: "Inbox focus")])
-        + destinations.filter { hiddenIDs.contains($0.id) }
-        + (catalog?.collections.filter { hiddenIDs.contains($0.identity.selectionID) }.map { .init(id: $0.identity.selectionID, name: $0.name) } ?? [])
-        + views.filter { !enabledIDs.contains($0.selectionID) }.map { .init(id: $0.selectionID, name: $0.name) }
-        + (catalog?.pins.filter { hiddenIDs.contains($0.identity.selectionID) }.map { .init(id: $0.identity.selectionID, name: $0.label) } ?? [])
+        var result: [MailboxOption] = enabledIDs.contains("focus") ? [] : [MailboxOption(id: "focus", name: "Inbox focus")]
+        result.append(contentsOf: destinations.filter { hiddenIDs.contains($0.id) })
+        let collections: [MailboxOption] = catalog?.collections.filter { hiddenIDs.contains($0.identity.selectionID) }.map { MailboxOption(id: $0.identity.selectionID, name: $0.name) } ?? []
+        result.append(contentsOf: collections)
+        result.append(contentsOf: views.filter { !enabledIDs.contains($0.selectionID) }.map { MailboxOption(id: $0.selectionID, name: $0.name) })
+        let pins: [MailboxOption] = catalog?.pins.filter { hiddenIDs.contains($0.identity.selectionID) }.map { MailboxOption(id: $0.identity.selectionID, name: $0.label) } ?? []
+        result.append(contentsOf: pins)
+        return result
     }
 }
