@@ -49,3 +49,21 @@ func body(_ request: URLRequest) throws -> Data {
     var data = Data(), buffer = [UInt8](repeating: 0, count: 4096)
     while true { let n = stream.read(&buffer, maxLength: buffer.count); if n == 0 { return data }; if n < 0 { throw stream.streamError! }; data.append(buffer, count: n) }
 }
+
+actor PreferenceCredentialHold {
+    private var count = 0
+    private var held = false
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var started: CheckedContinuation<Void, Never>?
+    func token() async -> String {
+        count += 1
+        if count == 2 {
+            held = true; started?.resume(); started = nil
+            await withCheckedContinuation { continuation = $0 }
+            return "owner-b-token"
+        }
+        return "owner-a-token"
+    }
+    func waitUntilHeld() async { if !held { await withCheckedContinuation { started = $0 } } }
+    func release() { continuation?.resume(); continuation = nil }
+}

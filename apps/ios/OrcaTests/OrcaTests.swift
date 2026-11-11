@@ -3341,20 +3341,27 @@ private actor NativePreferenceSaveGate {
     init(started: XCTestExpectation) { self.started = started }
     func token() async -> String {
         count += 1
-        if count == 2 { await withCheckedContinuation { continuation = $0; started.fulfill() } }
+        if count == 4 { await withCheckedContinuation { continuation = $0; started.fulfill() } }
         return "fixture-token"
     }
     func release() { continuation?.resume(); continuation = nil }
 }
 final class NativePreferenceTests: XCTestCase {
+    private var priorLastUser: Any?
+    override func setUp() { super.setUp(); priorLastUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example") }
+    override func tearDown() { UserDefaults.standard.set(priorLastUser, forKey: "lastUser|https://orca.example"); super.tearDown() }
     @MainActor func testNewerAccountEditsSurviveOlderSaveAcknowledgementAcrossSections() async throws {
         let gate = NativePreferenceSaveGate(started: expectation(description: "save request suspended"))
         let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.token() }); defer { fixture.cleanup() }
         let preferences = AccountPreferencesController()
         StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/auth/session" { return (200, Data(#"{"isAuthenticated":true,"user":{"id":"preference-owner","email":"owner@example.com"}}"#.utf8)) }
+            if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "x-orca-expected-user-id"), "preference-owner")
             if request.httpMethod == "PATCH" { return (200, try requestBodyData(request)) }
             return (200, Data(#"{"signature":"original","composeFormat":"plain","replyBehavior":"reply","notifyByDefault":false}"#.utf8))
         }
+        await fixture.state.loadAccounts()
         await preferences.load(state: fixture.state)
         preferences.edits?.signature = "submitted first"
         let save = Task { await preferences.save(state: fixture.state) }

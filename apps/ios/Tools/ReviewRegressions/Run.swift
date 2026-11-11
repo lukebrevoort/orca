@@ -74,6 +74,27 @@ import Foundation
         let originalOwner = state.ownerScope; state.ownerScope = "other-owner"; state.discardSettingsAndLeave()
         check("473-stale-owner-cannot-route", state.selectedTab == "settings" && state.routedThread == nil && preferences.dirty, "delayed Leave cannot route or discard another owner's choices")
         state.ownerScope = originalOwner
+        let preferenceHold = PreferenceCredentialHold()
+        let preferenceState = AppState(cache: state.cache)
+        preferenceState.userID = "verified-owner-a"; preferenceState.ownerScope = "origin|verified-owner-a"
+        preferenceState.client = APIClient(baseURL: URL(string: "https://example.invalid")!, session: URLSession(configuration: config)) { await preferenceHold.token() }
+        let ownedPreferences = AccountPreferencesController()
+        var dispatchedOwner: String?, dispatchedToken: String?
+        ReviewURLProtocol.handler = { request in
+            if request.httpMethod == "PATCH" {
+                dispatchedOwner = request.value(forHTTPHeaderField: "x-orca-expected-user-id")
+                dispatchedToken = request.value(forHTTPHeaderField: "Authorization")
+            }
+            return (200, try json(["signature": "original", "composeFormat": "plain", "replyBehavior": "reply", "notifyByDefault": false]))
+        }
+        await ownedPreferences.load(state: preferenceState)
+        ownedPreferences.edits?.signature = "Owner A unsaved choices"
+        let preferenceSave = Task { await ownedPreferences.save(state: preferenceState) }
+        await preferenceHold.waitUntilHeld()
+        preferenceState.userID = "verified-owner-b"; preferenceState.ownerScope = "origin|verified-owner-b"
+        await preferenceHold.release(); await preferenceSave.value
+        check("469-native-header-retains-original-owner-after-held-token", dispatchedOwner == "verified-owner-a" && dispatchedToken == "Bearer owner-b-token", "actual APIClient dispatch retains captured draft owner even after token/observable owner change; server enforcement separate")
+        check("469-native-stale-ack-keeps-original-edits", ownedPreferences.edits?.signature == "Owner A unsaved choices" && ownedPreferences.saved?.signature == "original", "late different-owner response cannot replace the original draft")
         if let connection {
             do {
             state.client = APIClient(baseURL: URL(string: connection.baseURL)!) { connection.token }
