@@ -168,6 +168,9 @@ try {
         const bold = zen.getByRole('button', { name: 'Bold, Command B', exact: true });
         await bold.scrollIntoViewIfNeeded(); await bold.hover(); await page.mouse.down();
         await screenshot(page, `${theme}-${width}-bold-pressed`); await page.mouse.up();
+        const writing = zen.getByRole('textbox', { name: 'Message body', exact: true });
+        await writing.press('End'); await writing.pressSequentially(' Formatting remains editable.');
+        await zen.locator('.compose-save-status-saved').waitFor();
         await zen.getByRole('combobox', { name: 'Message format' }).selectOption('plain');
         await zen.locator('.compose-save-status-saved').waitFor();
         await screenshot(page, `${theme}-${width}-plain-disabled`);
