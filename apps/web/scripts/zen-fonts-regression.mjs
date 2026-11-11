@@ -95,7 +95,9 @@ async function measure(page, name, expectedAttachments) {
     check(hit.reachable, name + ': visible hit target ' + label, hit);
     check(hit.width >= 44 && hit.height >= 44, name + ': 44px target ' + label, hit);
   }
+  await scope.locator('.compose-delivery-bar > p').scrollIntoViewIfNeeded();
   await screenshot(page, name);
+  console.log(JSON.stringify({ progress: name, assertions: results.assertions, failures: results.failures.length }));
   results.scenarios.push({ name, ...measurements });
 }
 async function cleanDraft(context, label) {
@@ -151,6 +153,7 @@ try {
         const control = zen.getByRole('button', { name: 'Attach files', exact: true });
         await control.hover(); await screenshot(page, `${theme}-${width}-attach-hover`);
         await control.focus();
+        await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
         check(await control.evaluate(el => el === document.activeElement && getComputedStyle(el).outlineStyle !== 'none'), label + ': visible keyboard focus');
         await screenshot(page, `${theme}-${width}-attach-focus`);
         await page.keyboard.press('Tab');
@@ -163,6 +166,7 @@ try {
         await screenshot(page, `${theme}-${width}-plain-disabled`);
       }
       if (width === 1440) {
+        await zen.locator('.compose-save-status-saved').waitFor();
         await attach(zen, page, Array.from({ length: 24 }, (_, i) => `limit-${i}.txt`));
         await zen.locator('.compose-attachment-error').waitFor();
         check(await zen.getByRole('button', { name: 'Attach files', exact: true }).isDisabled(), label + ': attachment limit is enforced');
@@ -178,7 +182,10 @@ try {
       await page.getByRole('button', { name: 'Close panel', exact: true }).click();
       } catch (error) {
         results.failures.push({ label: label + ': completed interaction path', detail: error.message });
+        console.error(error.stack);
         await screenshot(page, `${theme}-${width}-${suffix}-interaction-failure`).catch(() => {});
+        await writeFile(join(out, `${theme}-${width}-${suffix}-failure-dom.txt`), await page.locator('body').innerText());
+        if (mode === 'candidate') throw error;
       } finally { await context.close(); await cleanDraftViaNewContext(label); }
     }
     for (const [width,height] of [[1440,1000],[1024,768],[390,844],[320,568],[390,400],[720,450]]) await stateJourney(theme,{width,height});
@@ -243,7 +250,11 @@ async function stateJourney(theme, viewport) {
     await zen.locator('.compose-save-status-saved').waitFor();
     await measure(page, prefix.replaceAll(' ', '-') + '-saved', 2);
     await zen.getByRole('combobox', { name: 'Add To recipient' }).fill('unfinished-address');
-    await zen.getByRole('button', { name: 'Send', exact: true }).click();
+    const validateSend = zen.getByRole('button', { name: 'Send', exact: true });
+    check(await validateSend.getAttribute('aria-disabled') === 'true', prefix + ': invalid pending address is not delivery-ready');
+    // A real keyboard activation reaches the existing validation handler;
+    // locator.click intentionally refuses an aria-disabled control.
+    await validateSend.focus(); await page.keyboard.press('Enter');
     await zen.getByText(/Check the highlighted address/).waitFor();
     await measure(page, prefix.replaceAll(' ', '-') + '-validation', 2);
     await zen.getByRole('combobox', { name: 'Add To recipient' }).fill('');
@@ -284,7 +295,10 @@ async function stateJourney(theme, viewport) {
     results.scenarios.push({ name: prefix + '-preservation', providerCalls: deliveries.length - ledgerBefore });
   } catch (error) {
     results.failures.push({ label: prefix + ': state journey completed', detail: error.message });
+    console.error(error.stack);
     await screenshot(page, prefix.replaceAll(' ', '-') + '-failure').catch(() => {});
+    await writeFile(join(out, prefix.replaceAll(' ', '-') + '-failure-dom.txt'), await page.locator('body').innerText());
+    if (mode === 'candidate') throw error;
   } finally {
     releasePatch(); releaseSend();
     await api('/__fixture/outcome', 'POST', { outcome: 'sent' });
