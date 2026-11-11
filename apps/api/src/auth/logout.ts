@@ -8,7 +8,7 @@ import { getCookie } from "hono/cookie";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { sessionCookieName } from "./config.ts";
-import { buildClearedSessionCookie, getSessionCookieOptions } from "./jwt.ts";
+import { clearBrowserSessionCookies } from "./browser-auth-context.ts";
 import { getSessionFromToken, invalidateSession } from "./session-store.ts";
 
 export function createLogoutApp(
@@ -17,6 +17,10 @@ export function createLogoutApp(
   const app = new Hono();
 
   app.post("/logout", async (c) => {
+    c.header("Cache-Control", "private, no-store");
+    // Cookie logout stays cookie-authoritative for mixed requests. A bearer-only
+    // caller must not mutate browser state (including an ambient witness).
+    if (c.req.header("authorization") && !c.req.header("cookie")?.split(";").some(part => part.trim().startsWith(`${sessionCookieName}=`))) return c.json({ ok: true });
     const values = readSessionCookies(c.req.header("cookie"));
     const tokens = new Set(values.filter(isSessionToken));
     // Use the authentication parser itself for its selected cookie, including
@@ -38,7 +42,7 @@ export function createLogoutApp(
         sqlite.close();
       }
     }
-    c.header("Set-Cookie", buildClearedSessionCookie(getSessionCookieOptions()));
+    clearBrowserSessionCookies(c);
     return c.json({ ok: true });
   });
 

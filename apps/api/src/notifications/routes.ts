@@ -1,3 +1,4 @@
+import { requireSessionOwner } from "../auth/session-owner.ts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { importantNotificationCommandSchema, importantNotificationClaimSchema, importantNotificationReportSchema, notificationChannelSchema } from "@orca/shared";
@@ -11,7 +12,7 @@ const installationId = z.string().min(1).max(128).regex(/^[A-Za-z0-9._:-]+$/);
 export function createNotificationApp(options: { dbFactory?: typeof createDatabaseClient; now?: () => Date; config?: MobilePushConfig } = {}) {
   const app = new Hono<{ Variables: AuthVariables }>();
   const dbFactory = options.dbFactory ?? createDatabaseClient, now = options.now ?? (() => new Date()), config = options.config ?? loadMobilePushConfig();
-  app.use("/v1/notifications/*", requireAuth({ dbFactory }), bodyLimit({ maxSize: 32 * 1024 }), async (c, next) => {
+  app.use("/v1/notifications/*", requireAuth({ dbFactory }), requireSessionOwner, bodyLimit({ maxSize: 32 * 1024 }), async (c, next) => {
     c.header("Cache-Control", "private, no-store");
     if (["PUT", "POST"].includes(c.req.method) && !/^application\/json(?:;|$)/i.test(c.req.header("content-type") ?? "")) return c.json({ error: { code: "validation_error", message: "JSON content type required" } }, 400);
     await next();

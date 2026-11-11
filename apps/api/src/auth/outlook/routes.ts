@@ -3,7 +3,8 @@ import { completeMailOAuthLogin } from "../mail-oauth-login.ts";
 import { Hono } from "hono";
 import type { Handler, MiddlewareHandler } from "hono";
 
-import { buildSessionCookie, getSessionCookieOptions } from "../jwt.ts";
+import { createSessionToken } from "../jwt.ts";
+import { clearBrowserSessionCookies, setBrowserSessionCookies, setPendingBrowserSessionCookies } from "../browser-auth-context.ts";
 import { requireAuth, type AuthVariables } from "../middleware.ts";
 import { createSession } from "../session-store.ts";
 import { DatabaseOAuthAccountStore, type OAuthAccountStore } from "../gmail/oauth-accounts.ts";
@@ -61,7 +62,7 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
       const pendingEmail = `pending-${crypto.randomUUID()}@orca.invalid`;
       db.insert(users).values({ id: userId, email: pendingEmail }).run();
       const session = await createSession(db, userId);
-      c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+      setPendingBrowserSessionCookies(c, session);
       const result = service.getAuthorizationUrl(session, c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`, pendingEmail);
       return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
     } finally { sqlite.close(); }
@@ -83,7 +84,7 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
           ...result.account,
         });
         if (!completion.ok && completion.reason === "account_exists") {
-          c.header("Set-Cookie", buildSessionCookie("", new Date(0), getSessionCookieOptions()));
+          if (c.get("authSource") === "cookie") clearBrowserSessionCookies(c);
           if (result.redirectUrl) {
             const url = new URL(result.redirectUrl);
             url.searchParams.set("status", "account_exists");
@@ -94,8 +95,11 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
         if (!completion.ok) return c.json({ ok: false, error: "invalid_state", message: "The pending login is no longer available. Try again from Orca." }, 400);
         if (completion.returningUserId) {
           const session = await createSession(db, completion.returningUserId);
-          c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+          if (c.get("authSource") === "cookie") setBrowserSessionCookies(c, session);
           if (result.redirectUrl) return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
+        } else if (c.get("authSource") === "cookie") {
+          // Promotion retains the pending session ID; now its owner is verified.
+          setBrowserSessionCookies(c, { ...current, token: await createSessionToken(current) });
         }
       } finally { sqlite.close(); }
     }
