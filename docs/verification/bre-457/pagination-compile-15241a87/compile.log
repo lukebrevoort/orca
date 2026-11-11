@@ -1,0 +1,15 @@
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Tools/ReviewRegressions/PaginationCases.swift:59:133: error: missing argument for parameter 'displayName' in call
+57 |         await hold.waitUntilHeld()
+58 |         if transition == "owner" { state.ownerScope = "other-owner"; state.userID = "other-owner" }
+59 |         else if transition == "account" { state.accounts = [.init(id: "other-account", provider: "gmail", email: "other@example.com", capabilities: .init(read: true, send: true, draft: true))]; state.selectedAccountID = "other-account" }
+   |                                                                                                                                     `- error: missing argument for parameter 'displayName' in call
+60 |         else { state.phase = .signedOut }
+61 |         // This is the existing native navigation/logout invalidation boundary.
+
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Orca/Core/Models.swift:24:8: note: 'init(id:provider:email:displayName:avatarUrl:capabilities:)' declared here
+ 22 | struct MailContact: Codable, Hashable { var name: String?; var email: String }
+ 23 | struct MailCapabilities: Codable, Hashable { var read: Bool; var send: Bool; var draft: Bool }
+ 24 | struct MailAccount: Codable, Identifiable, Hashable {
+    |        `- note: 'init(id:provider:email:displayName:avatarUrl:capabilities:)' declared here
+ 25 |     var id: String; var provider: String; var email: String; var displayName: String
+ 26 |     var avatarUrl: String?; var capabilities: MailCapabilities

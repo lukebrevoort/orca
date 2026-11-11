@@ -56,7 +56,7 @@ import Foundation
         let pending = Task { await model.load(state: state, reset: false) }
         await hold.waitUntilHeld()
         if transition == "owner" { state.ownerScope = "other-owner"; state.userID = "other-owner" }
-        else if transition == "account" { state.accounts = [.init(id: "other-account", provider: "gmail", email: "other@example.com", capabilities: .init(read: true, send: true, draft: true))]; state.selectedAccountID = "other-account" }
+        else if transition == "account" { state.accounts = [.init(id: "other-account", provider: "gmail", email: "other@example.com", displayName: "Other fixture", capabilities: .init(read: true, send: true, draft: true))]; state.selectedAccountID = "other-account" }
         else { state.phase = .signedOut }
         // This is the existing native navigation/logout invalidation boundary.
         model.invalidate(); await hold.release(); await pending.value
