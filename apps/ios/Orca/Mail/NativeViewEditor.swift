@@ -18,6 +18,14 @@ struct NativeViewEditor: View {
                         Text("This existing advanced view skips Inbox. Its saved routing behavior is preserved; this editor does not change that policy.").font(.subheadline)
                     }
                 }
+                if let original = model.pendingTarget {
+                    Section("Save outcome unknown") {
+                        Text(original).textSelection(.enabled)
+                        Text("Retry sends the identical original command. Newer edits stay separate until its outcome is known. Closing this editor keeps that command.")
+                        Button("Retry original Save") { Task { await save() } }.accessibilityIdentifier("view-editor.reconcile")
+                    }
+                }
+                if let status = model.status { Section { Text(status).accessibilityIdentifier("view-editor.status") } }
                 if model.draft != nil {
                     Section("View") {
                         TextField("View name", text: $model.name).accessibilityIdentifier("view-editor.name")
@@ -32,7 +40,7 @@ struct NativeViewEditor: View {
                             Text(model.draft?["summary"]["text"].text ?? "The complete prepared definition is retained.")
                             Text("Advanced filters, account scope, ordering and policy are preserved. Use web Organization for other filter or policy changes.").font(.caption)
                         }
-                        Button("Preview matching mail") { Task { await model.review() } }.disabled(model.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button("Preview matching mail") { Task { await model.review() } }.disabled(model.pendingTarget != nil || model.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .accessibilityIdentifier("view-editor.preview")
                     }
                 } else if !model.busy { Button("Load view") { Task { await model.load() } } }
@@ -58,7 +66,7 @@ struct NativeViewEditor: View {
                 .interactiveDismissDisabled(model.changed || model.busy)
                 .confirmationDialog("Discard view edits?", isPresented: $leave, titleVisibility: .visible) {
                     Button("Keep editing", role: .cancel) { }
-                    Button("Discard edits", role: .destructive) { dismiss() }
+                    Button(model.pendingTarget == nil ? "Discard edits" : "Close and keep pending Save", role: .destructive) { model.discardEdits(); dismiss() }
                 }
                 .task { await model.open(selection: selection, state: state) }
                 .onChange(of: model.name) { model.edited() }.onChange(of: model.description) { model.edited() }

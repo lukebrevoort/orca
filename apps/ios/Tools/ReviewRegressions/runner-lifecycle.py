@@ -11,6 +11,7 @@ runner = pathlib.Path(__file__).resolve().parents[2] / 'OrcaUITests/run-fixture-
 source = runner.read_text()
 selection = source.split('if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then', 1)[1].split('\n# Check the recovered writer', 1)[0]
 phases = source.split('light_exit=0\n', 1)[1]
+adoption = source.split('# BEGIN isolated_adoption_phases\n', 1)[1].split('# END isolated_adoption_phases', 1)[0] if '# BEGIN isolated_adoption_phases' in source else ''
 results = []
 for scope in ['all', 'notifications', 'mailbox']:
     with tempfile.TemporaryDirectory(prefix='bre457-runner-lifecycle-') as directory:
@@ -46,7 +47,7 @@ simulator_udid=owned-synthetic-simulator
 read_only=0
 xcrun simctl uninstall "$simulator_udid" com.orca.mail
 if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
-''' + selection + '\nlight_exit=0\n' + phases)
+''' + selection + '\n' + adoption + '\nlight_exit=0\n' + phases)
         run = subprocess.run(['zsh',str(harness)],env=dict(os.environ,PATH=f'{root}:{os.environ["PATH"]}',MOCK_ROOT=str(root),ORCA_UI_TEST_SCOPE=scope),capture_output=True,text=True)
         state = json.loads((root/'state.json').read_text())
         dedicated = [c for c in state['calls'] if c['adoption'] and not c['legacy']]

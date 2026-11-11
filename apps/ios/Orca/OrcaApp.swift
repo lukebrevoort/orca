@@ -47,8 +47,6 @@ struct MainView: View {
     @StateObject private var mailboxes = MailboxViews()
     @StateObject private var importance = ImportanceController()
     @StateObject private var preferences = AccountPreferencesController()
-    @State private var pendingTab: String?
-    @State private var confirmSettingsLeave = false
     @StateObject private var feedback = FeedbackTicketModel()
     @StateObject private var capture = FeedbackCaptureController()
     @StateObject private var captureWindow = FeedbackWindowReference()
@@ -66,8 +64,7 @@ struct MainView: View {
         // there is no per-screen visibility bookkeeping or guessed padding.
         VStack(spacing: 0) {
             TabView(selection: Binding(get: { state.selectedTab }, set: { tab in
-                if state.selectedTab == "settings", tab != "settings", preferences.dirty || preferences.saving { pendingTab = tab; confirmSettingsLeave = true }
-                else { state.selectedTab = tab }
+                state.navigate(to: tab)
             })) {
                 InboxView().tabItem { Label("Mail", systemImage: "tray") }.tag("inbox")
                 DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
@@ -82,10 +79,10 @@ struct MainView: View {
         .environmentObject(importance)
         .environmentObject(preferences)
         .onAppear { state.accountPreferences = preferences }
-        .onChange(of: state.ownerScope) { preferences.invalidate() }
-        .confirmationDialog("Leave unsaved account choices?", isPresented: $confirmSettingsLeave, titleVisibility: .visible) {
-            Button("Stay", role: .cancel) { pendingTab = nil }
-            Button("Discard edits and leave", role: .destructive) { if !preferences.saving { preferences.discard(); state.selectedTab = pendingTab ?? "settings"; pendingTab = nil } }.disabled(preferences.saving)
+        .onChange(of: state.ownerScope) { preferences.invalidate(); state.stayInSettings() }
+        .confirmationDialog("Leave unsaved account choices?", isPresented: Binding(get: { state.pendingSettingsNavigation != nil }, set: { if !$0 { state.stayInSettings() } }), titleVisibility: .visible) {
+            Button("Stay", role: .cancel) { state.stayInSettings() }
+            Button("Discard edits and leave", role: .destructive) { state.discardSettingsAndLeave() }.disabled(preferences.saving)
         } message: { Text("Stay to save or continue editing. Section changes keep your edits.") }
         .onChange(of: captureScope) { importance.invalidate() }
         .background(FeedbackWindowProbe(reference: captureWindow).frame(width: 0, height: 0))

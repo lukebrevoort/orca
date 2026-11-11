@@ -139,8 +139,8 @@ elif [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
   # BRE-455 wired checkpoint3842e291 clears focused/API-type gates;
   # scenario48 now verifies actual native explicit adoption, not delivery.
-  light_tests=(-only-testing:OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable -only-testing:OrcaUITests/OrcaUITests/test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen -only-testing:OrcaUITests/OrcaUITests/test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving -only-testing:OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof -only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing -only-testing:OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly -only-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending)
-  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable -only-testing:OrcaUITests/OrcaUITests/test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen -only-testing:OrcaUITests/OrcaUITests/test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving -only-testing:OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof -only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing -only-testing:OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly -only-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending)
+  light_tests=(-only-testing:OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable -only-testing:OrcaUITests/OrcaUITests/test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen -only-testing:OrcaUITests/OrcaUITests/test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving -only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing -only-testing:OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly -only-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending)
+  dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable -only-testing:OrcaUITests/OrcaUITests/test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen -only-testing:OrcaUITests/OrcaUITests/test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving -only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing -only-testing:OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly -only-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -only-testing:OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending)
 elif [[ ${ORCA_UI_TEST_SCOPE:-all} == overscroll ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles -only-testing:OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing)
@@ -160,9 +160,36 @@ elif [[ $read_only == 1 ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
 else
-  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
+  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof -skip-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
 fi
+
+# BRE-468 adoption has a durable, intentionally irreversible installation policy.
+# Execute each appearance with its own app/installation UUID. The server retains
+# every old policy/tombstone; no product unadopt or fixture history reset occurs.
+# The preserved legacy suites then start from another fresh installation.
+# BEGIN isolated_adoption_phases
+adoption_exit=0
+if [[ $read_only != 1 && ( ${ORCA_UI_TEST_SCOPE:-all} == all || ${ORCA_UI_TEST_SCOPE:-all} == mailbox || ${ORCA_UI_TEST_SCOPE:-all} == notifications ) ]]; then
+  for appearance in light dark; do
+    xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
+    xcrun simctl ui "$simulator_udid" appearance "$appearance"
+    progress "adoption_${appearance}_started"
+    xcodebuild test-without-building \
+      -xctestrun "$injected_xctestrun" \
+      -destination "platform=iOS Simulator,id=$simulator_udid" \
+      -parallel-testing-enabled NO \
+      -resultBundlePath "$result_dir/Adoption${appearance}.xcresult" \
+      -only-testing:OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof || {
+        appearance_exit=$?
+        if (( adoption_exit == 0 )); then adoption_exit=$appearance_exit; fi
+      }
+    progress "adoption_${appearance}_finished"
+  done
+  xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
+  xcrun simctl ui "$simulator_udid" appearance light
+fi
+# END isolated_adoption_phases
 
 # Check the recovered writer's actual Feedback/Send geometry first, in both
 # appearances even if the baseline fails. This is the existing test18 moved
@@ -249,3 +276,5 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
   if (( light_exit != 0 )); then exit "$light_exit"; fi
   if (( dark_exit != 0 )); then exit "$dark_exit"; fi
 fi
+
+if (( ${adoption_exit:-0} != 0 )); then exit "$adoption_exit"; fi

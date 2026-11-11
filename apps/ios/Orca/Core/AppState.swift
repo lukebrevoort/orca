@@ -16,6 +16,7 @@ import SwiftUI
     @Published var selectedAccountID: String? { didSet { UserDefaults.standard.set(selectedAccountID, forKey: "selectedAccountID") } }
     @Published var errorMessage: String?
     @Published var selectedTab = "inbox"
+    @Published var pendingSettingsNavigation: SettingsNavigationRequest?
     weak var accountPreferences: AccountPreferencesController?
     @Published private(set) var mailboxReadRevision = UUID()
     private var connectionGeneration = UUID()

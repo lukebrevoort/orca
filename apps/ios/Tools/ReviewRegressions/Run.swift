@@ -63,6 +63,17 @@ import Foundation
         state.selectedTab = "settings"
         state.routeNotification(["threadId": "incoming", "accountId": "account"])
         check("notification-route-keeps-unsaved-settings", state.selectedTab == "settings" && state.routedThread == nil && preferences.dirty, "notification must use the shared Stay/Leave guard")
+        state.stayInSettings()
+        check("473-stay-preserves-edits", state.selectedTab == "settings" && preferences.dirty && state.pendingSettingsNavigation == nil, "Stay cancels notification navigation")
+        state.routeNotification(["threadId": "incoming", "accountId": "account"])
+        state.discardSettingsAndLeave()
+        check("473-leave-routes-original-thread", state.selectedTab == "inbox" && state.routedThread?.id == "incoming" && !preferences.dirty, "explicit discard applies captured route")
+        state.selectedTab = "settings"; state.routedThread = nil
+        preferences.edits = .init(signature: "Keep on changed owner", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)
+        state.routeNotification(["threadId": "old-owner", "accountId": "account"])
+        let originalOwner = state.ownerScope; state.ownerScope = "other-owner"; state.discardSettingsAndLeave()
+        check("473-stale-owner-cannot-route", state.selectedTab == "settings" && state.routedThread == nil && preferences.dirty, "delayed Leave cannot route or discard another owner's choices")
+        state.ownerScope = originalOwner
         if let connection {
             state.client = APIClient(baseURL: URL(string: connection.baseURL)!) { connection.token }
             let client = state.client!

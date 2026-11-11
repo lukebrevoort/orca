@@ -26,10 +26,11 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   if (request.headers.get('authorization') !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
   if (url.pathname === '/__bre457/drop-next-commit') { dropNext = true; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger });
+  const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
   const response = await app.fetch(request);
   if (request.method === 'POST' && url.pathname === '/v1/organization/views/commit') {
     const payload = await response.clone().json();
-    ledger.push({ path: url.pathname, actualStatus: response.status, deliveredStatus: dropNext && response.ok ? 503 : response.status, response: payload });
+    ledger.push({ path: url.pathname, actualStatus: response.status, deliveredStatus: dropNext && response.ok ? 503 : response.status, response: payload, command });
     if (dropNext && response.ok) { dropNext = false; return Response.json({ error: { code: 'synthetic_response_lost', message: 'Commit succeeded; acknowledgement deliberately replaced by HTTP503' } }, { status: 503 }); }
   }
   return response;

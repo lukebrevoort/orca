@@ -63,7 +63,7 @@ import SwiftUI
         } catch {
             let cached: Rows? = reset && MailboxViews.permitsOfflineCache(error) ? await state.cache.load(Rows.self, key: key) : nil
             guard current() else { return }
-            if let cached { messages = cached.messages; nextCursor = nil; self.error = "Offline — showing saved mail; importance may have changed." }
+            if let cached { messages = cached.messages; resultSearch = requestedSearch; nextCursor = nil; self.error = "Offline — showing saved mail; importance may have changed." }
             else { if !MailboxViews.permitsOfflineCache(error) { messages = []; nextCursor = nil }; self.error = error.localizedDescription }
         }
     }

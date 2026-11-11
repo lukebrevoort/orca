@@ -10,6 +10,7 @@ import SwiftUI
     var selectedAccount: MailAccount? { accounts.first }
     var selectedAccountID: String? = "account"
     var selectedTab = "settings"
+    var pendingSettingsNavigation: SettingsNavigationRequest?
     weak var accountPreferences: AccountPreferencesController?
     var routedThread: (id: String, accountId: String)?
     var ownerScope = "synthetic-owner"

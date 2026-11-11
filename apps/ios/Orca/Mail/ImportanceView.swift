@@ -47,7 +47,8 @@ struct ImportanceView: View {
                 if importance.busy { Section { ProgressView("Checking current importance…") } }
                 if importance.uncertain {
                     Section("Save outcome unknown") {
-                        Text("Check the original operation before making another choice. Offline does not mean saved.")
+                        Text(importance.originalTarget ?? "An earlier operation in this account needs reconciliation.").textSelection(.enabled)
+                        Text("Check that original operation before making another choice in this account. Offline does not mean saved.")
                         Button("Check save outcome") { Task { await importance.reconcile(state: state) } }.accessibilityIdentifier("importance.reconcile")
                         Button("Retry original choice safely") { Task { await importance.retryOriginal(state: state) } }
                         Button("Review current choice") { Task { await importance.reviewCurrent(state: state) } }
@@ -97,7 +98,7 @@ struct ImportanceView: View {
             .interactiveDismissDisabled(importance.busy)
             .task {
                 presented = true
-                await importance.open(state: state, accountId: selection.accountId, threadId: selection.threadId)
+                await importance.open(state: state, accountId: selection.accountId, threadId: selection.threadId, subject: selection.subject)
                 await loadSenders()
             }
             .onDisappear { presented = false }

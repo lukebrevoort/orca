@@ -1,0 +1,55 @@
+{
+  "results" : [
+    {
+      "case" : "465-original-uncertain-lock",
+      "detail" : "A committed, acknowledgement lost and reconciliation offline",
+      "pass" : true
+    },
+    {
+      "case" : "465-no-A-receipt-under-B",
+      "detail" : "visible receipt target = A",
+      "pass" : false
+    },
+    {
+      "case" : "465-no-A-undo-under-B",
+      "detail" : "Undo must not operate on A under B",
+      "pass" : false
+    },
+    {
+      "case" : "465-known-newer-revision-disables-Undo",
+      "detail" : "current conversation revision 2 supersedes receipt revision 1",
+      "pass" : true
+    },
+    {
+      "case" : "cached-query-provenance",
+      "detail" : "cached row B labeled A",
+      "pass" : false
+    },
+    {
+      "case" : "notification-route-keeps-unsaved-settings",
+      "detail" : "notification must use the shared Stay\/Leave guard",
+      "pass" : false
+    },
+    {
+      "case" : "466-first-commit-actually-recorded",
+      "detail" : "actual API\/SQLite commit exists; response replaced by HTTP503",
+      "pass" : true
+    },
+    {
+      "case" : "466-edit-retry-exactly-one-creation",
+      "detail" : "actual view count after commit\/retry = 2, first count = 1",
+      "pass" : false
+    },
+    {
+      "case" : "466-dismiss-reopen-no-duplicate",
+      "detail" : "actual view count after reopen = 3",
+      "pass" : false
+    },
+    {
+      "case" : "466-provider-boundary",
+      "detail" : "synthetic provider calls = 0",
+      "pass" : true
+    }
+  ],
+  "scope" : "production native controllers\/Foundation HTTP\/cache; not Apple UI"
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run through /tmp/orca-ui-heavy-slot.py. Foundation/HTTP, never simulator/Xcode UI."""
 import argparse, hashlib, json, os, pathlib, subprocess, tempfile, time
-parser = argparse.ArgumentParser(); parser.add_argument('output'); parser.add_argument('--api', action='store_true'); args = parser.parse_args()
+parser = argparse.ArgumentParser(); parser.add_argument('output'); parser.add_argument('--api', action='store_true'); parser.add_argument('--importance-ref'); args = parser.parse_args()
 root = pathlib.Path(__file__).resolve().parents[4]
 out = pathlib.Path(args.output); out.mkdir(parents=True, exist_ok=False)
 head = subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
@@ -10,8 +10,15 @@ sources = ['Orca/Core/Models.swift','Orca/Core/APIClient.swift','Orca/Core/Cache
 manifest = {'sourceSHA':head,'scope':'production Foundation controllers, synthetic URLProtocol and optional actual HTTP/API/SQLite; not Apple UI runtime','sourceHashes':{p:hashlib.sha256((root/'apps/ios'/p).read_bytes()).hexdigest() for p in sources}}
 with tempfile.TemporaryDirectory(prefix='bre457-review-run-') as scratch:
     scratch = pathlib.Path(scratch); exe = scratch/'regressions'
+    compile_sources = [str(root/'apps/ios'/p) for p in sources]
+    if args.importance_ref:
+        original = subprocess.check_output(['git','show',args.importance_ref+':apps/ios/Orca/Core/Importance.swift'],cwd=root)
+        frozen = scratch/'Importance.swift'; frozen.write_bytes(original)
+        compile_sources[sources.index('Orca/Core/Importance.swift')] = str(frozen)
+        manifest['importanceSourceRef'] = args.importance_ref
+        manifest['sourceHashes']['Orca/Core/Importance.swift'] = hashlib.sha256(original).hexdigest()
     with (out/'compile.log').open('w') as log:
-        code = subprocess.run(['/usr/bin/xcrun','swiftc','-swift-version','5','-parse-as-library',*[str(root/'apps/ios'/p) for p in sources],'-o',str(exe)],cwd=root,stdout=log,stderr=subprocess.STDOUT).returncode
+        code = subprocess.run(['/usr/bin/xcrun','swiftc','-swift-version','5','-parse-as-library',*compile_sources,'-o',str(exe)],cwd=root,stdout=log,stderr=subprocess.STDOUT).returncode
     manifest['compileExit'] = code
     api = None; api_log = None
     try:

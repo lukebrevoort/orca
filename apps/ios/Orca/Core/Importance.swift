@@ -4,7 +4,7 @@ import SwiftUI
 /// One account mutation at a time, retained across sheet dismissal/termination.
 /// The server operation record is the authority after an ambiguous response.
 @MainActor final class ImportanceController: ObservableObject {
-    struct Pending: Codable { var command: ImportanceCommand; var undoReceipt: ImportanceReceipt? }
+    struct Pending: Codable { var command: ImportanceCommand; var undoReceipt: ImportanceReceipt?; var contextThreadId: String?; var contextSubject: String? }
     @Published private(set) var snapshot: ImportanceResolution?
     @Published private(set) var preview: ImportancePreview?
     @Published private(set) var receipt: ImportanceReceipt?
@@ -13,24 +13,33 @@ import SwiftUI
     @Published private(set) var status: String?
     @Published private(set) var error: String?
     private var scope = "", accountId = "", threadId = ""
+    private var receiptThreadId: String?
+    private var subject = ""
     private var generation = UUID()
     private let defaults: UserDefaults
     private var pending: Pending?
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
     private var pendingKey: String { "importance.pending.v1|\(scope)|\(accountId)" }
-    var canUndo: Bool { !busy && !uncertain && receipt.flatMap { MailDate.parse($0.undoUntil) }.map { $0 > Date() } == true }
-    func invalidate() { generation = UUID(); scope = ""; accountId = ""; threadId = ""; snapshot = nil; preview = nil; receipt = nil; pending = nil; uncertain = false; busy = false; status = nil; error = nil }
+    var canUndo: Bool { !busy && !uncertain && receiptThreadId == threadId && receipt.flatMap { MailDate.parse($0.undoUntil) }.map { $0 > Date() } == true }
+    var originalTarget: String? {
+        guard let pending else { return nil }
+        let context = pending.contextSubject.flatMap { $0.isEmpty ? nil : $0 } ?? pending.contextThreadId ?? pending.command.target.threadId ?? "Earlier conversation"
+        if let address = pending.command.target.address { return "Original sender preference: \(address), opened from \(context)." }
+        return "Original conversation: \(context) (\(pending.contextThreadId ?? pending.command.target.threadId ?? "unknown"))."
+    }
+    func invalidate() { generation = UUID(); scope = ""; accountId = ""; threadId = ""; snapshot = nil; preview = nil; receipt = nil; receiptThreadId = nil; pending = nil; uncertain = false; busy = false; status = nil; error = nil }
     private func current(_ state: AppState, _ request: UUID) -> Bool {
         !Task.isCancelled && generation == request && scope == state.ownerScope && state.phase == .ready
         && state.selectedAccount?.id == accountId && state.accounts.contains { $0.id == accountId }
     }
-    func open(state: AppState, accountId: String, threadId: String) async {
+    func open(state: AppState, accountId: String, threadId: String, subject: String = "") async {
         guard state.phase == .ready, state.selectedAccount?.id == accountId else { invalidate(); return }
         if scope != state.ownerScope || self.accountId != accountId || self.threadId != threadId {
             invalidate(); scope = state.ownerScope; self.accountId = accountId; self.threadId = threadId
             pending = defaults.data(forKey: pendingKey).flatMap { try? JSONDecoder().decode(Pending.self, from: $0) }
             uncertain = pending != nil
         }
+        self.subject = subject
         if pending != nil { await reconcile(state: state); return }
         await refresh(state: state)
     }
@@ -78,6 +87,8 @@ import SwiftUI
     }
     private func submit(_ pending: Pending, state: AppState) async {
         guard let client = state.client, !busy, current(state, generation) else { return }
+        var pending = pending
+        if pending.contextThreadId == nil { pending.contextThreadId = threadId; pending.contextSubject = subject }
         persist(pending); busy = true; preview = nil; receipt = nil; status = nil; error = nil; let request = generation
         do {
             let result: ImportanceOperation
@@ -137,8 +148,12 @@ import SwiftUI
               result.current.revision >= result.receipt.revision,
               ["current", "superseded"].contains(result.status) else { error = "Server acknowledgement did not match this operation."; return }
         // Original receipt is never displayed as current when superseded.
-        receipt = result.status == "current" && result.current.revision == result.receipt.revision ? result.receipt : nil
-        status = result.status == "superseded" ? "Choice changed elsewhere. Showing the current conversation." : "Choice saved."
+        let originalThread = pending.contextThreadId ?? pending.command.target.threadId
+        let sameConversation = originalThread == threadId
+        receiptThreadId = sameConversation ? threadId : nil
+        receipt = sameConversation && result.status == "current" && result.current.revision == result.receipt.revision ? result.receipt : nil
+        if sameConversation { status = result.status == "superseded" ? "Choice changed elsewhere. Showing the current conversation." : "Choice saved." }
+        else { status = "Earlier operation resolved for \(originalTarget ?? "a different conversation"). Showing this conversation’s current importance." }
         persist(nil)
         state.importanceDidChange(accountId: accountId)
         do {
