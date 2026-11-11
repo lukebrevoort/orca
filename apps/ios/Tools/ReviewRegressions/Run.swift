@@ -75,6 +75,7 @@ import Foundation
         check("473-stale-owner-cannot-route", state.selectedTab == "settings" && state.routedThread == nil && preferences.dirty, "delayed Leave cannot route or discard another owner's choices")
         state.ownerScope = originalOwner
         if let connection {
+            do {
             state.client = APIClient(baseURL: URL(string: connection.baseURL)!) { connection.token }
             let client = state.client!
             let selection = NativeViewSelection(query: "Subject", accountId: "account")
@@ -107,7 +108,7 @@ import Foundation
             } else { check("466-repeated-retry-preserves-exact-command", false, "replay ledger missing") }
             let definition: MailActionJSON = .object(["revision": .number(1), "accountIds": .array([.string("account")]), "sender": .object(["addresses": .array([.string("person@example.com")])]), "thread": .object(["subjectContains": .string("Subject"), "readState": .string("unread")])])
             let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("typed_definition"), "source": .object(["kind": .string("manual"), "label": .string("Synthetic advanced View")]), "identity": .object(["name": .string("Advanced original")]), "definition": definition]))
-            let advancedPreview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": prepared["draft"], "page": .object(["limit": .number(25)])]))
+            let advancedPreview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": prepared["draft"].keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"]), "page": .object(["limit": .number(25)])]))
             let created: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object(["draft": advancedPreview["draft"], "expectedRevisions": .object(["workspace": advancedPreview["workspaceRevision"], "view": .null]), "retryKey": .string(UUID().uuidString), "confirmedZeroMatchDigest": advancedPreview["draft"]["definitionDigest"]]))
             let advancedID = created["view"]["id"].text!
             let editor = NativeViewEditorController(defaults: defaults)
@@ -123,6 +124,7 @@ import Foundation
             let latest: MailActionJSON = try await client.request("__bre457/state")
             check("466-advanced-update-no-extra-creation", latest["count"].integer == (committed["count"].integer ?? 0) + 1, "one recovered View plus one intentional advanced fixture, updates retain both IDs")
             check("466-provider-boundary", latest["providerCalls"].integer == 0, "synthetic provider calls = \(latest["providerCalls"].integer ?? -1)")
+            } catch { check("466-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
         if results.contains(where: { $0["pass"] as? Bool == false }) { exit(1) }

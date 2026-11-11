@@ -19,7 +19,7 @@ INSERT INTO threads(id,account_id,provider_thread_id,subject) VALUES('thread','a
 INSERT INTO emails(id,account_id,thread_id,provider_message_id,from_address,subject,snippet,body_text,received_at) VALUES('mail','account','thread','mail','person@example.com','Subject fixture','Synthetic only','Synthetic only',1000);`);
 const credential = createMobileSession(db, 'owner');
 let providerCalls = 0, dropNext = false;
-const ledger: unknown[] = [];
+const ledger: unknown[] = [], requests: unknown[] = [];
 const app = createApp({ dbFactory: () => createDatabaseClient(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; throw Error('Provider forbidden'); }; } }) as never });
 const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
   const url = new URL(request.url);
@@ -28,6 +28,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger });
   const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
   const response = await app.fetch(request);
+  requests.push({ method: request.method, path: url.pathname, status: response.status, ...(response.status >= 400 ? { error: await response.clone().text() } : {}) });
   if (request.method === 'POST' && url.pathname === '/v1/organization/views/commit') {
     const payload = await response.clone().json();
     ledger.push({ path: url.pathname, actualStatus: response.status, deliveredStatus: dropNext && response.ok ? 503 : response.status, response: payload, command });
@@ -36,5 +37,5 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   return response;
 } });
 writeFileSync(output, JSON.stringify({ baseURL: `http://127.0.0.1:${server.port}/`, token: credential.accessToken }), { mode: 0o600 });
-function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, providerCalls, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
+function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
 process.on('SIGTERM', cleanup); process.on('SIGINT', cleanup);
