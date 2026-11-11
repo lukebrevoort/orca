@@ -1471,7 +1471,11 @@ export function ComposeWorkspace({
         placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? actionLabel === "Forward" ? "Add a note above the forwarded message…" : "Write a reply…" : "Start with the human part…"}
       />
       {controller.writingPreferenceStatus === "loading" ? <p className="writing-preferences-note" role="status">Loading your writing defaults. You can start writing.</p> : controller.writingPreferenceStatus === "unavailable" ? <p className="writing-preferences-note" role="status">Writing defaults unavailable. New drafts use plain text without a signature.</p> : null}
-      {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
+      {attachmentError || (variant === "zen" && draft.attachments.length >= MAX_COMPOSE_ATTACHMENTS) ? (
+        <p className="compose-attachment-error" role={attachmentError ? "alert" : "status"}>
+          {attachmentError ?? `${MAX_COMPOSE_ATTACHMENTS} attachments. Remove a file before attaching another.`}
+        </p>
+      ) : null}
       <input
         accept="*/*"
         aria-hidden="true"
