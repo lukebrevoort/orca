@@ -1,0 +1,383 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/auth/mcp/owner-boundary.test.ts:
+66 |     expect(held.status).toBe(200);
+67 |     expect(((await held.json()) as { user: { id: string } }).user.id).toBe("u");
+68 |     const before = snapshot();
+69 |     const response = await app.request(command.path, { method: command.method, headers: { cookie: `orca_session=${v.token}`, [expectedUserIdHeaderName]: "u" } });
+70 |     const after = snapshot();
+71 |     expect({ status: response.status, domain: after }).toEqual({ status: 409, domain: before });
+                                                            ^
+error: expect(received).toEqual(expected)
+
+  {
+    "domain": {
+      "access": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-access",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-access",
+          "revoked_at": null,
+        },
+      ],
+      "connections": [
+        {
+          "id": "u-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "u",
+        },
+        {
+          "id": "v-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "v",
+        },
+      ],
+      "refresh": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-refresh",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-refresh",
+          "revoked_at": null,
+        },
+      ],
+    },
+-   "status": 409,
++   "status": 200,
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:71:56)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:47:11)
+(fail) BRE-469 MCP list rejects original U with replacement V session before domain effects [95.53ms]
+73 |   }));
+74 | 
+75 |   test(`BRE-469 MCP ${command.name} rejects malformed original owner`, async () => fixture(async ({ app, u, snapshot }) => {
+76 |     const before = snapshot();
+77 |     const response = await app.request(command.path, { method: command.method, headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u v" } });
+78 |     expect({ status: response.status, domain: snapshot() }).toEqual({ status: 400, domain: before });
+                                                                 ^
+error: expect(received).toEqual(expected)
+
+  {
+    "domain": {
+      "access": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-access",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-access",
+          "revoked_at": null,
+        },
+      ],
+      "connections": [
+        {
+          "id": "u-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "u",
+        },
+        {
+          "id": "v-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "v",
+        },
+      ],
+      "refresh": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-refresh",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-refresh",
+          "revoked_at": null,
+        },
+      ],
+    },
+-   "status": 400,
++   "status": 200,
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:78:61)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:47:11)
+(fail) BRE-469 MCP list rejects malformed original owner [62.14ms]
+66 |     expect(held.status).toBe(200);
+67 |     expect(((await held.json()) as { user: { id: string } }).user.id).toBe("u");
+68 |     const before = snapshot();
+69 |     const response = await app.request(command.path, { method: command.method, headers: { cookie: `orca_session=${v.token}`, [expectedUserIdHeaderName]: "u" } });
+70 |     const after = snapshot();
+71 |     expect({ status: response.status, domain: after }).toEqual({ status: 409, domain: before });
+                                                            ^
+error: expect(received).toEqual(expected)
+
+  {
+    "domain": {
+      "access": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-access",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-access",
+-         "revoked_at": null,
++         "revoked_at": 1794403999556,
+        },
+      ],
+      "connections": [
+        {
+          "id": "u-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "u",
+        },
+        {
+          "id": "v-connection",
+-         "revoked_at": null,
+-         "updated_at": 1794403999000,
++         "revoked_at": 1794403999556,
++         "updated_at": 1794403999556,
+          "user_id": "v",
+        },
+      ],
+      "refresh": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-refresh",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-refresh",
+-         "revoked_at": null,
++         "revoked_at": 1794403999556,
+        },
+      ],
+    },
+-   "status": 409,
++   "status": 204,
+  }
+
+- Expected  - 5
++ Received  + 5
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:71:56)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:47:11)
+(fail) BRE-469 MCP revoke one rejects original U with replacement V session before domain effects [73.10ms]
+73 |   }));
+74 | 
+75 |   test(`BRE-469 MCP ${command.name} rejects malformed original owner`, async () => fixture(async ({ app, u, snapshot }) => {
+76 |     const before = snapshot();
+77 |     const response = await app.request(command.path, { method: command.method, headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u v" } });
+78 |     expect({ status: response.status, domain: snapshot() }).toEqual({ status: 400, domain: before });
+                                                                 ^
+error: expect(received).toEqual(expected)
+
+  {
+    "domain": {
+      "access": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-access",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-access",
+          "revoked_at": null,
+        },
+      ],
+      "connections": [
+        {
+          "id": "u-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "u",
+        },
+        {
+          "id": "v-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "v",
+        },
+      ],
+      "refresh": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-refresh",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-refresh",
+          "revoked_at": null,
+        },
+      ],
+    },
+-   "status": 400,
++   "status": 404,
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:78:61)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:47:11)
+(fail) BRE-469 MCP revoke one rejects malformed original owner [69.68ms]
+66 |     expect(held.status).toBe(200);
+67 |     expect(((await held.json()) as { user: { id: string } }).user.id).toBe("u");
+68 |     const before = snapshot();
+69 |     const response = await app.request(command.path, { method: command.method, headers: { cookie: `orca_session=${v.token}`, [expectedUserIdHeaderName]: "u" } });
+70 |     const after = snapshot();
+71 |     expect({ status: response.status, domain: after }).toEqual({ status: 409, domain: before });
+                                                            ^
+error: expect(received).toEqual(expected)
+
+  {
+    "domain": {
+      "access": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-access",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-access",
+-         "revoked_at": null,
++         "revoked_at": 1794403999698,
+        },
+      ],
+      "connections": [
+        {
+          "id": "u-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "u",
+        },
+        {
+          "id": "v-connection",
+-         "revoked_at": null,
+-         "updated_at": 1794403999000,
++         "revoked_at": 1794403999698,
++         "updated_at": 1794403999698,
+          "user_id": "v",
+        },
+      ],
+      "refresh": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-refresh",
+          "revoked_at": null,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-refresh",
+-         "revoked_at": null,
++         "revoked_at": 1794403999698,
+        },
+      ],
+    },
+-   "status": 409,
++   "status": 200,
+  }
+
+- Expected  - 5
++ Received  + 5
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:71:56)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:47:11)
+(fail) BRE-469 MCP revoke all rejects original U with replacement V session before domain effects [71.70ms]
+73 |   }));
+74 | 
+75 |   test(`BRE-469 MCP ${command.name} rejects malformed original owner`, async () => fixture(async ({ app, u, snapshot }) => {
+76 |     const before = snapshot();
+77 |     const response = await app.request(command.path, { method: command.method, headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u v" } });
+78 |     expect({ status: response.status, domain: snapshot() }).toEqual({ status: 400, domain: before });
+                                                                 ^
+error: expect(received).toEqual(expected)
+
+  {
+    "domain": {
+      "access": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-access",
+-         "revoked_at": null,
++         "revoked_at": 1794403999775,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-access",
+          "revoked_at": null,
+        },
+      ],
+      "connections": [
+        {
+          "id": "u-connection",
+-         "revoked_at": null,
+-         "updated_at": 1794403999000,
++         "revoked_at": 1794403999775,
++         "updated_at": 1794403999775,
+          "user_id": "u",
+        },
+        {
+          "id": "v-connection",
+          "revoked_at": null,
+          "updated_at": 1794403999000,
+          "user_id": "v",
+        },
+      ],
+      "refresh": [
+        {
+          "connection_id": "u-connection",
+          "id": "u-refresh",
+-         "revoked_at": null,
++         "revoked_at": 1794403999775,
+        },
+        {
+          "connection_id": "v-connection",
+          "id": "v-refresh",
+          "revoked_at": null,
+        },
+      ],
+    },
+-   "status": 400,
++   "status": 200,
+  }
+
+- Expected  - 5
++ Received  + 5
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:78:61)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/mcp/owner-boundary.test.ts:47:11)
+(fail) BRE-469 MCP revoke all rejects malformed original owner [77.39ms]
+(pass) BRE-469 MCP same-owner revoke-all revokes only that owner's connection and credentials [69.28ms]
+(pass) BRE-469 MCP legacy no-header client retains exact revoke-all response [62.38ms]
+(pass) BRE-469 MCP foreign resource ID remains 404 for legacy DELETE [63.53ms]
+
+ 3 pass
+ 6 fail
+ 20 expect() calls
+Ran 9 tests across 1 file. [937.00ms]
