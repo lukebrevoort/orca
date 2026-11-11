@@ -1,0 +1,11 @@
+{
+  "head": "edab9f6a702be9b2fb2f8477af4e0fc895993523",
+  "runtime": {
+    "node": "v24.22.1",
+    "bun": "1.3.14"
+  },
+  "exitCode": 0,
+  "seconds": 0.9757077909889631,
+  "cleanAfter": true,
+  "scope": "Existing real logout-route assertions, origin rejection, revocation and zero-handler-DB assertions; no native/browser proof"
+}

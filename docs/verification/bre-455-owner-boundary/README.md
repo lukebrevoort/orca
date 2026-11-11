@@ -135,3 +135,44 @@ TS2322 in a test's inferred heterogeneous request-header array; the correction
 uses real `Headers` instances. The receipt retains this failure; this checkpoint
 is not claimed type-green. [Runtime proof](http-proof-ee2962c4.json),
 [checkpoint receipt](focused-ee2962c4-receipt.json).
+
+## Final root review checkpoint
+
+The published API checkpoint `1549608c194ec40c7ecfb5060242e0b41520a8bc`
+passed **309 focused tests / 1,514 expectations**, actual API/shared TypeScript
+checks, and the synthetic HTTP/SQLite proof. Retained receipts and the openable
+proof are in [final-review-checkpoint](final-review-checkpoint/).
+The proof records mismatched-owner 409 responses with unchanged installation
+and operation tables; a same-owner command succeeds. A held fresh-session read
+sets no cookies, while a real replacement login and logout each emit the pair.
+It serializes no tokens, raw session IDs, secrets or witness values.
+
+Hosted Unit Tests run `43021222685`, job `130524621958`, exposed two existing
+real logout-route assertions that still expected only the session cookie.
+[The failure excerpt](final-review-checkpoint/hosted-1549608c-logout-excerpt.log)
+is retained. The test-only correction at
+`edab9f6a702be9b2fb2f8477af4e0fc895993523` asserts both cleared cookies through
+`getSetCookie()`, preserving the original revocation, subsequent 401, Origin,
+method and database assertions. The same real route suite passed **8/8 tests,
+53 expectations** at that clean head; [receipt](final-review-checkpoint/logout-edab9f6a.json)
+and [log](final-review-checkpoint/logout-edab9f6a.log) are retained. API production
+bytes are unchanged from `1549608c`.
+
+Fresh independent source correctness review approved the protocol and this
+assertion correction. Independent security review found no authorization or
+credential flaw; its blocking verification finding was the two obsolete logout
+assertions, now corrected. These reviews did not execute browser, native or OS
+acceptance. Final frozen-head full sequential lint/typecheck/tests/build and the
+integrated browser checks remain separate gates. The final gate receipt will
+identify its own exact SHA; historical receipts above are not relabeled.
+
+To reproduce the synthetic proof from a clean checkout with frozen dependencies:
+
+```sh
+bun apps/api/scripts/browser-owner-boundary-proof.ts /tmp/new-browser-owner-proof.json
+```
+
+The output path must be new. Run the relevant workspace gates sequentially under
+the shared resource guard. This proof uses a temporary SQLite database and
+in-process authenticated HTTP requests, with no live provider or OS delivery.
+[SHA-256 checksums](final-review-checkpoint/sha256.json) cover the retained files.
