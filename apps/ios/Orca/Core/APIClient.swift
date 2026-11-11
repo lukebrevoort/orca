@@ -38,6 +38,9 @@ actor APIClient {
         let endpoint = pathSuffix.reduce(baseURL.appending(path: path)) { $0.appending(component: $1) }
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
+        // The API decodes form queries, where an unescaped plus means space.
+        // Preserve literal plus values without re-encoding existing escapes.
+        components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         guard let url = components.url else { throw ClientError.invalidBaseURL }
         var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = path == "v1/feedback/ticket" && (body as? FeedbackTicketInput)?.attachments?.isEmpty == false ? 300 : 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
