@@ -46,7 +46,7 @@ function requireTarget(sqlite: Database, accountId: string, target: ImportanceTa
   if (!exists && (target.kind === "conversation" || stored(sqlite, accountId, "sender", target.address).revision === 0)) throw new ImportanceError("not_found", "Importance target not found");
 }
 
-/** One batched metadata-only projection; no per-row SQL or message bodies. Caller owns an authorized read snapshot. */
+/** Batched metadata-only projection; no per-row SQL or message bodies. Caller owns an authorized read snapshot. */
 export function readImportance(sqlite: Database, targets: readonly { accountId: string; threadId: string }[]): Map<string, ImportanceResolution> {
   if (!targets.length) return new Map();
   const unique = [...new Map(targets.map(t => [JSON.stringify([t.accountId, t.threadId]), t])).values()];
@@ -89,22 +89,27 @@ export function aggregate(important: number, unreviewed: number, notImportant: n
 export function previewImportance(sqlite: Database, scope: Scope, input: ImportancePreviewRequest, now = Date.now()) {
   requireTarget(sqlite, scope.accountId, { kind: "sender", address: input.address });
   const current = stored(sqlite, scope.accountId, "sender", input.address), revision = importanceRevision(sqlite, scope.accountId);
-  const rows = sqlite.query(`SELECT s.*,c.choice override_choice FROM importance_participants p
-    JOIN importance_thread_state s ON s.account_id=p.account_id AND s.thread_id=p.thread_id
-    LEFT JOIN importance_choices c ON c.account_id=p.account_id AND c.kind='conversation' AND c.target=p.thread_id
-    WHERE p.account_id=? AND p.address=?`).all(scope.accountId, input.address) as (State & { override_choice: Stored["choice"] })[];
-  const existing = { matching: rows.length, overridden: 0, changed: 0, keptImportantByOtherParticipants: 0,
-    before: { important: 0, not_important: 0, unreviewed: 0 }, after: { important: 0, not_important: 0, unreviewed: 0 } };
-  for (const row of rows) {
-    const i = row.important_count - (current.choice === "important" ? 1 : 0) + (input.choice === "important" ? 1 : 0);
-    const n = row.not_important_count - (current.choice === "not_important" ? 1 : 0) + (input.choice === "not_important" ? 1 : 0);
-    const u = row.unreviewed_count - (current.choice === null ? 1 : 0) + (input.choice === null ? 1 : 0);
-    const after = row.override_choice ?? aggregate(i, u, n);
-    existing.before[row.effective]++; existing.after[after]++;
-    if (row.override_choice) existing.overridden++;
-    if (after !== row.effective) existing.changed++;
-    if (!row.override_choice && input.choice !== "important" && after === "important") existing.keptImportantByOtherParticipants++;
-  }
+  const deltaI = Number(input.choice === "important") - Number(current.choice === "important");
+  const deltaN = Number(input.choice === "not_important") - Number(current.choice === "not_important");
+  const deltaU = Number(input.choice === null) - Number(current.choice === null);
+  // Return one aggregate row: preview work is proportional to matching conversations,
+  // but neither its response nor JavaScript memory materializes the complete match set.
+  const counts = sqlite.query(`SELECT count(*) matching,
+    coalesce(sum(override_choice IS NOT NULL),0) overridden,
+    coalesce(sum(effective<>proposed),0) changed,
+    coalesce(sum(override_choice IS NULL AND ? IS NOT 'important' AND proposed='important'),0) kept,
+    coalesce(sum(effective='important'),0) before_i,coalesce(sum(effective='not_important'),0) before_n,coalesce(sum(effective='unreviewed'),0) before_u,
+    coalesce(sum(proposed='important'),0) after_i,coalesce(sum(proposed='not_important'),0) after_n,coalesce(sum(proposed='unreviewed'),0) after_u
+    FROM (SELECT s.effective,c.choice override_choice,
+      coalesce(c.choice,CASE WHEN s.important_count+?>0 THEN 'important'
+        WHEN s.unreviewed_count+?>0 OR s.not_important_count+?=0 THEN 'unreviewed' ELSE 'not_important' END) proposed
+      FROM importance_participants p
+      JOIN importance_thread_state s ON s.account_id=p.account_id AND s.thread_id=p.thread_id
+      LEFT JOIN importance_choices c ON c.account_id=p.account_id AND c.kind='conversation' AND c.target=p.thread_id
+      WHERE p.account_id=? AND p.address=?)`).get(input.choice, deltaI, deltaU, deltaN, scope.accountId, input.address) as Record<string, number>;
+  const existing = { matching: counts.matching!, overridden: counts.overridden!, changed: counts.changed!, keptImportantByOtherParticipants: counts.kept!,
+    before: { important: counts.before_i!, not_important: counts.before_n!, unreviewed: counts.before_u! },
+    after: { important: counts.after_i!, not_important: counts.after_n!, unreviewed: counts.after_u! } };
   return importancePreviewSchema.parse({ accountId: scope.accountId, address: input.address, choice: input.choice, current, accountRevision: revision, existing,
     confirmation: seal({ version: 1, revision, address: input.address, choice: input.choice, expires: now + windowMs }, { ...scope, purpose: "sender-confirmation" }),
     expiresAt: new Date(now + windowMs).toISOString(), future: { accountId: scope.accountId, address: input.address, preservesConversationOverrides: true, otherImportantParticipantsMayKeepImportant: true, exactAddressOnly: true } });

@@ -21,6 +21,7 @@ async function setup() {
   process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
   const dir = mkdtempSync(join(tmpdir(), "orca-bre454-")), path = join(dir, "fixture.sqlite");
   const { db, sqlite } = createDatabaseClient(path);
+  try {
   migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
   db.insert(schema.users).values([{ id: "u1", email: "one@example.com" }, { id: "u2", email: "two@example.com" }]).run();
   db.insert(schema.oauthAccounts).values([
@@ -55,6 +56,11 @@ async function setup() {
     return req("/v1/importance/choices", { accountId, target: { kind: "sender", address }, choice, expectedRevision: revision, operationId: randomUUID(), confirmation: p.value.confirmation });
   }
   return { headers: { cookie: `orca_session=${s1.token}` }, clock, priorEnv, dir, path, db, sqlite, app, req, read, write, preview, sender, thread, message, providerCalls: () => providerCalls };
+  } catch (error) {
+    sqlite.close(); rmSync(dir, { recursive: true, force: true });
+    for (const [key, value] of Object.entries(priorEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+    throw error;
+  }
 }
 
 test("BRE-454 durable conversation choices, independent DB/read projections and no mail side effects", () => fixture(async f => {
@@ -274,4 +280,18 @@ test("BRE-454 existing routing/rule/read/provider state survives automated Impor
   const afterState = await f.req("/v1/inbox?accountId=a1&view=all");
   expect(afterState.value.messages.map(({ importance, ...rest }: any) => rest)).toEqual(beforeState.value.messages.map(({ importance, ...rest }: any) => rest));
   expect(f.providerCalls()).toBe(0);
+}));
+
+test("BRE-454 provenance is bounded and truthful while aggregate counts include every distinct exact participant", () => fixture(async f => {
+  for (let i = 0; i < 25; i++) {
+    const address = `person${String(i).padStart(2, "0")}@example.com`;
+    f.message(`participant-${i}`, "t1", address);
+    f.sqlite.query("insert into importance_choices values('a1','sender',?,'important',1,1000)").run(address);
+  }
+  const importance = (await f.read()).value.importance;
+  expect(importance.effective).toBe("important");
+  expect(importance.participantCounts).toEqual({ important: 25, notImportant: 0, unreviewed: 1, total: 26 });
+  expect(importance.preferences.length).toBe(20); expect(importance.preferencesTruncated).toBe(true);
+  expect(importance.preferences[0].address).toBe("person00@example.com");
+  expect(importance.preferences[19].address).toBe("person19@example.com");
 }));
