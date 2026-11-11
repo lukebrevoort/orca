@@ -139,6 +139,7 @@ import Foundation
             let authenticated: AuthSession = try await client.request("v1/auth/session")
             state.userID = authenticated.user?.id; state.baseURLText = connection.baseURL
             state.ownerScope = await client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
+            state.accounts = try await client.accounts()
             let apiHold = PreferenceCredentialHold(first: connection.token, second: connection.otherToken)
             let realPreferencesState = AppState(cache: state.cache)
             realPreferencesState.userID = authenticated.user?.id
@@ -278,7 +279,8 @@ import Foundation
                 let afterRecovery: MailActionJSON = try await client.request("__bre457/state")
                 check("478-lost-" + lostKind + "-recovery-completes-once", recoveredID != nil && (lostKind != "noop" || recoveredID == advancedID) && afterRecovery["count"].integer == (beforeLost["count"].integer ?? 0) + (lostKind == "noop" ? 0 : 1), "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation")
             }
-            } catch { check("466-actual-api-journey", false, String(describing: error)) }
+            try await runCommitStatusCases(state: state, client: client, suite: suite, otherToken: connection.otherToken, createFixtureView: createFixtureView, check: check)
+            } catch { check("native-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
         if results.contains(where: { $0["pass"] as? Bool == false }) { exit(1) }

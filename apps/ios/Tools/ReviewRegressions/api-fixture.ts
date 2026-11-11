@@ -17,6 +17,7 @@ sqlite.exec(`INSERT INTO users(id,email) VALUES('owner','owner@example.com');
 INSERT INTO users(id,email) VALUES('owner-b','owner-b@example.com');
 INSERT INTO user_preferences(user_id,signature) VALUES('owner','Owner A original'),('owner-b','Owner B original');
 INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('account','owner','gmail','synthetic','owner@example.com');
+INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('other-account','owner','gmail','synthetic-other','owner-alt@example.com');
 INSERT INTO threads(id,account_id,provider_thread_id,subject) VALUES('thread','account','thread','Subject fixture');
 INSERT INTO emails(id,account_id,thread_id,provider_message_id,from_address,subject,snippet,body_text,received_at) VALUES('mail','account','thread','mail','person@example.com','Subject fixture','Synthetic only','Synthetic only',1000);`);
 sqlite.exec(`CREATE TABLE bre457_preference_write_probe(user_id TEXT NOT NULL, operation TEXT NOT NULL);
@@ -26,17 +27,30 @@ CREATE TRIGGER bre457_preference_delete_probe AFTER DELETE ON user_preferences B
 const credential = createMobileSession(db, 'owner'), otherCredential = createMobileSession(db, 'owner-b');
 let providerCalls = 0, dropNext = false, dropAnyNext = false;
 const ledger: unknown[] = [], requests: unknown[] = [];
+let holdNext = false, heldRequest: Request | null = null, heldCommand: unknown = null;
+let nextStatusResponse: { status: number; body: unknown } | null = null;
 const app = createApp({ dbFactory: () => createDatabaseClient(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; throw Error('Provider forbidden'); }; } }) as never });
 const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
   const url = new URL(request.url);
   const fixtureOwner = request.headers.get('authorization') === `Bearer ${credential.accessToken}` ? 'owner' : request.headers.get('authorization') === `Bearer ${otherCredential.accessToken}` ? 'owner-b' : null;
-  if (!fixtureOwner || (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner')) return new Response(null, { status: 401 });
+  if (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner') return new Response(null, { status: 401 });
+  if (url.pathname === '/__bre457/hold-next-commit') { if (heldRequest) throw Error('Own held request must be released first'); holdNext = true; return Response.json({ ok: true }); }
+  if (url.pathname === '/__bre457/status-response') { nextStatusResponse = await request.json() as { status: number; body: unknown }; return Response.json({ ok: true }); }
+  if (url.pathname === '/__bre457/release-held') {
+    if (!heldRequest) throw Error('No owned held request');
+    const original = heldRequest; heldRequest = null;
+    const response = await app.fetch(original), payload = await response.clone().json();
+    ledger.push({ path: '/v1/organization/views/commit', actualStatus: response.status, deliveredStatus: null, response: payload, command: heldCommand, lateOriginal: true });
+    heldCommand = null; return Response.json({ status: response.status });
+  }
   if (url.pathname === '/__bre457/drop-next-commit-response') { dropAnyNext = true; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/drop-next-commit') { dropNext = true; return Response.json({ ok: true }); }
-  if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger, requests, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all() });
+  if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger, requests, heldCommand, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all() });
   const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
+  if (command && holdNext) { holdNext = false; heldRequest = request.clone(); heldCommand = command; ledger.push({ path: url.pathname, actualStatus: null, deliveredStatus: 503, command, held: true }); return Response.json({ error: { code: 'synthetic_held_original', message: 'Original request deliberately delayed before API dispatch' } }, { status: 503 }); }
   const response = await app.fetch(request);
   requests.push({ method: request.method, path: url.pathname, status: response.status, fixtureOwner, expectedOwner: request.headers.get('x-orca-expected-user-id'), ...(response.status >= 400 ? { error: await response.clone().text() } : {}) });
+  if (url.pathname === '/v1/organization/views/commit-status' && nextStatusResponse) { const substitute = nextStatusResponse; nextStatusResponse = null; return Response.json(substitute.body, { status: substitute.status }); }
   if (request.method === 'POST' && url.pathname === '/v1/organization/views/commit') {
     const payload = await response.clone().json();
     ledger.push({ path: url.pathname, actualStatus: response.status, deliveredStatus: dropAnyNext || (dropNext && response.ok) ? 503 : response.status, response: payload, command });

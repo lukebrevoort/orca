@@ -66,7 +66,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     private func restore(_ value: Edits) { name = value.name; description = value.description; subject = value.subject; replaceSearch = value.replaceSearch }
     func open(selection: NativeViewSelection, state: AppState) async {
         generation = UUID(); self.selection = selection; self.state = state; scope = state.ownerScope; presented = true
-        draft = nil; preview = nil; status = nil; baseline = nil; changed = false; journal = nil; error = nil
+        draft = nil; preview = nil; status = nil; baseline = nil; changed = false; journal = nil; error = nil; pendingTarget = nil; busy = false; ownerID = ""; origin = ""; ownerClient = nil
         let request = generation, capturedScope = scope
         guard let client = state.client, let owner = state.userID, !owner.isEmpty else { error = "Verified account identity is unavailable. Reconnect to edit Views."; return }
         let capturedOrigin = await client.serverOrigin()
