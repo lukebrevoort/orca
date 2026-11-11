@@ -37,6 +37,22 @@ async function click(label: string) {
   await act(async () => button.click());
 }
 
+// The reader adds keyboard scrolling semantics to code without altering the
+// sanitized payload. Strip only those four verified UI attributes before the
+// original byte-for-byte preservation assertions; all content stays exact.
+function originalFormattedHtml() {
+  const body = container.querySelector<HTMLElement>(".reader-body-html");
+  if (!body) return undefined;
+  const clone = body.cloneNode(true) as HTMLElement;
+  for (const code of clone.querySelectorAll<HTMLElement>('pre[aria-label="Code block"]')) {
+    expect(code.getAttribute("tabindex")).toBe("0");
+    expect(code.getAttribute("role")).toBe("region");
+    expect(code.getAttribute("aria-description")).toBe("Scroll horizontally to read long lines.");
+    for (const attribute of ["tabindex", "role", "aria-label", "aria-description"]) code.removeAttribute(attribute);
+  }
+  return clone.innerHTML;
+}
+
 describe("message body alternatives", () => {
   test("folds trailing HTML history once and preserves nodes and open state across alternatives", async () => {
     const reply = '<p>Current reply.</p><div class="gmail_attr">On Monday, Sam wrote:</div>\n<div class="gmail_quote"><blockquote>Earlier discussion.</blockquote><span class="orca-mail-image-note">[Image blocked: Quoted chart]</span></div> \n';
@@ -78,12 +94,12 @@ describe("message body alternatives", () => {
     for (const body of [html, "<blockquote>History.</blockquote>Current answer.", '<div class="gmail_quote">History.</div><p>Footer.</p>']) {
       await render("one", body, null);
       expect(container.querySelector("details")).toBeNull();
-      expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(body);
+      expect(originalFormattedHtml()).toBe(body);
     }
   });
-  test("keeps sanitized formatted content and destinations byte-for-byte on first render", async () => {
+  test("keeps sanitized content and destinations byte-for-byte apart from verified accessibility annotations", async () => {
     await render();
-    expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(html);
+    expect(originalFormattedHtml()).toBe(html);
     expect(container.querySelector('button[aria-pressed="true"]')?.textContent).toBe("Formatted");
     expect(container.querySelector(".reader-formatted-region")?.getAttribute("tabindex")).toBe("0");
     expect(container.querySelector(".reader-body-plain")).toBeNull();
@@ -113,12 +129,12 @@ describe("message body alternatives", () => {
     expect(container.querySelector(".reader-body-html a")).toBe(originalLink);
     expect(container.querySelector(".reader-body-html img")).toBe(originalImage);
     expect(container.querySelector(".reader-formatted-region")?.hasAttribute("hidden")).toBe(false);
-    expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(html);
+    expect(originalFormattedHtml()).toBe(html);
     await click("Formatted");
     await render();
     expect(container.querySelector(".reader-body-html a")).toBe(originalLink);
     expect(container.querySelector(".reader-body-html img")).toBe(originalImage);
-    expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(html);
+    expect(originalFormattedHtml()).toBe(html);
   });
   test("scopes the selected alternative to the message identity", async () => {
     await render(); await click("Plain text");
@@ -142,7 +158,7 @@ describe("message body alternatives", () => {
   });
   test("recovers from an alternative disappearing on refresh", async () => {
     await render(); await click("Plain text"); await render("one", html, null);
-    expect(container.querySelector(".reader-body-html")?.innerHTML).toBe(html);
+    expect(originalFormattedHtml()).toBe(html);
     expect(container.querySelectorAll("button").length).toBe(0);
     await render("one", null, text);
     expect(container.querySelector(".reader-body-plain")?.textContent).toContain("Review requested");
