@@ -1,0 +1,7 @@
+{
+  "legacyReportedExit": 0,
+  "exactLegacyOutputSha256": "3f00fbce74b90ba90fdef893af103bc541099deabb24d40d9b0f28d509f395d5",
+  "newGuardExit": 2,
+  "interpretation": "retained actual usage-only0 rejected; not a compiler execution",
+  "realCompilerFailurePreserved": true
+}
