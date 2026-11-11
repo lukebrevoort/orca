@@ -27,11 +27,14 @@ async function fixture(run: (f: {
     const mobileV = createMobileSession(client.db, "v");
     const preferenceAccess: string[] = [];
     const app = createApp({ dbFactory() {
-      const db = createDatabaseClient(path), prepare = db.sqlite.prepare.bind(db.sqlite);
-      Object.defineProperty(db.sqlite, "prepare", { configurable: true, value(sql: string, ...args: unknown[]) {
-        if (/\buser_preferences\b/i.test(sql)) preferenceAccess.push(sql);
-        return Reflect.apply(prepare, db.sqlite, [sql, ...args]);
-      } });
+      const db = createDatabaseClient(path);
+      for (const method of ["query", "prepare"] as const) {
+        const original = db.sqlite[method].bind(db.sqlite);
+        Object.defineProperty(db.sqlite, method, { configurable: true, value(sql: string, ...args: unknown[]) {
+          if (/\buser_preferences\b/i.test(sql)) preferenceAccess.push(sql);
+          return Reflect.apply(original, db.sqlite, [sql, ...args]);
+        } });
+      }
       return db;
     } });
     const request = (owner: "u" | "v" | null, expected: string | undefined, method: "GET" | "PATCH" = "GET", suffix = "", bearer?: string) => app.request("/v1/preferences" + suffix, {
@@ -48,6 +51,7 @@ async function fixture(run: (f: {
 test("BRE-469 replacement cookie cannot read or write the original preference owner's draft", () => fixture(async f => {
   const capturedU = await f.request("u", "u");
   expect((await capturedU.json()).signature).toBe("Original U");
+  expect(f.preferenceAccess.length).toBeGreaterThan(0);
   const before = f.snapshot(); f.preferenceAccess.length = 0;
   for (const method of ["GET", "PATCH"] as const) {
     const response = await f.request("v", "u", method);
