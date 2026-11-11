@@ -5075,6 +5075,7 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 .compose-workspace-zen .compose-delivery-bar > div:first-child > span:last-child,
 .compose-workspace-zen .compose-delivery-bar > p { font-size: 13px; line-height: 1.5; max-width: none; overflow-wrap: anywhere; }
 .compose-workspace-zen .compose-delivery-error { color: var(--orca-danger) !important; }
+.compose-workspace-zen .compose-attachment-error { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .compose-workspace-zen .compose-attachment-chips li { max-width: 100%; min-width: 0; }
 .compose-workspace-zen .compose-attachment-chip-meta { flex: 1; }
 .compose-workspace-zen .compose-attachment-chip-meta strong { font-size: 13px; overflow-wrap: anywhere; white-space: normal; }
