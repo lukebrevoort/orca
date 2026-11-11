@@ -495,3 +495,49 @@ test("BRE-478 existing expiring-session renewal changes authentication only, out
   assert.notDeepEqual(after.find(([name]) => name === "sessions"), before.find(([name]) => name === "sessions"));
   assert.deepEqual(after.filter(([name]) => name !== "sessions"), before.filter(([name]) => name !== "sessions"), "renewal cannot mutate Views, receipts, reservations, Workspace, messages or other domain state");
 });
+
+test("BRE-478 recovery and fresh save preserve every advanced definition facet", async () => {
+  const f = await fixture();
+  const client = createDatabaseClient(f.path);
+  const now = Date.parse("2026-11-11T00:00:00Z");
+  let laneId: string;
+  try {
+    laneId = (client.sqlite.query("SELECT id FROM organization_lanes WHERE workspace_id='owner' ORDER BY position LIMIT 1").get() as { id: string }).id;
+    client.sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run("facet", "owner", "Urgency", 0, JSON.stringify({ kind: "text", maxLength: 200 }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_workflow_states (id,workspace_id,name,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run("workflow", "owner", "Waiting", 0, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_context_types (workspace_id,id,name,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run("owner", "context-type", "Project", 0, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_context_relationship_types (workspace_id,id,context_type_id,name,inverse_name,direction,position,maximum_per_thread,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+      .run("owner", "relationship", "context-type", "concerns", "has work", "thread_to_context", 0, 10, 1, now, now);
+    client.sqlite.query("INSERT INTO organization_contexts (workspace_id,id,context_type_id,name,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run("owner", "context", "context-type", "Orca", 1, now, now);
+  } finally { client.sqlite.close(); }
+  const definition = {
+    revision: 1, accountIds: ["account"], laneIds: [laneId], facetFilters: [{ facetId: "facet", operator: "equals", value: "urgent" }],
+    contextFilters: [{ context: { contextTypeId: "context-type", contextId: "context" }, relationshipTypeId: "relationship", direction: "thread_to_context" }],
+    workflowStateIds: ["workflow"], humanSignal: { minimumScore: 3, maximumScore: 9, classifications: ["likely_human"], evidenceReasonCodes: ["direct_recipient"] },
+    sender: { addresses: ["human@example.com", "other@example.com"], domains: ["example.com"] },
+    date: { receivedAfter: "2026-01-01T00:00:00.000Z", receivedBefore: "2026-12-31T00:00:00.000Z" },
+    thread: { subjectContains: "Advanced", readState: "unread" },
+  };
+  const preparedResponse = await f.post("prepare", { kind: "typed_definition", source: { kind: "search", label: "Advanced source" }, identity: { name: "Advanced", description: "Complete definition", color: "#123456", position: 0 }, skipInbox: true, definition });
+  assert.equal(preparedResponse.status, 200, await preparedResponse.clone().text());
+  const prepared = await preparedResponse.json();
+  const command = { draft: prepared.draft, retryKey: "advanced-create", expectedRevisions: { workspace: prepared.workspaceRevision, view: null }, confirmedZeroMatchDigest: prepared.draft.definitionDigest };
+  const savedResponse = await f.post("commit", command);
+  assert.equal(savedResponse.status, 200, await savedResponse.clone().text());
+  const saved = await savedResponse.json();
+  assert.deepEqual(saved.view.definition, definition);
+  const noop = await f.prepare("", saved.view.id);
+  assert.equal((await f.post("commit", noop)).status, 400);
+  assert.equal((await status(f, noop)).outcome, "not_applied");
+  const newer = await changed(f, await f.prepare("", saved.view.id), (draft) => { draft.identity.name = "Newer user edits preserved"; });
+  const updatedResponse = await f.post("commit", newer);
+  assert.equal(updatedResponse.status, 200, await updatedResponse.clone().text());
+  const updated = await updatedResponse.json();
+  assert.equal(updated.view.name, "Newer user edits preserved");
+  assert.deepEqual(updated.view.definition, definition);
+  assert.equal((await f.post("commit", noop)).status, 409, "old original stays fenced after fresh save");
+});
