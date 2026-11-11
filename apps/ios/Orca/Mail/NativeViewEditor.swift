@@ -6,6 +6,7 @@ struct NativeViewEditor: View {
     @EnvironmentObject private var mailboxes: MailboxViews
     @Environment(\.dismiss) private var dismiss
     let selection: NativeViewSelection
+    var onSaved: (() -> Void)? = nil
     @StateObject private var model = NativeViewEditorController()
     @State private var leave = false
     var body: some View {
@@ -14,6 +15,9 @@ struct NativeViewEditor: View {
                 Section("Scope") {
                     Text(state.accounts.first { $0.id == selection.accountId }?.email ?? "Account unavailable")
                     Text("A saved view groups mail. Preview creates nothing. Saving does not grant notifications or move mail.").font(.subheadline)
+                    if let references = selection.senderReferences {
+                        Text("Uses the actual senders of \(references.count) selected message(s), in this account only. Your conversation importance and sender importance preferences are separate.").font(.subheadline)
+                    }
                     if model.draft?["skipInbox"].flag == true {
                         Text("This existing advanced view skips Inbox. Its saved routing behavior is preserved; this editor does not change that policy.").font(.subheadline)
                     }
@@ -37,9 +41,15 @@ struct NativeViewEditor: View {
                             if model.replaceSearch { TextField("Subject contains", text: $model.subject).accessibilityIdentifier("view-editor.subject") }
                             Text("Only this explicit replacement enables Save. Cancel returns to your unchanged search.").font(.caption)
                         }
+                        if selection.senderReferences != nil {
+                            Toggle("Refine with subject contains", isOn: $model.replaceSearch)
+                                .accessibilityIdentifier("view-editor.refine-subject")
+                            if model.replaceSearch { TextField("Subject contains", text: $model.subject).accessibilityIdentifier("view-editor.subject") }
+                            Text("This changes only the subject filter you explicitly review. Other sender, account and advanced filters remain in the prepared definition.").font(.caption)
+                        }
                         DisclosureGroup("Retained filters") {
                             Text(model.draft?["summary"]["text"].text ?? "The complete prepared definition is retained.")
-                            Text("Advanced filters, account scope, ordering and policy are preserved. Use web Organization for other filter or policy changes.").font(.caption)
+                            Text("Advanced filters, account scope, ordering and policy are preserved. This editor exposes only the supported choices shown here.").font(.caption)
                         }
                         Button("Preview matching mail") { Task { await model.review() } }.disabled(model.pendingTarget != nil || model.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .accessibilityIdentifier("view-editor.preview")
@@ -52,6 +62,8 @@ struct NativeViewEditor: View {
                         if case .array(let items) = preview["results"]["items"] {
                             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                                 VStack(alignment: .leading) { Text(item["subject"].text ?? "(No subject)"); Text(item["accountEmail"].text ?? "").font(.caption) }
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityIdentifier("view-editor.preview-row." + (item["threadId"].text ?? "unavailable"))
                             }
                         }
                         if !preview["draft"]["saveEligibility"]["allowed"].flag { Text(preview["draft"]["saveEligibility"]["detail"].text ?? "Resolve unsupported criteria before saving.") }
@@ -62,7 +74,7 @@ struct NativeViewEditor: View {
                 if model.busy { ProgressView("Working…") }
                 if let error = model.error { Text(error).foregroundStyle(OrcaTheme.danger) }
             }.disabled(model.busy)
-                .navigationTitle(selection.viewId == nil ? "Save search as View" : "Edit View").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle(selection.senderReferences != nil ? "Use sender in View" : (selection.viewId == nil ? "Save search as View" : "Edit View")).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { if model.changed { leave = true } else { dismiss() } }.disabled(model.busy) } }
                 .interactiveDismissDisabled(model.changed || model.busy)
                 .confirmationDialog("Discard view edits?", isPresented: $leave, titleVisibility: .visible) {
@@ -84,6 +96,7 @@ struct NativeViewEditor: View {
             await mailboxes.load(state: state)
             guard model.canFinishPresentation, owner == state.ownerScope, state.selectedAccount?.id == selection.accountId, state.phase == .ready, state.accounts.contains(where: { $0.id == selection.accountId }) else { return }
             mailboxes.setEnabled("view:" + id, true); mailboxes.selectedID = "view:" + id
+            onSaved?()
             dismiss()
         }
     }

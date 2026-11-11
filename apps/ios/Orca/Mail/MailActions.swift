@@ -26,13 +26,8 @@ struct MailActionsSheet: View {
     let onChanged: () async -> Void
     @State private var catalog: MailActionJSON?
     @State private var routing: MailActionJSON?
-    @State private var savedViews: [SavedMailboxView] = []
     @State private var destination = ""
     @State private var senderScope = false
-    @State private var viewID = ""
-    @State private var name = ""
-    @StateObject private var viewCommand = LegacySenderViewCommand()
-    private var preview: MailActionJSON? { viewCommand.preview }
     @State private var busy = false
     @State private var loading = true
     @State private var presented = true
@@ -43,6 +38,12 @@ struct MailActionsSheet: View {
     private var current: Bool { presented && scope == state.ownerScope && state.phase == .ready && !Task.isCancelled }
 
     var body: some View {
+        Group {
+            if target.mode == .view { NativeSenderViewChooser(target: target) }
+            else { moveBody }
+        }
+    }
+    private var moveBody: some View {
         NavigationStack {
             Form {
                 Section {
@@ -73,33 +74,6 @@ struct MailActionsSheet: View {
                         Button(senderScope ? "Move sender’s mail" : "Move conversation") { Task { await move() } }
                             .disabled(busy || destination.isEmpty || routing == nil)
                             .accessibilityIdentifier("mail-action.move")
-                    }
-                } else if let preview {
-                    Section("Review sender rule") {
-                        Text(preview["draft"]["summary"]["text"].text ?? "Sender-based View")
-                        Text("\(preview["results"]["count"]["value"].integer ?? 0) matching conversations shown")
-                        Text(preview["draft"]["skipInbox"].flag
-                             ? "This View skips Inbox. Newly matching mail may leave Inbox, but remains in All Mail. Explicit conversation routing is preserved."
-                             : "Your Inbox and Focus routing will not change.").font(.caption).foregroundStyle(.secondary)
-                        if case .array(let notices) = preview["draft"]["preparationNotices"] {
-                            ForEach(Array(notices.enumerated()), id: \.offset) { _, notice in Text(notice["detail"].text ?? "").font(.caption) }
-                        }
-                        if !preview["draft"]["saveEligibility"]["allowed"].flag { Text(preview["draft"]["saveEligibility"]["detail"].text ?? "This View cannot be saved.") }
-                        Button(preview["results"]["state"].text == "zero" ? "Save empty View" : "Save View") { Task { await saveView() } }
-                            .disabled(busy || !preview["draft"]["saveEligibility"]["allowed"].flag)
-                            .accessibilityIdentifier("mail-action.save-view")
-                        Button("Edit choices") { viewCommand.editChoices() }.disabled(busy)
-                    }
-                } else {
-                    Section("View") {
-                        Picker("Use sender in", selection: $viewID) {
-                            Text("New View").tag("")
-                            ForEach(savedViews) { Text($0.name).tag($0.id) }
-                        }.accessibilityIdentifier("mail-action.view")
-                        if viewID.isEmpty { TextField("View name", text: $name).accessibilityIdentifier("mail-action.name") }
-                        Button("Preview View") { Task { await prepareView() } }
-                            .disabled(busy || (viewID.isEmpty && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
-                            .accessibilityIdentifier("mail-action.preview")
                     }
                 }
                 if busy || loading { ProgressView("Working…") }
@@ -139,10 +113,6 @@ struct MailActionsSheet: View {
                 guard current else { return }
                 self.catalog = catalog; self.routing = routing
                 destination = routing["selection"]["effective"]["destinationId"].text ?? catalog["legacyDestinationIds"]["normal"].text ?? ""
-            } else {
-                let views = try await client.mailboxViews()
-                guard current else { return }
-                savedViews = views.items; name = String((message.from.name ?? message.from.email).prefix(120))
             }
         } catch { if current { self.error = error.localizedDescription } }
     }
@@ -160,25 +130,79 @@ struct MailActionsSheet: View {
         } catch { if current { self.error = error.localizedDescription } }
     }
 
-    private func prepareView() async {
-        guard current, let client = state.client else { return }
-        busy = true; error = nil; defer { busy = false }
-        do {
-            try await viewCommand.prepare(message: message, savedViews: savedViews, viewID: viewID, name: name, client: client, current: { current })
-        } catch { if current { self.error = error.localizedDescription } }
-    }
-
-    private func saveView() async {
-        guard current, let client = state.client, preview != nil else { return }
-        busy = true; error = nil; defer { busy = false }
-        do {
-            guard let result = try await viewCommand.commit(client: client, current: { current }) else { return }
-            guard current else { return }
-            await mailboxes.load(state: state)
-            guard current else { return }
-            if let id = result["view"]["id"].text { mailboxes.setEnabled("view:" + id, true); mailboxes.selectedID = "view:" + id }
-            dismiss()
-        } catch { if current { self.error = error.localizedDescription } }
-    }
 }
 
+/// Chooses only the source/target. All preview, refinement, Save and recovery
+/// use the same durable editor as search and existing saved Views.
+private struct NativeSenderViewChooser: View {
+    @EnvironmentObject private var state: AppState
+    @Environment(\.dismiss) private var dismiss
+    let target: MailActionTarget
+    @State private var message: InboxMessage?
+    @State private var views = [SavedMailboxView]()
+    @State private var targetID = ""
+    @State private var name = ""
+    @State private var selection: NativeViewSelection?
+    @State private var loading = false
+    @State private var error: String?
+    @State private var presented = true
+    var body: some View {
+        NavigationStack {
+            Form {
+                if let message {
+                    Section("Selected sender") {
+                        Text(message.from.name ?? message.from.email).font(.headline)
+                        Text(message.from.email).textSelection(.enabled)
+                        Text(state.accounts.first(where: { $0.id == message.accountId })?.email ?? "Account unavailable")
+                        Text("Preview existing and future mail from this sender in this account. This does not change conversation importance or move this conversation.").font(.subheadline)
+                    }
+                    Section("View") {
+                        Picker("Use sender in", selection: $targetID) {
+                            Text("New View").tag("")
+                            ForEach(views) { Text($0.name).tag($0.id) }
+                        }.accessibilityIdentifier("mail-action.view")
+                        if targetID.isEmpty { TextField("View name", text: $name).accessibilityIdentifier("mail-action.name") }
+                        Button("Review and refine View") {
+                            selection = .init(viewId: targetID.isEmpty ? nil : targetID, accountId: message.accountId,
+                                              senderReferences: [.init(accountId: message.accountId, threadId: message.threadId, messageId: message.id)],
+                                              suggestedName: name.trimmingCharacters(in: .whitespacesAndNewlines))
+                        }.disabled(targetID.isEmpty && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityIdentifier("mail-action.preview")
+                    }
+                }
+                if loading { ProgressView("Loading selected mail…") }
+                if let error { Text(error).foregroundStyle(OrcaTheme.danger); Button("Try again") { Task { await load() } } }
+            }.disabled(loading)
+                .navigationTitle("Use sender in View").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { presented = false; dismiss() } } }
+                .sheet(item: $selection) { selection in
+                    NativeViewEditor(selection: selection, onSaved: { presented = false; dismiss() })
+                }
+                .task { presented = true; await load() }
+                .onDisappear { presented = false }
+                .onChange(of: state.ownerScope) { presented = false; dismiss() }
+                .onChange(of: state.selectedAccountID) { presented = false; dismiss() }
+        }
+    }
+    private func load() async {
+        guard !loading else { return }
+        guard let client = state.client, !state.demoMode else { error = "Connect an account to organize mail."; return }
+        let owner = state.ownerScope, account = target.message.accountId
+        func current() -> Bool { presented && !Task.isCancelled && state.phase == .ready && state.ownerScope == owner && state.client === client && state.selectedAccount?.id == account }
+        guard current() else { return }; loading = true; error = nil
+        defer { loading = false }
+        do {
+            var selected = target.message
+            if target.resolveMessage {
+                let detail = try await client.thread(selected.threadId, accountId: account)
+                guard current() else { return }
+                guard detail.account.id == account, detail.thread.id == selected.threadId,
+                      let latest = detail.messages.max(by: { $0.receivedAt < $1.receivedAt }), latest.accountId == account else { throw APIClient.ClientError.invalidResponse }
+                selected = InboxMessage(id: latest.id, accountId: latest.accountId, provider: latest.provider, providerMessageId: latest.providerMessageId, threadId: detail.thread.id, from: latest.from, subject: latest.subject, snippet: latest.snippet, receivedAt: latest.receivedAt, unread: latest.unread, labels: latest.labels, attentionBehavior: detail.thread.attention.attentionBehavior ?? "normal")
+            }
+            let catalog = try await client.mailboxViews()
+            guard current() else { return }
+            message = selected; views = catalog.items; name = String((selected.from.name ?? selected.from.email).prefix(120))
+        } catch { if current() { self.error = error.localizedDescription } }
+    }
+}

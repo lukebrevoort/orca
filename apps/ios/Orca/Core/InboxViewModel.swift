@@ -9,13 +9,27 @@ import SwiftUI
     private var requestGeneration = UUID()
     private var activeKey: String?
     private var globalSearchOwnerKey: String?
+    private var primarySubmittedQuery = ""
+    private var primaryMailboxView: String?
     enum PrimaryMailEvent { case submit, refresh, page }
-    // Behavior-preserving extraction of InboxView's handlers for an executable
-    // baseline. The event is explicit; editable-query behavior is not fixed yet.
+    // Only explicit Submit or a mailbox/clear action changes this query.
+    // Every background/read/foreground/page refresh retains that owned intent.
     func loadPrimaryMail(state: AppState, mailboxView: String, event: PrimaryMailEvent) async {
-        if event != .page { view = search.isEmpty ? mailboxView : "all" }
-        await load(state: state, reset: event != .page)
+        guard event != .page || primaryMailboxView == mailboxView else { return }
+        if let previous = primaryMailboxView, previous != mailboxView, event != .submit {
+            primarySubmittedQuery = ""; search = ""
+        }
+        primaryMailboxView = mailboxView
+        if event == .submit { primarySubmittedQuery = search }
+        if primarySubmittedQuery.isEmpty, mailboxView.hasPrefix("view:") {
+            // SavedMailboxResults owns this surface's typed View endpoint.
+            // Never pass a saved-View identifier as an invented inbox lens.
+            invalidate(); primaryMailboxView = mailboxView; view = mailboxView; return
+        }
+        if event != .page { view = primarySubmittedQuery.isEmpty ? mailboxView : "all" }
+        await load(state: state, reset: event != .page, submittedSearch: primarySubmittedQuery)
     }
+    func clearPrimaryMailSearch() { primarySubmittedQuery = ""; search = "" }
     static func globalSearchRefreshIdentity(state: AppState) -> String { "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(state.mailboxReadRevision)" }
     func openGlobalSearch(state: AppState) async -> Bool {
         let ownerKey = "\(state.ownerScope)|\(state.selectedAccountID ?? "")"
@@ -25,7 +39,7 @@ import SwiftUI
         // Refresh the submitted result set, keeping unfinished query text intact.
         await load(state: state, submittedSearch: resultSearch); return false
     }
-    func invalidate() { requestGeneration = UUID(); activeKey = nil; messages = []; nextCursor = nil; isLoading = false; error = nil; resultSearch = "" }
+    func invalidate() { requestGeneration = UUID(); activeKey = nil; messages = []; nextCursor = nil; isLoading = false; error = nil; resultSearch = ""; primarySubmittedQuery = ""; primaryMailboxView = nil }
     func load(state: AppState, reset: Bool = true, submittedSearch: String? = nil) async {
         guard let account = state.selectedAccount else { invalidate(); error = "No connected mailbox. Open Settings to review accounts."; return }
         guard reset || (!isLoading && nextCursor != nil) else { return }

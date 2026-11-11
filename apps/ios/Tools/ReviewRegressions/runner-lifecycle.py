@@ -31,7 +31,7 @@ if tool == 'xcodebuild':
     adoption = any(x.startswith('test48') for x in names) or (full and not any('test48' in x for x in skip))
     legacy = full or any(x.startswith(('test03','test06')) for x in names)
     failed = legacy and s['installation'] in s['adopted']
-    s['calls'].append({'bundle':pathlib.Path(bundle).name,'installation':s['installation'],'legacy':legacy,'adoption':adoption,'contaminated':failed})
+    s['calls'].append({'bundle':pathlib.Path(bundle).name,'installation':s['installation'],'legacy':legacy,'adoption':adoption,'contaminated':failed,'selectedCases':names})
     if adoption: s['adopted'].append(s['installation'])
 p.write_text(json.dumps(s)); sys.exit(65 if failed else 0)
 ''')
@@ -52,6 +52,10 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
         state = json.loads((root/'state.json').read_text())
         dedicated = [c for c in state['calls'] if c['adoption'] and not c['legacy']]
         ok = run.returncode == 0 and not any(c['contaminated'] for c in state['calls']) and len(dedicated) == 2 and len({c['installation'] for c in dedicated}) == 2
+        if scope == 'mailbox':
+            normal = [c for c in state['calls'] if not c['adoption']]
+            needed = {'test10NativeLongPressMovesConversationAndBuildsSenderView', 'test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText', 'test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement'}
+            ok = ok and len(normal) == 2 and all(needed.issubset(c['selectedCases']) for c in normal)
         results.append({'scope':scope,'pass':ok,'exit':run.returncode,'calls':state['calls'],'output':run.stdout+run.stderr})
 print(json.dumps({'proof':'real runner phase code with synthetic Apple commands, not native runtime','results':results},indent=2))
 sys.exit(0 if all(r['pass'] for r in results) else 1)

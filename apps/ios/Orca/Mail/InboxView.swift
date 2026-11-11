@@ -17,7 +17,7 @@ struct InboxView: View {
             // inset that the List's native refresh control can scroll underneath.
             mailboxControls.fixedSize(horizontal: false, vertical: true)
             ZStack {
-                if let view = mailboxes.selectedView, model.search.isEmpty {
+                if let view = mailboxes.selectedView, model.resultSearch.isEmpty {
                     SavedMailboxResults(view: view) { item in
                         guard state.selectSavedViewThread(item) else { return }
                         savedThread = item
@@ -39,8 +39,8 @@ struct InboxView: View {
                                     }
                                 } else {
                                     VStack(spacing: 12) {
-                                        ContentUnavailableView(model.view == "important" && model.search.isEmpty ? "No important conversations" : "No matching mail", systemImage: "tray", description: Text(model.search.isEmpty ? "All Mail keeps Unreviewed and Not important conversations available. Use Importance to make a choice." : "No matches in All Mail. Your query is still here."))
-                                        Button("Open All Mail") { model.search = ""; mailboxes.selectedID = "all" }
+                                        ContentUnavailableView(model.view == "important" && model.resultSearch.isEmpty ? "No important conversations" : "No matching mail", systemImage: "tray", description: Text(model.resultSearch.isEmpty ? "All Mail keeps Unreviewed and Not important conversations available. Use Importance to make a choice." : "No matches in All Mail. Your query is still here."))
+                                        Button("Open All Mail") { model.clearPrimaryMailSearch(); mailboxes.selectedID = "all"; Task { await loadCurrent() } }
                                     }
                                 }
                             }
@@ -98,13 +98,14 @@ struct InboxView: View {
         .searchable(text: $model.search, prompt: "Search All Mail")
         .onChange(of: state.selectedAccountID) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
         .onChange(of: state.ownerScope) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
-        .onChange(of: model.search) { if model.search.isEmpty { Task { await loadCurrent() } } }
         .onSubmit(of: .search) { Task { await loadCurrent(event: .submit) } }
         .toolbar {
             ToolbarItem(placement: .principal) { OrcaWordmark().fixedSize() }
             ToolbarItem(placement: .topBarLeading) {
-                if !model.search.isEmpty, let account = state.selectedAccount {
-                    Button("Save search") { viewEditor = .init(query: model.search, accountId: account.id) }.accessibilityIdentifier("search.save-view")
+                if !model.resultSearch.isEmpty, let account = state.selectedAccount {
+                    Button("Save search") { viewEditor = .init(query: model.resultSearch, accountId: account.id) }
+                        .accessibilityHint("Save submitted search “\(model.resultSearch)”. Unsubmitted text is kept in Search.")
+                        .accessibilityIdentifier("search.save-view")
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -126,10 +127,10 @@ struct InboxView: View {
             MailActionsSheet(target: target) { await loadCurrent() }
         }
         .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(state.mailboxReadRevision)") {
-            if mailboxes.selectedView == nil || !model.search.isEmpty { await loadCurrent() }
+            if mailboxes.selectedView == nil || !model.resultSearch.isEmpty { await loadCurrent() }
         }
         .onChange(of: scenePhase) {
-            if scenePhase == .active, state.phase == .ready, mailboxes.selectedView == nil {
+            if scenePhase == .active, state.phase == .ready, mailboxes.selectedView == nil || !model.resultSearch.isEmpty {
                 Task { await loadCurrent() }
             }
         }
@@ -144,6 +145,11 @@ struct InboxView: View {
             HStack(spacing: 8) {
                 filter("Important", id: "important")
                 filter("All Mail", id: "all")
+            }
+            if !model.resultSearch.isEmpty {
+                Button { model.clearPrimaryMailSearch(); Task { await loadCurrent() } } label: {
+                    Text("Clear submitted search").frame(minHeight: 44).contentShape(Rectangle())
+                }.accessibilityIdentifier("mail.search.clear-submitted")
             }
             if let account = state.selectedAccount {
                 Menu {
@@ -184,7 +190,7 @@ struct InboxView: View {
                 .foregroundStyle(OrcaTheme.accent).accessibilityLabel("Choose visible views")
                 .accessibilityIdentifier("inbox.visible-views")
             }
-            if mailboxes.selectedView != nil { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
+            if mailboxes.selectedView != nil && model.resultSearch.isEmpty { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
         }.padding(.horizontal, 20).padding(.vertical, 4)
             .background(OrcaTheme.paper, ignoresSafeAreaEdges: [])
     }
@@ -198,7 +204,7 @@ struct InboxView: View {
         await model.loadPrimaryMail(state: state, mailboxView: mailboxes.selectedID, event: event)
     }
     private func filter(_ title: String, id: String) -> some View {
-        Button { model.search = ""; mailboxes.selectedID = id } label: {
+        Button { model.clearPrimaryMailSearch(); mailboxes.selectedID = id; Task { await loadCurrent() } } label: {
             HStack(spacing: 6) {
                 if mailboxes.selectedID == id { Image(systemName: "checkmark").accessibilityHidden(true) }
                 Text(title).fixedSize(horizontal: false, vertical: true)

@@ -17,6 +17,84 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        search(for: "Jordan", in: app)
+        let accepted = app.buttons["inbox.message.\(Fixture.searchResultMessageID)"]
+        XCTAssertTrue(accepted.waitForExistence(timeout: 10))
+        let field = app.searchFields["Search All Mail"]
+        field.tap()
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (field.value as? String ?? "").count))
+        let unfinished = "Unsubmitted native query"
+        field.typeText(unfinished)
+        XCTAssertEqual(field.value as? String, unfinished)
+        XCTAssertTrue(accepted.exists, "Editing B must retain accepted A before any Submit")
+        attachScreenshot(named: "bre457-primary-unsubmitted-before-reader")
+        accepted.tap()
+        XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+        navigateBack(in: app)
+        XCTAssertTrue(accepted.waitForExistence(timeout: 10), "The acknowledged read refresh still requests submitted A")
+        XCTAssertEqual(field.value as? String, unfinished, "Reader return preserves unfinished B")
+        XCTAssertTrue(app.staticTexts["Showing results for “Jordan”. Press Search to update."].exists)
+        attachScreenshot(named: "bre457-primary-submitted-after-read-refresh")
+        app.buttons["mail.search.clear-submitted"].tap()
+        XCTAssertTrue(app.buttons["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 10))
+        XCTAssertFalse(field.buttons["Clear text"].exists, "Explicit clear removes unfinished text as it restores the real mailbox")
+    }
+
+    func test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement() throws {
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
+            let viewName = "Native sender " + String(UUID().uuidString.prefix(8))
+            addTeardownBlock {
+                let catalog = try self.composeFixtureRequest("/v1/organization/views")
+                for view in (catalog["items"] as? [[String: Any]] ?? []).filter({ $0["name"] as? String == viewName }) {
+                    let id = try XCTUnwrap(view["id"] as? String), revision = try XCTUnwrap(view["revision"] as? Int)
+                    let current = try self.composeFixtureRequest("/v1/organization/views")
+                    let workspace = try XCTUnwrap(current["workspaceRevision"] as? Int)
+                    _ = try self.composeFixtureRequest("/v1/organization/views/\(id)?expectedRevision=\(revision)&expectedWorkspaceRevision=\(workspace)&idempotencyKey=\(UUID().uuidString)", method: "DELETE")
+                }
+            }
+            let before = try composeFixtureRequest("/v1/organization/views")
+            let providerBefore = try composeFixtureRequest("/__fixture/compose/state")
+            let app = try launchApp(contentSize: size); assertInboxLoaded(in: app)
+            let row = app.buttons["inbox.message.\(Fixture.inboxMessageID)"]
+            XCTAssertTrue(row.waitForExistence(timeout: 10)); row.press(forDuration: 1.4)
+            app.buttons["Use sender in View…"].tap()
+            let name = app.textFields["mail-action.name"]
+            XCTAssertTrue(name.waitForExistence(timeout: 10)); name.tap()
+            name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (name.value as? String ?? "").count)); name.typeText(viewName)
+            app.buttons["mail-action.preview"].tap()
+            let refine = app.switches["view-editor.refine-subject"]
+            XCTAssertTrue(refine.waitForExistence(timeout: 10)); refine.tap()
+            let subject = app.textFields["view-editor.subject"]
+            XCTAssertTrue(subject.exists); subject.tap(); subject.typeText("A quieter")
+            let preview = app.buttons["view-editor.preview"]
+            for _ in 0..<8 { if preview.isHittable { break }; app.swipeUp() }
+            XCTAssertTrue(preview.isHittable); preview.tap()
+            let matching = app.descendants(matching: .any)["view-editor.preview-row.ios-fixture-thread-1"]
+            XCTAssertTrue(matching.waitForExistence(timeout: 10))
+            XCTAssertTrue(matching.label.contains(Fixture.inboxSubject), "Preview displays actual subject, not only a count")
+            let afterPreview = try composeFixtureRequest("/v1/organization/views")
+            XCTAssertEqual((afterPreview["items"] as? [[String: Any]])?.count, (before["items"] as? [[String: Any]])?.count, "Preview/refinement writes no View")
+            attachScreenshot(named: "bre457-native-sender-actual-preview-\(size)")
+            let save = app.buttons["view-editor.save"]
+            for _ in 0..<8 { if save.isHittable { break }; app.swipeUp() }
+            XCTAssertTrue(save.isHittable); save.tap()
+            XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-1"].waitForExistence(timeout: 10))
+            let saved = try composeFixtureRequest("/v1/organization/views")
+            let created = (saved["items"] as? [[String: Any]] ?? []).filter { $0["name"] as? String == viewName }
+            XCTAssertEqual(created.count, 1)
+            let definition = try XCTUnwrap(created.first?["definition"] as? [String: Any])
+            XCTAssertEqual((definition["thread"] as? [String: Any])?["subjectContains"] as? String, "A quieter")
+            XCTAssertEqual((definition["sender"] as? [String: Any])?["addresses"] as? [String], ["maya@example.com"])
+            let providerAfter = try composeFixtureRequest("/__fixture/compose/state")
+            XCTAssertEqual(providerAfter["sendRequests"] as? Int, providerBefore["sendRequests"] as? Int)
+            XCTAssertEqual(providerAfter["deliveries"] as? Int, providerBefore["deliveries"] as? Int)
+            attachScreenshot(named: "bre457-native-sender-refined-result-\(size)")
+            app.terminate()
+        }
+    }
+
     /// BRE-457 acceptance baseline. Runs against real native controls, never source text.
     func test44MailStartsImportantAndKeepsAllMailReachable() throws {
         let app = try launchApp(openInbox: false)
@@ -1430,9 +1508,12 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "14a-native-disabled-preview-and-name-focus")
         name.typeText(viewName)
         app.buttons["mail-action.preview"].tap()
-        XCTAssertTrue(app.buttons["mail-action.save-view"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["view-editor.preview"].waitForExistence(timeout: 10))
+        app.buttons["view-editor.preview"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["view-editor.preview-row.ios-fixture-thread-1"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["view-editor.save"].waitForExistence(timeout: 10))
         attachScreenshot(named: "14-native-sender-view-preview")
-        app.buttons["mail-action.save-view"].tap()
+        app.buttons["view-editor.save"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-1"].waitForExistence(timeout: 10))
         attachScreenshot(named: "15-native-created-view-result")
         chooseMailbox("Inbox", in: app)
@@ -1445,9 +1526,12 @@ final class OrcaUITests: XCTestCase {
         viewPicker.tap()
         app.buttons.matching(NSPredicate(format: "label CONTAINS %@", viewName)).firstMatch.tap()
         app.buttons["mail-action.preview"].tap()
-        XCTAssertTrue(app.buttons["mail-action.save-view"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["view-editor.preview"].waitForExistence(timeout: 10))
+        app.buttons["view-editor.preview"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["view-editor.preview-row.ios-fixture-thread-1"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["view-editor.save"].waitForExistence(timeout: 10))
         attachScreenshot(named: "16-native-existing-view-preview")
-        app.buttons["mail-action.save-view"].tap()
+        app.buttons["view-editor.save"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-1"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any)["view.thread.ios-fixture-thread-2"].waitForExistence(timeout: 10))
         attachScreenshot(named: "17-native-existing-view-result")
@@ -2147,12 +2231,11 @@ final class OrcaUITests: XCTestCase {
         let search = identified.exists ? identified : app.searchFields["Search All Mail"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.buttons["Clear text"].tap()
-        // Clearing triggers InboxView's empty-search reload immediately. iOS
-        // disables the keyboard Search key for an empty field, so submitting
-        // again is neither a valid user action nor required to restore mail.
-        // Accessibility can retain the clear control while SwiftUI processes
-        // the tap. Wait for the same required state instead of sampling once.
+        // Editing through empty does not replace the accepted result query.
+        // Use the real explicit clear action; iOS disables Search for empty text.
         XCTAssertTrue(search.buttons["Clear text"].waitForNonExistence(timeout: 5), "Clearing search must remove the clear control")
+        let clear = app.buttons["mail.search.clear-submitted"]
+        XCTAssertTrue(clear.waitForExistence(timeout: 5)); clear.tap()
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 10))
     }
 

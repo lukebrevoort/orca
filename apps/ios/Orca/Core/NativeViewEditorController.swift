@@ -1,41 +1,20 @@
 import Foundation
 import SwiftUI
 
+struct NativeSenderReference: Codable, Equatable {
+    var accountId: String; var threadId: String; var messageId: String
+}
 struct NativeViewSelection: Identifiable, Codable, Equatable {
     var viewId: String?; var query: String?; var accountId: String
-    var id: String { accountId + "|" + (viewId ?? "search|" + (query ?? "")) }
-}
-
-/// Exact legacy sender-sheet network state, extracted for a before-fix runtime
-/// baseline and used by MailActionsSheet. Deliberately adds no durable recovery.
-@MainActor final class LegacySenderViewCommand: ObservableObject {
-    @Published private(set) var preview: MailActionJSON?
-    private var retryKey = UUID().uuidString
-    func editChoices() { preview = nil }
-    func prepare(message: InboxMessage, savedViews: [SavedMailboxView], viewID: String, name: String,
-                 client: APIClient, current: () -> Bool) async throws {
-        guard current() else { return }
-        let existing = savedViews.first { $0.id == viewID }
-        var body: [String: MailActionJSON] = [
-            "kind": .string("selected_senders"), "skipInbox": .bool(false),
-            "source": .object(["kind": .string("sender_selection"), "label": .string("iOS mail long press")]),
-            "identity": .object(["name": .string(existing?.name ?? name.trimmingCharacters(in: .whitespacesAndNewlines))]),
-            "references": .array([.object(["accountId": .string(message.accountId), "threadId": .string(message.threadId), "messageId": .string(message.id)])])
-        ]
-        if let existing { body["targetView"] = .object(["id": .string(existing.id), "revision": .number(Double(existing.revision))]) }
-        let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(body))
-        guard current() else { return }
-        let input = prepared["draft"].keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
-        let result: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": input, "page": .object(["limit": .number(25)])]))
-        guard current() else { return }; preview = result; retryKey = UUID().uuidString
+    var senderReferences: [NativeSenderReference]? = nil
+    var suggestedName: String? = nil
+    var id: String {
+        accountId + "|" + (viewId ?? senderReferences.map { "senders|" + $0.map { $0.threadId + "|" + $0.messageId }.sorted().joined(separator: "|") } ?? "search|" + (query ?? ""))
     }
-    func commit(client: APIClient, current: () -> Bool) async throws -> MailActionJSON? {
-        guard current(), let preview else { return nil }
-        let result: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object([
-            "draft": preview["draft"], "expectedRevisions": .object(["workspace": preview["workspaceRevision"], "view": preview["draft"]["viewRevision"]]),
-            "retryKey": .string(retryKey), "confirmedZeroMatchDigest": preview["results"]["state"].text == "zero" ? preview["draft"]["definitionDigest"] : .null
-        ]))
-        guard current() else { return nil }; return result
+    // A chooser's suggested label is not the identity of a retained command.
+    // Reopening the same selected mail must restore its original journal/edits.
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.accountId == rhs.accountId && lhs.viewId == rhs.viewId && lhs.query == rhs.query && lhs.senderReferences == rhs.senderReferences
     }
 }
 
@@ -141,7 +120,25 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     }
     private func prepare(client: APIClient, selection: NativeViewSelection, adoptedId: String?) async throws -> MailActionJSON {
         let body: MailActionJSON
-        if let id = adoptedId ?? selection.viewId { body = .object(["kind": .string("saved_view"), "viewId": .string(id)]) }
+        if let id = adoptedId { body = .object(["kind": .string("saved_view"), "viewId": .string(id)]) }
+        else if let references = selection.senderReferences {
+            guard !references.isEmpty, references.allSatisfy({ $0.accountId == selection.accountId }) else { throw APIClient.ClientError.invalidResponse }
+            var fields: [String: MailActionJSON] = [
+                "kind": .string("selected_senders"), "skipInbox": .bool(false),
+                "source": .object(["kind": .string("sender_selection"), "label": .string("Native selected mail")]),
+                "identity": .object(["name": .string(selection.suggestedName ?? "Sender View")]),
+                "references": .array(references.map { .object(["accountId": .string($0.accountId), "threadId": .string($0.threadId), "messageId": .string($0.messageId)]) })
+            ]
+            if let id = selection.viewId {
+                let request = generation
+                let currentView: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("saved_view"), "viewId": .string(id)]))
+                guard await currentClient(request), let state, validPrepared(currentView, context: selection, adoptedId: id, state: state),
+                      let revision = currentView["draft"]["viewRevision"].integer else { throw APIClient.ClientError.invalidResponse }
+                fields["targetView"] = .object(["id": .string(id), "revision": .number(Double(revision))])
+            }
+            body = .object(fields)
+        }
+        else if let id = selection.viewId { body = .object(["kind": .string("saved_view"), "viewId": .string(id)]) }
         else {
             let query = selection.query?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             body = .object([
@@ -178,7 +175,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         let request = generation, reviewedEdits = edits; busy = true; error = nil; defer { if request == generation { busy = false } }
         var input = draft.keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
         input = input.setting("identity", to: draft["identity"].setting("name", to: .string(name.trimmingCharacters(in: .whitespacesAndNewlines))).setting("description", to: .string(description)))
-        if selection.query != nil && replaceSearch && !subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if (selection.query != nil || selection.senderReferences != nil) && replaceSearch && !subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             input = input.setting("definition", to: draft["definition"].setting("thread", to: draft["definition"]["thread"].setting("subjectContains", to: .string(subject.trimmingCharacters(in: .whitespacesAndNewlines)))))
                 .setting("unsupportedClauses", to: .array([]))
         }
