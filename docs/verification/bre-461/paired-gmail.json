@@ -1,0 +1,1530 @@
+{
+  "baseline": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+  "candidate": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+  "runtime": "1.3.14",
+  "productionSyncSha256": "f8019a80ea2589b40f39ec20b6622b29b091efa9ae42a1ad75d6a0fcc364d779",
+  "scope": "Actual production persistGmailMessages + normalization, synthetic same-thread messages, changed normal-label sets force wholesale refresh; no network/provider; fresh Bun subprocess per paired sample",
+  "rss": "actual before/after process RSS bytes, not per-phase peak",
+  "sources": [
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "sql": [
+        {
+          "path": "apps/api/drizzle/0000_melted_fenris.sql",
+          "sha256": "f144a68a1394284c33d61cd11896ff3ba41013fe9c9c18bbea6a1e7bdc84c4e3"
+        },
+        {
+          "path": "apps/api/drizzle/0001_legal_tempest.sql",
+          "sha256": "7ea3b9241dbc98636b687fda24aec4069023935c9f322bb8030ffbb885eb994b"
+        },
+        {
+          "path": "apps/api/drizzle/0002_overjoyed_lockjaw.sql",
+          "sha256": "f62680fb39a58c35e855f8e098217268b3f9d1b6a43d5bc03688d7fcb37e308f"
+        },
+        {
+          "path": "apps/api/drizzle/0003_google_login.sql",
+          "sha256": "39c5b7074cdbea204f2167739609622ecfa502d27ed800bcc4217efadba03421"
+        },
+        {
+          "path": "apps/api/drizzle/0004_sender_attention_preferences.sql",
+          "sha256": "c15ed8525dfcf0e3344340106f8c3ba32e999346a4e0a60ff3f1a15814001f71"
+        },
+        {
+          "path": "apps/api/drizzle/0005_hard_ted_forrester.sql",
+          "sha256": "85c816cc93bd2f6873b23556d1e64b74e6dc3403f012fd4593b5fb179b39e1ac"
+        },
+        {
+          "path": "apps/api/drizzle/0006_yellow_pete_wisdom.sql",
+          "sha256": "0c370a0f02e41e88c3abd01ca612972c3a7b8739fcb2f15073501beab84e6129"
+        },
+        {
+          "path": "apps/api/drizzle/0007_additive_collections_and_pins.sql",
+          "sha256": "be104911938c457113c3b572dbfb6b411becb67d28979e960cd42cc62dfecdb0"
+        },
+        {
+          "path": "apps/api/drizzle/0008_thread_reminders.sql",
+          "sha256": "91056093081c5e24c294839362ddc99de3f328da5e53edf4bd023e0267550240"
+        },
+        {
+          "path": "apps/api/drizzle/0009_gmail_label_migration.sql",
+          "sha256": "0c185418ba4aee94a40391c641e78b5f747c2536fb9dcb85a824cfc8fb8b92f9"
+        },
+        {
+          "path": "apps/api/drizzle/0010_tearful_randall_flagg.sql",
+          "sha256": "3e14667c6e14e75b66afcb189e9374e88686a64fabc19b499f72e569c08de4f4"
+        },
+        {
+          "path": "apps/api/drizzle/0011_unified_settings.sql",
+          "sha256": "ecb2efb63f6f14207de0d32124ad79a57840fd7a72bc40a6d4e641ac9bc10eb2"
+        },
+        {
+          "path": "apps/api/drizzle/0012_durable_draft_provider_sync.sql",
+          "sha256": "b40f491c0f2a99c15e2dd89494edd0f1a8ab14143da13e9f310c6a0e7e9cf303"
+        },
+        {
+          "path": "apps/api/drizzle/0013_reply_threading_headers.sql",
+          "sha256": "e73a184c8d6ec9d846eda8753e2dc104fca7d38e95f28428c3441e7739f8bf89"
+        },
+        {
+          "path": "apps/api/drizzle/0014_persistent_onboarding.sql",
+          "sha256": "d2cba4d2d0c2ee3e20829c41a9564de5a66970bd9f87a9c300085405f3b0e164"
+        },
+        {
+          "path": "apps/api/drizzle/0015_human_classification.sql",
+          "sha256": "b4baf00aed396b90e37335f64c7658f4a7b4bbba728a528cfc45701aca01f98e"
+        },
+        {
+          "path": "apps/api/drizzle/0016_human_classification_overrides.sql",
+          "sha256": "1e507b54ceba05a69c1b4e76da6da650d9ed1e54a6b080993e88e196ddf7568d"
+        },
+        {
+          "path": "apps/api/drizzle/0017_pin_appearance.sql",
+          "sha256": "b31a3f3e432ba8c9c9750e8a87fc2d4b7ec26a37082cebd774e0e94eb28fecd2"
+        },
+        {
+          "path": "apps/api/drizzle/0018_gmail_push_notifications.sql",
+          "sha256": "ef6fd6a2811488165436394e8e832c80c01f053f3331f820ecd4b255e7d7f195"
+        },
+        {
+          "path": "apps/api/drizzle/0019_provider_profile_images.sql",
+          "sha256": "51cec388ff96010ce7693fafd93dd3046747d3a316853844dc256312ec0d2e71"
+        },
+        {
+          "path": "apps/api/drizzle/0020_mcp_oauth.sql",
+          "sha256": "55c5a1fda875279862ba1b50f745a345a22710ca77f4f9d51dfcabf4de098591"
+        },
+        {
+          "path": "apps/api/drizzle/0021_calendar_availability.sql",
+          "sha256": "936e040812641b393864e65038947535a491634e027ecda342d1b8a4203d8067"
+        },
+        {
+          "path": "apps/api/drizzle/0022_agent_propagation_contract.sql",
+          "sha256": "af948de7a324d0abf5ab019f5531c697d0da04633c2e8b95cd2ef465ef6730dc"
+        },
+        {
+          "path": "apps/api/drizzle/0023_typed_facets_workflow.sql",
+          "sha256": "daf41eb857d8fe769680d18b0d1b60f2423b4db45749018d3ecc4c006f6b1275"
+        },
+        {
+          "path": "apps/api/drizzle/0024_organization_collections_pins.sql",
+          "sha256": "12514aeeb4b9bc373b40ef5c6ceb6b57e2d3c2bc722cd37cd5a862236294af48"
+        },
+        {
+          "path": "apps/api/drizzle/0025_organization_context_relationships.sql",
+          "sha256": "ffb92d892564c285403f0adeafee50811c9550d61119cbcd14fbd023d45fab80"
+        },
+        {
+          "path": "apps/api/drizzle/0026_organization_lanes.sql",
+          "sha256": "cca641337482ba4c57e2f632230d93f7ff05c47efa12f1f5a7d2edf874704ae9"
+        },
+        {
+          "path": "apps/api/drizzle/0027_organization_live_views.sql",
+          "sha256": "1f1dc588fca4514f92f438aa85e61d1f767ea5f17c6b6a8944e84b8edc5e840d"
+        },
+        {
+          "path": "apps/api/drizzle/0028_orca_rule_revisions.sql",
+          "sha256": "cea5e473dfc01872286fe90c4a0da46228cc42dc639c61cd57f41703ce0c20e5"
+        },
+        {
+          "path": "apps/api/drizzle/0029_orca_rule_evaluations.sql",
+          "sha256": "1d93c6cea224f6048553f51abd3e3cc5fb9283b8af9db7bdc6671cb80d7f1a0c"
+        },
+        {
+          "path": "apps/api/drizzle/0030_rule_set_ordering.sql",
+          "sha256": "22f4eda170b4e6ba4913c7164a60c41e7996e14000a189ef8b54e5d26cdc4b4a"
+        },
+        {
+          "path": "apps/api/drizzle/0031_rule_compilation_workspace.sql",
+          "sha256": "7750002fa43ffc59746f14e97ea864d07f4834cbe364950b76130dc53ec2864e"
+        },
+        {
+          "path": "apps/api/drizzle/0032_rule_simulation_change_sets.sql",
+          "sha256": "7037f1558ca897f4976d0a4ea3e55a43c7887e66a215d63e11fe299ad82bd685"
+        },
+        {
+          "path": "apps/api/drizzle/0033_g2_authority_concurrency.sql",
+          "sha256": "adc3593dd95dbedf568d499be5e8c2226a1f2275794593ac7b7edb603b4b2fbb"
+        },
+        {
+          "path": "apps/api/drizzle/0034_user_correction_receipts.sql",
+          "sha256": "56904d139cd598ecfc4c9277c1205fce4f9351b9f25fb8efd0d64e6d8db6bbee"
+        },
+        {
+          "path": "apps/api/drizzle/0035_bounded_mailbox_reads.sql",
+          "sha256": "e594d382b304efcff1d5596fa9f7fe45e327b230bc1c9239a239d7e411d627c9"
+        },
+        {
+          "path": "apps/api/drizzle/0036_mailbox_revision_root.sql",
+          "sha256": "23559907a72478b22cb011c894655794e00ccb2fb02d3cce942c4dd5977f0101"
+        },
+        {
+          "path": "apps/api/drizzle/0037_gmail_sync_coordinator.sql",
+          "sha256": "ae8b93007daf1421db98729ad65573b6eada0479fe17fc2cf18b5514267c9a14"
+        },
+        {
+          "path": "apps/api/drizzle/0038_first_view_guidance.sql",
+          "sha256": "155625a29571e85eeb85a66856f155963ead6e4b2fdb082cfbb3b0d1e585f11e"
+        },
+        {
+          "path": "apps/api/drizzle/0039_classifier_lookup_index.sql",
+          "sha256": "befc4d5100ac850a523a11c78f331bc6461d883bdff157d5b466422f96810c69"
+        },
+        {
+          "path": "apps/api/drizzle/0040_attention_preferences.sql",
+          "sha256": "7f7b3aaaa9d7a00d02aeb33b2c1f2a11174de71449fd6b2aac8db8d949515961"
+        },
+        {
+          "path": "apps/api/drizzle/0041_attention_routing.sql",
+          "sha256": "5a5dad2e4e561045b85348275dce3a1ef9b9832a0131283902d5c6bee1756896"
+        },
+        {
+          "path": "apps/api/drizzle/0042_custom_destinations.sql",
+          "sha256": "87ceab8c8bf94d65111d84accf9bfc16ac9ecc47d01de1bb24d957d076076b0c"
+        },
+        {
+          "path": "apps/api/drizzle/0043_destination_latest_index.sql",
+          "sha256": "340d92279f684180ef3be71211e42cc76790fc12de8a5cbd30257895d31a5549"
+        },
+        {
+          "path": "apps/api/drizzle/0044_destination_colors.sql",
+          "sha256": "faff1ef944da034a6634a79d142458ec8dac6a22def2c6d7e1a10086c072a36d"
+        },
+        {
+          "path": "apps/api/drizzle/0045_view_inbox_policy.sql",
+          "sha256": "438e11cff33caa1f7871f8c8ac812a1940a9e1504943313900e148c308401f93"
+        },
+        {
+          "path": "apps/api/drizzle/0046_mobile_auth.sql",
+          "sha256": "0f6251aa511046c73ffd65f4aabb6b0f798fdd8163e6fbe809b4afda4c84bec0"
+        },
+        {
+          "path": "apps/api/drizzle/0047_mobile_push.sql",
+          "sha256": "9a2762cb6d6aeb7428f5337f9a58347ed08e038071e620ac490985ed14dc23e6"
+        },
+        {
+          "path": "apps/api/drizzle/0048_mobile_push_commit_order.sql",
+          "sha256": "7902a2364989a7dcf46a5d823473b83631d32f362f832d29870ecfdaaf6e1050"
+        },
+        {
+          "path": "apps/api/drizzle/0049_mobile_push_destinations.sql",
+          "sha256": "921a14494e8c2487e69b7778eef74bf36aedc35b730b81168061d61b873f736a"
+        },
+        {
+          "path": "apps/api/drizzle/0050_mail_oauth_transactions.sql",
+          "sha256": "47173b0fd4b6d152f0bf62dc9a8a49222f5f5c8b0eeb0a6e883859e06c052226"
+        },
+        {
+          "path": "apps/api/drizzle/0051_focus_is_attention.sql",
+          "sha256": "4e5ee9117686a4156a975cb22ca78337aa55df49c9c889aa5b15b23f72b0405c"
+        },
+        {
+          "path": "apps/api/drizzle/0052_durable_importance.sql",
+          "sha256": "9eaff2d0a9c8ffcc6973ff5d28b075acf515382f4ecbf5e2f33fe5ff0e967957"
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "sql": [
+        {
+          "path": "apps/api/drizzle/0000_melted_fenris.sql",
+          "sha256": "f144a68a1394284c33d61cd11896ff3ba41013fe9c9c18bbea6a1e7bdc84c4e3"
+        },
+        {
+          "path": "apps/api/drizzle/0001_legal_tempest.sql",
+          "sha256": "7ea3b9241dbc98636b687fda24aec4069023935c9f322bb8030ffbb885eb994b"
+        },
+        {
+          "path": "apps/api/drizzle/0002_overjoyed_lockjaw.sql",
+          "sha256": "f62680fb39a58c35e855f8e098217268b3f9d1b6a43d5bc03688d7fcb37e308f"
+        },
+        {
+          "path": "apps/api/drizzle/0003_google_login.sql",
+          "sha256": "39c5b7074cdbea204f2167739609622ecfa502d27ed800bcc4217efadba03421"
+        },
+        {
+          "path": "apps/api/drizzle/0004_sender_attention_preferences.sql",
+          "sha256": "c15ed8525dfcf0e3344340106f8c3ba32e999346a4e0a60ff3f1a15814001f71"
+        },
+        {
+          "path": "apps/api/drizzle/0005_hard_ted_forrester.sql",
+          "sha256": "85c816cc93bd2f6873b23556d1e64b74e6dc3403f012fd4593b5fb179b39e1ac"
+        },
+        {
+          "path": "apps/api/drizzle/0006_yellow_pete_wisdom.sql",
+          "sha256": "0c370a0f02e41e88c3abd01ca612972c3a7b8739fcb2f15073501beab84e6129"
+        },
+        {
+          "path": "apps/api/drizzle/0007_additive_collections_and_pins.sql",
+          "sha256": "be104911938c457113c3b572dbfb6b411becb67d28979e960cd42cc62dfecdb0"
+        },
+        {
+          "path": "apps/api/drizzle/0008_thread_reminders.sql",
+          "sha256": "91056093081c5e24c294839362ddc99de3f328da5e53edf4bd023e0267550240"
+        },
+        {
+          "path": "apps/api/drizzle/0009_gmail_label_migration.sql",
+          "sha256": "0c185418ba4aee94a40391c641e78b5f747c2536fb9dcb85a824cfc8fb8b92f9"
+        },
+        {
+          "path": "apps/api/drizzle/0010_tearful_randall_flagg.sql",
+          "sha256": "3e14667c6e14e75b66afcb189e9374e88686a64fabc19b499f72e569c08de4f4"
+        },
+        {
+          "path": "apps/api/drizzle/0011_unified_settings.sql",
+          "sha256": "ecb2efb63f6f14207de0d32124ad79a57840fd7a72bc40a6d4e641ac9bc10eb2"
+        },
+        {
+          "path": "apps/api/drizzle/0012_durable_draft_provider_sync.sql",
+          "sha256": "b40f491c0f2a99c15e2dd89494edd0f1a8ab14143da13e9f310c6a0e7e9cf303"
+        },
+        {
+          "path": "apps/api/drizzle/0013_reply_threading_headers.sql",
+          "sha256": "e73a184c8d6ec9d846eda8753e2dc104fca7d38e95f28428c3441e7739f8bf89"
+        },
+        {
+          "path": "apps/api/drizzle/0014_persistent_onboarding.sql",
+          "sha256": "d2cba4d2d0c2ee3e20829c41a9564de5a66970bd9f87a9c300085405f3b0e164"
+        },
+        {
+          "path": "apps/api/drizzle/0015_human_classification.sql",
+          "sha256": "b4baf00aed396b90e37335f64c7658f4a7b4bbba728a528cfc45701aca01f98e"
+        },
+        {
+          "path": "apps/api/drizzle/0016_human_classification_overrides.sql",
+          "sha256": "1e507b54ceba05a69c1b4e76da6da650d9ed1e54a6b080993e88e196ddf7568d"
+        },
+        {
+          "path": "apps/api/drizzle/0017_pin_appearance.sql",
+          "sha256": "b31a3f3e432ba8c9c9750e8a87fc2d4b7ec26a37082cebd774e0e94eb28fecd2"
+        },
+        {
+          "path": "apps/api/drizzle/0018_gmail_push_notifications.sql",
+          "sha256": "ef6fd6a2811488165436394e8e832c80c01f053f3331f820ecd4b255e7d7f195"
+        },
+        {
+          "path": "apps/api/drizzle/0019_provider_profile_images.sql",
+          "sha256": "51cec388ff96010ce7693fafd93dd3046747d3a316853844dc256312ec0d2e71"
+        },
+        {
+          "path": "apps/api/drizzle/0020_mcp_oauth.sql",
+          "sha256": "55c5a1fda875279862ba1b50f745a345a22710ca77f4f9d51dfcabf4de098591"
+        },
+        {
+          "path": "apps/api/drizzle/0021_calendar_availability.sql",
+          "sha256": "936e040812641b393864e65038947535a491634e027ecda342d1b8a4203d8067"
+        },
+        {
+          "path": "apps/api/drizzle/0022_agent_propagation_contract.sql",
+          "sha256": "af948de7a324d0abf5ab019f5531c697d0da04633c2e8b95cd2ef465ef6730dc"
+        },
+        {
+          "path": "apps/api/drizzle/0023_typed_facets_workflow.sql",
+          "sha256": "daf41eb857d8fe769680d18b0d1b60f2423b4db45749018d3ecc4c006f6b1275"
+        },
+        {
+          "path": "apps/api/drizzle/0024_organization_collections_pins.sql",
+          "sha256": "12514aeeb4b9bc373b40ef5c6ceb6b57e2d3c2bc722cd37cd5a862236294af48"
+        },
+        {
+          "path": "apps/api/drizzle/0025_organization_context_relationships.sql",
+          "sha256": "ffb92d892564c285403f0adeafee50811c9550d61119cbcd14fbd023d45fab80"
+        },
+        {
+          "path": "apps/api/drizzle/0026_organization_lanes.sql",
+          "sha256": "cca641337482ba4c57e2f632230d93f7ff05c47efa12f1f5a7d2edf874704ae9"
+        },
+        {
+          "path": "apps/api/drizzle/0027_organization_live_views.sql",
+          "sha256": "1f1dc588fca4514f92f438aa85e61d1f767ea5f17c6b6a8944e84b8edc5e840d"
+        },
+        {
+          "path": "apps/api/drizzle/0028_orca_rule_revisions.sql",
+          "sha256": "cea5e473dfc01872286fe90c4a0da46228cc42dc639c61cd57f41703ce0c20e5"
+        },
+        {
+          "path": "apps/api/drizzle/0029_orca_rule_evaluations.sql",
+          "sha256": "1d93c6cea224f6048553f51abd3e3cc5fb9283b8af9db7bdc6671cb80d7f1a0c"
+        },
+        {
+          "path": "apps/api/drizzle/0030_rule_set_ordering.sql",
+          "sha256": "22f4eda170b4e6ba4913c7164a60c41e7996e14000a189ef8b54e5d26cdc4b4a"
+        },
+        {
+          "path": "apps/api/drizzle/0031_rule_compilation_workspace.sql",
+          "sha256": "7750002fa43ffc59746f14e97ea864d07f4834cbe364950b76130dc53ec2864e"
+        },
+        {
+          "path": "apps/api/drizzle/0032_rule_simulation_change_sets.sql",
+          "sha256": "7037f1558ca897f4976d0a4ea3e55a43c7887e66a215d63e11fe299ad82bd685"
+        },
+        {
+          "path": "apps/api/drizzle/0033_g2_authority_concurrency.sql",
+          "sha256": "adc3593dd95dbedf568d499be5e8c2226a1f2275794593ac7b7edb603b4b2fbb"
+        },
+        {
+          "path": "apps/api/drizzle/0034_user_correction_receipts.sql",
+          "sha256": "56904d139cd598ecfc4c9277c1205fce4f9351b9f25fb8efd0d64e6d8db6bbee"
+        },
+        {
+          "path": "apps/api/drizzle/0035_bounded_mailbox_reads.sql",
+          "sha256": "e594d382b304efcff1d5596fa9f7fe45e327b230bc1c9239a239d7e411d627c9"
+        },
+        {
+          "path": "apps/api/drizzle/0036_mailbox_revision_root.sql",
+          "sha256": "23559907a72478b22cb011c894655794e00ccb2fb02d3cce942c4dd5977f0101"
+        },
+        {
+          "path": "apps/api/drizzle/0037_gmail_sync_coordinator.sql",
+          "sha256": "ae8b93007daf1421db98729ad65573b6eada0479fe17fc2cf18b5514267c9a14"
+        },
+        {
+          "path": "apps/api/drizzle/0038_first_view_guidance.sql",
+          "sha256": "155625a29571e85eeb85a66856f155963ead6e4b2fdb082cfbb3b0d1e585f11e"
+        },
+        {
+          "path": "apps/api/drizzle/0039_classifier_lookup_index.sql",
+          "sha256": "befc4d5100ac850a523a11c78f331bc6461d883bdff157d5b466422f96810c69"
+        },
+        {
+          "path": "apps/api/drizzle/0040_attention_preferences.sql",
+          "sha256": "7f7b3aaaa9d7a00d02aeb33b2c1f2a11174de71449fd6b2aac8db8d949515961"
+        },
+        {
+          "path": "apps/api/drizzle/0041_attention_routing.sql",
+          "sha256": "5a5dad2e4e561045b85348275dce3a1ef9b9832a0131283902d5c6bee1756896"
+        },
+        {
+          "path": "apps/api/drizzle/0042_custom_destinations.sql",
+          "sha256": "87ceab8c8bf94d65111d84accf9bfc16ac9ecc47d01de1bb24d957d076076b0c"
+        },
+        {
+          "path": "apps/api/drizzle/0043_destination_latest_index.sql",
+          "sha256": "340d92279f684180ef3be71211e42cc76790fc12de8a5cbd30257895d31a5549"
+        },
+        {
+          "path": "apps/api/drizzle/0044_destination_colors.sql",
+          "sha256": "faff1ef944da034a6634a79d142458ec8dac6a22def2c6d7e1a10086c072a36d"
+        },
+        {
+          "path": "apps/api/drizzle/0045_view_inbox_policy.sql",
+          "sha256": "438e11cff33caa1f7871f8c8ac812a1940a9e1504943313900e148c308401f93"
+        },
+        {
+          "path": "apps/api/drizzle/0046_mobile_auth.sql",
+          "sha256": "0f6251aa511046c73ffd65f4aabb6b0f798fdd8163e6fbe809b4afda4c84bec0"
+        },
+        {
+          "path": "apps/api/drizzle/0047_mobile_push.sql",
+          "sha256": "9a2762cb6d6aeb7428f5337f9a58347ed08e038071e620ac490985ed14dc23e6"
+        },
+        {
+          "path": "apps/api/drizzle/0048_mobile_push_commit_order.sql",
+          "sha256": "7902a2364989a7dcf46a5d823473b83631d32f362f832d29870ecfdaaf6e1050"
+        },
+        {
+          "path": "apps/api/drizzle/0049_mobile_push_destinations.sql",
+          "sha256": "921a14494e8c2487e69b7778eef74bf36aedc35b730b81168061d61b873f736a"
+        },
+        {
+          "path": "apps/api/drizzle/0050_mail_oauth_transactions.sql",
+          "sha256": "47173b0fd4b6d152f0bf62dc9a8a49222f5f5c8b0eeb0a6e883859e06c052226"
+        },
+        {
+          "path": "apps/api/drizzle/0051_focus_is_attention.sql",
+          "sha256": "4e5ee9117686a4156a975cb22ca78337aa55df49c9c889aa5b15b23f72b0405c"
+        },
+        {
+          "path": "apps/api/drizzle/0052_durable_importance.sql",
+          "sha256": "9eaff2d0a9c8ffcc6973ff5d28b075acf515382f4ecbf5e2f33fe5ff0e967957"
+        },
+        {
+          "path": "apps/api/drizzle/0053_incremental_importance.sql",
+          "sha256": "96168f44048abee93660fff7afd386955230b3c43532995145f57dd1e6e861fd"
+        }
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 100,
+      "distinct": false,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 58.684499999999986,
+          "cpuMs": 74.534,
+          "rssBeforeBytes": 133070848,
+          "rssAfterBytes": 140918784,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 92.08208300000001,
+          "cpuMs": 98.414,
+          "rssBeforeBytes": 140918784,
+          "rssAfterBytes": 149766144,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 100,
+      "distinct": false,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 21.120874999999984,
+          "cpuMs": 39.509,
+          "rssBeforeBytes": 134283264,
+          "rssAfterBytes": 142262272,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 12.141833999999989,
+          "cpuMs": 17.961,
+          "rssBeforeBytes": 142262272,
+          "rssAfterBytes": 150716416,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 100,
+      "distinct": false,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 21.138875000000013,
+          "cpuMs": 36.669,
+          "rssBeforeBytes": 131612672,
+          "rssAfterBytes": 138870784,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 12.076583,
+          "cpuMs": 17.943,
+          "rssBeforeBytes": 138870784,
+          "rssAfterBytes": 147390464,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 100,
+      "distinct": false,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 58.250249999999994,
+          "cpuMs": 76.469,
+          "rssBeforeBytes": 131612672,
+          "rssAfterBytes": 139968512,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 90.45141699999999,
+          "cpuMs": 96.527,
+          "rssBeforeBytes": 139968512,
+          "rssAfterBytes": 148766720,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 100,
+      "distinct": false,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 58.73237499999999,
+          "cpuMs": 76.802,
+          "rssBeforeBytes": 132775936,
+          "rssAfterBytes": 140492800,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 90.53970799999996,
+          "cpuMs": 96.474,
+          "rssBeforeBytes": 140492800,
+          "rssAfterBytes": 149127168,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 100,
+      "distinct": false,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 21.244542000000024,
+          "cpuMs": 36.736,
+          "rssBeforeBytes": 132562944,
+          "rssAfterBytes": 139804672,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 12.014416000000011,
+          "cpuMs": 17.62,
+          "rssBeforeBytes": 139821056,
+          "rssAfterBytes": 148389888,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 100,
+      "distinct": true,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 103.34924999999998,
+          "cpuMs": 120.053,
+          "rssBeforeBytes": 131973120,
+          "rssAfterBytes": 140574720,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 177.37954200000001,
+          "cpuMs": 183.283,
+          "rssBeforeBytes": 140574720,
+          "rssAfterBytes": 150470656,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 100,
+      "distinct": true,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 23.188165999999995,
+          "cpuMs": 42.674,
+          "rssBeforeBytes": 134529024,
+          "rssAfterBytes": 143998976,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 13.76962499999999,
+          "cpuMs": 19.143,
+          "rssBeforeBytes": 143998976,
+          "rssAfterBytes": 153747456,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 100,
+      "distinct": true,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 23.586624999999998,
+          "cpuMs": 40.159,
+          "rssBeforeBytes": 131760128,
+          "rssAfterBytes": 140165120,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 13.162542000000002,
+          "cpuMs": 18.486,
+          "rssBeforeBytes": 140165120,
+          "rssAfterBytes": 149864448,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 100,
+      "distinct": true,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 104.743292,
+          "cpuMs": 123.963,
+          "rssBeforeBytes": 133709824,
+          "rssAfterBytes": 142999552,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 179.779959,
+          "cpuMs": 185.394,
+          "rssBeforeBytes": 142999552,
+          "rssAfterBytes": 152797184,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 100,
+      "distinct": true,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 107.70166699999999,
+          "cpuMs": 127.57,
+          "rssBeforeBytes": 133709824,
+          "rssAfterBytes": 142196736,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 181.675208,
+          "cpuMs": 187.267,
+          "rssBeforeBytes": 142196736,
+          "rssAfterBytes": 151945216,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 100,
+      "distinct": true,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 24.907666000000006,
+          "cpuMs": 42.831,
+          "rssBeforeBytes": 130908160,
+          "rssAfterBytes": 139640832,
+          "preparedStatements": 26,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 200
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 13.025750000000016,
+          "cpuMs": 18.531,
+          "rssBeforeBytes": 139657216,
+          "rssAfterBytes": 149618688,
+          "preparedStatements": 15,
+          "changedEmailCount": 100,
+          "labelAssociationRows": 300
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 200,
+      "distinct": false,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 157.673041,
+          "cpuMs": 179.966,
+          "rssBeforeBytes": 131530752,
+          "rssAfterBytes": 145489920,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 287.818791,
+          "cpuMs": 360.093,
+          "rssBeforeBytes": 145489920,
+          "rssAfterBytes": 181059584,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 200,
+      "distinct": false,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 30.04333299999999,
+          "cpuMs": 52.91,
+          "rssBeforeBytes": 135380992,
+          "rssAfterBytes": 149651456,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 21.451625000000007,
+          "cpuMs": 45.51,
+          "rssBeforeBytes": 149651456,
+          "rssAfterBytes": 175521792,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 200,
+      "distinct": false,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 32.32120899999998,
+          "cpuMs": 56.034,
+          "rssBeforeBytes": 133890048,
+          "rssAfterBytes": 148406272,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 22.06762500000002,
+          "cpuMs": 47.322,
+          "rssBeforeBytes": 148406272,
+          "rssAfterBytes": 174751744,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 200,
+      "distinct": false,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 170.720708,
+          "cpuMs": 192.493,
+          "rssBeforeBytes": 132104192,
+          "rssAfterBytes": 146194432,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 317.147667,
+          "cpuMs": 383.636,
+          "rssBeforeBytes": 146194432,
+          "rssAfterBytes": 181780480,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 200,
+      "distinct": false,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 167.013,
+          "cpuMs": 190.238,
+          "rssBeforeBytes": 132890624,
+          "rssAfterBytes": 147472384,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 294.29145900000003,
+          "cpuMs": 367.811,
+          "rssBeforeBytes": 147472384,
+          "rssAfterBytes": 181993472,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 200,
+      "distinct": false,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 30.022707999999994,
+          "cpuMs": 52.259,
+          "rssBeforeBytes": 131547136,
+          "rssAfterBytes": 145653760,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 22.17625000000001,
+          "cpuMs": 47.493,
+          "rssBeforeBytes": 145653760,
+          "rssAfterBytes": 171589632,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 200,
+      "distinct": true,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 352.591958,
+          "cpuMs": 373.363,
+          "rssBeforeBytes": 132153344,
+          "rssAfterBytes": 147947520,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 684.2647919999999,
+          "cpuMs": 761.79,
+          "rssBeforeBytes": 147963904,
+          "rssAfterBytes": 185516032,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 200,
+      "distinct": true,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 34.19245799999999,
+          "cpuMs": 56.332,
+          "rssBeforeBytes": 131645440,
+          "rssAfterBytes": 148226048,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 28.146917000000002,
+          "cpuMs": 63.939,
+          "rssBeforeBytes": 148242432,
+          "rssAfterBytes": 177717248,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 200,
+      "distinct": true,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 34.70070799999999,
+          "cpuMs": 54.916,
+          "rssBeforeBytes": 132005888,
+          "rssAfterBytes": 148373504,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 28.287458000000015,
+          "cpuMs": 64.229,
+          "rssBeforeBytes": 148389888,
+          "rssAfterBytes": 177537024,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 200,
+      "distinct": true,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 475.58824999999996,
+          "cpuMs": 443.351,
+          "rssBeforeBytes": 132890624,
+          "rssAfterBytes": 148258816,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 869.4622089999999,
+          "cpuMs": 840.67,
+          "rssBeforeBytes": 148275200,
+          "rssAfterBytes": 185253888,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 200,
+      "distinct": true,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 423.94841699999995,
+          "cpuMs": 413.978,
+          "rssBeforeBytes": 134676480,
+          "rssAfterBytes": 149028864,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 747.89625,
+          "cpuMs": 825.903,
+          "rssBeforeBytes": 149045248,
+          "rssAfterBytes": 187006976,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 200,
+      "distinct": true,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 35.15016700000001,
+          "cpuMs": 58.301,
+          "rssBeforeBytes": 131973120,
+          "rssAfterBytes": 147783680,
+          "preparedStatements": 26,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 400
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 28.221416000000005,
+          "cpuMs": 65.081,
+          "rssBeforeBytes": 147800064,
+          "rssAfterBytes": 177094656,
+          "preparedStatements": 16,
+          "changedEmailCount": 200,
+          "labelAssociationRows": 600
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 400,
+      "distinct": false,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 539.2123339999999,
+          "cpuMs": 620.24,
+          "rssBeforeBytes": 132366336,
+          "rssAfterBytes": 175980544,
+          "preparedStatements": 28,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 1025.9475000000002,
+          "cpuMs": 1101.072,
+          "rssBeforeBytes": 175980544,
+          "rssAfterBytes": 186269696,
+          "preparedStatements": 18,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 400,
+      "distinct": false,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 53.053291,
+          "cpuMs": 104.279,
+          "rssBeforeBytes": 131055616,
+          "rssAfterBytes": 168640512,
+          "preparedStatements": 28,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 44.81816600000002,
+          "cpuMs": 89.16,
+          "rssBeforeBytes": 168640512,
+          "rssAfterBytes": 183599104,
+          "preparedStatements": 18,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 400,
+      "distinct": false,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 53.480166999999994,
+          "cpuMs": 96.759,
+          "rssBeforeBytes": 132661248,
+          "rssAfterBytes": 169426944,
+          "preparedStatements": 28,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 45.527874999999995,
+          "cpuMs": 96.275,
+          "rssBeforeBytes": 169426944,
+          "rssAfterBytes": 186744832,
+          "preparedStatements": 18,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 400,
+      "distinct": false,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 528.8430420000001,
+          "cpuMs": 607.336,
+          "rssBeforeBytes": 131809280,
+          "rssAfterBytes": 172834816,
+          "preparedStatements": 28,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 1021.0100840000001,
+          "cpuMs": 1097.257,
+          "rssBeforeBytes": 172834816,
+          "rssAfterBytes": 184958976,
+          "preparedStatements": 18,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 400,
+      "distinct": false,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 529.592084,
+          "cpuMs": 608.343,
+          "rssBeforeBytes": 132431872,
+          "rssAfterBytes": 174604288,
+          "preparedStatements": 28,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 1064.731667,
+          "cpuMs": 1136.128,
+          "rssBeforeBytes": 174604288,
+          "rssAfterBytes": 185630720,
+          "preparedStatements": 18,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 400,
+      "distinct": false,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 52.33324999999999,
+          "cpuMs": 95.403,
+          "rssBeforeBytes": 134447104,
+          "rssAfterBytes": 171769856,
+          "preparedStatements": 28,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 45.03524999999999,
+          "cpuMs": 95.404,
+          "rssBeforeBytes": 171769856,
+          "rssAfterBytes": 188792832,
+          "preparedStatements": 18,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 400,
+      "distinct": true,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 1348.9519169999999,
+          "cpuMs": 1430.896,
+          "rssBeforeBytes": 132284416,
+          "rssAfterBytes": 179798016,
+          "preparedStatements": 29,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 2703.3935420000003,
+          "cpuMs": 2778.448,
+          "rssBeforeBytes": 179798016,
+          "rssAfterBytes": 187187200,
+          "preparedStatements": 19,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 400,
+      "distinct": true,
+      "sample": 1,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 59.95066700000001,
+          "cpuMs": 112.052,
+          "rssBeforeBytes": 131317760,
+          "rssAfterBytes": 175423488,
+          "preparedStatements": 29,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 48.78579100000002,
+          "cpuMs": 95.938,
+          "rssBeforeBytes": 175439872,
+          "rssAfterBytes": 186482688,
+          "preparedStatements": 19,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 400,
+      "distinct": true,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 60.361290999999994,
+          "cpuMs": 119.69,
+          "rssBeforeBytes": 134578176,
+          "rssAfterBytes": 179142656,
+          "preparedStatements": 29,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 47.430916999999994,
+          "cpuMs": 85.484,
+          "rssBeforeBytes": 179159040,
+          "rssAfterBytes": 189825024,
+          "preparedStatements": 19,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 400,
+      "distinct": true,
+      "sample": 2,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 1349.608958,
+          "cpuMs": 1432.571,
+          "rssBeforeBytes": 131858432,
+          "rssAfterBytes": 179142656,
+          "preparedStatements": 29,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 2686.7850420000004,
+          "cpuMs": 2757.695,
+          "rssBeforeBytes": 179159040,
+          "rssAfterBytes": 186793984,
+          "preparedStatements": 19,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "messages": 400,
+      "distinct": true,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 1353.216583,
+          "cpuMs": 1436.735,
+          "rssBeforeBytes": 133971968,
+          "rssAfterBytes": 181288960,
+          "preparedStatements": 29,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 2666.4811250000002,
+          "cpuMs": 2742.297,
+          "rssBeforeBytes": 181288960,
+          "rssAfterBytes": 188284928,
+          "preparedStatements": 19,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "messages": 400,
+      "distinct": true,
+      "sample": 3,
+      "results": [
+        {
+          "phase": "insert",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 61.277874999999995,
+          "cpuMs": 114.075,
+          "rssBeforeBytes": 131825664,
+          "rssAfterBytes": 175456256,
+          "preparedStatements": 29,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 800
+        },
+        {
+          "phase": "labelRefresh",
+          "sqliteVersion": "3.51.0",
+          "wallMs": 49.127167000000014,
+          "cpuMs": 96.346,
+          "rssBeforeBytes": 175456256,
+          "rssAfterBytes": 186351616,
+          "preparedStatements": 19,
+          "changedEmailCount": 400,
+          "labelAssociationRows": 1200
+        }
+      ]
+    }
+  ]
+}

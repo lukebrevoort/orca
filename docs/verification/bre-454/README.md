@@ -1,3 +1,5 @@
+> Follow-up: [BRE-461 incremental writes](../bre-461/README.md) replaces the original 0052 write path via additive 0053. The receipts below retain their original revisions and are historical; see the follow-up and PR for current final-head checks.
+
 # BRE-454 — durable account-scoped importance
 
 Status: implementation and focused regressions pass; independent correctness/security review and root merge gate belong to the parent. This is API/shared-contract evidence, not web, native, delivery or real-mail acceptance.

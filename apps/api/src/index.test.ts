@@ -1568,10 +1568,10 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "mailbox_revisions"));
         assert.equal(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_page_idx'").get(), null);
         assert.deepEqual(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_account_page_idx'").get(), { name: "emails_mailbox_account_page_idx" });
-        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 2 });
-        // 0051 invalidates existing mailbox cursors once; a migration replay is a no-op.
+        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 3 });
+        // 0051 and 0053 each invalidate existing mailbox cursors once; replay is a no-op.
         migrate(db, { migrationsFolder: fullMigrations });
-        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 2 });
+        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 3 });
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
         assert.deepEqual(emailColumns.filter((column) => ["internet_message_id", "references"].includes(column.name)).map((column) => column.name), ["internet_message_id", "references"]);
