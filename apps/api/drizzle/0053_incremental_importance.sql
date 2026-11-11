@@ -31,6 +31,13 @@ CREATE INDEX importance_message_thread_time_idx ON importance_message_state(acco
 --> statement-breakpoint
 CREATE INDEX importance_message_sender_idx ON importance_message_state(account_id,sender_address,email_id);
 --> statement-breakpoint
+-- Cascading thread deletion probes child thread_id without account_id.
+CREATE INDEX importance_message_thread_fk_idx ON importance_message_state(thread_id);
+--> statement-breakpoint
+CREATE INDEX importance_participants_thread_fk_idx ON importance_participants(thread_id);
+--> statement-breakpoint
+CREATE INDEX importance_state_thread_fk_idx ON importance_thread_state(thread_id);
+--> statement-breakpoint
 INSERT INTO importance_message_state SELECT e.id,e.account_id,e.thread_id,lower(trim(coalesce(e.from_address,''))),CASE WHEN e.is_draft=0 AND trim(coalesce(e.from_address,''))<>''
  AND lower(trim(e.from_address))<>(SELECT lower(trim(provider_email)) FROM oauth_accounts WHERE id=e.account_id)
  AND NOT EXISTS(SELECT 1 FROM email_labels el JOIN labels l ON l.id=el.label_id

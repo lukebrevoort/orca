@@ -14,6 +14,7 @@ if(process.argv.includes("--worker")){
   try{
     for(const sql of input.sql) sqlite.exec(sql.text);
     sqlite.exec("INSERT INTO users(id,email) VALUES('u','u@example.com'); INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('a','u','gmail','a','self@example.com')");
+    const sqliteVersion=(sqlite.query("SELECT sqlite_version() v").get() as {v:string}).v;
     let prepares=0; const prepare=sqlite.prepare.bind(sqlite); Object.defineProperty(sqlite,"prepare",{configurable:true,value:(sql:string)=>{prepares++;return prepare(sql);}});
     const messages:GmailMessage[]=Array.from({length:input.n},(_,i)=>({id:`m${i}`,threadId:"one-long-thread",internalDate:String(1700000000000+i),labelIds:["INBOX","UNREAD"],snippet:"Synthetic receipt",payload:{mimeType:"text/plain",headers:[{name:"From",value:input.distinct?`person${i}@example.com`:"robot@example.com"},{name:"To",value:"self@example.com"},{name:"Subject",value:"Same conversation"}],body:{data:Buffer.from("Synthetic body").toString("base64")}}}));
     const results=[];
@@ -21,11 +22,11 @@ if(process.argv.includes("--worker")){
       if(phase==="labelRefresh") for(const m of messages)m.labelIds=["INBOX","UNREAD","STARRED"];
       const rssBeforeBytes=process.memoryUsage().rss; const cpu=process.cpuUsage();const start=performance.now();prepares=0;
       const result=await persistGmailMessages(db,{accountId:"a",accountEmail:"self@example.com",gmailMessages:messages,labelList:[{id:"INBOX",name:"Inbox"},{id:"UNREAD",name:"Unread"},{id:"STARRED",name:"Starred"}],now:new Date("2026-11-11T12:00:00Z"),propagationTrigger:"sync",propagationOptions:{enabled:false}});
-      const wallMs=performance.now()-start; const used=process.cpuUsage(cpu);
+      const wallMs=performance.now()-start; const used=process.cpuUsage(cpu); const preparedStatements=prepares;
       if(result.changedEmailCount!==input.n)throw Error("Refresh did not actually traverse changed-message association replacement");
       const state=sqlite.query("SELECT effective,participant_count,retained_count FROM importance_thread_state").get() as any;
       if(state.effective!=="unreviewed"||state.participant_count!==(input.distinct?input.n:1)||state.retained_count!==input.n)throw Error("Materialization diverged after actual Gmail persist");
-      results.push({phase,wallMs,cpuMs:(used.user+used.system)/1000,rssBeforeBytes,rssAfterBytes:process.memoryUsage().rss,preparedStatements:prepares,changedEmailCount:result.changedEmailCount,labelAssociationRows:(sqlite.query("SELECT count(*) n FROM email_labels").get() as {n:number}).n});
+      results.push({phase,sqliteVersion,wallMs,cpuMs:(used.user+used.system)/1000,rssBeforeBytes,rssAfterBytes:process.memoryUsage().rss,preparedStatements,changedEmailCount:result.changedEmailCount,labelAssociationRows:(sqlite.query("SELECT count(*) n FROM email_labels").get() as {n:number}).n});
     }
     console.log(JSON.stringify(results));
   }finally{sqlite.close();}
