@@ -1,0 +1,3 @@
+@orca/api:lint    | Done in 4.94s
+@orca/shared:lint | Done in 646ms
+@orca/web:lint    | Done in 11.02s

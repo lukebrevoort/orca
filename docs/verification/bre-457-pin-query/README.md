@@ -2,11 +2,32 @@
 
 ## Current verification index
 
+**Current tested source: `f232399bec5a73ec7159e443ac7746a8ee8313a9`.** Actual
+workspace lint/typecheck/**2360 tests / 12111 expect calls / zero failures**/build,
+focused78 and the current HTTP/SQLite/work demo passed cumulatively over **two
+serialized invocations of the same clean source**. The original full invocation
+remains NONPASS2: actual tests exited0, but its summary parser rejected Bun's
+real prefix. ROOT verified original raw evidence and corrected that external
+parser, then ran only build/focused/demo. No lint/type/full-test repeat or
+product change occurred between those invocations.
+
+[Open final demo, exact stages, limitations and historical scopes](final-f232399/demo.md)
+· [combined verification](final-f232399/combined.json)
+· [original NONPASS manifest](final-f232399/first-invocation/manifest.json)
+· [remaining stages and corrected summaries](final-f232399/remaining-invocation/manifest.json).
+This evidence-retention checkpoint adds docs only and must retain execution inputs
+exactly equal to f232. Source equivalence to869 is FALSE because of the approved
+10fb read.ts comment; final f232 HTTP/work replay is actual new execution, not a
+byte-identity inference. Wire publication/native-client integration, hosted/native
+UI and combined all33 acceptance remain separate. No push or PR is claimed here.
+
+### Earlier checkpoints (retained at their exact scope)
+
 Source869ce35f passed78 focused tests, including28 first-executed semantic counterexamples, and an actual three-request HTTP/SQLite demo. Sparse work scanned104 candidates for3 returned rows and4 retained rows; SELECT counts are not VM work or a database-memory bound. Provider/domain-write tripwires passed; auth renewal is separately recorded. [Exact source869 receipts](focused-869ce35f/manifest.json) and [demo/work](focused-869ce35f/demo-work.json).
 
 Both type commands in that original manifest printed Bun usage with exit0 and DID NOT run TypeScript. ROOT corrected the runner; actual shared/API project types passed at f6d0e168 using pinned Node24.22.1/TypeScript5.9.3, and the retained usage-only0 is rejected by the new guard. [Actual type receipts and scope](root-type-correction-f6d0/README.md). Do not relabel the original usage-only stages.
 
-Independent correctness review approved0f07957a with nonblocking comment/entrypoint clarity findings now addressed by ROOT. Separate security review found no product security blocker but requested a fail-closed runner end-state guard. ROOT reproduced two false-success cases at8e55183d and fixed them at44afb3b1; all four boundary regressions then passed. [Exact runner-only scope and retained reviews](root-source-drift-44afb3b1/scope.json). Fresh independent narrow re-check approved44afb3b1 and closed the runner finding. Final sequential lint/types/tests/build remain pending, as do wire publication and native-client integration. The inherited scan comment is clarified without changing executable behavior. No PR, native retrieval, full product, live-provider or OS completion is claimed.
+Independent correctness review approved0f07957a with nonblocking comment/entrypoint clarity findings now addressed by ROOT. Separate security review found no product security blocker but requested a fail-closed runner end-state guard. ROOT reproduced two false-success cases at8e55183d and fixed them at44afb3b1; all four boundary regressions then passed. [Exact runner-only scope and retained reviews](root-source-drift-44afb3b1/scope.json). Fresh independent narrow re-check approved44afb3b1 and closed the runner finding. At that checkpoint final sequential lint/types/tests/build remained pending; their later actual f232 results are indexed above. Wire publication and native-client integration remain pending. The inherited scan comment is clarified without changing executable behavior. No PR, native retrieval, full product, live-provider or OS completion is claimed.
 
 ## Historical checkpoint below
 

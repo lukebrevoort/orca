@@ -1,0 +1,330 @@
+{
+  "testedSourceHead": "f232399bec5a73ec7159e443ac7746a8ee8313a9",
+  "sourceCleanBeforeAfter": true,
+  "cumulativeStatus": "PASS_SIX_STAGES_SAME_COMMITTED_SOURCE_TWO_INVOCATIONS",
+  "originalRunnerOverallExit": 2,
+  "originalParserFailurePreserved": true,
+  "reason": "Bun emits @orca/api:test |; original guard expected @orca/api test:. Actual child test exit0 and complete per-workspace zero-failure summaries retained. ROOT corrected only external parser and ran remaining stages.",
+  "workspaceTests": [
+    {
+      "workspace": "@orca/api",
+      "passed": 1300,
+      "failed": 0,
+      "ran": 1300
+    },
+    {
+      "workspace": "@orca/web",
+      "passed": 869,
+      "failed": 0,
+      "ran": 869
+    },
+    {
+      "workspace": "@orca/shared",
+      "passed": 191,
+      "failed": 0,
+      "ran": 191
+    }
+  ],
+  "testsPassed": 2360,
+  "testsFailed": 0,
+  "expectCalls": 12111,
+  "focusedTestsPassed": 78,
+  "stages": [
+    {
+      "name": "lint",
+      "actualChildExit": 0,
+      "checkedExit": 0,
+      "seconds": 16.678812833997654,
+      "manifest": "/private/tmp/bre457-pin-query-final-f232399-01/manifest.json"
+    },
+    {
+      "name": "typecheck",
+      "actualChildExit": 0,
+      "checkedExit": 0,
+      "seconds": 12.749598583002808,
+      "manifest": "/private/tmp/bre457-pin-query-final-f232399-01/manifest.json"
+    },
+    {
+      "name": "test",
+      "actualChildExit": 0,
+      "checkedExit": 2,
+      "seconds": 193.54209029200138,
+      "manifest": "/private/tmp/bre457-pin-query-final-f232399-01/manifest.json"
+    },
+    {
+      "name": "build",
+      "actualChildExit": 0,
+      "checkedExit": 0,
+      "seconds": 16.986431500001345,
+      "manifest": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/manifest.json"
+    },
+    {
+      "name": "focused-replay",
+      "actualChildExit": 0,
+      "checkedExit": 0,
+      "seconds": 3.9157424999866635,
+      "manifest": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/manifest.json"
+    },
+    {
+      "name": "http-work-replay",
+      "actualChildExit": 0,
+      "checkedExit": 0,
+      "seconds": 1.0443716250010766,
+      "manifest": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/manifest.json"
+    }
+  ],
+  "correctedTestGuardExit": 0,
+  "http": [
+    {
+      "name": "notify-only",
+      "status": 200
+    },
+    {
+      "name": "Unicode-cross-field-person",
+      "status": 200
+    },
+    {
+      "name": "foreign-account",
+      "status": 404
+    }
+  ],
+  "work": [
+    {
+      "name": "dense",
+      "round": 0,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 7.760792000000038,
+      "rssBefore": 291962880,
+      "rssAfter": 292388864,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 6.559041999999977,
+        "countDurationMs": 2.2023750000000746,
+        "pageDurationMs": 4.127708999999982,
+        "enrichmentDurationMs": 0.09783300000003692,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 0,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 9.337041999999997,
+      "rssBefore": 292028416,
+      "rssAfter": 292470784,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 7.352916999999934,
+        "countDurationMs": 2.318583999999987,
+        "pageDurationMs": 4.8377080000000205,
+        "enrichmentDurationMs": 0.09058300000003783,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 1,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 7.707208000000037,
+      "rssBefore": 292077568,
+      "rssAfter": 292487168,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 7.110791000000063,
+        "countDurationMs": 2.2029999999999745,
+        "pageDurationMs": 4.652166999999963,
+        "enrichmentDurationMs": 0.1520420000000513,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "round": 1,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 7.5098330000000715,
+      "rssBefore": 292093952,
+      "rssAfter": 292782080,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 6.872333000000026,
+        "countDurationMs": 2.4616250000000264,
+        "pageDurationMs": 4.216833000000065,
+        "enrichmentDurationMs": 0.08424999999999727,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "round": 2,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 6.980834000000073,
+      "rssBefore": 292438016,
+      "rssAfter": 292847616,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 6.45900000000006,
+        "countDurationMs": 2.2201659999999492,
+        "pageDurationMs": 4.069292000000019,
+        "enrichmentDurationMs": 0.07654200000001765,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 2,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 7.641250000000014,
+      "rssBefore": 292487168,
+      "rssAfter": 293011456,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 7.140875000000051,
+        "countDurationMs": 2.1999170000000277,
+        "pageDurationMs": 4.7641250000000355,
+        "enrichmentDurationMs": 0.0812909999999647,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    }
+  ],
+  "providerCalls": {
+    "network": 0,
+    "sync": 0,
+    "transport": 0
+  },
+  "requestConnectionChanges": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "limitations": [
+    "Synthetic loopback HTTP, not live mail/native acceptance",
+    "Worst-case streaming work is O(candidates); no database-work bound follows from the page limit",
+    "SELECT preparation count is not VM-step count; timings/RSS are noisy finite-run observations"
+  ],
+  "ownedTmpRemoved": true,
+  "evidenceHashes": {
+    "/private/tmp/bre457-pin-query-final-f232399-01/manifest.json": "dbbda72362f265f82ae08d54f05bac96cc333d49a2eda1b538b25dd505c84ede",
+    "/private/tmp/bre457-pin-query-final-f232399-01/lint.log": "ba26b0cb0d8615b73f844fbff8e890f6b5239449a502d8e4b229d9641b3f70e8",
+    "/private/tmp/bre457-pin-query-final-f232399-01/typecheck.log": "43dec2398449b8c6f2a43e200929f97135dbdba7e8fb97585e43a273eeff09af",
+    "/private/tmp/bre457-pin-query-final-f232399-01/test.log": "962cfbfb190b5c9e9ad7e4d49fc7a09d04a564c7b8e040f215b278db37b88908",
+    "/private/tmp/bre457-pin-query-final-f232399-01/node-executions.jsonl": "1f0a19c682ff242e21efe055d9d998bdd47afee49f6b93ddc0ab404681624fa5",
+    "/private/tmp/bre457-pin-query-final-f232399-01/driver-original.py": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27",
+    "/private/tmp/bre457-pin-query-final-f232399-remaining-01/manifest.json": "a2336d63dabfe11459f11b5e5f6e5cc2ec3fe8d785f7aa6cf64fdcf04bac6657",
+    "/private/tmp/bre457-pin-query-final-f232399-remaining-01/build.log": "34043ed97d2f9433a55300cdf3abf57319040d714413d013b476f362b35328c8",
+    "/private/tmp/bre457-pin-query-final-f232399-remaining-01/focused-replay.log": "0c5a72011f92b4140c69560c8660badc939bf7b4576d7cede68ba0ceac8576b0",
+    "/private/tmp/bre457-pin-query-final-f232399-remaining-01/http-work-replay.log": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca",
+    "/private/tmp/bre457-pin-query-final-f232399-remaining-01/demo-work.json": "9e29f5cdbb66a93d7ee7ec1289f4b2a436b2ebb30c76688b73b25776844f9fb8",
+    "/tmp/bre457-final-remaining.py": "885f8fdb722f78f58211c45e240b63e745ef4f526ddb5b26228149ef9be36d82"
+  }
+}

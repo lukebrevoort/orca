@@ -1,0 +1,113 @@
+{
+  "source": "Authenticated GitHub fetch_pr; metadata only, no PR modification",
+  "items": [
+    {
+      "number": 309,
+      "url": "https://github.com/lukebrevoort/orca/pull/309",
+      "title": "BRE-444 BRE-446 BRE-453 integrate native width, cleanup and rework plan",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "main",
+      "base_sha": "75df5e597b24c13cde7c047019bfe8a3ba66ea7c",
+      "head_sha": "5a07a5362e35cc34ff6bd07663fb2df2b558c55a",
+      "merge_commit_sha": "b23fa0ce72906633af36c54a2140d7599d7aa315"
+    },
+    {
+      "number": 311,
+      "url": "https://github.com/lukebrevoort/orca/pull/311",
+      "title": "BRE-454 BRE-461 BRE-464 durable importance, incremental ingestion and safe disconnect",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "main",
+      "base_sha": "b23fa0ce72906633af36c54a2140d7599d7aa315",
+      "head_sha": "5795909927d8aa77c5e777e37a3e85eaf14aeb99",
+      "merge_commit_sha": "872b9141ec95c92d94d984cc2757a7b15d8bec1f"
+    },
+    {
+      "number": 314,
+      "url": "https://github.com/lukebrevoort/orca/pull/314",
+      "title": "BRE-455 BRE-470 Important-only notifications with guarded APNs dispatch",
+      "state": "closed",
+      "merged": true,
+      "draft": true,
+      "base": "main",
+      "base_sha": "872b9141ec95c92d94d984cc2757a7b15d8bec1f",
+      "head_sha": "20a0166d66807fd6f26406319c083fa2ae8aa8fd",
+      "merge_commit_sha": "f2a1ddd469260506500edbe389ef7c39cd156233"
+    },
+    {
+      "number": 315,
+      "url": "https://github.com/lukebrevoort/orca/pull/315",
+      "title": "BRE-469 Reject stale-owner preference requests before database access",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "main",
+      "base_sha": "872b9141ec95c92d94d984cc2757a7b15d8bec1f",
+      "head_sha": "03c6045e6a1ea87583c012f2c7d4c037f078ebe6",
+      "merge_commit_sha": "97a0a7340de8e4db468d64161872888775803a86"
+    },
+    {
+      "number": 316,
+      "url": "https://github.com/lukebrevoort/orca/pull/316",
+      "title": "BRE-478: add safe native View commit recovery proof",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "fix/BRE-469-preferences-owner",
+      "base_sha": "03c6045e6a1ea87583c012f2c7d4c037f078ebe6",
+      "head_sha": "c539ca3259f05a6cbb9babdc93bac4708c3d8558",
+      "merge_commit_sha": "5c9e44b82bf0f727d4e9a969dadebb0163fd72f0"
+    },
+    {
+      "number": 318,
+      "url": "https://github.com/lukebrevoort/orca/pull/318",
+      "title": "fix(BRE-455): fence notification owners with paired browser auth context",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "main",
+      "base_sha": "97a0a7340de8e4db468d64161872888775803a86",
+      "head_sha": "996ae13a909024f1a2c5f6fa5c3f59d3c38aa4a7",
+      "merge_commit_sha": "a6a8567e81dab98d7ee50b6ec263d94266ac3009"
+    },
+    {
+      "number": 303,
+      "url": "https://github.com/lukebrevoort/orca/pull/303",
+      "title": "BRE-444 Give native digest content readable width",
+      "state": "closed",
+      "merged": true,
+      "draft": true,
+      "base": "main",
+      "base_sha": "9ec3ca31afecc28a4af2bf8b40c48a5f1fb9a311",
+      "head_sha": "707e012c7f977730badaa06912d6d8f13f4d0668",
+      "merge_commit_sha": "00e01a0cb1261949752664ddb0133839e40e46c3"
+    },
+    {
+      "number": 310,
+      "url": "https://github.com/lukebrevoort/orca/pull/310",
+      "title": "BRE-459: reserve native Feedback space around writer and reader actions",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "b23fa0ce72906633af36c54a2140d7599d7aa315",
+      "head_sha": "b476970cb7d4c3e649fea11f7b71f8fa36c5e897",
+      "merge_commit_sha": "6604cab1d6992a87b70e97b88dfe0e06beeefdfc"
+    },
+    {
+      "number": 312,
+      "url": "https://github.com/lukebrevoort/orca/pull/312",
+      "title": "BRE-452 / BRE-456: keep Zen delivery in flow and self-host fonts",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "base": "integrate/BRE-453-foundation-core",
+      "base_sha": "0182327c5fa36b8d686ed72130d8133ee9b3a1a2",
+      "head_sha": "bc1b26e0de0e66d7fe0cc4711e4b525610eba312",
+      "merge_commit_sha": "c435e72e55fd9d40efb7472a6c99e7f15e9e4d64"
+    }
+  ]
+}

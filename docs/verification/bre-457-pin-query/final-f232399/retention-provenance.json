@@ -1,0 +1,239 @@
+{
+  "testedSource": "f232399bec5a73ec7159e443ac7746a8ee8313a9",
+  "copiedRawFilesUnmodified": true,
+  "files": [
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/driver-original.py",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/driver-original.py",
+      "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27",
+      "bytes": 16190
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/full-test-receipts.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/full-test-receipts.jsonl",
+      "sha256": "cd778adcac9550c3d35d6e7280027f223d9bc9ca0f5a6588996c519ae210cc43",
+      "bytes": 19005
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/lint.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/lint.log",
+      "sha256": "ba26b0cb0d8615b73f844fbff8e890f6b5239449a502d8e4b229d9641b3f70e8",
+      "bytes": 103
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/manifest.json",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/manifest.json",
+      "sha256": "dbbda72362f265f82ae08d54f05bac96cc333d49a2eda1b538b25dd505c84ede",
+      "bytes": 20855
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/node-executions.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/node-executions.jsonl",
+      "sha256": "1f0a19c682ff242e21efe055d9d998bdd47afee49f6b93ddc0ab404681624fa5",
+      "bytes": 8402
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/node-observer.cjs",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/node-observer.cjs",
+      "sha256": "75614d5b430515cef580a54b786532d9dc5a26d3c03fa6259237d223e57c2d59",
+      "bytes": 897
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/test.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/test.log",
+      "sha256": "962cfbfb190b5c9e9ad7e4d49fc7a09d04a564c7b8e040f215b278db37b88908",
+      "bytes": 879386
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/typecheck.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/typecheck.log",
+      "sha256": "43dec2398449b8c6f2a43e200929f97135dbdba7e8fb97585e43a273eeff09af",
+      "bytes": 118
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/build.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/build.log",
+      "sha256": "34043ed97d2f9433a55300cdf3abf57319040d714413d013b476f362b35328c8",
+      "bytes": 1698
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/demo-receipts.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/demo-receipts.jsonl",
+      "sha256": "9c29aeea10db34241f2b77f79b02119368c2470dd16050b4936b8579cd377beb",
+      "bytes": 431
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/demo-work.json",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/demo-work.json",
+      "sha256": "9e29f5cdbb66a93d7ee7ec1289f4b2a436b2ebb30c76688b73b25776844f9fb8",
+      "bytes": 11927
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/focused-receipts.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/focused-receipts.jsonl",
+      "sha256": "9ecd4d8ba3fa773ab384e794b4af340c76ae5b06383a2738c5c36947fcab7909",
+      "bytes": 19006
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/focused-replay.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/focused-replay.log",
+      "sha256": "0c5a72011f92b4140c69560c8660badc939bf7b4576d7cede68ba0ceac8576b0",
+      "bytes": 31404
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/http-work-replay.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/http-work-replay.log",
+      "sha256": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca",
+      "bytes": 438
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/manifest.json",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/manifest.json",
+      "sha256": "a2336d63dabfe11459f11b5e5f6e5cc2ec3fe8d785f7aa6cf64fdcf04bac6657",
+      "bytes": 54017
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/node-executions.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/node-executions.jsonl",
+      "sha256": "ded319e51fe6a34b0bea509cc250678d4edf572e004b4894daf3f7a372e61691",
+      "bytes": 5350
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-remaining-01/node-observer.cjs",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/node-observer.cjs",
+      "sha256": "75614d5b430515cef580a54b786532d9dc5a26d3c03fa6259237d223e57c2d59",
+      "bytes": 897
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-bc6b447-20261111T171918Z/baseline.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/bc6b447-setup-failure/baseline.log",
+      "sha256": "d7a607c962dd00c41ac081cf70d3c5816521f81652ced3c19ee8288d19647982",
+      "bytes": 1269
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-bc6b447-20261111T171918Z/frozen-install.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/bc6b447-setup-failure/frozen-install.log",
+      "sha256": "beec155a9a3aad0ae5aabaafed9d1869e9c6c6e94f46617da13ed0fa0e881782",
+      "bytes": 143
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-bc6b447-20261111T171918Z/manifest.json",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/bc6b447-setup-failure/manifest.json",
+      "sha256": "50efb620f581c8547c1324a2246ed8e53aede66491f8974cf827c8cebe8ebc0a",
+      "bytes": 831
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-1f9bbc97-20261111T172333Z/baseline.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/baseline.jsonl",
+      "sha256": "f5457cac2fc370fae7abe5238f4246cdb9dc4b2bc17c93f292c61d2253f30b4a",
+      "bytes": 657
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-1f9bbc97-20261111T172333Z/baseline.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/baseline.log",
+      "sha256": "f648b43afed4310d7b099d69af48479c7dec94c00aafc518834777c36a3925a9",
+      "bytes": 920
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-1f9bbc97-20261111T172333Z/candidate-red.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/candidate-red.jsonl",
+      "sha256": "19a880486ab84de5c01d340b35eb90818df4eafa0a4adfb897ecfd770741199b",
+      "bytes": 5070
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-1f9bbc97-20261111T172333Z/candidate-red.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/candidate-red.log",
+      "sha256": "0f2b6b7f37d1653edef97d55870154cb2ccd5cf4088750d51a0a705f3b526e3d",
+      "bytes": 51485
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-1f9bbc97-20261111T172333Z/frozen-install.log",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/frozen-install.log",
+      "sha256": "9c783e5ea0eab8ff9522b3aa88387574ab3586c32d3e8bf2b6c5780a393cdce2",
+      "bytes": 97
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-baseline-1f9bbc97-20261111T172333Z/manifest.json",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/manifest.json",
+      "sha256": "0f9434ddcc0db74e69424c77fc98938f4e3ec632def46e3a267ba63683e6138b",
+      "bytes": 1352
+    },
+    {
+      "source": "/private/tmp/bre457-final-gates.py",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/drivers/full-prepared-current.py",
+      "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27",
+      "bytes": 16190
+    },
+    {
+      "source": "/private/tmp/bre457-final-remaining.py",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/drivers/remaining-stage-corrected.py",
+      "sha256": "885f8fdb722f78f58211c45e240b63e745ef4f526ddb5b26228149ef9be36d82",
+      "bytes": 19082
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-f232399-01/driver-original.py",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/drivers/full-executed-original.py",
+      "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27",
+      "bytes": 16190
+    },
+    {
+      "source": "/private/tmp/bre457-query-final-verification-f232399b.json",
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/combined.json",
+      "sha256": "110740563cd7fe2e07899d9529a4669d2ea5099c209a5416351dbeefd2066ff2",
+      "bytes": 10976
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-candidate-869ce35f-01/api-types.log",
+      "retained": "docs/verification/bre-457-pin-query/focused-869ce35f/api-types.log",
+      "sha256": "3f00fbce74b90ba90fdef893af103bc541099deabb24d40d9b0f28d509f395d5",
+      "bytes": 9019
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-candidate-869ce35f-01/focused-tests.log",
+      "retained": "docs/verification/bre-457-pin-query/focused-869ce35f/focused-tests.log",
+      "sha256": "28b5f4e257e77caafb76fb3682975f0174a8c1048be29b91bda14cad4d6c2e4c",
+      "bytes": 31425
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-candidate-869ce35f-01/http-sqlite-demo.log",
+      "retained": "docs/verification/bre-457-pin-query/focused-869ce35f/http-sqlite-demo.log",
+      "sha256": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca",
+      "bytes": 438
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-candidate-869ce35f-01/shared-types.log",
+      "retained": "docs/verification/bre-457-pin-query/focused-869ce35f/shared-types.log",
+      "sha256": "4d67dc91488abcafa8b89cf2d84fb60a8e38288d0f6fa5fade10ab1af06b1a61",
+      "bytes": 8536
+    },
+    {
+      "source": "/private/tmp/orca-ui-heavy-resources.jsonl",
+      "selector": {
+        "ownerPid": 21109,
+        "from": 1794427040.498365,
+        "through": 1794427273.78985
+      },
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/wrapper-resources.jsonl",
+      "records": 16,
+      "sha256": "e724f3f61ca9d84fda2dabfc81ec39fd67d6948c2d019d37dc06b4b7e7c8d6e7"
+    },
+    {
+      "source": "/private/tmp/orca-ui-heavy-resources.jsonl",
+      "selector": {
+        "ownerPid": 24114,
+        "from": 1794427431.940289,
+        "through": 1794427464.208478
+      },
+      "retained": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/wrapper-resources.jsonl",
+      "records": 3,
+      "sha256": "de1dbb1222827c0d1dd0b1dbda7eb71974eee30dd6313787e7837925f5962250"
+    }
+  ],
+  "derivedReadableLog": {
+    "source": "first-invocation/test.log",
+    "rawSha256": "962cfbfb190b5c9e9ad7e4d49fc7a09d04a564c7b8e040f215b278db37b88908",
+    "derived": "first-invocation/test-readable.txt",
+    "transformation": "UTF-8 with backslash escapes for invalid bytes, literal NUL escaped as \\u0000; raw log remains byte-identical",
+    "derivedSha256": "3731cac2fdc0237366955235f43db93005f8b6504101b1985755e601c0148f51"
+  }
+}
