@@ -15,9 +15,9 @@
       "summary": "Proposed compact Mail/Drafts hierarchy; 16 surface families and 10 state families inventoried; preserve deep links and user-owned organization; primary filter remains open."
     },
     "3": {
-      "status": "pending",
-      "file": null,
-      "summary": null
+      "status": "done",
+      "file": "phase3-userflows.md",
+      "summary": "Five proposed journeys cover triage/correction, durable writing, safe saved views, important-only interruption and account/search recovery, including stale/failure exits."
     },
     "4": {
       "status": "pending",
@@ -51,5 +51,5 @@
       "reviewResult": null
     }
   },
-  "lastUpdated": "2026-11-11T05:04:00Z"
+  "lastUpdated": "2026-11-11T05:08:00Z"
 }
