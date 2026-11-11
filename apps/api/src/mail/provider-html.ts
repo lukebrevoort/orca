@@ -101,6 +101,20 @@ export function sanitizeProviderHtml(value: string | null) {
   return value === null ? null : sanitizeHtml(value, providerHtmlPolicy) || null;
 }
 
+// Image loading is an inbound-only intermediate pass. Keep inert table roles
+// until sanitizeInboundHtml classifies/removes them; stripping them here would
+// let a semantic table acquire a spacer hint after an image-load attempt.
+// Outbound drafts continue to use the unchanged provider policy above.
+export function sanitizeImageSourceHtml(value: string | null) {
+  return value === null ? null : sanitizeHtml(value, {
+    ...providerHtmlPolicy,
+    allowedAttributes: {
+      ...providerHtmlPolicy.allowedAttributes,
+      table: [...((providerHtmlPolicy.allowedAttributes || {}).table as string[]), "role"],
+    },
+  }) || null;
+}
+
 type Node = ReturnType<typeof parseDocument>["children"][number];
 type Tag = Extract<Node, { type: "tag" | "script" | "style" }>;
 const isTag = (node: Node): node is Tag => "attribs" in node;
@@ -140,12 +154,43 @@ function isLayoutTable(table: Tag) {
     || "rowspan" in node.attribs || "colspan" in node.attribs);
 }
 
+// A narrow sizing hint, not presentation-table classification. Keep table
+// semantics and all sender content; only blank structural gutters may yield
+// their equal fixed-layout share to the row's single content cell.
+function spacerGutters(table: Tag, blank: (node: Node) => boolean) {
+  if (table.attribs.role) return null;
+  if (table.attribs.width?.trim() !== "100%"
+    && !/(?:^|;)\s*width\s*:\s*100%\s*(?:!important\s*)?(?:;|$)/i.test(table.attribs.style ?? "")) return null;
+  const parts = tableParts(table);
+  if (parts.some(node => ["th", "caption", "thead", "tfoot", "col", "colgroup"].includes(node.name)
+    || "rowspan" in node.attribs || "colspan" in node.attribs)) return null;
+  const rows = parts.filter(node => node.name === "tr");
+  if (rows.length !== 1) return null;
+  const cells = rows[0]!.children.filter((node): node is Tag => isTag(node) && node.name === "td");
+  const gutters = cells.filter(blank);
+  return cells.length >= 2 && gutters.length === cells.length - 1 ? gutters : null;
+}
+
 export function sanitizeInboundHtml(value: string | null): string | null {
   if (value === null) return null;
   const safe = sanitizeHtml(value, inboundPolicy);
   if (!safe) return null;
   const document = parseDocument(safe);
   let hasLayout = false;
+  // Memoize subtree emptiness before normalization mutates it. This avoids
+  // repeatedly collecting a newsletter's text through nested spacer tables.
+  const blankCache = new WeakMap<Node, boolean>();
+  const blank = (node: Node): boolean => {
+    const cached = blankCache.get(node);
+    if (cached !== undefined) return cached;
+    const result = node.type === "text" ? !node.data.trim()
+      : isTag(node) && ["table", "tbody", "tr", "td", "div", "span", "br"].includes(node.name)
+        && !("rowspan" in node.attribs) && !("colspan" in node.attribs)
+        && !(node.name === "table" && node.attribs.role)
+        && node.children.every(blank);
+    blankCache.set(node, result);
+    return result;
+  };
   const visit = (node: Node, inLayout: boolean) => {
     if (!isTag(node)) return;
     if (node.name === "img") {
@@ -165,11 +210,15 @@ export function sanitizeInboundHtml(value: string | null): string | null {
     }
     if (node.name === "table") {
       inLayout = isLayoutTable(node);
+      const gutters = !inLayout ? spacerGutters(node, blank) : null;
       delete node.attribs.role;
       if (inLayout) {
         hasLayout = true;
         node.attribs.class = "orca-mail-layout";
         node.attribs.role = "presentation";
+      } else if (gutters) {
+        node.attribs.class = "orca-mail-spacer-table";
+        for (const gutter of gutters) gutter.attribs.class = "orca-mail-spacer-cell";
       }
     }
     if (inLayout && !["pre", "code"].includes(node.name)) {

@@ -1,0 +1,10 @@
+{
+  "base": "9ec3ca31afecc28a4af2bf8b40c48a5f1fb9a311",
+  "candidate": "01f6909ee534177a4fbaf486c29b06d7e7ba55e2",
+  "privateFunctions": 5,
+  "retainedStatements": 178,
+  "unchangedCanonicalInputs": 5,
+  "removedNpmLockBytes": 61924,
+  "passed": true,
+  "scope": "Pinned cleanup component source audit; not runtime, final integration or performance proof"
+}

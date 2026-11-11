@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { createHash, randomUUID } from "node:crypto";
-import { sanitizeInboundHtml, sanitizeProviderHtml } from "../provider-html.ts";
+import { sanitizeInboundHtml, sanitizeImageSourceHtml } from "../provider-html.ts";
 import { downloadRemoteImage, ImageFetchError, rasterType, validatedRasterType, remoteImageURL } from "./remote.ts";
 import { withImagePermit } from "./permits.ts";
 const {parseDocument,DomUtils}=createRequire(import.meta.url)("htmlparser2") as typeof import("htmlparser2");
@@ -17,7 +17,7 @@ function assertImageSourceLimit(html: string | null) {
 }
 const escapeText=(s:string)=>s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
-function documentImages(html:string|null){assertImageSourceLimit(html);const document=parseDocument(sanitizeProviderHtml(html)??"");return {document,images:DomUtils.findAll(n=>n.type==="tag"&&n.name==="img",document.children)};}
+function documentImages(html:string|null){assertImageSourceLimit(html);const document=parseDocument(sanitizeImageSourceHtml(html)??"");return {document,images:DomUtils.findAll(n=>n.type==="tag"&&n.name==="img",document.children)};}
 function blockedNote(image:ReturnType<typeof documentImages>["images"][number]) {
   let linked=false;
   for(let parent=image.parent;parent;parent=parent.parent){if(parent.type==="tag"&&parent.name==="a"&&parent.attribs.href){linked=true;break;}}

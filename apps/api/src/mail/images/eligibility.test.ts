@@ -79,10 +79,10 @@ test("malformed, entity, raw-text and nested HTML agrees with the pre-optimizati
   ]) expect(hasLoadableImages(html)).toBe(referenceEligibility(html));
 });
 
-test("image-free eligibility avoids provider sanitizer work while possible tags still use its policy", () => {
-  const sanitize = providerHtml.sanitizeProviderHtml;
+test("image-free eligibility avoids image-source sanitizer work while possible tags still use its policy", () => {
+  const sanitize = providerHtml.sanitizeImageSourceHtml;
   let calls = 0;
-  const spy = spyOn(providerHtml, "sanitizeProviderHtml").mockImplementation(html => { calls++; return sanitize(html); });
+  const spy = spyOn(providerHtml, "sanitizeImageSourceHtml").mockImplementation(html => { calls++; return sanitize(html); });
   try {
     for (const html of [null, "", "<p>ordinary text</p>".repeat(6000), "&lt;im&#103;&gt;"]) expect(hasLoadableImages(html)).toBe(false);
     expect(calls).toBe(0);
@@ -111,7 +111,8 @@ test("long-thread GET retains image availability, inert bodies and account isola
       { id: "b", userId: "other", provider: "gmail", providerId: "b", providerEmail: "other@example.com" },
     ]).run();
     db.insert(schema.threads).values([{ id: "thread", accountId: "a", providerThreadId: "same", messageCount: 50 }, { id: "private", accountId: "b", providerThreadId: "same", messageCount: 1 }]).run();
-    const bodies = ["<p>Ordinary &amp; safe</p>".repeat(180), `<ImG src="${src}" alt="Banner"><script>evil()</script>`, `<img src="${src}" width="1">`, "&lt;img src='https://images.example.org/a'&gt;"];
+    const historicBody = '<table width="100%"><tr><td></td><td>' + "<p>Ordinary &amp; safe</p>".repeat(180) + '</td><td></td></tr></table>';
+    const bodies = [historicBody, `<ImG src="${src}" alt="Banner"><script>evil()</script>`, `<img src="${src}" width="1">`, "&lt;img src='https://images.example.org/a'&gt;"];
     const messages = Array.from({ length: 50 }, (_, index) => ({ id: `m-${index}`, accountId: "a", threadId: "thread", providerMessageId: `m-${index}`, fromAddress: "sender@example.com", bodyText: "Synthetic", bodyHtml: bodies[index % bodies.length]!, receivedAt: new Date(1000 + index), createdAt: new Date(1000 + index) }));
     db.insert(schema.emails).values(messages).run();
     db.insert(schema.emails).values({ id: "secret", accountId: "b", threadId: "private", providerMessageId: "m-0", bodyHtml: `<img src="${src}" alt="PRIVATE">` }).run();
@@ -135,12 +136,17 @@ test("long-thread GET retains image availability, inert bodies and account isola
         expect(message.accountId).toBe("a");
         expect(message.imageLoadAvailable).toBe(index % 4 === 1);
         expect(message.bodyHtml).toBe(providerHtml.sanitizeInboundHtml(messages[index]!.bodyHtml));
+        if (index % 4 === 0) expect(message.bodyHtml).toContain('class="orca-mail-spacer-table"');
         expect(message.bodyHtml ?? "").not.toMatch(/<img|<script|PRIVATE/);
       }
     }
+    // Historical stored source is re-presented, not migrated or mutated.
+    expect(db.select({ bodyHtml: schema.emails.bodyHtml }).from(schema.emails).where(eq(schema.emails.id, 'm-0')).get()?.bodyHtml).toBe(historicBody);
     const optedIn=await app.request('/v1/threads/thread?accountId=a',{headers:{...headers,'x-orca-image-version':'2'}});
     const optedBody=await optedIn.json();const optedDetail=threadDetailSchema.parse(optedBody);
     expect(optedDetail.messages[1]!.imageSourceRevision).toBe(imageSourceRevision(messages[1]!.bodyHtml));
+    expect(optedDetail.messages[0]!.imageSourceRevision).toBe(imageSourceRevision(historicBody));
+    expect(optedDetail.messages[0]!.bodyHtml).toContain('class="orca-mail-spacer-table"');
     const oldParser=threadDetailSchema.extend({messages:z.array(threadDetailMessageSchema.omit({imageSourceRevision:true}))});
     expect(oldParser.safeParse(optedBody).success).toBe(false);
     db.update(schema.emails).set({bodyHtml:`<img src="${src}">` + "x".repeat(imageSourceByteLimit)}).where(eq(schema.emails.id,"m-1")).run();

@@ -1,0 +1,72 @@
+{
+  "product": "Orca foundation direction",
+  "platform": "both",
+  "language": "en",
+  "scope": "BRE-453 November application rework; preparatory design while BRE-448/449/450/451 await merge gates",
+  "phases": {
+    "1": {
+      "status": "done",
+      "file": "phase1-context.md",
+      "summary": "Readable mail, direct importance correction, calm retrieval and dependable correspondence; responsive web and native iOS; privacy and account boundaries preserved."
+    },
+    "2": {
+      "status": "done",
+      "file": "phase2-architecture.md",
+      "summary": "Proposed compact Mail/Drafts hierarchy; 16 surface families and 10 state families inventoried; preserve deep links and user-owned organization; primary filter remains open."
+    },
+    "3": {
+      "status": "done",
+      "file": "phase3-userflows.md",
+      "summary": "Five proposed journeys cover triage/correction, durable writing, safe saved views, important-only interruption and account/search recovery, including stale/failure exits."
+    },
+    "4": {
+      "status": "done",
+      "file": "phase4-page-specs/",
+      "summary": "All 16 surface interaction specs cover 10 sections each, platform gaps, loading/error/stale states, privacy and exact preservation walkthroughs; implementation remains unverified.",
+      "pagesCompleted": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+        "P13",
+        "P14",
+        "P15",
+        "P16"
+      ],
+      "pagesTotal": 16
+    },
+    "5": {
+      "status": "done",
+      "file": "phase5-components.md",
+      "summary": "Twelve component responsibilities use Orca semantic tokens, explicit ownership/revision/availability, safe selected states and separate importance/placement/notification contracts."
+    },
+    "6": {
+      "status": "done",
+      "file": "phase6-visual.md",
+      "summary": "Quiet correspondence palette and typography with 10 visual dimensions specified; 14 essential opaque color pairs calculate above 4.5; final rendered controls and font reliability remain unverified."
+    },
+    "7": {
+      "status": "in_progress",
+      "file": "architecture-options.html",
+      "summary": "Interactive architecture options checked with 48 assertions across 4 theme/width states and zero requests; standalone fallback palette and selected PNGs inspected; full application and native demos pending.",
+      "pagesCompleted": [],
+      "pagesTotal": 16
+    },
+    "8": {
+      "status": "pending",
+      "file": null,
+      "summary": null,
+      "reviewRounds": 0,
+      "reviewResult": null
+    }
+  },
+  "lastUpdated": "2026-11-11T06:04:00Z"
+}

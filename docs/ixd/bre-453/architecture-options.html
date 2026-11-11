@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orca primary mail options</title>
+<style>
+:root{color-scheme:light dark;--demo-ink:#132b24;--demo-muted:#53665d;--demo-surface:#ffffff;--demo-hover:#e8f1eb;--demo-border:#c8d5cd;--demo-accent:#166248}@media(prefers-color-scheme:dark){:root{--demo-ink:#edf4ef;--demo-muted:#acbcb1;--demo-surface:#19251d;--demo-hover:#25392d;--demo-border:#3b5042;--demo-accent:#a6d4b9}}
+*{box-sizing:border-box}body{margin:0;color:var(--foreground,var(--demo-ink));font-family:var(--font-sans,"Avenir Next","Segoe UI",sans-serif)}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--ring,var(--demo-accent));outline-offset:3px}button:hover{background:var(--secondary,var(--demo-hover))}.options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.option{min-width:0}.caption{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}.caption strong{font-size:16px;letter-spacing:-.02em}.caption span{font-size:11px;color:var(--muted-foreground,var(--demo-muted))}.mail{padding:16px;border:1px solid var(--border,var(--demo-border));border-radius:var(--radius,12px);background:var(--card,var(--demo-surface));color:var(--card-foreground,var(--demo-ink))}.identity{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--border,var(--demo-border))}.wordmark{font-family:Georgia,serif;font-size:25px;font-weight:bold;letter-spacing:-.06em}.write{border:1px solid var(--border,var(--demo-border));border-radius:999px;padding:7px 11px;background:var(--secondary,var(--demo-hover));font-size:12px}.navigation{display:flex;gap:12px;margin:14px 0 18px;font-size:11px;color:var(--muted-foreground,var(--demo-muted))}.navigation b{color:var(--foreground,var(--demo-ink))}.heading{display:flex;justify-content:space-between;align-items:center;gap:6px}.heading h2{font:400 28px Georgia,serif;letter-spacing:-.04em;margin:0}.heading span{font-size:11px;color:var(--muted-foreground,var(--demo-muted))}.filters{display:flex;gap:5px;margin:14px 0 6px}.filters button{background:transparent;border:1px solid transparent;border-radius:999px;padding:7px 10px;font-size:12px}.filters button[aria-pressed=true]{background:var(--secondary,var(--demo-hover));border-color:var(--border,var(--demo-border));color:var(--foreground,var(--demo-ink));font-weight:650}.message{border-bottom:1px solid var(--border,var(--demo-border));padding:16px 0;min-height:116px}.message:last-child{border-bottom:0}.sender{font-size:11px;display:flex;justify-content:space-between;gap:8px;color:var(--muted-foreground,var(--demo-muted))}.subject{font-size:14px;font-weight:650;line-height:1.4;margin:6px 0}.snippet{font-size:12px;line-height:1.5;color:var(--muted-foreground,var(--demo-muted));margin:0}.choice{font-size:11px;border:1px solid var(--border,var(--demo-border));border-radius:6px;background:transparent;padding:5px 7px;margin-top:10px}.choice[aria-pressed=true]{background:var(--secondary,var(--demo-hover));color:var(--foreground,var(--demo-ink))}.empty{padding:22px 0;font-size:13px;line-height:1.6;color:var(--muted-foreground,var(--demo-muted))}.foot{font-size:11px;line-height:1.5;color:var(--muted-foreground,var(--demo-muted));margin:12px 0 0}.reset{border:0;background:transparent;color:var(--muted-foreground,var(--demo-muted));font-size:11px;padding:8px 0;text-decoration:underline;text-underline-offset:3px}.contract{margin-top:18px;padding:16px;background:var(--secondary,var(--demo-hover));border-radius:var(--radius,12px);font-size:12px;line-height:1.6}.contract strong{font-size:13px}.contract p{margin:6px 0 0}.proposal{font-size:11px;line-height:1.5;color:var(--muted-foreground,var(--demo-muted));margin-top:12px}@media(max-width:570px){.options{grid-template-columns:1fr;gap:24px}.mail{padding:16px}.message{min-height:0}}[hidden]{display:none!important}
+</style></head><body>
+<div class="options">
+ <section class="option" data-default="important">
+  <div class="caption"><strong>A · Important first</strong><span>Recommended</span></div>
+  <div class="mail"><div class="identity"><span class="wordmark">orca ≋</span><button class="write" type="button" aria-label="Sample compose action" onclick="this.closest('.mail').querySelector('.foot').textContent='Compose stays a global action. This sketch does not send mail.'">Compose ↗</button></div>
+   <nav class="navigation" aria-label="Option A sample navigation"><b>Mail</b><span>Drafts</span><span>Mailboxes ⌄</span><span>Settings</span></nav>
+   <div class="heading"><h2>Your mail.</h2><span>Work account</span></div>
+   <div class="filters" role="group" aria-label="Option A mail filter"><button data-filter="important" aria-pressed="true" type="button">Important</button><button data-filter="all" aria-pressed="false" type="button">All Mail</button></div>
+   <div class="messages" aria-live="polite"></div>
+   <p class="foot">Only important conversations here. All Mail keeps everything reachable.</p>
+  </div><button class="reset" type="button">Reset sample choices</button>
+ </section>
+ <section class="option" data-default="all">
+  <div class="caption"><strong>B · Inbox first</strong><span>More mail on entry</span></div>
+  <div class="mail"><div class="identity"><span class="wordmark">orca ≋</span><button class="write" type="button" aria-label="Sample compose action" onclick="this.closest('.mail').querySelector('.foot').textContent='Compose stays a global action. This sketch does not send mail.'">Compose ↗</button></div>
+   <nav class="navigation" aria-label="Option B sample navigation"><b>Mail</b><span>Drafts</span><span>Mailboxes ⌄</span><span>Settings</span></nav>
+   <div class="heading"><h2>Your mail.</h2><span>Work account</span></div>
+   <div class="filters" role="group" aria-label="Option B mail filter"><button data-filter="important" aria-pressed="false" type="button">Important</button><button data-filter="all" aria-pressed="true" type="button">All Mail</button></div>
+   <div class="messages" aria-live="polite"></div>
+   <p class="foot">Open the complete Inbox first. Important is a deliberate filter.</p>
+  </div><button class="reset" type="button">Reset sample choices</button>
+ </section>
+</div>
+<div class="contract"><strong>Proposed meaning of a correction</strong><p>“Important” applies to this conversation in this account. It does not move mail, mark it read, or create a sender rule. Broader future-mail behavior requires a separate explicit choice. Unknown mail stays available in All Mail.</p><p>Notification proposal: opt in to important-only interruptions; uncertain mail stays quiet, with correction effects and repeat limits specified before implementation.</p></div>
+<p class="proposal">Interactive architecture sketches using synthetic sample messages. Change Important / All Mail and toggle a conversation’s choice to compare the entry points. This is a design proposal, not connected product data or a delivery demo.</p>
+<script>
+const seed=[{id:'maya',sender:'Maya Chen',time:'10:24',subject:'Can we move tomorrow’s review?',snippet:'The updated draft is ready. Would eleven work?',important:true},{id:'receipt',sender:'Travel receipt',time:'09:10',subject:'Your train for Friday',snippet:'Ticket and departure details for your trip.',important:true},{id:'alex',sender:'Alex Rivera',time:'Yesterday',subject:'Lunch at one?',snippet:'We are trying the new cafe if you want to join.',important:false}];
+document.querySelectorAll('.option').forEach(option=>{
+ let messages=structuredClone(seed),filter=option.dataset.default;
+ function render(){
+  option.querySelectorAll('[data-filter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.filter===filter)));
+  const visible=messages.filter(message=>filter==='all'||message.important);
+  const list=option.querySelector('.messages');list.replaceChildren();
+  for(const message of visible){
+   const item=document.createElement('article');item.className='message';item.dataset.messageId=message.id;
+   const sender=document.createElement('div');sender.className='sender';sender.textContent=message.sender;const time=document.createElement('span');time.textContent=message.time;sender.append(time);
+   const subject=document.createElement('p');subject.className='subject';subject.textContent=message.subject;
+   const snippet=document.createElement('p');snippet.className='snippet';snippet.textContent=message.snippet;
+   const button=document.createElement('button');button.type='button';button.className='choice';button.setAttribute('aria-pressed',String(message.important));button.setAttribute('aria-label',`${message.important?'Mark not important':'Mark important'}: ${message.subject}; this conversation only`);button.textContent=message.important?'✓ Important':'Mark important';
+   button.addEventListener('click',()=>{message.important=!message.important;render();option.querySelector('.foot').textContent='Sample choice changed for this conversation only. All Mail still contains every message.';const row=[...list.querySelectorAll('.message')].find(row=>row.dataset.messageId===message.id);(row?.querySelector('.choice')??list.querySelector('.choice')??option.querySelector('[data-filter=all]')).focus();});
+   item.append(sender,subject,snippet,button);list.append(item);
+  }
+  if(!visible.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='No important conversations. Open All Mail to review everything.';list.append(empty);}
+ }
+ option.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;render();}));
+ option.querySelector('.reset').addEventListener('click',()=>{messages=structuredClone(seed);filter=option.dataset.default;render();});
+ render();
+});
+</script></body></html>
