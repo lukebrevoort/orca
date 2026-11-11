@@ -2,6 +2,7 @@ import XCTest
 
 final class OrcaUITests: XCTestCase {
     private var boundaryDiagnostics = false
+    private var boundaryFailureCaptureRegistered = false
     private enum Fixture {
         static let inboxMessageID = "ios-fixture-message-1"
         static let searchResultMessageID = "ios-fixture-message-2"
@@ -17,6 +18,7 @@ final class OrcaUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         boundaryDiagnostics = false
+        boundaryFailureCaptureRegistered = false
     }
 
     func test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy() throws {
@@ -846,7 +848,6 @@ final class OrcaUITests: XCTestCase {
         for _ in 0..<5 { if remove.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(remove.isHittable); remove.tap()
         let removedAfterTap = remove.waitForNonExistence(timeout: 5)
-        captureComposeBoundary(in: app, stage: "attachment-after-original-removal-wait", observed: ["original_removal_result": String(removedAfterTap)])
         XCTAssertTrue(removedAfterTap)
         let keep = app.buttons["compose.attachment.remove.keep"]
         revealComposeControl(keep, in: app, scrollUp: true)
@@ -1308,6 +1309,16 @@ final class OrcaUITests: XCTestCase {
     }
 
     private func focusComposeBody(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() && !boundaryFailureCaptureRegistered {
+            boundaryFailureCaptureRegistered = true
+            // Capture only after the original test has failed. Observing AX or
+            // taking a PNG between tap() and the caller's typeText() could give
+            // delayed focus time to recover and hide the original boundary.
+            addTeardownBlock { [weak self] in
+                guard let self, (self.testRun?.totalFailureCount ?? 0) > 0 else { return }
+                self.captureComposeBoundary(in: app, stage: "after-original-test-failure")
+            }
+        }
         let body = messageBody(in: app)
         let form = app.scrollViews["compose.form"]
         let status = app.descendants(matching: .any)["compose.save-status"]
@@ -1330,13 +1341,6 @@ final class OrcaUITests: XCTestCase {
                     print("[native-writing-tap] viewport=\(viewport) body=\(body.frame) intersection=\(visible) normalized=\(offset) absolute_x=\(visible.midX) absolute_y=\(visible.midY)")
                 }
                 body.coordinate(withNormalizedOffset: offset).tap()
-                if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() {
-                    let firstPublicUIFocus = body.hasFocus
-                    let firstKeyboardExists = app.keyboards.firstMatch.exists
-                    captureComposeBoundary(in: app, stage: "after-original-body-tap", observed: [
-                        "first_public_ui_focus": String(firstPublicUIFocus), "first_keyboard_exists": String(firstKeyboardExists)
-                    ])
-                }
                 return
             }
             let up = !body.exists || body.frame.minY >= top
@@ -1966,13 +1970,14 @@ final class OrcaUITests: XCTestCase {
         }
         captureHistoryBoundary(in: app, stage: "history-before-show21")
         app.buttons["Show 21 earlier messages"].tap()
-        let firstShowAfterTap = app.buttons["Show 21 earlier messages"].exists
-        let firstHideAfterTap = app.buttons["Hide 21 earlier messages"].exists
         // Keep the original5s predicate and capture its result before the
-        // expensive hierarchy/PNG work. Diagnostics cannot rescue a failure.
+        // first extra AX read or hierarchy/PNG work. Diagnostics cannot rescue
+        // a failure by moving the original wait's start later.
         let unreadJumpAfterHistory = jumpUnread.waitForExistence(timeout: 5)
+        let showAfterOriginalWait = app.buttons["Show 21 earlier messages"].exists
+        let hideAfterOriginalWait = app.buttons["Hide 21 earlier messages"].exists
         captureHistoryBoundary(in: app, stage: "history-after-original-wait", observed: [
-            "first_show_after_tap": String(firstShowAfterTap), "first_hide_after_tap": String(firstHideAfterTap),
+            "show_after_original_wait": String(showAfterOriginalWait), "hide_after_original_wait": String(hideAfterOriginalWait),
             "original_5s_jump_result": String(unreadJumpAfterHistory)
         ])
         XCTAssertTrue(unreadJumpAfterHistory)
