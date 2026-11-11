@@ -859,6 +859,8 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     // The request can fail without leaving Settings. Keep edits dirty; the
     // native unload guard protects the actual authorization redirect instead.
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
+      // A cancelled native unload leaves this component mounted and retryable.
+      if (result === "started") setOutlookAuthorizationStatus("idle");
       if (result !== "provider_unavailable") return;
       setOutlookAuthorizationStatus("error");
       setOutlookAuthorizationError("Microsoft Outlook connection is unavailable here. Your existing mail access was not changed. Check with your Orca administrator before trying again.");
