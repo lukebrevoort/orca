@@ -10,6 +10,7 @@ const [connection,out]=process.argv.slice(2),fixture=JSON.parse(await readFile(c
 await mkdir(out,{recursive:true});
 const result={revision:await webSourceIdentity(),scope:'Real browser constructor and server report; no OS display or closed-tab delivery proof',scenarios:[],assertions:0,failures:[],pageErrors:[],requests:[],fixtureApiRequests:[],externalRequestsBlocked:[]};
 const check=(ok,label,detail)=>{result.assertions++;assert(ok,label+' '+JSON.stringify(detail));};
+async function bounded(promise,label){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label+' barrier exceeded 10s')),10000);})]);}finally{clearTimeout(timer);}}
 function db(sql){return JSON.parse(execFileSync('python3',['-c','import sqlite3,json,sys;c=sqlite3.connect(sys.argv[1]);c.row_factory=sqlite3.Row;print(json.dumps([dict(r) for r in c.execute(sys.argv[2])]))',fixture.databasePath,sql],{encoding:'utf8'}));}
 const browser=await chromium.launch({headless:true,executablePath:process.env.ORCA_CHROMIUM_EXECUTABLE});
 async function makeContext(theme,permission='granted'){
@@ -51,7 +52,7 @@ try{for(const theme of ['light','dark']){
  // Ambiguous adoption reconciles the original UUID instead of applying again.
  let dropped=false,releaseSave,saveStarted;const saveGate=new Promise(resolve=>releaseSave=resolve),saved=new Promise(resolve=>saveStarted=resolve);
  await page.route('**/v1/notifications/installations/*',async route=>{if(route.request().method()==='PUT'&&!dropped){dropped=true;const response=await route.fetch();assert(response.ok());saveStarted();await saveGate;return route.abort('failed');}return route.continue();});
- dialog=await configure(page);await dialog.getByRole('button',{name:'Enable important-only notifications',exact:true}).click();await saved;
+ dialog=await configure(page);await dialog.getByRole('button',{name:'Enable important-only notifications',exact:true}).click();await bounded(saved,'adoption acknowledgement');
  check(await dialog.getByRole('button',{name:'Saving notification choices…',exact:true}).isDisabled(),'Pending adoption disables repeated submission');
  await screenshot(page,theme+'-saving');releaseSave();await dialog.waitFor({state:'hidden'});
  await page.getByRole('button',{name:'Review important-only choices',exact:true}).waitFor();
@@ -76,7 +77,7 @@ try{for(const theme of ['light','dark']){
  const queued='queued-'+theme;await api(context,'/__fixture/fresh',{id:'browser-queued-'+theme,thread:queued});
  let release,started,hold=true;const gate=new Promise(r=>release=r),claimed=new Promise(r=>started=r);
  await page.route('**/v1/notifications/installations/*/claim',async route=>{if(hold){hold=false;const response=await route.fetch();assert(response.ok());started();await gate;return route.fulfill({response});}return route.continue();});
- await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await claimed;
+ await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await bounded(claimed,'queued claim');
  const snapshot=await api(context,`/v1/importance/conversations/${encodeURIComponent('gmail:a:'+queued)}?accountId=a`);
  await api(context,'/v1/importance/choices',{accountId:'a',target:{kind:'conversation',threadId:'gmail:a:'+queued},choice:'not_important',expectedRevision:snapshot.importance.conversation.revision,operationId:crypto.randomUUID()});
  const ack=page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/claim'));release();await ack;
@@ -88,11 +89,11 @@ try{for(const theme of ['light','dark']){
  const ownerThread='owner-'+theme;await api(context,'/__fixture/fresh',{id:'browser-owner-'+theme,thread:ownerThread});
  let releaseOwner,ownerStarted;const ownerGate=new Promise(r=>releaseOwner=r),ownerClaimed=new Promise(r=>ownerStarted=r);let ownerHold=true;
  await page.route('**/v1/notifications/installations/*/claim',async route=>{if(ownerHold){ownerHold=false;const response=await route.fetch();assert(response.ok());ownerStarted();await ownerGate;return route.fulfill({response});}return route.continue();});
- await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await ownerClaimed;
+ await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await bounded(ownerClaimed,'owner claim');
  await context.request.get(origin+'/__fixture/login-other');const ownerAck=page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/claim'));releaseOwner();await ownerAck;
- await page.getByText('Notification ownership changed.',{exact:false}).first().waitFor();
+ await page.getByRole('heading',{name:'Settings ownership changed.',exact:true}).waitFor();
  check(await constructorCount(page)===2,'Changed session owner never constructs old queued alert');
- check(await page.locator('.important-notification-settings').innerText().then(text=>!text.includes('u@example.com')),'Notification owner account choices clear after ownership change');
+ check(await page.locator('.important-notification-settings,.desktop-account').count()===0,'Notification and shell account choices hide after ownership change');
  await page.unroute('**/v1/notifications/installations/*/claim');
  await screenshot(page,theme+'-owner-barrier');
  result.scenarios.push({theme,name:'adoption-reconcile-freshness-cooldown-correction-owner',installationId:id,actualConstructors:await page.evaluate(()=>window.__notifications),providerCalls:(await api(context,'/__fixture/state')).providerCalls});
@@ -137,10 +138,10 @@ for(const theme of ['light','dark'])for(const name of ['claim-report-response-lo
    }else{
     let release,started,finished,hold=true;const gate=new Promise(resolve=>release=resolve),claimed=new Promise(resolve=>started=resolve),released=new Promise(resolve=>finished=resolve);
     await page.route('**/v1/notifications/installations/*/claim',async route=>{if(hold){hold=false;const response=await route.fetch();assert(response.ok());started();await gate;await route.fulfill({response});finished();return;}return route.continue();});
-    await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await claimed;
+    await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await bounded(claimed,name+' claim');
     if(name==='lease-expiry')await api(context,'/__fixture/advance',{milliseconds:31000});
     else{const current=await api(context,`/v1/notifications/installations/${id}?channel=open_app`);await api(context,`/v1/notifications/installations/${id}`,{channel:'open_app',policyVersion:1,enabled:true,accountIds:['a'],permission:'granted',expectedRevision:current.revision,operationId:crypto.randomUUID()},'PUT');}
-    release();await released;await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(button=>button.textContent==='Check for important mail now'&&!button.disabled));
+    release();await bounded(released,name+' release');await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(button=>button.textContent==='Check for important mail now'&&!button.disabled));
     check(await constructorCount(page)===(name==='lease-expiry'?0:1),name==='lease-expiry'?'Expired claim cannot construct late alert':'Identical current policy revision preserves valid same-generation claim');
     await page.unroute('**/v1/notifications/installations/*/claim');
    }

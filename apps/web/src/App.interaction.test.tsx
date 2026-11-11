@@ -346,6 +346,12 @@ async function waitFor(milliseconds: number) {
 }
 
 async function renderSettingsHome(theme: "light" | "dark" = "light", demoMode = false) {
+  // These fixtures exercise scoped Settings transport failures, with a stable
+  // authenticated owner. Account-switch coverage uses the real HTTP fixture.
+  const settingsTransport = globalThis.fetch;
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => String(input) === "/v1/auth/session"
+    ? Promise.resolve(jsonResponse({ isAuthenticated: true, user: { id: "settings-fixture-owner", email: "owner@example.com", name: "Owner" }, expiresAt: "2027-01-01T00:00:00.000Z", onboardingCompletedAt: null }))
+    : settingsTransport(input, init)) as typeof fetch;
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);

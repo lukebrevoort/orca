@@ -27,6 +27,11 @@ button:disabled { opacity:1; color:var(--orca-muted); cursor:not-allowed; }
 .settings-home-intro h1 { font-size:32px; }
 .settings-home-intro { margin-bottom:24px; }
 .settings-home-nav a[aria-current="page"] { background:var(--orca-surface-hover); color:var(--orca-ink); border-radius:8px; }
+.settings-owner-recovery .login-required-shell { width:min(640px,100%); }
+.settings-owner-recovery h1 { font:500 32px/1.2 var(--orca-font-display); letter-spacing:normal; margin-bottom:24px; }
+.settings-owner-recovery p { font:400 16px/1.65 var(--orca-font-body); margin-bottom:24px; }
+.settings-owner-recovery button,.settings-owner-recovery a { display:block; min-height:44px; padding:12px 16px; border:1px solid var(--orca-border); border-radius:8px; background:var(--orca-surface); color:var(--orca-ink); font:500 14px/1.5 var(--orca-font-body); margin:12px 0; cursor:pointer; }
+.settings-owner-recovery button:hover,.settings-owner-recovery a:hover { background:var(--orca-surface-hover); }
 .settings-section { scroll-margin-top:24px; }
 .settings-save-bar { position:sticky; bottom:0; z-index:2; background:var(--orca-paper); border-top:1px solid var(--orca-border); padding:16px 0; }
 @media(max-width:760px) { .settings-save-bar { bottom:80px; } .message-subject-row h2 { white-space:normal; } .desktop-mobile-nav-item { color:var(--orca-ink); } }

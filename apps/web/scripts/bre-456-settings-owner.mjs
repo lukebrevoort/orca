@@ -24,6 +24,9 @@ try{for(const theme of ['light','dark']){
   const database=rows();result.scenarios.push({theme,before,after,database});
   check(after.signature===before.signature,'Old owner edits must never be saved into the new session owner');
   check(await page.getByRole('button',{name:'Check original session',exact:true}).isVisible(),'Owner change offers explicit recovery without exposing old account data');
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(out,theme+'-owner-mobile.png')});
+  check(await page.locator('.settings-owner-recovery').evaluate(node=>node.scrollWidth<=node.clientWidth+1),'Owner recovery reflows on mobile');
+  check(await page.getByRole('button',{name:'Check original session',exact:true}).evaluate(node=>node.getBoundingClientRect().height>=44),'Owner recovery action retains touch target');
   await context.request.get(origin+'/__fixture/login');await page.getByRole('button',{name:'Check original session',exact:true}).click();await signature.waitFor();
   check(await signature.inputValue()==='Unsaved original owner '+theme,'Original owner recovery retains unsaved choices');
  }catch(error){result.failures.push({theme,message:error.message});}finally{await context.close();}

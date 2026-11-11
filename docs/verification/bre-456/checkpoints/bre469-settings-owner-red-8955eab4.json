@@ -1,0 +1,98 @@
+{
+  "revision": {
+    "head": "8955eab429cc68f12943a8af7185f1463087ee5f",
+    "sourceSha256": "ddc8bdd24bd64dd41180507105660452dd7ed92d0a70b7060cb45ede8f935038",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "scenarios": [
+    {
+      "theme": "light",
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": [
+        {
+          "user_id": "v",
+          "signature": "Unsaved original owner light"
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "before": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "Unsaved original owner dark",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": [
+        {
+          "user_id": "v",
+          "signature": "Unsaved original owner dark"
+        }
+      ]
+    }
+  ],
+  "assertions": 2,
+  "failures": [
+    {
+      "theme": "light",
+      "message": "Old owner edits must never be saved into the new session owner"
+    },
+    {
+      "theme": "dark",
+      "message": "Old owner edits must never be saved into the new session owner"
+    }
+  ],
+  "requests": [
+    {
+      "theme": "light",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "body": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      }
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "body": {
+        "signature": "Unsaved original owner dark",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      }
+    }
+  ],
+  "pageErrors": []
+}

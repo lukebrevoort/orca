@@ -703,6 +703,10 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const accountEditVersionRef = useRef(0);
   const accountLoadRequestRef = useRef(0);
   const accountSaveRequestRef = useRef(0);
+  const settingsOwnerRef = useRef<string | null>(null);
+  const [settingsOwnerBlocked, setSettingsOwnerBlocked] = useState(false);
+  const [settingsOwnerRecoveryBusy, setSettingsOwnerRecoveryBusy] = useState(false);
+  const [settingsOwnerRecoveryError, setSettingsOwnerRecoveryError] = useState<string | null>(null);
   const accountLoadControllerRef = useRef<AbortController | null>(null);
   const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[]>(demoMode ? [demoAccount] : []);
   const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
@@ -728,7 +732,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   useEffect(() => {
     if (demoMode) return;
     void loadAccountPreferences();
-    return () => { accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; };
+    return () => { accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; accountSaveRequestRef.current += 1; };
   }, [demoMode]);
   useEffect(() => {
     if (demoMode) return;
@@ -746,6 +750,43 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     return () => { settingsSyncControllerRef.current?.abort(); settingsSyncRequestRef.current += 1; };
   }, [demoMode]);
 
+  useEffect(() => {
+    if (importantNotifications.state.error?.startsWith("Notification ownership changed.")) blockSettingsOwner();
+  }, [importantNotifications.state.error]);
+  useEffect(() => { if (settingsOwnerBlocked) titleRef.current?.focus(); }, [settingsOwnerBlocked]);
+
+  function blockSettingsOwner() {
+    accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; accountSaveRequestRef.current += 1;
+    connectedAccountsControllerRef.current?.abort(); connectedAccountsRequestRef.current += 1;
+    settingsSyncControllerRef.current?.abort(); settingsSyncRequestRef.current += 1;
+    agentConnectionsControllerRef.current?.abort(); agentConnectionsRequestRef.current += 1;
+    setSettingsOwnerBlocked(true);
+    setAccountSaveStatus("idle");
+  }
+  async function requireSettingsOwner(signal?: AbortSignal, establish = false) {
+    const session = await fetchJson("/v1/auth/session", authSessionSchema, signal);
+    if (!session.isAuthenticated || !session.user) throw new ApiRequestError(401, "Your Orca session expired.", "unauthorized");
+    if (!settingsOwnerRef.current && !establish) throw new Error("Load the original Settings session before changing account choices.");
+    if (settingsOwnerRef.current && settingsOwnerRef.current !== session.user.id) {
+      blockSettingsOwner();
+      throw new Error("Settings ownership changed. Your unsaved choices remain with their original session.");
+    }
+    settingsOwnerRef.current = session.user.id;
+  }
+  async function recoverSettingsOwner() {
+    if (settingsOwnerRecoveryBusy) return;
+    setSettingsOwnerRecoveryBusy(true); setSettingsOwnerRecoveryError(null);
+    try {
+      await requireSettingsOwner();
+      setSettingsOwnerBlocked(false);
+      setAccountSaveNotice("Original session restored. Your unsaved choices are still here.");
+      void loadConnectedAccounts(); void loadSettingsSyncStatus(); void loadAgentConnections();
+      // An interrupted first load has no editable draft to restore.
+      if (!accountPreferences) void loadAccountPreferences();
+    } catch (error) { setSettingsOwnerRecoveryError(getErrorMessage(error)); }
+    finally { setSettingsOwnerRecoveryBusy(false); }
+  }
+
   async function loadAccountPreferences() {
     if (demoMode) return;
     const requestId = ++accountLoadRequestRef.current;
@@ -755,7 +796,9 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     setAccountLoadStatus("loading");
     setAccountLoadError(null);
     try {
+      await requireSettingsOwner(controller.signal, true);
       const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal);
+      await requireSettingsOwner(controller.signal);
       if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
       setAccountPreferences(value);
       accountEditVersionRef.current = 0;
@@ -849,7 +892,10 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     setAccountSaveError(null);
     setAccountSaveNotice(null);
     try {
+      await requireSettingsOwner();
+      if (requestId !== accountSaveRequestRef.current) return;
       const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      await requireSettingsOwner();
       invalidateWritingPreferences();
       if (requestId !== accountSaveRequestRef.current) return;
       if (editVersion === accountEditVersionRef.current) {
@@ -868,9 +914,11 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     }
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
-  function connectOutlook() {
+  async function connectOutlook() {
     // The request can fail without leaving Settings. Keep edits dirty; the
     // native unload guard protects the actual authorization redirect instead.
+    try { if (!demoMode) await requireSettingsOwner(); }
+    catch (error) { setOutlookAuthorizationStatus("error"); setOutlookAuthorizationError(getErrorMessage(error)); return; }
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
       // A cancelled native unload leaves this component mounted and retryable.
       if (result === "started") setOutlookAuthorizationStatus("idle");
@@ -883,7 +931,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
     setRevokingAgentConnection(connection.id); setAgentConnectionsError(null);
     try {
-      if (!demoMode) await revokeAgentConnection(connection.id);
+      if (!demoMode) { await requireSettingsOwner(); await revokeAgentConnection(connection.id); }
       const revokedAt = new Date().toISOString();
       setAgentConnections((current) => current.map((item) => item.id === connection.id ? { ...item, revokedAt } : item));
     } catch (error) { setAgentConnectionsError(`Could not revoke this connection. ${getErrorMessage(error)}`); }
@@ -893,7 +941,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     if (!window.confirm("Revoke every active ChatGPT and Codex connection?")) return;
     setRevokingAgentConnection("all"); setAgentConnectionsError(null);
     try {
-      if (!demoMode) await revokeAllAgentConnections();
+      if (!demoMode) { await requireSettingsOwner(); await revokeAllAgentConnections(); }
       const revokedAt = new Date().toISOString();
       setAgentConnections((current) => current.map((item) => item.revokedAt ? item : { ...item, revokedAt }));
     } catch (error) { setAgentConnectionsError(`Could not revoke agent connections. ${getErrorMessage(error)}`); }
@@ -934,6 +982,13 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     syncing: !demoMode && (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "syncing"))),
   }), [connectedAccounts.length, connectedAccountsStatus, demoMode, demoSavedViews, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
+  if (settingsOwnerBlocked) return <><main className="oauth-page login-required-page settings-owner-recovery" ref={settingsEditorRef}><section className="login-required-shell">
+    <h1 ref={titleRef} tabIndex={-1}>Settings ownership changed.</h1>
+    <p>Your unsaved choices remain local to the original session. Orca stopped Settings writes and hid its account details. Sign back into the original account to resume, or leave Settings and discard those local edits.</p>
+    <button disabled={settingsOwnerRecoveryBusy} onClick={() => void recoverSettingsOwner()} type="button">{settingsOwnerRecoveryBusy ? "Checking original session…" : "Check original session"}</button>
+    <a href="/login?returnTo=%2Fsettings">Sign in to the original account</a><a href="/">Leave Settings</a>
+    {settingsOwnerRecoveryError ? <p role="alert">{settingsOwnerRecoveryError}</p> : null}
+  </section></main>{navigationGuard.asking ? <SettingsLeaveDialog onStay={navigationGuard.keep} onLeave={navigationGuard.discard} /> : null}</>;
   return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
     <main className="settings-home-page" ref={settingsEditorRef}>
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
