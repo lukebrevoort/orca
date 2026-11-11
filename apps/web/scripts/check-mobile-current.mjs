@@ -45,7 +45,8 @@ try {
     check.equal(await more.evaluate(el=>el===document.activeElement),true);
     for (const label of ['Summary','Focus','Focus (legacy)','Orca launch','Weekly production review, saved view','All Mail']) {
      await more.click();
-     await page.getByRole('menuitem',{name:new RegExp('^'+label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'[0-9]*$')}).click();
+     console.log('select',theme,label);
+     await page.getByRole('menuitem',{name:new RegExp('^'+label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:\\s*[0-9]+)?$')}).click();
      await dialog.waitFor({state:'hidden'});
      check.equal(await more.getAttribute('data-has-current'),'true');
      check.equal(await nav.locator('[aria-current="page"]').count(),0);
