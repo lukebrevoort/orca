@@ -114,6 +114,37 @@ function describeResponse(workspaceRevision: number) {
 }
 
 describe("AppSidebar mobile navigation", () => {
+  test("canonical fallback Inbox owns the anchor without marking More current", async () => {
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    const fallback = { id: "custom-fallback", name: "Correspondence", color: "#648ac4", isFallback: true, retiredAt: null, revision: 1, position: 0, notificationPreference: "quiet" as const, delivery: "proposal_only" as const, counts: { total: 0, unread: 0 } };
+    const cases: [DesktopDestination, string | null][] = [
+      ["inbox", null], ["destination:custom-fallback", null], ["drafts", null],
+      ["summary", "Summary"], ["focus", "Focus"], ["all", "All Mail"],
+      ["settings", "Settings"], ["attention", "Organization"], ["organization-studio", "Organization"],
+      ["destination:clients", "Clients"], ["view:weekly", "Weekly review"],
+      ["space:hidden-id", "Hidden projects"], ["destination:missing-id", "Unavailable space"],
+      ["view:missing-id", "Unavailable space"], ["space:missing-id", "Unavailable space"],
+    ];
+    for (const [active, currentLabel] of cases) {
+      await act(async () => root!.render(<TopLayerProvider><AppSidebar theme="light"
+        onCompose={() => {}} onManageSpaces={() => {}} onNavigate={() => {}}
+        projection={{ account: { displayName: "Owner", email: "owner@example.com", accountCount: 1, health: "synced" }, active, online: true, fallbackDestination: fallback,
+          spaces: [
+            { id: "clients", kind: "destination", label: "Clients", description: "" },
+            { id: "weekly", kind: "view", label: "Weekly review", description: "" },
+            { id: "hidden-id", custom: true, hidden: true, label: "Hidden projects", description: "" },
+          ] }}
+      /></TopLayerProvider>));
+      const mobile = container.querySelector('nav[aria-label="Mobile primary"]') as unknown as HTMLElement;
+      const more = button(mobile, "More");
+      expect(more.getAttribute("data-has-current"), active).toBe(currentLabel ? "true" : null);
+      expect(more.getAttribute("aria-label"), active).toBe(`Open all spaces${currentLabel ? `. Current space: ${currentLabel}` : ""}`);
+      expect(mobile.querySelectorAll('[aria-current="page"]').length, active).toBe(currentLabel ? 0 : 1);
+    }
+  });
+
   test("keeps every destination, account, Compose, and space management keyboard reachable", async () => {
     const destinations: DesktopDestination[] = [];
     let composeCalls = 0;
