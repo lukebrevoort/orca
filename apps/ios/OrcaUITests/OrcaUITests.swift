@@ -1992,6 +1992,7 @@ final class OrcaUITests: XCTestCase {
             "full_target_reachable": String(historyReachableBeforeTap), "reading_viewport": String(describing: historyViewport())
         ])
         XCTAssertTrue(historyReachableBeforeTap, "Show21 needs its full44pt target below navigation and above Reply before tapping")
+        guard historyReachableBeforeTap else { return }
         history.tap()
         // Keep the original5s predicate and capture its result before the
         // first extra AX read or hierarchy/PNG work. Diagnostics cannot rescue
