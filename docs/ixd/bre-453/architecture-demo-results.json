@@ -1,0 +1,31 @@
+{
+  "artifactSha256": "4be4a12d6cc15fe9a3f8387c4bcf456ebeaa359d2aba45af2dd2e3fa941fd085",
+  "assertions": 48,
+  "matrix": [
+    {
+      "theme": "light",
+      "width": 390,
+      "pass": true,
+      "requests": 0
+    },
+    {
+      "theme": "light",
+      "width": 728,
+      "pass": true,
+      "requests": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "pass": true,
+      "requests": 0
+    },
+    {
+      "theme": "dark",
+      "width": 728,
+      "pass": true,
+      "requests": 0
+    }
+  ],
+  "scope": "architecture sketch only; no application persistence, API or delivery proof"
+}
