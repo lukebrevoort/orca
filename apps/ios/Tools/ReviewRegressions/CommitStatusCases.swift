@@ -141,7 +141,20 @@ import Foundation
     let addedProof: ViewCommitStatus = try await client.request("v1/organization/views/commit-status", method: "POST", body: addedOriginal)
     if case .unknown = addedProof.outcome { check("478-added-account-status-stays-conservative", true, "historical account-set receipt proof stays unknown") }
     else { check("478-added-account-status-stays-conservative", false, "expected documented historical account-set unknown limitation") }
-    let exactRetryID = await added.save(), afterAddition = try await statusState()
-    check("478-added-account-exact-retry-recovers", exactRetryID != nil && added.pendingTarget == nil && afterAddition["count"].integer == beforeAddition["count"].integer, "independent same-command200ack permits original View recovery despite conservative unknown status; no duplicate")
+    guard case .array(let addedLedger) = beforeAddition["ledger"], let originalID = addedLedger.last?["response"]["view"]["id"].text else { throw APIClient.ClientError.invalidResponse }
+    let currentPrepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("saved_view"), "viewId": .string(originalID)]))
+    var externalDraft = currentPrepared["draft"].keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
+    externalDraft = externalDraft.setting("identity", to: externalDraft["identity"].setting("name", to: .string("Externally advanced current View"))).setting("definition", to: externalDraft["definition"].setting("date", to: .object(["receivedAfter": .string("1970-01-01T00:00:00.000Z")])))
+    let externalPreview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": externalDraft, "page": .object(["limit": .number(25)])]))
+    let externalSave: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object(["draft": externalPreview["draft"], "expectedRevisions": .object(["workspace": externalPreview["workspaceRevision"], "view": externalPreview["draft"]["viewRevision"]]), "retryKey": .string(UUID().uuidString), "confirmedZeroMatchDigest": externalPreview["draft"]["definitionDigest"]]))
+    added.name = "Local newer edits survive exact acknowledgement"; added.edited()
+    _ = await added.save(); let afterAddition = try await statusState()
+    check("478-added-account-exact-retry-recovers", added.pendingTarget == nil && added.draft?["viewId"].text == originalID && afterAddition["count"].integer == beforeAddition["count"].integer, "independent exact-command200ack permits original View recovery despite conservative unknown status; no duplicate")
+    check("478-added-account-current-revisions-and-edits", added.name == "Local newer edits survive exact acknowledgement" && added.draft?["viewRevision"].integer == externalSave["view"]["revision"].integer && (externalSave["view"]["revision"].integer ?? 0) > 1, "current object may have later revisions; local unsaved edits remain while fresh advanced predicates are retained")
+    await added.review(); let addedSaved = await added.save()
+    let finalCatalog: MailActionJSON = try await client.request("v1/organization/views")
+    if case .array(let views) = finalCatalog["items"], let result = views.first(where: { $0["id"].text == originalID }) {
+        check("478-added-account-update-preserves-fresh-definition", addedSaved == originalID && result["name"].text == "Local newer edits survive exact acknowledgement" && result["definition"]["date"]["receivedAfter"].text == "1970-01-01T00:00:00.000Z", "fresh explicit update preserves externally added advanced definition and original identity")
+    }
 
 }
