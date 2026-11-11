@@ -3347,6 +3347,7 @@ private actor NativePreferenceSaveGate {
     func release() { continuation?.resume(); continuation = nil }
 }
 final class NativePreferenceTests: XCTestCase {
+    private struct SavedAccounts: Encodable { let items: [MailAccount] }
     private var priorLastUser: Any?
     override func setUp() { super.setUp(); priorLastUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example") }
     override func tearDown() { UserDefaults.standard.set(priorLastUser, forKey: "lastUser|https://orca.example"); super.tearDown() }
