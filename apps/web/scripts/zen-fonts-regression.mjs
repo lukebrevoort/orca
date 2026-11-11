@@ -111,8 +111,13 @@ async function cleanDraft(context, label) {
 }
 try {
   for (const theme of ['light', 'dark']) {
-    for (const fontPath of ['cold','reload','offline','stall']) {
-      const { context, page, release } = await contextFor(theme, { width: 390, height: 844 }, fontPath);
+    const fontCases = [
+      ...['cold', 'reload', 'stall'].map(fontPath => ({ fontPath, width: 390, height: 844 })),
+      ...[[1440,1000],[1024,768],[390,844],[320,568],[390,400],[720,450]].map(([width,height]) => ({ fontPath: 'offline', width, height })),
+    ];
+    for (const { fontPath, width, height } of fontCases) {
+      const fontName = `${theme}-font-${fontPath}-${width}x${height}`;
+      const { context, page, release } = await contextFor(theme, { width, height }, fontPath);
       const before = results.externalRequests.length;
       await page.goto(origin + '/dev/inbox', { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: /^Compose(?:\s+C)?$/ }).first().click();
@@ -122,16 +127,16 @@ try {
       await page.evaluate(() => { document.body.getBoundingClientRect(); document.fonts.load('16px Sora').catch(() => {}); document.fonts.load('18px Newsreader').catch(() => {}); });
       const ready = await page.evaluate(() => Promise.race([document.fonts.ready.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 1500))]));
       let screenshotError = null;
-      try { await page.screenshot({ path: join(out, `${theme}-font-${fontPath}.png`), timeout: 2500 }); }
+      try { await page.screenshot({ path: join(out, `${fontName}.png`), timeout: 2500 }); }
       catch (error) { screenshotError = error.message; }
-      if (!screenshotError) results.screenshots.push(`${theme}-font-${fontPath}.png`);
+      if (!screenshotError) results.screenshots.push(`${fontName}.png`);
       const requests = results.externalRequests.slice(before);
       check(ready, `${theme}/${fontPath}: document.fonts.ready resolves without bypass`);
       check(!screenshotError, `${theme}/${fontPath}: normal screenshot without bypass`, screenshotError);
       check(requests.length === 0, `${theme}/${fontPath}: zero external font requests`, requests);
       release();
-      if (screenshotError) await screenshot(page, `${theme}-font-${fontPath}-after-release`);
-      results.scenarios.push({ name: `${theme}-font-${fontPath}`, ready, screenshotError, requests, fontState: await page.evaluate(() => ({ status: document.fonts.status, loaded: [...document.fonts].map(f => ({ family: f.family, status: f.status })), body: getComputedStyle(document.body).fontFamily, resources: performance.getEntriesByType('resource').filter(r => /font|\.ttf|\.woff/.test(r.name)).map(r => ({ name: r.name, transferSize: r.transferSize, encodedBodySize: r.encodedBodySize })) })) });
+      if (screenshotError) await screenshot(page, `${fontName}-after-release`);
+      results.scenarios.push({ name: fontName, ready, screenshotError, requests, fontState: await page.evaluate(() => ({ status: document.fonts.status, loaded: [...document.fonts].map(f => ({ family: f.family, status: f.status })), body: getComputedStyle(document.body).fontFamily, resources: performance.getEntriesByType('resource').filter(r => /font|\.ttf|\.woff/.test(r.name)).map(r => ({ name: r.name, transferSize: r.transferSize, encodedBodySize: r.encodedBodySize })) })) });
       await context.close();
     }
     for (const [width, height, suffix] of [[1440,1000,'desktop'],[1024,768,'narrow-desktop'],[390,844,'mobile'],[320,568,'small'],[390,400,'short'],[720,450,'200pct-reflow']]) {
