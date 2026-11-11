@@ -1,4 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Sora:wght@400;500;600;700&display=swap");
+/* Same-origin, OFL-licensed variable fonts; system fallbacks remain usable
+   if an asset is unavailable. Sources and licenses: public/fonts/README.md. */
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/Sora-variable.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/Newsreader-variable.ttf") format("truetype");
+}
 
 :root {
   --orca-ink: #0a0a0b;
@@ -4155,8 +4171,8 @@ textarea {
   --orca-blur-tint: rgb(247 250 248 / 84%);
   --orca-shadow: 0 18px 54px rgb(15 36 34 / 12%);
   --orca-font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --orca-font-body: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --orca-font-reader: "Newsreader", Georgia, serif;
+  --orca-font-body: "Sora", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --orca-font-reader: "Newsreader", "Iowan Old Style", Georgia, serif;
   --orca-bg: var(--orca-paper);
   --orca-serif: var(--orca-font-display);
 }
@@ -5037,25 +5053,58 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
 }
 .zen-header { padding: 28px 34px 0; }
 .zen-back { background: var(--orca-surface); border: 1px solid color-mix(in srgb, var(--orca-border) 65%, transparent); border-radius: 999px; color: var(--orca-ink); font-size: 12px; font-weight: 600; padding: 11px 16px; }
-.zen-stage { align-items: flex-start; display: flex; justify-content: center; padding: 116px 24px 130px; }
-.zen-column { max-width: 640px; padding: 0; width: min(640px, calc(100vw - 48px)); }
-.compose-workspace-zen { min-height: calc(100vh - 246px); }
+.zen-stage { align-items: flex-start; display: flex; justify-content: center; padding: clamp(24px, 8vh, 80px) 24px 32px; }
+.zen-column { height: auto; max-width: 680px; min-height: 0; padding: 0; width: 100%; }
+.compose-workspace-zen { min-height: 0; }
+.compose-workspace-zen .compose-writing-field { flex: 1 0 auto; min-width: 0; }
 .compose-workspace-zen .compose-addressing { border-bottom: 0; margin: 0 0 22px; }
 .compose-workspace-zen .compose-recipient-row { grid-template-columns: 28px minmax(0,1fr); }
 .compose-workspace-zen .compose-recipient-chip { background: var(--orca-surface); }
 .compose-workspace-zen .compose-subject-field { border: 0; display: block; }
 .compose-workspace-zen .compose-subject-label { display: none; }
 .compose-workspace-zen .compose-subject-field input { font-size: 30px; font-weight: 600; line-height: 1.2; padding: 10px 0 20px; }
-.compose-workspace-zen .compose-writing-area { font-family: var(--orca-font-reader); font-size: 20px; line-height: 1.65; min-height: 40vh; padding-top: 8px; }
-.compose-workspace-zen .compose-formatting { background: transparent; border-radius: 0; bottom: 36px; box-shadow: none; left: clamp(36px, 7.5vw, 94px); margin: 0; padding: 0; position: fixed; transform: none; width: auto; z-index: 4; }
+.compose-workspace-zen .compose-writing-area { font-family: var(--orca-font-reader); font-size: 20px; line-height: 1.65; min-height: clamp(160px, 32vh, 360px); padding-top: 8px; }
+/* One scrollable writing column owns attachments, formatting and delivery.
+   No footer piece reserves a competing rectangle in the viewport. */
+.compose-workspace-zen .compose-formatting { background: transparent; border-radius: 0; box-shadow: none; margin: 0; opacity: 1; padding: 12px 0; position: static; transform: none; width: auto; z-index: auto; }
 .compose-workspace-zen > .compose-delivery-bar .compose-delivery-empty { display: none; }
-.compose-workspace-zen > .compose-delivery-bar { border: 0; bottom: 36px; padding: 0; position: fixed; right: max(36px, calc((100vw - 600px) / 2 + 10px)); z-index: 5; }
+.compose-workspace-zen > .compose-delivery-bar { border-top: 1px solid var(--orca-border); flex-shrink: 0; min-width: 0; padding: 16px 0 max(16px, env(safe-area-inset-bottom)); position: static; z-index: auto; }
+.compose-workspace-zen .compose-delivery-bar > div:first-child { align-items: flex-start; }
+.compose-workspace-zen .compose-save-status { font-size: 13px; line-height: 1.5; min-width: 0; }
+.compose-workspace-zen .compose-save-status > span { flex-shrink: 0; margin-top: 7px; }
+.compose-workspace-zen .compose-delivery-bar > div:first-child > span:last-child,
+.compose-workspace-zen .compose-delivery-bar > p { font-size: 13px; line-height: 1.5; max-width: none; overflow-wrap: anywhere; }
+.compose-workspace-zen .compose-delivery-error { color: var(--orca-danger) !important; }
+.compose-workspace-zen .compose-attachment-chips li { max-width: 100%; min-width: 0; }
+.compose-workspace-zen .compose-attachment-chip-meta { flex: 1; }
+.compose-workspace-zen .compose-attachment-chip-meta strong { font-size: 13px; overflow-wrap: anywhere; white-space: normal; }
+.compose-workspace-zen .compose-attachment-chip-meta small { font-size: 13px; }
+.compose-workspace-zen .compose-attachment-chips button { flex: 0 0 44px; }
+.compose-workspace-zen .compose-formatting button,
+.compose-workspace-zen .compose-attachment-chips button,
+.compose-workspace-zen .compose-delivery-actions button,
+.compose-workspace-zen .compose-conflict button,
+.compose-workspace-zen .compose-save-retry,
+.compose-workspace-zen .writing-format-choice select,
+.compose-workspace-zen .compose-carbon-toggle,
+.compose-workspace-zen .compose-recipient-chip button { height: auto; min-height: 44px; min-width: 44px; }
+.compose-workspace-zen .compose-formatting button,
+.compose-workspace-zen .compose-delivery-actions button { font-size: 14px; }
+.compose-workspace-zen .compose-formatting button:disabled,
+.compose-workspace-zen .compose-delivery-actions button:disabled { color: var(--orca-muted); opacity: 1; }
+.compose-workspace-zen .compose-conflict { flex-wrap: wrap; }
+.compose-workspace-zen .compose-conflict > div { min-width: 0; }
+.compose-workspace-zen .compose-conflict > div:last-child { flex-wrap: wrap; }
+.compose-workspace-zen .compose-conflict strong,
+.compose-workspace-zen .compose-conflict span { font-size: 13px; }
+.compose-zen-header { flex-shrink: 0; }
+.compose-zen-header .zen-back { height: auto; min-height: 44px; }
+.compose-workspace-zen .compose-attachment-chips button:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 2px; }
 
 @media (max-width: 760px) {
   .compose-delivery-bar { grid-template-columns: 1fr; }
   .compose-delivery-actions { justify-content: flex-end; }
-  .compose-workspace-zen .compose-formatting { bottom: 24px; }
-  .compose-workspace-zen > .compose-delivery-bar { bottom: 88px; right: 20px; }
+  .compose-workspace-zen > .compose-delivery-bar { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 600px) {
