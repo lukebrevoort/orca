@@ -134,7 +134,7 @@ test("marker alone and marker as bearer grant nothing; real bearer wins over amb
   const mobile = createMobileSession(fixture.db, "v");
   const response = await fixture.app.request("/v1/auth/session", { headers: { authorization: `Bearer ${mobile.accessToken}`, cookie: `orca_session=${fixture.u.token}; ${contextCookie}=${marker}` } });
   expect(response.status).toBe(200);
-  expect(authSessionSchema.parse(await response.json()).user.id).toBe("v");
+  expect(authSessionSchema.parse(await response.json()).user!.id).toBe("v");
   expect(response.headers.get(contextHeader)).toBeNull();
   expect(response.headers.getSetCookie()).toEqual([]);
   const logout = await fixture.app.request("/v1/auth/logout", { method: "POST", headers: { origin: "http://localhost:5173", authorization: `Bearer ${mobile.accessToken}`, cookie: `${contextCookie}=${marker}` } });
@@ -183,5 +183,5 @@ test("held fresh U session response cannot replace V witness after real paired t
   expect(jar.get(contextCookie)).toBe(createBrowserAuthContext(fixture.v));
   expect(held.headers.get(contextHeader)).toBe(createBrowserAuthContext(fixture.u));
   expect(jar.get(contextCookie)).not.toBe(held.headers.get(contextHeader)!);
-  expect(authSessionSchema.parse(await held.json()).user.id).toBe("u");
+  expect(authSessionSchema.parse(await held.json()).user!.id).toBe("u");
 });
