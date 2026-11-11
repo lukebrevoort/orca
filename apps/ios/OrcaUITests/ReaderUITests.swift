@@ -24,15 +24,36 @@ final class ReaderUITests: XCTestCase {
         }
         XCTAssertTrue(toggle.isHittable)
         XCTAssertGreaterThanOrEqual(toggle.frame.height, 44)
+        revealReaderControl(toggle, in: app, scrollUp: true)
         screenshot( "earlier-messages-accessibility-collapsed")
         toggle.tap()
         let hide = app.buttons["Hide 21 earlier messages"]
+        revealReaderControl(hide, in: app, scrollUp: false)
         XCTAssertTrue(hide.waitForExistence(timeout: 5))
         XCTAssertEqual(hide.value as? String, "Expanded")
         screenshot( "earlier-messages-accessibility-expanded")
         hide.tap()
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         XCTAssertEqual(toggle.value as? String, "Collapsed")
+    }
+
+    private func revealReaderControl(_ control: XCUIElement, in app: XCUIApplication, scrollUp: Bool,
+                                     file: StaticString = #filePath, line: UInt = #line) {
+        let reader = app.scrollViews["thread.reader"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 5), file: file, line: line)
+        for attempt in 0..<12 {
+            let top = max(reader.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 8
+            let bottom = min(reader.frame.maxY, app.buttons["Reply"].frame.minY) - 8
+            if control.exists && control.isHittable && control.frame.minY >= top && control.frame.maxY <= bottom {
+                print("[bre-459] reader_disclosure_frame=\(control.frame) visible_top=\(top) visible_bottom=\(bottom)")
+                return
+            }
+            let up = control.exists && !control.frame.isEmpty ? control.frame.maxY > bottom : (attempt < 6 ? scrollUp : !scrollUp)
+            reader.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: up ? 0.75 : 0.25))
+                .press(forDuration: 0.05, thenDragTo: reader.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: up ? 0.25 : 0.75)))
+        }
+        screenshot("bre-459-reader-disclosure-unreachable")
+        XCTFail("Earlier-message disclosure must be fully reachable between navigation and reply actions", file: file, line: line)
     }
 
     private func setLongReader(_ enabled: Bool) throws {

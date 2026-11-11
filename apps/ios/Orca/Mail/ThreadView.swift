@@ -66,6 +66,7 @@ struct ThreadView: View {
                                 Rectangle().fill(OrcaTheme.border).frame(height: 1).accessibilityHidden(true)
                             }
                         }
+                        .id("thread.earlier-messages")
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, item in
                         if showEarlier || index >= firstIndex {
@@ -144,6 +145,7 @@ struct ThreadView: View {
                 if overflow { Button("Open in pages") { Task { await loadPage(nil) } } }
             } else { ProgressView("Getting conversation").padding(.top, 80) }
         }.background(OrcaTheme.paper)
+        .accessibilityIdentifier("thread.reader")
         .coordinateSpace(name: "threadViewport")
         // Observe the scroll viewport directly. A background PreferenceKey can
         // resolve to its zero default here, suppressing every contextual jump.
@@ -168,6 +170,15 @@ struct ThreadView: View {
                 }
                 .font(OrcaTheme.ui(12)).buttonStyle(ReaderJumpButtonStyle())
                 .padding(12)
+            }
+        }
+        .onChange(of: showEarlier) { _, _ in
+            // Inserting older cards must not preserve the old card's offset
+            // by pushing the disclosure off screen. Keep the control and the
+            // newly revealed beginning reachable, including at large text.
+            Task { @MainActor in
+                await Task.yield()
+                proxy.scrollTo("thread.earlier-messages", anchor: .top)
             }
         }
         }

@@ -254,15 +254,6 @@ struct ComposeView: View {
         }
         .navigationTitle(kind == "new" ? "New message" : kind.replacingOccurrences(of: "_", with: " ").capitalized).navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button { focusedField = nil } label: {
-                    Text("Done").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-                }
-                    .accessibilityIdentifier("compose.keyboard-done")
-            }
-        }
         .task {
             let activeEditor = UUID(); editorID = activeEditor; isVisible = true
             let needsHydration = preparing; preparing = true
@@ -349,6 +340,7 @@ struct ComposeView: View {
             HStack(spacing: 14) {
                 Spacer(minLength: 0)
                 if staleConflict { keepBothButton }
+                keyboardDoneButton
                 sendButton
             }
         }
@@ -357,7 +349,25 @@ struct ComposeView: View {
         VStack(alignment: .leading, spacing: 8) {
             saveStatus
             if staleConflict { keepBothButton }
-            sendButton
+            HStack(spacing: 12) {
+                keyboardDoneButton
+                sendButton
+            }
+        }
+    }
+    @ViewBuilder private var keyboardDoneButton: some View {
+        if focusedField != nil {
+            // A system keyboard toolbar clamps its button to 36pt on iOS26.
+            // Own the target in the reserved action row, alongside Send, so it
+            // remains 44pt without taking another row from the writing area.
+            Button("Done") { focusedField = nil }
+                .font(OrcaTheme.ui(13, weight: .semibold))
+                .foregroundStyle(OrcaTheme.ink)
+                .padding(.horizontal, 12)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("compose.keyboard-done")
         }
     }
     private func recipientField(_ label: String, text: Binding<String>, field: WritingField) -> some View {

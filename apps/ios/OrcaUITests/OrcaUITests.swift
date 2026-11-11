@@ -188,7 +188,7 @@ final class OrcaUITests: XCTestCase {
             let body = messageBody(in: app)
             revealComposeBody(in: app)
             for _ in 0..<8 { if body.isHittable { break }; app.swipeUp() }
-            XCTAssertTrue(body.isHittable); body.tap(); body.typeText(" Layout writing.")
+            XCTAssertTrue(body.isHittable); focusComposeBody(in: app); body.typeText(" Layout writing.")
             dismissTypingIntroduction(in: app)
             XCTAssertTrue(app.keyboards.firstMatch.exists)
             let send = app.buttons["compose.send"]
@@ -203,14 +203,14 @@ final class OrcaUITests: XCTestCase {
             // Resume actual editing after the support sheet, then interrupt the
             // scene. Both transitions must preserve this account's draft.
             for _ in 0..<8 { if body.isHittable { break }; app.swipeDown() }
-            XCTAssertTrue(body.isHittable); body.tap(); body.typeText(" Resumed.")
+            XCTAssertTrue(body.isHittable); focusComposeBody(in: app); body.typeText(" Resumed.")
             dismissTypingIntroduction(in: app)
             let latest = try XCTUnwrap(body.value as? String)
             XCTAssertTrue(latest.contains("Resumed."))
             XCUIDevice.shared.press(.home); app.activate()
             XCTAssertEqual(body.value as? String, latest)
             assertFeedbackClear(of: [send, status], in: app, checkpoint: name + "-foreground")
-            if !app.keyboards.firstMatch.exists { body.tap() }
+            if !app.keyboards.firstMatch.exists { focusComposeBody(in: app) }
             XCTAssertTrue(app.buttons["compose.keyboard-done"].waitForExistence(timeout: 5))
             app.buttons["compose.keyboard-done"].tap()
             XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
@@ -582,7 +582,7 @@ final class OrcaUITests: XCTestCase {
         let recipient = app.textFields["compose.to"]
         XCTAssertTrue(recipient.waitForExistence(timeout: 10))
         recipient.tap(); recipient.typeText("maya@example.com")
-        let body = messageBody(in: app); body.tap(); body.typeText("Keep these words while access changes.")
+        let body = messageBody(in: app); focusComposeBody(in: app); body.typeText("Keep these words while access changes.")
         let refresh = app.buttons["compose.refresh-permission"]
         XCTAssertTrue(refresh.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["compose.send"].isEnabled)
@@ -652,14 +652,16 @@ final class OrcaUITests: XCTestCase {
         for _ in 0..<5 { if remove.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(remove.isHittable); remove.tap()
         XCTAssertTrue(remove.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["compose.attachment.remove.keep"].exists)
+        let keep = app.buttons["compose.attachment.remove.keep"]
+        revealComposeControl(keep, in: app, scrollUp: true)
+        XCTAssertTrue(keep.exists)
         attachScreenshot(named: "33-compose-attachment-removed")
         assertFeedbackClear(of: [app.buttons["compose.attachment.remove.keep"], app.buttons["compose.send"]],
                             in: app, checkpoint: "attachment-removed")
         navigateBack(in: app)
         let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
         XCTAssertTrue(localRow.waitForExistence(timeout: 10)); localRow.tap()
-        for _ in 0..<5 { if app.buttons["compose.attachment.remove.keep"].isHittable { break }; app.swipeUp() }
+        revealComposeControl(keep, in: app, scrollUp: true)
         XCTAssertFalse(app.buttons["compose.attachment.remove.remove"].exists)
         XCTAssertTrue(app.buttons["compose.attachment.remove.keep"].exists)
         let send = app.buttons["compose.send"]; XCTAssertTrue(send.isEnabled); send.tap()
@@ -677,7 +679,7 @@ final class OrcaUITests: XCTestCase {
         let recipient = app.textFields["compose.to"]
         XCTAssertTrue(recipient.waitForExistence(timeout: 10))
         recipient.tap(); recipient.typeText("maya@example.com")
-        let body = messageBody(in: app); body.tap(); body.typeText("Words survive a trip to the browser.")
+        let body = messageBody(in: app); focusComposeBody(in: app); body.typeText("Words survive a trip to the browser.")
         XCTAssertFalse(app.buttons["compose.send"].isEnabled)
         XCUIDevice.shared.press(.home)
         try setFixtureSending(true)
@@ -1102,6 +1104,33 @@ final class OrcaUITests: XCTestCase {
         XCTAssertLessThanOrEqual(control.frame.maxY, status.frame.minY - 8, "Control must be above the fixed footer before tapping", file: file, line: line)
         expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: control)
         waitForExpectations(timeout: 10)
+    }
+
+    private func focusComposeBody(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let body = messageBody(in: app)
+        let form = app.scrollViews["compose.form"]
+        let status = app.descendants(matching: .any)["compose.save-status"]
+        XCTAssertTrue(form.waitForExistence(timeout: 10), file: file, line: line)
+        for _ in 0..<12 {
+            let top = max(form.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 2
+            let bottom = min(form.frame.maxY, status.frame.minY) - 2
+            let viewport = CGRect(x: form.frame.minX, y: top, width: form.frame.width, height: max(0, bottom - top))
+            let visible = body.frame.intersection(viewport)
+            if body.exists && body.isHittable && !visible.isNull && visible.width >= 44 && visible.height >= 44 {
+                // TextEditor is taller than the keyboard-reduced viewport.
+                // XCTest's default center may be behind the fixed footer;
+                // tap its actual visible writing area, as a user does.
+                let offset = CGVector(dx: (visible.midX - body.frame.minX) / body.frame.width,
+                                      dy: (visible.midY - body.frame.minY) / body.frame.height)
+                body.coordinate(withNormalizedOffset: offset).tap()
+                return
+            }
+            let up = !body.exists || body.frame.minY >= top
+            form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.75 : 0.25))
+                .press(forDuration: 0.05, thenDragTo: form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.25 : 0.75)))
+        }
+        attachScreenshot(named: "bre-459-writing-area-unreachable")
+        XCTFail("Message body needs a visible 44pt writing area above the fixed actions", file: file, line: line)
     }
 
     private func revealComposeBody(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
