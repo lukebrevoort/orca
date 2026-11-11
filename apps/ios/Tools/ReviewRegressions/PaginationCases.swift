@@ -31,6 +31,32 @@ import Foundation
         check("CORE02-pagination-" + name + "-owned-state", invalidates ? model.messages.isEmpty && model.nextCursor == nil : model.messages.map(\.id) == ["accepted"] && model.nextCursor == "valid-cursor", "auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor")
         check("CORE02-pagination-" + name + "-error-and-provenance", model.error == "Controlled pagination failure" && !model.isLoading && model.resultSearch == "submitted-query", "failure stays visible with submitted-query provenance and completed loading")
     }
+    do {
+        let state = fixture("foreign-account-response"), model = InboxViewModel(); model.view = "all"
+        var requests = 0
+        ReviewURLProtocol.handler = { _ in
+            requests += 1
+            return (200, try page(requests == 1 ? "accepted" : "foreign", cursor: "next", account: requests == 1 ? "account" : "foreign-account"))
+        }
+        await model.load(state: state)
+        check("CORE02-foreign-page-established-owned-page", model.messages.map(\.id) == ["accepted"] && model.nextCursor == "next", "nonempty authorized page precedes the wrong-account pagination response")
+        await model.load(state: state, reset: false)
+        check("CORE02-foreign-200-page-rejected", requests == 2 && model.messages.isEmpty && model.nextCursor == nil && model.error == APIClient.ClientError.invalidResponse.localizedDescription && !model.isLoading, "a well-formed200 page containing another account's row fails ownership validation and clears this request's visible page")
+    }
+    do {
+        let state = fixture("later-owned-offline-reset"), model = InboxViewModel(); model.view = "all"; model.search = "owned-query"
+        var requests = 0
+        ReviewURLProtocol.handler = { _ in
+            requests += 1
+            if requests == 1 { return (200, try page("accepted", cursor: "next")) }
+            if requests == 2 { return (401, try ReviewRegressions.json(["error": ["code": "unauthorized", "message": "Current request rejected"]])) }
+            throw URLError(.notConnectedToInternet)
+        }
+        await model.load(state: state); await model.load(state: state, reset: false)
+        check("CORE02-current-auth-rejection-clears-visible-page", requests == 2 && model.messages.isEmpty && model.nextCursor == nil && model.error == "Current request rejected", "current authentication rejection is not treated as an offline response")
+        await model.load(state: state)
+        check("CORE02-later-same-owner-offline-reset-keeps-cache-policy", requests == 3 && model.messages.map(\.id) == ["accepted"] && model.resultSearch == "owned-query" && model.nextCursor == nil && model.error?.hasPrefix("Offline — showing saved mail") == true, "later distinct network failure can load the existing cache for the unchanged owner/account/query; no new cache purge policy")
+    }
     for freshSucceeds in [true, false] {
         let state = fixture("cursor-restart-\(freshSucceeds)"), model = InboxViewModel(); model.view = "all"
         var cursors = [String?]()

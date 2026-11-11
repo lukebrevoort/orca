@@ -75,9 +75,10 @@ import SwiftUI
             guard current() else { return }
             if let cached { messages = cached.messages; resultSearch = requestedSearch; nextCursor = nil; self.error = "Offline — showing saved mail; importance may have changed." }
             else {
-                // Pagination failures do not revoke an already accepted owned
-                // page. Authentication/ownership failures do; never present old
-                // account data as an offline fallback after that boundary.
+                // Ordinary pagination errors retain the accepted owned page.
+                // An auth/ownership rejection clears this request's visible rows;
+                // it does not purge the scoped cache. A later reset with a network
+                // or server failure may still show that same owner's cached page.
                 let invalidatesOwnership: Bool
                 if case let APIClient.ClientError.http(code, _) = error { invalidatesOwnership = [401, 403, 404].contains(code) }
                 else if case APIClient.ClientError.invalidResponse = error { invalidatesOwnership = true }
