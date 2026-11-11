@@ -3581,3 +3581,56 @@ final class NativeViewEditorRecoveryTests: XCTestCase {
         XCTAssertEqual(replayBodies.count, 2, "Newer edits receive a separate update command only after the original Save resolves")
     }
 }
+
+extension NativeImportanceTests {
+    @MainActor func testDroppedConversationAcknowledgementRemainsOwnedByOriginalTarget() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "importance-context-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var command: ImportanceCommand?, offline = false, writes = 0, operationIDs = [String]()
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                writes += 1; command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); offline = true
+                throw URLError(.networkConnectionLost)
+            }
+            if request.url!.path.contains("/operations/") {
+                operationIDs.append(request.url!.lastPathComponent)
+                if offline { throw URLError(.notConnectedToInternet) }
+                return (200, try Self.data(Self.operation(command!)))
+            }
+            let id = request.url!.lastPathComponent
+            return (200, try Self.data(["accountId": "demo-account", "threadId": id, "importance": Self.resolution(id == "A" && command != nil ? "important" : "unreviewed", revision: id == "A" && command != nil ? 1 : 0)]))
+        }
+        let first = ImportanceController(defaults: defaults)
+        await first.open(state: fixture.state, accountId: "demo-account", threadId: "A", subject: "Original A")
+        await first.choose(.important, state: fixture.state)
+        let reopened = ImportanceController(defaults: defaults)
+        await reopened.open(state: fixture.state, accountId: "demo-account", threadId: "B", subject: "Different B")
+        XCTAssertTrue(reopened.uncertain); XCTAssertTrue(reopened.originalTarget?.contains("Original A") == true)
+        await reopened.choose(.notImportant, state: fixture.state); XCTAssertEqual(writes, 1)
+        offline = false; await reopened.reconcile(state: fixture.state)
+        XCTAssertNil(reopened.receipt); XCTAssertFalse(reopened.canUndo)
+        XCTAssertTrue(reopened.status?.contains("Original A") == true)
+        XCTAssertEqual(reopened.snapshot?.effective, .unreviewed)
+        XCTAssertEqual(Set(operationIDs), [command!.operationId], "Every reconciliation retains A’s original UUID")
+    }
+    @MainActor func testKnownNewerConversationRevisionRetiresReceiptAndUndo() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "importance-stale-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var revision = 0
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                let command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); revision = 1
+                return (200, try Self.data(Self.operation(command)))
+            }
+            return (200, try Self.data(["accountId": "demo-account", "threadId": "A", "importance": Self.resolution(revision == 0 ? "unreviewed" : "important", revision: revision)]))
+        }
+        let controller = ImportanceController(defaults: defaults)
+        await controller.open(state: fixture.state, accountId: "demo-account", threadId: "A")
+        await controller.choose(.important, state: fixture.state)
+        XCTAssertNotNil(controller.receipt); XCTAssertTrue(controller.canUndo, "Establish the current receipt first")
+        revision = 2; await controller.refresh(state: fixture.state)
+        XCTAssertFalse(controller.canUndo); XCTAssertNil(controller.receipt)
+    }
+}
