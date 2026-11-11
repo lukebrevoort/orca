@@ -522,6 +522,14 @@ final class OrcaUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label CONTAINS %@", "Both drafts kept"), evaluatedWith: status)
         waitForExpectations(timeout: 10)
         attachScreenshot(named: "35-compose-conflict-copy-checkpoint")
+        XCTAssertTrue(app.keyboards.firstMatch.exists, "Reproduce the recovered copy with its writing keyboard still visible")
+        assertFeedbackClear(of: [app.buttons["compose.send"], status], in: app, checkpoint: "conflict-copy-keyboard")
+        // A separate real interaction checks Feedback's target. Geometry above
+        // is required even when XCTest calls a partly covered Send hittable.
+        app.buttons["feedback.open"].tap()
+        XCTAssertTrue(app.textViews["feedback.message"].waitForExistence(timeout: 5))
+        app.buttons["feedback.close"].tap()
+        XCTAssertEqual(body.value as? String, latestWriting, "Opening support must preserve the recovered writing")
         app.terminate()
         let reopened = try launchApp(); assertInboxLoaded(in: reopened)
         reopened.tabBars.buttons["Drafts"].tap()
@@ -532,6 +540,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertFalse(reopened.buttons["compose.attachment.remove.remove"].exists)
         XCTAssertTrue(reopened.buttons["compose.attachment.remove.keep"].exists)
         attachScreenshot(named: "36-compose-conflict-copy-reopened")
+        assertFeedbackClear(of: [reopened.buttons["compose.send"], reopened.descendants(matching: .any)["compose.save-status"]],
+                            in: reopened, checkpoint: "conflict-copy-reopened")
         reopened.buttons["compose.send"].tap()
         XCTAssertTrue(reopened.navigationBars["Drafts"].waitForExistence(timeout: 15))
         let original = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
@@ -1491,6 +1501,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(latest.waitForExistence(timeout: 10))
         XCTAssertTrue(latest.isHittable, "The newest message must be visible without scrolling past earlier replies.")
         attachScreenshot(named: "17-latest-message-on-open")
+        assertFeedbackClear(of: [app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
+                            in: app, checkpoint: "reader-actions")
 
         let actions = app.buttons["thread.actions"]
         XCTAssertTrue(actions.isHittable, "Conversation actions must remain reachable in the toolbar.")
@@ -1814,6 +1826,37 @@ final class OrcaUITests: XCTestCase {
         let back = app.navigationBars.buttons.firstMatch
         XCTAssertTrue(back.waitForExistence(timeout: 5), file: file, line: line)
         back.tap()
+    }
+
+    /// Measure actual accessibility frames, not SwiftUI padding constants.
+    /// Keep diagnostics to fixed checkpoint names and numeric geometry; do not
+    /// log recipients, writing, subjects, attachment names or API credentials.
+    private func assertFeedbackClear(of controls: [XCUIElement], in app: XCUIApplication, checkpoint: String,
+                                     file: StaticString = #filePath, line: UInt = #line) {
+        let feedback = app.buttons["feedback.open"]
+        XCTAssertTrue(feedback.waitForExistence(timeout: 10), "Feedback must remain available", file: file, line: line)
+        let feedbackFrame = feedback.frame
+        let frames = controls.map { $0.frame }
+        let overlaps = frames.map { frame -> CGFloat in
+            let intersection = frame.intersection(feedbackFrame)
+            return intersection.isNull ? 0 : intersection.width * intersection.height
+        }
+        let overlapCount = overlaps.filter { $0 > 0 }.count
+        // Capture before any assertion aborts this test, including on baseline.
+        attachScreenshot(named: "bre-459-\(checkpoint)")
+        print("[bre-459] checkpoint=\(checkpoint) controls=\(controls.count) overlapping_controls=\(overlapCount) keyboard=\(app.keyboards.firstMatch.exists) feedback_frame=\(feedbackFrame) control_frames=\(frames) intersection_areas_pt2=\(overlaps)")
+        XCTAssertFalse(feedbackFrame.isEmpty, file: file, line: line)
+        XCTAssertTrue(app.frame.contains(feedbackFrame), "Feedback must be fully on screen", file: file, line: line)
+        XCTAssertTrue(feedback.isHittable, "Feedback must remain operable", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(feedbackFrame.width, 44, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(feedbackFrame.height, 44, file: file, line: line)
+        XCTAssertEqual(overlapCount, 0, "Feedback must not cover any protected control", file: file, line: line)
+        for (index, control) in controls.enumerated() {
+            XCTAssertTrue(control.exists, "Protected control \(index) must exist", file: file, line: line)
+            XCTAssertFalse(frames[index].isEmpty, "Protected control \(index) needs visible geometry", file: file, line: line)
+            XCTAssertTrue(app.frame.contains(frames[index]), "Protected control \(index) must be fully on screen", file: file, line: line)
+            XCTAssertTrue(control.isHittable, "Protected control \(index) must remain reachable", file: file, line: line)
+        }
     }
 
     private func attachScreenshot(named name: String) {
