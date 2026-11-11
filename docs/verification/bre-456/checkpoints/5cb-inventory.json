@@ -1,0 +1,88 @@
+{
+  "source": {
+    "baseline": "bdec28426de57b8833ae29743eef330f391f63cb",
+    "cases": [
+      {
+        "name": "baseline",
+        "active": "inbox",
+        "baseline": "bdec28426de57b8833ae29743eef330f391f63cb",
+        "componentSourceSha256": "17d4d055dc15d41912465a0f1d49dfb31080a10fb6ef25143cd9c1f733bc006c"
+      },
+      {
+        "name": "candidate",
+        "active": "important",
+        "baseline": null,
+        "componentSourceSha256": null
+      }
+    ]
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "inventory": [
+    {
+      "name": "baseline",
+      "visibleButtons": [
+        "ComposeC",
+        "Summary",
+        "Inbox3",
+        "Focus",
+        "Drafts2",
+        "Manage spaces",
+        "Customize tools",
+        "Later",
+        "Weekly review",
+        "Manage saved views",
+        "All Mail",
+        "Organization",
+        "Settings",
+        "FOFixture owner2 accounts \u00b7 synced\u203a"
+      ],
+      "count": 14,
+      "visibleControls": [
+        "ComposeC",
+        "Summary",
+        "Inbox3",
+        "Focus",
+        "Drafts2",
+        "Manage spaces",
+        "Customize tools",
+        "Later",
+        "Weekly review",
+        "Manage saved views",
+        "All Mail",
+        "Organization",
+        "Settings",
+        "FOFixture owner2 accounts \u00b7 synced\u203a"
+      ],
+      "controlCount": 14
+    },
+    {
+      "name": "candidate",
+      "visibleButtons": [
+        "ComposeC",
+        "Mail",
+        "All Mail",
+        "Drafts2",
+        "Settings",
+        "FOFixture owner2 accounts \u00b7 synced"
+      ],
+      "count": 6,
+      "visibleControls": [
+        "ComposeC",
+        "Mail",
+        "All Mail",
+        "Drafts2",
+        "Mailboxes",
+        "Settings",
+        "FOFixture owner2 accounts \u00b7 synced"
+      ],
+      "controlCount": 7
+    }
+  ],
+  "scope": "Default desktop sidebar buttons from exact baseline/candidate components with the same synthetic owner/counts/views. Not a performance benchmark.",
+  "scenarioCount": 0,
+  "rawPath": "/tmp/bre456-runtime-committed-2/inventory/results.json",
+  "rawSha256": "1c127f94789bb635191252335ff4047eb62e593b6d0bc14e97cb3a07535ecf91"
+}

@@ -1,0 +1,25 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "failures": [
+    {
+      "theme": "light",
+      "name": "offline-after-empty",
+      "message": "Unavailable Important is never shown as an empty mailbox undefined"
+    },
+    {
+      "theme": "dark",
+      "name": "offline-after-empty",
+      "message": "Unavailable Important is never shown as an empty mailbox undefined"
+    }
+  ],
+  "assertions": 66,
+  "pageErrors": [],
+  "scenarioCount": 20,
+  "rawPath": "/tmp/bre456-runtime-committed-2/importance-recovery/results.json",
+  "rawSha256": "e8d2afc5dd41843f2ecb1c28efb87ee287a16e6c6479cfc0d3006c5e611f4e12"
+}

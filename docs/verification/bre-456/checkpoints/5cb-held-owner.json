@@ -1,0 +1,105 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "assertions": 16,
+  "failures": [],
+  "pageErrors": [],
+  "scenarioCount": 4,
+  "rawPath": "/tmp/bre456-runtime-committed-2/held-owner/results.json",
+  "rawSha256": "06eeced3aca09b9f5afe4e82d63240044ff9546810854b18e25e3156a8018179",
+  "scenarios": [
+    {
+      "theme": "light",
+      "name": "owner-switched-before-save",
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    },
+    {
+      "theme": "light",
+      "name": "owner-switched-during-held-identity-preflight",
+      "identitySnapshot": {
+        "isAuthenticated": true,
+        "user": {
+          "id": "u",
+          "email": "u@example.com",
+          "name": null
+        },
+        "expiresAt": "2026-12-11T10:38:17.530Z",
+        "onboardingCompletedAt": null
+      },
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    },
+    {
+      "theme": "dark",
+      "name": "owner-switched-before-save",
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    },
+    {
+      "theme": "dark",
+      "name": "owner-switched-during-held-identity-preflight",
+      "identitySnapshot": {
+        "isAuthenticated": true,
+        "user": {
+          "id": "u",
+          "email": "u@example.com",
+          "name": null
+        },
+        "expiresAt": "2026-12-11T10:38:17.530Z",
+        "onboardingCompletedAt": null
+      },
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    }
+  ],
+  "browserRequestCount": 4
+}

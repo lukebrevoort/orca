@@ -91,6 +91,10 @@ try{for(const theme of ['light','dark']){
   if(failure==='offline-after-empty')await page.evaluate(()=>window.dispatchEvent(new Event('focus')));else await important.click();
   await page.getByRole('alert').filter({hasText:'Importance could not load.'}).waitFor();
   check(await page.getByRole('heading',{name:'No important conversations yet',exact:true}).count()===0,'Unavailable Important is never shown as an empty mailbox');
+  check(await page.locator('.mail-count').count()===0,'Failed refresh never presents a current membership count');
+  if(failure==='offline-after-empty')check(await page.getByRole('alert').innerText().then(text=>text.includes('last loaded snapshot')),'Genuine retained snapshot is explicitly identified');
+  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-'+failure+'-mobile.png')});
+  check(await page.getByRole('button',{name:'Retry Important',exact:true}).evaluate(node=>node.getBoundingClientRect().height>=44),'Failed-refresh retry remains a usable mobile control');
   await page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'All Mail',exact:true}).click();await page.locator('button.message-row').filter({hasText:'first account conversation'}).first().waitFor();
   check(await page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'Important',exact:true}).isVisible(),'Important and All Mail remain reachable after '+failure);
  });

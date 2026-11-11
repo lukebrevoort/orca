@@ -1,0 +1,15 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "commit": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+  "failures": [],
+  "assertions": 38,
+  "scenarioCount": 2,
+  "rawPath": "/tmp/bre456-runtime-committed-2/reader-attachments/results.json",
+  "rawSha256": "00967cb5de223d7b4b6c40b70dc2ac2dab7085c935edc7f4be7a66952e45fa23",
+  "browserRequestCount": 12
+}

@@ -18,16 +18,16 @@ try{for(const theme of ['light','dark']){
   await page.goto(origin+'/settings#writing');const signature=page.getByRole('textbox',{name:'Default signature',exact:true});await signature.fill('Unsaved original owner '+theme);
   await context.request.get(origin+'/__fixture/login-other');const before=await context.request.get(origin+'/v1/preferences').then(r=>r.json());
   await page.getByRole('button',{name:'Save account choices',exact:true}).click();
-  await page.waitForFunction(()=>document.body.textContent.includes('Account preferences saved.')||document.body.textContent.includes('Settings ownership changed.'));
+  await page.waitForFunction(()=>document.body.textContent.includes('Account preferences saved.')||document.body.textContent.includes('Your signed-in account changed'));
   const after=await context.request.get(origin+'/v1/preferences').then(r=>r.json());
   await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-owner.png')});
   const database=rows();result.scenarios.push({theme,name:'owner-switched-before-save',before,after,database});
   check(after.signature===before.signature,'Old owner edits must never be saved into the new session owner');
-  check(await page.getByRole('button',{name:'Check original session',exact:true}).isVisible(),'Owner change offers explicit recovery without exposing old account data');
+  check(await page.getByRole('button',{name:'Check original account',exact:true}).isVisible(),'Owner change offers explicit recovery without exposing old account data');
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(out,theme+'-owner-mobile.png')});
   check(await page.locator('.settings-owner-recovery').evaluate(node=>node.scrollWidth<=node.clientWidth+1),'Owner recovery reflows on mobile');
-  check(await page.getByRole('button',{name:'Check original session',exact:true}).evaluate(node=>node.getBoundingClientRect().height>=44),'Owner recovery action retains touch target');
-  await context.request.get(origin+'/__fixture/login');await page.getByRole('button',{name:'Check original session',exact:true}).click();await signature.waitFor();
+  check(await page.getByRole('button',{name:'Check original account',exact:true}).evaluate(node=>node.getBoundingClientRect().height>=44),'Owner recovery action retains touch target');
+  await context.request.get(origin+'/__fixture/login');await page.getByRole('button',{name:'Check original account',exact:true}).click();await signature.waitFor();
   check(await signature.inputValue()==='Unsaved original owner '+theme,'Original owner recovery retains unsaved choices');
   // The preflight identity is a real committed U response. A later V cookie
   // must not turn this old editor into a V preferences mutation.
@@ -47,7 +47,7 @@ try{for(const theme of ['light','dark']){
    await context.request.get(origin+'/__fixture/login-other');
    const heldBefore=await context.request.get(origin+'/v1/preferences').then(response=>response.json());
    releaseIdentity();
-   await page.waitForFunction(()=>document.body.textContent.includes('Account preferences saved.')||document.body.textContent.includes('Settings ownership changed.')||document.body.textContent.includes('Could not save your preferences.'));
+   await page.waitForFunction(()=>document.body.textContent.includes('Account preferences saved.')||document.body.textContent.includes('Your signed-in account changed')||document.body.textContent.includes('Could not save your preferences.'));
    const heldAfter=await context.request.get(origin+'/v1/preferences').then(response=>response.json());
    await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-held-identity.png')});
    result.scenarios.push({theme,name:'owner-switched-during-held-identity-preflight',identitySnapshot,before:heldBefore,after:heldAfter,database:rows()});

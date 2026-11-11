@@ -769,7 +769,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     if (!settingsOwnerRef.current && !establish) throw new Error("Load the original Settings session before changing account choices.");
     if (settingsOwnerRef.current && settingsOwnerRef.current !== session.user.id) {
       blockSettingsOwner();
-      throw new Error("Settings ownership changed. Your unsaved choices remain with their original session.");
+      throw new Error("These choices belong to the original account. Return to that account to keep editing.");
     }
     settingsOwnerRef.current = session.user.id;
     return session.user.id;
@@ -780,7 +780,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     try {
       await requireSettingsOwner();
       setSettingsOwnerBlocked(false);
-      setAccountSaveNotice("Original session restored. Your unsaved choices are still here.");
+      setAccountSaveNotice("Original account restored. Your unsaved choices are still here.");
       void loadConnectedAccounts(); void loadSettingsSyncStatus(); void loadAgentConnections();
       // An interrupted first load has no editable draft to restore.
       if (!accountPreferences) void loadAccountPreferences();
@@ -990,9 +990,9 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }), [connectedAccounts.length, connectedAccountsStatus, demoMode, demoSavedViews, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
   if (settingsOwnerBlocked) return <><main className="oauth-page login-required-page settings-owner-recovery" ref={settingsEditorRef}><section className="login-required-shell">
-    <h1 ref={titleRef} tabIndex={-1}>Settings ownership changed.</h1>
-    <p>Your unsaved choices remain local to the original session. Orca stopped Settings writes and hid its account details. Sign back into the original account to resume, or leave Settings and discard those local edits.</p>
-    <button disabled={settingsOwnerRecoveryBusy} onClick={() => void recoverSettingsOwner()} type="button">{settingsOwnerRecoveryBusy ? "Checking original session…" : "Check original session"}</button>
+    <h1 ref={titleRef} tabIndex={-1}>Your signed-in account changed</h1>
+    <p>Your unsaved choices are still here for the account you opened Settings with. Return to that account to keep editing, or leave Settings and discard these changes.</p>
+    <button disabled={settingsOwnerRecoveryBusy} onClick={() => void recoverSettingsOwner()} type="button">{settingsOwnerRecoveryBusy ? "Checking original account…" : "Check original account"}</button>
     <a href="/login?returnTo=%2Fsettings">Sign in to the original account</a><a href="/">Leave Settings</a>
     {settingsOwnerRecoveryError ? <p role="alert">{settingsOwnerRecoveryError}</p> : null}
   </section></main>{navigationGuard.asking ? <SettingsLeaveDialog onStay={navigationGuard.keep} onLeave={navigationGuard.discard} /> : null}</>;
@@ -2081,7 +2081,7 @@ export function InboxApp({
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
-    : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+    : summaryOpen ? "Summary" : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;

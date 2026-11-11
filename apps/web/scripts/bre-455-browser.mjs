@@ -45,6 +45,8 @@ try{for(const theme of ['light','dark']){
  for(let tab=0;tab<12;tab++){await page.keyboard.press('Tab');check(await dialog.evaluate(node=>node.contains(document.activeElement)),'Notification choices retain keyboard focus inside modal');}
  await screenshot(page,theme+'-choices-mobile');
  await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ // The existing shared TopLayer contract restores the opener in one frame.
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
  check(await page.getByRole('button',{name:'Set up important-only notifications',exact:true}).evaluate(node=>node===document.activeElement),'Cancel restores setup trigger focus');
  await page.setViewportSize({width:1024,height:900});
  check(JSON.stringify(db('select * from important_notification_installations'))===JSON.stringify(installationsBefore),'Cancel preserves policy and previous choices');
@@ -91,7 +93,7 @@ try{for(const theme of ['light','dark']){
  await page.route('**/v1/notifications/installations/*/claim',async route=>{if(ownerHold){ownerHold=false;const response=await route.fetch();assert(response.ok());ownerStarted();await ownerGate;return route.fulfill({response});}return route.continue();});
  await page.getByRole('button',{name:'Check for important mail now',exact:true}).click();await bounded(ownerClaimed,'owner claim');
  await context.request.get(origin+'/__fixture/login-other');const ownerAck=page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/claim'));releaseOwner();await ownerAck;
- await page.getByRole('heading',{name:'Settings ownership changed.',exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Your signed-in account changed',exact:true}).waitFor();
  check(await constructorCount(page)===2,'Changed session owner never constructs old queued alert');
  check(await page.locator('.important-notification-settings,.desktop-account').count()===0,'Notification and shell account choices hide after ownership change');
  await page.unroute('**/v1/notifications/installations/*/claim');

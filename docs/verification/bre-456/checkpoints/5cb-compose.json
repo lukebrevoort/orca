@@ -1,0 +1,14 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "pageErrors": [],
+  "scenarioCount": 16,
+  "rawPath": "/tmp/bre456-runtime-committed-2/compose/results.json",
+  "rawSha256": "2525bbae9e667faa38b5f06699a0ee41c616ab793a5805f23655ed933c778e82",
+  "browserRequestCount": 70,
+  "expectedSyntheticDeliveries": 8,
+  "actualSyntheticDeliveries": 8,
+  "externalRequestsBlocked": 0
+}
