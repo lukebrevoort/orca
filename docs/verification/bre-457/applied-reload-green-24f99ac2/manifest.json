@@ -1,0 +1,27 @@
+{
+  "sourceSHA": "24f99ac27f37b173ac3f0dea0656eeecdcb62903",
+  "scope": "production Foundation controllers, synthetic URLProtocol and optional actual HTTP/API/SQLite; not Apple UI runtime",
+  "sourceHashes": {
+    "Orca/Core/Models.swift": "c0332c3c0a01f190af1ded1a90aa9ba581b300f416f741cc1412b6c76d74836d",
+    "Orca/Core/APIClient.swift": "7a321288491cfdee95c277fc6f625249ed9fac87ffc093ed58819a438eef68df",
+    "Orca/Core/CacheStore.swift": "3ba61106879acdf5ee8ddc6183160b656f89788843e4ca3728b83b0cbfa344b6",
+    "Orca/Core/MailActionJSON.swift": "29821025192bbe9e45253e01ba5c0bfaa261ee5ac4658508793f4adc6f958fac",
+    "Orca/Core/Importance.swift": "068dd0e150e6d2c832df3572e15a8b6b80df2104eda255dfb309783156d61dbf",
+    "Orca/Core/InboxViewModel.swift": "07dd5c3f3657bcbd6092b3b66d2ffb27e4f9638034674e52037b945bb3b60766",
+    "Orca/Core/AccountPreferences.swift": "ca12209151c03abaa30a92e6ccaca01a26cd79a3fcaa235f5c9993950da08bfc",
+    "Orca/Core/NotificationNavigation.swift": "635618e29c437c02c13ad28efe5cbb180e810ab17aac266cc9ef3f7d44444ac7",
+    "Orca/Core/ViewCommitStatus.swift": "12f1bd9bfdb96560d6c63329fa99a522991bfb465bb1bcccbe5305030f6984f3",
+    "Orca/Core/NativeViewEditorController.swift": "ec2e3a5faee45051b76fadd5663e746a41612c56312287cd12cc5731a9c3bb5e",
+    "Tools/ReviewRegressions/Support.swift": "461c0372c9db6585cace7a207c6313c87fed55fb36c487764dfeaca29e78b9c4",
+    "Tools/ReviewRegressions/AppliedReloadCases.swift": "ace2c510d01482c0eb76829543dd4ffc8b05ad7f59484fe40f5a249b8fbd63be",
+    "Tools/ReviewRegressions/CommitStatusCases.swift": "db9393984b5f132e6eac3bcdc9cb40050e90235ad8b27690ebdede2de008c608",
+    "Tools/ReviewRegressions/Run.swift": "1f217624d2a4332d4f16d29b6ad432afc467dbc4fe899ac35edb8999d72a3202"
+  },
+  "harnessHashes": {
+    "run.py": "13cde3006b0150914f9b698d0684e3160e85ee1ce83e13fd57ad9a32713e7610",
+    "api-fixture.ts": "1459f4c4e1c6e9a3561a72ff8feb51cc65d50b9d9ac853d8f98a3614680b4981",
+    "runner-lifecycle.py": "aafe650397ce3d056ff1699e9d3fd594479a11f506bb598e1ee2f2260f3e12b9"
+  },
+  "compileExit": 0,
+  "regressionExit": 0
+}
