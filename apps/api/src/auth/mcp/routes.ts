@@ -6,6 +6,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { mcpConnectionPageSchema, mcpOAuthScopeSchema } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "../middleware.ts";
+import { requireSessionOwner } from "../session-owner.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   mcpAuthorizationCodes,
@@ -380,7 +381,7 @@ export function registerMcpOAuthRoutes(
     finally { sqlite.close(); }
   });
 
-  app.get("/v1/mcp/connections", requireMcpFeature, requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/mcp/connections", requireMcpFeature, requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const rows = db.select({
@@ -399,7 +400,7 @@ export function registerMcpOAuthRoutes(
     } finally { sqlite.close(); }
   });
 
-  app.delete("/v1/mcp/connections/:id", requireMcpFeature, requireAuth({ dbFactory }), (c) => {
+  app.delete("/v1/mcp/connections/:id", requireMcpFeature, requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const connection = db.select({ id: mcpConnections.id }).from(mcpConnections).where(and(eq(mcpConnections.id, c.req.param("id")), eq(mcpConnections.userId, c.get("auth").userId))).get();
@@ -409,7 +410,7 @@ export function registerMcpOAuthRoutes(
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/mcp/connections/revoke-all", requireMcpFeature, requireAuth({ dbFactory }), (c) => {
+  app.post("/v1/mcp/connections/revoke-all", requireMcpFeature, requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const { db, sqlite } = dbFactory();
     try { return c.json({ revoked: revokeAllMcpConnections(db, c.get("auth").userId, now()) }); }
     finally { sqlite.close(); }

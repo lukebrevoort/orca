@@ -6,6 +6,7 @@ import type { Handler, MiddlewareHandler } from "hono";
 import { createSessionToken } from "../jwt.ts";
 import { clearBrowserSessionCookies, setBrowserSessionCookies, setPendingBrowserSessionCookies } from "../browser-auth-context.ts";
 import { requireAuth, type AuthVariables } from "../middleware.ts";
+import { requireSessionOwner } from "../session-owner.ts";
 import { createSession } from "../session-store.ts";
 import { DatabaseOAuthAccountStore, type OAuthAccountStore } from "../gmail/oauth-accounts.ts";
 import { createDatabaseClient } from "../../db/client.ts";
@@ -46,7 +47,7 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
     return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
   };
 
-  app.get("/connect", auth, start);
+  app.get("/connect", auth, requireSessionOwner, start);
   app.get("/login", async (c) => {
     const missing = validateOutlookOAuthConfig(config);
     if (missing.length) {
