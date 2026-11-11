@@ -22,3 +22,7 @@ Run after the evidence commit; the PR handoff records the exact SHA and actual o
 - `python3 scripts/pstack/verify.py evidence /tmp/bre450-compose-final --commit <final SHA>` validates provenance; it does not execute product checks.
 
 No existing harness is weakened. Independent review and final integration gate belong to the parent coordinator; no approval or Done claim. Linear get_issue returned “MCP tool codex_apps/linear.get_issue is not available to the model”, so full ticket/comments and issue-state updates were blocked; supplied acceptance criteria were used. No live mail, OAuth, credentials, sending, release or deployment is part of this work.
+
+## Independent review correction
+
+The independent review of `dda23f22b0e30619a7a47607776b05c293bb3409` reproduced a remaining Zen-specific `Later` pseudo-element. The original six-case test checked its absence only in the panel, so its passing result did not prove the Zen requirement. The extended regression now checks both surfaces and captures Zen in each theme/width. Before the correction it failed four cases (light/dark at 1024/1440) in `/tmp/bre450-root-zen-before-20261111/results.json`; the 390px layout uses the panel presentation. The redundant Zen rule is removed. Final correction results and revision are recorded in the PR after execution. The earlier full-suite and compose-fixture results cover the earlier revision only.

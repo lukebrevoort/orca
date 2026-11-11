@@ -51,6 +51,8 @@ for(const theme of ['light','dark']) for(const width of [390,1024,1440]) {
  await page.getByRole('button',{name:'Open in Zen',exact:true}).click();
  const zen=page.locator('.compose-workspace-zen');await zen.waitFor();assert((await zen.getByRole('textbox',{name:'Message body',exact:true}).innerText()).includes('Preserved writing'));
  assert(await zen.getByRole('button',{name:'Attach files',exact:true}).isEnabled());
+ check(!await zen.locator('.compose-delivery-actions').evaluate(el=>getComputedStyle(el,'::before').content.includes('Later')),`${theme}/${width}: no phantom Later in Zen`);
+ await page.screenshot({path:`${out}/${theme}-${width}-zen.png`});
  result.cases.push({theme,width,actions:'plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen'});
  await context.close();
 }
