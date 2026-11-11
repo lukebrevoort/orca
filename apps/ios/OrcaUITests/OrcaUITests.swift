@@ -1115,7 +1115,7 @@ final class OrcaUITests: XCTestCase {
             let top = max(form.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 2
             let bottom = min(form.frame.maxY, status.frame.minY) - 2
             let viewport = CGRect(x: form.frame.minX, y: top, width: form.frame.width, height: max(0, bottom - top))
-            let visible = body.frame.intersection(viewport)
+            let visible = body.exists ? body.frame.intersection(viewport) : .null
             if body.exists && body.isHittable && !visible.isNull && visible.width >= 44 && visible.height >= 44 {
                 // TextEditor is taller than the keyboard-reduced viewport.
                 // XCTest's default center may be behind the fixed footer;
