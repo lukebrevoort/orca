@@ -12,13 +12,22 @@ import { readImportantPage } from "../src/importance/store.ts";
 
 const output = process.argv[2];
 if (!output) throw Error("Usage: bun apps/api/scripts/importance-fixture.ts <new-output-directory>");
+const repositoryRoot = resolve(import.meta.dir, "../../..");
+function gitEvidence(...args: string[]) {
+  const result = spawnSync("git", ["-C", repositoryRoot, ...args], { encoding: "utf8" });
+  if (result.error || result.status !== 0) throw Error(`Cannot establish fixture source identity (${args[0]}): ${result.error?.message ?? result.stderr.trim()}`);
+  return result.stdout.trim();
+}
+// Anchor identity to this script, not the caller's working directory. Capture
+// before creating evidence, and include untracked source in the dirty flag.
+const commit = gitEvidence("rev-parse", "--verify", "HEAD");
+if (!/^[a-f0-9]{40}$/.test(commit)) throw Error("Fixture source identity is not a full commit SHA");
+const dirty = gitEvidence("status", "--porcelain=v1", "--untracked-files=all");
 mkdirSync(output, { recursive: false });
 const scratch = mkdtempSync(join(tmpdir(), "orca-importance-evidence-"));
 const path = join(scratch, "fixture.sqlite"), client = createDatabaseClient(path), { db, sqlite } = client;
 process.env.SESSION_SECRET = "synthetic-bre454-session-secret-long-enough";
 process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
-const commit = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
-const dirty = spawnSync("git", ["status", "--porcelain", "--untracked-files=no"], { encoding: "utf8" }).stdout.trim();
 try {
   migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
   sqlite.exec("INSERT INTO users(id,email) VALUES('demo-user','demo@example.com'); INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('demo-account','demo-user','gmail','demo','demo@example.com')");
