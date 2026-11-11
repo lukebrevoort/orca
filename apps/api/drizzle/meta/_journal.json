@@ -379,6 +379,13 @@
       "when": 1791820800000,
       "tag": "0053_incremental_importance",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1791907200000,
+      "tag": "0054_important_notification_policy",
+      "breakpoints": true
     }
   ]
 }
