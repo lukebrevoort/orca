@@ -25,14 +25,14 @@ struct AccountPreferences: Codable, Equatable {
         if scope != state.ownerScope { invalidate(); scope = state.ownerScope }
         if let loadTask { await loadTask.value; return }
         guard !loading, !saving, !dirty, let client = state.client else { return }
-        loading = true; error = nil; let request = generation, owner = scope
+        loading = true; error = nil; let request = generation, owner = scope, originalEdits = edits
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { if generation == request { loading = false; loadTask = nil } }
             do {
                 let value: AccountPreferences = try await client.request("v1/preferences")
                 guard !Task.isCancelled, generation == request, owner == state.ownerScope, state.phase == .ready else { return }
-                saved = value; edits = value
+                saved = value; if edits == originalEdits { edits = value }
             } catch { if generation == request && owner == state.ownerScope { self.error = error.localizedDescription } }
         }
         loadTask = task
