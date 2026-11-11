@@ -86,3 +86,25 @@ test("BRE-455 real opaque mobile-session adoption and revocation use mobile_sess
   f.state.now += 901000; await f.persist(f.message("mobile-revoked", "conversation")); expect(scan(f).enqueued).toBe(1);
   revokeMobileSession(f.db, mobile.sessionId, "u", new Date(f.state.now)); expect((await deliver(f, l.transport)).delivered).toBe(0); expect(l.attempts).toHaveLength(1);
 }));
+
+test("BRE-455 a fresh Important arrival after moving outside Inbox ignores placement and legacy selection", () => fixture(async f => {
+  const { createDestinations } = await import("../destinations/service.ts");
+  await phone(f); await f.adopt("apns", "phone");
+  await f.persist(f.message("old", "moved")); await f.important("gmail:a:moved");
+  const destinations = createDestinations(f.db, "u");
+  const quiet = destinations.create({ expectedRevision: destinations.list().revision, name: "Quiet archive" }).destinationId;
+  destinations.save("a", { expectedRevision: destinations.list().revision, target: { scope: "conversation", threadId: "gmail:a:moved" }, destinationId: quiet });
+  f.state.now += 1000; await f.persist(f.message("fresh-moved", "moved"));
+  expect(f.sqlite.query("SELECT destination_id FROM organization_effective_destinations WHERE account_id='a' AND thread_id='gmail:a:moved'").get()).toEqual({ destination_id: quiet });
+  expect(scan(f).enqueued).toBe(1); const l = ledger(); expect((await deliver(f, l.transport)).delivered).toBe(1); expect(l.attempts).toHaveLength(1);
+}));
+
+test("BRE-455 obsolete legacy selected Space does not block adopted token refresh or change saved intent", () => fixture(async f => {
+  f.sqlite.query("INSERT INTO collections(id,account_id,name,color,position,revision,created_at,updated_at) VALUES('legacy','a','Legacy','#123456',0,1,1,1)").run();
+  expect((await phone(f, { notificationSelection: { inbox: false, spaceIds: ["collection:legacy"] } })).status).toBe(200);
+  await f.adopt("apns", "phone");
+  f.sqlite.query("DELETE FROM collections WHERE id='legacy'").run();
+  expect((await phone(f, { notificationSelection: { inbox: false, spaceIds: ["collection:legacy"] } })).status).toBe(200);
+  const current = await (await f.request("/v1/notifications/installations/phone?channel=apns")).json();
+  expect(current.revision).toBe(1); expect(current.policy.enabled).toBe(true); expect(current.previousSelection).toEqual({ inbox: false, spaceIds: ["collection:legacy"] });
+}));
