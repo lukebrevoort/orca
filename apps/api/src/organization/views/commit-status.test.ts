@@ -34,7 +34,7 @@ async function fixture() {
   const prepare = async (name = "Original", viewId?: string): Promise<OrganizationViewCommitRequest> => {
     const response = await post("prepare", viewId ? { kind: "saved_view", viewId } : {
       kind: "typed_definition", source: { kind: "manual", label: "Synthetic recovery" }, identity: { name }, skipInbox: true,
-      definition: { revision: 1, accountIds: ["account"], sender: { addresses: ["human@example.com"] }, thread: { subjectContains: "Advanced" }, unread: true },
+      definition: { revision: 1, accountIds: ["account"], sender: { addresses: ["human@example.com"] }, thread: { subjectContains: "Advanced", readState: "unread" } },
     });
     assert.equal(response.status, 200, await response.clone().text());
     const prepared = await response.json();
