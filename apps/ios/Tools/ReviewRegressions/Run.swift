@@ -8,6 +8,7 @@ import Foundation
         let root = FileManager.default.temporaryDirectory.appending(path: "bre457-controller-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
+        try await runPrimaryMailCases(cacheRoot: root.appending(path: "primary-mail"), check: check)
         try await runPaginationCases(cacheRoot: root.appending(path: "pagination"), check: check)
         let state = AppState(cache: CacheStore(directory: root.appending(path: "cache")))
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [ReviewURLProtocol.self]
@@ -282,6 +283,7 @@ import Foundation
             }
             try await runCommitStatusCases(state: state, client: client, suite: suite, otherToken: connection.otherToken, createFixtureView: createFixtureView, check: check)
             try await runAppliedReloadCases(state: state, client: client, suite: suite, token: connection.token, otherToken: connection.otherToken, check: check)
+            try await runPrimaryMailSenderAPICases(connection: connection, cacheRoot: root.appending(path: "primary-sender-api"), check: check)
             } catch { check("native-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))

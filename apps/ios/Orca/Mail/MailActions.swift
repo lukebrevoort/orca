@@ -31,8 +31,8 @@ struct MailActionsSheet: View {
     @State private var senderScope = false
     @State private var viewID = ""
     @State private var name = ""
-    @State private var preview: MailActionJSON?
-    @State private var retryKey = UUID().uuidString
+    @StateObject private var viewCommand = LegacySenderViewCommand()
+    private var preview: MailActionJSON? { viewCommand.preview }
     @State private var busy = false
     @State private var loading = true
     @State private var presented = true
@@ -88,7 +88,7 @@ struct MailActionsSheet: View {
                         Button(preview["results"]["state"].text == "zero" ? "Save empty View" : "Save View") { Task { await saveView() } }
                             .disabled(busy || !preview["draft"]["saveEligibility"]["allowed"].flag)
                             .accessibilityIdentifier("mail-action.save-view")
-                        Button("Edit choices") { self.preview = nil }.disabled(busy)
+                        Button("Edit choices") { viewCommand.editChoices() }.disabled(busy)
                     }
                 } else {
                     Section("View") {
@@ -164,30 +164,15 @@ struct MailActionsSheet: View {
         guard current, let client = state.client else { return }
         busy = true; error = nil; defer { busy = false }
         do {
-            let existing = savedViews.first { $0.id == viewID }
-            var body: [String: MailActionJSON] = [
-                "kind": .string("selected_senders"), "skipInbox": .bool(false),
-                "source": .object(["kind": .string("sender_selection"), "label": .string("iOS mail long press")]),
-                "identity": .object(["name": .string(existing?.name ?? name.trimmingCharacters(in: .whitespacesAndNewlines))]),
-                "references": .array([.object(["accountId": .string(message.accountId), "threadId": .string(message.threadId), "messageId": .string(message.id)])])
-            ]
-            if let existing { body["targetView"] = .object(["id": .string(existing.id), "revision": .number(Double(existing.revision))]) }
-            let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(body))
-            guard current else { return }
-            let input = prepared["draft"].keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
-            let result: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": input, "page": .object(["limit": .number(25)])]))
-            guard current else { return }; preview = result; retryKey = UUID().uuidString
+            try await viewCommand.prepare(message: message, savedViews: savedViews, viewID: viewID, name: name, client: client, current: { current })
         } catch { if current { self.error = error.localizedDescription } }
     }
 
     private func saveView() async {
-        guard current, let client = state.client, let preview else { return }
+        guard current, let client = state.client, preview != nil else { return }
         busy = true; error = nil; defer { busy = false }
         do {
-            let result: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object([
-                "draft": preview["draft"], "expectedRevisions": .object(["workspace": preview["workspaceRevision"], "view": preview["draft"]["viewRevision"]]),
-                "retryKey": .string(retryKey), "confirmedZeroMatchDigest": preview["results"]["state"].text == "zero" ? preview["draft"]["definitionDigest"] : .null
-            ]))
+            guard let result = try await viewCommand.commit(client: client, current: { current }) else { return }
             guard current else { return }
             await mailboxes.load(state: state)
             guard current else { return }

@@ -6,6 +6,39 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     var id: String { accountId + "|" + (viewId ?? "search|" + (query ?? "")) }
 }
 
+/// Exact legacy sender-sheet network state, extracted for a before-fix runtime
+/// baseline and used by MailActionsSheet. Deliberately adds no durable recovery.
+@MainActor final class LegacySenderViewCommand: ObservableObject {
+    @Published private(set) var preview: MailActionJSON?
+    private var retryKey = UUID().uuidString
+    func editChoices() { preview = nil }
+    func prepare(message: InboxMessage, savedViews: [SavedMailboxView], viewID: String, name: String,
+                 client: APIClient, current: () -> Bool) async throws {
+        guard current() else { return }
+        let existing = savedViews.first { $0.id == viewID }
+        var body: [String: MailActionJSON] = [
+            "kind": .string("selected_senders"), "skipInbox": .bool(false),
+            "source": .object(["kind": .string("sender_selection"), "label": .string("iOS mail long press")]),
+            "identity": .object(["name": .string(existing?.name ?? name.trimmingCharacters(in: .whitespacesAndNewlines))]),
+            "references": .array([.object(["accountId": .string(message.accountId), "threadId": .string(message.threadId), "messageId": .string(message.id)])])
+        ]
+        if let existing { body["targetView"] = .object(["id": .string(existing.id), "revision": .number(Double(existing.revision))]) }
+        let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(body))
+        guard current() else { return }
+        let input = prepared["draft"].keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
+        let result: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": input, "page": .object(["limit": .number(25)])]))
+        guard current() else { return }; preview = result; retryKey = UUID().uuidString
+    }
+    func commit(client: APIClient, current: () -> Bool) async throws -> MailActionJSON? {
+        guard current(), let preview else { return nil }
+        let result: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object([
+            "draft": preview["draft"], "expectedRevisions": .object(["workspace": preview["workspaceRevision"], "view": preview["draft"]["viewRevision"]]),
+            "retryKey": .string(retryKey), "confirmedZeroMatchDigest": preview["results"]["state"].text == "zero" ? preview["draft"]["definitionDigest"] : .null
+        ]))
+        guard current() else { return nil }; return result
+    }
+}
+
 /// A submitted Save is immutable until its original idempotent command returns.
 /// The account journal survives dismissal/termination; edits never replace it.
 @MainActor final class NativeViewEditorController: ObservableObject {

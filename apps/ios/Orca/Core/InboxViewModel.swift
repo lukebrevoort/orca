@@ -9,6 +9,13 @@ import SwiftUI
     private var requestGeneration = UUID()
     private var activeKey: String?
     private var globalSearchOwnerKey: String?
+    enum PrimaryMailEvent { case submit, refresh, page }
+    // Behavior-preserving extraction of InboxView's handlers for an executable
+    // baseline. The event is explicit; editable-query behavior is not fixed yet.
+    func loadPrimaryMail(state: AppState, mailboxView: String, event: PrimaryMailEvent) async {
+        if event != .page { view = search.isEmpty ? mailboxView : "all" }
+        await load(state: state, reset: event != .page)
+    }
     static func globalSearchRefreshIdentity(state: AppState) -> String { "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(state.mailboxReadRevision)" }
     func openGlobalSearch(state: AppState) async -> Bool {
         let ownerKey = "\(state.ownerScope)|\(state.selectedAccountID ?? "")"

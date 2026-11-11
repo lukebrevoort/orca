@@ -78,7 +78,7 @@ struct InboxView: View {
                                         Button("Importance…") { importanceOrigin = message.threadId; importanceTarget = .init(message) }
                                         MailActionMenu(message: message, resolveMessage: message.providerMessageId.isEmpty) { actionTarget = $0 }
                                     }
-                                    .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
+                                    .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.loadPrimaryMail(state: state, mailboxView: mailboxes.selectedID, event: .page) } } }
                             }
                         }
                     }.listStyle(.plain).scrollContentBackground(.hidden).accessibilityIdentifier("inbox.list")
@@ -99,7 +99,7 @@ struct InboxView: View {
         .onChange(of: state.selectedAccountID) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
         .onChange(of: state.ownerScope) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
         .onChange(of: model.search) { if model.search.isEmpty { Task { await loadCurrent() } } }
-        .onSubmit(of: .search) { Task { await loadCurrent() } }
+        .onSubmit(of: .search) { Task { await loadCurrent(event: .submit) } }
         .toolbar {
             ToolbarItem(placement: .principal) { OrcaWordmark().fixedSize() }
             ToolbarItem(placement: .topBarLeading) {
@@ -194,9 +194,8 @@ struct InboxView: View {
         guard !model.messages.contains(where: { $0.threadId == thread }) else { return }
         mailFocus = model.messages.first.map { .row($0.id) } ?? .filter("all")
     }
-    private func loadCurrent() async {
-        model.view = model.search.isEmpty ? mailboxes.selectedID : "all"
-        await model.load(state: state)
+    private func loadCurrent(event: InboxViewModel.PrimaryMailEvent = .refresh) async {
+        await model.loadPrimaryMail(state: state, mailboxView: mailboxes.selectedID, event: event)
     }
     private func filter(_ title: String, id: String) -> some View {
         Button { model.search = ""; mailboxes.selectedID = id } label: {
