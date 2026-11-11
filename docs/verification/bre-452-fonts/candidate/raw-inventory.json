@@ -1,0 +1,850 @@
+{
+  "rawDirectory": "/tmp/bre452-candidate5-browser",
+  "files": [
+    {
+      "name": "BRE452-states-dark-1024x768-conflict.png",
+      "bytes": 369507,
+      "sha256": "b50b44742993d842886af40d34d410a96040790161fccf94fd53ed97ceb9d380"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-failed.png",
+      "bytes": 409904,
+      "sha256": "b5317389363ff8cca4cf9d38eaa185c1ad01109fc6ebdbc5fb9e4f2e9b734461"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-pending.png",
+      "bytes": 397131,
+      "sha256": "9b1d8cd832c380a64db6eb2d483debaa85cc21e2f8cf37268efb59d465508819"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-saved.png",
+      "bytes": 408886,
+      "sha256": "940edbfb5568f7e94730887fea09f4fcdf9bb884ab8a405438c1d48d7af3e4d0"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-sending.png",
+      "bytes": 419957,
+      "sha256": "15f8b90b17b09a5b0e04925817932e5237acef6c1cd1166edbc2de3345efa3fd"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-uncertain.png",
+      "bytes": 411999,
+      "sha256": "474bf991500a1ab2a5674050c83c3b0b02a8603c6226dffa9d39167e6c889b8e"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-validation.png",
+      "bytes": 411268,
+      "sha256": "50de76b6d89e2c246653f35056f017b430c9bf21c724e1447e5b063447e73673"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-conflict.png",
+      "bytes": 601236,
+      "sha256": "978b131032b1532d3748bb5ebf7ccf30860e9f5d310f1bc8664921b747c816d3"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-failed.png",
+      "bytes": 594199,
+      "sha256": "fe8b49d9b006967f44d29178427d9c0b0635d4f8f361645533c724b68f74a00a"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-pending.png",
+      "bytes": 581118,
+      "sha256": "211a22655ae9bba1c540d39cfa6233f23d33e56d8c4b47798139f49ae8bf5e98"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-saved.png",
+      "bytes": 593635,
+      "sha256": "091d308eb04e871d122eda189420f33f8881f27b826fef508de6c0e5e92b2723"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-sending.png",
+      "bytes": 614344,
+      "sha256": "14171628eaddc460bd06690057b4f4b8fdd2ea23b07db3b1162884f1567f0545"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-uncertain.png",
+      "bytes": 605158,
+      "sha256": "c44e52b12c9ebec5a515233e87f719f5ae9bb0a62d7e4b069ee266600f2a4838"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-validation.png",
+      "bytes": 619845,
+      "sha256": "f06b750b733260bdc558dd048642c2d5f0e0947d848fc0654328fd6cfa7a83ff"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-conflict.png",
+      "bytes": 105320,
+      "sha256": "6baf08b63d2798cd4e3ba9f5c3e91c4ba2042b39a586361ba92b7cac104249e7"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-failed.png",
+      "bytes": 86394,
+      "sha256": "674e9d95950bb74e24021c50c3131cd094fd6a2e8102c1f20abb5fe375f6cfaa"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-pending.png",
+      "bytes": 75327,
+      "sha256": "9fedc7cb42403683dd4ed158006ebe7c4d51ce4ade87d38ab1a4dfe568ad9e2e"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-saved.png",
+      "bytes": 83976,
+      "sha256": "b6ccf5be9906c7d09cf91b5f9ce465d895e485e1019eb9fa57955a9e3cbe0eb2"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-sending.png",
+      "bytes": 91244,
+      "sha256": "c6eb52f59d886d30a39bf3702d2335fc0a3da8ac9f4a586f415d155344a92566"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-uncertain.png",
+      "bytes": 82989,
+      "sha256": "e05153da409774357de6f90a923c01aabc61338cfddef2bc12a048456baebc63"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-validation.png",
+      "bytes": 85190,
+      "sha256": "e58bc5966b4e9b527dbefe7c254216feaac97c244d7f7288b46b2935e271ec07"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-conflict.png",
+      "bytes": 73448,
+      "sha256": "3a2c8234fb061276f7cc18524f2aec587bf26fb657669accd2bbe268b41c3239"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-failed.png",
+      "bytes": 58331,
+      "sha256": "3a518060d2723184c20863f2843df134e980959114c9d1797df8717928eec5d2"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-pending.png",
+      "bytes": 66663,
+      "sha256": "cbf10ebfe0ecf4d424f944d56b6c3c93f59c5f41408a473e6229b151c5a97606"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-saved.png",
+      "bytes": 67729,
+      "sha256": "bb236e975c6f7dd6c5c0ec33d82e6dbb51e55b7fa69d9fb6af1d544508ed68fc"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-sending.png",
+      "bytes": 60305,
+      "sha256": "a1a06b278a09d81658730c55fe149e8b54bf9b2e4675d7640a1808ed2414f936"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-uncertain.png",
+      "bytes": 53190,
+      "sha256": "3b326dd67b2d521c2395f2e82fa8f592c7af4780804e435f8ec10cd0e7f51a76"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-validation.png",
+      "bytes": 69592,
+      "sha256": "ec8618025d12a0e59c223715049670f38224ecd8247ab48d1f1896f386f7dc67"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-conflict.png",
+      "bytes": 141655,
+      "sha256": "51a3d57c1fa8c9817fb562a7dcc157b5a6931296310d38bd0d01a0840a4b8611"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-failed.png",
+      "bytes": 112862,
+      "sha256": "4d922bbc141876a9b3b597f2b47b1baa5d0f7dc06fdaf9c72d2a3f70687c0464"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-pending.png",
+      "bytes": 111374,
+      "sha256": "a1a27b06e1417d0d125a07ddb4e70a1382197fe6d0a52bd110c5dca0536e3be7"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-saved.png",
+      "bytes": 110237,
+      "sha256": "c046b00b9b4c31749fbd06eab5692e6205fca3bb200264f12f61e2a6c6d0b6ff"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-sending.png",
+      "bytes": 120466,
+      "sha256": "556b150e4338db73904579d5408cbcaa83e571b714a717e89a73dd8c98662898"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-uncertain.png",
+      "bytes": 112686,
+      "sha256": "9d9ce2f562041941acd840ff34b56ff926b6c7055c5bdfe75a5f44cb0388129a"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-validation.png",
+      "bytes": 110628,
+      "sha256": "48ba2c795a4e86f45004eaedacaad10f4cc23ee1086adb3e63d78592bd7db6b9"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-conflict.png",
+      "bytes": 101278,
+      "sha256": "24d4fda853477d612536aeae1e4772fa8b16a728d5e24460bf7d806d3f3eab2f"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-failed.png",
+      "bytes": 83240,
+      "sha256": "470f94b560404d07b3c7a8a08cde9e2542cdfaf38f9fff3d27dec96aa89eb30b"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-pending.png",
+      "bytes": 72407,
+      "sha256": "6c99dfc8fcf99c652e47e30f907abc9f4434f3f1c00b88242132917ab3130e38"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-saved.png",
+      "bytes": 78691,
+      "sha256": "6688539996f50b33dfa3d220f707d57657a51be094afc65a6270fb4caa7c883c"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-sending.png",
+      "bytes": 82532,
+      "sha256": "1249ba0cbd4357f80682929f0240e5efe8e398ed31947ab95e01f52807d6e569"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-uncertain.png",
+      "bytes": 77127,
+      "sha256": "e129bfde67513e8eef8d10d07b867c0aa71e0e44a78e36be7951fd4a96bedec8"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-validation.png",
+      "bytes": 80188,
+      "sha256": "0a42545d23f9228bcc389e85a7a4bb2cdedfce7bc8167902ce30be58ef6c5383"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-conflict.png",
+      "bytes": 444153,
+      "sha256": "73275976cb7d50f5f5399071329e521abe2ff72c3f97dd00ada0c5af8e08bef5"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-failed.png",
+      "bytes": 504557,
+      "sha256": "b417b62dc1ec09dcf6bb61f27e21ce937cfafd76bda19365d4041ccde66508cf"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-pending.png",
+      "bytes": 490585,
+      "sha256": "bd8ff9bd583fd1203c69a1252d212675226096631aeda10e7411c33bce1d2094"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-saved.png",
+      "bytes": 509848,
+      "sha256": "ddbf0586eecf6043ae234135ed00650128b9a249fba282fa8be4398651ac1879"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-sending.png",
+      "bytes": 523435,
+      "sha256": "35b65076f8c6d69cbddb5f51316ccd91fcbae6f555aaed4ea7a86eb160afe2b5"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-uncertain.png",
+      "bytes": 512231,
+      "sha256": "4db65553fa3ec4281ab54ab0b8201033c09a4eb7ec2c2fd757bf8064326324af"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-validation.png",
+      "bytes": 508907,
+      "sha256": "42b6201b1a1da7307302d891a70d1de04b918c02f300c405dfa2dda56771eecb"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-conflict.png",
+      "bytes": 728210,
+      "sha256": "1e13f026f43ef1727414fc569061db4ff3fe7821427d6f92459d92de1364b1d7"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-failed.png",
+      "bytes": 745082,
+      "sha256": "b5157aa626752ca6b8b7c5118ff92f133d5370de6893c6fd2fbc8835b044431b"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-pending.png",
+      "bytes": 729268,
+      "sha256": "5de23ac13f8b7466937e170a055d1a2757389c07d97e75aacdb5f5c448c9cb89"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-saved.png",
+      "bytes": 749783,
+      "sha256": "358943a52dcc1238dc5530cad6f0fcc1b3d4752c2fa8b9b6b19b80f283783d84"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-sending.png",
+      "bytes": 776456,
+      "sha256": "89a0cec29cc07a64f6bbc5016e466a148ebdd5935e10f4d6e7c326bff53aa686"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-uncertain.png",
+      "bytes": 763139,
+      "sha256": "c3ae269e275f9b28739be6194c1e199f96340b7687b823718cc8422582d356d9"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-validation.png",
+      "bytes": 776923,
+      "sha256": "bb25e56af34e783185d61b39b3226b247b70a8e7cd7ecdbf2bb11067166244a3"
+    },
+    {
+      "name": "BRE452-states-light-320x568-conflict.png",
+      "bytes": 108601,
+      "sha256": "e647b9de08bb50f180fcb7b1b2cd519c02b95306c243d04b52f3821c7e58c35b"
+    },
+    {
+      "name": "BRE452-states-light-320x568-failed.png",
+      "bytes": 87879,
+      "sha256": "91eb7cdb92d2ab907589b8d075e9900f7ef5308dcdd4fa212d7d4302e682e843"
+    },
+    {
+      "name": "BRE452-states-light-320x568-pending.png",
+      "bytes": 76720,
+      "sha256": "52b53e0abaf29c916439ca4c89f1690f63c433ea22654fab1d6e87440dbe526b"
+    },
+    {
+      "name": "BRE452-states-light-320x568-saved.png",
+      "bytes": 85943,
+      "sha256": "f1759aa685a83c4d7f8f426872cde2bb2b21747a2e484b08905ed5b6c0c78980"
+    },
+    {
+      "name": "BRE452-states-light-320x568-sending.png",
+      "bytes": 93939,
+      "sha256": "5186db000c663dd6f422cd0f534ac88c0128fdbea2e21127e6bb2f414f338a37"
+    },
+    {
+      "name": "BRE452-states-light-320x568-uncertain.png",
+      "bytes": 84127,
+      "sha256": "31f830efeb8a3f99745690360a968f3c59bec0eea8deac181007e0cf4b99885b"
+    },
+    {
+      "name": "BRE452-states-light-320x568-validation.png",
+      "bytes": 86169,
+      "sha256": "be059962118b021b475e43afe19c3f6726ff292d9558bba78f3af97a2f84124f"
+    },
+    {
+      "name": "BRE452-states-light-390x400-conflict.png",
+      "bytes": 74950,
+      "sha256": "70ace0e2bf9e4b1c66a30a44f2182e6212a5183e452952a9cd96dfe59c36e2f3"
+    },
+    {
+      "name": "BRE452-states-light-390x400-failed.png",
+      "bytes": 71156,
+      "sha256": "c110bba4fd83f0f4a38a95c6bab1c8fc113cb2aabe1029fb994761227f7709f3"
+    },
+    {
+      "name": "BRE452-states-light-390x400-pending.png",
+      "bytes": 66713,
+      "sha256": "db9387d3b6c7eb36cf098ca2124b548e5f6ce188abf802367ae2227aa819bc90"
+    },
+    {
+      "name": "BRE452-states-light-390x400-saved.png",
+      "bytes": 69579,
+      "sha256": "ffdb4630dbfb40292a3dda6594f1dbaf446d36419892f38bad50432adbc64b89"
+    },
+    {
+      "name": "BRE452-states-light-390x400-sending.png",
+      "bytes": 62960,
+      "sha256": "75ba0d33e19aa0043093849dcbb8b1fa32ec4246cff87acc1b31c822113dfda0"
+    },
+    {
+      "name": "BRE452-states-light-390x400-uncertain.png",
+      "bytes": 54281,
+      "sha256": "91d5abd887ad7799df1185232d981b2c9fcf9a6efffa21485e096df0011a69cf"
+    },
+    {
+      "name": "BRE452-states-light-390x400-validation.png",
+      "bytes": 70406,
+      "sha256": "acf95d7b3d521b2037484f05e90ba944a4c35c472e09eb13e4dce12f70dbc6d9"
+    },
+    {
+      "name": "BRE452-states-light-390x844-conflict.png",
+      "bytes": 145758,
+      "sha256": "70332034ef9a7382706300b47db08ae4c7ffdc3c257b08fcad13bef4199a9fc0"
+    },
+    {
+      "name": "BRE452-states-light-390x844-failed.png",
+      "bytes": 114635,
+      "sha256": "b7c399e50795fc88a543c6210d119d80cc05eaf9f7fda402541073552ba813b9"
+    },
+    {
+      "name": "BRE452-states-light-390x844-pending.png",
+      "bytes": 112914,
+      "sha256": "ef77dcfcb974dc68c0ab564fc3f9003846fdee50b1558d89bce88cdfa8659f57"
+    },
+    {
+      "name": "BRE452-states-light-390x844-saved.png",
+      "bytes": 112984,
+      "sha256": "e6c5dcc9d9e164fd3b79426b0f8d473a4776d56251779123aa2c72f077090667"
+    },
+    {
+      "name": "BRE452-states-light-390x844-sending.png",
+      "bytes": 123417,
+      "sha256": "acdd6250828c1d19fa2695c57310560f7c7208fdca4bcbb4b1f5c4d066c108fb"
+    },
+    {
+      "name": "BRE452-states-light-390x844-uncertain.png",
+      "bytes": 114035,
+      "sha256": "d9e69aebdfafbc10a57f02307d086119c6f371e5a86c6aa275aa6fb96dadadba"
+    },
+    {
+      "name": "BRE452-states-light-390x844-validation.png",
+      "bytes": 111967,
+      "sha256": "cfeaee226653bd0a9f7c87bd1178769b61f00bb2d7eaa4e98523390e7ffdad99"
+    },
+    {
+      "name": "BRE452-states-light-720x450-conflict.png",
+      "bytes": 103658,
+      "sha256": "140915697320d507b3a60c6d92f0f10e9c2d4840cb278c942df1f425acdbe214"
+    },
+    {
+      "name": "BRE452-states-light-720x450-failed.png",
+      "bytes": 83518,
+      "sha256": "ef437a1b5abc5836b53ce004dd374bf5fac277f62107122074936dbcc413d099"
+    },
+    {
+      "name": "BRE452-states-light-720x450-pending.png",
+      "bytes": 73266,
+      "sha256": "f86d2305e7eb59ab63d1f35b9441f33dbebadf9d7554ca6db65502c52baf12ee"
+    },
+    {
+      "name": "BRE452-states-light-720x450-saved.png",
+      "bytes": 80140,
+      "sha256": "b56b181cb9d2598b6733e868d92a999afe5967b2c6c15138e723ff0f0ddcc69f"
+    },
+    {
+      "name": "BRE452-states-light-720x450-sending.png",
+      "bytes": 84369,
+      "sha256": "13fc5a36f4e400286716cdbb8a2170b57b430a82cceb6b111747c289948a7c43"
+    },
+    {
+      "name": "BRE452-states-light-720x450-uncertain.png",
+      "bytes": 77563,
+      "sha256": "0ff30e28cef066269699ef2cdb5d7fdc42b6ef26eb243e102e9002c2a28d1357"
+    },
+    {
+      "name": "BRE452-states-light-720x450-validation.png",
+      "bytes": 80918,
+      "sha256": "5231f080d37309d3af1249b0252d620e6d2a191b973993909cb0e836d72e4404"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-multiple-long.png",
+      "bytes": 403603,
+      "sha256": "2543a5351174bf374bc8f2ad7a141fcb0c22050b373d546f58bbd5220ca090eb"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-one.png",
+      "bytes": 404281,
+      "sha256": "281f3fd461e4c695087093386287cd74ecf72c523e0ff7d912badaed14b1d016"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-plain-removed.png",
+      "bytes": 416479,
+      "sha256": "3b7e0535042f2d43f4d1054acb956ef98a3515989f529629cccca7655bc797d3"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-zero.png",
+      "bytes": 400851,
+      "sha256": "873c96699140d1c93522cf68a9cc8b3fc0ede668239382b46923abfe1b2bd26d"
+    },
+    {
+      "name": "dark-1440-attach-focus.png",
+      "bytes": 614852,
+      "sha256": "06b9c10d4b7f6b7525eb2856c1ac94c2f3d4cac33878a2a1e0d3c3d1f9c183dc"
+    },
+    {
+      "name": "dark-1440-attach-hover.png",
+      "bytes": 610454,
+      "sha256": "582fceafd14b321c893f31bf1c59047c592ff46bff0b1c5d3d2eded3ba138fd1"
+    },
+    {
+      "name": "dark-1440-attachment-limit-error-disabled.png",
+      "bytes": 588280,
+      "sha256": "646e8d2b31ab047664297b32d716f692fe64a8fd7bdbdcd4431a54b4b013c344"
+    },
+    {
+      "name": "dark-1440-bold-pressed.png",
+      "bytes": 600535,
+      "sha256": "cb1d5430cd12f6cdc674cd184a612625ade525266397aa4c307b68641ded7452"
+    },
+    {
+      "name": "dark-1440-desktop-multiple-long.png",
+      "bytes": 590634,
+      "sha256": "266b47c6a6bc511411f151a0abe4d8f8f1ae8aeb6966bf16f5cc91be0814d772"
+    },
+    {
+      "name": "dark-1440-desktop-one.png",
+      "bytes": 557197,
+      "sha256": "1268d49667718ce89ef16adbcd078a5af242d4734d765c3a4295465bd36e8019"
+    },
+    {
+      "name": "dark-1440-desktop-plain-removed.png",
+      "bytes": 596408,
+      "sha256": "35b0f7c8ce97ea65d7aab717f1a6dc24f62b3e7e716a9c2e200938dc7286736d"
+    },
+    {
+      "name": "dark-1440-desktop-zero.png",
+      "bytes": 551310,
+      "sha256": "756ef6a980c29bab40c3ee8aadedb5e241034567f7256f94798b7db108185c92"
+    },
+    {
+      "name": "dark-1440-plain-disabled.png",
+      "bytes": 623025,
+      "sha256": "0067a3ce9263c3addd092ec86a7b51f790d36d0a913ec8d546c61b50546c1ce2"
+    },
+    {
+      "name": "dark-320-small-multiple-long.png",
+      "bytes": 85489,
+      "sha256": "035fe803d8ab4976bd96fd49323eb3f303991231e6c6e3e286b4d44ad76483de"
+    },
+    {
+      "name": "dark-320-small-one.png",
+      "bytes": 71055,
+      "sha256": "81845c7ac483673aa4a6dc7e29968cd039cae0ea9cef7d5ad64ae7c9fcb79fce"
+    },
+    {
+      "name": "dark-320-small-plain-removed.png",
+      "bytes": 85042,
+      "sha256": "fed326ba689f53b2bc0356daf478df212be6455435bd1ece20805ce7ab156ce9"
+    },
+    {
+      "name": "dark-320-small-zero.png",
+      "bytes": 67391,
+      "sha256": "9e167b4ba947ec3a7e2229fe857f096dfa242559d8382bef84f6ad666c8c5ec4"
+    },
+    {
+      "name": "dark-390-attach-focus.png",
+      "bytes": 116933,
+      "sha256": "e8e72b3e3507a39f33fe4e3bce9771327d6427333e80cf139946054f36d1b60b"
+    },
+    {
+      "name": "dark-390-attach-hover.png",
+      "bytes": 115736,
+      "sha256": "6c5045b626519ae18100ef87acba9e55c594e648eb719f5828b27ade938db48d"
+    },
+    {
+      "name": "dark-390-bold-pressed.png",
+      "bytes": 118851,
+      "sha256": "89bf2364dda9f8babe6fb34fc55ac8de9a73fc91a38cdc7350efd5b0cf8ed16f"
+    },
+    {
+      "name": "dark-390-mobile-multiple-long.png",
+      "bytes": 116613,
+      "sha256": "ed66d9ecacc49e47f5a4462eb7ef12524005069838244488ed5fdec467145f1f"
+    },
+    {
+      "name": "dark-390-mobile-one.png",
+      "bytes": 99068,
+      "sha256": "3c4522b7680a4a748c1d65a894577d139b3fa951b63967456e76efdae40a6adf"
+    },
+    {
+      "name": "dark-390-mobile-plain-removed.png",
+      "bytes": 120750,
+      "sha256": "2a639b87467adce92064288f2e305ef7385eb676bc62baec05d5cb75a2ef19b9"
+    },
+    {
+      "name": "dark-390-mobile-zero.png",
+      "bytes": 95552,
+      "sha256": "12823b4e5711f9c2c345a598d1e68ebc18cfd3b32d202a8596398482b36b7050"
+    },
+    {
+      "name": "dark-390-plain-disabled.png",
+      "bytes": 122822,
+      "sha256": "f6c15a88efebc1556b3d133f8c136d5eb3752b3e740b5c001a06b3be29ca474c"
+    },
+    {
+      "name": "dark-390-short-multiple-long.png",
+      "bytes": 67003,
+      "sha256": "8ef66bf15f3eae03115cb5a87ad0b27729fe293dd88a851df1f388e743115275"
+    },
+    {
+      "name": "dark-390-short-one.png",
+      "bytes": 48491,
+      "sha256": "822695109cdc3316930f530fa5b9940387ad700035ad004a1699ba9650d535bc"
+    },
+    {
+      "name": "dark-390-short-plain-removed.png",
+      "bytes": 62191,
+      "sha256": "41ab3cad066b3d3b0a2aa9ae08e01baa015a0ff22ce28344532d1f13f1346809"
+    },
+    {
+      "name": "dark-390-short-zero.png",
+      "bytes": 57231,
+      "sha256": "3d515f250904251d0833c78ad23c36f15e2ec4cf2da7280ad3aa6e90fffdb9a3"
+    },
+    {
+      "name": "dark-720-200pct-reflow-multiple-long.png",
+      "bytes": 93880,
+      "sha256": "250ae38fc98e3b1fdacc85f32ff2fc092e1f3d0766cac41fdfdb35a8d10c436d"
+    },
+    {
+      "name": "dark-720-200pct-reflow-one.png",
+      "bytes": 63920,
+      "sha256": "fe29de3c8282a9d03debabce402dd7203e80c07a941d827727ca257dccca65ec"
+    },
+    {
+      "name": "dark-720-200pct-reflow-plain-removed.png",
+      "bytes": 82570,
+      "sha256": "b930f40ecd47dcfa3d98194934a0dee0f0636958a971b5a0d4d2fab5fdd09c1c"
+    },
+    {
+      "name": "dark-720-200pct-reflow-zero.png",
+      "bytes": 66171,
+      "sha256": "503cc864b14bd30bc0aefa96afa49e8774d7b9554e2964a7b40f9d8addb1a0d1"
+    },
+    {
+      "name": "dark-font-cold-390x844.png",
+      "bytes": 81139,
+      "sha256": "36baf51647a3d900ec91a1c713e11ca4c466a112eb73ff41e2d5f16346656748"
+    },
+    {
+      "name": "dark-font-offline-1024x768.png",
+      "bytes": 237452,
+      "sha256": "03a2bc6ee491edfe2b5ac4095b1147b252d67f7aa034ff3326851a543511758f"
+    },
+    {
+      "name": "dark-font-offline-1440x1000.png",
+      "bytes": 294133,
+      "sha256": "5bf7eb87a23fef52305eaeb9e6ce78b69bdc455c5b95aa8332189cd0c868d153"
+    },
+    {
+      "name": "dark-font-offline-320x568.png",
+      "bytes": 65328,
+      "sha256": "6fa9807b1715c98488123ca586f2682ec38ec93bb225470d68123f3619c747e0"
+    },
+    {
+      "name": "dark-font-offline-390x400.png",
+      "bytes": 46319,
+      "sha256": "fca2b5289390ef6f2448d3723d1c70605c4e53003625477b9dd34ca05b7d0783"
+    },
+    {
+      "name": "dark-font-offline-390x844.png",
+      "bytes": 81205,
+      "sha256": "28bcd3755d457a339aed5cdf9c8e5afddab0e55518b4d3c1ffc46de34005fabb"
+    },
+    {
+      "name": "dark-font-offline-720x450.png",
+      "bytes": 51303,
+      "sha256": "43cbb4715b669ec5d7cadc28cbca43a7fa5182849fe5e6656f1efa0866e858d0"
+    },
+    {
+      "name": "dark-font-reload-390x844.png",
+      "bytes": 32593,
+      "sha256": "c6164dc4e64c2c14e5ea53d04ca4fedaf5e7d632ce370e543152be789cb2957e"
+    },
+    {
+      "name": "dark-font-stall-390x844.png",
+      "bytes": 81139,
+      "sha256": "36baf51647a3d900ec91a1c713e11ca4c466a112eb73ff41e2d5f16346656748"
+    },
+    {
+      "name": "light-1024-narrow-desktop-multiple-long.png",
+      "bytes": 489387,
+      "sha256": "118abfb942a16d469e2f9c52a907fc217fdb2c6df280b5215bc00ad04117c0d6"
+    },
+    {
+      "name": "light-1024-narrow-desktop-one.png",
+      "bytes": 506235,
+      "sha256": "a69dde8d9a33e9fa83873fcd77a3e513cad6b7a3a0a4d17df859b9d2d11973b9"
+    },
+    {
+      "name": "light-1024-narrow-desktop-plain-removed.png",
+      "bytes": 509970,
+      "sha256": "499d5c16a019a29c013482a217e66e3233d363e575b2b832e23ea6099a137e88"
+    },
+    {
+      "name": "light-1024-narrow-desktop-zero.png",
+      "bytes": 497347,
+      "sha256": "b2b8c91bfc0e5b3a6e891635aabd6ffcef302dc019b3f99c7e3e224f7e82970c"
+    },
+    {
+      "name": "light-1440-attach-focus.png",
+      "bytes": 779824,
+      "sha256": "9ec7e76c9fbd468dfdce496f1a398e4ef22948862a2c67b49f35f987635dde85"
+    },
+    {
+      "name": "light-1440-attach-hover.png",
+      "bytes": 767779,
+      "sha256": "6a103bf51d49062f5b7881622d229e6f8a09dfd3960bceb18708455a58b6da45"
+    },
+    {
+      "name": "light-1440-attachment-limit-error-disabled.png",
+      "bytes": 749948,
+      "sha256": "21dfeb95367e806dee1e8bf96df4320602fe4b724df9c0cac8713730a655fe5a"
+    },
+    {
+      "name": "light-1440-bold-pressed.png",
+      "bytes": 732662,
+      "sha256": "c9e75693c3b54b167ce3b874a859f2117e71a39c97d72d66b34c29b120c3da34"
+    },
+    {
+      "name": "light-1440-desktop-multiple-long.png",
+      "bytes": 731588,
+      "sha256": "099000b3d4ef5c5dc36b877f775c30b4fa02e281131e0ad73fcab62918cfc6ae"
+    },
+    {
+      "name": "light-1440-desktop-one.png",
+      "bytes": 715173,
+      "sha256": "87517bcd93b19d383b95b376279364e3abaeeaa54d3971aa17f5d77682b36f1a"
+    },
+    {
+      "name": "light-1440-desktop-plain-removed.png",
+      "bytes": 747404,
+      "sha256": "aa7d4f8c85463a84336f823b6e62286fce648c50f7429a17ec5e33b528a2b5b1"
+    },
+    {
+      "name": "light-1440-desktop-zero.png",
+      "bytes": 704565,
+      "sha256": "ffe73c2fdc3200dc0fed1bb62078095f17e120458d80ef4da35b33223936767b"
+    },
+    {
+      "name": "light-1440-plain-disabled.png",
+      "bytes": 782127,
+      "sha256": "b4623134713e9da94f54c8576d9affbaa0cd4f63ac9c072d2955c876cd30bd76"
+    },
+    {
+      "name": "light-320-small-multiple-long.png",
+      "bytes": 85289,
+      "sha256": "5f1b85cef6507fb06fd4250fdd530fb4cdafab9f394287891e993e926e84e7f8"
+    },
+    {
+      "name": "light-320-small-one.png",
+      "bytes": 71804,
+      "sha256": "4920975242786bc3d2cb91f91c8a2a399401e22a60fd2a06c5d4599e42241d43"
+    },
+    {
+      "name": "light-320-small-plain-removed.png",
+      "bytes": 87039,
+      "sha256": "7a2c338ff79966cdb34a9d7e2a19bae5d3edebd2ebc1ddd10907a59c64b87ef6"
+    },
+    {
+      "name": "light-320-small-zero.png",
+      "bytes": 68430,
+      "sha256": "4a6eb22b6bf742a8649f0433891621fcd6c7d1bf0e0aa0940953131c317ecf11"
+    },
+    {
+      "name": "light-390-attach-focus.png",
+      "bytes": 118336,
+      "sha256": "7909c70d38e48646416815bf97931e7439c6fcdded91049cc701d86024c2f94a"
+    },
+    {
+      "name": "light-390-attach-hover.png",
+      "bytes": 117286,
+      "sha256": "36c06e93ebd7b6e3dbcdb24b47a2a950015c5cbb183f1a2d1ed13db5f5337ea2"
+    },
+    {
+      "name": "light-390-bold-pressed.png",
+      "bytes": 120375,
+      "sha256": "196843fb1f05e42a02eb3be4497f3d68f6cb08c443ba7e84f18fcf70ceb29b58"
+    },
+    {
+      "name": "light-390-mobile-multiple-long.png",
+      "bytes": 117984,
+      "sha256": "7cfdf716a115dba177aed38c94e907229ba2b2f28bba7abdb63daa06274cf5df"
+    },
+    {
+      "name": "light-390-mobile-one.png",
+      "bytes": 101004,
+      "sha256": "6bdf05ad34758e8a55a6c9a071cfcd234c6235837f9f87522d56f577ead7b620"
+    },
+    {
+      "name": "light-390-mobile-plain-removed.png",
+      "bytes": 122784,
+      "sha256": "796662cdeecf2a5599b42ddfb9c78f61628f6db2edef4449d2e10ed32a9d72f0"
+    },
+    {
+      "name": "light-390-mobile-zero.png",
+      "bytes": 97740,
+      "sha256": "d148c47a1e725221178af79ef971e2f8b5f80850d3be4e6885bbedb68c30835b"
+    },
+    {
+      "name": "light-390-plain-disabled.png",
+      "bytes": 124222,
+      "sha256": "8d7f73456417a5b1a8eeae5a88cc7268dadf6f565e1144652b89fcb49a77c4c1"
+    },
+    {
+      "name": "light-390-short-multiple-long.png",
+      "bytes": 68398,
+      "sha256": "bfd9aaf0d73043ce72c8e699525e13f1d9d8f544ea097f4e5ed71eb24c705350"
+    },
+    {
+      "name": "light-390-short-one.png",
+      "bytes": 49827,
+      "sha256": "b127e4f934190c5cd9481b4b15b827a0f166a0b5c4f94ff9af8df3804b4fafc5"
+    },
+    {
+      "name": "light-390-short-plain-removed.png",
+      "bytes": 64100,
+      "sha256": "cfa2c934a4bba5fb4214990a03c0029d8f0f88727846608373ad2d31ff4f68db"
+    },
+    {
+      "name": "light-390-short-zero.png",
+      "bytes": 58531,
+      "sha256": "191a11340c20de8ae8f44b8c0252ab129104a3209d9bc611843fd1acf00a22b0"
+    },
+    {
+      "name": "light-720-200pct-reflow-multiple-long.png",
+      "bytes": 92532,
+      "sha256": "80386a1c66ae2442f397da601ecb16f14213d21952148c19d01a2613540b2e57"
+    },
+    {
+      "name": "light-720-200pct-reflow-one.png",
+      "bytes": 64566,
+      "sha256": "3cca22cea283d8242b449acf78b5ad7ff12e207ddf09f407e489c2f6b23310cb"
+    },
+    {
+      "name": "light-720-200pct-reflow-plain-removed.png",
+      "bytes": 84088,
+      "sha256": "12e5386bb4261edc6eec05f2e23c176cfd5711c0dd2ec40f94410bcbba580ee0"
+    },
+    {
+      "name": "light-720-200pct-reflow-zero.png",
+      "bytes": 66989,
+      "sha256": "a63ba34ab91d8508edd4c8b6a6e6af1309f5e92ae2d52ad45e3321c5122b16a2"
+    },
+    {
+      "name": "light-font-cold-390x844.png",
+      "bytes": 89537,
+      "sha256": "53fe50e2aeda597e3ea7361e28864871f35e2a67fad8e2ffe8bbb84890c22336"
+    },
+    {
+      "name": "light-font-offline-1024x768.png",
+      "bytes": 270390,
+      "sha256": "91baedb1670020ca3d8c30f1b86bb148e538cd70fe6f027d28494438517935c2"
+    },
+    {
+      "name": "light-font-offline-1440x1000.png",
+      "bytes": 331086,
+      "sha256": "d9ed9383e3bec0b301f98d614283f29693f07a04b52d58a27f6d37a0f5b1ceaf"
+    },
+    {
+      "name": "light-font-offline-320x568.png",
+      "bytes": 74050,
+      "sha256": "b7bbd8241d00cd5b7c060916bfdb6235b11e8c8b6c267efe114d981899e9bf1e"
+    },
+    {
+      "name": "light-font-offline-390x400.png",
+      "bytes": 50296,
+      "sha256": "0fda7aade3f087899da22b2526e9d49e736c1b0e2fdbec56a022096a62d90d60"
+    },
+    {
+      "name": "light-font-offline-390x844.png",
+      "bytes": 91679,
+      "sha256": "cfc7eb52966ba69899654975d6064ab5921b7b2d952d4158d1b7015f755a8cdc"
+    },
+    {
+      "name": "light-font-offline-720x450.png",
+      "bytes": 55227,
+      "sha256": "69d6aaadefa3fe5cb17169d8b15133e970f6a2452f6bf521cd4e19e323ee38f1"
+    },
+    {
+      "name": "light-font-reload-390x844.png",
+      "bytes": 32765,
+      "sha256": "a3332a6f0a57d8a72cf34cacdb483c20fb08dd483b8688bf0623e70be9fea126"
+    },
+    {
+      "name": "light-font-stall-390x844.png",
+      "bytes": 89537,
+      "sha256": "53fe50e2aeda597e3ea7361e28864871f35e2a67fad8e2ffe8bbb84890c22336"
+    },
+    {
+      "name": "results.json",
+      "bytes": 771955,
+      "sha256": "9734a6c3e8184baccf14a878041f6708b9214d79a12b5dde750f1acd788b99b8"
+    }
+  ]
+}
