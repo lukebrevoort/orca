@@ -25,6 +25,7 @@ try{for(const theme of ['light','dark']){
  const geometry=await page.locator('.reader-formatted-region').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
  check(geometry.scroll<=geometry.width+1,'BRE-460 ordinary formatted prose reflows',geometry);
  await page.screenshot({path:join(out,theme+'-reader.png')});
+ await page.locator('.reader-body-html').scrollIntoViewIfNeeded();await page.screenshot({path:join(out,theme+'-reader-content.png')});
  await page.goto(origin+'/?destination=all');await page.getByRole('button',{name:/^Compose(?:\s+C)?$/}).first().click();
  const panel=page.locator('.compose-workspace-panel');await panel.getByRole('textbox',{name:'Subject',exact:true}).fill('BRE456 '+theme);
  await panel.getByRole('combobox',{name:'Message format'}).selectOption('plain');

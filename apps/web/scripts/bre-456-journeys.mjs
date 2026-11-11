@@ -84,6 +84,31 @@ try{for(const theme of ['light','dark']){
  check((await api('/v1/importance/conversations/second-thread?accountId=second')).importance.effective==='unreviewed','F05 second account remains isolated');
  // F02: Drafts/compose/Zen are separately exercised by the complete 16-case fixture.
  await page.goto(origin+'/?destination=drafts');await page.getByRole('heading',{name:'Drafts',exact:true}).waitFor();await screenshot(page,theme+'-drafts-mobile');
+ // F03/P02/P07/P08: actual search, read-only preview, explicit refinement/save, reopen.
+ await page.goto(origin+'/?destination=all');
+ await page.getByRole('textbox',{name:'Search mail',exact:true}).fill('conversation');
+ await page.getByRole('textbox',{name:'Search mail',exact:true}).press('Enter');
+ await page.getByRole('button',{name:'Save as View',exact:true}).waitFor();
+ const viewsBefore=db('select * from organization_views order by id');
+ const placementBeforeView=db('select * from email_labels order by id');
+ const importanceBeforeView=db('select * from importance_choices order by account_id,kind,target');
+ await page.getByRole('button',{name:'Save as View',exact:true}).click();
+ const author=page.locator('.search-view-authoring');
+ await author.getByRole('textbox',{name:'View name',exact:true}).fill('Correspondence '+theme);
+ const refinement=author.getByRole('button',{name:'Replace with subject contains “conversation”',exact:true});
+ if(await refinement.count()) await refinement.click();
+ const saveView=author.getByRole('button',{name:'Save View',exact:true});
+ await saveView.waitFor();await page.waitForFunction(()=>{const button=document.querySelector('.search-view-authoring .view-save');return button&&!button.disabled;});
+ check(JSON.stringify(db('select * from organization_views order by id'))===JSON.stringify(viewsBefore),'F03 preview creates no saved view');
+ await screenshot(page,theme+'-view-preview-mobile');
+ await saveView.click();await page.waitForURL(url=>url.searchParams.get('destination')?.startsWith('view:'));
+ await page.getByRole('heading',{name:'Correspondence '+theme,exact:true}).waitFor();
+ const view=db('select * from organization_views where name=?',['Correspondence '+theme])[0];
+ check(Boolean(view)&&view.skip_inbox===0,'F03 explicit Save persists a view without placement policy');
+ check(JSON.stringify(db('select * from email_labels order by id'))===JSON.stringify(placementBeforeView),'F03 saving a view does not move provider mail');
+ check(JSON.stringify(db('select * from importance_choices order by account_id,kind,target'))===JSON.stringify(importanceBeforeView),'F03 saving a view creates no importance preference');
+ await page.reload();await page.getByRole('heading',{name:'Correspondence '+theme,exact:true}).waitFor();
+ await screenshot(page,theme+'-saved-view-mobile');
  await page.goto(origin+'/settings#writing');
  const signature=page.getByRole('textbox',{name:'Default signature',exact:true});await signature.fill('BRE456 '+theme+' signature');
  await page.getByRole('combobox',{name:'Settings section',exact:true}).selectOption('appearance');
@@ -99,7 +124,7 @@ try{for(const theme of ['light','dark']){
  await screenshot(page,theme+'-settings-mobile');
  // Retained utility/legacy route inventory, genuine server responses only.
  await page.setViewportSize({width:1440,height:1000});
- for(const [surface,path] of [['P02','/?destination=all'],['P09','/?destination=organization-studio&section=views'],['P10','/?destination=organization-studio'],['P12','/settings/gmail'],['P14','/?destination=later'],['P15','/?destination=summary'],['P16','/settings/reading']]){
+ for(const [surface,path] of [['P02','/?destination=all'],['P09','/?destination=organization-studio&section=views'],['P10','/?destination=organization-studio'],['P12','/settings/gmail'],['P14','/?destination=later'],['P15','/?destination=summary'],['P16','/settings/reading'],['P13','/login']]){
   await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);await screenshot(page,theme+'-'+surface+'-retained');
  }
  const providers=await api('/__fixture/deliveries');check(providers.length===0,'No provider sends in read/importance/settings journeys',providers.length);
