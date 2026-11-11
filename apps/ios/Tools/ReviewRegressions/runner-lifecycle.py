@@ -13,7 +13,7 @@ selection = source.split('if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then', 
 phases = source.split('light_exit=0\n', 1)[1]
 adoption = source.split('# BEGIN isolated_adoption_phases\n', 1)[1].split('# END isolated_adoption_phases', 1)[0] if '# BEGIN isolated_adoption_phases' in source else ''
 results = []
-for scope in ['all', 'notifications', 'mailbox']:
+for scope in ['all', 'notifications', 'mailbox', 'compose']:
     with tempfile.TemporaryDirectory(prefix='bre457-runner-lifecycle-') as directory:
         root = pathlib.Path(directory)
         (root/'state.json').write_text(json.dumps({'installation': 0, 'adopted': [], 'calls': []}))
@@ -51,7 +51,14 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
         run = subprocess.run(['zsh',str(harness)],env=dict(os.environ,PATH=f'{root}:{os.environ["PATH"]}',MOCK_ROOT=str(root),ORCA_UI_TEST_SCOPE=scope),capture_output=True,text=True)
         state = json.loads((root/'state.json').read_text())
         dedicated = [c for c in state['calls'] if c['adoption'] and not c['legacy']]
-        ok = run.returncode == 0 and not any(c['contaminated'] for c in state['calls']) and len(dedicated) == 2 and len({c['installation'] for c in dedicated}) == 2
+        ok = run.returncode == 0 and not any(c['contaminated'] for c in state['calls'])
+        if scope == 'compose':
+            # Compose does not run notification adoption; both actual theme
+            # invocations must select the explicit destructive-action journey.
+            needed = {'test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy'}
+            ok = ok and not dedicated and len(state['calls']) == 2 and all(needed.issubset(c['selectedCases']) for c in state['calls'])
+        else:
+            ok = ok and len(dedicated) == 2 and len({c['installation'] for c in dedicated}) == 2
         if scope == 'mailbox':
             normal = [c for c in state['calls'] if not c['adoption']]
             needed = {'test10NativeLongPressMovesConversationAndBuildsSenderView', 'test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText', 'test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement', 'test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows'}
