@@ -37,13 +37,14 @@ import Foundation
         await importance.reconcile(state: state)
         check("465-no-A-receipt-under-B", importance.receipt == nil || importance.receipt?.target.threadId == "B", "visible receipt target = \(importance.receipt?.target.threadId ?? "none")")
         check("465-no-A-undo-under-B", !importance.canUndo, "Undo must not operate on A under B")
-        await importance.open(state: state, accountId: "account", threadId: "A")
-        // Restore a current receipt via the persisted original command, then discover a newer revision.
-        if importance.receipt == nil {
-            revision = 0; await importance.choose(.important, state: state); offline = false; await importance.reconcile(state: state)
-        }
-        revision = 2; await importance.refresh(state: state)
-        check("465-known-newer-revision-disables-Undo", !importance.canUndo, "current conversation revision 2 supersedes receipt revision 1")
+        let undoController = ImportanceController(defaults: defaults)
+        revision = 0
+        await undoController.open(state: state, accountId: "account", threadId: "A")
+        await undoController.choose(.important, state: state); offline = false
+        await undoController.reconcile(state: state)
+        check("465-stale-test-established-current-receipt", undoController.receipt?.revision == 1 && undoController.canUndo, "must establish current revision1 receipt before checking revision2")
+        revision = 2; await undoController.refresh(state: state)
+        check("465-known-newer-revision-disables-Undo", !undoController.canUndo, "current conversation revision2 supersedes receipt revision1")
 
         let inbox = InboxViewModel(); inbox.view = "all"
         var networkOffline = false
