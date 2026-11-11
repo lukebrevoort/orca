@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, selectedSenderPreparation, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
-import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
+import { accountFixture, authSessionFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
 import { demoStore } from "./demo-store";
 import { TopLayerProvider } from "./top-layer";
@@ -153,12 +153,12 @@ function restoreDom() {
 async function renderApp(
   preferences: ReaderPreferences = defaultReaderPreferences,
   strict = false,
-  options: Pick<Parameters<typeof InboxApp>[0], "demoMode" | "theme" | "bulkAttentionClient" | "initialDemoMessages"> = { theme: "light" },
+  options: Pick<Parameters<typeof InboxApp>[0], "demoMode" | "theme" | "bulkAttentionClient" | "initialDemoMessages" | "verifiedUserId"> = { theme: "light" },
 ) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} /></TopLayerProvider>;
+  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} verifiedUserId={options.verifiedUserId} /></TopLayerProvider>;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
@@ -4651,7 +4651,7 @@ describe("BRE-386 guidance navigation", () => {
       return base(input, init);
     }) as typeof fetch;
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
-    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light", verifiedUserId: authSessionFixture.user!.id });
     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
     expect(browserWindow.document.querySelector(".first-view-starts")).not.toBeNull();
     for (const kind of ["attention", "classification"]) {
@@ -4669,7 +4669,7 @@ describe("BRE-386 guidance navigation", () => {
       return base(input, init);
     }) as typeof fetch;
     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${source}`);
-    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light", verifiedUserId: authSessionFixture.user!.id });
     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
     const start = [...browserWindow.document.querySelectorAll("button")].find(button => button.querySelector("strong")?.textContent === "Use selected mail");
     expect(start).toBeDefined();

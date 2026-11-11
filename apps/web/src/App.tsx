@@ -427,6 +427,7 @@ export function App() {
     }));
   };
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
+  const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
   const devPreview = isDevPreviewRoute();
   const onboardingPreview = isOnboardingDevPreviewRoute();
   const calendarPreview = isCalendarSettingsDevPreviewRoute();
@@ -459,6 +460,7 @@ export function App() {
           return;
         }
         const session = authSessionSchema.parse(await response.json());
+        setAuthenticatedUserId(session.isAuthenticated ? session.user?.id ?? null : null);
         setAccess("authenticated");
         if (isOnboardingRoute() && session.onboardingCompletedAt) {
           window.location.replace("/");
@@ -526,7 +528,7 @@ export function App() {
     return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Attention views"><AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} /></DesktopSettingsFrame>;
   }
 
-  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} notificationClient={importantNotifications} />;
+  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} notificationClient={importantNotifications} verifiedUserId={authenticatedUserId} />;
 
   async function completeOnboarding() {
     const response = await fetch("/v1/auth/onboarding/complete", {
@@ -1368,6 +1370,7 @@ export function InboxApp({
   bulkAttentionClient,
   initialDemoMessages,
   notificationClient,
+  verifiedUserId = null,
 }: {
   demoMode?: boolean;
   preferences?: ReaderPreferences;
@@ -1376,6 +1379,7 @@ export function InboxApp({
   bulkAttentionClient?: BulkAttentionClient;
   initialDemoMessages?: InboxMessage[];
   notificationClient?: ReturnType<typeof useImportantNotifications>;
+  verifiedUserId?: string | null;
 }) {
   const topLayerActive = useTopLayerActive();
   const online = useOnlineStatus();
@@ -3454,7 +3458,7 @@ export function InboxApp({
   }
 
   return (
-    <ImportanceProvider key={account?.id ?? ""}><AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
+    <ImportanceProvider key={account?.id ?? ""}><AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} ownerUserId={verifiedUserId} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
     <div className="app-root">
       <main className={`desktop-shell mobile-mail-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
