@@ -1,0 +1,206 @@
+{
+  "before": {
+    "artifactZipSha256": "c7b36f9f4ec6f4bdfb5b8bc2435336caba106ca5ad77e1a9307d550e20911208",
+    "identity": "mode=ios\ntested_sha=647b1493e5e7f96e56bf16c6d75381358767f177\nevent_sha=aa3f8301338329140398ed46865d905ac928dad7\nhead_sha=647b1493e5e7f96e56bf16c6d75381358767f177\nrunner_os=macOS runner_arch=ARM64\nimage=macos26 image_version=20261026.0455.2\nbun=1.3.14\nnode=v24.22.1\nXcode 26.4.1\nBuild version 17E202\n{\"runtime\": \"com.apple.CoreSimulator.SimRuntime.iOS-26-4\", \"deviceType\": \"com.apple.CoreSimulator.SimDeviceType.iPhone-17\", \"name\": \"iPhone 17\"}\nsimulator=590CEDF3-5A64-4FB3-A7FD-1367F49D4832\n",
+    "digestMeasurements": [
+      {
+        "width": 272.0,
+        "bodySize": 22.0,
+        "theme": "light",
+        "titleWidth": 42.0,
+        "titleLines": 10.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 272.0,
+        "bodySize": 22.0,
+        "theme": "dark",
+        "titleWidth": 42.0,
+        "titleLines": 10.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 272.0,
+        "bodySize": 44.0,
+        "theme": "light",
+        "titleWidth": 42.0,
+        "titleLines": 10.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 272.0,
+        "bodySize": 44.0,
+        "theme": "dark",
+        "titleWidth": 42.0,
+        "titleLines": 10.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 342.0,
+        "bodySize": 22.0,
+        "theme": "light",
+        "titleWidth": 54.0,
+        "titleLines": 8.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 342.0,
+        "bodySize": 22.0,
+        "theme": "dark",
+        "titleWidth": 54.0,
+        "titleLines": 8.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 342.0,
+        "bodySize": 44.0,
+        "theme": "light",
+        "titleWidth": 54.0,
+        "titleLines": 8.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 342.0,
+        "bodySize": 44.0,
+        "theme": "dark",
+        "titleWidth": 54.0,
+        "titleLines": 8.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 700.0,
+        "bodySize": 22.0,
+        "theme": "light",
+        "titleWidth": 113.0,
+        "titleLines": 4.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 700.0,
+        "bodySize": 22.0,
+        "theme": "dark",
+        "titleWidth": 113.0,
+        "titleLines": 4.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 700.0,
+        "bodySize": 44.0,
+        "theme": "light",
+        "titleWidth": 113.0,
+        "titleLines": 4.0,
+        "bodyWidth": null
+      },
+      {
+        "width": 700.0,
+        "bodySize": 44.0,
+        "theme": "dark",
+        "titleWidth": 113.0,
+        "titleLines": 4.0,
+        "bodyWidth": null
+      }
+    ]
+  },
+  "after": {
+    "artifactZipSha256": "6e5d15d7861e2f59d0432f48188f7b0463d7fdaa4b8efb0d18f05f47ce131802",
+    "identity": "mode=ios\ntested_sha=707e012c7f977730badaa06912d6d8f13f4d0668\nevent_sha=47b08ec7b920e746a05e58c93da72a101174ed38\nhead_sha=707e012c7f977730badaa06912d6d8f13f4d0668\nrunner_os=macOS runner_arch=ARM64\nimage=macos26 image_version=20261102.0473.1\nbun=1.3.14\nnode=v24.22.2\nXcode 26.4.1\nBuild version 17E202\n{\"runtime\": \"com.apple.CoreSimulator.SimRuntime.iOS-26-4\", \"deviceType\": \"com.apple.CoreSimulator.SimDeviceType.iPhone-17\", \"name\": \"iPhone 17\"}\nsimulator=CE0E3C49-E9EB-4391-8DBF-4AAA32BD7277\n",
+    "digestMeasurements": [
+      {
+        "width": 272.0,
+        "bodySize": 22.0,
+        "theme": "light",
+        "titleWidth": 256.0,
+        "titleLines": 2.0,
+        "bodyWidth": 260.0
+      },
+      {
+        "width": 272.0,
+        "bodySize": 22.0,
+        "theme": "dark",
+        "titleWidth": 256.0,
+        "titleLines": 2.0,
+        "bodyWidth": 260.0
+      },
+      {
+        "width": 272.0,
+        "bodySize": 44.0,
+        "theme": "light",
+        "titleWidth": 256.0,
+        "titleLines": 2.0,
+        "bodyWidth": 260.0
+      },
+      {
+        "width": 272.0,
+        "bodySize": 44.0,
+        "theme": "dark",
+        "titleWidth": 256.0,
+        "titleLines": 2.0,
+        "bodyWidth": 260.0
+      },
+      {
+        "width": 342.0,
+        "bodySize": 22.0,
+        "theme": "light",
+        "titleWidth": 326.0,
+        "titleLines": 2.0,
+        "bodyWidth": 330.0
+      },
+      {
+        "width": 342.0,
+        "bodySize": 22.0,
+        "theme": "dark",
+        "titleWidth": 326.0,
+        "titleLines": 2.0,
+        "bodyWidth": 330.0
+      },
+      {
+        "width": 342.0,
+        "bodySize": 44.0,
+        "theme": "light",
+        "titleWidth": 326.0,
+        "titleLines": 2.0,
+        "bodyWidth": 330.0
+      },
+      {
+        "width": 342.0,
+        "bodySize": 44.0,
+        "theme": "dark",
+        "titleWidth": 326.0,
+        "titleLines": 2.0,
+        "bodyWidth": 330.0
+      },
+      {
+        "width": 700.0,
+        "bodySize": 22.0,
+        "theme": "light",
+        "titleWidth": 680.0,
+        "titleLines": 1.0,
+        "bodyWidth": 688.0
+      },
+      {
+        "width": 700.0,
+        "bodySize": 22.0,
+        "theme": "dark",
+        "titleWidth": 680.0,
+        "titleLines": 1.0,
+        "bodyWidth": 688.0
+      },
+      {
+        "width": 700.0,
+        "bodySize": 44.0,
+        "theme": "light",
+        "titleWidth": 680.0,
+        "titleLines": 1.0,
+        "bodyWidth": 688.0
+      },
+      {
+        "width": 700.0,
+        "bodySize": 44.0,
+        "theme": "dark",
+        "titleWidth": 680.0,
+        "titleLines": 1.0,
+        "bodyWidth": 688.0
+      }
+    ]
+  }
+}
