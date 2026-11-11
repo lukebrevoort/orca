@@ -38,6 +38,8 @@ Later source inspection found an inherited `:first-of-type` Settings link style 
 
 [BRE-471](https://linear.app/brevoort/issue/BRE-471) records the actual `aed8563d` duplicate-current regression: Advanced Organization marked both Organize and Advanced Organization current. A subsequent real React probe on `69964eba` reaches and records the skipped saved-view arrow action and a hardcoded Focus shortcut ignoring configured name/visibility. Product fixes use the correct menu-item semantics and destination identity; they preserve differently identified user spaces even if names match. The focused App/Settings/navigation suite then passes 166 tests/1,269 expectations, including the original session-expiry, failed-save, Stay/Leave and viewport/history/focus assertions. Its two intermediate Settings failures concerned read-count isolation: the controller fixture now supplies the actual disabled notification hook, while real notification integration remains separately exercised against HTTP/SQLite. No original recovery assertion or timeout was removed or loosened. Final committed-head repetition remains required.
 
+The remaining actual navigation children are [BRE-474](https://linear.app/brevoort/issue/BRE-474) (saved-view menu arrow participation) and [BRE-475](https://linear.app/brevoort/issue/BRE-475) (configured Focus shortcut name/order/visibility). Their red source and green scope are the same retained receipts above.
+
 ## Commands
 
 Use the existing absolute Bun 1.3.14 and Node 24.22.1 paths. Every heavy command runs through the cooperative nonblocking lock/resource sampler; exit 75 means not started and is never bypassed. One owned fixture/browser run at a time:

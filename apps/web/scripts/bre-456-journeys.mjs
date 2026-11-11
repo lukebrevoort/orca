@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { chromium } from 'playwright';
 const [connection,out]=process.argv.slice(2),fixture=JSON.parse(await readFile(connection,'utf8')),origin=fixture.url;
 assert(['127.0.0.1','localhost'].includes(new URL(origin).hostname));await mkdir(out,{recursive:true});
-const result={revision:await webSourceIdentity(),commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scenarios:[],assertions:0,failures:[],requests:[],pageErrors:[],screenshots:[],userSteps:[],separateCoverage:[{journey:'F04',script:'bre-455-browser.mjs',scope:'Actual native constructor and server ledger; no OS display proof.'}]};
+const result={revision:await webSourceIdentity(),commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scenarios:[],assertions:0,failures:[],requests:[],fixtureApiRequests:[],pageErrors:[],screenshots:[],userSteps:[],separateCoverage:[{journey:'F04',script:'bre-455-browser.mjs',scope:'Actual native constructor and server ledger; no OS display proof.'}]};
 const check=(ok,label,detail)=>{result.assertions++;if(!ok)throw new Error(label+': '+JSON.stringify(detail));};
 function db(sql,params=[]){return JSON.parse(execFileSync('python3',['-c','import sqlite3,json,sys; c=sqlite3.connect(sys.argv[1]); c.row_factory=sqlite3.Row; print(json.dumps([dict(r) for r in c.execute(sys.argv[2],json.loads(sys.argv[3]))])); c.commit()',join(fixture.directory,'mail.sqlite'),sql,JSON.stringify(params)],{encoding:'utf8'}));}
 async function screenshot(page,name){await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,name+'.png')});result.screenshots.push(name+'.png');}
@@ -21,7 +21,7 @@ try{for(const theme of ['light','dark']){
  const page=await context.newPage();page.setDefaultTimeout(10000);
  page.on('pageerror',error=>result.pageErrors.push(error.message));
  page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/v1/'))result.requests.push({theme,path:new URL(request.url()).pathname,method:request.method()});});
- async function api(path,body){const response=await context.request.fetch(origin+path,body?{method:'POST',data:body}:{});check(response.ok(),path,await response.clone?.()?.text?.());return response.json();}
+ async function api(path,body){result.fixtureApiRequests.push({theme,path,method:body?'POST':'GET'});const response=await context.request.fetch(origin+path,body?{method:'POST',data:body}:{});check(response.ok(),path,await response.clone?.()?.text?.());return response.json();}
  async function step(task,action,run){const entry={theme,task,action,completed:false};result.userSteps.push(entry);await run();entry.completed=true;}
  try{
  // Reset each scenario's preconditions through revision-guarded commands, even
