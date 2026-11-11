@@ -19,6 +19,8 @@ Status: proposed component/library contracts for BRE-454–457. Phase 4 inventor
 
 These are layout defaults, not fixed native text sizes or permission to prevent zoom. Native Dynamic Type and platform safe areas take precedence over copied web dimensions.
 
+Phase6 supplies the final semantic values: Ink `#132b24/#edf4ef`, Paper `#f7faf8/#111914`, Muted `#53665d/#acbcb1`, Surface `#ffffff/#19251d`, selected/hover `#e8f1eb/#25392d`, Border `#c8d5cd/#3b5042`, Accent `#166248/#a6d4b9`, explicit accent text `#ffffff/#111914`, Danger `#9f3c35/#f2a19a` (Light/Dark). Body family is Sora with reliable local fallbacks; display/reader is Newsreader with reliable serif fallbacks. Use the detailed Phase6 reliability and rendered-verification obligations before claiming these values are implemented.
+
 ## Reusable responsibilities
 
 | ID | Component | Responsibility and main inputs | Required states and boundaries |
