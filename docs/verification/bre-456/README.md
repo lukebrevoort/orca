@@ -4,6 +4,10 @@ Status: running. This directory is implementation evidence, not the coordinator'
 
 The prepared baseline is `bdec28426de57b8833ae29743eef330f391f63cb`. Public importance contracts come from `packages/shared/src/importance.ts` and BRE-454; no client-local importance store or invented notification endpoint is used. The four November Space pages and complete BRE-453 specifications were read. D1–D6 remain coordinator working defaults, not asserted historical Luke approvals.
 
+Latest executed source is clean `f8f58bbc0a2974a94db5e22247e8de1a7f1958b3`: actual web typecheck, all 871 web tests/6,159 expectations, fresh build, and hardened font/Zen 164 scenarios/3,186 assertions pass. The separate fonts-404 negative correctly exits1 with four assertions/two failures and both bundled faces in error. [Exact stages, source/bundle hashes and raw evidence hashes](checkpoints/web-fonts-f8f58bbc.json). [Inspected light desktop](checkpoints/font-zen-f8-light-desktop.png) and [dark mobile](checkpoints/font-zen-f8-dark-mobile.png) show actual font/layout/attachment states; immediate Saving labels in those captures are not settlement proofs. The raw matrix has 317 draft HTTP responses, 64 successful font responses, zero page/external errors and 12 independently checked synthetic preservation deliveries (one per named theme/viewport case), distinct from the original compose fixture's16/eight counts.
+
+This remains a dependency checkpoint, not full completion: actual notification owner-boundary A/B failures at `aa7867a1` remain open pending root's committed auth-transition witness/API guard; final all-workspace gates, final integration, full-surface runtime and independent reviews remain required. The existing PR317 draft was retargeted by root to main872 after PR311 merged; its already retained579 source tree is identical. The current API design names are provisional until root supplies tested committed helpers, and no guessed notification support has been implemented.
+
 ## Implementation coverage
 
 | Surface family | Web implementation |
