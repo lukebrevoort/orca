@@ -20,9 +20,25 @@ def git(*args):
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True, timeout=10).strip()
 
 
+def typecheck_command(workspace):
+    if workspace not in ("packages/shared", "apps/api"):
+        raise ValueError("Unknown typecheck workspace")
+    # Invoke the pinned installed compiler directly. Bun's alternate --cwd/run
+    # order can print usage and return0 without running the package script.
+    return [f"{NODE_BIN}/node", str(ROOT / "node_modules/typescript/bin/tsc"),
+            "--project", str(ROOT / workspace / "tsconfig.json"), "--pretty", "false"]
+
+
+def checked_type_exit(code, output):
+    # Preserve real compiler failures; usage-only0 is never a typecheck pass.
+    usage = "Usage: bun" in output or "tsc: The TypeScript Compiler" in output
+    return 2 if code == 0 and usage else code
+
+
 def main():
-    if len(sys.argv) != 3:
-        raise SystemExit("ROOT allocation required: run-candidate.py NEW_EVIDENCE_DIRECTORY EXACT_HEAD_SHA")
+    type_only = len(sys.argv) == 4 and sys.argv[3] == "--types-only"
+    if len(sys.argv) != 3 and not type_only:
+        raise SystemExit("ROOT allocation required: run-candidate.py NEW_EVIDENCE_DIRECTORY EXACT_HEAD_SHA [--types-only]")
     evidence = Path(sys.argv[1]).resolve()
     head = git("rev-parse", "HEAD")
     if head != sys.argv[2] or git("status", "--porcelain"):
@@ -43,7 +59,9 @@ def main():
             if (directory / name).exists():
                 raise SystemExit(f"Refusing automatic environment-file loading: {directory / name}")
     evidence.mkdir(parents=True)
-    manifest = {"testedHead": head, "endpointAbsenceBaseline": BASELINE, "kind": "first executed candidate semantics; not semantic red-to-green", "startedAt": time.time(), "stages": []}
+    manifest = {"testedHead": head, "endpointAbsenceBaseline": BASELINE,
+                "kind": "actual type-only correction; no semantic/demo repeat" if type_only else "first executed candidate semantics; not semantic red-to-green",
+                "startedAt": time.time(), "stages": []}
     env = {key: os.environ[key] for key in ["HOME", "USER", "LOGNAME", "SHELL", "TERM"] if key in os.environ}
     env.update({"PATH": f"{NODE_BIN}:/opt/homebrew/bin:/usr/bin:/bin", "TMPDIR": "/private/tmp", "LANG": "en_US.UTF-8", "CI": "true", "BRE457_QUERY_STAGE": "candidate"})
 
@@ -64,6 +82,12 @@ def main():
                     except subprocess.TimeoutExpired:
                         os.killpg(child.pid, signal.SIGKILL)
                         child.wait(timeout=5)
+        if name.endswith("-types"):
+            checked = checked_type_exit(code, (evidence / f"{name}.log").read_text())
+            if checked != code:
+                with (evidence / f"{name}.log").open("a") as output:
+                    output.write("\nType gate rejected usage-only0: compiler execution was not established.\n")
+                code = checked
         manifest["stages"].append({"name": name, "command": command, "exitCode": code, "seconds": time.monotonic() - started})
         (evidence / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         print(f"BRE457 finished {name}; exit={code}", flush=True)
@@ -76,12 +100,17 @@ def main():
         manifest["sqliteTypeProof"] = {"path": str(types), "sha256": hashlib.sha256(types.read_bytes()).hexdigest(), "packageVersion": json.loads((types.parent / "package.json").read_text())["version"]}
         if manifest["bun"] != "1.3.14" or manifest["sqliteTypeProof"]["sha256"] != TYPE_SHA:
             raise RuntimeError("Pinned runtime/local SQLite type proof changed; inspect before execution")
+        compiler = ROOT / "node_modules/typescript/bin/tsc"
+        manifest["compiler"] = {"entry": str(compiler), "sha256": hashlib.sha256(compiler.read_bytes()).hexdigest(),
+                                "version": json.loads((compiler.parent.parent / "package.json").read_text())["version"]}
         stages = [
             ("focused-tests", [BUN, "test", "apps/api/src/organization/collections-pins/query-results.test.ts", "apps/api/src/mailbox/read.test.ts", "packages/shared/src/organization-saved-query-results.test.ts", "packages/shared/src/organization-collections-pins.test.ts"], 90, {"BRE457_RECEIPTS": str(evidence / "candidate.jsonl")}),
-            ("shared-types", [BUN, "--cwd", "packages/shared", "run", "typecheck"], 60, None),
-            ("api-types", [BUN, "--cwd", "apps/api", "run", "typecheck"], 90, None),
+            ("shared-types", typecheck_command("packages/shared"), 60, None),
+            ("api-types", typecheck_command("apps/api"), 90, None),
             ("http-sqlite-demo", [BUN, "docs/verification/bre-457-pin-query/candidate-demo.ts", str(evidence / "demo-work.json")], 60, {"BRE457_RECEIPTS": str(evidence / "demo.jsonl")}),
         ]
+        if type_only:
+            stages = [stage for stage in stages if stage[0].endswith("-types")]
         for name, command, timeout, extra in stages:
             code = stage(name, command, timeout, extra)
             if code:
