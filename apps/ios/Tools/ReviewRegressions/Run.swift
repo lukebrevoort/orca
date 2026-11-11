@@ -8,6 +8,7 @@ import Foundation
         let root = FileManager.default.temporaryDirectory.appending(path: "bre457-controller-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
+        try runNavigationProjectionBaselineCases(check: check)
         try await runSavedFirstSearchSurfaceCases(cacheRoot: root.appending(path: "saved-first-search"), check: check)
         try await runDiscardStoreBoundaryCases(cacheRoot: root.appending(path: "discard-store"), check: check)
         try await runDiscardControllerCases(cacheRoot: root.appending(path: "discard-controller"), check: check)
@@ -288,6 +289,7 @@ import Foundation
             try await runAppliedReloadCases(state: state, client: client, suite: suite, token: connection.token, otherToken: connection.otherToken, check: check)
             try await runPrimaryMailSenderAPICases(connection: connection, cacheRoot: root.appending(path: "primary-sender-api"), check: check)
             try await runDiscardAPICases(connection: connection, cacheRoot: root.appending(path: "discard-api"), check: check)
+            try await runNavigationAPIBaselineCases(connection: connection, check: check)
             } catch { check("native-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))

@@ -1,0 +1,27 @@
+{
+  "artifactID": 13890686259,
+  "zipSHA256": "483cdb22bb646ed540667ab36f8d7bb62f0f454ba8af7c204200069779c58ff3",
+  "testedSHA": "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f",
+  "eventSHA": "56a2b65594ca10d6a07cce82e9ddee2665af93ed",
+  "eventTreeEqualityAsserted": false,
+  "artifactFileHashes": {
+    "identity.log": "e5de855d7803d5e82a935118af096482d5aae64e897dee4c467bca3fe91ab8fb",
+    "outcome.json": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107",
+    "checks.log": "b97e6e1f89b3d0ae8879d019920a58b3dbe3edcba6f72b9598d63ab3beee2a1f",
+    "fixture.log": "37db7706dc498b69db27cf2a775f9a5116280b39cee6620a8d9dcaeed7a40ef7",
+    "Orca-summary.json": "6d459a108abdf3aa955f990c8d5e79246b173936a8fd60ef2ab8c2d6f0a8cb82",
+    "OrcaDark-summary.json": "f95477d3af508aef06bd6e03bbc3d08f0091648a751cd2b348c6b17c57e7167c",
+    "Adoptiondark-summary.json": "157f50599b333150abc094a9c462acc2d87b5136607f5316c1d35d8ca0542926",
+    "Adoptionlight-summary.json": "b2c40c04e074c630b4c82f4315d71b2d1a103c31f958be3a5a179f7ee516a315"
+  },
+  "pinnedSourceHashes": {
+    "mobile-fixture.ts": "67c6cc87769e25b84de7db418eac8a5edddb5acb12d24a60a82f4f515e3c91d2",
+    "SettingsView.swift": "baeb1d009994cffb683068fd732f533877be320c98ba64947c3d048d8a83a643",
+    "MailboxViews.swift": "599a7bb15cb9b29845709a1e8b70f6e99b1858bccead3e8d2f44df74e54eda3e",
+    "MailActions.swift": "9601b837a9fc3c6ae876922042e738e7273027a7464439ff1b6208e8e6da1afb",
+    "OrcaUITests.swift": "7018fe4aad9613161b30759a3fe7adb039a7b1e090b2c4bd1d08d80e85e2e0bb",
+    "InboxView.swift": "815111907208c495ab6626325a5723588bcdacd10b6708f37612525d2115fd4a",
+    "InboxViewModel.swift": "f57577d06b40f0101510ba25e2f59bf68aa8bc8562f9bec5c2fe461fc2847583",
+    "MailSearchView.swift": "c4e712eb06c6ff2526fd38b371b92437258bc2c5cdfdb85a10198fd39dff159a"
+  }
+}

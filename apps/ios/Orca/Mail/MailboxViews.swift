@@ -1,19 +1,5 @@
 import SwiftUI
 
-struct MailboxOption: Identifiable, Equatable { var id: String; var name: String }
-
-/// Browsing choices belong to this signed-in identity on this device, independently of push.
-struct MailboxPreferenceStore {
-    let defaults: UserDefaults
-    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
-    func load(scope: String) -> Set<String> {
-        Set(defaults.stringArray(forKey: "mailboxViews|\(scope)") ?? ["focus", "all"])
-    }
-    func save(_ ids: Set<String>, scope: String) {
-        defaults.set(ids.sorted(), forKey: "mailboxViews|\(scope)")
-    }
-}
-
 @MainActor final class MailboxViews: ObservableObject {
     @Published private(set) var views = [SavedMailboxView]()
     @Published private(set) var destinations = [MailboxOption]()
@@ -29,14 +15,11 @@ struct MailboxPreferenceStore {
 
     init(preferences: MailboxPreferenceStore = .init()) { self.preferences = preferences }
     var options: [MailboxOption] {
-        [MailboxOption(id: "important", name: "Important"), MailboxOption(id: "all", name: "All Mail"), MailboxOption(id: "normal", name: "Inbox")]
-            + [MailboxOption(id: "focus", name: "Focus")].filter { enabledIDs.contains($0.id) }
-            + destinations
-            + views.filter { enabledIDs.contains($0.selectionID) }.map { MailboxOption(id: $0.selectionID, name: $0.name) }
+        NativeMailboxProjection.options(destinations: destinations, views: views, enabledIDs: enabledIDs)
     }
     var selectedView: SavedMailboxView? { views.first { $0.selectionID == selectedID } }
     var title: String { options.first { $0.id == selectedID }?.name ?? "Important" }
-    var unavailableIDs: [String] { enabledIDs.filter { id in id.hasPrefix("view:") && !views.contains(where: { $0.selectionID == id }) }.sorted() }
+    var unavailableIDs: [String] { NativeMailboxProjection.unavailableIDs(enabledIDs: enabledIDs, views: views) }
 
     func activate(scope: String) {
         guard self.scope != scope else { return }
@@ -66,13 +49,7 @@ struct MailboxPreferenceStore {
             guard current() else { return }
             let routing: MailActionJSON = try await client.request("v1/destinations")
             guard current() else { return }
-            if case .array(let items) = routing["destinations"] {
-                let builtIns = [routing["legacyDestinationIds"]["normal"].text, routing["legacyDestinationIds"]["focus"].text]
-                destinations = items.compactMap { item in
-                    guard let id = item["id"].text, let name = item["name"].text, !builtIns.contains(id), item["retiredAt"].text == nil else { return nil }
-                    return MailboxOption(id: "destination:" + id, name: name)
-                }
-            }
+            if let projected = NativeMailboxProjection.destinations(routing: routing) { destinations = projected }
             views = catalog.items; workspaceRevision = catalog.workspaceRevision; ensureSelection()
             try? await state.cache.save(catalog, key: "\(requestedScope)|mailboxViews")
         } catch {

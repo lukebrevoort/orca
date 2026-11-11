@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B45700000000000000000012 /* NativeMailboxProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000012 /* NativeMailboxProjection.swift */; };
 		B45700000000000000000011 /* ViewCommitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000011 /* ViewCommitStatus.swift */; };
 		B45700000000000000000010 /* NotificationNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000010 /* NotificationNavigation.swift */; };
 		B45700000000000000000009 /* InboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000009 /* InboxViewModel.swift */; };
@@ -70,6 +71,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B45710000000000000000012 /* NativeMailboxProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailboxProjection.swift; sourceTree = "<group>"; };
 		B45710000000000000000011 /* ViewCommitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewCommitStatus.swift; sourceTree = "<group>"; };
 		B45710000000000000000010 /* NotificationNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationNavigation.swift; sourceTree = "<group>"; };
 		B45710000000000000000009 /* InboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxViewModel.swift; sourceTree = "<group>"; };
@@ -146,6 +148,7 @@
 		2DED08717BC463CBFCC5F794 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000012 /* NativeMailboxProjection.swift */,
 				B45710000000000000000011 /* ViewCommitStatus.swift */,
 				B45710000000000000000010 /* NotificationNavigation.swift */,
 				B45710000000000000000009 /* InboxViewModel.swift */,
@@ -398,6 +401,7 @@
 				B45700000000000000000011 /* ViewCommitStatus.swift in Sources */,
 				B45700000000000000000010 /* NotificationNavigation.swift in Sources */,
 				B45700000000000000000009 /* InboxViewModel.swift in Sources */,
+				B45700000000000000000012 /* NativeMailboxProjection.swift in Sources */,
 				B45700000000000000000008 /* NativeViewEditorController.swift in Sources */,
 				B45700000000000000000007 /* MailActionJSON.swift in Sources */,
 				B45700000000000000000006 /* NotificationIdentity.swift in Sources */,

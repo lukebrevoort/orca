@@ -63,14 +63,12 @@ import SwiftUI
             // Search explicitly covers All Mail, including when entered from a view or Important.
             let searching = !requestedSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let destinationID: String?
-            if requestedView == "all" || requestedView == "important" { destinationID = nil }
-            else if requestedView.hasPrefix("destination:") { destinationID = String(requestedView.dropFirst(12)) }
-            else {
+            if NativeMailboxRequestScope.requiresDestinationCatalog(view: requestedView) {
                 let catalog: MailActionJSON = try await client.request("v1/destinations")
-                destinationID = catalog["legacyDestinationIds"][requestedView == "focus" ? "normal" : requestedView].text
-            }
+                destinationID = NativeMailboxRequestScope.destinationID(view: requestedView, routing: catalog)
+            } else { destinationID = NativeMailboxRequestScope.destinationID(view: requestedView) }
             guard current() else { return }
-            let apiView = requestedView.hasPrefix("destination:") || (requestedView == "normal" && destinationID != nil) ? "all" : requestedView
+            let apiView = NativeMailboxRequestScope.apiView(view: requestedView, destinationID: destinationID)
             func fetch(_ cursor: String?) async throws -> Rows {
                 if requestedView == "important" && !searching {
                     let page = try await client.important(accountId: account.id, cursor: cursor)

@@ -6,12 +6,14 @@ import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { createDatabaseClient } from '../../../api/src/db/client.ts';
 import { createMobileSession } from '../../../api/src/auth/mobile/store.ts';
 import { createApp } from '../../../api/src/index.ts';
+import { createNavigationProbe } from './navigation-fixture.ts';
 const output = process.argv[2];
 if (!output) throw Error('Need an owned connection output path');
 process.env.SESSION_SECRET = 'synthetic-native-review-regressions-secret';
 process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 23).toString('base64');
 const scratch = mkdtempSync(join(tmpdir(), 'bre457-native-review-api-'));
 const path = join(scratch, 'fixture.sqlite'), { db, sqlite } = createDatabaseClient(path);
+const navigation = createNavigationProbe(sqlite);
 migrate(db, { migrationsFolder: resolve(import.meta.dir, '../../../api/drizzle') });
 sqlite.exec(`INSERT INTO users(id,email) VALUES('owner','owner@example.com');
 INSERT INTO users(id,email) VALUES('owner-b','owner-b@example.com');
@@ -32,11 +34,14 @@ const ledger: unknown[] = [], requests: unknown[] = [];
 let holdNext = false, heldRequest: Request | null = null, heldCommand: unknown = null;
 let savedPrepareFailures = 0;
 let nextStatusResponse: { status: number; body: unknown } | null = null;
-const app = createApp({ dbFactory: () => createDatabaseClient(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; throw Error('Provider forbidden'); }; } }) as never });
+const app = createApp({ dbFactory: () => navigation.dbFactory(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; navigation.recordProviderClientCall(); throw Error('Provider forbidden'); }; } }) as never });
 const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
   const url = new URL(request.url);
   const fixtureOwner = request.headers.get('authorization') === `Bearer ${credential.accessToken}` ? 'owner' : request.headers.get('authorization') === `Bearer ${otherCredential.accessToken}` ? 'owner-b' : null;
   if (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner') return new Response(null, { status: 401 });
+  if (url.pathname === '/__bre457/navigation/seed' && request.method === 'POST') return Response.json(navigation.seed());
+  if (url.pathname === '/__bre457/navigation/seal' && request.method === 'POST') return Response.json(navigation.seal());
+  if (url.pathname === '/__bre457/navigation/state' && request.method === 'GET') return Response.json(navigation.snapshot());
   if (url.pathname === '/__bre457/add-account') { const body = await request.json() as { id?: string }; const id = body.id ?? 'added-account'; if (!/^[a-z0-9-]{1,80}$/.test(id)) throw Error('Invalid owned fixture account'); sqlite.query("INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES(?,'owner','gmail',?,?)").run(id, 'synthetic-' + id, id + '@example.com'); return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/saved-prepare-failures') { const body = await request.json() as { count: number }; if (!Number.isInteger(body.count) || body.count < 0 || body.count > 20) throw Error('Invalid fixture failure count'); savedPrepareFailures = body.count; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/hold-next-commit') { if (heldRequest) throw Error('Own held request must be released first'); holdNext = true; return Response.json({ ok: true }); }
@@ -54,7 +59,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
   if (command && holdNext) { holdNext = false; heldRequest = request.clone(); heldCommand = command; ledger.push({ path: url.pathname, actualStatus: null, deliveredStatus: 503, command, held: true }); return Response.json({ error: { code: 'synthetic_held_original', message: 'Original request deliberately delayed before API dispatch' } }, { status: 503 }); }
   const prepareBody = request.method === 'POST' && url.pathname === '/v1/organization/views/prepare' ? await request.clone().json() as { kind?: string; viewId?: string } : null;
-  const response = await app.fetch(request);
+  const response = await navigation.dispatch(request, () => app.fetch(request));
   if (prepareBody?.kind === 'saved_view' && response.ok && savedPrepareFailures > 0) { savedPrepareFailures--; requests.push({ method: request.method, path: url.pathname, status: response.status, deliveredStatus: 503, fixtureOwner, kind: prepareBody.kind, viewId: prepareBody.viewId }); return Response.json({ error: { code: 'synthetic_saved_prepare_unavailable', message: 'Owned API read succeeded; acknowledgement deliberately replaced503' } }, { status: 503 }); }
   requests.push({ method: request.method, path: url.pathname, status: response.status, ...(url.pathname === "/v1/inbox" ? { query: url.searchParams.get("query"), cursor: url.searchParams.get("cursor"), accountId: url.searchParams.get("accountId") } : {}), ...(prepareBody ? { kind: prepareBody.kind, viewId: prepareBody.viewId } : {}), fixtureOwner, expectedOwner: request.headers.get('x-orca-expected-user-id'), ...(response.status >= 400 ? { error: await response.clone().text() } : {}) });
   if (url.pathname === '/v1/organization/views/commit-status' && nextStatusResponse) { const substitute = nextStatusResponse; nextStatusResponse = null; return Response.json(substitute.body, { status: substitute.status }); }
@@ -66,5 +71,5 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   return response;
 } });
 writeFileSync(output, JSON.stringify({ baseURL: `http://127.0.0.1:${server.port}/`, token: credential.accessToken, otherToken: otherCredential.accessToken }), { mode: 0o600 });
-function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all(), views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), drafts: sqlite.query('SELECT id,account_id,delivery_status,send_idempotency_key FROM message_drafts ORDER BY id').all(), draftDeletes: sqlite.query('SELECT id,account_id FROM bre457_draft_delete_probe').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
+function cleanup() { navigation.restore(); writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, navigation: navigation.snapshot(), preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all(), views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), drafts: sqlite.query('SELECT id,account_id,delivery_status,send_idempotency_key FROM message_drafts ORDER BY id').all(), draftDeletes: sqlite.query('SELECT id,account_id FROM bre457_draft_delete_probe').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
 process.on('SIGTERM', cleanup); process.on('SIGINT', cleanup);
