@@ -126,7 +126,7 @@ import Foundation
     guard case .array(let ledger) = saved["ledger"], let last = ledger.last, let savedID = last["response"]["view"]["id"].text else { throw APIClient.ClientError.invalidResponse }
     let catalog: MailActionJSON = try await client.request("v1/organization/views")
     let _: EmptyResponse = try await client.request("v1/organization/views", pathSuffix: [savedID], method: "DELETE", query: [.init(name: "expectedRevision", value: "1"), .init(name: "expectedWorkspaceRevision", value: String(catalog["workspaceRevision"].integer!)), .init(name: "idempotencyKey", value: UUID().uuidString)])
-    let removed = try await statusState(); _ = await deleted.checkSaveOutcome(); _ = await deleted.save(); await deleted.review()
+    let removed = try await statusState(); _ = await deleted.checkSaveOutcome(); _ = await deleted.checkSaveOutcome(); _ = await deleted.save(); await deleted.review()
     let stillRemoved = try await statusState()
     check("478-applied-deleted-never-recreates", deleted.pendingTarget != nil && deleted.error?.contains(savedID) == true && removed["count"].integer == stillRemoved["count"].integer && sameCommand(deletedDefaults, deletedOriginal), "applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID \(savedID), pending \(deleted.pendingTarget != nil), counts \(removed["count"].integer ?? -1)/\(stillRemoved["count"].integer ?? -1), error \(deleted.error ?? "none")")
     check("478-status-provider-boundary", stillRemoved["providerCalls"].integer == 0, "all status, fence and recovery cases use zero external provider calls")

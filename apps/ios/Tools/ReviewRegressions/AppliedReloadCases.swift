@@ -94,5 +94,6 @@ import Foundation
             check("478-applied-" + kind + "-same-id-update", updatedID == id && result["name"].text == desired && result["definition"]["date"]["receivedAfter"].text == "1970-01-01T00:00:00.000Z", "fresh preview/Save updates the original ID once and preserves current advanced predicates")
         }
     }
-    check("478-applied-reload-provider-boundary", try await snapshot()["providerCalls"].integer == 0, "all known-applied recovery cases use zero external provider calls")
+    let finalState = try await snapshot()
+    check("478-applied-reload-provider-boundary", finalState["providerCalls"].integer == 0, "all known-applied recovery cases use zero external provider calls")
 }
