@@ -134,7 +134,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     }
     private func install(_ result: MailActionJSON, selection: NativeViewSelection, keeping: Edits?) {
         draft = result["draft"]; preview = nil
-        let saved = Edits(name: result["draft"]["identity"]["name"].text ?? "", description: result["draft"]["identity"]["description"].text ?? "", subject: selection.query ?? "", replaceSearch: false)
+        let saved = Edits(name: result["draft"]["identity"]["name"].text ?? "", description: result["draft"]["identity"]["description"].text ?? "", subject: result["draft"]["mode"].text == "update" ? result["draft"]["definition"]["thread"]["subjectContains"].text ?? selection.query ?? "" : selection.query ?? "", replaceSearch: false)
         baseline = saved; restore(keeping ?? saved); changed = edits != saved
     }
     func review() async {
@@ -171,8 +171,11 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         let request = generation; busy = true; error = nil; defer { if request == generation { busy = false } }
         guard await currentClient(request) else { return nil }
         do {
-            let _: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: command.body)
+            let acknowledgement: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: command.body)
             guard await currentClient(request) else { return nil }
+            if let applied = validatedAcknowledgement(acknowledgement, command: command.body) {
+                return try await completeApplied(id: applied.id, workspaceRevision: applied.workspace, viewRevision: applied.view, command: command, client: client, state: state, request: request)
+            }
             return await resolve(command, client: client, state: state, request: request)
         } catch {
             guard await currentClient(request) else { return nil }
@@ -191,6 +194,49 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         guard await currentClient(request) else { return nil }
         return await resolve(command, client: client, state: state, request: request)
     }
+    private func validatedAcknowledgement(_ value: MailActionJSON, command: MailActionJSON) -> (id: String, workspace: Int, view: Int)? {
+        // /commit reloads the CURRENT View/workspace. These may be newer than
+        // the original receipt; a valid exact-request200 is independent of status.
+        guard value["workspaceId"].text == ownerID, value["view"]["workspaceId"].text == ownerID,
+              let id = value["view"]["id"].text, !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, id.utf16.count <= 200,
+              value["navigation"]["destination"].text == "view:" + id,
+              let w = value["workspaceRevision"].integer, let v = value["view"]["revision"].integer,
+              let expectedW = command["expectedRevisions"]["workspace"].integer, expectedW > 0,
+              w <= 9_007_199_254_740_991, v <= 9_007_199_254_740_991, w >= expectedW + 1 else { return nil }
+        if let expectedV = command["expectedRevisions"]["view"].integer {
+            guard command["draft"]["mode"].text == "update", id == command["draft"]["viewId"].text, v >= expectedV + 1 else { return nil }
+        } else { guard command["draft"]["mode"].text == "create", v >= 1 else { return nil } }
+        return (id, w, v)
+    }
+    private func completeApplied(id: String, workspaceRevision: Int, viewRevision: Int, command: Command,
+                                 client: APIClient, state: AppState, request: UUID) async throws -> String? {
+        guard let original = journal, original.command?.body["retryKey"].text == command.body["retryKey"].text else { return nil }
+        journal?.adoptedViewId = id; journal?.appliedViewId = id; persist()
+        let prepared = try await prepare(client: client, selection: original.context, adoptedId: id)
+        guard await currentClient(request) else { return nil }
+        guard validPrepared(prepared, context: original.context, adoptedId: id, state: state),
+              (prepared["workspaceRevision"].integer ?? 0) >= workspaceRevision,
+              (prepared["draft"]["viewRevision"].integer ?? 0) >= viewRevision else {
+            error = "Original Save is applied, but its current object could not be verified. No replacement was created."; return nil
+        }
+        let retained = journal?.edits ?? original.edits, ownsContext = matchingContext
+        journal?.command = nil; persist()
+        guard ownsContext else { status = "Original View saved as \(id). Reopen its editor to continue retained edits."; return nil }
+        if retained == command.submitted {
+            install(prepared, selection: original.context, keeping: nil)
+            journal = nil; persist(); baseline = edits; changed = false; status = "View saved."; return id
+        }
+        // Rebase only edits made AFTER the submitted command. Untouched simple
+        // fields and advanced predicates come from the freshly authorized object.
+        let freshSubject = prepared["draft"]["definition"]["thread"]["subjectContains"].text ?? original.context.query ?? ""
+        let filterChanged = retained.subject != command.submitted.subject || retained.replaceSearch != command.submitted.replaceSearch
+        let rebased = Edits(name: retained.name == command.submitted.name ? prepared["draft"]["identity"]["name"].text ?? retained.name : retained.name,
+                            description: retained.description == command.submitted.description ? prepared["draft"]["identity"]["description"].text ?? retained.description : retained.description,
+                            subject: filterChanged ? retained.subject : freshSubject, replaceSearch: filterChanged ? retained.replaceSearch : false)
+        journal?.edits = rebased; persist()
+        install(prepared, selection: original.context, keeping: rebased)
+        status = "Earlier Save acknowledged. Newer edits are kept on that View; preview and save them separately."; return nil
+    }
     private func resolve(_ command: Command, client: APIClient, state: AppState, request: UUID) async -> String? {
         do {
             let proof: ViewCommitStatus = try await client.request("v1/organization/views/commit-status", method: "POST", body: command.body)
@@ -203,22 +249,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
             case .unknown:
                 error = "Save outcome remains unresolved. The original command is kept; you can check again or retry it safely."; return nil
             case .applied(let id, let workspaceRevision, let viewRevision):
-                journal?.adoptedViewId = id; journal?.appliedViewId = id; persist()
-                let prepared = try await prepare(client: client, selection: original.context, adoptedId: id)
-                guard await currentClient(request) else { return nil }
-                guard validPrepared(prepared, context: original.context, adoptedId: id, state: state),
-                      (prepared["workspaceRevision"].integer ?? 0) >= workspaceRevision,
-                      (prepared["draft"]["viewRevision"].integer ?? 0) >= viewRevision else {
-                    error = "Original Save is applied, but its current object could not be verified. No replacement was created."; return nil
-                }
-                let retained = journal?.edits ?? original.edits, ownsContext = matchingContext
-                journal?.command = nil; persist()
-                guard ownsContext else { status = "Original View saved as \(id). Reopen its editor to continue retained edits."; return nil }
-                install(prepared, selection: original.context, keeping: retained)
-                if retained == command.submitted {
-                    journal = nil; persist(); baseline = edits; changed = false; status = "View saved."; return id
-                }
-                status = "Earlier Save acknowledged. Newer edits are kept on that View; preview and save them separately."; return nil
+                return try await completeApplied(id: id, workspaceRevision: workspaceRevision, viewRevision: viewRevision, command: command, client: client, state: state, request: request)
             case .notApplied(_, let workspaceRevision, let viewRevision):
                 let prepared = try await prepare(client: client, selection: original.context, adoptedId: original.adoptedViewId)
                 guard await currentClient(request) else { return nil }
