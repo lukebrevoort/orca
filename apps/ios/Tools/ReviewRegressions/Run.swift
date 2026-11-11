@@ -88,16 +88,23 @@ import Foundation
             let committed: MailActionJSON = try await client.request("__bre457/state")
             check("466-first-commit-actually-recorded", lost == nil && committed["count"].integer == (before["count"].integer ?? 0) + 1, "actual API/SQLite commit exists; response replaced by HTTP503")
             view.name = "Edited after lost acknowledgement"; view.edited()
+            let _: MailActionJSON = try await client.request("__bre457/drop-next-commit", method: "POST", body: ["drop": true])
             await view.review(); _ = await view.save()
             let after: MailActionJSON = try await client.request("__bre457/state")
-            check("466-edit-retry-exactly-one-creation", after["count"].integer == committed["count"].integer, "actual view count after commit/retry = \(after["count"].integer ?? -1), first count = \(committed["count"].integer ?? -1)")
+            check("466-edit-retry-exactly-one-creation", after["count"].integer == committed["count"].integer && view.pendingTarget != nil, "actual view count after commit/retry = \(after["count"].integer ?? -1), first count = \(committed["count"].integer ?? -1)")
             view.close()
             let reopened = NativeViewEditorController(defaults: defaults)
             await reopened.open(selection: selection, state: state)
             reopened.name = "Reopened edit"; reopened.replaceSearch = true; reopened.subject = "Subject"; reopened.edited()
             await reopened.review(); _ = await reopened.save()
+            await reopened.review(); _ = await reopened.save()
             let final: MailActionJSON = try await client.request("__bre457/state")
             check("466-dismiss-reopen-no-duplicate", final["count"].integer == committed["count"].integer, "actual view count after reopen = \(final["count"].integer ?? -1)")
+            if case .array(let ledger) = final["ledger"], ledger.count >= 3 {
+                let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
+                let commands = try ledger.prefix(3).map { try encoder.encode($0["command"]) }
+                check("466-repeated-retry-preserves-exact-command", Set(commands).count == 1, "first three committed/replayed requests retain identical UUID, expected revisions and reviewed definition")
+            } else { check("466-repeated-retry-preserves-exact-command", false, "replay ledger missing") }
             let definition: MailActionJSON = .object(["revision": .number(1), "accountIds": .array([.string("account")]), "sender": .object(["addresses": .array([.string("person@example.com")])]), "thread": .object(["subjectContains": .string("Subject"), "readState": .string("unread")])])
             let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("typed_definition"), "source": .object(["kind": .string("manual"), "label": .string("Synthetic advanced View")]), "identity": .object(["name": .string("Advanced original")]), "definition": definition]))
             let advancedPreview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": prepared["draft"], "page": .object(["limit": .number(25)])]))
@@ -113,7 +120,9 @@ import Foundation
                 let same = try NSDictionary(dictionary: JSONSerialization.jsonObject(with: expected) as! [String: Any]).isEqual(to: JSONSerialization.jsonObject(with: actual) as! [String: Any])
                 check("466-advanced-definition-preserved", updatedID == advancedID && same && advanced["name"].text == "Advanced renamed", "actual API saved ID and complete sender/thread/readState definition retained")
             } else { check("466-advanced-definition-preserved", false, "updated advanced view missing") }
-            check("466-provider-boundary", final["providerCalls"].integer == 0, "synthetic provider calls = \(final["providerCalls"].integer ?? -1)")
+            let latest: MailActionJSON = try await client.request("__bre457/state")
+            check("466-advanced-update-no-extra-creation", latest["count"].integer == (committed["count"].integer ?? 0) + 1, "one recovered View plus one intentional advanced fixture, updates retain both IDs")
+            check("466-provider-boundary", latest["providerCalls"].integer == 0, "synthetic provider calls = \(latest["providerCalls"].integer ?? -1)")
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
         if results.contains(where: { $0["pass"] as? Bool == false }) { exit(1) }
