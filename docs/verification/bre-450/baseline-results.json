@@ -1,0 +1,66 @@
+{
+  "sha": "9ec3ca31afecc28a4af2bf8b40c48a5f1fb9a311",
+  "browser": "151.0.7922.34",
+  "failures": [
+    "light/390: Bulleted list readable without misleading glyph",
+    "light/390: Quote readable without misleading glyph",
+    "light/390: Attach files readable without misleading glyph",
+    "light/390: plain-format reason visible",
+    "light/1024: Bulleted list readable without misleading glyph",
+    "light/1024: Quote readable without misleading glyph",
+    "light/1024: Attach files readable without misleading glyph",
+    "light/1024: no phantom Later",
+    "light/1024: plain-format reason visible",
+    "light/1440: Bulleted list readable without misleading glyph",
+    "light/1440: Quote readable without misleading glyph",
+    "light/1440: Attach files readable without misleading glyph",
+    "light/1440: no phantom Later",
+    "light/1440: plain-format reason visible",
+    "dark/390: Bulleted list readable without misleading glyph",
+    "dark/390: Quote readable without misleading glyph",
+    "dark/390: Attach files readable without misleading glyph",
+    "dark/390: plain-format reason visible",
+    "dark/1024: Bulleted list readable without misleading glyph",
+    "dark/1024: Quote readable without misleading glyph",
+    "dark/1024: Attach files readable without misleading glyph",
+    "dark/1024: no phantom Later",
+    "dark/1024: plain-format reason visible",
+    "dark/1440: Bulleted list readable without misleading glyph",
+    "dark/1440: Quote readable without misleading glyph",
+    "dark/1440: Attach files readable without misleading glyph",
+    "dark/1440: no phantom Later",
+    "dark/1440: plain-format reason visible"
+  ],
+  "cases": [
+    {
+      "theme": "light",
+      "width": 390,
+      "actions": "plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen"
+    },
+    {
+      "theme": "light",
+      "width": 1024,
+      "actions": "plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "actions": "plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "actions": "plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen"
+    },
+    {
+      "theme": "dark",
+      "width": 1024,
+      "actions": "plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen"
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "actions": "plain disabled, attachment chooser, rich list + quote DOM, content preserved into Zen"
+    }
+  ]
+}
