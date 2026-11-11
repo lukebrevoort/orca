@@ -138,6 +138,18 @@ for (const provider of ["gmail", "outlook"] as const) {
       expect((await f.callback(authorization.state, authorization.cookie)).status).toBe(302);
     });
 
+    test("BRE-455 completed real browser login pairs its verified context witness", async () => {
+      const f = await fixture(provider);
+      const authorization = await f.start("login");
+      const response = await f.callback(authorization.state, authorization.cookie);
+      expect(response.status).toBe(302);
+      const cookies = response.headers.getSetCookie();
+      expect(cookies).toHaveLength(2);
+      expect(cookies[0]).toMatch(/^orca_session=.+; HttpOnly; Path=\//);
+      expect(cookies[1]).toMatch(/^orca_browser_auth_context=v1\.[A-Za-z0-9_-]{43}; Path=\//);
+      expect(cookies[1]).not.toContain("HttpOnly");
+    });
+
     test("legitimate login survives a new service instance, uses private PKCE, and rejects replay", async () => {
       const f = await fixture(provider);
       const authorization = await f.start("login");
