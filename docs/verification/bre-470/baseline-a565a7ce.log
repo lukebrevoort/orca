@@ -1,0 +1,24 @@
+[Orca resources] {"time": 1794391658.12121, "stage": "before", "ownerPid": 74187, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  31.8 542368 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", " 1152  11.6  21584 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15214  11.3  93488 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", "15382  11.1 963936 codex", "15249   8.6 367424 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)", "  404   7.0 122256 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"], "memory": "System-wide memory free percentage: 74%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/notifications/apns-signing.test.ts:
+4 | test("BRE-470 correction during production APNs signing prevents opening an HTTP/2 request", () => {
+5 |   const child = Bun.spawnSync([process.execPath, resolve(import.meta.dir, "apns-signing.probe.ts"), "correction"], { stdout: "pipe", stderr: "pipe", timeout: 10000 });
+6 |   if (child.exitCode !== 0) throw Error(child.stderr.toString() + child.stdout.toString());
+7 |   const result = JSON.parse(child.stdout.toString().trim());
+8 |   expect(result.change).toBe("correction");
+9 |   expect(result.requests).toBe(0);
+                              ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/notifications/apns-signing.test.ts:9:27)
+(fail) BRE-470 correction during production APNs signing prevents opening an HTTP/2 request [243.02ms]
+
+ 0 pass
+ 1 fail
+ 2 expect() calls
+Ran 1 test across 1 file. [259.00ms]
+[Orca resources] {"time": 1794391658.425164, "stage": "after", "ownerPid": 74187, "childPid": 74190, "command": "bun", "exitCode": 1, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  40.4 542192 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", " 1152  15.2  21584 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15214   4.9  93504 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", "  404   4.9 122256 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer", "  416   4.8  22112 /usr/sbin/coreaudiod", "15249   4.3 367488 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)"], "memory": "System-wide memory free percentage: 74%"}
