@@ -1,0 +1,222 @@
+{
+  "base": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+  "testedSource": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+  "checks": [
+    {
+      "pr": 303,
+      "url": "https://github.com/lukebrevoort/orca/pull/303",
+      "head": "707e012c7f977730badaa06912d6d8f13f4d0668",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 309,
+      "url": "https://github.com/lukebrevoort/orca/pull/309",
+      "head": "5a07a5362e35cc34ff6bd07663fb2df2b558c55a",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 310,
+      "url": "https://github.com/lukebrevoort/orca/pull/310",
+      "head": "b476970cb7d4c3e649fea11f7b71f8fa36c5e897",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 1,
+          "isAncestor": false
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 1,
+          "isAncestor": false
+        }
+      ]
+    },
+    {
+      "pr": 311,
+      "url": "https://github.com/lukebrevoort/orca/pull/311",
+      "head": "5795909927d8aa77c5e777e37a3e85eaf14aeb99",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 312,
+      "url": "https://github.com/lukebrevoort/orca/pull/312",
+      "head": "bc1b26e0de0e66d7fe0cc4711e4b525610eba312",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 1,
+          "isAncestor": false
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 1,
+          "isAncestor": false
+        }
+      ]
+    },
+    {
+      "pr": 313,
+      "url": "https://github.com/lukebrevoort/orca/pull/313",
+      "head": "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 1,
+          "isAncestor": false
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 1,
+          "isAncestor": false
+        }
+      ]
+    },
+    {
+      "pr": 314,
+      "url": "https://github.com/lukebrevoort/orca/pull/314",
+      "head": "20a0166d66807fd6f26406319c083fa2ae8aa8fd",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 315,
+      "url": "https://github.com/lukebrevoort/orca/pull/315",
+      "head": "03c6045e6a1ea87583c012f2c7d4c037f078ebe6",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 316,
+      "url": "https://github.com/lukebrevoort/orca/pull/316",
+      "head": "c539ca3259f05a6cbb9babdc93bac4708c3d8558",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 318,
+      "url": "https://github.com/lukebrevoort/orca/pull/318",
+      "head": "996ae13a909024f1a2c5f6fa5c3f59d3c38aa4a7",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 319,
+      "url": "https://github.com/lukebrevoort/orca/pull/319",
+      "head": "d8f66c7b2af3a4d7282621b42519efd906ac9b8f",
+      "checks": [
+        {
+          "target": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    }
+  ],
+  "inheritedPrs": [
+    303,
+    309,
+    311,
+    314,
+    315,
+    316,
+    318,
+    319
+  ],
+  "ownPr": 320,
+  "preparedLinkSet": [
+    320,
+    303,
+    309,
+    311,
+    314,
+    315,
+    316,
+    318,
+    319
+  ],
+  "excludedPrs": [
+    310,
+    312,
+    313
+  ],
+  "native313Scope": "fb10 is the last verified published native head in this receipt; ROOT native36ac work is separately owned and not integrated here.",
+  "publication": "Prepared link set only; no new T3/PR/remote mutation in this docs-only task."
+}

@@ -1,0 +1,15 @@
+{
+  "before": "bfd47277a07b834740cd01547a5864f170395b7e",
+  "integrated": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+  "main": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+  "parents": [
+    "bfd47277a07b834740cd01547a5864f170395b7e",
+    "97d0484d8358b8bf9207eca3b4ecf05012a0bac3"
+  ],
+  "tree": "59ce77ceb4a781e31cd4f4fab1d8eea9a3504dc3",
+  "oldReviewedApiSharedDeltaEqualsNewMainRelativeDelta": true,
+  "deltaSha256": "3fce22cb391293cf8e1ec3d41abfa170f508f6a73ee5155e476a654dceab0560",
+  "currentClean": true,
+  "runtimeAfterIntegration": "NOT RUN",
+  "publication": "NOT PUSHED"
+}
