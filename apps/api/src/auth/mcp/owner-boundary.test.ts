@@ -79,12 +79,21 @@ for (const command of commands) {
   }));
 }
 
-test("BRE-469 MCP same-owner revoke-all revokes only that owner's connection and credentials", async () => fixture(async ({ app, u }) => {
+test("BRE-469 MCP same-owner revoke-all revokes only that owner's connection and credentials", async () => fixture(async ({ app, u, snapshot }) => {
+  const before = snapshot();
   const response = await app.request("/v1/mcp/connections/revoke-all", { method: "POST", headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u" } });
   expect(response.status).toBe(200); expect(await response.json()).toEqual({ revoked: 1 });
   const own = await app.request("/v1/mcp/connections", { headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u" } });
   const items = (await own.json() as { items: { id: string; revokedAt: string | null }[] }).items;
   expect(items.map(item => item.id)).toEqual(["u-connection"]); expect(items[0]!.revokedAt).not.toBeNull();
+  const old = before as { connections: { id: string; revoked_at: number | null }[]; access: { id: string; revoked_at: number | null }[]; refresh: { id: string; revoked_at: number | null }[] };
+  const current = snapshot() as typeof old;
+  for (const key of ["connections", "access", "refresh"] as const) {
+    expect(current[key].find(row => row.id.startsWith("v-"))).toEqual(old[key].find(row => row.id.startsWith("v-")));
+    expect(current[key].find(row => row.id.startsWith("u-"))?.revoked_at).not.toBeNull();
+  }
+  const repeated = await app.request("/v1/mcp/connections/revoke-all", { method: "POST", headers: { cookie: `orca_session=${u.token}`, [expectedUserIdHeaderName]: "u" } });
+  expect(repeated.status).toBe(200); expect(await repeated.json()).toEqual({ revoked: 0 });
 }));
 
 test("BRE-469 MCP legacy no-header client retains exact revoke-all response", async () => fixture(async ({ app, v }) => {
@@ -97,3 +106,11 @@ test("BRE-469 MCP foreign resource ID remains 404 for legacy DELETE", async () =
   const response = await app.request("/v1/mcp/connections/v-connection", { method: "DELETE", headers: { cookie: `orca_session=${u.token}` } });
   expect(response.status).toBe(404); expect(snapshot()).toEqual(before);
 }));
+
+for (const command of commands) {
+  test(`BRE-469 MCP ${command.name} requires authentication even with an owner header`, async () => fixture(async ({ app, snapshot }) => {
+    const before = snapshot();
+    const response = await app.request(command.path, { method: command.method, headers: { [expectedUserIdHeaderName]: "u" } });
+    expect(response.status).toBe(401); expect(snapshot()).toEqual(before);
+  }));
+}
