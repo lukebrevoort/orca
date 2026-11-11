@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { captureArrivals } from "../../notifications/provenance.ts";
 
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
@@ -479,6 +480,8 @@ export async function persistGmailMessages(
         });
       }
     }
+    captureArrivals(db.$client, { accountId: input.accountId, accountEmail: input.accountEmail,
+      messages: input.gmailMessages.filter(message => !existingMessageIds.has(`gmail:${input.accountId}:${message.id}`)), now: input.now.getTime() });
     input.afterPersist?.(tx);
   });
   input.metrics?.recordDbWrite(performance.now() - dbWriteStartedAt);
