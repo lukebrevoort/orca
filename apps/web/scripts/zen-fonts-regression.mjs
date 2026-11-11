@@ -229,6 +229,7 @@ async function stateJourney(theme, viewport) {
     await zen.getByRole('button', { name: 'Retry', exact: true }).click();
     const saved = await poll(async () => (await api('/v1/drafts?accountId=first')).find(d => d.subject === prefix && d.body.text === latestBody && d.providerSyncStatus === 'synced'), 'Retry saves latest writing');
     check(saved.body.text === latestBody, prefix + ': retry persisted latest writing');
+    await zen.locator('.compose-save-status-saved').waitFor();
     await measure(page, prefix.replaceAll(' ', '-') + '-saved', 2);
     await zen.getByRole('combobox', { name: 'Add To recipient' }).fill('unfinished-address');
     await zen.getByRole('button', { name: 'Send', exact: true }).click();
@@ -260,11 +261,14 @@ async function stateJourney(theme, viewport) {
     await page.unroute('**/v1/drafts/*/send?*', sendRoute);
     await zen.getByText(/could not be confirmed/).waitFor();
     await measure(page, prefix.replaceAll(' ', '-') + '-uncertain', 2);
+    const replayResponse = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/send'));
     await zen.getByRole('button', { name: 'Send', exact: true }).click();
+    await replayResponse;
     await zen.getByText(/could not be confirmed/).waitFor();
     const deliveries = await api('/__fixture/deliveries');
     check(deliveries.length === ledgerBefore + 1, prefix + ': uncertain replay invokes provider once');
-    check(deliveries.at(-1).draft.attachments.length === 2, prefix + ': synthetic dispatch preserves attachment bytes');
+    check(deliveries.at(-1).draft.attachments.length === 2, prefix + ': synthetic dispatch preserves attachment count');
+    check(deliveries.at(-1).draft.attachments.every(a => Buffer.from(a.contentBase64, 'base64').toString() === 'Synthetic attachment bytes: ' + a.filename), prefix + ': synthetic dispatch preserves attachment bytes');
     check(deliveries.at(-1).draft.body.text.includes('Local recovery copy.'), prefix + ': synthetic dispatch uses recovered writing');
     results.scenarios.push({ name: prefix + '-preservation', providerCalls: deliveries.length - ledgerBefore });
   } catch (error) {
