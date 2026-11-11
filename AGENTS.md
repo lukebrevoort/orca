@@ -103,7 +103,7 @@ bun run lint        # type-level linting (tsc)
 - Gmail OAuth connect and callback flow is wired end-to-end.
 - Gmail sync engine fetches, normalizes, and persists messages to SQLite.
 - Web and native clients read the inbox from the API; synthetic fixtures support development.
-- Compose and zen writing use persisted, revisioned drafts; Gmail mirroring and sending require the incremental `gmail.compose` grant.
+- Compose and zen writing use persisted, revisioned drafts; Orca requests incremental `gmail.compose` for Gmail mirroring and sending. Existing broader Gmail grants are also recognized.
 - Read/unread changes and organization actions are local to Orca, not Gmail mailbox mutations.
 - Outlook OAuth is implemented; its provider adapter does not implement sync, draft transport, or sending.
 - OAuth login establishes user-scoped sessions and connected accounts; native clients use revocable opaque credentials. Implementation and fixture checks do not establish production or device acceptance.

@@ -27,6 +27,14 @@ files are excluded. No production performance or bundle-size improvement is clai
 
 ## Verification
 
+Reproduce the pinned component source audit from the repository root with frozen dependencies installed:
+
+```sh
+node docs/verification/bre-446/audit-cleanup.mjs 9ec3ca31afecc28a4af2bf8b40c48a5f1fb9a311 01f6909ee534177a4fbaf486c29b06d7e7ba55e2
+```
+
+This checks identifier reachability, normalized retained statements, canonical dependency inputs and removed lock bytes. It audits those immutable component revisions; it does not claim runtime or current integration verification. The following November 9 results are historical until the final integration receives new checks.
+
 - Before deletion: existing collections/pins, smoke and draft-mirror suites passed 24 tests across six files.
 - TypeScript AST audit: each removed function has only its private declaration at base. All 178 retained top-level API statements compare unchanged after printing, apart from the orphaned import specifier.
 - Bun 1.3.14 / Node 24.22.1: `bun run test` passed 2,194 tests (API 1,140; web 867; shared 187), zero failures.
