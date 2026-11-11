@@ -2461,8 +2461,13 @@ final class InboxRecoveryTests: XCTestCase {
             let model = InboxViewModel(); model.view = "all"
             await model.load(state: fixture.state)
             await model.load(state: fixture.state, reset: false)
-            XCTAssertEqual(requests, 2); XCTAssertEqual(model.nextCursor, "valid-cursor")
-            XCTAssertEqual(model.messages.map(\.id), ["saved"]); XCTAssertEqual(model.error, "Try again")
+            XCTAssertEqual(requests, 2)
+            if status == 401 {
+                XCTAssertNil(model.nextCursor); XCTAssertTrue(model.messages.isEmpty, "Authentication loss must invalidate previously accepted mail")
+            } else {
+                XCTAssertEqual(model.nextCursor, "valid-cursor"); XCTAssertEqual(model.messages.map(\.id), ["saved"])
+            }
+            XCTAssertEqual(model.error, "Try again")
         }
     }
 

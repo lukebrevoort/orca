@@ -61,7 +61,7 @@ import SwiftUI
             var replaces = reset
             let page: Rows
             do { page = try await fetch(cursor) }
-            catch APIClient.ClientError.http(400, _) where !reset && cursor != nil {
+            catch APIClient.ClientError.http(400, let body) where body?.code == "invalid_cursor" && !reset && cursor != nil {
                 guard current() else { return }; nextCursor = nil; replaces = true
                 page = try await fetch(nil) // One revision-bound restart, no retry loop.
             }
@@ -74,7 +74,17 @@ import SwiftUI
             let cached: Rows? = reset && MailboxViews.permitsOfflineCache(error) ? await state.cache.load(Rows.self, key: key) : nil
             guard current() else { return }
             if let cached { messages = cached.messages; resultSearch = requestedSearch; nextCursor = nil; self.error = "Offline — showing saved mail; importance may have changed." }
-            else { if !MailboxViews.permitsOfflineCache(error) { messages = []; nextCursor = nil }; self.error = error.localizedDescription }
+            else {
+                // Pagination failures do not revoke an already accepted owned
+                // page. Authentication/ownership failures do; never present old
+                // account data as an offline fallback after that boundary.
+                let invalidatesOwnership: Bool
+                if case let APIClient.ClientError.http(code, _) = error { invalidatesOwnership = [401, 403, 404].contains(code) }
+                else if case APIClient.ClientError.invalidResponse = error { invalidatesOwnership = true }
+                else { invalidatesOwnership = false }
+                if invalidatesOwnership || (reset && !MailboxViews.permitsOfflineCache(error)) { messages = []; nextCursor = nil }
+                self.error = error.localizedDescription
+            }
         }
     }
 }
