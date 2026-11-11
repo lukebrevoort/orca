@@ -1,0 +1,66 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/auth/outlook/owner-boundary.test.ts:
+47 | test("BRE-469 Outlook start rejects captured U with replacement V before transaction creation", async () => fixture(async ({ auth, outlook, u, v, rows }) => {
+48 |   const held = await auth.request("/v1/auth/session", { headers: { cookie: `orca_session=${u.token}` } });
+49 |   expect(held.status).toBe(200); expect((await held.json() as { user: { id: string } }).user.id).toBe("u");
+50 |   const before = rows();
+51 |   const response = await outlook.request("/connect", { headers: { cookie: `orca_session=${v.token}`, "x-orca-expected-user-id": "u" } });
+52 |   expect({ status: response.status, rows: rows() }).toEqual({ status: 409, rows: before });
+                                                         ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "rows": [],
+-   "status": 409,
++   "rows": [
++     {
++       "pending_email": null,
++       "provider": "outlook",
++       "user_id": "v",
++     },
++   ],
++   "status": 200,
+  }
+
+- Expected  - 2
++ Received  + 8
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/outlook/owner-boundary.test.ts:52:53)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/outlook/owner-boundary.test.ts:39:11)
+(fail) BRE-469 Outlook start rejects captured U with replacement V before transaction creation [90.03ms]
+52 |   expect({ status: response.status, rows: rows() }).toEqual({ status: 409, rows: before });
+53 | }));
+54 | 
+55 | test("BRE-469 Outlook start rejects malformed captured owner", async () => fixture(async ({ outlook, u, rows }) => {
+56 |   const response = await outlook.request("/connect", { headers: { cookie: `orca_session=${u.token}`, "x-orca-expected-user-id": "u v" } });
+57 |   expect({ status: response.status, rows: rows() }).toEqual({ status: 400, rows: [] });
+                                                         ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "rows": [],
+-   "status": 400,
++   "rows": [
++     {
++       "pending_email": null,
++       "provider": "outlook",
++       "user_id": "u",
++     },
++   ],
++   "status": 200,
+  }
+
+- Expected  - 2
++ Received  + 8
+
+      at <anonymous> (/Users/lbrevoort/orca/apps/api/src/auth/outlook/owner-boundary.test.ts:57:53)
+      at async fixture (/Users/lbrevoort/orca/apps/api/src/auth/outlook/owner-boundary.test.ts:39:11)
+(fail) BRE-469 Outlook start rejects malformed captured owner [62.14ms]
+(pass) BRE-469 Outlook same-owner and legacy starts retain their authorized transaction scope [70.88ms]
+(pass) BRE-469 Outlook owner header never supplies authentication [59.49ms]
+
+ 2 pass
+ 2 fail
+ 12 expect() calls
+Ran 4 tests across 1 file. [515.00ms]
