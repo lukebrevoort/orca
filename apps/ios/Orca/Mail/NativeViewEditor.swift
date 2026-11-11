@@ -22,6 +22,7 @@ struct NativeViewEditor: View {
                     Section("Save outcome unknown") {
                         Text(original).textSelection(.enabled)
                         Text("Retry sends the identical original command. Newer edits stay separate until its outcome is known. Closing this editor keeps that command.")
+                        Button("Check Save outcome") { Task { await save(checkOnly: true) } }.accessibilityIdentifier("view-editor.check-outcome")
                         Button("Retry original Save") { Task { await save() } }.accessibilityIdentifier("view-editor.reconcile")
                     }
                 }
@@ -76,11 +77,12 @@ struct NativeViewEditor: View {
                 .onChange(of: state.selectedAccountID) { model.close(); dismiss() }
         }
     }
-    private func save() async {
+    private func save(checkOnly: Bool = false) async {
         let owner = state.ownerScope
-        if let id = await model.save() {
+        let result = checkOnly ? await model.checkSaveOutcome() : await model.save()
+        if let id = result {
             await mailboxes.load(state: state)
-            guard owner == state.ownerScope, state.phase == .ready, state.accounts.contains(where: { $0.id == selection.accountId }) else { return }
+            guard model.canFinishPresentation, owner == state.ownerScope, state.selectedAccount?.id == selection.accountId, state.phase == .ready, state.accounts.contains(where: { $0.id == selection.accountId }) else { return }
             mailboxes.setEnabled("view:" + id, true); mailboxes.selectedID = "view:" + id
             dismiss()
         }

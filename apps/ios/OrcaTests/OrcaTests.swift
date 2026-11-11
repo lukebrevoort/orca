@@ -3543,25 +3543,35 @@ final class NativeViewEditorRecoveryTests: XCTestCase {
         let suite = "native-editor-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let definition: [String: Any] = ["revision": 1, "accountIds": ["demo-account"], "sender": ["addresses": ["maya@example.com"]], "thread": ["subjectContains": "fixture", "readState": "unread"]]
-        var creates = 0, commits = 0, replayBodies = [String: Data](), serverName = "Original", drop = true
+        var creates = 0, commits = 0, replayBodies = [String: Data](), serverName = "Original", drop = true, workspaceRevision = 2, viewRevision = 0
+        let oldLastUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example")
+        defer { UserDefaults.standard.set(oldLastUser, forKey: "lastUser|https://orca.example") }
         StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/auth/session" { return (200, Data(#"{"isAuthenticated":true,"user":{"id":"view-owner","email":"owner@example.com"}}"#.utf8)) }
+            if request.url!.path == "/v1/accounts" { struct Accounts: Encodable { let items: [MailAccount] }; return (200, try JSONEncoder().encode(Accounts(items: DemoData.accounts))) }
             let input = try JSONSerialization.jsonObject(with: requestBodyData(request)) as! [String: Any]
-            var draft: [String: Any] = ["mode": "create", "viewRevision": NSNull(), "source": ["kind": "search", "label": "fixture"], "identity": ["name": serverName, "description": ""], "definition": definition, "unsupportedClauses": [], "saveEligibility": ["allowed": true], "definitionDigest": "fixture-digest"]
+            var draft: [String: Any] = ["mode": "create", "viewId": NSNull(), "viewRevision": NSNull(), "effectiveAccountIds": ["demo-account"], "source": ["kind": "search", "label": "fixture"], "identity": ["name": serverName, "description": ""], "definition": definition, "unsupportedClauses": [], "saveEligibility": ["allowed": true], "definitionDigest": "fixture-digest"]
             let path = request.url!.path
             if path.hasSuffix("/prepare") {
-                if input["viewId"] != nil { draft["mode"] = "update"; draft["viewId"] = "created-view"; draft["viewRevision"] = 1 }
-                return (200, try JSONSerialization.data(withJSONObject: ["draft": draft]))
+                if input["viewId"] != nil { draft["mode"] = "update"; draft["viewId"] = "created-view"; draft["viewRevision"] = viewRevision }
+                return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "workspaceRevision": workspaceRevision, "draft": draft]))
             }
             if path.hasSuffix("/preview") {
                 draft = input["draft"] as! [String: Any]; draft["saveEligibility"] = ["allowed": true]; draft["definitionDigest"] = "fixture-digest"
-                return (200, try JSONSerialization.data(withJSONObject: ["draft": draft, "workspaceRevision": 2, "results": ["state": "matches", "count": ["value": 1, "kind": "exact"]]]))
+                return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "draft": draft, "workspaceRevision": workspaceRevision, "results": ["state": "matches", "count": ["value": 1, "kind": "exact"]]]))
+            }
+            if path.hasSuffix("/commit-status") {
+                let revisions = input["expectedRevisions"] as! [String: Any], key = input["retryKey"] as! String
+                let canonical = try JSONSerialization.data(withJSONObject: input, options: .sortedKeys)
+                XCTAssertEqual(replayBodies[key], canonical)
+                return (200, try JSONSerialization.data(withJSONObject: ["operation": "view_commit", "workspaceId": "view-owner", "retryKey": key, "expectedRevisions": revisions, "outcome": "applied", "viewId": "created-view", "committedWorkspaceRevision": (revisions["workspace"] as! Int) + 1, "committedViewRevision": (revisions["view"] as? Int ?? 0) + 1]))
             }
             XCTAssertTrue(path.hasSuffix("/commit"))
             commits += 1
             let key = input["retryKey"] as! String, canonical = try JSONSerialization.data(withJSONObject: input, options: .sortedKeys)
             if let original = replayBodies[key] { XCTAssertEqual(canonical, original, "Recovery must replay the exact original command, not replacement edits") }
             else {
-                replayBodies[key] = canonical
+                replayBodies[key] = canonical; workspaceRevision += 1; viewRevision += 1
                 let submitted = input["draft"] as! [String: Any]
                 if submitted["mode"] as? String == "create" { creates += 1 }
                 XCTAssertTrue(NSDictionary(dictionary: submitted["definition"] as! [String: Any]).isEqual(to: definition), "Simple edits preserve every advanced predicate")
@@ -3570,6 +3580,7 @@ final class NativeViewEditorRecoveryTests: XCTestCase {
             if drop { drop = false; throw URLError(.networkConnectionLost) }
             return (200, Data(#"{"view":{"id":"created-view"}}"#.utf8))
         }
+        await fixture.state.loadAccounts()
         let selection = NativeViewSelection(query: "fixture", accountId: "demo-account")
         let first = NativeViewEditorController(defaults: defaults)
         await first.open(selection: selection, state: fixture.state)

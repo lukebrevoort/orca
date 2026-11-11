@@ -14,7 +14,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     }
     private struct Command: Codable { var body: MailActionJSON; var submitted: Edits }
     private struct Journal: Codable {
-        var context: NativeViewSelection; var command: Command?; var adoptedViewId: String?; var edits: Edits
+        var context: NativeViewSelection; var command: Command?; var adoptedViewId: String?; var edits: Edits; var appliedViewId: String?
     }
     @Published private(set) var draft: MailActionJSON?
     @Published private(set) var preview: MailActionJSON?
@@ -29,6 +29,8 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     @Published private(set) var pendingTarget: String?
     private var baseline: Edits?
     private var scope = ""
+    private var ownerID = "", origin = ""
+    private var ownerClient: APIClient?
     private var generation = UUID()
     private var presented = false
     private let defaults: UserDefaults
@@ -41,9 +43,21 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     private var matchingContext: Bool { journal?.context == selection || (selection?.viewId != nil && journal?.adoptedViewId == selection?.viewId && journal?.context.accountId == selection?.accountId) }
     private func current(_ request: UUID) -> Bool {
         guard let state, let selection else { return false }
-        return presented && !Task.isCancelled && generation == request && scope == state.ownerScope && state.phase == .ready
+        return presented && !Task.isCancelled && generation == request && scope == state.ownerScope && ownerID == state.userID && state.client === ownerClient && origin == canonicalOrigin(state.validatedBaseURL(state.baseURLText)) && state.phase == .ready
             && state.selectedAccount?.id == selection.accountId && state.accounts.contains { $0.id == selection.accountId }
     }
+    private func canonicalOrigin(_ url: URL?) -> String? {
+        guard let url else { return nil }; var parts = URLComponents()
+        parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased()
+        parts.port = url.port == (parts.scheme == "https" ? 443 : 80) ? nil : url.port
+        return parts.string
+    }
+    private func currentClient(_ request: UUID) async -> Bool {
+        guard current(request), let client = ownerClient else { return false }
+        let actualOrigin = await client.serverOrigin()
+        return current(request) && actualOrigin == origin
+    }
+    var canFinishPresentation: Bool { current(generation) }
     private func persist() {
         pendingTarget = journal?.command == nil ? nil : "Original Save: \(journal!.command!.submitted.name) (\(journal!.context.viewId ?? journal!.context.query ?? "new View"))."
         if let journal, let data = try? JSONEncoder().encode(journal) { defaults.set(data, forKey: key) }
@@ -52,7 +66,14 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     private func restore(_ value: Edits) { name = value.name; description = value.description; subject = value.subject; replaceSearch = value.replaceSearch }
     func open(selection: NativeViewSelection, state: AppState) async {
         generation = UUID(); self.selection = selection; self.state = state; scope = state.ownerScope; presented = true
-        draft = nil; preview = nil; status = nil; baseline = nil; changed = false
+        draft = nil; preview = nil; status = nil; baseline = nil; changed = false; journal = nil; error = nil
+        let request = generation, capturedScope = scope
+        guard let client = state.client, let owner = state.userID, !owner.isEmpty else { error = "Verified account identity is unavailable. Reconnect to edit Views."; return }
+        let capturedOrigin = await client.serverOrigin()
+        guard generation == request, capturedScope == state.ownerScope, owner == state.userID, state.client === client,
+              canonicalOrigin(state.validatedBaseURL(state.baseURLText)) == capturedOrigin else { return }
+        ownerID = owner; origin = capturedOrigin; ownerClient = client
+        guard current(request) else { return }
         journal = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(Journal.self, from: $0) }
         persist(); await load()
     }
@@ -73,12 +94,12 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         busy = true; error = nil; defer { if request == generation { busy = false } }
         if matchingContext, let journal, let command = journal.command {
             draft = command.body["draft"]; baseline = command.submitted; restore(journal.edits); changed = true
-            error = "Save outcome unknown. Retry the original Save before previewing or saving replacement edits."
+            error = journal.appliedViewId.map { "Original Save applied as \($0). Reload its current object; no replacement will be created." } ?? "Save outcome unknown. Check or retry the original Save before previewing replacement edits."
             return
         }
         do {
             let prepared = try await prepare(client: client, selection: selection, adoptedId: matchingContext ? journal?.adoptedViewId : nil)
-            guard current(request) else { return }
+            guard await currentClient(request), validPrepared(prepared, context: selection, adoptedId: matchingContext ? journal?.adoptedViewId : nil, state: state) else { if current(request) { error = "Current View scope could not be verified." }; return }
             install(prepared, selection: selection, keeping: matchingContext ? journal?.edits : nil)
         } catch { if current(request) { self.error = error.localizedDescription } }
     }
@@ -96,6 +117,18 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
             ])
         }
         return try await client.request("v1/organization/views/prepare", method: "POST", body: body)
+    }
+    private func validPrepared(_ value: MailActionJSON, context: NativeViewSelection, adoptedId: String?, state: AppState) -> Bool {
+        guard value["workspaceId"].text == ownerID, let workspaceRevision = value["workspaceRevision"].integer, workspaceRevision > 0,
+              case .array(let accounts) = value["draft"]["effectiveAccountIds"], !accounts.isEmpty else { return false }
+        let ids = accounts.compactMap(\.text)
+        guard ids.count == accounts.count, Set(ids).count == ids.count,
+              ids.allSatisfy({ id in state.accounts.contains { $0.id == id } }) else { return false }
+        if let id = adoptedId ?? context.viewId {
+            return value["draft"]["mode"].text == "update" && value["draft"]["viewId"].text == id && (value["draft"]["viewRevision"].integer ?? 0) > 0
+        }
+        return value["draft"]["mode"].text == "create" && value["draft"]["viewId"].text == nil
+            && ids == [context.accountId]
     }
     private func install(_ result: MailActionJSON, selection: NativeViewSelection, keeping: Edits?) {
         draft = result["draft"]; preview = nil
@@ -115,7 +148,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         }
         do {
             let result: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": input, "page": .object(["limit": .number(25)])]))
-            guard current(request) else { return }
+            guard await currentClient(request), validPrepared(result, context: selection, adoptedId: matchingContext ? journal?.adoptedViewId : nil, state: state) else { if current(request) { error = "Preview scope could not be verified." }; return }
             guard edits == reviewedEdits else { error = "Your edits changed while previewing. Preview them again before saving."; return }; preview = result
         } catch { if current(request) { self.error = error.localizedDescription } }
     }
@@ -126,6 +159,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         else {
             guard journal == nil || matchingContext else { error = "Finish the original View’s retained edits first."; return nil }
             guard let preview, preview["draft"]["saveEligibility"]["allowed"].flag else { return nil }
+            guard validPrepared(preview, context: selection, adoptedId: matchingContext ? journal?.adoptedViewId : nil, state: state) else { self.preview = nil; error = "View scope changed. Load and preview it again before saving."; return nil }
             command = .init(body: .object([
                 "draft": preview["draft"], "expectedRevisions": .object(["workspace": preview["workspaceRevision"], "view": preview["draft"]["viewRevision"]]),
                 "retryKey": .string(UUID().uuidString), "confirmedZeroMatchDigest": preview["results"]["state"].text == "zero" ? preview["draft"]["definitionDigest"] : .null
@@ -133,30 +167,77 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
             journal = .init(context: selection, command: command, adoptedViewId: preview["draft"]["viewId"].text, edits: edits); persist()
         }
         let request = generation; busy = true; error = nil; defer { if request == generation { busy = false } }
+        guard await currentClient(request) else { return nil }
         do {
-            // This endpoint's idempotent replay is the existing reconciliation contract.
-            // Never prepare a new command/key while this acknowledgement is uncertain.
-            let result: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: command.body)
-            guard current(request), let id = result["view"]["id"].text, !id.isEmpty else { return nil }
-            let ownsContext = matchingContext, retained = journal?.edits ?? edits
-            journal?.command = nil; journal?.adoptedViewId = id; persist()
-            guard ownsContext else {
-                status = "Original Save acknowledged for a different editor. Reopen that original View to continue its edits."
-                // Keep its working identity/edits; another context may not replace it.
-                error = "Finish the original View before saving a different View in this account."; return nil
-            }
-            if retained == command.submitted {
-                journal = nil; persist(); baseline = edits; changed = false; status = "View saved."; return id
-            }
-            // Acknowledge only the submitted definition. Preserve newer edits on the
-            // created identity; they need their own fresh preview and explicit Save.
-            draft = nil; preview = nil
-            status = "Earlier Save acknowledged. Newer edits are kept on that View; preview and save them separately."
-            let prepared = try await prepare(client: client, selection: selection, adoptedId: id)
-            guard current(request) else { return nil }
-            install(prepared, selection: selection, keeping: retained); return nil
+            let _: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: command.body)
+            guard await currentClient(request) else { return nil }
+            return await resolve(command, client: client, state: state, request: request)
         } catch {
-            if current(request) { self.error = journal?.command == nil ? "View saved; reconnect to load its current definition. Your newer edits are kept." : "Save outcome unknown. Retry the original Save; replacement edits are kept. \(error.localizedDescription)" }
+            guard await currentClient(request) else { return nil }
+            // HTTP failure itself is never proof. Only the strict status protocol
+            // can distinguish a durable rejection from an earlier applied Save.
+            if case let APIClient.ClientError.http(code, _) = error, [400, 404, 409].contains(code) {
+                return await resolve(command, client: client, state: state, request: request)
+            }
+            self.error = "Save outcome unknown. The exact original Save and newer edits are kept. Check its outcome or retry safely."
+            return nil
+        }
+    }
+    func checkSaveOutcome() async -> String? {
+        guard let state, let client = state.client, let command = journal?.command, !busy, current(generation) else { return nil }
+        let request = generation; busy = true; error = nil; defer { if request == generation { busy = false } }
+        guard await currentClient(request) else { return nil }
+        return await resolve(command, client: client, state: state, request: request)
+    }
+    private func resolve(_ command: Command, client: APIClient, state: AppState, request: UUID) async -> String? {
+        do {
+            let proof: ViewCommitStatus = try await client.request("v1/organization/views/commit-status", method: "POST", body: command.body)
+            guard await currentClient(request) else { return nil }
+            guard proof.binds(command.body, owner: ownerID), let original = journal,
+                  original.command?.body["retryKey"].text == command.body["retryKey"].text else {
+                error = "Save proof did not match the original owner, key and revisions. Original Save is kept."; return nil
+            }
+            switch proof.outcome {
+            case .unknown:
+                error = "Save outcome remains unresolved. The original command is kept; you can check again or retry it safely."; return nil
+            case .applied(let id, let workspaceRevision, let viewRevision):
+                journal?.adoptedViewId = id; journal?.appliedViewId = id; persist()
+                let prepared = try await prepare(client: client, selection: original.context, adoptedId: id)
+                guard await currentClient(request) else { return nil }
+                guard validPrepared(prepared, context: original.context, adoptedId: id, state: state),
+                      (prepared["workspaceRevision"].integer ?? 0) >= workspaceRevision,
+                      (prepared["draft"]["viewRevision"].integer ?? 0) >= viewRevision else {
+                    error = "Original Save is applied, but its current object could not be verified. No replacement was created."; return nil
+                }
+                let retained = journal?.edits ?? original.edits, ownsContext = matchingContext
+                journal?.command = nil; persist()
+                guard ownsContext else { status = "Original View saved as \(id). Reopen its editor to continue retained edits."; return nil }
+                install(prepared, selection: original.context, keeping: retained)
+                if retained == command.submitted {
+                    journal = nil; persist(); baseline = edits; changed = false; status = "View saved."; return id
+                }
+                status = "Earlier Save acknowledged. Newer edits are kept on that View; preview and save them separately."; return nil
+            case .notApplied(_, let workspaceRevision, let viewRevision):
+                let prepared = try await prepare(client: client, selection: original.context, adoptedId: original.adoptedViewId)
+                guard await currentClient(request) else { return nil }
+                guard validPrepared(prepared, context: original.context, adoptedId: original.adoptedViewId, state: state),
+                      (prepared["workspaceRevision"].integer ?? 0) >= workspaceRevision,
+                      viewRevision == nil || (prepared["draft"]["viewRevision"].integer ?? 0) >= viewRevision! else {
+                    error = "Original Save was not applied, but fresh scope could not be verified. The command and edits are kept."; return nil
+                }
+                let retained = journal?.edits ?? original.edits, ownsContext = matchingContext
+                // The server fence is only for this exact /commit command in
+                // this preserved workspace lifetime. Fresh prepare precedes retirement.
+                journal?.command = nil; persist()
+                guard ownsContext else { status = "Original Save was not applied. Reopen its editor to continue retained edits."; return nil }
+                install(prepared, selection: original.context, keeping: retained)
+                error = nil; status = "Original Save was not applied. Current View loaded; preview and save your kept edits again."; return nil
+            }
+        } catch {
+            if await currentClient(request) {
+                self.error = journal?.appliedViewId.map { "Original Save applied as \($0), but that View is unavailable. No replacement was created. Reconnect and check again." }
+                    ?? "Save status could not be verified. Original command and newer edits are kept."
+            }
             return nil
         }
     }
