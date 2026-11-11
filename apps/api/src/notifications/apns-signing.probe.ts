@@ -43,7 +43,7 @@ try {
   if (registered.status !== 200 || (await f.adopt("apns", "phone")).status !== 200) throw Error("Synthetic registration/adoption failed");
   await f.fresh("signing-arrival");
   if (scanAndEnqueue(f.sqlite, { now: new Date(f.state.now), batchSize: 100 }).enqueued !== 1) throw Error("Expected one actual queued notification");
-  const delivery = deliverReady(f.sqlite, { now: () => new Date(f.state.now), batchSize: 100, config, transport });
+  const delivery = deliverReady(f.sqlite, { now: () => new Date(f.state.now), batchSize: 1, config, transport });
   await Promise.race([signing, new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(Error("Production signing boundary not reached")), 5000); })]);
   clearTimeout(timeout);
   const change = process.argv[2] ?? "correction";
