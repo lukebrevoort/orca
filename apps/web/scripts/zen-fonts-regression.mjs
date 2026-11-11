@@ -16,6 +16,8 @@ const out = resolve(output); await mkdir(out, { recursive: true });
 const results = { commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), mode,
   syntheticOnly: true, scenarios: [], assertions: 0, failures: [], externalRequests: [], fontResponses: [], screenshots: [], pageErrors: [] };
 const browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE, args: ['--disable-background-networking'] });
+results.browserVersion = browser.version();
+results.nodeVersion = process.version;
 let activePage;
 function check(value, label, detail) { results.assertions++; if (!value) results.failures.push({ label, detail }); }
 async function screenshot(page, name) {
