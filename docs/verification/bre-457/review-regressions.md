@@ -1,14 +1,30 @@
-Independent review follow-up: BRE-465, BRE-466, BRE-467, BRE-468
+Independent review follow-up: BRE-465, BRE-466, BRE-467, BRE-468, BRE-472, BRE-473
 
 The initial review findings are static evidence at b180ae4349e7b7d2c5f758afd2104e1b1ead1a40. They are not executed native failures. Root's two selector corrections (BRE-467, efcb60552771fbfd223c1c0e8bbef05589b73936) were normal-merged before this checkpoint. Root owns the existing PR313/PR310 hosted jobs; this work does not dispatch duplicates.
 
 Before logical fixes, the native saved-view persistence logic and inbox loading logic were extracted into production Core controllers without changing their command/cache behavior. The SwiftUI editor delegates to that same controller. `MailActionJSON` moved unchanged into Core so the executable controller harness can compile without the entire UI. This refactored checkpoint is a new baseline, not runtime proof for the original b180 binary.
 
-Prepared checks (execution pending an allocated cooperative heavy slot):
+Runnable checks (all local heavy execution requires an explicitly allocated cooperative slot):
 
 - `python3 /tmp/orca-ui-heavy-slot.py python3 apps/ios/Tools/ReviewRegressions/run.py /tmp/<new-owned-result-directory> --api`: production Importance, Inbox and NativeViewEditor controllers, actual APIClient/CacheStore; synthetic URLProtocol for dropped importance acknowledgement, cross-conversation reconciliation and known stale Undo; actual loopback Hono/SQLite for committed saved-view create with deliberately replaced acknowledgement, edit/retry/reopen and independent view counts. The runtime AppState in this harness is a fixture data owner, not the iOS application.
 - `python3 /tmp/orca-ui-heavy-slot.py python3 apps/ios/Tools/ReviewRegressions/runner-lifecycle.py`: executes the actual hosted runner selection and phase code with synthetic Apple commands and durable adopted-policy namespaces. This verifies orchestration, not SwiftUI/APNs delivery.
 
-The API harness owns its temporary database, session, loopback listener and cleanup. Provider calls throw and are counted. No live mail, simulator, Xcode build, adoption reversal or foreign history cleanup is involved. Exact SHA, source hashes, compile log, regression output and actual API ledger are retained on execution. No red/green runtime result is claimed until those checks run.
+The API harness owns its temporary database, session, loopback listener and cleanup. Provider calls throw and are counted. No live mail, simulator, Xcode build, adoption reversal or foreign history cleanup is involved. Exact SHA, source hashes, compile log, regression output and actual API ledger are retained on execution. The executed baseline is `dabf42bd46e9f5db2638f8b36ad43e4db4b9482a`, after the behavior-preserving `903a81cc` controller extraction plus production notification-route extraction. Frozen install completed in 1.80 seconds; all stages took 11.04 seconds. Foundation compilation passed. See `review-red-dabf42bd/` for source hashes, raw results, API command/response ledger and CPU/RSS snapshots.
+
+Observed red at that baseline:
+
+- BRE-465: A’s committed operation lost its response and reconciled offline. Reopening B reconciled A, displayed A’s receipt, and enabled A’s Undo beneath B.
+- BRE-466: the real Hono/SQLite API recorded one View before deliberately returning HTTP503. Editing/retrying created a second View; dismiss/reopen/save created a third. Provider calls remained zero.
+- BRE-472: offline cache returned query B’s row with submitted query A’s label.
+- BRE-473: the production route method left unsaved Settings immediately.
+- BRE-468: executing the actual runner’s phase code with synthetic Apple commands reproduced the same installation’s adopted policy entering dark legacy tests (exit65). Mailbox adoption also reused the same installation in both themes. This is an orchestration model, not an Apple UI failure. The notifications scope had no adoption test; its zero exit is not a contamination repro.
+
+The initial stale-Undo subcase did not establish a receipt and passed vacuously; it is explicitly excluded from evidence. A corrected nonvacuous check at `9d0695ca324e015a86e177ccddb64595c74ea02a` compiled the exact original Importance source from `ce64e6a673fc831dc46ef4c126ce8c01dd2d1b87` (hash retained), established revision1/Undo enabled, then refreshed revision2 and observed Undo still enabled. Only after that red was the revision predicate fixed. Its mixed-source manifest is not an all-candidate pass.
+
+That 15.03-second follow-up compiled candidate Foundation source, but the newly added advanced API fixture omitted a required `source` field and raised HTTP400; its overall controller run failed. The runner model also extracted the new adoption prelude twice, causing duplicate result-bundle errors. Both harness defects were corrected without API production changes or weakened assertions. Their failed logs remain in `review-stale-red-9d0695ca/`.
+
+Candidate behavior retains the original Importance UUID/account lock and explicitly identifies its original conversation. A receipt is shown only in its originating conversation and is retired when a newer known target revision is accepted. The View editor writes an owner/account journal before Save: exact original body/key, originating editor, newer local edits and adopted View ID. Retry uses the existing idempotent commit endpoint; Preview never replays a write. Replacement edits require a new preview and explicit update of the adopted ID. Unresolved commands survive dismissal, termination, account/session changes and ordinary cancel.
+
+The notification route and tab selection share the same Stay/Leave state; Leave rechecks owner/account and cannot discard while saving. Cached rows accept their submitted query provenance together. Adoption test48 runs in dedicated light/dark phases with a fresh app/installation UUID per appearance, followed by a third fresh installation for the untouched legacy suites. Existing server policy rows/tombstones remain intact. Preserved tests03/06 are neither skipped nor weakened. The new editor UI test49 covers preview-only behavior, explicit search replacement, Save and reopening the actual created ID at standard/AX sizes; hosted execution and images remain pending.
 
 Full hosted native/UI gates, before/after screenshot inspection, full workspace gates, corrected backend integration and fresh independent correctness/security review remain required. The inherited hosted unit failure at b180 is the two MCP ingestion cases owned by backend; it is not a native regression result. PR310 reader timeout diagnosis also remains root-owned.
