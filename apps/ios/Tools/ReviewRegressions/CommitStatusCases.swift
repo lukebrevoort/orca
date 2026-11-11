@@ -130,4 +130,18 @@ import Foundation
     let stillRemoved = try await statusState()
     check("478-applied-deleted-never-recreates", deleted.pendingTarget != nil && deleted.error?.contains(savedID) == true && removed["count"].integer == stillRemoved["count"].integer && sameCommand(deletedDefaults, deletedOriginal), "applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID \(savedID), pending \(deleted.pendingTarget != nil), counts \(removed["count"].integer ?? -1)/\(stillRemoved["count"].integer ?? -1), error \(deleted.error ?? "none")")
     check("478-status-provider-boundary", stillRemoved["providerCalls"].integer == 0, "all status, fence and recovery cases use zero external provider calls")
+    let addedSuite = suite + ".status-account-added", addedDefaults = UserDefaults(suiteName: addedSuite)!
+    defer { addedDefaults.removePersistentDomain(forName: addedSuite) }
+    let added = NativeViewEditorController(defaults: addedDefaults)
+    await added.open(selection: .init(query: "Subject", accountId: "account"), state: state)
+    added.name = "Saved before account addition"; added.replaceSearch = true; added.subject = "Subject"; added.edited(); await added.review()
+    try await control("drop-next-commit"); _ = await added.save()
+    let addedOriginal = pendingBody(addedDefaults), beforeAddition = try await statusState()
+    try await control("add-account"); state.accounts = try await client.accounts()
+    let addedProof: ViewCommitStatus = try await client.request("v1/organization/views/commit-status", method: "POST", body: addedOriginal)
+    if case .unknown = addedProof.outcome { check("478-added-account-status-stays-conservative", true, "historical account-set receipt proof stays unknown") }
+    else { check("478-added-account-status-stays-conservative", false, "expected documented historical account-set unknown limitation") }
+    let exactRetryID = await added.save(), afterAddition = try await statusState()
+    check("478-added-account-exact-retry-recovers", exactRetryID != nil && added.pendingTarget == nil && afterAddition["count"].integer == beforeAddition["count"].integer, "independent same-command200ack permits original View recovery despite conservative unknown status; no duplicate")
+
 }

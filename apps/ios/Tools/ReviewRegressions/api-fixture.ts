@@ -34,6 +34,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   const url = new URL(request.url);
   const fixtureOwner = request.headers.get('authorization') === `Bearer ${credential.accessToken}` ? 'owner' : request.headers.get('authorization') === `Bearer ${otherCredential.accessToken}` ? 'owner-b' : null;
   if (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner') return new Response(null, { status: 401 });
+  if (url.pathname === '/__bre457/add-account') { sqlite.query("INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('added-account','owner','gmail','synthetic-added','added@example.com')").run(); return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/hold-next-commit') { if (heldRequest) throw Error('Own held request must be released first'); holdNext = true; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/status-response') { nextStatusResponse = await request.json() as { status: number; body: unknown }; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/release-held') {
