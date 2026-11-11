@@ -1,0 +1,859 @@
+{
+  "scope": "byte-for-byte raw evidence retention; no execution performed by this docs commit",
+  "referenceSource": "0f9e630fac65a20493877257d8d9f665503b7763",
+  "files": [
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/api-evidence.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/controllers/api-evidence.json",
+      "bytes": 299530,
+      "sha256": "c4c58197e59ee305ef4618f2c3b3a47520bade5fd428532d1cd6deb9048a56b0"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/controllers/api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/compile.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/controllers/compile.log",
+      "bytes": 1616,
+      "sha256": "402d6aab5250f3ee887329b6b1758e4e0393156967e2cc8cdeb15956f902ad0b"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/controllers/manifest.json",
+      "bytes": 3949,
+      "sha256": "dc8500dcdcaed9ef91e3380972e376e66aec292c79893fa0cfe464d470c99a61"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/results.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/controllers/results.log",
+      "bytes": 140876,
+      "sha256": "7b61f2c4d1ada5702ca9658fbf4a0c224be79f3990736f7805f8379c0d0decb6"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/controllers-api.log",
+      "bytes": 3795,
+      "sha256": "a482fb44f29b7f017346fca485710c658dae761665526723e7dbbfca68380263"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/driver.py",
+      "bytes": 8386,
+      "sha256": "f181f3883ed21461a83f9a64463724daf9a047ef66ec442168457e55997d3af4"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/fixture-types.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/fixture-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/grammar.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/manifest.json",
+      "bytes": 22284,
+      "sha256": "a92d7b71f0a42ebcab84b6c63d4b12db7138e312bbd033b9d7b402ed1fe1269f"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/project-syntax.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/project-syntax.log",
+      "bytes": 44,
+      "sha256": "26ea96ccf98b840157d0b9477bd9b940dafa55dc891bf76d7445c68811dffac1"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/routing-witness/fixture.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/routing-witness/fixture.log",
+      "bytes": 530,
+      "sha256": "6502719124b1fc22d59fd470d1c67116604a4b366f1575fb54b8dd9ca9397e6e"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/routing-witness/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/routing-witness/manifest.json",
+      "bytes": 2801,
+      "sha256": "253e01c9bcfbfaff9fd48042173da98c4eeaf1e91c551f0a4caefd7b11a8cad2"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/routing-witness/witness.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/routing-witness/witness.json",
+      "bytes": 5579,
+      "sha256": "a8f34e3ed0d94e9898ce0e83aa5398a9856a42832313c487773eb3e8e74f24f2"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/routing-witness.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/routing-witness.log",
+      "bytes": 75,
+      "sha256": "304626a1dd8bff45a2b1677f9f5b147a86a84ead2c68965ad957aafa5d2547e4"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/runner-lifecycle.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/runner-lifecycle.log",
+      "bytes": 11211,
+      "sha256": "1903a0168532fe25ee86c0402852ed946e762a0005f1f19dbfd30268e62f8917"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-candidate-0f9e630f/runner-syntax.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-candidate-0f9e630f/runner-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-821e8fb8/controllers/compile.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-821e8fb8/controllers/compile.log",
+      "bytes": 938,
+      "sha256": "b4d12ba40d6acb885e4c1c95a8c57324d9ed58f6272254a5f79f5dd33ae3cf01"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-821e8fb8/controllers/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-821e8fb8/controllers/manifest.json",
+      "bytes": 3926,
+      "sha256": "45697982e7c38abea22976d502771a43e90f6507511d66b2a48a7190f63308f5"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-821e8fb8/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-821e8fb8/controllers-api.log",
+      "bytes": 3774,
+      "sha256": "7e90e24335c75d5a4a4be585e5beaf84c71cab45eb30c2908f6a792e5401bbbf"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-821e8fb8/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-821e8fb8/driver.py",
+      "bytes": 8386,
+      "sha256": "dc3ea72375c048cee6a2c68e25430c60eea51173be9e250c71f276b21bd5ee1c"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-821e8fb8/grammar.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-821e8fb8/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-821e8fb8/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-821e8fb8/manifest.json",
+      "bytes": 38864,
+      "sha256": "77fe2aaf0d6c60aeb169de78834c4523fefc17b48ee85c7d8b1f693f10262720"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/controllers/api-evidence.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/controllers/api-evidence.json",
+      "bytes": 299530,
+      "sha256": "83850d58cb32f179c2194019a9eb4f6b13cd2aa9f6241c6b33b59ed261ec5594"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/controllers/api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/controllers/api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/controllers/compile.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/controllers/compile.log",
+      "bytes": 1616,
+      "sha256": "2c5e0fcf67281efd80ad79f3151adc95a592ec9ae4278e22ab1834d688213972"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/controllers/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/controllers/manifest.json",
+      "bytes": 3949,
+      "sha256": "44f7569433feb9947145193e56f2ce088a51c9bfb80b10af7a947e44778717a7"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/controllers/results.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/controllers/results.log",
+      "bytes": 140562,
+      "sha256": "3492f851e59d6286a69c4e990c432528c9c523b8637bf4c3adf924b1352a1a11"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/controllers-api.log",
+      "bytes": 3795,
+      "sha256": "46363397deb9f9a933ff2811a26a3335ab2a9f015287aa293d21340eaec3c08c"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/driver.py",
+      "bytes": 8386,
+      "sha256": "dc3ea72375c048cee6a2c68e25430c60eea51173be9e250c71f276b21bd5ee1c"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/grammar.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-navigation-settings-red-f6886807/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-navigation-settings-red-f6886807/manifest.json",
+      "bytes": 21500,
+      "sha256": "14abde7044a8e862f5c30346299b6f67bbb99471a0e34a4817f0bd8a5ebd69e8"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/driver.log",
+      "bytes": 1321,
+      "sha256": "465ebc638379ff87edc1c7f743e993723ac161e52068758717952226dd03eae0"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/gate-output/controllers-api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/gate-output/driver.py",
+      "bytes": 5439,
+      "sha256": "5d3dbc64841c85a700a3a66127cc0fb75a58cd9c43a6f20c1ec44ff86b674126"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/gate-output/manifest.json",
+      "bytes": 8980,
+      "sha256": "154e497112fc2bb385cbd8fdca6803f568c94ef3401affa823dc90940260b773"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/harness.py",
+      "bytes": 1158,
+      "sha256": "9dabf296bf3387419601b9b392d905ccd61dbde238c57ee256a228cfb4e1ea9b"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/owned-stage.json",
+      "bytes": 400,
+      "sha256": "f9090f2c75ef7322d24dfe81f9582a1906e66df3798eb67bb73e2b2d48752264"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGINT/stage-ready",
+      "bytes": 5,
+      "sha256": "cccc8b728e3b42ea3d591288cd138e693872748ccce9202a6207ea6b90c52660"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGTERM/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGTERM/driver.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGTERM/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGTERM/gate-output/controllers-api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGTERM/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGTERM/gate-output/driver.py",
+      "bytes": 5439,
+      "sha256": "5d3dbc64841c85a700a3a66127cc0fb75a58cd9c43a6f20c1ec44ff86b674126"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGTERM/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGTERM/harness.py",
+      "bytes": 1161,
+      "sha256": "5dcddc9c6f9c181486121e62fc00e9342147439dcfee9a7b557e6da5bce425dc"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGTERM/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGTERM/owned-stage.json",
+      "bytes": 402,
+      "sha256": "9d47231a36361cc46aede982e35372378d0d6bb2cfed17fa161ffea19569ad1d"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/SIGTERM/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/SIGTERM/stage-ready",
+      "bytes": 5,
+      "sha256": "c4912d37c0db024dbc0b5214d0f63d6f027c463947c0f939559e7e086a5db79a"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/executed-control.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/executed-control.py",
+      "bytes": 4978,
+      "sha256": "874065b41ee9dba118a71a417e9f9ffcac70c6a80f7d13fbaf19256f1d9469ae"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-red-36ac/results.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-red-36ac/results.json",
+      "bytes": 11855,
+      "sha256": "9d19bfee8155bd0655ebaa9017c0c0efd8facec8ae70f5e971583af144790129"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/driver.log",
+      "bytes": 284,
+      "sha256": "4fc381abeea012113d06ade4281ab602f7427d352586db8bfb5a738b8314a1ba"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/gate-output/controllers-api.log",
+      "bytes": 394,
+      "sha256": "e9ccb5aefa94a88e6449ac6520401d5f8a396568658997e70141651930cce16d"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/gate-output/driver.py",
+      "bytes": 7629,
+      "sha256": "94b1a742fffe401408c0e45b02978c7b8d0d1dda64abea89765f356ccf36c637"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/gate-output/manifest.json",
+      "bytes": 18066,
+      "sha256": "4f0668c9cc4d019a9057d60d5f5f7f157c8f924ca1de247899cfa539ac4f7c63"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/harness.py",
+      "bytes": 1164,
+      "sha256": "ae8b91ba9c88887c6d82e4d518c150e8932de861f6795cc541b8a5b5bc508883"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/owned-stage.json",
+      "bytes": 404,
+      "sha256": "2b99ebbd340e6606bccd08f77a505f00e5b5a2eff6e34fdb5eda5500ee2dddf5"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGINT/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGINT/stage-ready",
+      "bytes": 5,
+      "sha256": "3e2c9441729a618dadfffed523dded6a84ef26028b25970f7bb0735001cee36a"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/driver.log",
+      "bytes": 283,
+      "sha256": "4fccf0329f7c4373cc460c153b92616764bc8dc2a2988e72150b2ad29cd14c99"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/gate-output/controllers-api.log",
+      "bytes": 396,
+      "sha256": "d1550ab87f5e58a536dcb16d7e42f38e069dc8523292886eb0f0ef06456c6ff8"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/gate-output/driver.py",
+      "bytes": 7629,
+      "sha256": "94b1a742fffe401408c0e45b02978c7b8d0d1dda64abea89765f356ccf36c637"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/gate-output/manifest.json",
+      "bytes": 18059,
+      "sha256": "1865cf9999d15d22bd7e0d100e8e275fc481e6f27c30a822fdf58d5d2a28b560"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/harness.py",
+      "bytes": 1167,
+      "sha256": "4a8bb76d62a34838ca2488662c34bf21d7a41594b110363591a4c8208e2cfa4d"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/owned-stage.json",
+      "bytes": 406,
+      "sha256": "10a2f6c54d8e9582dba0618c9c64f82b05ea12964db40622ac7bc77dd657fbb9"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/SIGTERM/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/SIGTERM/stage-ready",
+      "bytes": 5,
+      "sha256": "d7710031636cf66c9427b2fd1458f4137871f5b7afabc8686c565b160506f9cb"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/executed-control.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/executed-control.py",
+      "bytes": 5144,
+      "sha256": "bb04ba860ff81026bb3c7b0cf189bf6cf21a122c9efbda2476e66d2a03b48278"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-interrupt-green-8389/results.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-interrupt-green-8389/results.json",
+      "bytes": 40937,
+      "sha256": "8473c0662ba5d226051f4faadae89fc51bae79b7f1a686f1929ace1dace366f7"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/cleanup-signal",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/cleanup-signal",
+      "bytes": 8,
+      "sha256": "318c5ad51e9b36ff5924ae323dd59031245413a3e0f2aa3e03cc42902e9e7acc"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/driver.log",
+      "bytes": 284,
+      "sha256": "d13982bdf5d897a605334271f68333cc34f3d4f6ad564cc92d7ae5f48c25ebcb"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/gate-output/controllers-api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/gate-output/driver.py",
+      "bytes": 7629,
+      "sha256": "94b1a742fffe401408c0e45b02978c7b8d0d1dda64abea89765f356ccf36c637"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/gate-output/manifest.json",
+      "bytes": 18010,
+      "sha256": "d0c41d2ad0950255f57266c2e64d9096ee90dfd23258ff13f3b59d5e97542a8f"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/harness.py",
+      "bytes": 1296,
+      "sha256": "4150af051303a0bc22a80a7768040f3bcf93cdffee96828770a0e95cefdc3412"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/owned-stage.json",
+      "bytes": 539,
+      "sha256": "5f73f3efe9b429e8b1b5fbce50e95fa5da3dbb05d09da7b492ffdc6d87c1d11c"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGINT/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGINT/stage-ready",
+      "bytes": 4,
+      "sha256": "54224175e1520f2c0420e776379d28bdcf558699a96885f898b46b368534857a"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/cleanup-signal",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/cleanup-signal",
+      "bytes": 8,
+      "sha256": "318c5ad51e9b36ff5924ae323dd59031245413a3e0f2aa3e03cc42902e9e7acc"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/driver.log",
+      "bytes": 284,
+      "sha256": "acc031e918d1d256d1c1cbe496c6cfeabb6aec893b396722fbd8c41faaf2aaa6"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/gate-output/controllers-api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/gate-output/driver.py",
+      "bytes": 7629,
+      "sha256": "94b1a742fffe401408c0e45b02978c7b8d0d1dda64abea89765f356ccf36c637"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/gate-output/manifest.json",
+      "bytes": 18010,
+      "sha256": "794b336a1aafefbbdbc5ba5ffd8b99ee0b833a2020dfa3426eb26d570dbc0d4f"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/harness.py",
+      "bytes": 1300,
+      "sha256": "a43b5deeaef62b052592f8a779a0308bbe7935bbb258138375fc3415f22ac2ac"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/owned-stage.json",
+      "bytes": 542,
+      "sha256": "d6d877acf391abeeaf6a1fef29ecebad96b2f3e2a641c8c45fc1c16a7e4012e9"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/SIGTERM/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/SIGTERM/stage-ready",
+      "bytes": 4,
+      "sha256": "957e984230c0adf1d8e8e32275f8e654c5bff7cd2292036cd923f425ce31d02a"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/executed-control.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/executed-control.py",
+      "bytes": 5817,
+      "sha256": "8fd0b0d35ae6d07c0bc2670f18ae55a442004c1c56a8e3b7e7d10a36080ba6db"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-red-8389/results.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-red-8389/results.json",
+      "bytes": 41302,
+      "sha256": "e2e146789936ca6b994a122e70ec49f6cdb540373d961bd89a017c1890e6a081"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/cleanup-signal",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/cleanup-signal",
+      "bytes": 8,
+      "sha256": "318c5ad51e9b36ff5924ae323dd59031245413a3e0f2aa3e03cc42902e9e7acc"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/driver.log",
+      "bytes": 283,
+      "sha256": "c2fd4208d31c8897a54a3f309483f2c0f53e86f74e6dd8bdc6c81c3e7bddd670"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/gate-output/controllers-api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/gate-output/driver.py",
+      "bytes": 8386,
+      "sha256": "ce41ba458172b5fea0de7d2cce15213c16a4be9f5d41906c8f9ea242ef9743aa"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/gate-output/manifest.json",
+      "bytes": 18081,
+      "sha256": "144cb4b66c7c2c3a451dc4aebd2239f4579f59c9c7d0e3d471406c8ee3ea080e"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/harness.py",
+      "bytes": 1324,
+      "sha256": "1d4931f6ebc9d24b87b23dbaaff8fd02a516ca57c2037d0c212110e1c494f656"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/owned-stage.json",
+      "bytes": 560,
+      "sha256": "697a9b0120f035dfdba56116b1982d28083aa6d82ad43e082fd192911156f5ca"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGINT/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGINT/stage-ready",
+      "bytes": 4,
+      "sha256": "8664f0d168799ba7eb959cb75d0c173af2e4b197b40468b725460bb5d34c9d5f"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/cleanup-signal",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/cleanup-signal",
+      "bytes": 8,
+      "sha256": "318c5ad51e9b36ff5924ae323dd59031245413a3e0f2aa3e03cc42902e9e7acc"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/driver.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/driver.log",
+      "bytes": 281,
+      "sha256": "8dc625e3e65038c9d50b65d3305a896b24fd5b7516949b8ce2cc9af679edd1d1"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/gate-output/controllers-api.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/gate-output/controllers-api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/gate-output/driver.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/gate-output/driver.py",
+      "bytes": 8386,
+      "sha256": "ce41ba458172b5fea0de7d2cce15213c16a4be9f5d41906c8f9ea242ef9743aa"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/gate-output/manifest.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/gate-output/manifest.json",
+      "bytes": 18079,
+      "sha256": "53ed2ade40239e124b9d60594e181c8da4ea4dbe867e9ffac6c5a7a8e26304b8"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/harness.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/harness.py",
+      "bytes": 1328,
+      "sha256": "5c5ffa4993151a6b207aa83e2564c600fc77d656364aad063cc4750cb26578a3"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/owned-stage.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/owned-stage.json",
+      "bytes": 563,
+      "sha256": "63669fe662c0efe74cf7b99800670c1b75f7b56f99350ff7ee2d79937a7c533f"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/SIGTERM/stage-ready",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/SIGTERM/stage-ready",
+      "bytes": 4,
+      "sha256": "8f1d857513c617aa479c66f399c8b9c509d7c76aba96a82fc4f2b96b807605c3"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/executed-control.py",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/executed-control.py",
+      "bytes": 5817,
+      "sha256": "8fd0b0d35ae6d07c0bc2670f18ae55a442004c1c56a8e3b7e7d10a36080ba6db"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-double-green-745b-run2/results.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/raw/bre457-native-gate-double-green-745b-run2/results.json",
+      "bytes": 41509,
+      "sha256": "1df41faf7f02b7db45e35c2b6d432f434be7b769b48ada052b374c9c919ce40e"
+    },
+    {
+      "source": "/tmp/bre457-native-root-corrections-0f9e630f.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/reports/bre457-native-root-corrections-0f9e630f.json",
+      "bytes": 3138,
+      "sha256": "fe5eda7de8d90474ad9a815f83265106a591f633877b5066a248b99b0b80f440"
+    },
+    {
+      "source": "/tmp/bre457-native-root-corrections-review-0f9e.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/reports/bre457-native-root-corrections-review-0f9e.md",
+      "bytes": 13275,
+      "sha256": "214bce29deea7e1c211ef7de38c5a97cac7a736ff94eb258fdc6856f0addead8"
+    },
+    {
+      "source": "/tmp/bre457-navigation-correctness-36ac.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/reports/bre457-navigation-correctness-36ac.md",
+      "bytes": 12943,
+      "sha256": "ab64c6b834aba1bbabbe9716d0cc4be65f84d6273ead013aa7b96877261f2ea9"
+    },
+    {
+      "source": "/tmp/bre457-navigation-security-36ac.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/reports/bre457-navigation-security-36ac.md",
+      "bytes": 13074,
+      "sha256": "30d648e183197d6b75b0231c0d3a5d6746df6e85e3aa81aef3fe855a2b008751"
+    },
+    {
+      "source": "/tmp/bre457-native-gate-cleanup-recheck-8389.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/reports/bre457-native-gate-cleanup-recheck-8389.md",
+      "bytes": 7751,
+      "sha256": "454cd43e5d7474932ba602366146a07cc3244dec3c4260f1523532aa35546289"
+    },
+    {
+      "source": "/tmp/bre457-hosted-reading-fb10/Orca-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading/Orca-summary.json",
+      "bytes": 2142,
+      "sha256": "abcf4392886b74af191b0b4134d41036cdd775eded1e7e1ae7d8c24b30e07f12"
+    },
+    {
+      "source": "/tmp/bre457-hosted-reading-fb10/Orca-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading/Orca-tests.json",
+      "bytes": 125408,
+      "sha256": "62a65f69c16e6fa23a197594186c944d8781be80bcff1c82fa945126e4c049d0"
+    },
+    {
+      "source": "/tmp/bre457-hosted-reading-fb10/checks.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading/checks.log",
+      "bytes": 946969,
+      "sha256": "7fa9d58e7fadc57b5da75bc7a28029fbc605844dfffcf0c6c27d429d9e85b3c4"
+    },
+    {
+      "source": "/tmp/bre457-hosted-reading-fb10/fixture.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading/fixture.log",
+      "bytes": 12380,
+      "sha256": "6b561f41feea727e73444dd4289947c9dec4ed464f54c65c6db11c469e189dd3"
+    },
+    {
+      "source": "/tmp/bre457-hosted-reading-fb10/identity.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading/identity.log",
+      "bytes": 491,
+      "sha256": "689631bf460a5c94dbb00a2fa01ed21f725de79ba9f6ef690574b0a910aba779"
+    },
+    {
+      "source": "/tmp/bre457-hosted-reading-fb10/outcome.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading/outcome.json",
+      "bytes": 78,
+      "sha256": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107"
+    },
+    {
+      "source": "/tmp/bre457-reading-fb10-triage.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/reading-triage.md",
+      "bytes": 13880,
+      "sha256": "bc6ca95213c7ba6eeae1fb6c86e105348f1ea647866ff7f3debd4b32ccd73707"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/Adoptiondark-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/Adoptiondark-summary.json",
+      "bytes": 968,
+      "sha256": "157f50599b333150abc094a9c462acc2d87b5136607f5316c1d35d8ca0542926"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/Adoptiondark-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/Adoptiondark-tests.json",
+      "bytes": 2183,
+      "sha256": "b3b8f4678c37aaf82f8de6ca3686fddcbda5839b420c0c6af107d18bdef13dfd"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/Adoptionlight-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/Adoptionlight-summary.json",
+      "bytes": 968,
+      "sha256": "b2c40c04e074c630b4c82f4315d71b2d1a103c31f958be3a5a179f7ee516a315"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/Adoptionlight-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/Adoptionlight-tests.json",
+      "bytes": 2183,
+      "sha256": "e11ec9de179e66e3b16ba8837f7dae4fb793ddeabdeb28e32096af317f0ade71"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/Orca-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/Orca-summary.json",
+      "bytes": 8990,
+      "sha256": "6d459a108abdf3aa955f990c8d5e79246b173936a8fd60ef2ab8c2d6f0a8cb82"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/Orca-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/Orca-tests.json",
+      "bytes": 132774,
+      "sha256": "a923b3df8eee996f86d19e5f01ba189731e3f869b98651efee8aaed7dc4a85e6"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/OrcaDark-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/OrcaDark-summary.json",
+      "bytes": 8134,
+      "sha256": "f95477d3af508aef06bd6e03bbc3d08f0091648a751cd2b348c6b17c57e7167c"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/OrcaDark-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/OrcaDark-tests.json",
+      "bytes": 19178,
+      "sha256": "a89e9e517de3e4d8a9256c08577c306ce2397f1506f15b372ade6522d3c70e60"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/checks.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/checks.log",
+      "bytes": 844468,
+      "sha256": "b97e6e1f89b3d0ae8879d019920a58b3dbe3edcba6f72b9598d63ab3beee2a1f"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/fixture.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/fixture.log",
+      "bytes": 47025,
+      "sha256": "37db7706dc498b69db27cf2a775f9a5116280b39cee6620a8d9dcaeed7a40ef7"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/identity.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/identity.log",
+      "bytes": 491,
+      "sha256": "e5de855d7803d5e82a935118af096482d5aae64e897dee4c467bca3fe91ab8fb"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/native-crash-summary.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/native-crash-summary.log",
+      "bytes": 642,
+      "sha256": "1c5af3fcebcc0055b872c716dd23b760b048d84c5d586a57cc52bdead7b1467c"
+    },
+    {
+      "source": "/tmp/bre457-hosted-mailbox-fb10/outcome.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox/outcome.json",
+      "bytes": 78,
+      "sha256": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-fb10-triage.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/mailbox-triage.md",
+      "bytes": 12485,
+      "sha256": "56367f42bec19f0fe54ce66ad4041ea4ee554bae389e305ab9e5faddd683b6e1"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/DirectCaptureLight-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/DirectCaptureLight-summary.json",
+      "bytes": 1161,
+      "sha256": "b7ad511375b444a6176e7fdedd6d6e9aa0934b3f74a8858d0cd9c99a9820a23e"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/DirectCaptureLight-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/DirectCaptureLight-tests.json",
+      "bytes": 11040,
+      "sha256": "ebaf3e9f3b6a21961098a850fcbe6537c8b208b94437384ef0d43ee6a424b045"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/FeedbackLayoutdark-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/FeedbackLayoutdark-summary.json",
+      "bytes": 968,
+      "sha256": "9d7cd8dc4d2dd1dc94c893a4c64db557c27d4d129b48eb7be88b0621d981e6c1"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/FeedbackLayoutdark-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/FeedbackLayoutdark-tests.json",
+      "bytes": 2169,
+      "sha256": "a3dabea9f88f041a68674719c6ecb00b0a7b3c383e2e9b851fd286ad8ec714fe"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/FeedbackLayoutlight-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/FeedbackLayoutlight-summary.json",
+      "bytes": 967,
+      "sha256": "00e312da36671d654cdbd4d109be78802d5f067f41f2bc8254c6fe32b0b050ec"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/FeedbackLayoutlight-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/FeedbackLayoutlight-tests.json",
+      "bytes": 2169,
+      "sha256": "103c4e1a99010d2f20cdea9781eb36d7d0fd9a8b8e581498cac7605dc65f4843"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/FeedbackLight-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/FeedbackLight-summary.json",
+      "bytes": 967,
+      "sha256": "605d6d13b742504f6b51c286ee99e14a172b6cba8d0b25c139ebe0167f52a3c2"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/FeedbackLight-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/FeedbackLight-tests.json",
+      "bytes": 1827,
+      "sha256": "f0c1b61008d6dd6445a1c39cb3df4132d19d3aabb93cffb5d29e8618cf549113"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/Orca-summary.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/Orca-summary.json",
+      "bytes": 3799,
+      "sha256": "5f2134baab0f583787b0c1226ac1b7ea707b1299af153a4ddf714696d44f03d9"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/Orca-tests.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/Orca-tests.json",
+      "bytes": 123193,
+      "sha256": "b86f363ac8fee9441ed39ff53fb9a8c497200fd2acb07b93f96b3075f740cf97"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/checks.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/checks.log",
+      "bytes": 1016261,
+      "sha256": "1bf870779e63a368c2ced8219d289496186f0aef5924d6345e959aee26be4a8d"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/fixture.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/fixture.log",
+      "bytes": 50345,
+      "sha256": "1ac57b8ec1e822820b711457702a8582228b0b54efcece77a985e293cf17a1e4"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/identity.log",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/identity.log",
+      "bytes": 491,
+      "sha256": "3f2129bd1bae698dd04939a1fa0513ca78f013888de2b2591610597c874b39d8"
+    },
+    {
+      "source": "/tmp/bre457-hosted-compose-fb10/outcome.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose/outcome.json",
+      "bytes": 78,
+      "sha256": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107"
+    },
+    {
+      "source": "/tmp/bre457-compose-fb10-triage.md",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/compose-triage.md",
+      "bytes": 10979,
+      "sha256": "9df5b5096354cc272ca0218ce4b8c34d365ca51c215a940012bcf6c35e7992a1"
+    },
+    {
+      "source": "/tmp/bre457-compose-fb10-tested-tree-identity.json",
+      "retained": "docs/verification/bre-457/navigation-root-0f9e630f/historical-fb10/tested-tree-identity.json",
+      "bytes": 812,
+      "sha256": "6a81b99377a08d3b70b54e7ffa0061bf83ea9ef52b4c54a9cb5a8e9f84c7b2b7"
+    }
+  ],
+  "emptyPreflightFailure": {
+    "source": "/tmp/bre457-native-gate-double-green-745b",
+    "observedDirectoryExists": true,
+    "observedEntries": 0,
+    "classification": "Root-reported wrong-SHA assertion before spawn, not a green control; no original manifest exists to copy"
+  },
+  "resources": "original stage/control manifests retained without aggregation or speedup claim"
+}

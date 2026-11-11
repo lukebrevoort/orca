@@ -1,0 +1,13 @@
+{
+  "testedCommit": "56a2b65594ca10d6a07cce82e9ddee2665af93ed",
+  "headCommit": "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f",
+  "remoteTestedTree": "ad727843734aecac0f47b3922edab1cd78be4eb2",
+  "localExactHeadTree": "ad727843734aecac0f47b3922edab1cd78be4eb2",
+  "wholeTreeEqual": true,
+  "parents": [
+    "a6a8567e81dab98d7ee50b6ec263d94266ac3009",
+    "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f"
+  ],
+  "source": "GitHub git-commit API for exact tested merge versus local exactfb10 Git tree object; not inferred from event naming or ancestry",
+  "scope": "Cryptographic whole-tree content equality at these immutable commits. Test execution identity stays56a2, notfb10 SHA; makes retained fb10 head-source explanations applicable to identical tested source. Does not convert failures or scope limits to passes."
+}

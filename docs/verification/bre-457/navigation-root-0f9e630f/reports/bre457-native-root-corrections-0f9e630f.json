@@ -1,0 +1,33 @@
+{
+  "base": "36ac2e844715ec202d4b20841866e35afc2788b1",
+  "head": "0f9e630fac65a20493877257d8d9f665503b7763",
+  "scope": "ROOT corrections: cancellation ownership, C1 Settings operational-state projection, Swift compiler expression split, two meaningful test preconditions. NOT hosted/native UI acceptance.",
+  "evidence": {
+    "/tmp/bre457-native-gate-cleanup-recheck-8389.md": "454cd43e5d7474932ba602366146a07cc3244dec3c4260f1523532aa35546289",
+    "/tmp/bre457-native-gate-double-red-8389/results.json": "e2e146789936ca6b994a122e70ec49f6cdb540373d961bd89a017c1890e6a081",
+    "/tmp/bre457-native-gate-double-red-8389/executed-control.py": "8fd0b0d35ae6d07c0bc2670f18ae55a442004c1c56a8e3b7e7d10a36080ba6db",
+    "/tmp/bre457-native-gate-double-green-745b-run2/results.json": "1df41faf7f02b7db45e35c2b6d432f434be7b769b48ada052b374c9c919ce40e",
+    "/tmp/bre457-native-gate-double-green-745b-run2/executed-control.py": "8fd0b0d35ae6d07c0bc2670f18ae55a442004c1c56a8e3b7e7d10a36080ba6db",
+    "/tmp/bre457-navigation-settings-red-821e8fb8/manifest.json": "77fe2aaf0d6c60aeb169de78834c4523fefc17b48ee85c7d8b1f693f10262720",
+    "/tmp/bre457-navigation-settings-red-821e8fb8/controllers/compile.log": "b4d12ba40d6acb885e4c1c95a8c57324d9ed58f6272254a5f79f5dd33ae3cf01",
+    "/tmp/bre457-navigation-settings-red-f6886807/manifest.json": "14abde7044a8e862f5c30346299b6f67bbb99471a0e34a4817f0bd8a5ebd69e8",
+    "/tmp/bre457-navigation-settings-red-f6886807/controllers/results.log": "3492f851e59d6286a69c4e990c432528c9c523b8637bf4c3adf924b1352a1a11",
+    "/tmp/bre457-navigation-settings-candidate-0f9e630f/manifest.json": "a92d7b71f0a42ebcab84b6c63d4b12db7138e312bbd033b9d7b402ed1fe1269f",
+    "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/results.log": "7b61f2c4d1ada5702ca9658fbf4a0c224be79f3990736f7805f8379c0d0decb6",
+    "/tmp/bre457-navigation-settings-candidate-0f9e630f/controllers/api-evidence.json": "c4c58197e59ee305ef4618f2c3b3a47520bade5fd428532d1cd6deb9048a56b0"
+  },
+  "history": [
+    "Single-signal controls at8389 retained; second cancellation reproduced survivors in both orders then external coordinator cleaned owned stages.",
+    "Wrong manually entered SHA made one green preflight assertion fail before stage spawn; empty /tmp/bre457-native-gate-double-green-745b retained.",
+    "Verified745b run2 double-signals force escalation and leave no stage; cancellation function bytes equal current0f9.",
+    "821e compilation failed before runtime on original PhaseB hidden projection expression; 44 grammar passed, not runtime red.",
+    "f688 actual418/412/6FAIL: four C1 policy reds plus nil optional edit and unseeded named Focus setup gaps.",
+    "0f9 actual419/419: original final assertions preserved, added explicit dirty/pending precondition; named Focus created by production service before read-only window; seed178DML separate;31read GETs auth/domain0 provider0."
+  ],
+  "remaining": [
+    "Fresh source review",
+    "Hosted SwiftUI/XCTest and light/dark screenshots",
+    "Nonblocking foreground/Back focus considerations",
+    "Final relevant integrated gates and root all33 acceptance"
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "253E6307-67E5-4816-AB6A-225B25370136",
+        "deviceName" : "Orca CI 43087654605-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 13,
+      "passedTests" : 2,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 13,
+  "finishTime" : 1794428072.897,
+  "passedTests" : 2,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1794427429.266,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 1,
+      "testIdentifierString" : "OrcaUITests/test08VisibleViewsAreIndependentAndPersist()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist",
+      "testName" : "test08VisibleViewsAreIndependentAndPersist()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 2,
+      "testIdentifierString" : "OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable",
+      "testName" : "test09EmptySavedViewKeepsMailboxMenuAvailable()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 3,
+      "testIdentifierString" : "OrcaUITests/test10NativeLongPressMovesConversationAndBuildsSenderView()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test10NativeLongPressMovesConversationAndBuildsSenderView",
+      "testName" : "test10NativeLongPressMovesConversationAndBuildsSenderView()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 4,
+      "testIdentifierString" : "OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles",
+      "testName" : "test12InboxIntroductionScrollsWithMailAndRefreshSettles()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 5,
+      "testIdentifierString" : "OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing",
+      "testName" : "test13MailboxControlsRemainVisibleWhileRefreshing()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 6,
+      "testIdentifierString" : "OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly",
+      "testName" : "test40MailboxSelectorCancelsAndSwitchesRepeatedly()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 8,
+      "testIdentifierString" : "OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending",
+      "testName" : "test42MailboxSwitchWhileInboxRefreshIsPending()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 10,
+      "testIdentifierString" : "OrcaUITests/test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen",
+      "testName" : "test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen()"
+    },
+    {
+      "failureText" : "Failed to get matching snapshot: No matches found for Elements matching predicate '\"settings.save\" IN identifiers' from input {(\n    Button, identifier: 'feedback.open', label: 'Feedback',\n    Button, identifier: 'tray', label: 'Mail',\n    Button, identifier: 'doc.text', label: 'Drafts',\n    Button, identifier: 'gearshape', label: 'Settings', Selected,\n    Button, identifier: 'magnifyingglass', label: 'Search All Mail', Disabled,\n    Button, identifier: 'square.and.pencil', label: 'Compose', Disabled,\n    Button, identifier: 'settings.root', label: 'Save account choices',\n    Button, identifier: 'settings.root', label: 'Discard edits',\n    Button, identifier: 'settings.section', label: 'Settings section, Appearance & reading',\n    Button, label: 'Appearance, System',\n    Button, label: 'Open iOS settings'\n)}\nPossibly caused by runtime issues:\nAutomation type mismatch: computed Button from legacy attributes vs Link from modern attribute. Input attributes and values: {\n    \"XC_kAXXCAttributeAutomationType\" = 42;\n    \"XC_kAXXCAttributeElementBaseType\" = UIResponder;\n    \"XC_kAXXCAttributeElementType\" = \"SwiftUI.AccessibilityNode\";\n    \"XC_kAXXCAttributeTraits\" = 8589934595;\n}\nSee test report attachments for more detail.",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 11,
+      "testIdentifierString" : "OrcaUITests/test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving",
+      "testName" : "test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 12,
+      "testIdentifierString" : "OrcaUITests/test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity",
+      "testName" : "test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 13,
+      "testIdentifierString" : "OrcaUITests/test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText",
+      "testName" : "test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 14,
+      "testIdentifierString" : "OrcaUITests/test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement",
+      "testName" : "test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 15,
+      "testIdentifierString" : "OrcaUITests/test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows",
+      "testName" : "test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 15
+}

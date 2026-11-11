@@ -1,0 +1,12 @@
+[feedback crash] exception.type=EXC_BREAKPOINT
+[feedback crash] exception.signal=SIGTRAP
+[feedback crash] termination.namespace=SIGNAL
+[feedback crash] termination.code=5
+[feedback crash] frame=_assertionFailure(_:_:file:line:flags:)
+[feedback crash] frame=Array._checkSubscript(_:wasNativeTypeChecked:)
+[feedback crash] frame=Array.subscript.getter
+[feedback crash] frame=ForEachChild.updateValue()
+[feedback crash] frame=AG: :Graph: :UpdateStack: :update()
+[feedback crash] frame=AG: :Subgraph: :update(unsigned int)
+[feedback crash] frame=specialized GraphHost.runTransaction(_:do:id:)
+[feedback crash] frame=GraphHost.flushTransactions()
