@@ -1715,3 +1715,14 @@ export const importanceThreadState = sqliteTable("importance_thread_state", {
 }, table => ({ pk: primaryKey({ columns: [table.accountId, table.threadId] }),
   pageIdx: index("importance_thread_page_idx").on(table.accountId, table.effective, sql`${table.receivedAt} DESC`, table.threadId).where(sql`${table.retainedCount}>0`),
 }));
+
+/** Internal per-message metadata for incremental participant votes; never contains bodies. */
+export const importanceMessageState = sqliteTable("importance_message_state", {
+  emailId: text("email_id").primaryKey().references(() => emails.id, { onDelete: "cascade" }),
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+  senderAddress: text("sender_address").notNull(), participantAddress: text("participant_address"), receivedAt: integer("received_at"),
+}, table => ({
+  threadTimeIdx: index("importance_message_thread_time_idx").on(table.accountId, table.threadId, sql`${table.receivedAt} DESC`),
+  senderIdx: index("importance_message_sender_idx").on(table.accountId, table.senderAddress, table.emailId),
+}));
