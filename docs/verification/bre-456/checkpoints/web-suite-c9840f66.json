@@ -1,0 +1,31 @@
+{
+  "head": "c9840f66a469ce018437f3e939d77c0981e952ef",
+  "stages": [
+    {
+      "name": "web-types",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "passed": true,
+      "elapsedMs": 10553
+    },
+    {
+      "name": "web-tests",
+      "exitCode": 1,
+      "expectedExitCode": 0,
+      "passed": false,
+      "elapsedMs": 92930
+    }
+  ],
+  "webTests": {
+    "pass": 870,
+    "fail": 1,
+    "tests": 871,
+    "files": 70,
+    "expectCalls": 6136,
+    "raw": "/tmp/bre456-web-fonts-c9840f66/web-tests.log",
+    "sha256": "24652c80eb4ca6c6931cac412d0c212c82a234cf0acf10ac7724af276b948587",
+    "failure": "Existing silent Reader refresh expects guidance inbox query. Direct InboxApp fixture bypassed verified App owner and no longer supplied owner, so BRE-484 guard correctly withheld guidance. Explicit shared synthetic owner is restored in controller fixture; original query/order/read assertions stay."
+  },
+  "fontsPositive": "NOT STARTED: driver stopped after web-test failure",
+  "fonts404": "NOT STARTED"
+}

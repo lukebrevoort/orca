@@ -158,7 +158,10 @@ async function renderApp(
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} verifiedUserId={options.verifiedUserId} /></TopLayerProvider>;
+  // Direct controller fixtures bypass App's authenticated entry gate. Supply
+  // its shared synthetic owner explicitly; null still exercises unknown owner.
+  const verifiedUserId = options.verifiedUserId === undefined ? authSessionFixture.user!.id : options.verifiedUserId;
+  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} verifiedUserId={verifiedUserId} /></TopLayerProvider>;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
