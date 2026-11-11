@@ -16,12 +16,13 @@ struct NotificationInstallationStore {
     @Published private(set) var status = "Checking authenticated device owner…"
     private let store: NotificationInstallationStore
     private var scope: String?
+    private var verifiedClient: APIClient?
     private var generation = UUID()
     private var resolution: Task<String?, Never>?
     init(store: NotificationInstallationStore = .init()) { self.store = store }
     func savedInstallation(scope: String) -> String? { store.saved(scope: scope) }
     func invalidate() {
-        generation = UUID(); resolution?.cancel(); resolution = nil; installationID = nil; scope = nil
+        generation = UUID(); resolution?.cancel(); resolution = nil; installationID = nil; scope = nil; verifiedClient = nil
         status = "Checking authenticated device owner…"
     }
     func resolve(state: AppState) async -> String? {
@@ -30,7 +31,12 @@ struct NotificationInstallationStore {
             invalidate(); status = "Device owner is unavailable. Reconnect before changing notifications."; return nil
         }
         let owner = state.ownerScope
-        if scope != owner { invalidate(); scope = owner }
+        let server = await client.serverOrigin()
+        guard state.phase == .ready, state.ownerScope == owner, state.userID == userID, state.client === client else { return nil }
+        guard owner == server + "|" + userID else {
+            invalidate(); status = "Server identity changed. Reconnect before changing notifications."; return nil
+        }
+        if scope != owner || verifiedClient !== client { invalidate(); scope = owner; verifiedClient = client }
         if let installationID { return installationID }
         if let resolution { return await resolution.value }
         let request = generation
@@ -42,10 +48,6 @@ struct NotificationInstallationStore {
                     && state.userID == userID && state.phase == .ready && state.client === client
             }
             do {
-                let server = await client.serverOrigin()
-                guard current(), owner == server + "|" + userID else {
-                    if current() { status = "Server identity changed. Reconnect before changing notifications." }; return nil
-                }
                 // Cached identity is insufficient to resolve a new notification owner.
                 let session: AuthSession = try await client.request("v1/auth/session")
                 guard current() else { return nil }
