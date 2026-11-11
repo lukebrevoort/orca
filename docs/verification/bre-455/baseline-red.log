@@ -1,0 +1,27 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/notifications/important-routes.test.ts:
+24 |     const session = await createSession(db, "u");
+25 |     const app = createApp({ dbFactory: () => createDatabaseClient(path) });
+26 |     const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+27 |     const endpoint = "/v1/notifications/installations/browser";
+28 |     const initial = await app.request(`${endpoint}?channel=open_app`, { headers });
+29 |     assert.equal(initial.status, 200, "authenticated policy status must be available; baseline is a real HTTP404");
+                ^
+AssertionError: authenticated policy status must be available; baseline is a real HTTP404
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/orca/apps/api/src/notifications/important-routes.test.ts:29:12
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-455 explicit open-app adoption persists and reconciles without replaying old settings [75.23ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [358.00ms]

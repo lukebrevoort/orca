@@ -1,0 +1,111 @@
+[Orca resources] {"time": 1794388405.3477619, "stage": "before", "ownerPid": 46599, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  21.9 530224 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", " 1152  19.0  21568 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15214  13.5  92864 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", "15382   9.6 1084080 codex", "  379   6.7  27872 /usr/libexec/locationd", "  416   5.9  22096 /usr/sbin/coreaudiod"], "memory": "System-wide memory free percentage: 75%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/mobile-push/scheduler.test.ts:
+(pass) mobile push scheduler > isolates users, suppresses registration backfill, and deduplicates repeated scans [75.92ms]
+(pass) mobile push scheduler > uses actual Inbox routing instead of provider labels or Human Signal [75.22ms]
+(pass) mobile push scheduler > notifies selected Spaces outside Inbox, ignores unselected Spaces, and deduplicates overlap [100.09ms]
+(pass) mobile push scheduler > rechecks current mail and Space eligibility under the delivery lease [71.42ms]
+(pass) mobile push scheduler > delivers only each device's selected destinations, with one preview per matching message [83.90ms]
+(pass) mobile push scheduler > deselecting one Space suppresses its queued and future alerts while another remains enabled [86.06ms]
+(pass) mobile push scheduler > retries transient failures with backoff and succeeds later [65.10ms]
+(pass) mobile push scheduler > disables invalid tokens but cannot disable a concurrently refreshed registration [64.45ms]
+(pass) mobile push scheduler > removes stale registrations and their outbox rows [56.03ms]
+(pass) mobile push scheduler > suppresses queued and future pushes after the bound session is revoked or expired [56.78ms]
+(pass) mobile push scheduler > preference changes invalidate queued alerts, including off then on before delivery [54.31ms]
+(pass) mobile push scheduler > uses the production mobile session checker before scan and queued delivery [56.82ms]
+(pass) mobile push scheduler > atomically reassigns a token on account switch and removes the former owner's outbox [55.25ms]
+(pass) mobile push scheduler > uses a fresh lease timestamp for every serial delivery claim [60.92ms]
+(pass) mobile push scheduler > does not let a stale lease owner overwrite the current owner's completion [56.63ms]
+(pass) mobile push scheduler > scans newly committed mail by insertion order across accounts [56.39ms]
+
+apps/api/src/mobile-push/payload.test.ts:
+(pass) notification preview contains sender, subject and snippet with unchanged conversation routing [0.12ms]
+(pass) missing content uses sender address, plain-text fallback, then readable placeholders [0.05ms]
+(pass) preview normalizes whitespace and control characters without interpreting plain text as HTML [0.27ms]
+(pass) Gmail snippet entities decode once before normalization and truncation [0.63ms]
+(pass) entity-only snippet whitespace falls back without decoding literal body or header text [0.05ms]
+(pass) long Unicode previews remain valid and fit Apple's 4096-byte payload limit [0.62ms]
+
+apps/api/src/mobile-push/routes.test.ts:
+(pass) mobile push routes > requires authentication and keeps installation registrations isolated per user [142.53ms]
+(pass) mobile push routes > reports a clear disabled state when APNs credentials are absent [59.71ms]
+
+apps/api/src/mobile-push/migration.test.ts:
+(pass) mobile push commit-order migration replays from the earliest unprocessed sequence [62.02ms]
+
+apps/api/src/mobile-push/apns.test.ts:
+(pass) APNs configuration and response handling > disables delivery without throwing for absent, partial, or malformed credentials [1.16ms]
+(pass) APNs configuration and response handling > accepts a complete token-auth configuration and bounds scheduler settings [0.05ms]
+(pass) APNs configuration and response handling > distinguishes retryable, permanent, and token-invalidating APNs responses [0.11ms]
+
+apps/api/src/mobile-push/device-limit.test.ts:
+(pass) per-user cap rejects new devices without writes, permits refresh, and frees slots only on real deletion [166.07ms]
+(pass) capped account switching preserves the other user's device, spaces and pending outbox; store throws DeviceLimitError [136.73ms]
+(pass) reinstall at the cap replaces the same token and cascades the old registration [123.24ms]
+(pass) store permits reinstall at the cap but different environments and new tokens leave the database unchanged [135.43ms]
+(pass) concurrent processes competing for the last device slot respect the write lock [380.95ms]
+
+apps/api/src/notifications/database.test.ts:
+(pass) BRE-455 migration enforces owner/account/message boundaries and leaves stable importance migrations intact [52.36ms]
+
+apps/api/src/notifications/loop.test.ts:
+(pass) BRE-455 real authenticated browser feed claims important automated archived arrivals and records constructor reports [109.55ms]
+(pass) BRE-455 old mark before first scan, human unreviewed/not-important, unknown direction and read arrivals stay quiet [97.31ms]
+(pass) BRE-455 persistent cooldown suppresses arrivals permanently and allows exact fifteen-minute boundary [97.47ms]
+(pass) BRE-455 identical save retains fresh pending, disable/re-enable and new accounts do not replay backlog [97.81ms]
+(pass) BRE-455 correction, lease expiry, permission and stale generations prevent claim retry/report reuse [109.81ms]
+(pass) BRE-455 authorization, foreign scopes, operation conflicts and malformed/oversized bodies fail closed [105.23ms]
+(pass) BRE-455 exact-sender inheritance uses all retained participants and conversation override wins [85.29ms]
+(pass) BRE-455 concurrent browser claims and foreign-device reports cannot duplicate or steal envelopes [91.10ms]
+(pass) BRE-455 new selected account gets its own boundary and provider thread IDs do not cross-suppress [93.37ms]
+(pass) BRE-455 initially read, corrected-back and read-back arrivals cannot resurrect an interruption [90.70ms]
+
+apps/api/src/notifications/work.test.ts:
+BRE455_SQL_WORK {"arrivals":202,"scanRows":20,"envelopes":19,"reads":34,"returnedRows":141,"plan":[{"id":7,"parent":0,"notused":50,"detail":"SEARCH a USING INDEX important_notification_arrivals_account_idx (account_id=? AND sequence>?)"},{"id":16,"parent":0,"notused":46,"detail":"SEARCH e USING INDEX emails_account_thread_id_unique_idx (account_id=? AND thread_id=? AND id=?)"},{"id":37,"parent":0,"notused":0,"detail":"CORRELATED SCALAR SUBQUERY 1"},{"id":43,"parent":37,"notused":55,"detail":"SEARCH el USING COVERING INDEX email_labels_email_label_unique_idx (email_id=?)"},{"id":47,"parent":37,"notused":46,"detail":"SEARCH l USING INDEX sqlite_autoindex_labels_1 (id=?)"},{"id":64,"parent":0,"notused":0,"detail":"CORRELATED SCALAR SUBQUERY 2"},{"id":69,"parent":64,"notused":39,"detail":"SEARCH own USING INDEX sqlite_autoindex_oauth_accounts_1 (id=?)"}]}
+(pass) BRE-455 200-arrival account scan examines at most twenty per browser claim with metadata-only indexed SQL [124.93ms]
+
+apps/api/src/notifications/apns.test.ts:
+(pass) BRE-455 actual APNs policy dispatch sends automated Important archived incoming exactly once while U/N/unknown stay quiet [84.31ms]
+(pass) BRE-455 legacy choices survive status/cancel/adoption and older clients cannot downgrade or re-enable [99.11ms]
+48 |     const result = await deliver(f, l.transport, async (...args) => {
+49 |       const value = await readDeviceToken(...args);
+50 |       if (change === "correction") await f.important("gmail:a:conversation", "not_important");
+51 |       if (change === "read") f.sqlite.query("UPDATE emails SET is_read=1 WHERE id=?").run(`gmail:a:queued-${change}`);
+52 |       if (change === "session") f.sqlite.query("UPDATE sessions SET invalidated_at=? WHERE id=?").run(f.state.now, f.session.sessionId);
+53 |       if (change === "account") f.sqlite.query("DELETE FROM oauth_accounts WHERE id='a'").run();
+                                                                                               ^
+SQLiteError: FOREIGN KEY constraint failed
+      errno: 787,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_FOREIGNKEY"
+
+      at #runNoArgs (bun:sqlite:138:25)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/apns.test.ts:53:91)
+      at async deliverReady (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/mobile-push/scheduler.ts:270:47)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/apns.test.ts:48:26)
+      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/apns.test.ts:9:15)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-3bc71a1c-d51a8f536312f74e/apps/api/src/notifications/apns.test.ts:45:108)
+(fail) BRE-455 correction/read/revoke/account removal during asynchronous decryption prevents provider I/O [289.95ms]
+(pass) BRE-455 concurrent workers share one lease and retry with a stable APNs ID [73.10ms]
+(pass) BRE-455 unchanged refresh preserves pending; replacement token creates a freshness barrier; deletion retains adoption tombstone [112.03ms]
+
+apps/api/src/notifications/important-routes.test.ts:
+(pass) BRE-455 explicit open-app adoption persists and reconciles without replaying old settings [91.71ms]
+
+apps/api/src/notifications/legacy-policy-red.test.ts:
+(pass) BRE-455 an adopted Important-only installation must not send an unreviewed human Inbox message [53.79ms]
+
+apps/api/src/notifications/provenance.test.ts:
+(pass) BRE-455 SMTP metadata is exact-account bounded evidence independent of Inbox [0.22ms]
+(pass) BRE-455 original ordered duplicate headers cannot override earlier delivery evidence [0.11ms]
+(pass) BRE-455 imported old date, missing invalid time, duplicated From and trailing fake headers remain unknown [0.09ms]
+
+1 tests failed:
+(fail) BRE-455 correction/read/revoke/account removal during asynchronous decryption prevents provider I/O [289.95ms]
+
+ 54 pass
+ 1 fail
+ 154 expect() calls
+Ran 55 tests across 13 files. [4.49s]
+[Orca resources] {"time": 1794388409.940741, "stage": "after", "ownerPid": 46599, "childPid": 46602, "command": "bun", "exitCode": 1, "cpuRssTop": ["  PID  %CPU    RSS COMM", " 1152  14.8  21568 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", " 1046  10.5 767232 /Applications/Zen.app/Contents/MacOS/zen", "25406   4.3 581392 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "  416   4.2  22096 /usr/sbin/coreaudiod", "15232   3.9 530192 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "  404   3.5 156528 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"], "memory": "System-wide memory free percentage: 75%"}
