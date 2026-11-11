@@ -125,7 +125,7 @@ test("context is stable per verified session, changes across users/sessions, and
 });
 test("marker alone and marker as bearer grant nothing; real bearer wins over ambient cookie without browser output", async () => {
   const marker = createBrowserAuthContext(fixture.u);
-  for (const headers of [{ cookie: `${contextCookie}=${marker}` }, { authorization: `Bearer ${marker}` }]) {
+  for (const headers of [new Headers({ cookie: `${contextCookie}=${marker}` }), new Headers({ authorization: `Bearer ${marker}` })]) {
     const response = await fixture.app.request("/v1/auth/session", { headers });
     expect(response.status).toBe(401);
     expect(response.headers.get(contextHeader)).toBeNull();

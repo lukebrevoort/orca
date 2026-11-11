@@ -127,3 +127,11 @@ lint/typecheck/test/build at exact SHA, browser A/B plus held-session/navigation
 acceptance, and merge. An early API draft is not final acceptance. Reverting
 this narrow patch restores previous API behavior; the optional header leaves
 legacy clients compatible and there is no schema migration to roll back.
+
+Checkpoint `ee2962c40414d22b3035471bd1c7cdc59fdd2a38`:
+304 auth/notification tests across 27 files passed (1,474 expectations, 21.64s).
+Actual shared tsc and the HTTP/SQLite proof passed. Actual API tsc **failed**
+TS2322 in a test's inferred heterogeneous request-header array; the correction
+uses real `Headers` instances. The receipt retains this failure; this checkpoint
+is not claimed type-green. [Runtime proof](http-proof-ee2962c4.json),
+[checkpoint receipt](focused-ee2962c4-receipt.json).
