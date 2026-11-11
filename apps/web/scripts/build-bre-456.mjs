@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { writeFile, rm, stat } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { webSourceIdentity, webBundleIdentity } from './verification-revision.mjs';
 const before=await webSourceIdentity();
+assert.match(process.version,/^v24\./,'Use the pinned Node 24 runtime');
 await rm('apps/web/dist/bre456-source.json',{force:true});
 const started=Date.now();
 const webOnly=process.argv.includes('--web-only');
 const args=webOnly?['run','build']:['run','--sequential','--filter','*','build'];
-const run=spawnSync('/opt/homebrew/bin/bun',args,{stdio:'inherit',...(webOnly?{cwd:'apps/web'}:{})});
+const run=spawnSync('/opt/homebrew/bin/bun',args,{stdio:'inherit',env:{...process.env,PATH:`${dirname(process.execPath)}:/opt/homebrew/bin:${process.env.PATH??''}`},...(webOnly?{cwd:'apps/web'}:{})});
 if(run.error)throw run.error;
 if(run.status!==0)process.exit(run.status??1);
 assert((await stat('apps/web/dist/index.html')).mtimeMs>=started,'Build did not write a fresh entry artifact; no source manifest will be issued');
