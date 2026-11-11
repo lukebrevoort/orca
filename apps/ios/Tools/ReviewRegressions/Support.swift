@@ -7,7 +7,7 @@ import SwiftUI
     var phase: Phase = .ready
     var client: APIClient?
     var accounts = [MailAccount(id: "account", provider: "gmail", email: "owner@example.com", displayName: "Fixture", capabilities: .init(read: true, send: true, draft: true))]
-    var selectedAccount: MailAccount? { accounts.first }
+    var selectedAccount: MailAccount? { accounts.first { $0.id == selectedAccountID } ?? accounts.first }
     var selectedAccountID: String? = "account"
     var selectedTab = "settings"
     var pendingSettingsNavigation: SettingsNavigationRequest?
@@ -66,6 +66,21 @@ actor PreferenceCredentialHold {
             return second
         }
         return count >= 2 ? second : first
+    }
+    func waitUntilHeld() async { if !held { await withCheckedContinuation { started = $0 } } }
+    func release() { continuation?.resume(); continuation = nil }
+}
+
+actor SearchRequestHold {
+    private var first = true, held = false
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var started: CheckedContinuation<Void, Never>?
+    func token() async -> String {
+        if first {
+            first = false; held = true; started?.resume(); started = nil
+            await withCheckedContinuation { continuation = $0 }
+        }
+        return "synthetic-search"
     }
     func waitUntilHeld() async { if !held { await withCheckedContinuation { started = $0 } } }
     func release() { continuation?.resume(); continuation = nil }

@@ -79,6 +79,21 @@ import Foundation
         check("480-correction-actually-acknowledged", acknowledgedSearchChoice.receipt?.target.threadId == "Submitted A", "production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback")
         if beforeCorrectionKey != InboxViewModel.globalSearchRefreshIdentity(state: state) { _ = await globalSearch.openGlobalSearch(state: state) }
         check("480-acknowledged-correction-refreshes-submitted-search", globalSearch.messages.first?.importance?.effective == .important && globalSearch.resultSearch == "Submitted A" && globalSearch.search == "Unsubmitted B" && globalSearch.messages.first?.id == "Submitted A", "actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime")
+        let accountState = AppState(cache: state.cache), searchHold = SearchRequestHold()
+        accountState.client = APIClient(baseURL: URL(string: "https://example.invalid")!, session: URLSession(configuration: config)) { await searchHold.token() }
+        ReviewURLProtocol.handler = { request in
+            let account = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!.first { $0.name == "accountId" }!.value!
+            let message = InboxMessage(id: account, accountId: account, provider: "gmail", providerMessageId: account, threadId: account, from: .init(email: "person@example.com"), subject: "Account query", snippet: "Synthetic", receivedAt: "2026-11-11T00:00:00Z", unread: false, labels: [], attentionBehavior: "normal")
+            return (200, try JSONEncoder().encode(InboxPage(accounts: [], messages: [message], nextCursor: nil, counts: .init(focus: 0, normal: 0, quiet: 0, hidden: 0, all: 1))))
+        }
+        let accountSearch = InboxViewModel(); accountSearch.search = "Account query"
+        let staleSearch = Task { _ = await accountSearch.openGlobalSearch(state: accountState) }
+        await searchHold.waitUntilHeld()
+        var otherAccount = accountState.accounts[0]; otherAccount.id = "other-account"
+        accountState.accounts.append(otherAccount); accountState.selectedAccountID = otherAccount.id
+        _ = await accountSearch.openGlobalSearch(state: accountState)
+        await searchHold.release(); await staleSearch.value
+        check("480-late-old-account-search-cannot-overwrite", accountSearch.messages.map(\.accountId) == ["other-account"] && accountSearch.resultSearch == "Account query", "production controller account/request generation rejects held older account response")
         let preferences = AccountPreferencesController()
         state.accountPreferences = preferences
         preferences.edits = .init(signature: "Unsaved", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)
