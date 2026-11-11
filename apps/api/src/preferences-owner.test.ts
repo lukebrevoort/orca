@@ -8,6 +8,7 @@ import { createDatabaseClient } from "./db/client.ts";
 import { createSession } from "./auth/session-store.ts";
 import { createMobileSession } from "./auth/mobile/store.ts";
 import { createApp } from "./index.ts";
+import { getServerConfig } from "./config/server.ts";
 
 const ownerHeader = "x-orca-expected-user-id";
 async function fixture(run: (f: {
@@ -90,3 +91,17 @@ test("BRE-469 malformed preconditions and unauthenticated requests never access 
   expect(f.snapshot()).toEqual(before);
   expect(f.preferenceAccess).toHaveLength(0);
 }));
+
+test("BRE-469 CORS accepts the owner precondition without widening allowed origins", async () => {
+  const app = createApp({ dbFactory: () => { throw Error("Preflight must not open a database"); } });
+  const allowed = getServerConfig().webOrigin;
+  for (const origin of [allowed, "https://foreign.synthetic.invalid"]) {
+    const response = await app.request("/v1/preferences", { method: "OPTIONS", headers: {
+      origin, "access-control-request-method": "PATCH", "access-control-request-headers": `content-type,${ownerHeader}`,
+    } });
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe(origin === allowed ? allowed : null);
+    expect(response.headers.get("access-control-allow-headers")?.split(",")).toContain(ownerHeader);
+    expect(response.headers.get("access-control-allow-methods")?.split(",")).toContain("PATCH");
+  }
+});
