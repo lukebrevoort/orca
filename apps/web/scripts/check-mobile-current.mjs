@@ -19,7 +19,7 @@ try {
    await page.locator('.desktop-mobile-more').waitFor({state:width===390?'visible':'attached'});
    if (theme==='dark') await page.getByRole('button',{name:'Switch to Orca Black',exact:true}).click();
    await page.waitForTimeout(350);
-   const nav = page.getByRole('navigation',{name:width===390?'Mobile primary':'Primary navigation',exact:true});
+   const nav = page.getByRole('navigation',{name:width===390?'Mobile primary':'Primary navigation',exact:true,includeHidden:true});
    const inbox = nav.getByRole('button',{name:/^Inbox/});
    await inbox.click();
    await page.screenshot({path:join(output,`${theme}-${width}-inbox.png`)});
