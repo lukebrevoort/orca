@@ -296,7 +296,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     if (destination === "settings") return;
     requestViewNavigation(() => window.location.assign(desktopDestinationHref(destination, window.location.pathname)));
   };
-  return <ImportanceProvider key={source.accountId ?? "loading"}><div className="desktop-shell desktop-settings-frame">
+  return <ImportanceProvider><div className="desktop-shell desktop-settings-frame">
     {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
       onCompose={() => requestViewNavigation(() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`))}

@@ -13,7 +13,7 @@ const check=(ok,label)=>{result.assertions++;assert(ok,label);};
 function rows(){return JSON.parse(execFileSync('python3',['-c','import sqlite3,json,sys;c=sqlite3.connect(sys.argv[1]);c.row_factory=sqlite3.Row;print(json.dumps([dict(r) for r in c.execute("select user_id,signature from user_preferences order by user_id")]))',fixture.databasePath],{encoding:'utf8'}));}
 try{for(const theme of ['light','dark']){
  const context=await browser.newContext({viewport:{width:1024,height:900}});await context.addInitScript(theme=>localStorage.setItem('orca-reader-preferences',JSON.stringify({theme,motion:'reduced'})),theme);await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
- await context.request.get(origin+'/__fixture/login');const page=await context.newPage();page.setDefaultTimeout(8000);page.on('pageerror',e=>result.pageErrors.push(e.message));page.on('request',r=>{if(new URL(r.url()).pathname==='/v1/preferences')result.requests.push({theme,method:r.method(),body:r.postDataJSON()});});
+ await context.request.get(origin+'/__fixture/login');const page=await context.newPage();page.setDefaultTimeout(8000);page.on('pageerror',e=>result.pageErrors.push(e.message));page.on('request',r=>{if(new URL(r.url()).pathname==='/v1/preferences')result.requests.push({theme,method:r.method(),expectedOwner:r.headers()['x-orca-expected-user-id']??null,body:r.postDataJSON()});});
  try{
   await page.goto(origin+'/settings#writing');const signature=page.getByRole('textbox',{name:'Default signature',exact:true});await signature.fill('Unsaved original owner '+theme);
   await context.request.get(origin+'/__fixture/login-other');const before=await context.request.get(origin+'/v1/preferences').then(r=>r.json());
@@ -40,6 +40,7 @@ try{for(const theme of ['light','dark']){
    identityStarted();await identityGate;await route.fulfill({response});
   });
   try{
+   const requestStart=result.requests.length;
    await page.getByRole('button',{name:'Save account choices',exact:true}).click();
    let timer;try{await Promise.race([identityHeld,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Identity preflight did not reach the real response barrier in 8s')),8000);})]);}finally{clearTimeout(timer);}
    check(identitySnapshot.isAuthenticated&&identitySnapshot.user.id==='u','Held identity preflight really belongs to U');
@@ -51,6 +52,8 @@ try{for(const theme of ['light','dark']){
    await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-held-identity.png')});
    result.scenarios.push({theme,name:'owner-switched-during-held-identity-preflight',identitySnapshot,before:heldBefore,after:heldAfter,database:rows()});
    check(heldAfter.signature===heldBefore.signature,'Held stale U identity must never authorize a PATCH into V');
+   const guardedWrites=result.requests.slice(requestStart).filter(request=>request.method==='PATCH');
+   check(guardedWrites.length===1&&guardedWrites[0].expectedOwner==='u','Interrupted save carries original verified U, never replacement V, as its atomic precondition');
   }finally{releaseIdentity();await page.unroute('**/v1/auth/session');}
  }catch(error){result.failures.push({theme,message:error.message});}finally{await context.close();}
 }}finally{await browser.close();await writeFile(join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({scenarios:result.scenarios.length,assertions:result.assertions,failures:result.failures,pageErrors:result.pageErrors}));}process.exitCode=result.failures.length||result.pageErrors.length?1:0;
