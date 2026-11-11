@@ -140,7 +140,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     func review() async {
         guard let state, let selection, !busy, current(generation), let client = state.client, let draft else { return }
         guard journal == nil || matchingContext else { error = "Reopen the original View to finish its retained edits before editing another View."; return }
-        guard journal?.command == nil else { error = "Resolve the original Save for this account before previewing a replacement. Preview never replays a write."; return }
+        guard journal?.command == nil else { error = journal?.appliedViewId.map { "Original Save applied as \($0). Reload its current View before previewing; no replacement will be created." } ?? "Resolve the original Save for this account before previewing a replacement. Preview never replays a write."; return }
         let request = generation, reviewedEdits = edits; busy = true; error = nil; defer { if request == generation { busy = false } }
         var input = draft.keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
         input = input.setting("identity", to: draft["identity"].setting("name", to: .string(name.trimmingCharacters(in: .whitespacesAndNewlines))).setting("description", to: .string(description)))
