@@ -1,0 +1,25 @@
+36 |   const syncPath="apps/api/src/providers/gmail/sync.ts";
+37 |   if(git("show",old+":"+syncPath)!==git("show",head+":"+syncPath)||git("diff",head,"--",syncPath))throw Error("Production Gmail sync differs between paired sources");
+38 |   const sources=[...new Set([old,head])].map(sha=>({sha,sql:git("ls-tree","-r","--name-only",sha,"apps/api/drizzle").split("\n").filter(p=>p.endsWith(".sql")).sort().map(path=>{const text=spawnSync("git",["-C",root,"show",sha+":"+path],{encoding:"utf8"});if(text.status!==0)throw Error(text.stderr);return{path,text:text.stdout,sha256:hash(text.stdout)};})}));
+39 |   const runs=[];
+40 |   for(const n of [100,200,400])for(const distinct of [false,true])for(let sample=1;sample<=3;sample++)for(const source of sample%2?sources:[...sources].reverse()){
+41 |     const child=spawnSync(process.execPath,[import.meta.path,"--worker"],{input:JSON.stringify({sql:source.sql,n,distinct}),encoding:"utf8",maxBuffer:1024*1024});if(child.status!==0)throw Error(child.stderr+child.stdout);
+                                                                                                                                                                                                 ^
+error: 25 | 
+26 | export function normalizeGmailMessage(
+27 |   message: GmailMessage,
+28 |   options: NormalizeOptions,
+29 | ): NormalizedGmailMessage {
+30 |   throw new Error("BRE461_DIRTY_NORMALIZER_EXECUTED");
+                 ^
+error: BRE461_DIRTY_NORMALIZER_EXECUTED
+      at normalizeGmailMessage (/Users/lbrevoort/orca/apps/api/src/providers/gmail/normalizer.ts:30:13)
+      at map (1:11)
+      at persistGmailMessages (/Users/lbrevoort/orca/apps/api/src/providers/gmail/sync.ts:386:50)
+      at /Users/lbrevoort/orca/apps/api/scripts/importance-gmail-work.ts:24:26
+
+Bun v1.3.14 (macOS arm64)
+
+      at /Users/lbrevoort/orca/apps/api/scripts/importance-gmail-work.ts:41:189
+
+Bun v1.3.14 (macOS arm64)

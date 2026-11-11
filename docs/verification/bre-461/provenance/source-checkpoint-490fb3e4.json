@@ -1,0 +1,30 @@
+{
+  "head": "490fb3e42df6b24c02b66818afbb82774b27e141",
+  "records": [
+    {
+      "case": "dirty-normalizer",
+      "requestedCandidate": "490fb3e42df6b24c02b66818afbb82774b27e141",
+      "executionHead": "490fb3e42df6b24c02b66818afbb82774b27e141",
+      "exitCode": 1,
+      "rejected": true,
+      "outputCreated": false
+    },
+    {
+      "case": "untracked-source",
+      "requestedCandidate": "490fb3e42df6b24c02b66818afbb82774b27e141",
+      "executionHead": "490fb3e42df6b24c02b66818afbb82774b27e141",
+      "exitCode": 1,
+      "rejected": true,
+      "outputCreated": false
+    },
+    {
+      "case": "wrong-head",
+      "requestedCandidate": "db8a1e6e41f5d99183b680e8e43531486edddad5",
+      "executionHead": "490fb3e42df6b24c02b66818afbb82774b27e141",
+      "exitCode": 1,
+      "rejected": true,
+      "outputCreated": false
+    }
+  ],
+  "cleanAfter": true
+}
