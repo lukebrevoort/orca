@@ -49,6 +49,31 @@ actor APIClient {
         guard 200..<300 ~= http.statusCode else { throw ClientError.http(http.statusCode, try? decoder.decode(ErrorEnvelope.self, from: data).error) }
         return (data, http)
     }
+    /// Discard has no revision CAS on the server. This only binds this native
+    /// request to its original origin/session and requires an actual 204 receipt.
+    func deleteDraftForDiscard(_ id: String, accountId: String, expectedOrigin: String,
+        authorize: @escaping @Sendable () async -> Bool) async throws {
+        guard serverOrigin() == expectedOrigin else { throw CancellationError() }
+        // Capture the destination before the first suspension. A temporary
+        // base-URL change cannot leave a foreign URL in a later authorized call.
+        let endpoint = baseURL.appending(path: "v1/drafts").appending(component: id)
+        guard await authorize() else { throw CancellationError() }
+        guard var parts = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
+        parts.queryItems = [.init(name: "accountId", value: accountId)]
+        guard let url = parts.url else { throw ClientError.invalidBaseURL }
+        var request = URLRequest(url: url); request.httpMethod = "DELETE"; request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
+        // Keychain lookup may suspend while logout/login replaces the owner.
+        // Check the captured operation after lookup, before any request leaves.
+        guard serverOrigin() == expectedOrigin, await authorize(), !Task.isCancelled else { throw CancellationError() }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        guard http.statusCode == 204 else {
+            throw ClientError.http(http.statusCode, try? decoder.decode(ErrorEnvelope.self, from: data).error)
+        }
+    }
+
 }
 private final class CredentialSafeRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {

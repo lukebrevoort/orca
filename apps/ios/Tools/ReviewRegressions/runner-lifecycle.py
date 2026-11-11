@@ -54,7 +54,7 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
         ok = run.returncode == 0 and not any(c['contaminated'] for c in state['calls']) and len(dedicated) == 2 and len({c['installation'] for c in dedicated}) == 2
         if scope == 'mailbox':
             normal = [c for c in state['calls'] if not c['adoption']]
-            needed = {'test10NativeLongPressMovesConversationAndBuildsSenderView', 'test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText', 'test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement'}
+            needed = {'test10NativeLongPressMovesConversationAndBuildsSenderView', 'test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText', 'test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement', 'test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows'}
             ok = ok and len(normal) == 2 and all(needed.issubset(c['selectedCases']) for c in normal)
         results.append({'scope':scope,'pass':ok,'exit':run.returncode,'calls':state['calls'],'output':run.stdout+run.stderr})
 print(json.dumps({'proof':'real runner phase code with synthetic Apple commands, not native runtime','results':results},indent=2))

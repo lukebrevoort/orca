@@ -31,11 +31,11 @@ struct InboxView: View {
                         }
                         if model.messages.isEmpty {
                             Group {
-                                if model.isLoading { ProgressView(model.view == "important" ? "Getting important conversations" : "Getting mail") }
+                                if model.isLoading { ProgressView(model.view == "important" ? "Getting important conversations" : "Getting mail").accessibilityIdentifier("mail.search.loading") }
                                 else if let error = model.error {
                                     VStack(spacing: 16) {
                                         ContentUnavailableView("Mail unavailable", systemImage: "wifi.exclamationmark", description: Text("Your mail is safe. \(error)"))
-                                        Button("Try again") { Task { await loadCurrent() } }
+                                        Button("Try again") { Task { await loadCurrent() } }.accessibilityIdentifier("mail.search.retry")
                                     }
                                 } else {
                                     VStack(spacing: 12) {
@@ -92,7 +92,7 @@ struct InboxView: View {
             .clipped()
         }
         .background(OrcaTheme.paper)
-        .safeAreaInset(edge: .bottom) { if mailboxes.selectedView == nil, let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
+        .safeAreaInset(edge: .bottom) { if !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil), let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
         .navigationTitle(mailboxes.title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $model.search, prompt: "Search All Mail")
@@ -127,10 +127,10 @@ struct InboxView: View {
             MailActionsSheet(target: target) { await loadCurrent() }
         }
         .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(state.mailboxReadRevision)") {
-            if mailboxes.selectedView == nil || !model.resultSearch.isEmpty { await loadCurrent() }
+            if !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil) { await loadCurrent() }
         }
         .onChange(of: scenePhase) {
-            if scenePhase == .active, state.phase == .ready, mailboxes.selectedView == nil || !model.resultSearch.isEmpty {
+            if scenePhase == .active, state.phase == .ready, !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil) {
                 Task { await loadCurrent() }
             }
         }
@@ -190,7 +190,7 @@ struct InboxView: View {
                 .foregroundStyle(OrcaTheme.accent).accessibilityLabel("Choose visible views")
                 .accessibilityIdentifier("inbox.visible-views")
             }
-            if mailboxes.selectedView != nil && model.resultSearch.isEmpty { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
+            if model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil) { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
         }.padding(.horizontal, 20).padding(.vertical, 4)
             .background(OrcaTheme.paper, ignoresSafeAreaEdges: [])
     }

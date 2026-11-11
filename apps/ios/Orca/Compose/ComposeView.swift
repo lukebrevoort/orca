@@ -6,7 +6,7 @@ struct ComposeSendPermissionGate: Equatable {
 }
 
 struct ComposeOperationReservation {
-    enum Operation: Equatable { case attachments, delivery, reconciliation, conversion }
+    enum Operation: Equatable { case attachments, delivery, reconciliation, conversion, discard }
     private(set) var active: Operation?
     var isBusy: Bool { active != nil }
     mutating func reserve(_ operation: Operation) -> Bool {
@@ -15,22 +15,6 @@ struct ComposeOperationReservation {
     }
     mutating func release(_ operation: Operation) {
         if active == operation { active = nil }
-    }
-}
-
-@MainActor enum ComposeSaveSequencing {
-    static func enqueue(after previous: Task<Void, Never>?, debounce: Bool,
-                        canSave: @escaping @MainActor () -> Bool,
-                        save: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
-        previous?.cancel()
-        return Task { @MainActor in
-            if debounce { try? await Task.sleep(for: .milliseconds(350)) }
-            // Even a cancelled queue entry must drain its predecessor. Otherwise
-            // Send could await this entry while an older disk write is still live.
-            await previous?.value
-            guard !Task.isCancelled, canSave() else { return }
-            await save()
-        }
     }
 }
 
@@ -93,6 +77,9 @@ struct ComposeView: View {
     @State private var storageReservation: DraftStore.Reservation?
     @State private var lastOwnedOperation: UUID?
     @State private var saveTask: Task<Void, Never>?
+    @State private var discardController = ComposeDiscardController()
+    @State private var discardApproval: ComposeDiscardContext?
+    @State private var showingDiscardConfirmation = false
     @State private var showingImporter = false
     @State private var showingPlainTextConfirmation = false
     @State private var plainTextConversionRequest: ComposePlainTextConversion.Request?
@@ -220,6 +207,7 @@ struct ComposeView: View {
             }
             .padding(.horizontal, 22)
         }
+        .disabled(discarding)
         .background(OrcaTheme.paper.ignoresSafeArea())
         .accessibilityIdentifier("compose.form")
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -255,9 +243,38 @@ struct ComposeView: View {
                 .padding(.vertical, 12)
             }
             .background(OrcaTheme.surface)
+            .disabled(discarding)
         }
         .navigationTitle(kind == "new" ? "New message" : kind.replacingOccurrences(of: "_", with: " ").capitalized).navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .navigationBarBackButtonHidden(discarding)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(role: .destructive) {
+                    guard let approval = discardContext(), !draftOperation.isBusy else { return }
+                    discardApproval = approval; showingDiscardConfirmation = true
+                } label: {
+                    Text("Discard draft").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }
+                .accessibilityIdentifier("compose.discard")
+                .disabled(preparing || draftOperation.isBusy || heldByAnotherComposer || local.map { !DraftStore.permitsDiscard($0) } != false)
+            }
+        }
+        .alert("Discard this draft?", isPresented: $showingDiscardConfirmation, presenting: discardApproval) { approval in
+            Button("Keep writing", role: .cancel) { discardApproval = nil }
+            Button("Discard draft", role: .destructive) {
+                discardApproval = nil
+                // Freeze synchronously before creating a Task: repeated taps,
+                // Back flush, attachments and Send cannot overtake this command.
+                guard let current = discardContext(), approval.permits(current), draftOperation.reserve(.discard) else { return }
+                focusedField = nil
+                Task { await discard(approval) }
+            }
+        } message: { approval in
+            Text(approval.draft.serverID == nil
+                ? "Permanently remove this draft from this device? This cannot be undone."
+                : "Remove this draft from Orca and request deletion of its linked provider draft? This cannot be undone. If confirmation fails, your writing stays on this device.")
+        }
         .task {
             let activeEditor = UUID(); editorID = activeEditor; isVisible = true
             let needsHydration = preparing; preparing = true
@@ -298,12 +315,13 @@ struct ComposeView: View {
         }
         .onChange(of: scenePhase) {
             if scenePhase == .inactive || scenePhase == .background {
+                showingDiscardConfirmation = false; discardApproval = nil
                 showingPlainTextConfirmation = false; plainTextConversionRequest = nil
                 flushForTransition()
             }
         }
         .onDisappear {
-            isVisible = false; showingPlainTextConfirmation = false; plainTextConversionRequest = nil
+            isVisible = false; showingDiscardConfirmation = false; discardApproval = nil; showingPlainTextConfirmation = false; plainTextConversionRequest = nil
             flushForTransition(closingEditor: editorID)
         }
         .alert("Edit as plain text?", isPresented: $showingPlainTextConfirmation, presenting: plainTextConversionRequest) { request in
@@ -420,7 +438,8 @@ struct ComposeView: View {
     var rejectedDelivery: Bool { local?.deliveryState == "rejected" }
     var copyableDelivery: Bool { local.map { ["rejected", "sent"].contains($0.deliveryState) } ?? false }
     var deliveryRecoveryAction: Bool { local.map { ["sending", "ambiguous", "rejected", "sent"].contains($0.deliveryState) } ?? false }
-    var deliveryFrozen: Bool { preparing || sending || convertingBody || (local.map { ["sending", "ambiguous", "rejected", "sent"].contains($0.deliveryState) } ?? false) }
+    var discarding: Bool { draftOperation.active == .discard }
+    var deliveryFrozen: Bool { discarding || preparing || sending || convertingBody || (local.map { ["sending", "ambiguous", "rejected", "sent"].contains($0.deliveryState) } ?? false) }
     var primaryActionTitle: String { copyableDelivery ? "Edit a new copy" : ((deliveryRecoveryAction || sending) ? "Check delivery" : "Send") }
     var composeAccount: MailAccount? { guard let draftAccountID else { return state.selectedAccount }; return state.accounts.first(where: { $0.id == draftAccountID }) }
     var sendPermissionGate: ComposeSendPermissionGate { Self.sendPermissionGate(account: composeAccount, deliveryState: local?.deliveryState) }
@@ -497,6 +516,45 @@ struct ComposeView: View {
         } catch {
             guard identityIsCurrent() else { return }
             status = "Could not convert this draft. Formatting and links are still preserved. Try again after reopening the saved draft."
+        }
+    }
+    func discardContext() -> ComposeDiscardContext? {
+        guard isVisible, scenePhase == .active, !preparing, !completed, !heldByAnotherComposer,
+              state.phase == .ready, let local, DraftStore.permitsDiscard(local),
+              let owner = draftOwnerScope, owner == state.ownerScope,
+              let account = draftAccountID, account == local.accountId, owner == local.ownerScope,
+              state.accounts.contains(where: { $0.id == account }),
+              let client = state.client, let origin = state.draftServerOrigin else { return nil }
+        return .init(draft: local, content: content(), recipientText: .init(to: to, cc: cc, bcc: bcc),
+                     editorID: editorID, generation: state.draftSessionGeneration,
+                     clientID: ObjectIdentifier(client), origin: origin)
+    }
+    func discard(_ approval: ComposeDiscardContext) async {
+        defer { draftOperation.release(.discard) }
+        guard let client = state.client, ObjectIdentifier(client) == approval.clientID else { return }
+        let result = await discardController.discard(approval, store: state.draftStore, predecessor: saveTask,
+            current: { discardContext() }, checkpointed: { local = $0 }, leased: { reservation in
+                storageReservation = reservation
+                if let reservation {
+                    lastOwnedOperation = reservation.id
+                    state.activeDraftOperations[approval.draft.id] = reservation.id
+                } else if state.activeDraftOperations[approval.draft.id] == lastOwnedOperation {
+                    state.activeDraftOperations.removeValue(forKey: approval.draft.id)
+                }
+            }, delete: { draft in
+                guard let id = draft.serverID else { throw APIClient.ClientError.invalidResponse }
+                try await client.deleteDraftForDiscard(id, accountId: draft.accountId, expectedOrigin: approval.origin) {
+                    await MainActor.run { discardContext().map(approval.permits) == true }
+                }
+            })
+        guard let current = discardContext(), approval.permits(current) else { return }
+        switch result {
+        case .discarded:
+            completed = true; dismiss()
+        case let .kept(message): status = message
+        case .serverDeletedLocalKept:
+            status = "Orca acknowledged server deletion, but this device copy could not be removed. Your writing is kept here. Keep writing or explicitly retry Discard draft; a missing-server response is not success."
+        case .originalRemoved: break
         }
     }
     func validRecipients(_ value: String) -> [Recipient] { value.split(separator: ",", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { Self.isEmail($0) }.map { Recipient(name: nil, email: $0) } }

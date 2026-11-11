@@ -10,6 +10,7 @@ import Foundation
         defer { try? FileManager.default.removeItem(at: root) }
         try await runSavedFirstSearchSurfaceCases(cacheRoot: root.appending(path: "saved-first-search"), check: check)
         try await runDiscardStoreBoundaryCases(cacheRoot: root.appending(path: "discard-store"), check: check)
+        try await runDiscardControllerCases(cacheRoot: root.appending(path: "discard-controller"), check: check)
         try await runPrimaryMailCases(cacheRoot: root.appending(path: "primary-mail"), check: check)
         try await runPaginationCases(cacheRoot: root.appending(path: "pagination"), check: check)
         let state = AppState(cache: CacheStore(directory: root.appending(path: "cache")))
@@ -286,6 +287,7 @@ import Foundation
             try await runCommitStatusCases(state: state, client: client, suite: suite, otherToken: connection.otherToken, createFixtureView: createFixtureView, check: check)
             try await runAppliedReloadCases(state: state, client: client, suite: suite, token: connection.token, otherToken: connection.otherToken, check: check)
             try await runPrimaryMailSenderAPICases(connection: connection, cacheRoot: root.appending(path: "primary-sender-api"), check: check)
+            try await runDiscardAPICases(connection: connection, cacheRoot: root.appending(path: "discard-api"), check: check)
             } catch { check("native-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))

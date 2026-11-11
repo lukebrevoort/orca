@@ -17,6 +17,64 @@ final class OrcaUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        let subject = "Device discard " + String(UUID().uuidString.prefix(8))
+        let before = try composeFixtureRequest("/__fixture/compose/state")
+        app.buttons["compose.open"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["compose.from"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["compose.from"].label.contains(Fixture.account))
+        let to = app.textFields["compose.to"]
+        XCTAssertTrue(to.waitForExistence(timeout: 5)); to.tap(); to.typeText("Unfinished <person@")
+        let title = app.textFields["compose.subject"]
+        title.tap(); title.typeText(subject)
+        focusComposeBody(in: app); messageBody(in: app).typeText("Keep this writing until I explicitly confirm.")
+        app.buttons["compose.keyboard-done"].tap()
+        let discard = app.buttons["compose.discard"]
+        XCTAssertTrue(discard.isEnabled); discard.tap()
+        XCTAssertTrue(app.alerts["Discard this draft?"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "bre457-discard-local-confirmation")
+        app.alerts.buttons["Keep writing"].tap()
+        XCTAssertEqual(title.value as? String, subject)
+        XCTAssertEqual(to.value as? String, "Unfinished <person@")
+        XCTAssertTrue((messageBody(in: app).value as? String ?? "").contains("Keep this writing"))
+        discard.tap(); app.alerts.buttons["Discard draft"].tap()
+        XCTAssertTrue(app.buttons["compose.open"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["Drafts"].tap()
+        XCTAssertFalse(app.staticTexts[subject].exists, "Only the explicitly approved device copy is removed")
+        let after = try composeFixtureRequest("/__fixture/compose/state")
+        XCTAssertEqual(try XCTUnwrap(after["deliveries"] as? Int), try XCTUnwrap(before["deliveries"] as? Int))
+        XCTAssertEqual(try XCTUnwrap(after["sendRequests"] as? Int), try XCTUnwrap(before["sendRequests"] as? Int))
+        attachScreenshot(named: "bre457-discard-local-acknowledged")
+    }
+
+    func test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows() throws {
+        let app = try launchApp(); assertInboxLoaded(in: app)
+        app.tabBars.buttons["Settings"].tap()
+        app.buttons["settings.visible-views"].tap()
+        let hub = app.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.views.view:", "Hub notifications")).firstMatch
+        XCTAssertTrue(hub.waitForExistence(timeout: 10))
+        if hub.value as? String != "1" { hub.tap() }
+        app.tabBars.buttons["Mail"].tap()
+        app.buttons["inbox.view-picker"].tap(); app.buttons["Hub notifications"].tap()
+        let saved = app.buttons["view.thread.ios-fixture-thread-2"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 10))
+        try refreshFixture("arm", method: "POST", scenario: "controls")
+        addTeardownBlock { try self.refreshFixture("release", method: "POST") }
+        search(for: "Jordan", in: app)
+        try refreshFixture("wait", method: "GET")
+        XCTAssertTrue(app.collectionViews["inbox.list"].exists, "The first submitted search owns its pending surface before any accepted resultSearch exists")
+        XCTAssertTrue(app.descendants(matching: .any)["mail.search.loading"].exists)
+        XCTAssertFalse(saved.exists, "Saved View rows must not hide the in-flight All Mail search")
+        XCTAssertEqual(app.searchFields["Search All Mail"].value as? String, "Jordan")
+        attachScreenshot(named: "bre457-saved-first-search-pending")
+        try refreshFixture("release", method: "POST")
+        XCTAssertTrue(app.buttons["inbox.message.\(Fixture.searchResultMessageID)"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["mail.list-heading"].label.contains("Jordan"))
+        XCTAssertFalse(app.descendants(matching: .any)["mail.search.loading"].exists)
+        attachScreenshot(named: "bre457-saved-first-search-accepted")
+    }
+
     func test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText() throws {
         let app = try launchApp(); assertInboxLoaded(in: app)
         search(for: "Jordan", in: app)

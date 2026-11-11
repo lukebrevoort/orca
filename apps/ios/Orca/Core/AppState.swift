@@ -20,6 +20,8 @@ import SwiftUI
     weak var accountPreferences: AccountPreferencesController?
     @Published private(set) var mailboxReadRevision = UUID()
     private var connectionGeneration = UUID()
+    var draftSessionGeneration: UUID { connectionGeneration }
+    var draftServerOrigin: String? { validatedBaseURL(baseURLText).map(origin) }
     private var accountRefreshGeneration = UUID()
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()

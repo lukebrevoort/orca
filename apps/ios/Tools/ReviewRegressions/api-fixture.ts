@@ -24,6 +24,8 @@ sqlite.exec(`CREATE TABLE bre457_preference_write_probe(user_id TEXT NOT NULL, o
 CREATE TRIGGER bre457_preference_insert_probe AFTER INSERT ON user_preferences BEGIN INSERT INTO bre457_preference_write_probe VALUES(new.user_id,'insert'); END;
 CREATE TRIGGER bre457_preference_update_probe AFTER UPDATE ON user_preferences BEGIN INSERT INTO bre457_preference_write_probe VALUES(new.user_id,'update'); END;
 CREATE TRIGGER bre457_preference_delete_probe AFTER DELETE ON user_preferences BEGIN INSERT INTO bre457_preference_write_probe VALUES(old.user_id,'delete'); END;`);
+sqlite.exec(`CREATE TABLE bre457_draft_delete_probe(id TEXT NOT NULL, account_id TEXT NOT NULL);
+CREATE TRIGGER bre457_draft_delete_probe_trigger AFTER DELETE ON message_drafts BEGIN INSERT INTO bre457_draft_delete_probe VALUES(old.id,old.account_id); END;`);
 const credential = createMobileSession(db, 'owner'), otherCredential = createMobileSession(db, 'owner-b');
 let providerCalls = 0, dropNext = false, dropAnyNext = false;
 const ledger: unknown[] = [], requests: unknown[] = [];
@@ -48,7 +50,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   }
   if (url.pathname === '/__bre457/drop-next-commit-response') { dropAnyNext = true; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/drop-next-commit') { dropNext = true; return Response.json({ ok: true }); }
-  if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger, requests, heldCommand, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all() });
+  if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), drafts: sqlite.query('SELECT id,account_id,delivery_status,send_idempotency_key FROM message_drafts ORDER BY id').all(), draftDeletes: sqlite.query('SELECT id,account_id FROM bre457_draft_delete_probe').all(), providerCalls, ledger, requests, heldCommand, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all() });
   const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
   if (command && holdNext) { holdNext = false; heldRequest = request.clone(); heldCommand = command; ledger.push({ path: url.pathname, actualStatus: null, deliveredStatus: 503, command, held: true }); return Response.json({ error: { code: 'synthetic_held_original', message: 'Original request deliberately delayed before API dispatch' } }, { status: 503 }); }
   const prepareBody = request.method === 'POST' && url.pathname === '/v1/organization/views/prepare' ? await request.clone().json() as { kind?: string; viewId?: string } : null;
@@ -64,5 +66,5 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   return response;
 } });
 writeFileSync(output, JSON.stringify({ baseURL: `http://127.0.0.1:${server.port}/`, token: credential.accessToken, otherToken: otherCredential.accessToken }), { mode: 0o600 });
-function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all(), views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
+function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all(), views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), drafts: sqlite.query('SELECT id,account_id,delivery_status,send_idempotency_key FROM message_drafts ORDER BY id').all(), draftDeletes: sqlite.query('SELECT id,account_id FROM bre457_draft_delete_probe').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
 process.on('SIGTERM', cleanup); process.on('SIGINT', cleanup);
