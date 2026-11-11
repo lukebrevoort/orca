@@ -1,0 +1,17 @@
+{
+  "source": "66e156e5b3d7d99268b3055dad095487497cc5b1",
+  "command": [
+    "bun",
+    "run",
+    "--sequential",
+    "--filter",
+    "*",
+    "test"
+  ],
+  "rawLog": "/tmp/bre461-final-head-gates/test.log",
+  "actualFailure": "Orca API > upgrades a database at migration 0003 with the reader storage migrations",
+  "expectedByOldTest": 2,
+  "actualRevision": 3,
+  "explanation": "0051 and additive 0053 each retire mailbox cursors once; the test expected only 0051. Both first-upgrade and replay assertions now require exactly 3, retaining one-time invalidation and replay stability. Production behavior was preserved.",
+  "isolatedReplay": "Heavy slot exit75: not started; full sequential API suite is genuine red evidence, 1166 pass / 1 fail."
+}
