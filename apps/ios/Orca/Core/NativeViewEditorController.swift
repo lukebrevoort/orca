@@ -201,7 +201,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
             do {
                 return try await completeApplied(id: applied.id, workspaceRevision: applied.workspace, viewRevision: applied.view, command: command, client: client, state: state, request: request)
             } catch {
-                if await currentClient(request) { error = "Original Save applied as \(applied.id), but that View is unavailable. No replacement was created. Reload it again when connected." }
+                if await currentClient(request) { self.error = "Original Save applied as \(applied.id), but that View is unavailable. No replacement was created. Reload it again when connected." }
                 return nil
             }
         }
