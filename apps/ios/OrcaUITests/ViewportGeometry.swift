@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// UI-test stimulus geometry only. This does not change app layout or state.
 enum ViewportGeometry {
