@@ -1,0 +1,218 @@
+{
+  "scope": "Harness correctness and retained old sanitizer replay only; no speedup, identical output, full app or final-head gate claim. Request partition v2 differs from historical measurements.",
+  "harnessSha256": "779ebbb0a80d3c9c1b72c56a9cb18c466d4a8ac2a2224fd8452fec9a91a6bcd5",
+  "baseline": {
+    "revision": "e9f928258479aa7b46f7489c6e3e100c254a064f",
+    "role": "baseline",
+    "sanitizerExport": "sanitizeProviderHtml",
+    "parserVersion": "12.0.0",
+    "sanitizerParserVersion": "12.0.0",
+    "runtime": "1.3.14",
+    "lockSha256": "ed608305f7dd563306ebfcd889a002a3dbceaeadcf9d54c3d6c6aed6d166b06f"
+  },
+  "candidate": {
+    "revision": "ed8493b5ab3e7ec74128852fe68c48fb53cafa72",
+    "role": "candidate",
+    "sanitizerExport": "sanitizeImageSourceHtml",
+    "parserVersion": "12.0.0",
+    "sanitizerParserVersion": "12.0.0",
+    "runtime": "1.3.14",
+    "lockSha256": "b716f52383585ab058f94872a11c468258069ae8158c19014b66775aeb6acff7"
+  },
+  "perRevision": {
+    "workloads": 7,
+    "measuredRows": 84,
+    "warmupRows": 14,
+    "authorizationControls": 4,
+    "downloads": 0
+  },
+  "workloads": [
+    {
+      "name": "null-250",
+      "count": 250,
+      "batches": [
+        {
+          "id": "null-250",
+          "count": 100
+        },
+        {
+          "id": "null-250-batch-1",
+          "count": 100
+        },
+        {
+          "id": "null-250-batch-2",
+          "count": 50
+        }
+      ],
+      "bytesPerMessage": 0,
+      "payloadSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "4KiB-250-noimg",
+      "count": 250,
+      "batches": [
+        {
+          "id": "4KiB-250-noimg",
+          "count": 100
+        },
+        {
+          "id": "4KiB-250-noimg-batch-1",
+          "count": 100
+        },
+        {
+          "id": "4KiB-250-noimg-batch-2",
+          "count": 50
+        }
+      ],
+      "bytesPerMessage": 4096,
+      "payloadSha256": "c992f13cc3540241f5c1ff8637548265fb2180ee8cb7fbfc4e0af4e7c0cbe9dd"
+    },
+    {
+      "name": "100KiB-1-noimg",
+      "count": 1,
+      "batches": [
+        {
+          "id": "100KiB-1-noimg",
+          "count": 1
+        }
+      ],
+      "bytesPerMessage": 102400,
+      "payloadSha256": "41912a6da7172c6614a2752a0ea10700da1090166e405b3ca96bbd9ea0b1d44c"
+    },
+    {
+      "name": "100KiB-50-noimg",
+      "count": 50,
+      "batches": [
+        {
+          "id": "100KiB-50-noimg",
+          "count": 50
+        }
+      ],
+      "bytesPerMessage": 102400,
+      "payloadSha256": "41912a6da7172c6614a2752a0ea10700da1090166e405b3ca96bbd9ea0b1d44c"
+    },
+    {
+      "name": "100KiB-50-tailimg",
+      "count": 50,
+      "batches": [
+        {
+          "id": "100KiB-50-tailimg",
+          "count": 50
+        }
+      ],
+      "bytesPerMessage": 102400,
+      "payloadSha256": "78974a213a40f61dd99835f10d4086ddbe9c4a24f0d7d652b657fea466867ce1"
+    },
+    {
+      "name": "1MiB-1-noimg",
+      "count": 1,
+      "batches": [
+        {
+          "id": "1MiB-1-noimg",
+          "count": 1
+        }
+      ],
+      "bytesPerMessage": 1048576,
+      "payloadSha256": "2f0190f859bbb5c87f766a40b336692a3498d116cdaef5842184a2c11b19bd30"
+    },
+    {
+      "name": "1MiB-10-tailimg",
+      "count": 10,
+      "batches": [
+        {
+          "id": "1MiB-10-tailimg",
+          "count": 7
+        },
+        {
+          "id": "1MiB-10-tailimg-batch-1",
+          "count": 3
+        }
+      ],
+      "bytesPerMessage": 1048576,
+      "payloadSha256": "3b96f5489a626422b50148a3ee85d7a837168edf634dba8640da131fc6109a67"
+    }
+  ],
+  "observedSanitizerCallsPerRepeat": [
+    {
+      "name": "null-250",
+      "baseline": [
+        250
+      ],
+      "candidate": [
+        0
+      ]
+    },
+    {
+      "name": "4KiB-250-noimg",
+      "baseline": [
+        250
+      ],
+      "candidate": [
+        0
+      ]
+    },
+    {
+      "name": "100KiB-1-noimg",
+      "baseline": [
+        1
+      ],
+      "candidate": [
+        0
+      ]
+    },
+    {
+      "name": "100KiB-50-noimg",
+      "baseline": [
+        50
+      ],
+      "candidate": [
+        0
+      ]
+    },
+    {
+      "name": "100KiB-50-tailimg",
+      "baseline": [
+        50
+      ],
+      "candidate": [
+        50
+      ]
+    },
+    {
+      "name": "1MiB-1-noimg",
+      "baseline": [
+        1
+      ],
+      "candidate": [
+        0
+      ]
+    },
+    {
+      "name": "1MiB-10-tailimg",
+      "baseline": [
+        10
+      ],
+      "candidate": [
+        10
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/bre444-image-bench-red-0182327c.log",
+      "sha256": "0925ec2def19700241a21c7ea070d2dd47cb54240a1d0496117caeb7b9fe763e"
+    },
+    {
+      "path": "/tmp/bre444-image-bench-red-5797d2e3.log",
+      "sha256": "5527f976151b8a33c4009b7d9b03b37f989aafaed78fd888abdf75d9fb401131"
+    },
+    {
+      "path": "/tmp/bre444-image-bench-baseline-e9f92825.json",
+      "sha256": "936735102d97570b0daacc509cb187062a0c4eb7e551f8cf9bce9d4b265ecb5c"
+    },
+    {
+      "path": "/tmp/bre444-image-bench-green-ed8493b5.json",
+      "sha256": "ce6e0ebacdf67c4400a9a6fa893d65052bb8ec9324a4e5a0e273dcd5b0cfd123"
+    }
+  ]
+}

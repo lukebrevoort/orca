@@ -1,0 +1,24 @@
+completed null-250
+completed 4KiB-250-noimg
+completed 100KiB-1-noimg
+completed 100KiB-50-noimg
+120 |     }
+121 |     const sum=(key:'wallMs'|'cpuMs'|'scanCalls'|'scanBytes'|'scanMs'|'providerCalls'|'providerInputBytes')=>responses.reduce((n,r)=>n+r[key],0);
+122 |     const r={status:200,body:responses.map(r=>r.body).join('\n'),wallMs:sum('wallMs'),cpuMs:sum('cpuMs'),rssBefore:responses[0]!.rssBefore,rssAfter:responses.at(-1)!.rssAfter,scanCalls:sum('scanCalls'),scanBytes:sum('scanBytes'),scanMs:sum('scanMs'),providerCalls:sum('providerCalls'),providerInputBytes:sum('providerInputBytes'),requestCount:responses.length};
+123 |     assert.equal(r.scanCalls,w.count);assert.equal(r.scanBytes,w.count*Buffer.byteLength(w.html??''));
+124 |     const expectedProviderCalls: number=role==='baseline'||w.name.includes('tailimg')?w.count:0;
+125 |     assert.equal(r.providerCalls,expectedProviderCalls);
+                 ^
+AssertionError: Expected values to be strictly equal:
+
+0 !== 50
+
+ generatedMessage: true,
+     actual: 0,
+   expected: 50,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/orca/apps/api/benchmarks/image-eligibility.ts:125:12
+
+Bun v1.3.14 (macOS arm64)
