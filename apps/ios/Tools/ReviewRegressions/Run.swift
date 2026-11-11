@@ -8,6 +8,7 @@ import Foundation
         let root = FileManager.default.temporaryDirectory.appending(path: "bre457-controller-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
+        try await runPaginationCases(cacheRoot: root.appending(path: "pagination"), check: check)
         let state = AppState(cache: CacheStore(directory: root.appending(path: "cache")))
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [ReviewURLProtocol.self]
         state.client = APIClient(baseURL: URL(string: "https://example.invalid")!, session: URLSession(configuration: config)) { "synthetic" }

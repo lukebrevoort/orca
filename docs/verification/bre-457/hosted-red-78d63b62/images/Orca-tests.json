@@ -1,0 +1,123 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "5B82265D-6381-4C9B-815F-9EF1B05261D1",
+      "deviceName" : "Orca CI 43024332168-1",
+      "modelName" : "iPhone 17",
+      "osBuildNumber" : "23E254a",
+      "osVersion" : "26.4.1",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "1m 2s",
+                  "durationInSeconds" : 62.54729199409485,
+                  "name" : "testChangedImageSourceRequiresSnapshotRefreshAndNewConsent()",
+                  "nodeIdentifier" : "ReaderUITests/testChangedImageSourceRequiresSnapshotRefreshAndNewConsent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testChangedImageSourceRequiresSnapshotRefreshAndNewConsent",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "54s",
+                  "durationInSeconds" : 54.52479791641235,
+                  "name" : "testImagesRequireExplicitLoadingAndResetOnReopen()",
+                  "nodeIdentifier" : "ReaderUITests/testImagesRequireExplicitLoadingAndResetOnReopen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testImagesRequireExplicitLoadingAndResetOnReopen",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "ReaderUITests.swift:346: XCTAssertTrue failed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "35s",
+                  "durationInSeconds" : 35.7202570438385,
+                  "name" : "testMissingImageCapabilityOffersRefreshWithoutLoading()",
+                  "nodeIdentifier" : "ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "39s",
+                  "durationInSeconds" : 39.654289960861206,
+                  "name" : "testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages()",
+                  "nodeIdentifier" : "ReaderUITests/testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "24s",
+                  "durationInSeconds" : 24.588218092918396,
+                  "name" : "testOversizedImageSnapshotRefreshOffersReadOnlyRecovery()",
+                  "nodeIdentifier" : "ReaderUITests/testOversizedImageSnapshotRefreshOffersReadOnlyRecovery()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testOversizedImageSnapshotRefreshOffersReadOnlyRecovery",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "ReaderUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "OrcaUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "Orca",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}

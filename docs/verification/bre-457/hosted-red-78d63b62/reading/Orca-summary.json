@@ -1,0 +1,127 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "B1DF1EB0-9DC8-42D8-9C2D-D9FEB2926EA2",
+        "deviceName" : "Orca CI 43024332168-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 9,
+      "passedTests" : 178,
+      "skippedTests" : 5,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 9,
+  "finishTime" : 1794402725.379,
+  "passedTests" : 178,
+  "result" : "Failed",
+  "skippedTests" : 5,
+  "startTime" : 1794402244.868,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "XCTAssertEqual failed: (\"0\") is not equal to (\"1\")",
+      "targetName" : "OrcaTests",
+      "testIdentifier" : 104,
+      "testIdentifierString" : "NativeViewEditorRecoveryTests/testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeViewEditorRecoveryTests/testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView",
+      "testName" : "testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView()"
+    },
+    {
+      "failureText" : "XCTAssertEqual failed: (\"[]\") is not equal to (\"[\"saved\"]\")",
+      "targetName" : "OrcaTests",
+      "testIdentifier" : 75,
+      "testIdentifierString" : "InboxRecoveryTests/testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests/testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails",
+      "testName" : "testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails()"
+    },
+    {
+      "failureText" : "XCTAssertEqual failed: (\"3\") is not equal to (\"2\")",
+      "targetName" : "OrcaTests",
+      "testIdentifier" : 78,
+      "testIdentifierString" : "InboxRecoveryTests/testUnrelatedPaginationFailuresKeepCursorForManualRetry()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests/testUnrelatedPaginationFailuresKeepCursorForManualRetry",
+      "testName" : "testUnrelatedPaginationFailuresKeepCursorForManualRetry()"
+    },
+    {
+      "failureText" : "Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x10a29aa30>.\nSparse tree of matches:\n→Application, pid: 25784, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳CollectionView, identifier: 'inbox.list'\n                                    ↳Cell\n                                      ↳Other\n                                        ↳Other\n                                          ↳Other\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-3', label: 'Sofia Martinez, 11:27 AM, Notes from our conversation, Here are the three things I took away: protect people's attention, make writing effortless, and never lose a draft.\n\nThat feels like the right place t, Unreviewed'\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-3', label: 'Importance for Notes from our conversation', value: Unreviewed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 182,
+      "testIdentifierString" : "OrcaUITests/test04StyledHTMLUsesReadableCanvas()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas",
+      "testName" : "test04StyledHTMLUsesReadableCanvas()"
+    },
+    {
+      "failureText" : "Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x10a29ad00>.\nSparse tree of matches:\n→Application, pid: 27003, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳CollectionView, identifier: 'inbox.list'\n                                    ↳Cell\n                                      ↳Other\n                                        ↳Other\n                                          ↳Other\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Maya Chen, 12:57 PM, Unread, A quieter kind of inbox, I tried the new reading view this morning. The space around each conversation makes such a difference.\n\nCould we catch up tomorrow about the writing e, Unreviewed'\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Importance for A quieter kind of inbox', value: Unreviewed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 183,
+      "testIdentifierString" : "OrcaUITests/test07ConversationOpensAtLatestMessage()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage",
+      "testName" : "test07ConversationOpensAtLatestMessage()"
+    },
+    {
+      "failureText" : "Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x10a29af80>.\nSparse tree of matches:\n→Application, pid: 27989, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳CollectionView, identifier: 'inbox.list'\n                                    ↳Cell\n                                      ↳Other\n                                        ↳Other\n                                          ↳Other\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Maya Chen, 12:57 PM, Unread, A quieter kind of inbox, I tried the new reading view this morning. The space around each conversation makes such a difference.\n\nCould we catch up tomorrow about the writing e, Unreviewed'\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Importance for A quieter kind of inbox', value: Unreviewed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 184,
+      "testIdentifierString" : "OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps",
+      "testName" : "test37LongConversationOffersOffscreenUnreadAndLatestJumps()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 186,
+      "testIdentifierString" : "ReaderUITests/testEarlierMessagesRemainReadableAtAccessibilitySize()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testEarlierMessagesRemainReadableAtAccessibilitySize",
+      "testName" : "testEarlierMessagesRemainReadableAtAccessibilitySize()"
+    },
+    {
+      "failureText" : "Failed to swipe up \"inbox.list\" CollectionView: No matches found for Elements matching predicate '\"inbox.list\" IN identifiers' from input {(\n    Window (Main),\n    Window,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Button, identifier: 'feedback.open', label: 'Feedback',\n    Other,\n    Other,\n    Image, identifier: 'bubble.left', label: 'Comment Left',\n    StaticText, label: 'Feedback',\n    Other,\n    Other,\n    Other,\n    Other,\n    TabBar, label: 'Tab Bar',\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Button, identifier: 'tray', label: 'Mail',\n    Button, identifier: 'doc.text', label: 'Drafts', Selected,\n    Button, identifier: 'gearshape', label: 'Settings',\n    Other,\n    Other,\n    Other,\n    NavigationBar, identifier: 'Drafts',\n    Other,\n    Other,\n    Image, identifier: 'tray.fill', label: 'inbox',\n    Image, identifier: 'text.document.fill', label: 'text.document.fill',\n    Image, identifier: 'gearshape.fill', label: 'gearshape.fill',\n    Other,\n    Other,\n    Other,\n    StaticText, label: 'Drafts',\n    Other, identifier: 'magnifyingglass', label: 'Search All Mail',\n    Other, identifier: 'compose.open', label: 'Compose',\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Button, identifier: 'magnifyingglass', label: 'Search All Mail',\n    Button, identifier: 'compose.open', label: 'Compose',\n    Other,\n    Other,\n    Image, identifier: 'doc.text', label: 'Plain Text Document',\n    StaticText, label: 'No drafts',\n    StaticText, label: 'Anything you start writing will be saved immediately.'\n)}",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 187,
+      "testIdentifierString" : "ReaderUITests/testHTMLAtAccessibilityTypeSize()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testHTMLAtAccessibilityTypeSize",
+      "testName" : "testHTMLAtAccessibilityTypeSize()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 189,
+      "testIdentifierString" : "ReaderUITests/testLongHTMLScrollBackAndRepeatedOpen()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testLongHTMLScrollBackAndRepeatedOpen",
+      "testName" : "testLongHTMLScrollBackAndRepeatedOpen()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+    {
+      "category" : "Common Failures",
+      "impact" : "11% of failures",
+      "text" : "4 runs of 1 test failed with XCTAssertEqual failed: (\"0\") is not equal to (\"1\")"
+    },
+    {
+      "category" : "Common Failures",
+      "impact" : "22% of failures",
+      "text" : "3 runs of 2 tests failed with XCTAssertEqual failed: (\"[]\") is not equal to (\"[\"saved\"]\")"
+    },
+    {
+      "category" : "Common Failures",
+      "impact" : "11% of failures",
+      "text" : "3 runs of 1 test failed with XCTAssertEqual failed: (\"Original\") is not equal to (\"Newer preserved edit\")"
+    }
+  ],
+  "totalTestCount" : 192
+}
