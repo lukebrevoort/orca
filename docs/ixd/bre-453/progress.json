@@ -1,0 +1,17 @@
+{
+  "product": "Orca foundation direction",
+  "platform": "both",
+  "language": "en",
+  "scope": "BRE-453 November application rework; preparatory design while BRE-448/449/450/451 await merge gates",
+  "phases": {
+    "1": { "status": "done", "file": "phase1-context.md", "summary": "Readable mail, direct importance correction, calm retrieval and dependable correspondence; responsive web and native iOS; privacy and account boundaries preserved." },
+    "2": { "status": "pending", "file": null, "summary": null },
+    "3": { "status": "pending", "file": null, "summary": null },
+    "4": { "status": "pending", "file": null, "summary": null, "pagesCompleted": [], "pagesTotal": 0 },
+    "5": { "status": "pending", "file": null, "summary": null },
+    "6": { "status": "pending", "file": null, "summary": null },
+    "7": { "status": "pending", "file": null, "summary": null, "pagesCompleted": [], "pagesTotal": 0 },
+    "8": { "status": "pending", "file": null, "summary": null, "reviewRounds": 0, "reviewResult": null }
+  },
+  "lastUpdated": "2026-11-11T05:00:00Z"
+}
