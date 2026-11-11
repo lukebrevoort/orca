@@ -114,6 +114,57 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected)
     }
 
+    func test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity() throws {
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
+            let name = "Native editor " + UUID().uuidString.prefix(8)
+            func ownedViews() throws -> [[String: Any]] {
+                let catalog = try composeFixtureRequest("/v1/organization/views")
+                return (catalog["items"] as? [[String: Any]] ?? []).filter { $0["name"] as? String == name }
+            }
+            addTeardownBlock {
+                let catalog = try self.composeFixtureRequest("/v1/organization/views")
+                for view in (catalog["items"] as? [[String: Any]] ?? []).filter({ $0["name"] as? String == name }) {
+                    let id = try XCTUnwrap(view["id"] as? String), revision = try XCTUnwrap(view["revision"] as? Int)
+                    let current = try self.composeFixtureRequest("/v1/organization/views")
+                    let workspace = try XCTUnwrap(current["workspaceRevision"] as? Int)
+                    _ = try self.composeFixtureRequest("/v1/organization/views/\(id)?expectedRevision=\(revision)&expectedWorkspaceRevision=\(workspace)&idempotencyKey=\(UUID().uuidString)", method: "DELETE")
+                }
+            }
+            let app = try launchApp(contentSize: size)
+            search(for: "Friday", in: app)
+            let saveSearch = app.buttons["search.save-view"]
+            XCTAssertTrue(saveSearch.waitForExistence(timeout: 10)); saveSearch.tap()
+            let field = app.textFields["view-editor.name"]
+            XCTAssertTrue(field.waitForExistence(timeout: 10)); field.tap()
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (field.value as? String ?? "").count)); field.typeText(String(name))
+            let preview = app.buttons["view-editor.preview"]
+            for _ in 0..<5 { if preview.isHittable { break }; app.swipeUp() }
+            XCTAssertTrue(preview.isHittable); preview.tap()
+            let save = app.buttons["view-editor.save"]
+            for _ in 0..<5 { if save.exists { break }; app.swipeUp() }
+            XCTAssertTrue(save.waitForExistence(timeout: 10)); XCTAssertFalse(save.isEnabled, "Unsupported general search requires explicit replacement")
+            XCTAssertTrue(try ownedViews().isEmpty, "Preview must create no View")
+            attachScreenshot(named: "bre457-native-editor-unsupported-" + size)
+            let replacement = app.switches["Replace search with subject contains"]
+            for _ in 0..<5 { if replacement.isHittable { break }; app.swipeDown() }
+            XCTAssertTrue(replacement.isHittable); replacement.tap()
+            for _ in 0..<5 { if preview.isHittable { break }; app.swipeUp() }; preview.tap()
+            for _ in 0..<5 { if save.isHittable { break }; app.swipeUp() }
+            XCTAssertTrue(save.waitForExistence(timeout: 10)); XCTAssertTrue(save.isEnabled)
+            attachScreenshot(named: "bre457-native-editor-reviewed-" + size); save.tap()
+            let edit = app.buttons["view.edit"]
+            XCTAssertTrue(edit.waitForExistence(timeout: 15))
+            let created = try ownedViews(); XCTAssertEqual(created.count, 1)
+            let createdID = try XCTUnwrap(created.first?["id"] as? String)
+            edit.tap(); XCTAssertTrue(field.waitForExistence(timeout: 10))
+            XCTAssertEqual(field.value as? String, String(name))
+            attachScreenshot(named: "bre457-native-editor-reopened-" + size)
+            app.buttons["Cancel"].tap()
+            XCTAssertEqual(try ownedViews().first?["id"] as? String, createdID, "Reopening the created View must retain its actual identity")
+            app.terminate()
+        }
+    }
+
     func test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof() throws {
         let accounts = try composeFixtureRequest("/v1/accounts")
         let accountID = try XCTUnwrap((accounts["items"] as? [[String: Any]])?.first?["id"] as? String)
