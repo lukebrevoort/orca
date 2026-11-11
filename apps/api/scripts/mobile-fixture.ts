@@ -347,20 +347,32 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
   // They simulate browser consent and another device completing delivery; no
   // Google/OAuth request, persistent grant, or provider delivery is performed.
   if (url.pathname.startsWith("/__fixture/compose/")) {
-    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    // Diagnose the native control's pre-launch transport boundary without logging
+    // credentials, body values or connection metadata. This is fixture-only.
+    const trace = url.pathname === "/__fixture/compose/capabilities" ? crypto.randomUUID() : null;
+    const traceControl = (event: "received" | "body_read" | "response_ready", status?: number) => {
+      if (trace) console.log(`[compose-control-fixture] ${JSON.stringify({ trace, event, epoch_ms: Date.now(), method: request.method, path: url.pathname, ...(status === undefined ? {} : { status }) })}`);
+    };
+    const controlResponse = (status: number) => {
+      traceControl("response_ready", status);
+      return new Response(null, { status });
+    };
+    traceControl("received");
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return controlResponse(401);
     if (request.method === "GET" && url.pathname === "/__fixture/compose/state") {
       return Response.json({ sendEnabled, accountsUnavailable, sendRequests, deliveries: sent.length });
     }
-    if (request.method !== "POST") return new Response(null, { status: 405 });
+    if (request.method !== "POST") return controlResponse(405);
     const raw = await request.text();
-    if (raw.length > 4096) return new Response(null, { status: 413 });
+    traceControl("body_read");
+    if (raw.length > 4096) return controlResponse(413);
     let body: Record<string, unknown>;
     try { body = JSON.parse(raw); if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("object required"); }
-    catch { return new Response(null, { status: 400 }); }
+    catch { return controlResponse(400); }
     if (url.pathname === "/__fixture/compose/capabilities") {
-      if (typeof body.sendEnabled !== "boolean" || typeof body.accountsUnavailable !== "boolean") return new Response(null, { status: 400 });
+      if (typeof body.sendEnabled !== "boolean" || typeof body.accountsUnavailable !== "boolean") return controlResponse(400);
       sendEnabled = body.sendEnabled; accountsUnavailable = body.accountsUnavailable;
-      return new Response(null, { status: 204 });
+      return controlResponse(204);
     }
     if (url.pathname === "/__fixture/compose/delivery") {
       if (typeof body.draftId !== "string" || !["sending", "ambiguous", "sent", "rejected"].includes(String(body.status))) return new Response(null, { status: 400 });
