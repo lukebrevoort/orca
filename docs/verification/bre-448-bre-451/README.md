@@ -39,3 +39,9 @@ No provider/API behavior changes. No live mail, OAuth, credentials, delivery, de
 ## Visual inspection and cleanup
 
 Inspected light/dark screenshots for readable labels, modal keyboard focus, picker focus, selected radio states, hover Leave action, and disabled Saved state. The initial modal and sticky-picker positioning errors were corrected before the accepted run. Additional 320/1024/1440 screenshots are retained in `/tmp/orca-settings-full-v4`; selected PNGs keep the commit small. Owned server process is stopped after final verification; evidence remains. Rollback is a revert of this PR; no data migration or account write is needed.
+# Independent review follow-up
+
+Source review found that confirming Leave before an asynchronous Outlook authorization request cleared dirty state even when that request failed and Settings stayed open. A new synthetic browser regression reproduced **12 failed assertions in six cases** (both themes × provider unavailable/server failure/offline) on `9a29e0c060507f327b8752906bace42322d17030`. Unsaved values remained visible while Save became disabled and subsequent Compose was unprotected. Authorization now preserves dirty state until a real redirect; the existing native unload guard protects that navigation. No live provider call is used in the test.
+
+The same regression also checks focus after Stay and two animation frames. All six focus checks passed before the fix; the source-identified competing-restoration concern was not reproduced. Final revision results are recorded in the PR separately from the earlier verification below. Reproduce with `node apps/web/scripts/settings-review-e2e.mjs http://127.0.0.1:5198 /tmp/settings-review-new` against an owned Vite server.
+

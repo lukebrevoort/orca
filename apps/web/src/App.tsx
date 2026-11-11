@@ -856,11 +856,13 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
   function connectOutlook() {
-    navigationGuard.request(() => { void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
+    // The request can fail without leaving Settings. Keep edits dirty; the
+    // native unload guard protects the actual authorization redirect instead.
+    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
       if (result !== "provider_unavailable") return;
       setOutlookAuthorizationStatus("error");
       setOutlookAuthorizationError("Microsoft Outlook connection is unavailable here. Your existing mail access was not changed. Check with your Orca administrator before trying again.");
-    }); });
+    });
   }
   async function revokeConnection(connection: McpConnection) {
     if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
