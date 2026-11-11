@@ -13,3 +13,8 @@ After actual P2 red, surface choice must distinguish submitted/pending intent fr
 The production policy now uses explicit submitted intent (`primarySubmittedQuery`) independently of accepted `resultSearch`. InboxView uses this policy for saved-row selection, foreground/read refresh eligibility, error inset and saved-view explanation. The existing loader still clears unauthorized rows and retains editable input; accepted provenance is not assigned on submission. The same12 baseline cases and all earlier152 remain in the harness without changed assertions.
 
 New hosted test52 enters through an actual visible saved View, submits Search through the real handler, and uses the existing controlled inbox-refresh ingress to retain a pending HTTP response. It requires the search list/progress and absence of saved rows before release, then actual accepted matching mail/provenance. Both mailbox phase selections include it and the synthetic runner lifecycle guard checks the selected identity. This test is authored, not executed;503/offline/401 policy proof remains Foundation/controller scope until hosted failure scenarios are available. Reader/Tools/jump tests remain untouched.
+
+
+## Actual Foundation candidate result
+
+At clean `f15310e69f509356c56a95b7b56d84f2e47ede4d`, all12 unchanged first-search pending/error preconditions and visibility assertions passed within [223/223 actual controller/API cases](discard-candidate-f15310e6/scope.json), compile0/runtime0. This closes the established Foundation surface-policy regression across503/offline/401 while retaining accepted provenance and unfinished input. Test52 remains authored/unexecuted; no SwiftUI runtime, screenshot or full native acceptance claim follows from the Foundation result.
