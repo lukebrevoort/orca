@@ -9,6 +9,12 @@ import Foundation
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         try runNavigationProjectionBaselineCases(check: check)
+        try runNativeCatalogModelCases(check: check)
+        try runRoutingCompensationCases(check: check)
+        try await runNativeCatalogControllerCases(cacheRoot: root.appending(path: "catalog-controller"), check: check)
+        try await runNativeCatalogHeldCases(cacheRoot: root.appending(path: "catalog-held"), check: check)
+        try await runNativeCatalogBoundaryCases(cacheRoot: root.appending(path: "catalog-boundary"), check: check)
+        try await runNativeCatalogResponseOriginCase(cacheRoot: root.appending(path: "catalog-origin"), check: check)
         try await runSavedFirstSearchSurfaceCases(cacheRoot: root.appending(path: "saved-first-search"), check: check)
         try await runDiscardStoreBoundaryCases(cacheRoot: root.appending(path: "discard-store"), check: check)
         try await runDiscardControllerCases(cacheRoot: root.appending(path: "discard-controller"), check: check)
@@ -290,6 +296,7 @@ import Foundation
             try await runPrimaryMailSenderAPICases(connection: connection, cacheRoot: root.appending(path: "primary-sender-api"), check: check)
             try await runDiscardAPICases(connection: connection, cacheRoot: root.appending(path: "discard-api"), check: check)
             try await runNavigationAPIBaselineCases(connection: connection, check: check)
+            try await runNativeCatalogAPICases(connection: connection, cacheRoot: root.appending(path: "catalog-api"), check: check)
             } catch { check("native-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))

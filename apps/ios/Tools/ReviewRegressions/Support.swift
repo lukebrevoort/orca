@@ -12,6 +12,8 @@ import SwiftUI
     var selectedTab = "settings"
     var pendingSettingsNavigation: SettingsNavigationRequest?
     weak var accountPreferences: AccountPreferencesController?
+    var mailConnectionGeneration = UUID()
+    var routedMailbox: NativeMailIntent?
     var routedThread: (id: String, accountId: String)?
     var ownerScope = "synthetic-owner"
     var userID: String? = "owner"
@@ -20,6 +22,14 @@ import SwiftUI
     let cache: CacheStore
     init(cache: CacheStore) { self.cache = cache }
     func validatedBaseURL(_ value: String) -> URL? { URL(string: value) }
+    // Test identity owner only; real AppState's verified-connection factory is
+    // separately covered by hosted NativeMailCatalogTests, not substituted proof.
+    func nativeMailContext() -> NativeMailContext? {
+        guard phase == .ready, let userID, let account = selectedAccount, let url = validatedBaseURL(baseURLText) else { return nil }
+        var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased()
+        parts.port = url.port == (parts.scheme == "https" ? 443 : 80) ? nil : url.port
+        return .init(origin: parts.string!, userID: userID, accountID: account.id, connection: mailConnectionGeneration, ownedAccountIDs: Set(accounts.map(\.id)))
+    }
     var mailboxReadRevision = UUID()
     func importanceDidChange(accountId: String) { mailboxReadRevision = UUID() }
     func inboxCacheKey(accountID: String, view: String, search: String) -> String { "\(ownerScope)|\(accountID)|\(view)|\(search)" }

@@ -25,7 +25,7 @@ struct SettingsView: View {
                     sectionContent
                     if let error = preferences.error { Text(error).foregroundStyle(OrcaTheme.danger) }
                     if preferences.uncertain { Button("Check current account choices") { Task { await preferences.checkCurrent(state: state) } } }
-                }.padding(20)
+                }.padding(20).accessibilityIdentifier("settings.root")
             }
             .safeAreaInset(edge: .bottom) {
                 if preferences.dirty || preferences.saving || preferences.status != nil {
@@ -34,7 +34,7 @@ struct SettingsView: View {
                         HStack {
                             Button("Save account choices") { Task { await preferences.save(state: state) } }.disabled(!preferences.dirty || preferences.loading || preferences.saving || preferences.uncertain)
                                 .accessibilityIdentifier("settings.save")
-                            Button("Discard edits") { preferences.discard() }.disabled(preferences.saving)
+                            Button("Discard edits") { preferences.discard() }.disabled(preferences.saving).accessibilityIdentifier("settings.discard")
                         }
                     }.padding().frame(maxWidth: .infinity, alignment: .leading).background(OrcaTheme.surface)
                 }
@@ -46,7 +46,6 @@ struct SettingsView: View {
                     NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil").frame(width: 44, height: 44) }.accessibilityLabel("Compose").disabled(preferences.dirty || preferences.saving)
                 }
             }
-            .accessibilityIdentifier("settings.root")
             .task { await preferences.load(state: state) }
             .confirmationDialog("Leave unsaved account choices?", isPresented: $confirmingAccount, titleVisibility: .visible) {
                 Button("Stay", role: .cancel) { pendingAccount = nil }
@@ -410,8 +409,25 @@ private struct MailboxVisibilitySettings: View {
                     SettingsValue(label: "Important & All Mail", value: "Always available")
                     SettingsValue(label: "Inbox", value: "Placement; always in Mailboxes")
                     SettingsRule()
-                    choice(id: "focus", name: "Focus", detail: "Unread Focus and Notify mail in Inbox; separate from importance")
+                    choice(id: "focus", name: "Inbox focus", detail: "Focus and Notify mail in Inbox; separate from importance")
                     Text("All Mail cannot be hidden. Your previous optional visibility choices are retained.").font(.caption)
+                }
+                ForEach(mailboxes.groups.filter { ["spaces", "collections", "pins"].contains($0.id) }) { group in
+                    SettingsGroup(title: group.title, scope: "Browse · this device") {
+                        ForEach(group.options) { item in
+                            SettingsChoiceToggle(name: item.name, detail: "Show in Mailboxes; does not change notifications", isOn: Binding(get: { !mailboxes.hiddenIDs.contains(item.id) }, set: { mailboxes.setHidden(item.id, !$0) }))
+                                .accessibilityIdentifier("settings.mailbox." + item.id)
+                        }
+                        if group.options.isEmpty { Text("No visible choices. Hidden choices can be restored below.").font(.caption) }
+                    }
+                }
+                if !mailboxes.hiddenOptions.isEmpty {
+                    SettingsGroup(title: "Hidden", scope: "This device") {
+                        ForEach(mailboxes.hiddenOptions) { item in
+                            Button("Restore “\(item.name)”") { mailboxes.restore(item.id) }
+                                .frame(minHeight: 44).accessibilityIdentifier("settings.restore." + item.id)
+                        }
+                    }
                 }
                 SettingsGroup(title: "Saved views", scope: "From your workspace") {
                     if mailboxes.loading {

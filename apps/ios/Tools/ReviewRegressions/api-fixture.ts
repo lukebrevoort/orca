@@ -7,6 +7,7 @@ import { createDatabaseClient } from '../../../api/src/db/client.ts';
 import { createMobileSession } from '../../../api/src/auth/mobile/store.ts';
 import { createApp } from '../../../api/src/index.ts';
 import { createNavigationProbe } from './navigation-fixture.ts';
+import { queryGoldenVectors } from './query-golden.ts';
 const output = process.argv[2];
 if (!output) throw Error('Need an owned connection output path');
 process.env.SESSION_SECRET = 'synthetic-native-review-regressions-secret';
@@ -39,6 +40,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   const url = new URL(request.url);
   const fixtureOwner = request.headers.get('authorization') === `Bearer ${credential.accessToken}` ? 'owner' : request.headers.get('authorization') === `Bearer ${otherCredential.accessToken}` ? 'owner-b' : null;
   if (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner') return new Response(null, { status: 401 });
+  if (url.pathname === '/__bre457/navigation/golden' && request.method === 'GET') return Response.json(queryGoldenVectors());
   if (url.pathname === '/__bre457/navigation/seed' && request.method === 'POST') return Response.json(navigation.seed());
   if (url.pathname === '/__bre457/navigation/seal' && request.method === 'POST') return Response.json(navigation.seal());
   if (url.pathname === '/__bre457/navigation/state' && request.method === 'GET') return Response.json(navigation.snapshot());

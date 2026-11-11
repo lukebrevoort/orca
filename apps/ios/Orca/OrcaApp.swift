@@ -114,7 +114,8 @@ struct MainView: View {
             feedbackPresented = false
             feedback.configure(scope: scope)
         }
-        .task(id: state.ownerScope) { await mailboxes.load(state: state) }
+        .onChange(of: state.selectedAccountID) { mailboxes.accountDidChange(to: state.selectedAccount?.id) }
+        .task(id: state.nativeMailContext()?.key) { await mailboxes.load(state: state) }
         .task(id: state.ownerScope) { await preferences.load(state: state) }
         .onChange(of: scenePhase) {
             if scenePhase == .active {

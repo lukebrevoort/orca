@@ -3,6 +3,8 @@ import SwiftUI
 struct InboxView: View {
     @EnvironmentObject private var mailboxes: MailboxViews
     @State private var savedThread: SavedViewThread?
+    @State private var choosingMailbox = false
+    @State private var readerSource: NativeMailBackContext?
     @State private var actionTarget: MailActionTarget?
     @State private var importanceTarget: ImportanceSelection?
     @State private var viewEditor: NativeViewSelection?
@@ -17,11 +19,26 @@ struct InboxView: View {
             // inset that the List's native refresh control can scroll underneath.
             mailboxControls.fixedSize(horizontal: false, vertical: true)
             ZStack {
-                if let view = mailboxes.selectedView, model.showsSavedMailboxResults(hasSavedView: true) {
+                if mailboxes.selectedIsHidden {
+                    VStack(spacing: 16) {
+                        Text(mailboxes.title).font(.title2).fixedSize(horizontal: false, vertical: true)
+                        Text("Hidden on this device. Restoring does not change the workspace or notifications.")
+                        Button("Restore and open") { mailboxes.restore(mailboxes.selectedID) }.frame(minHeight: 44)
+                            .accessibilityIdentifier("mailbox.hidden.restore-open")
+                        Button("Open All Mail") { model.clearPrimaryMailSearch(); mailboxes.selectedID = "all" }.frame(minHeight: 44)
+                    }.padding()
+                } else if let view = mailboxes.selectedView, model.showsSavedMailboxResults(hasSavedView: true) {
                     SavedMailboxResults(view: view) { item in
-                        guard state.selectSavedViewThread(item) else { return }
+                        guard let context = state.nativeMailContext(), state.accounts.contains(where: { $0.id == item.accountId }) else { return }
+                        readerSource = .init(context: context, selection: mailboxes.selectedID, readerAccount: item.accountId)
+                        guard state.selectSavedViewThread(item) else { readerSource = nil; return }
                         savedThread = item
                     }
+                } else if mailboxes.selectsSeparateMailbox && model.showsSavedMailboxResults(hasSavedView: true) {
+                    NativeCatalogResults(route: mailboxes.selectedRoute, onOpen: { selected = $0 }, onThread: { account, thread in
+                        selected = InboxMessage(id: thread, accountId: account, provider: state.selectedAccount?.provider ?? "gmail", providerMessageId: "", threadId: thread, from: .init(email: ""), subject: "Pinned conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal")
+                    }, onAllMail: { model.clearPrimaryMailSearch(); mailboxes.selectedID = "all"; Task { await loadCurrent() } })
+                        .id((state.nativeMailContext()?.key ?? "") + (mailboxes.selectedRoute?.fingerprint ?? "missing"))
                 } else {
                     // Keep one refreshable surface even when the mailbox is empty.
                     List {
@@ -92,12 +109,17 @@ struct InboxView: View {
             .clipped()
         }
         .background(OrcaTheme.paper)
-        .safeAreaInset(edge: .bottom) { if !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil), let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
+        .safeAreaInset(edge: .bottom) { if !mailboxes.selectedIsHidden && readerSource == nil && !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox), let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
         .navigationTitle(mailboxes.title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $model.search, prompt: "Search All Mail")
-        .onChange(of: state.selectedAccountID) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
-        .onChange(of: state.ownerScope) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
+        .onChange(of: state.selectedAccountID) {
+            // A cross-account saved View reader leases its account only until
+            // Back. The source's accepted query A and unfinished B remain owned.
+            if readerSource == nil { model.invalidate() }
+            importanceOrigin = nil; importanceTarget = nil
+        }
+        .onChange(of: state.ownerScope) { model.invalidate(); choosingMailbox = false; readerSource = nil; savedThread = nil; selected = nil; importanceOrigin = nil; importanceTarget = nil }
         .onSubmit(of: .search) { Task { await loadCurrent(event: .submit) } }
         .toolbar {
             ToolbarItem(placement: .principal) { OrcaWordmark().fixedSize() }
@@ -120,22 +142,42 @@ struct InboxView: View {
             }
         }
         .navigationDestination(for: InboxMessage.self) { ThreadView(message: $0) }
+        .sheet(isPresented: $choosingMailbox) { NativeMailboxPicker { id in model.clearPrimaryMailSearch(); mailboxes.selectedID = id; Task { await loadCurrent() } } }
         .sheet(item: $viewEditor) { selection in NativeViewEditor(selection: selection) }
         .sheet(item: $importanceTarget, onDismiss: restoreImportanceFocus) { target in ImportanceView(selection: target) }
         .onChange(of: model.isLoading) { if !model.isLoading && importanceTarget == nil { restoreImportanceFocus() } }
         .sheet(item: $actionTarget) { target in
             MailActionsSheet(target: target) { await loadCurrent() }
         }
-        .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(state.mailboxReadRevision)") {
-            if !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil) { await loadCurrent() }
+        .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(mailboxes.selectedIsHidden)|\(state.mailboxReadRevision)") {
+            if !mailboxes.selectedIsHidden && readerSource == nil && !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox) { await loadCurrent() }
         }
         .onChange(of: scenePhase) {
-            if scenePhase == .active, state.phase == .ready, !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil) {
+            if scenePhase == .active, state.phase == .ready, !mailboxes.selectedIsHidden, readerSource == nil, !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox) {
                 Task { await loadCurrent() }
             }
         }
         .navigationDestination(item: $savedThread) { ThreadView(accountId: $0.accountId, threadId: $0.threadId) }
-        .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread { selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
+        .onChange(of: savedThread) { old, next in
+            guard old != nil, next == nil, let source = readerSource else { return }
+            if source.mayRestore(current: state.nativeMailContext(), currentReaderAccount: state.selectedAccount?.id), mailboxes.selectedID == source.selection {
+                state.selectedAccountID = source.context.accountID
+            } else { model.invalidate() }
+            readerSource = nil
+        }
+        .onChange(of: state.routedMailbox?.identity.id) {
+            guard let intent = state.routedMailbox, let current = state.nativeMailContext(), current == intent.context else { return }
+            model.clearPrimaryMailSearch(); savedThread = nil; selected = nil; readerSource = nil
+            mailboxes.selectedID = intent.identity.selectionID; state.routedMailbox = nil; choosingMailbox = false
+            if let route = mailboxes.selectedRoute, case .thread(let id) = route.target, let account = state.selectedAccount {
+                selected = InboxMessage(id: id, accountId: account.id, provider: account.provider, providerMessageId: "", threadId: id, from: .init(email: ""), subject: "Pinned conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal")
+            }
+        }
+        .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread {
+            choosingMailbox = false
+            if let source = readerSource, source.context.accountID != route.accountId { model.invalidate() }
+            readerSource = nil; savedThread = nil
+            selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
         .navigationDestination(item: $selected) { ThreadView(message: $0) }
         }
     }
@@ -158,39 +200,27 @@ struct InboxView: View {
                 .accessibilityLabel("Account: " + account.email)
             }
             HStack {
-            Menu {
-                Picker("Mailbox view", selection: $mailboxes.selectedID) {
-                    ForEach(mailboxes.options) { option in Text(option.name).tag(option.id) }
-                }
-            } label: {
+            Button { choosingMailbox = true } label: {
                 HStack(spacing: 8) {
                     Text(mailboxes.title)
                         .font(OrcaTheme.ui(14, weight: .semibold))
                         .lineLimit(2).truncationMode(.tail)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(OrcaTheme.muted)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(OrcaTheme.ink)
-                .padding(.vertical, 8)
-                // Put the interaction area inside the Menu label. An outer
-                // Picker frame reports 44pt but leaves its padded edge inert.
-                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
+                    Image(systemName: "chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(OrcaTheme.muted).accessibilityHidden(true)
+                }.foregroundStyle(OrcaTheme.ink).padding(.vertical, 8)
+                    .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Mailboxes")
             .accessibilityValue(mailboxes.title)
             .accessibilityHint("Choose which mail to show")
             .accessibilityIdentifier("inbox.view-picker")
-            Button { state.selectedTab = "settings" } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }
+            Button { state.navigate(to: "settings") } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }
                 .foregroundStyle(OrcaTheme.accent).accessibilityLabel("Choose visible views")
                 .accessibilityIdentifier("inbox.visible-views")
             }
-            if model.showsSavedMailboxResults(hasSavedView: mailboxes.selectedView != nil) { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
+            if model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox) { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
         }.padding(.horizontal, 20).padding(.vertical, 4)
             .background(OrcaTheme.paper, ignoresSafeAreaEdges: [])
     }

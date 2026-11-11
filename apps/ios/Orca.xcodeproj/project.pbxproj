@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B45700000000000000000019 /* RoutingCompensation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000019 /* RoutingCompensation.swift */; };
+		B45700000000000000000018 /* NativeCatalogResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000018 /* NativeCatalogResults.swift */; };
+		B45700000000000000000017 /* NativeMailboxPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000017 /* NativeMailboxPicker.swift */; };
+		B45700000000000000000016 /* NativeMailBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000016 /* NativeMailBrowser.swift */; };
+		B45700000000000000000015 /* NativeMailWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000015 /* NativeMailWire.swift */; };
+		B45700000000000000000014 /* NativeMailCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000014 /* NativeMailCatalog.swift */; };
 		B45700000000000000000013 /* ViewportGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000013 /* ViewportGeometry.swift */; };
 		B45700000000000000000012 /* NativeMailboxProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000012 /* NativeMailboxProjection.swift */; };
 		B45700000000000000000011 /* ViewCommitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000011 /* ViewCommitStatus.swift */; };
@@ -72,6 +78,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B45710000000000000000019 /* RoutingCompensation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingCompensation.swift; sourceTree = "<group>"; };
+		B45710000000000000000018 /* NativeCatalogResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCatalogResults.swift; sourceTree = "<group>"; };
+		B45710000000000000000017 /* NativeMailboxPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailboxPicker.swift; sourceTree = "<group>"; };
+		B45710000000000000000016 /* NativeMailBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailBrowser.swift; sourceTree = "<group>"; };
+		B45710000000000000000015 /* NativeMailWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailWire.swift; sourceTree = "<group>"; };
+		B45710000000000000000014 /* NativeMailCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailCatalog.swift; sourceTree = "<group>"; };
 		B45710000000000000000013 /* ViewportGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewportGeometry.swift; sourceTree = "<group>"; };
 		B45710000000000000000012 /* NativeMailboxProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailboxProjection.swift; sourceTree = "<group>"; };
 		B45710000000000000000011 /* ViewCommitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewCommitStatus.swift; sourceTree = "<group>"; };
@@ -151,6 +163,9 @@
 			isa = PBXGroup;
 			children = (
 				B45710000000000000000012 /* NativeMailboxProjection.swift */,
+				B45710000000000000000016 /* NativeMailBrowser.swift */,
+				B45710000000000000000015 /* NativeMailWire.swift */,
+				B45710000000000000000014 /* NativeMailCatalog.swift */,
 				B45710000000000000000011 /* ViewCommitStatus.swift */,
 				B45710000000000000000010 /* NotificationNavigation.swift */,
 				B45710000000000000000009 /* InboxViewModel.swift */,
@@ -212,6 +227,8 @@
 				434EE936EE558743123D3016 /* MailboxViews.swift */,
 				FD4FFBDDCD8DE3B9E596C80B /* SafeHTMLView.swift */,
 				63653D38AA3104BDBDE5CCFA /* SavedMailboxResults.swift */,
+				B45710000000000000000018 /* NativeCatalogResults.swift */,
+				B45710000000000000000017 /* NativeMailboxPicker.swift */,
 				C5A8BEAFF621E5292BE1D0AB /* ThreadView.swift */,
 				AC0DE0000000000000000002 /* VerificationCode.swift */,
 			);
@@ -242,6 +259,7 @@
 			isa = PBXGroup;
 			children = (
 				B45710000000000000000013 /* ViewportGeometry.swift */,
+				B45710000000000000000019 /* RoutingCompensation.swift */,
 				22789472C398207011CE37F6 /* OrcaUITests.swift */,
 				AADDEE020000000000000002 /* ReaderUITests.swift */,
 				D55D7D1A9F41B9B7A8D1CC6D /* run-fixture-tests.sh */,
@@ -394,6 +412,7 @@
 			files = (
 				06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */,
 				B45700000000000000000013 /* ViewportGeometry.swift in Sources */,
+				B45700000000000000000019 /* RoutingCompensation.swift in Sources */,
 				AADDEE020000000000000001 /* ReaderUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -406,6 +425,11 @@
 				B45700000000000000000010 /* NotificationNavigation.swift in Sources */,
 				B45700000000000000000009 /* InboxViewModel.swift in Sources */,
 				B45700000000000000000012 /* NativeMailboxProjection.swift in Sources */,
+				B45700000000000000000018 /* NativeCatalogResults.swift in Sources */,
+				B45700000000000000000017 /* NativeMailboxPicker.swift in Sources */,
+				B45700000000000000000016 /* NativeMailBrowser.swift in Sources */,
+				B45700000000000000000015 /* NativeMailWire.swift in Sources */,
+				B45700000000000000000014 /* NativeMailCatalog.swift in Sources */,
 				B45700000000000000000008 /* NativeViewEditorController.swift in Sources */,
 				B45700000000000000000007 /* MailActionJSON.swift in Sources */,
 				B45700000000000000000006 /* NotificationIdentity.swift in Sources */,

@@ -24,7 +24,7 @@ import SwiftUI
         }
         primaryMailboxView = mailboxView
         if event == .submit { primarySubmittedQuery = search }
-        if primarySubmittedQuery.isEmpty, mailboxView.hasPrefix("view:") {
+        if primarySubmittedQuery.isEmpty, (mailboxView.hasPrefix("view:") || mailboxView.hasPrefix("collection:") || mailboxView.hasPrefix("pin:")) {
             // SavedMailboxResults owns this surface's typed View endpoint.
             // Never pass a saved-View identifier as an invented inbox lens.
             invalidate(); primaryMailboxView = mailboxView; view = mailboxView; return
@@ -47,11 +47,13 @@ import SwiftUI
         guard let account = state.selectedAccount else { invalidate(); error = "No connected mailbox. Open Settings to review accounts."; return }
         guard reset || (!isLoading && nextCursor != nil) else { return }
         let scope = state.ownerScope, requestedView = view, requestedSearch = submittedSearch ?? search
+        let connection = state.mailConnectionGeneration, capturedClient = state.client
         let key = state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch)
         if activeKey != key { messages = []; nextCursor = nil; error = nil; activeKey = key }
         requestGeneration = UUID(); let generation = requestGeneration
         func current() -> Bool {
             !Task.isCancelled && generation == requestGeneration && scope == state.ownerScope && state.phase == .ready
+            && state.mailConnectionGeneration == connection && state.client === capturedClient
             && account.id == state.selectedAccount?.id && view == requestedView && (submittedSearch != nil || search == requestedSearch)
             && key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch)
         }

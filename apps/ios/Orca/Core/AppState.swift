@@ -21,8 +21,12 @@ import SwiftUI
     @Published private(set) var mailboxReadRevision = UUID()
     private var connectionGeneration = UUID()
     var draftSessionGeneration: UUID { connectionGeneration }
+    var mailConnectionGeneration: UUID { connectionGeneration }
+    private(set) var verifiedMailConnection: UUID?
+    private(set) var verifiedMailOrigin: String?
     var draftServerOrigin: String? { validatedBaseURL(baseURLText).map(origin) }
     private var accountRefreshGeneration = UUID()
+    @Published var routedMailbox: NativeMailIntent?
     @Published var routedThread: (id: String, accountId: String)?
     let keychain = KeychainStore()
     let draftStore = DraftStore()
@@ -64,6 +68,7 @@ import SwiftUI
             let session: AuthSession = try await client.request("v1/auth/session")
             guard generation == connectionGeneration else { return }
             guard session.isAuthenticated, let user = session.user else { phase = .signedOut; return }
+            verifiedMailConnection = generation; verifiedMailOrigin = origin
             userID = user.id; UserDefaults.standard.set(user.id, forKey: "lastUser|\(origin)")
             let loadedAccounts = try await client.accounts()
             guard generation == connectionGeneration else { return }
@@ -108,7 +113,8 @@ import SwiftUI
             catch { errorMessage = "Could not revoke this device's session. Reconnect and try signing out again."; return false }
         }
         if let url = validatedBaseURL(baseURLText) { await keychain.clear(origin: origin(url)) }
-        connectionGeneration = UUID(); accounts = []; userID = nil; routedThread = nil; fixtureToken = nil; if let url = validatedBaseURL(baseURLText) { configure(url) }; phase = .signedOut
+        verifiedMailConnection = nil; verifiedMailOrigin = nil
+        connectionGeneration = UUID(); accounts = []; userID = nil; routedThread = nil; routedMailbox = nil; fixtureToken = nil; if let url = validatedBaseURL(baseURLText) { configure(url) }; phase = .signedOut
         return true
     }
     @discardableResult func selectSavedViewThread(_ thread: SavedViewThread) -> Bool {
@@ -138,7 +144,7 @@ import SwiftUI
         UserDefaults.standard.set(revision.uuidString, forKey: "inboxReadRevision|\(ownerScope)|\(accountId)")
         mailboxReadRevision = revision
     }
-    private func configure(_ url: URL) { connectionGeneration = UUID(); let keychain = keychain, fixtureToken = fixtureToken, key = origin(url); client = APIClient(baseURL: url) { if let fixtureToken { return fixtureToken }; return await keychain.read(origin: key) } }
+    private func configure(_ url: URL) { verifiedMailConnection = nil; verifiedMailOrigin = nil; connectionGeneration = UUID(); let keychain = keychain, fixtureToken = fixtureToken, key = origin(url); client = APIClient(baseURL: url) { if let fixtureToken { return fixtureToken }; return await keychain.read(origin: key) } }
     private func origin(_ url: URL) -> String { var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased(); parts.port = url.port == (url.scheme == "https" ? 443 : 80) ? nil : url.port; return parts.string ?? url.absoluteString }
 #if DEBUG
     private func fixtureConfiguration() -> (url: URL, token: String)? {

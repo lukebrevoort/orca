@@ -24,18 +24,24 @@ actor APIClient {
         self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
     }
     func updateBaseURL(_ url: URL) { baseURL = url }
-    func serverOrigin() -> String {
-        var parts = URLComponents(); parts.scheme = baseURL.scheme?.lowercased(); parts.host = baseURL.host?.lowercased()
-        parts.port = baseURL.port == (parts.scheme == "https" ? 443 : 80) ? nil : baseURL.port
-        return parts.string ?? baseURL.absoluteString
+    func serverOrigin() -> String { Self.origin(baseURL) }
+    nonisolated private static func origin(_ url: URL) -> String {
+        var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased()
+        parts.port = url.port == (parts.scheme == "https" ? 443 : 80) ? nil : url.port
+        return parts.string ?? url.absoluteString
     }
-    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> T {
-        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body, headers: headers)
+    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:], authorize: (@Sendable () async -> Bool)? = nil) async throws -> T {
+        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body, headers: headers, authorize: authorize)
         guard !data.isEmpty else { if T.self == EmptyResponse.self { return EmptyResponse() as! T }; throw ClientError.invalidResponse }
         do { return try decoder.decode(T.self, from: data) } catch { throw ClientError.decoding(error) }
     }
-    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> (Data, HTTPURLResponse) {
+    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:], authorize: (@Sendable () async -> Bool)? = nil) async throws -> (Data, HTTPURLResponse) {
+        let capturedOrigin = serverOrigin()
+        // Bind the URL before the first suspension as well as the credential.
+        // A temporary base-URL change during authorization cannot be captured
+        // and later survive an origin ABA check after token lookup.
         let endpoint = pathSuffix.reduce(baseURL.appending(path: path)) { $0.appending(component: $1) }
+        if let authorize, !(await authorize()) { throw CancellationError() }
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
         // The API decodes form queries, where an unescaped plus means space.
@@ -46,9 +52,16 @@ actor APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
+        if let authorize {
+            guard serverOrigin() == capturedOrigin, await authorize(), !Task.isCancelled else { throw CancellationError() }
+        }
         if let body { request.httpBody = try encoder.encode(AnyEncodable(body)); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        if let authorize {
+            guard let responseURL = http.url, Self.origin(responseURL) == capturedOrigin else { throw ClientError.invalidResponse }
+            guard serverOrigin() == capturedOrigin, await authorize(), !Task.isCancelled else { throw CancellationError() }
+        }
         guard 200..<300 ~= http.statusCode else { throw ClientError.http(http.statusCode, try? decoder.decode(ErrorEnvelope.self, from: data).error) }
         return (data, http)
     }

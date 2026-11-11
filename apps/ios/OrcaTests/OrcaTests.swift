@@ -3699,3 +3699,88 @@ extension NativeImportanceTests {
         XCTAssertEqual(searched, ["Submitted A", "Submitted A"], "Revision refresh must not submit unfinished query text")
     }
 }
+
+/// Hosted XCTest compilation/execution is required in addition to the local
+/// Foundation harness. These exercise native production read-only adapters.
+@MainActor final class NativeMailCatalogTests: XCTestCase {
+    private func json(_ value: [String: Any]) throws -> MailActionJSON {
+        try JSONDecoder().decode(MailActionJSON.self, from: JSONSerialization.data(withJSONObject: value))
+    }
+    private func query() throws -> NativeSavedQuery {
+        try NativeSavedQuery(json(["id": "owned-query", "accountId": "owned", "name": "Keep this query", "revision": 9,
+                                  "definition": ["revision": 1, "filters": ["dataSource": "stored_mail", "text": "Friday"]]]))
+    }
+    private func page(_ query: NativeSavedQuery) -> [String: Any] {
+        ["query": ["id": query.id, "accountId": "owned", "revision": 9, "definitionDigest": query.definition.digest, "evaluationProfile": "stored-mail-v1"],
+         "accounts": [["id": "owned", "provider": "gmail", "email": "synthetic@example.com", "displayName": "Owned synthetic", "capabilities": ["read": true, "draft": true, "send": true]]],
+         "messages": [], "nextCursor": "opaque-next", "freshness": ["revision": "mailbox-v2:" + String(repeating: "a", count: 64), "lastSyncedAt": NSNull()]]
+    }
+    func testDefaultNormalizationPreservesUnicodeAndStoredProfile() throws {
+        let value = try NativeSavedQueryDefinition(json(["revision": 1, "filters": ["mailbox": "inbox", "attention": "all", "text": "\u{FEFF}Équipe / e\u{0301} 😀\n", "dataSource": "stored_mail"]]))
+        XCTAssertEqual(value.canonical, "{\"filters\":{\"dataSource\":\"stored_mail\",\"text\":\"Équipe / e\u{0301} 😀\"},\"revision\":1}")
+        XCTAssertEqual(value.profile, "stored-mail-v1")
+        XCTAssertThrowsError(try NativeSavedQueryDefinition(json(["revision": 1, "filters": ["text": String(repeating: "😀", count: 101)]])))
+    }
+    func testRealNamedFocusAndInboxRemainSeparateFromUtility() throws {
+        let raw = try json(["legacyDestinationIds": ["normal": "inbox-id", "focus": "focus-id"], "destinations": [
+            ["id": "focus-id", "name": "Renamed Focus", "retiredAt": NSNull()], ["id": "inbox-id", "name": "Renamed Inbox", "retiredAt": NSNull()]]])
+        let destinations = try XCTUnwrap(NativeMailboxProjection.destinations(routing: raw))
+        XCTAssertEqual(destinations.map(\.name), ["Renamed Focus", "Renamed Inbox"])
+        XCTAssertEqual(NativeMailboxRequestScope.destinationID(view: "focus", routing: raw), "inbox-id")
+        XCTAssertEqual(NativeMailboxRequestScope.destinationID(view: "destination:focus-id", routing: raw), "focus-id")
+    }
+    func testPinLegacyViewIsNotSavedViewIdentity() throws {
+        guard case .mailbox(.focus) = try NativePinTarget(json(["type": "resource", "resource": ["family": "view", "id": "focus"]])) else { return XCTFail("Expected actual legacy Focus target") }
+        XCTAssertThrowsError(try NativePinTarget(json(["type": "resource", "resource": ["family": "view", "id": "view:focus"]])))
+        XCTAssertThrowsError(try NativePinTarget(json(["type": "resource", "resource": ["family": "url", "id": "https://example.com"]])))
+    }
+    func testQueryPageBindsObjectRevisionDigestAndProfile() throws {
+        let query = try query(); let raw = page(query)
+        XCTAssertEqual(try NativeSavedQueryPage(json(raw), query: query, account: "owned", limit: 30).cursor, "opaque-next")
+        for (key, wrong) in [("id", "other"), ("definitionDigest", String(repeating: "b", count: 64)), ("evaluationProfile", "legacy-pin-v1")] {
+            var changed = raw, metadata = raw["query"] as! [String: Any]; metadata[key] = wrong; changed["query"] = metadata
+            XCTAssertThrowsError(try NativeSavedQueryPage(json(changed), query: query, account: "owned", limit: 30))
+        }
+    }
+    func testForeignOrUnknownQueryResponseCannotPublish() throws {
+        let query = try query(); var raw = page(query)
+        raw["accounts"] = [["id": "foreign", "provider": "gmail", "email": "foreign@example.com", "displayName": "Foreign", "capabilities": ["read": true, "draft": true, "send": true]]]
+        XCTAssertThrowsError(try NativeSavedQueryPage(json(raw), query: query, account: "owned", limit: 30))
+        raw = page(query); raw["invented"] = true
+        XCTAssertThrowsError(try NativeSavedQueryPage(json(raw), query: query, account: "owned", limit: 30))
+    }
+    func testVisibilityPersistsWithoutChangingLegacyKeysOrOtherOwners() {
+        let suite = "NativeMailCatalogTests-" + UUID().uuidString, defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let prefs = MailboxPreferenceStore(defaults: defaults)
+        prefs.save(["focus", "view:unknown"], scope: "origin|owner")
+        prefs.saveHidden(["destination:opaque"], scope: "origin|owner")
+        XCTAssertEqual(MailboxPreferenceStore(defaults: defaults).load(scope: "origin|owner"), ["focus", "view:unknown"])
+        XCTAssertEqual(MailboxPreferenceStore(defaults: defaults).loadHidden(scope: "origin|owner"), ["destination:opaque"])
+        XCTAssertTrue(prefs.loadHidden(scope: "other-origin|owner").isEmpty)
+    }
+    func testVerifiedMailContextRejectsUnsavedServerDraft() async throws {
+        let configuration = URLSessionConfiguration.ephemeral; configuration.protocolClasses = [StubURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); StubURLProtocol.handler = nil }
+        let client = APIClient(baseURL: URL(string: "https://example.invalid")!, session: session) { "synthetic" }
+        StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/auth/session" { return (200, try JSONSerialization.data(withJSONObject: ["isAuthenticated": true, "user": ["id": "owned-user", "email": "synthetic@example.com", "name": NSNull()], "expiresAt": NSNull()])) }
+            return (200, try JSONSerialization.data(withJSONObject: ["items": [["id": "owned", "provider": "gmail", "email": "synthetic@example.com", "displayName": "Owned", "capabilities": ["read": true, "draft": true, "send": true]]]]))
+        }
+        let root = FileManager.default.temporaryDirectory.appending(path: "native-catalog-auth-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://example.invalid"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
+        defer {
+            UserDefaults.standard.set(previousUser, forKey: "lastUser|https://example.invalid")
+            UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID")
+        }
+        let state = AppState(client: client, cache: CacheStore(directory: root)); state.baseURLText = "https://example.invalid"
+        await state.loadAccounts()
+        XCTAssertNotNil(state.nativeMailContext())
+        let original = state.mailConnectionGeneration
+        state.baseURLText = "https://other.invalid"
+        XCTAssertNil(state.nativeMailContext(), "Editing an unsaved server field does not establish that origin's verified owner")
+        XCTAssertEqual(state.mailConnectionGeneration, original)
+    }
+}

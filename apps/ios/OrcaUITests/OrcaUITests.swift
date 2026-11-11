@@ -21,6 +21,97 @@ final class OrcaUITests: XCTestCase {
         boundaryFailureCaptureRegistered = false
     }
 
+    func test54NamedSpacesCollectionsAndQueryPinsBrowseHideRestoreAndReturnToSource() throws {
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
+            let fixture = try createNativeBrowseFixture()
+            let providerBefore = try composeFixtureRequest("/__fixture/compose/state")
+            let app = try launchApp(contentSize: size); assertInboxLoaded(in: app)
+            chooseMailboxID(try fixtureMailboxSelection("Focus"), title: "Focus", in: app)
+            XCTAssertTrue(app.buttons["mail.filter.all"].isHittable, "Permanent All Mail remains one action away from the actual named Focus Space")
+            chooseMailboxID(fixture.collectionSelection, title: fixture.collectionName, in: app)
+            let collected = app.buttons["catalog.message.ios-fixture-message-1"]
+            XCTAssertTrue(collected.waitForExistence(timeout: 10)); XCTAssertTrue(collected.label.contains(Fixture.inboxSubject))
+            attachScreenshot(named: "bre457-collection-owned-rows-" + size)
+            collected.tap(); XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
+            navigateBack(in: app)
+            XCTAssertTrue(app.navigationBars[fixture.collectionName].waitForExistence(timeout: 10))
+            XCTAssertTrue(collected.waitForExistence(timeout: 10), "Back keeps the typed collection source and its owned rows")
+            chooseMailboxID(fixture.pinSelection, title: fixture.pinName, in: app)
+            let matching = app.buttons["catalog.message.ios-fixture-message-2"]
+            XCTAssertTrue(matching.waitForExistence(timeout: 10)); XCTAssertFalse(app.buttons["catalog.message.ios-fixture-message-1"].exists)
+            attachScreenshot(named: "bre457-query-pin-owned-results-" + size)
+            app.buttons["inbox.view-picker"].tap()
+            let choices = app.collectionViews["mailbox.choices"], pin = choices.buttons["mailbox.option." + fixture.pinSelection]
+            for _ in 0..<12 { if pin.exists && pin.isHittable { break }; choices.swipeUp() }
+            XCTAssertTrue(pin.isHittable); pin.press(forDuration: 1.2)
+            app.buttons["Hide on this device"].tap()
+            let restore = choices.buttons["mailbox.restore-open." + fixture.pinSelection]
+            for _ in 0..<12 { if restore.exists && restore.isHittable { break }; choices.swipeUp() }
+            XCTAssertTrue(restore.isHittable)
+            attachScreenshot(named: "bre457-hidden-pin-restore-" + size)
+            restore.tap()
+            XCTAssertTrue(matching.waitForExistence(timeout: 10))
+            app.buttons["mail.filter.all"].tap()
+            XCTAssertTrue(app.buttons["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
+            let providerAfter = try composeFixtureRequest("/__fixture/compose/state")
+            XCTAssertEqual(providerBefore["sendRequests"] as? Int, providerAfter["sendRequests"] as? Int)
+            XCTAssertEqual(providerBefore["deliveries"] as? Int, providerAfter["deliveries"] as? Int)
+        }
+    }
+
+    func test55FirstSearchFromCollectionAndQueryPinPreservesSubmittedAndUnfinishedQueries() throws {
+        let fixture = try createNativeBrowseFixture()
+        for (selection, title) in [(fixture.collectionSelection, fixture.collectionName), (fixture.pinSelection, fixture.pinName)] {
+            let app = try launchApp(); assertInboxLoaded(in: app)
+            chooseMailboxID(selection, title: title, in: app)
+            XCTAssertTrue(app.collectionViews["catalog.results"].waitForExistence(timeout: 10))
+            search(for: "Friday", in: app)
+            let accepted = app.buttons["inbox.message.ios-fixture-message-2"]
+            XCTAssertTrue(accepted.waitForExistence(timeout: 10)); XCTAssertFalse(app.collectionViews["catalog.results"].exists)
+            let field = app.searchFields["Search All Mail"]
+            field.tap(); field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (field.value as? String ?? "").count)); field.typeText("Unsubmitted native B")
+            XCTAssertEqual(field.value as? String, "Unsubmitted native B")
+            accepted.tap(); XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10)); navigateBack(in: app)
+            XCTAssertTrue(accepted.waitForExistence(timeout: 10))
+            XCTAssertEqual(field.value as? String, "Unsubmitted native B")
+            XCTAssertTrue(app.staticTexts["Showing results for “Friday”. Press Search to update."].exists)
+            attachScreenshot(named: "bre457-catalog-search-owned-A-B-" + selection.components(separatedBy: ":")[0])
+            app.buttons["mail.search.clear-submitted"].tap()
+            XCTAssertTrue(app.collectionViews["catalog.results"].waitForExistence(timeout: 10), "Explicit clear restores the real source, not an invented inbox lens")
+            app.terminate()
+        }
+    }
+
+    private struct NativeBrowseFixture {
+        let collectionSelection: String; let pinSelection: String; let collectionName: String; let pinName: String
+    }
+    private func createNativeBrowseFixture() throws -> NativeBrowseFixture {
+        let account = "ios-fixture-account", suffix = String(UUID().uuidString.prefix(8))
+        let collectionName = "Native collection " + suffix, pinName = "Native query " + suffix
+        func apply(_ change: [String: Any]) throws -> [String: Any] {
+            try composeFixtureRequest("/v1/organization/collections-pins/apply", method: "POST", body: ["idempotencyKey": UUID().uuidString, "change": change])
+        }
+        let created = try apply(["kind": "collection", "action": "create", "accountId": account, "collection": ["name": collectionName, "color": "#70867d"]])
+        let collection = try XCTUnwrap((created["change"] as? [String: Any])?["resourceId"] as? String)
+        addTeardownBlock { _ = try apply(["kind": "collection", "action": "remove", "accountId": account, "collectionId": collection]) }
+        _ = try apply(["kind": "collection_membership", "action": "add", "accountId": account, "collectionId": collection, "threadId": "ios-fixture-thread-1"])
+        let result = try apply(["kind": "pin", "action": "create", "accountId": account, "pin": ["label": pinName, "icon": "search", "color": "#70867d", "target": ["type": "new_query", "name": pinName, "definition": ["revision": 1, "filters": ["text": "Friday", "accountId": account, "dataSource": "stored_mail"]]]]])
+        let pin = try XCTUnwrap((result["change"] as? [String: Any])?["resourceId"] as? String)
+        let state = try XCTUnwrap(result["state"] as? [String: Any])
+        let exactPins = (state["pins"] as? [[String: Any]] ?? []).filter { $0["id"] as? String == pin }
+        XCTAssertEqual(exactPins.count, 1)
+        let query = try XCTUnwrap((exactPins.first?["target"] as? [String: Any])?["queryId"] as? String)
+        // Teardown is LIFO: remove only these owned synthetic pin/query/collection
+        // objects. Setup writes are not native product authoring or read-only proof.
+        addTeardownBlock { _ = try apply(["kind": "saved_query", "action": "remove", "accountId": account, "queryId": query]) }
+        addTeardownBlock { _ = try apply(["kind": "pin", "action": "remove", "accountId": account, "pinId": pin]) }
+        func selection(_ kind: String, _ id: String) throws -> String {
+            let data = try JSONSerialization.data(withJSONObject: [account, id], options: [.withoutEscapingSlashes])
+            return kind + ":" + data.base64EncodedString()
+        }
+        return .init(collectionSelection: try selection("collection", collection), pinSelection: try selection("pin", pin), collectionName: collectionName, pinName: pinName)
+    }
+
     func test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy() throws {
         let app = try launchApp(); assertInboxLoaded(in: app)
         let subject = "Device discard " + String(UUID().uuidString.prefix(8))
@@ -190,6 +281,7 @@ final class OrcaUITests: XCTestCase {
         }
         try reset()
         addTeardownBlock { try reset() }
+        addTeardownBlock { if (self.testRun?.totalFailureCount ?? 0) > 0 { try self.captureMailFixtureReadback(stage: "importance-before-teardown-reset", accountID: accountID) } }
         let providerBefore = try composeFixtureRequest("/__fixture/compose/state")
         let before = try composeFixtureRequest("/v1/inbox?accountId=" + accountID + "&view=all&limit=30")
         let beforeRow = try XCTUnwrap((before["messages"] as? [[String: Any]])?.first { $0["threadId"] as? String == thread })
@@ -200,7 +292,9 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.buttons["importance.important"].waitForExistence(timeout: 10))
         attachScreenshot(named: "bre457-conversation-scope-before-choice")
         app.buttons["importance.important"].tap()
-        XCTAssertTrue(app.staticTexts["importance.status"].waitForExistence(timeout: 10))
+        let originalStatusFound = app.staticTexts["importance.status"].waitForExistence(timeout: 10)
+        if !originalStatusFound { captureMailBoundary(in: app, stage: "importance-after-original-status-wait") }
+        XCTAssertTrue(originalStatusFound)
         XCTAssertEqual(try current()["effective"] as? String, "important")
         XCTAssertTrue(app.buttons["importance.undo"].isEnabled)
         attachScreenshot(named: "bre457-importance-acknowledged-undo")
@@ -271,9 +365,12 @@ final class OrcaUITests: XCTestCase {
                 }
             }
             let app = try launchApp(contentSize: size)
+            addTeardownBlock { if (self.testRun?.totalFailureCount ?? 0) > 0 { try self.captureMailFixtureReadback(stage: "search-save-before-view-cleanup", accountID: "ios-fixture-account") } }
             search(for: "Friday", in: app)
             let saveSearch = app.buttons["search.save-view"]
-            XCTAssertTrue(saveSearch.waitForExistence(timeout: 10)); saveSearch.tap()
+            let originalSaveFound = saveSearch.waitForExistence(timeout: 10)
+            if !originalSaveFound { captureMailBoundary(in: app, stage: "search-save-after-original-wait") }
+            XCTAssertTrue(originalSaveFound); saveSearch.tap()
             let field = app.textFields["view-editor.name"]
             XCTAssertTrue(field.waitForExistence(timeout: 10)); field.tap()
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (field.value as? String ?? "").count)); field.typeText(String(name))
@@ -1475,7 +1572,7 @@ final class OrcaUITests: XCTestCase {
 
         // Check actual interaction as well as accessibility hit testing.
         picker.tap()
-        XCTAssertTrue(app.buttons["All Mail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["mailbox.option.all"].waitForExistence(timeout: 3))
         attachScreenshot(named: "28-mailbox-picker-during-refresh")
         try refreshFixture("wait", method: "GET")
         try refreshFixture("release", method: "POST")
@@ -1554,6 +1651,7 @@ final class OrcaUITests: XCTestCase {
     }
 
     func test10NativeLongPressMovesConversationAndBuildsSenderView() throws {
+        let restoreOriginal = try registerOwnedRoutingCompensation(thread: "ios-fixture-thread-1")
         let app = try launchApp()
         assertInboxLoaded(in: app)
         let maya = app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].firstMatch
@@ -1587,6 +1685,9 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No matching mail"].waitForExistence(timeout: 10))
         chooseMailbox("Inbox", in: app)
         XCTAssertTrue(maya.waitForExistence(timeout: 10))
+        // Restore the original explicit-vs-inherited choice at the exact last
+        // UI-owned receipt revision, before View authoring advances workspace.
+        try restoreOriginal()
 
         maya.press(forDuration: 1.4)
         app.buttons["Use sender in View…"].tap()
@@ -1667,12 +1768,79 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
     }
 
-    private func chooseMailbox(_ title: String, in app: XCUIApplication) {
+    private func registerOwnedRoutingCompensation(thread: String) throws -> () throws -> Void {
+        guard feedbackFixtureDiagnosticsAllowed(), thread == "ios-fixture-thread-1" else { throw TestConfigurationError.missingFixtureEnvironment }
+        let account = "ios-fixture-account", path = "/v1/destinations/routing?accountId=ios-fixture-account&threadId=" + thread
+        let original = try composeFixtureRequest(path)
+        let originalSelection = try XCTUnwrap(original["selection"] as? [String: Any])
+        let explicit = try XCTUnwrap(originalSelection["explicitDestinationId"])
+        let revision = try XCTUnwrap(original["revision"] as? Int)
+        let baseline = try composeFixtureRequest("/__fixture/routing-receipts?threadId=" + thread)
+        let ordinal = try XCTUnwrap(baseline["ordinal"] as? Int)
+        let originalSQL = try XCTUnwrap(baseline["sqlite"] as? [String: Any])
+        let catalog = try composeFixtureRequest("/v1/destinations"), legacy = try XCTUnwrap(catalog["legacyDestinationIds"] as? [String: Any])
+        let scope = RoutingCompensationScope(accountID: account, threadID: thread, revision: revision, explicitID: explicit as? String, ordinal: ordinal,
+            allowedDestinationIDs: [try XCTUnwrap(legacy["normal"] as? String), try XCTUnwrap(legacy["focus"] as? String)])
+        var done = false
+        let compensate: () throws -> Void = {
+            guard !done else { return }
+            let witness = try self.composeFixtureRequest("/__fixture/routing-receipts?threadId=" + thread)
+            XCTAssertEqual(witness["truncated"] as? Bool, false)
+            guard witness["truncated"] as? Bool == false else { throw TestConfigurationError.missingFixtureEnvironment }
+            let entries = (witness["receipts"] as? [[String: Any]] ?? []).filter { ($0["ordinal"] as? Int ?? 0) > ordinal }
+            if entries.isEmpty {
+                let unchanged = try self.composeFixtureRequest(path)
+                XCTAssertEqual(unchanged["revision"] as? Int, revision, "Missing receipt is safe only when no routing mutation committed")
+                guard unchanged["revision"] as? Int == revision else { throw TestConfigurationError.missingFixtureEnvironment }
+                done = true; return
+            }
+            let encodedWitness = try JSONSerialization.data(withJSONObject: witness)
+            let plan = try XCTUnwrap(scope.plan(encodedWitness), "Only an exact, complete owned receipt chain can authorize compensation")
+            let command = try JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as! [String: Any]
+            let result = try self.composeFixtureRequest("/v1/destinations/routing?accountId=" + account, method: "PUT", body: command)
+            let restoredState = try XCTUnwrap(result["state"] as? [String: Any]), selection = try XCTUnwrap(restoredState["selection"] as? [String: Any])
+            XCTAssertEqual(selection["explicitDestinationId"] as? NSObject, explicit as? NSObject)
+            let readback = try self.composeFixtureRequest(path), currentSelection = try XCTUnwrap(readback["selection"] as? [String: Any])
+            XCTAssertEqual(currentSelection["explicitDestinationId"] as? NSObject, explicit as? NSObject)
+            let sql = try self.composeFixtureRequest("/__fixture/routing-receipts?threadId=" + thread), currentSQL = try XCTUnwrap(sql["sqlite"] as? [String: Any])
+            // Original fixture has no manual choice. Compare independent raw
+            // selected-target SQL, not response-derived membership or a GET CAS.
+            XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+            done = true
+        }
+        addTeardownBlock { try compensate() }
+        return compensate
+    }
+
+    private func fixtureMailboxSelection(_ title: String) throws -> String {
+        switch title { case "Important": return "important"; case "All Mail": return "all"; case "Inbox": return "normal"; case "Inbox focus": return "focus"; default: break }
+        if title == "Focus" {
+            let routing = try composeFixtureRequest("/v1/destinations")
+            let legacy = try XCTUnwrap(routing["legacyDestinationIds"] as? [String: Any])
+            return "destination:" + (try XCTUnwrap(legacy["focus"] as? String))
+        }
+        let destinations = try composeFixtureRequest("/v1/destinations")
+        let spaces = (destinations["destinations"] as? [[String: Any]] ?? []).filter { $0["name"] as? String == title && $0["retiredAt"] is NSNull }
+        let catalog = try composeFixtureRequest("/v1/organization/views")
+        let views = (catalog["items"] as? [[String: Any]] ?? []).filter { $0["name"] as? String == title }
+        let exact = spaces.compactMap { ($0["id"] as? String).map { "destination:" + $0 } } + views.compactMap { ($0["id"] as? String).map { "view:" + $0 } }
+        XCTAssertEqual(exact.count, 1, "Fixture title must resolve to one typed server-owned choice, never firstMatch")
+        return try XCTUnwrap(exact.count == 1 ? exact[0] : nil)
+    }
+    private func chooseMailboxID(_ id: String, title: String, in app: XCUIApplication) {
         let picker = app.buttons["inbox.view-picker"]
-        XCTAssertTrue(picker.waitForExistence(timeout: 10))
-        picker.tap()
-        app.buttons.matching(identifier: title).firstMatch.tap()
+        XCTAssertTrue(picker.waitForExistence(timeout: 10)); picker.tap()
+        let list = app.collectionViews["mailbox.choices"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        let option = list.buttons["mailbox.option." + id]
+        for _ in 0..<12 { if option.exists && option.isHittable { break }; list.swipeUp() }
+        XCTAssertTrue(option.exists); XCTAssertTrue(option.isHittable)
+        option.tap()
         XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10))
+    }
+    private func chooseMailbox(_ title: String, in app: XCUIApplication) {
+        do { chooseMailboxID(try fixtureMailboxSelection(title), title: title, in: app) }
+        catch { XCTFail("Owned fixture mailbox identity unavailable: \(error)") }
     }
 
     /// Exercises the real fixture API through the same UI a person uses. Keeping this
@@ -2111,7 +2279,8 @@ final class OrcaUITests: XCTestCase {
         assertInboxLoaded(in: reopened)
         reopened.buttons["inbox.view-picker"].tap()
         XCTAssertTrue(reopened.buttons["Hub notifications"].exists)
-        XCTAssertFalse(reopened.buttons["Focus"].exists)
+        XCTAssertFalse(reopened.buttons["mailbox.option.focus"].exists)
+        XCTAssertTrue(reopened.buttons["mailbox.option.destination:" + (try XCTUnwrap((try composeFixtureRequest("/v1/destinations")["legacyDestinationIds"] as? [String: Any])?["focus"] as? String))].exists, "Hiding Inbox focus does not hide the actual named Focus Space")
         reopened.buttons["Hub notifications"].tap()
         XCTAssertTrue(reopened.buttons["view.thread.ios-fixture-thread-2"].waitForExistence(timeout: 10))
         reopened.tabBars.buttons["Settings"].tap()
@@ -2139,7 +2308,7 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "23-empty-view-with-menu")
         XCTAssertTrue(app.buttons["inbox.view-picker"].isHittable)
         app.buttons["inbox.view-picker"].tap()
-        app.buttons["All Mail"].tap()
+        app.buttons["mailbox.option.all"].tap()
         XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.ios-fixture-message-1"].waitForExistence(timeout: 10))
     }
@@ -2154,18 +2323,18 @@ final class OrcaUITests: XCTestCase {
 
         // Tap near the top edge rather than only the native text's center.
         picker.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
-        XCTAssertTrue(app.buttons["All Mail"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["mailbox.option.all"].waitForExistence(timeout: 5))
         attachScreenshot(named: "mailbox-selector-open")
-        // A tap outside the native menu dismisses it without selecting an item.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9)).tap()
-        XCTAssertTrue(app.buttons["All Mail"].waitForNonExistence(timeout: 5))
+        // The grouped native disclosure has an explicit Done cancellation.
+        app.navigationBars["Mailboxes"].buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["mailbox.option.all"].waitForNonExistence(timeout: 5))
         assertMailboxControl("Inbox", in: app)
         XCTAssertTrue(app.navigationBars["Inbox"].exists)
         attachScreenshot(named: "mailbox-selector-cancelled")
         // The opposite padded edge must activate the same native menu too.
         picker.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92)).tap()
-        XCTAssertTrue(app.buttons["All Mail"].waitForExistence(timeout: 5))
-        app.buttons["All Mail"].tap()
+        XCTAssertTrue(app.buttons["mailbox.option.all"].waitForExistence(timeout: 5))
+        app.buttons["mailbox.option.all"].tap()
         assertMailboxControl("All Mail", in: app)
 
         for title in ["All Mail", "Focus", "Inbox", "All Mail", "Inbox", "Inbox"] {
@@ -2187,15 +2356,15 @@ final class OrcaUITests: XCTestCase {
         let name = "Research planning and weekly product follow-ups"
         let picker = app.buttons["inbox.view-picker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 10))
-        let option = app.buttons.matching(identifier: name).firstMatch
+        let option = app.buttons["mailbox.option." + (try fixtureMailboxSelection(name))]
         // Catalog loading is independent of the navigation title. Native menus
         // may snapshot their options, so reopen within a bounded readiness wait.
         for attempt in 0..<4 {
             picker.tap()
             if option.waitForExistence(timeout: 3) { break }
             if attempt < 3 {
-                app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9)).tap()
-                XCTAssertTrue(app.buttons["All Mail"].waitForNonExistence(timeout: 5))
+                app.navigationBars["Mailboxes"].buttons["Done"].tap()
+                XCTAssertTrue(app.buttons["mailbox.option.all"].waitForNonExistence(timeout: 5))
             }
         }
         XCTAssertTrue(option.exists, "Run with the opt-in mailbox-control fixture; its catalog must load")
@@ -2290,6 +2459,25 @@ final class OrcaUITests: XCTestCase {
             chooseMailbox("Inbox", in: app)
         }
         return app
+    }
+
+    private func captureMailBoundary(in app: XCUIApplication, stage: String) {
+        captureSyntheticBoundary(in: app, stage: stage, targets: [
+            ("mail-list", app.collectionViews["inbox.list"]), ("search", app.searchFields["Search All Mail"]),
+            ("save-view", app.buttons["search.save-view"]), ("importance-status", app.staticTexts["importance.status"]),
+            ("importance-save", app.buttons["importance.important"]), ("importance-undo", app.buttons["importance.undo"]),
+            ("mail-tab", app.tabBars.buttons["Mail"]), ("navigation", app.navigationBars.firstMatch)
+        ])
+    }
+    private func captureMailFixtureReadback(stage: String, accountID: String) throws {
+        guard feedbackFixtureDiagnosticsAllowed(), accountID == "ios-fixture-account" else { return }
+        let page = try composeFixtureRequest("/v1/inbox?accountId=" + accountID + "&view=all&limit=30")
+        let rows = (page["messages"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }.filter { $0.hasPrefix("ios-fixture-") }
+        let importance = try composeFixtureRequest("/v1/importance/conversations/ios-fixture-thread-1?accountId=" + accountID)
+        let witness = try composeFixtureRequest("/__fixture/routing-receipts?threadId=ios-fixture-thread-1")
+        let snapshot: [String: Any] = ["stage": stage, "sqlite": witness["sqlite"] ?? NSNull(), "syntheticRowIDs": rows, "accountID": accountID, "effective": (importance["importance"] as? [String: Any])?["effective"] ?? NSNull(), "epoch_ms": Int64(Date().timeIntervalSince1970 * 1000)]
+        let data = try JSONSerialization.data(withJSONObject: snapshot, options: [.sortedKeys])
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json"); attachment.name = "native-mail-readback-" + stage; attachment.lifetime = .keepAlways; add(attachment)
     }
 
     private func captureHistoryBoundary(in app: XCUIApplication, stage: String, observed: [String: String] = [:]) {

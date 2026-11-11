@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import type { ThreadDetail } from "@orca/shared";
+import { destinationRoutingChangeSchema, destinationRoutingResultSchema, type ThreadDetail } from "@orca/shared";
 import type { AuthVariables } from "../src/auth/middleware.ts";
 import { fixtureCounterResponse } from "./fixture-counter.ts";
 import { InboxRefreshGate, inboxRefreshDeadlines, inboxRefreshScenario, inboxRefreshArmBodyIsEmpty } from "./inbox-refresh-gate.ts";
@@ -162,6 +162,11 @@ const app = createApp({
   }]),
 });
 const routingRequests: unknown[] = [];
+// Bounded, authenticated witness for fixed synthetic routing targets only.
+// Clone the real API response; never consume or replace the UI acknowledgement.
+const routingReceipts: unknown[] = [];
+let routingReceiptOrdinal = 0;
+let routingReceiptsTruncated = false;
 // Hold one real inbox response so UI tests can inspect the refreshing layout.
 // This control exists only in this loopback fixture server, never the API app.
 type RefreshGate = {
@@ -187,6 +192,21 @@ let inboxRecoveryGate: (RefreshGate & { path: string }) | undefined;
 // Keep the connection alive until each gate’s explicit safety release.
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, async fetch(request) {
   const url = new URL(request.url);
+  if (url.pathname === "/__fixture/routing-receipts") {
+    if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
+    if (request.method !== "GET" || [...url.searchParams.keys()].some(key => key !== "threadId")) return new Response(null, { status: 400 });
+    const threadId = url.searchParams.get("threadId") ?? "ios-fixture-thread-1";
+    if (!["ios-fixture-thread-1", "ios-fixture-thread-2"].includes(threadId)) return new Response(null, { status: 400 });
+    const owned = createDatabaseClient();
+    try {
+      const threadState = owned.sqlite.query("SELECT manual_override_lane_id destinationId,revision FROM organization_thread_lane_states WHERE workspace_id=? AND account_id=? AND thread_id=?").get(userId, accountId, threadId) as { destinationId: string | null; revision: number } | null;
+      const binding = owned.sqlite.query("SELECT destination_id destinationId,revision FROM organization_destination_bindings WHERE workspace_id=? AND account_id=? AND scope='conversation' AND value=?").get(userId, accountId, threadId) as { destinationId: string | null; revision: number } | null;
+      const importanceChoice = owned.sqlite.query("SELECT choice,revision FROM importance_choices WHERE account_id=? AND kind='conversation' AND target=?").get(accountId, threadId);
+      const importanceState = owned.sqlite.query("SELECT effective FROM importance_thread_state WHERE account_id=? AND thread_id=?").get(accountId, threadId);
+      const syntheticRows = owned.sqlite.query("SELECT id,thread_id threadId,is_read isRead FROM emails WHERE account_id=? AND id IN ('ios-fixture-message-1','ios-fixture-message-2') ORDER BY id").all(accountId);
+      return Response.json({ accountId, ordinal: routingReceiptOrdinal, truncated: routingReceiptsTruncated, receipts: routingReceipts, sqlite: { threadId, manualOverrideDestinationId: threadState?.destinationId ?? null, bindingDestinationId: binding?.destinationId ?? null, importanceChoice, importanceState, syntheticRows } });
+    } finally { owned.sqlite.close(); }
+  }
   if (url.pathname.startsWith("/__fixture/feedback/")) {
     if (request.headers.get("Authorization") !== `Bearer ${credential.accessToken}`) return new Response(null, { status: 401 });
     if (request.method === "GET" && url.pathname.endsWith("/state")) return Response.json({ tickets: [...feedbackTickets.values()] });
@@ -438,8 +458,28 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 30, asyn
     }
   }
   if (request.method === "PUT" && url.pathname === "/v1/destinations/routing") {
+    const receivedAt = Date.now();
     const body = await request.clone().json();
     const response = await app.fetch(request);
+    const responseAt = Date.now();
+    const command = destinationRoutingChangeSchema.safeParse(body);
+    if (request.headers.get("Authorization") === `Bearer ${credential.accessToken}` && url.searchParams.get("accountId") === accountId && command.success
+      && command.data.target.scope === "conversation" && ["ios-fixture-thread-1", "ios-fixture-thread-2"].includes(command.data.target.threadId)) {
+      routingReceiptOrdinal++;
+      if (routingReceipts.length < 128) {
+        let receipt = null;
+        try {
+          const parsed = destinationRoutingResultSchema.safeParse(await response.clone().json());
+          if (parsed.success && response.ok && parsed.data.state.accountId === accountId
+            && parsed.data.state.selection.target.scope === "conversation"
+            && parsed.data.state.selection.target.threadId === command.data.target.threadId
+            && parsed.data.undo.target.scope === "conversation" && parsed.data.undo.target.threadId === command.data.target.threadId) {
+            receipt = { state: { accountId, revision: parsed.data.state.revision, selection: { target: parsed.data.state.selection.target, explicitDestinationId: parsed.data.state.selection.explicitDestinationId } }, undo: parsed.data.undo };
+          }
+        } catch { /* Preserve the real malformed/error acknowledgement unchanged. */ }
+        routingReceipts.push({ ordinal: routingReceiptOrdinal, receivedAt, responseAt, accountId, command: command.data, status: response.status, receipt });
+      } else { routingReceiptsTruncated = true; }
+    }
     routingRequests.push({ accountId: url.searchParams.get("accountId"), body, status: response.status });
     writeFileSync(join(directory, "routing-requests.json"), JSON.stringify(routingRequests, null, 2), { mode: 0o600 });
     return response;
