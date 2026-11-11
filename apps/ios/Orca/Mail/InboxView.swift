@@ -62,6 +62,7 @@ struct InboxView: View {
                                 }
                                 HStack(alignment: .top, spacing: 8) {
                                     NavigationLink(value: message) { MessageRow(message: message) }
+                                        .accessibilityIdentifier("inbox.message.\(message.id)")
                                         .accessibilityFocused($mailFocus, equals: .row(message.id))
                                     Button { importanceOrigin = message.threadId; importanceTarget = .init(message) } label: {
                                         Image(systemName: message.importance?.effective == .important ? "flag.fill" : "flag").frame(width: 44, height: 44)
@@ -73,7 +74,6 @@ struct InboxView: View {
                                     .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
                                     .listRowSeparatorTint(OrcaTheme.border)
                                     .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
-                                    .accessibilityIdentifier("inbox.message.\(message.id)")
                                     .contextMenu {
                                         Button("Importance…") { importanceOrigin = message.threadId; importanceTarget = .init(message) }
                                         MailActionMenu(message: message, resolveMessage: message.providerMessageId.isEmpty) { actionTarget = $0 }

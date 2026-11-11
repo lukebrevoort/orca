@@ -341,13 +341,20 @@ final class ReaderUITests: XCTestCase {
         let refresh = app.buttons["message.refresh-images-source"]
         XCTAssertTrue(refresh.waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["message.load-images"].exists)
+        // Reset ingress AFTER the initial thread read. Hold the existing fixture
+        // response so XCTest can observe this real refresh instead of racing a
+        // one-second success between its tap and first accessibility snapshot.
+        try setFixtureImageSnapshot(fail: false, delayed: true)
+        screenshot("missing-image-capability-before-refresh")
         refresh.tap()
         let refreshing = app.buttons.matching(identifier: "message.refresh-images-source").matching(NSPredicate(format: "label == %@", "Refreshing message…")).firstMatch
         XCTAssertTrue(refreshing.waitForExistence(timeout: 10))
+        try waitForFixtureImageSnapshotStart()
         let refreshed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@ AND enabled == true", "Refresh message"), object: refresh)
         XCTAssertEqual(XCTWaiter.wait(for: [refreshed], timeout: 10), .completed)
         XCTAssertFalse(app.buttons["message.load-images"].exists)
         XCTAssertEqual(try imageDownloadCount(), initial)
+        screenshot("missing-image-capability-refreshed-without-loading")
     }
 
     private func setFixtureImageSource(changed: Bool) throws {

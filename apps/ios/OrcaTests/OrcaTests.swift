@@ -3557,7 +3557,10 @@ final class NativeViewEditorRecoveryTests: XCTestCase {
                 return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "workspaceRevision": workspaceRevision, "draft": draft]))
             }
             if path.hasSuffix("/preview") {
-                draft = input["draft"] as! [String: Any]; draft["saveEligibility"] = ["allowed": true]; draft["definitionDigest"] = "fixture-digest"
+                draft = input["draft"] as! [String: Any]
+                // Preview recomputes derived scope; it is not part of the strict input draft.
+                draft["effectiveAccountIds"] = definition["accountIds"]
+                draft["saveEligibility"] = ["allowed": true]; draft["definitionDigest"] = "fixture-digest"
                 return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "draft": draft, "workspaceRevision": workspaceRevision, "results": ["state": "matches", "count": ["value": 1, "kind": "exact"]]]))
             }
             if path.hasSuffix("/commit-status") {
@@ -3578,13 +3581,15 @@ final class NativeViewEditorRecoveryTests: XCTestCase {
                 serverName = (submitted["identity"] as! [String: Any])["name"] as! String
             }
             if drop { drop = false; throw URLError(.networkConnectionLost) }
-            return (200, Data(#"{"view":{"id":"created-view"}}"#.utf8))
+            return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "workspaceRevision": workspaceRevision, "view": ["id": "created-view", "workspaceId": "view-owner", "revision": viewRevision], "navigation": ["destination": "view:created-view"]]))
         }
         await fixture.state.loadAccounts()
         let selection = NativeViewSelection(query: "fixture", accountId: "demo-account")
         let first = NativeViewEditorController(defaults: defaults)
         await first.open(selection: selection, state: fixture.state)
         first.name = "Submitted"; first.edited(); await first.review()
+        let validPreview = try XCTUnwrap(first.preview, "The real preview contract must recompute effective account scope before Save")
+        if case .array(let ids) = validPreview["draft"]["effectiveAccountIds"] { XCTAssertEqual(ids.compactMap(\.text), ["demo-account"]) } else { XCTFail("Preview must include derived account IDs") }
         let lost = await first.save(); XCTAssertNil(lost); XCTAssertEqual(creates, 1)
         first.name = "Newer preserved edit"; first.edited(); first.close()
         let reopened = NativeViewEditorController(defaults: defaults)
