@@ -60,7 +60,7 @@ if (stage === "baseline") {
 } else {
   describe("BRE-457 approved deterministic counterexamples (candidate only)", () => {
     const cases: Array<{ name: string; filters: QueryFilters; ids: string[] }> = [
-      { name: "notify-only distinguishes otherwise identical notify/focus threads", filters: { mailbox: "inbox", attention: "notify", classification: "all", text: "attention-marker" }, ids: ["notify"] },
+      { name: "notify-only distinguishes sender-routed threads sharing content/classification", filters: { mailbox: "inbox", attention: "notify", classification: "all", text: "attention-marker" }, ids: ["notify"] },
       { name: "normal-only is independent from Inbox attention union", filters: { mailbox: "inbox", attention: "normal", classification: "all", text: "attention-marker" }, ids: ["normal"] },
       { name: "focus execution union deliberately differs from old strict-focus preview", filters: { mailbox: "inbox", attention: "focus", classification: "all", text: "attention-marker" }, ids: ["notify", "focus", "bulk-focus"] },
       { name: "formerly ignored attention on quiet is conjunctive and contradictory", filters: { mailbox: "quiet", attention: "notify", classification: "all", text: "quiet-marker" }, ids: [] },

@@ -1,13 +1,24 @@
 # BRE-457 saved-query results: approved contract and test-only baseline
 
-Status: source/test preparation only. No install, test, typecheck, lint, build,
-server, browser, simulator, provider call, review, PR or push has run for this
-checkpoint. ROOT must allocate the bounded heavy slot before the command below.
+Status: corrected source/test preparation only; rerun awaits a new ROOT allocation.
+At the previous frozen test-only SHA `bc6b447240dea2d0a0ca354fe62724a9a98b26a9`,
+frozen install passed in 1.95 seconds and baseline failed during fixture seeding
+in 1.26 seconds. No auth/catalog/query/mailbox precondition or missing-endpoint red
+was established, and candidate tests did not run. No execution has run at this
+corrected checkpoint; no evaluator or production change has been made.
+
+The original setup-failure evidence remains separate and unchanged:
+[/private/tmp/bre457-pin-query-baseline-bc6b447-20261111T171918Z/manifest.json](/private/tmp/bre457-pin-query-baseline-bc6b447-20261111T171918Z/manifest.json)
+and its adjacent `baseline.log` / `frozen-install.log`. The failure was inserting
+`notify` into `thread_attention_overrides`, whose production migration 0041 CHECK
+accepts only `normal/quiet`. This is a fixture defect, not evaluator regression.
 
 Base: `a6a8567e81dab98d7ee50b6ec263d94266ac3009`, verified as local and remote
 `origin/main` before preparation. Branch: `t3/bre-457-saved-query-results`.
-The test-only commit is the immutable baseline; runtime receipts record its full
-SHA. The base has no evaluator endpoint. Its absence cannot establish runtime
+The corrected test-only commit directly follows frozen `bc6b447`, preserving that
+failed checkpoint rather than amending it; both are above exact a6. Runtime
+receipts record the corrected SHA and previous failure SHA. The base has no
+evaluator endpoint. Its absence cannot establish runtime
 parity or reproduce a historical browser filtering bug.
 
 ## ROOT-approved additive contract
@@ -63,7 +74,7 @@ At this baseline their semantic assertions cannot run past the missing route.
 | Generated stored-mail subset is unchanged | Five mailbox profiles compare actual rows/order/account/freshness directly with existing `/v1/inbox`. `history-old` witnesses `needle`, while Inbox returns `history-new`. `right\nleft` retains existing newline-concatenated search. Existing non-Inbox row semantics remain authoritative. |
 | Legacy global latest before predicates | `history-new` replaces historical `needle`; legacy query excludes that thread. `quiet-old`/`hidden-old` mention Maya, latest rows do not; legacy person queries exclude them. This deliberately changes old quiet/hidden person-before-dedup. |
 | Deterministic SQL ties | `tie-a` and `tie-z` have identical received/created timestamps. Ascending SQL ID chooses `tie-a`, which does not mention Maya; this deliberately replaces old JS descending-ID selection. |
-| Independent attention | Otherwise identical `notify`, `focus`, `normal` plus `bulk-focus`: notify-only returns notify; normal-only normal; focus is notify/focus union, unlike old strict-focus preview. Quiet + notify is empty, rather than dropping attention. |
+| Independent attention | `notify`, `focus`, `normal` share content/classification/timestamps but have differing production-supported routing provenance and sender addresses. Notify-only returns notify; normal-only normal; focus is notify/focus union, unlike old strict-focus preview. Quiet + notify is empty, rather than dropping attention. This does not claim an otherwise-identical-sender impossibility witness. |
 | Retained collection is conjunctive | Only `notify` belongs to collection A; legacy All Mail collection query excludes matching nonmembers. Old web selection cleared collection. |
 | Explicit classification is conjunctive | Legacy All Mail human excludes `bulk-focus`; quiet tideline cannot resurrect historical `quiet-old` after choosing human `quiet-new`. Old web ignored these clauses. |
 | Classification defaults are deterministic | Inbox absent classification returns human; Focus absent classification includes bulk. Explicit Focus tideline returns `bulk-focus` independently of prior browser UI state. |
@@ -80,6 +91,16 @@ provider tokens are null; the synthetic provider registry rejects sync/transport
 and a network tripwire rejects/counts fetch. Pure capability projection is allowed.
 No real OAuth route is mounted by the fixture provider.
 
+Corrected routing seed: normal/quiet use supported conversation overrides;
+notify/focus/hidden use existing exact sender rules with per-thread synthetic
+addresses. No CHECK constraint is disabled, schema altered, or production resolver
+replaced. The ordinary person/Unicode rows retain their explicitly supplied sender
+fields. Preconditions now also read the real account-scoped All Mail endpoint and
+assert effective notify/focus/normal/quiet/hidden values, plus Inbox archive/move
+exclusion, before accepting the later missing-route 404. These extra assertions
+remain unexecuted until allocation; they test fixture fidelity, not saved-query
+evaluation semantics.
+
 Every request checks SQLite `total_changes()` on each request-owned connection
 before closure, including trigger and rolled-back writes, plus provider/network
 counters. Fixture seed/session creation uses a separate connection and is outside
@@ -89,15 +110,19 @@ Native bearer/session-renewal cases need separately labeled evidence.
 
 ## Bounded allocation requested from ROOT
 
-Estimate: 4–6 minutes; stage hard timeouts total 330 seconds plus short metadata
-checks. One wrapper invocation, no nesting. Native has priority. No command has
-been started, and exit 75 means NOT STARTED with no retry/spin.
+Warm-dependency rerun estimate: 10–20 seconds, based on the actual 1.95-second
+install and 1.26-second failed baseline, allowing for now-reaching preconditions
+and candidate failures. This is an estimate, not a result. Stage hard timeouts
+remain 180/60/90 seconds (330 total); they are failure caps, not expected duration.
+One newly allocated wrapper invocation, no nesting. Native has priority. No rerun
+has started; exit 75 means NOT STARTED with no retry/spin.
 
 ```sh
 python3 /tmp/orca-ui-heavy-slot.py python3 docs/verification/bre-457-pin-query/run-baseline.py /tmp/bre457-pin-query-baseline-NEW
 ```
 
-The runner requires the clean test-only commit directly above exact a6, validates
+The runner requires the clean corrected test-only commit directly above frozen
+bc6b447 (which is directly above exact a6), validates
 Bun 1.3.14, pins the supplied Node child PATH, refuses local automatic `.env`
 loading, and does not inherit provider/OAuth environment variables. It runs:
 

@@ -12,7 +12,7 @@ import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   collectionThreads, collections, emails, labels, oauthAccounts,
-  organizationSavedQueries, pins, threadAttentionOverrides, threads, users,
+  organizationSavedQueries, pins, senderAttentionRules, threadAttentionOverrides, threads, users,
 } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
 import { ProviderRegistry } from "../../providers/registry.ts";
@@ -82,20 +82,32 @@ export async function createQueryResultsFixture() {
     } = {}) {
       const accountId = input.accountId ?? ownerAccount;
       const threadId = input.thread ?? `thread-${id}`;
+      const behavior = input.behavior ?? "normal";
+      // Production migration 0041 permits only normal/quiet conversation overrides.
+      // Legacy notify/focus/hidden remain representable by exact sender rules.
+      // Those rows therefore have distinct real sender addresses; they are not
+      // an otherwise-identical-sender impossibility witness.
+      const senderRouting = !["normal", "quiet"].includes(behavior);
+      const address = input.address ?? (senderRouting ? `${threadId}@synthetic.example` : "human@synthetic.example");
       client.db.insert(threads).values({
         id: threadId, accountId, providerThreadId: input.accountId ? "shared-provider-thread" : threadId,
         latestReceivedAt: new Date(input.at ?? epoch), messageCount: 1,
       }).onConflictDoNothing().run();
       client.db.insert(emails).values({
         id, accountId, threadId, providerMessageId: id,
-        fromName: input.name ?? "Human", fromAddress: input.address ?? "human@synthetic.example",
+        fromName: input.name ?? "Human", fromAddress: address,
         subject: input.subject ?? "attention-marker", snippet: input.snippet ?? "latest",
         receivedAt: new Date(input.at ?? epoch), createdAt: new Date(input.at ?? epoch),
         humanClassification: input.classification ?? "likely_human", isRead: false,
       }).run();
-      client.db.insert(threadAttentionOverrides).values({
-        accountId, threadId, behavior: input.behavior ?? "normal",
-      }).onConflictDoNothing().run();
+      if (senderRouting) {
+        client.db.insert(senderAttentionRules).values({
+          id: `sender-${accountId}-${threadId}`, accountId, scope: "address", value: address,
+          behavior, source: "user_choice",
+        }).onConflictDoNothing().run();
+      } else {
+        client.db.insert(threadAttentionOverrides).values({ accountId, threadId, behavior }).onConflictDoNothing().run();
+      }
     }
 
     message("notify", { behavior: "notify" });
@@ -192,8 +204,18 @@ export async function createQueryResultsFixture() {
       assert.deepEqual(catalog.accountIds, [ownerAccount]);
       assert.equal(catalog.queries.find(item => item.id === catalogQueryId)?.revision, 7);
       assert.equal(catalog.pins[0]?.target.queryId, catalogQueryId);
-      assert.equal((await request(`/v1/inbox?accountId=${ownerAccount}&classification=all&limit=30`)).status, 200);
-      receipt({ name: "real-auth-catalog-query-mailbox-preconditions", unauthenticatedStatus: 401, catalogStatus: 200, inboxStatus: 200, queryId: catalogQueryId, objectRevision: 7, schemaRevision: 1, connectionChanges, providerCalls: calls });
+      const inboxResponse = await request(`/v1/inbox?accountId=${ownerAccount}&classification=all&limit=30`);
+      assert.equal(inboxResponse.status, 200);
+      const inbox = await inboxResponse.json() as { messages: Array<{ id: string }> };
+      assert.ok(!inbox.messages.some(message => ["archived", "moved"].includes(message.id)));
+      const allResponse = await request(`/v1/inbox?accountId=${ownerAccount}&view=all&classification=all&limit=100`);
+      assert.equal(allResponse.status, 200);
+      const all = await allResponse.json() as { accounts: Array<{ id: string }>; messages: Array<{ id: string; accountId: string; attentionBehavior: string }> };
+      assert.deepEqual(all.accounts.map(account => account.id), [ownerAccount]);
+      assert.ok(all.messages.every(message => message.accountId === ownerAccount));
+      const observedBehaviors = Object.fromEntries(["notify", "focus", "normal", "quiet-new", "hidden-new"].map(id => [id, all.messages.find(message => message.id === id)?.attentionBehavior]));
+      assert.deepEqual(observedBehaviors, { notify: "notify", focus: "focus", normal: "normal", "quiet-new": "quiet", "hidden-new": "hidden" });
+      receipt({ name: "real-auth-catalog-query-mailbox-preconditions", unauthenticatedStatus: 401, catalogStatus: 200, inboxStatus: 200, allMailStatus: 200, observedBehaviors, queryId: catalogQueryId, objectRevision: 7, schemaRevision: 1, connectionChanges, providerCalls: calls });
     }
     return { ...client, app, directory, session, otherSession, foreignSession, headers, query, rawQuery, url, request, preconditions, catalogQueryId, calls, connectionChanges, close };
   } catch (error) {

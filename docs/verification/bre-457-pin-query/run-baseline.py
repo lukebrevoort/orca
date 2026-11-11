@@ -9,6 +9,7 @@ import sys
 import time
 
 BASE = "a6a8567e81dab98d7ee50b6ec263d94266ac3009"
+FAILED_BASELINE = "bc6b447240dea2d0a0ca354fe62724a9a98b26a9"
 ROOT = Path(__file__).resolve().parents[3]
 TEST = "apps/api/src/organization/collections-pins/query-results.test.ts"
 NODE_BIN = "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin"
@@ -34,8 +35,8 @@ def main():
     if git("status", "--porcelain"):
         raise SystemExit("Baseline execution requires a clean committed checkout")
     head = git("rev-parse", "HEAD")
-    if git("rev-parse", "HEAD^") != BASE:
-        raise SystemExit("The immutable test-only baseline must be a direct child of exact a6a8567")
+    if git("rev-parse", "HEAD^") != FAILED_BASELINE or git("rev-parse", f"{FAILED_BASELINE}^") != BASE:
+        raise SystemExit("Corrected test-only baseline must directly follow frozen bc6b447, itself directly above exact a6a8567")
     changed = set(git("diff", "--name-only", BASE, head).splitlines())
     if not changed or not changed <= ALLOWED:
         raise SystemExit(f"Unexpected baseline patch paths: {sorted(changed - ALLOWED)}")
@@ -44,7 +45,7 @@ def main():
             if (directory / filename).exists():
                 raise SystemExit(f"Refusing automatic environment-file loading: {directory / filename}")
     evidence.mkdir(parents=True)
-    manifest = {"base": BASE, "testedHead": head, "kind": "test-only missing-route baseline", "stages": [], "startedAt": time.time()}
+    manifest = {"base": BASE, "testedHead": head, "previousSetupFailureHead": FAILED_BASELINE, "kind": "test-only missing-route baseline", "stages": [], "startedAt": time.time()}
     # Do not inherit provider/OAuth credentials. Sessions/crypto are synthetic in the fixture.
     env = {key: os.environ[key] for key in ["HOME", "USER", "LOGNAME", "SHELL", "TERM"] if key in os.environ}
     env.update({"PATH": f"{NODE_BIN}:/opt/homebrew/bin:/usr/bin:/bin", "TMPDIR": "/private/tmp", "LANG": "en_US.UTF-8", "CI": "true"})
