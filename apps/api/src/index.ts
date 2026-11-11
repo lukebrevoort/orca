@@ -7,6 +7,7 @@ import { hasLoadableImages, imageSourceRevision, imageSourceWithinLimit } from "
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createLogoutApp } from "./auth/logout.ts";
+import { requirePreferenceOwner } from "./auth/preference-owner.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
 import { createNotificationApp } from "./notifications/routes.ts";
 import { registerMobilePushRoutes, createMobilePushScheduler } from "./mobile-push/index.ts";
@@ -1229,7 +1230,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }
   });
 
-  app.get("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), requireAuth({ dbFactory }), requirePreferenceOwner, (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const preference = db.select().from(userPreferences).where(eq(userPreferences.userId, c.get("auth").userId)).get();
@@ -1243,6 +1244,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch("/v1/preferences",
     requireAuth({ dbFactory }),
+    requirePreferenceOwner,
     bodyLimit({ maxSize: ordinaryJsonBodyBytes }),
     validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)),
     validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)),
