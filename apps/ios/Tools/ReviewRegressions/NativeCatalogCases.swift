@@ -218,9 +218,27 @@ private func nativePage(query: NativeSavedQuery? = nil, row: String = "row", cur
         await browser.load(context: context, client: client, cache: cache, isCurrent: { true })
         let groups = NativeMailboxProjection.groups(destinations: [], views: [], enabledIDs: [], hiddenIDs: [], catalog: browser.catalog)
         check("NAV-B-optional-spaces-failure-independent", browser.spaceError != nil && browser.catalog?.collections.first?.id == "same" && groups[0].options.map(\.id) == ["important", "all"], "a failed optional section leaves successful catalog, fixed Important and All Mail available")
+        let failedSpaces = browser.settingsSection("spaces"), goodCatalog = browser.settingsSection("collections")
+        check("NAV-B-settings-spaces-error-visible", failedSpaces.message == browser.spaceError && failedSpaces.message != nil && !failedSpaces.canShowEmpty && goodCatalog.message == nil, "actual independent 503 remains visible in Settings instead of being described as an empty resolved section")
         ReviewURLProtocol.handler = { request in request.url!.path == "/v1/destinations" ? (200, try ReviewRegressions.json(nativeRouting())) : (403, try ReviewRegressions.json(["error": ["code": "synthetic", "message": "forbidden"]])) }
         await browser.load(context: context, client: client, cache: cache, isCurrent: { true })
         check("NAV-B-optional-catalog-failure-independent", browser.catalog == nil && browser.spaces?.options.count == 2 && browser.catalogError != nil, "403 clears inaccessible collections/pins while real Space choices remain")
+        let failedCatalog = browser.settingsSection("pins"), goodSpaces = browser.settingsSection("spaces")
+        check("NAV-B-settings-catalog-error-visible", failedCatalog.message == browser.catalogError && failedCatalog.message != nil && !failedCatalog.canShowEmpty && goodSpaces.message == nil, "actual inaccessible catalog is disclosed independently of successful Space choices")
+    }
+    do {
+        let browser = NativeMailBrowser(), cache = store("settings-status"), hold = SearchRequestHold()
+        let heldClient = APIClient(baseURL: URL(string: context.origin)!, session: URLSession(configuration: config)) { await hold.token() }
+        ReviewURLProtocol.handler = { request in (200, try ReviewRegressions.json(request.url!.path == "/v1/destinations" ? nativeRouting() : nativeCatalog())) }
+        let pending = Task { await browser.load(context: context, client: heldClient, cache: cache, isCurrent: { true }) }
+        await hold.waitUntilHeld()
+        let loading = browser.settingsSection("spaces")
+        check("NAV-B-settings-loading-not-empty", browser.loading && loading.loading && !loading.canShowEmpty, "actual suspended catalog load is presented as loading rather than a successful empty list")
+        await hold.release(); await pending.value
+        ReviewURLProtocol.handler = { _ in (503, try ReviewRegressions.json(["error": ["code": "synthetic", "message": "unavailable"]])) }
+        await browser.load(context: context, client: client, cache: cache, isCurrent: { true })
+        let stale = browser.settingsSection("collections")
+        check("NAV-B-settings-stale-cache-warning", browser.staleCatalog && browser.catalog?.collections.first?.id == "same" && stale.message == browser.catalogError && stale.message?.hasPrefix("Offline") == true && !stale.canShowEmpty, "actual cached catalog remains available with its explicit stale warning in Settings")
     }
     for source in ["destination:opaque-focus", "collection:opaque-owned", "pin:opaque-owned"] {
         let state = AppState(cache: store("query-" + source)); state.client = client

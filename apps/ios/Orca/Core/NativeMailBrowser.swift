@@ -1,6 +1,12 @@
 import Foundation
 import SwiftUI
 
+struct NativeCatalogSectionPresentation {
+    let loading: Bool
+    let message: String?
+    let canShowEmpty: Bool
+}
+
 /// Read-only Organization catalogs. Section failure never removes fixed Mail.
 @MainActor final class NativeMailBrowser: ObservableObject {
     @Published private(set) var catalog: NativeMailCatalog?
@@ -64,6 +70,11 @@ import SwiftUI
             }
             catalogError = staleCatalog ? "Offline — saved collections and pins; results may have changed." : "Collections and pins unavailable. Important and All Mail remain available."
         }
+    }
+    /// Used by Settings; extraction preserves the pre-review presentation for
+    /// the failing baseline before its operational-state policy is corrected.
+    func settingsSection(_ section: String) -> NativeCatalogSectionPresentation {
+        NativeCatalogSectionPresentation(loading: false, message: nil, canShowEmpty: true)
     }
     static func offline(_ error: Error) -> Bool {
         if case APIClient.ClientError.http(let code, _) = error { return code >= 500 }

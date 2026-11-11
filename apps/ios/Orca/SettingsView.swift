@@ -414,11 +414,20 @@ private struct MailboxVisibilitySettings: View {
                 }
                 ForEach(mailboxes.groups.filter { ["spaces", "collections", "pins"].contains($0.id) }) { group in
                     SettingsGroup(title: group.title, scope: "Browse · this device") {
+                        let presentation = mailboxes.browser.settingsSection(group.id)
+                        if presentation.loading {
+                            HStack(spacing: 8) { ProgressView(); Text("Loading choices…").font(OrcaTheme.ui(12)) }
+                        }
+                        if let message = presentation.message {
+                            Text(message).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
+                            Button("Retry loading choices") { Task { await mailboxes.load(state: state) } }
+                                .frame(minHeight: 44).accessibilityIdentifier("settings." + group.id + ".retry")
+                        }
                         ForEach(group.options) { item in
                             SettingsChoiceToggle(name: item.name, detail: "Show in Mailboxes; does not change notifications", isOn: Binding(get: { !mailboxes.hiddenIDs.contains(item.id) }, set: { mailboxes.setHidden(item.id, !$0) }))
                                 .accessibilityIdentifier("settings.mailbox." + item.id)
                         }
-                        if group.options.isEmpty { Text("No visible choices. Hidden choices can be restored below.").font(.caption) }
+                        if group.options.isEmpty && presentation.canShowEmpty { Text("No visible choices. Hidden choices can be restored below.").font(.caption) }
                     }
                 }
                 if !mailboxes.hiddenOptions.isEmpty {

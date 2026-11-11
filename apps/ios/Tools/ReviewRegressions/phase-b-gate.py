@@ -13,7 +13,7 @@ assert len(files) == 44
 inputs = files + [p for p in sorted(Path(__file__).parent.iterdir()) if p.is_file() and p.suffix in ['.py','.swift','.ts','.json']] + [root/'apps/api/scripts/mobile-fixture.ts', root/'apps/ios/OrcaUITests/run-fixture-tests.sh', root/'apps/ios/Orca.xcodeproj/project.pbxproj', root/'bun.lock']
 inputs = list(dict.fromkeys(inputs))
 hashes = lambda: {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs}
-receipt = {'scope':'414 planned Foundation/API controls +13 mobile-fixture receipt probes +44 Swift grammar +fixture/transitive types +runner syntax/lifecycle; NOT SwiftUI/XCTest/event-hit proof', 'startSHA':sha(),'startStatus':status(),'sourceHashes':hashes(),'expectedCaseCount':inventory['expectedCount'],'stages':[],'resourcesBefore':list(resource.getrusage(resource.RUSAGE_CHILDREN)),'exit':2}
+receipt = {'scope':'418 planned Foundation/API controls +13 mobile-fixture receipt probes +44 Swift grammar +fixture/transitive types +runner syntax/lifecycle; NOT SwiftUI/XCTest/event-hit proof', 'startSHA':sha(),'startStatus':status(),'sourceHashes':hashes(),'expectedCaseCount':inventory['expectedCount'],'stages':[],'resourcesBefore':list(resource.getrusage(resource.RUSAGE_CHILDREN)),'exit':2}
 assert receipt['startSHA'] == expected and not receipt['startStatus']
 env = dict(os.environ, PATH='/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:/opt/homebrew/bin:'+os.environ['PATH'], TMPDIR='/private/tmp')
 (out/'driver.py').write_bytes(Path(__file__).read_bytes())
