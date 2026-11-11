@@ -1,0 +1,31 @@
+{
+  "head": "d3e427e4fc8991354412717d7d5482a39b488d52",
+  "testedMerge": "ccad40d4b75045fd8202e8c22c4232a36c424e6a",
+  "job": 130434571601,
+  "run": 42994204378,
+  "checksSha256": "c070bfc7b3527357ad06806dc87a1ced8378718df4f4b4aeddbe6a962d9b57b6",
+  "observedPhoto": "Photo, November 11, 9:36 AM",
+  "observedPhotoIdentifier": "PXGGridLayout-Info",
+  "assertion": "System picker must expose exactly one photo imported for this fixture day",
+  "earlyFeedbackLayout": {
+    "light": {
+      "passed": 1,
+      "failed": 0
+    },
+    "dark": {
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "directCapture": {
+    "passed": 16,
+    "failed": 0
+  },
+  "laterFeedbackLight": {
+    "passed": 0,
+    "failed": 1
+  },
+  "mainComposeAndAX": "not reached",
+  "diagnosis": "Earlier waitForExistence false was retained; later failure snapshot contains the exact fixture-day photo. Expected injected day was not logged in this run, so date identity is inferred from the UTC run date, not independently logged. Candidate logs expected day and freshly observed exact count.",
+  "candidateNativeRuntime": "pending"
+}

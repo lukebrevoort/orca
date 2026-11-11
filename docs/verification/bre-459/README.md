@@ -1,6 +1,6 @@
 # BRE-459 — reserve native Feedback geometry
 
-Status: **implementation candidate; hosted candidate execution and independent reviews pending**. Parent owns review and merge approval. BRE-457's wider redesign and PR311's API importance work remain separate.
+Status: **implementation candidate; complete hosted compose verification and final reviews pending**. Parent owns review and merge approval. BRE-457's wider redesign and PR311's API importance work remain separate.
 
 ## Reproduced baseline
 
@@ -56,3 +56,13 @@ Actual findings: keyboard Done had a36pt accessibility target despite44pt label 
 Root follow-up moves Done from the system keyboard toolbar into the existing reserved compose-action row beside Send. The actual button owns its44pt target, and no extra row is consumed. It anchors the history disclosure when older cards are inserted. Regression interactions now require visible writing-area geometry before tapping and explicitly reveal the remaining attachment/disclosure between navigation and fixed actions. They retain original typing, persistence, removal/reopen, original remote version, exact synthetic delivery, label/44pt and zero-overlap assertions. No hidden-control tap or weakened44pt threshold is accepted.
 
 All26 app/unit/UI Swift files syntax-parse locally under the shared resource wrapper (exit0). That is **not** SwiftUI typechecking, an iOS build, XCTest or runtime verification. JS/API/package/lock/CI source is unchanged from67b; existing local full2204-test receipts are scoped to that earlier revision. New exact-head hosted compiler/unit/compose/reader/images/mailbox gates, both themes, actual zero-overlap/keyboard/large-text/short-layout screenshots and independent source review remain required before merge. Follow-up is unverified until those results are retained and inspected.
+
+## Partial hosted result at d3e427e4 and picker readiness follow-up
+
+Head `d3e427e4fc8991354412717d7d5482a39b488d52`, tested merge `ccad40d4b75045fd8202e8c22c4232a36c424e6a`: [compose job](https://github.com/lukebrevoort/orca/actions/runs/42994204378/job/130434571601), [bounded failure log](d3-picker-failure.log), [receipt](d3-picker-failure.json). The ZIP is retained at `/tmp/bre459-d3-failed-native.zip`, SHA-256 `58a8dec0427e6be1896c6346c0a63b87245ea0255efb3b2033a04c1dd513e178`.
+
+Early Feedback layout passed **one test per theme**, including four completed zero-overlap checkpoints and one synthetic delivery per theme. Direct capture passed **16 tests**. The later light Feedback media test failed before the main compose and accessibility-size compose suites ran. Those later suites are **not verified**. Mailbox and image jobs passed separately. Reading passed after an isolated retry of a SafeHTML load timeout; the original timeout remains a failed attempt.
+
+The photo lookup retained the result of its first ten-second wait. It extended that wait only if Photos exposed a `Loading...` label. The failure log instead shows no such label, followed by a later snapshot containing `Photo, November 11, 9:36 AM` with the required `PXGGridLayout-Info` identifier. The old expected date was not logged, so this supports a stale readiness observation without proving date injection independently. The candidate rechecks the exact unique fixture-day query throughout the existing 60-second readiness budget and logs the expected day, wait outcome and fresh count. It retains the exact-day/time pattern, uniqueness, stock-photo exclusion, actual picker interaction, two-preview consent and synthetic-ticket assertions. No product layout or hit-target assertion changes in this follow-up.
+
+The branch normally merged main `b23fa0ce72906633af36c54a2140d7599d7aa315` before this fixture change, preserving the published Feedback implementation and foundation benchmark repair. Candidate hosted execution, full compose/media/large-text results and independent final review remain pending. A syntax parse does not establish this picker behavior or native UI acceptance.
