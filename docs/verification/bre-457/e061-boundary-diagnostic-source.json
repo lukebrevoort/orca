@@ -19,7 +19,8 @@
     "controllers": "f15310e69f509356c56a95b7b56d84f2e47ede4d 223/223 Foundation/API",
     "runner": "1748efb952763968ff8fe121d82911e29486764a 4/4 synthetic lifecycle +zsh"
   },
-  "plannedCheck": "one allocated 36-file Swift grammar only; current test delta not yet compiled/executed",
+  "plannedCheck": "Completed one allocated grammar-only gate at exact d485fae8138ce0ecdb49f5508c6ab360be7487c2:36files,exit0,0.200s,start/endSHA+clean+hashes equal; XCTest typecheck/runtime still pending",
   "appleHostedPending": true,
-  "originalAssertions": "same predicates/deadlines; captured first wide value and original wait results remain the assertion inputs; all downstream assertions/stimuli retained"
+  "originalAssertions": "same predicates/deadlines; captured first wide value and original wait results remain the assertion inputs; all downstream assertions/stimuli retained",
+  "grammarReceipt": "diagnostic-grammar-d485fae8/manifest.json"
 }
