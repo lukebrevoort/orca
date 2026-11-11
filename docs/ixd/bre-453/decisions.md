@@ -12,6 +12,12 @@ The default correction applies to one conversation in one connected account, inc
 
 Resolution is explicit conversation choice, then an explicit account/sender choice, then Unreviewed. Unreviewed is distinct from Not important. Existing attention/destination rules remain their own supported concepts and are not silently renamed, deleted or converted into importance rules. No AI learning or automatic sender rule is implied by a conversation action.
 
+Architecture review compared conversation-only choices with optional exact-sender inheritance. The coordinator retains the separately confirmed sender option because avoiding repeated triage of future conversations supports the stated everyday-email goal. This adds internal resolution work; it must not add a rule editor to the ordinary correction path. Without a conversation override, evaluate distinct inbound participants in that account: any explicitly Important participant makes the conversation Important; otherwise any Unreviewed participant makes it Unreviewed; otherwise all explicitly Not important participants make it Not important. An empty participant set is Unreviewed. Exact sender choices do not generalize to domains, aliases or another account.
+
+Do not use latest-inbound-sender fallback: a new participant must not silently remove an Important conversation. Broader confirmation must explain that conversations with their own choices keep them, and another Important participant may keep a conversation Important. Provenance names the actual contributing preference(s), not a claimed classifier judgment. Notifications consume the same effective conversation result, including when a new participant replies.
+
+Important retrieval uses the All Mail retention/authorization basis, not the legacy provider-Inbox/destination predicate. Marking an archived or moved conversation Important must surface it without moving it back to Inbox. Query work must remain indexed/batched and its actual costs measured; a bounded response does not by itself prove bounded database work.
+
 Removing a conversation choice means inherit the current sender preference, which may still be Important; explain that before applying the reset. Unreviewed is the effective result when neither explicit level supplies a choice, not a synonym for deleting a choice. Revision guards must retain reset history/tombstones so remove/recreate cycles cannot admit a stale initial write.
 
 ## D3 — Uncertainty and discoverability
