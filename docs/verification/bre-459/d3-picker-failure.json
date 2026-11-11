@@ -27,5 +27,21 @@
   },
   "mainComposeAndAX": "not reached",
   "diagnosis": "Earlier waitForExistence false was retained; later failure snapshot contains the exact fixture-day photo. Expected injected day was not logged in this run, so date identity is inferred from the UTC run date, not independently logged. Candidate logs expected day and freshly observed exact count.",
-  "candidateNativeRuntime": "pending"
+  "candidateNativeRuntime": "pending",
+  "selectedScreenshots": [
+    {
+      "artifactFile": "screenshots/FeedbackLayoutlight-4.png",
+      "retainedFile": "d3-light-keyboard.png",
+      "sha256": "d984ffb465164137af806049018833dd0711e38019b106cc843ad188d16450d5",
+      "scope": "Light conflict writing with keyboard up; reserved Done/Send/Feedback rows visible",
+      "inspectedByRoot": true
+    },
+    {
+      "artifactFile": "screenshots/FeedbackLayoutdark-4.png",
+      "retainedFile": "d3-dark-keyboard-down.png",
+      "sha256": "47fb689de53469b9a2f5d30875113bef9a5addd2a1eea8d926922a3c83a0209b",
+      "scope": "Dark conflict writing with keyboard down; Send/Feedback rows visible",
+      "inspectedByRoot": true
+    }
+  ]
 }
