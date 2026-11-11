@@ -50,7 +50,11 @@ async function contextFor(theme, viewport, fontPath = 'blocked') {
   page.on('pageerror', error => results.pageErrors.push(error.message));
   page.on('response', async response => {
     const path = new URL(response.url()).pathname;
-    if (path.startsWith('/v1/drafts')) results.draftResponses.push({ method: response.request().method(), path, status: response.status() });
+    if (path.startsWith('/v1/drafts')) {
+      const record = { method: response.request().method(), path, status: response.status() };
+      results.draftResponses.push(record);
+      if (!response.ok()) record.error = await response.json().catch(() => null);
+    }
     if (response.request().resourceType() === 'font') results.fontResponses.push({ url: response.url(), status: response.status(), bytes: (await response.body().catch(() => Buffer.alloc(0))).length });
   });
   await context.request.get(origin + '/__fixture/login');
