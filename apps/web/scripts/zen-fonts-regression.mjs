@@ -140,7 +140,12 @@ try {
       check(requests.length === 0, `${theme}/${fontPath}: zero external font requests`, requests);
       release();
       if (screenshotError) await screenshot(page, `${fontName}-after-release`);
-      results.scenarios.push({ name: fontName, ready, screenshotError, requests, fontState: await page.evaluate(() => ({ status: document.fonts.status, loaded: [...document.fonts].map(f => ({ family: f.family, status: f.status })), body: getComputedStyle(document.body).fontFamily, resources: performance.getEntriesByType('resource').filter(r => /font|\.ttf|\.woff/.test(r.name)).map(r => ({ name: r.name, transferSize: r.transferSize, encodedBodySize: r.encodedBodySize })) })) });
+      const fontState = await page.evaluate(() => ({ status: document.fonts.status, loaded: [...document.fonts].map(f => ({ family: f.family, status: f.status })), body: getComputedStyle(document.body).fontFamily, resources: performance.getEntriesByType('resource').filter(r => /font|\.ttf|\.woff/.test(r.name)).map(r => ({ name: r.name, transferSize: r.transferSize, encodedBodySize: r.encodedBodySize })) }));
+      if (fontPath !== 'offline') {
+        const loadedFamilies = new Set(fontState.loaded.filter(face => face.status === 'loaded').map(face => face.family.replaceAll('"', '').replaceAll("'", '')));
+        check(loadedFamilies.has('Sora') && loadedFamilies.has('Newsreader'), `${theme}/${fontPath}: both bundled faces loaded rather than fallback-only readiness`, fontState.loaded);
+      }
+      results.scenarios.push({ name: fontName, ready, screenshotError, requests, fontState });
       await context.close();
     }
     for (const [width, height, suffix] of [[1440,1000,'desktop'],[1024,768,'narrow-desktop'],[390,844,'mobile'],[320,568,'small'],[390,400,'short'],[720,450,'200pct-reflow']]) {
