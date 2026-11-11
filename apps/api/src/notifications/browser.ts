@@ -46,7 +46,7 @@ export function claimBrowser(sqlite: Database, scope: Scope, sessionId: string, 
         sqlite.query("UPDATE important_notification_web_deliveries SET state='dead',updated_at=? WHERE id=?").run(now, row.id);
       } else notifications.push(JSON.parse(row.envelope_json));
     }
-    return { operationId: input.operationId, installationId: scope.installationId, policyRevision: policy.revision, scope: "open_app", notifications };
+    return { operationId: input.operationId, installationId: scope.installationId, policyRevision: policy.revision, scope: "open_app" as const, notifications };
   }).immediate();
 }
 export function reportBrowser(sqlite: Database, scope: Scope, sessionId: string, input: ImportantNotificationReport, now: number) {

@@ -7,7 +7,7 @@ async function fixture(run: (f: Awaited<ReturnType<typeof notificationFixture>>)
   setMobilePushTestEnv(); const f = await notificationFixture();
   try { await run(f); } finally { f.sqlite.close(); clearMobilePushTestEnv(); }
 }
-async function claim(f: Awaited<ReturnType<typeof notificationFixture>>, revision = 1, operationId = randomUUID(), id = "browser") {
+async function claim(f: Awaited<ReturnType<typeof notificationFixture>>, revision = 1, operationId: string = randomUUID(), id = "browser") {
   const response = await f.request(`/v1/notifications/installations/${id}/claim`, { channel: "open_app", expectedRevision: revision, operationId, permission: "granted" }, "POST");
   expect(response.status).toBe(200); return await response.json() as ImportantNotificationClaimResponse;
 }

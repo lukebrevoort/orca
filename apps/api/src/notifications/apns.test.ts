@@ -75,3 +75,14 @@ test("BRE-455 unchanged refresh preserves pending; replacement token creates a f
   const removed = await (await f.request("/v1/notifications/installations/phone?channel=apns")).json(); expect(removed.revision).toBe(3); expect(removed.permission).toBe("unavailable");
   await phone(f); expect((await (await f.request("/v1/notifications/installations/phone?channel=apns")).json()).revision).toBe(4); expect(scan(f).enqueued).toBe(0);
 }));
+
+test("BRE-455 real opaque mobile-session adoption and revocation use mobile_sessions, not browser cookies", () => fixture(async f => {
+  const { createMobileSession, revokeMobileSession } = await import("../auth/mobile/store.ts");
+  const mobile = createMobileSession(f.db, "u");
+  const request = (path: string, body: unknown) => f.app.request(path, { method: "PUT", headers: { authorization: `Bearer ${mobile.accessToken}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+  expect((await request("/v1/mobile/devices/mobile-phone", { token, environment: "sandbox", notificationSelection: { inbox: false, spaceIds: [] } })).status).toBe(200);
+  expect((await request("/v1/notifications/installations/mobile-phone", f.command(0, { channel: "apns" }))).status).toBe(200);
+  await f.fresh("mobile-first"); expect(scan(f).enqueued).toBe(1); const l = ledger(); expect((await deliver(f, l.transport)).delivered).toBe(1);
+  f.state.now += 901000; await f.persist(f.message("mobile-revoked", "conversation")); expect(scan(f).enqueued).toBe(1);
+  revokeMobileSession(f.db, mobile.sessionId, "u", new Date(f.state.now)); expect((await deliver(f, l.transport)).delivered).toBe(0); expect(l.attempts).toHaveLength(1);
+}));

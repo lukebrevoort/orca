@@ -19,3 +19,8 @@ First observation and each account's sequence/time boundary prevent old adoption
 ## Rollback
 
 Keep the new policy disabled during review. Revert the candidate code as a unit while retaining the additive tables/receipts; do not edit stable migrations 0052/0053 or delete legacy selections/evidence. A live rollback needs an explicit migration plan because reverting to a legacy-only dispatcher could resume old placement delivery; do not run that dispatcher for adopted installations. No merge, deployment, credentials, scopes, live Gmail/APNs, signed build or TestFlight action is authorized here.
+
+## Historical checkpoint receipts
+
+- `101c45221f7ce1e452b5b9c4da3c86af69eb00f8` clean: unchanged legacy dispatcher red actually attempted/delivered one Unreviewed human message for an adopted Important-only installation; expected zero. Separate actual settings/browser/provenance checkpoint passed 10 tests, 77 expectations. It deliberately did not wire APNs policy dispatch.
+- `6b51113049178ece0b8b8894679b173fb3d9e691` clean: focused notifications/mobile-push execution passed 54 tests and failed one (nonempty account deletion during token decryption raises a foreign-key error). The same historical adopted-Unreviewed transport test now passed with zero provider calls. API typecheck failed five narrow type errors; this is not a full passing candidate. Raw logs are retained separately. Source fixes and account-deletion diagnosis are in progress.

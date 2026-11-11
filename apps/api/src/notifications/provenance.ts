@@ -20,7 +20,10 @@ export function gmailArrivalEvidence(message: GmailMessage, accountEmail: string
   const values = (name: string) => headers.filter(h => h.name.toLowerCase() === name).map(h => h.value.replace(/\r?\n[ \t]+/g, " ").trim());
   const from = values("from");
   if (from.length !== 1) return unknown("ambiguous_sender");
-  const address = from[0]!.match(/<([^<>]+)>/)?.[1]?.trim().toLowerCase() ?? from[0]!.trim().toLowerCase();
+  const fromValue = from[0]!;
+  const angle = fromValue.match(/^[^<>,;]*<([^<>]+)>$/);
+  const address = (angle?.[1] ?? fromValue).trim().toLowerCase();
+  if (!/^[^\s<>@,;()]+@[^\s<>@,;()]+$/.test(address)) return unknown("ambiguous_sender");
   if (address === primary) return unknown("own_primary_sender");
   const deliveries = values("delivered-to");
   if (!deliveries.length || deliveries.some(value => value.toLowerCase() !== primary)) return unknown("missing_or_contradictory_recipient");
