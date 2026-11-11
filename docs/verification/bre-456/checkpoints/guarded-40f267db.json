@@ -1,0 +1,101 @@
+{
+  "head": "40f267db",
+  "stages": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "elapsedMs": 12086
+    },
+    {
+      "name": "guidance",
+      "exitCode": 0,
+      "elapsedMs": 4274
+    },
+    {
+      "name": "guidance-held",
+      "exitCode": 0,
+      "elapsedMs": 2595
+    },
+    {
+      "name": "important-reader",
+      "exitCode": 0,
+      "elapsedMs": 5613
+    },
+    {
+      "name": "settings-panel-red",
+      "exitCode": 1,
+      "elapsedMs": 2978
+    }
+  ],
+  "results": [
+    {
+      "name": "guidance",
+      "revision": {
+        "head": "40f267db26a86cac99e5267ce46cbbed298275d9",
+        "sourceSha256": "5cf1fcec0d92c3724adcf64e0782001f610fbc79275ce9cfb42314ff5bdbcb61",
+        "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+        "dirty": []
+      },
+      "scenarios": 4,
+      "assertions": 16,
+      "failures": [],
+      "pageErrors": [],
+      "raw": "/tmp/bre456-guarded-40f267db/guidance/results.json",
+      "sha256": "0e51f12d694339cf5c9acc87aa00a3d6aa698b74ecb6aeaca3615730f87a7908"
+    },
+    {
+      "name": "guidance-held",
+      "revision": {
+        "head": "40f267db26a86cac99e5267ce46cbbed298275d9",
+        "sourceSha256": "5cf1fcec0d92c3724adcf64e0782001f610fbc79275ce9cfb42314ff5bdbcb61",
+        "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+        "dirty": []
+      },
+      "scenarios": 2,
+      "assertions": 8,
+      "failures": [],
+      "pageErrors": [],
+      "raw": "/tmp/bre456-guarded-40f267db/guidance-held/results.json",
+      "sha256": "2e39617c0b6b0000dc825ea1d1822e13457fccfe3c498b37b040657ffa723bf9"
+    },
+    {
+      "name": "important-reader",
+      "revision": {
+        "head": "40f267db26a86cac99e5267ce46cbbed298275d9",
+        "sourceSha256": "5cf1fcec0d92c3724adcf64e0782001f610fbc79275ce9cfb42314ff5bdbcb61",
+        "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+        "dirty": []
+      },
+      "scenarios": 2,
+      "assertions": 16,
+      "failures": [],
+      "pageErrors": [],
+      "raw": "/tmp/bre456-guarded-40f267db/important-reader/results.json",
+      "sha256": "2a8804b7c1f2828f139f9c707299cca5bbe3ac88c394e495ba40fc3f9d437da8"
+    },
+    {
+      "name": "settings-panel-red",
+      "revision": {
+        "head": "40f267db26a86cac99e5267ce46cbbed298275d9",
+        "sourceSha256": "5cf1fcec0d92c3724adcf64e0782001f610fbc79275ce9cfb42314ff5bdbcb61",
+        "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+        "dirty": []
+      },
+      "scenarios": 4,
+      "assertions": 12,
+      "failures": [
+        {
+          "theme": "light",
+          "message": "Original owner recovery retains exactly one visible Settings panel"
+        },
+        {
+          "theme": "dark",
+          "message": "Original owner recovery retains exactly one visible Settings panel"
+        }
+      ],
+      "pageErrors": [],
+      "raw": "/tmp/bre456-guarded-40f267db/settings-panel-red/results.json",
+      "sha256": "5559b3b1161cea42262e6de6e326d0e7e13e516754683a7cf201b2934b21a82d"
+    }
+  ]
+}

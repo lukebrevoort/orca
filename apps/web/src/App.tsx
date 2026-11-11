@@ -687,7 +687,6 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const sectionFromHash = () => settingsSections.find(([id]) => `#${id}` === (typeof window === "undefined" ? "" : window.location.hash))?.[0] ?? "account";
   const [activeSection, setActiveSection] = useState<string>(sectionFromHash);
   useEffect(() => { const update = () => setActiveSection(sectionFromHash()); window.addEventListener("hashchange", update); window.addEventListener("popstate", update); return () => { window.removeEventListener("hashchange", update); window.removeEventListener("popstate", update); }; }, []);
-  useLayoutEffect(() => { for (const panel of settingsEditorRef.current?.querySelectorAll<HTMLElement>(".settings-section") ?? []) panel.hidden = panel.id !== activeSection; }, [activeSection]);
   function selectSettingsSection(id: string) { window.history.replaceState(window.history.state, "", `#${id}`); setActiveSection(id); }
 
   const [accountPreferences, setAccountPreferences] = useState<UserPreferences | null>(demoMode ? defaultAccountPreferences : null);
@@ -707,6 +706,16 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const accountSaveRequestRef = useRef(0);
   const settingsOwnerRef = useRef<string | null>(null);
   const [settingsOwnerBlocked, setSettingsOwnerBlocked] = useState(false);
+  const focusRecoveredSection = useRef(false);
+  useLayoutEffect(() => {
+    for (const panel of settingsEditorRef.current?.querySelectorAll<HTMLElement>(".settings-section") ?? []) panel.hidden = panel.id !== activeSection;
+    if (!settingsOwnerBlocked && focusRecoveredSection.current) {
+      focusRecoveredSection.current = false;
+      const heading = settingsEditorRef.current?.querySelector<HTMLHeadingElement>(".settings-section:not([hidden]) h2");
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeSection, settingsOwnerBlocked]);
   const [settingsOwnerRecoveryBusy, setSettingsOwnerRecoveryBusy] = useState(false);
   const [settingsOwnerRecoveryError, setSettingsOwnerRecoveryError] = useState<string | null>(null);
   const accountLoadControllerRef = useRef<AbortController | null>(null);
@@ -781,6 +790,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     setSettingsOwnerRecoveryBusy(true); setSettingsOwnerRecoveryError(null);
     try {
       await requireSettingsOwner();
+      focusRecoveredSection.current = true;
       setSettingsOwnerBlocked(false);
       setAccountSaveNotice("Original account restored. Your unsaved choices are still here.");
       void loadConnectedAccounts(); void loadSettingsSyncStatus(); void loadAgentConnections();
@@ -2586,7 +2596,7 @@ export function InboxApp({
       readerFocusFrameRef.current = null;
     }
     const returnContext = captureSurfaceReturnContext({ kind: "message", id: importantSourceKey(item) });
-    surfaceHistoryRef.current?.openReader(item, returnContext);
+    surfaceHistoryRef.current?.openReader({ accountId: item.accountId, threadId: item.threadId }, returnContext);
     runUiTransition("reader-forward", () => {
       setPanelClosing(false); setZenClosing(false);
       setSelectedThreadId(item.threadId); setSelectedThreadAccountId(item.accountId);
