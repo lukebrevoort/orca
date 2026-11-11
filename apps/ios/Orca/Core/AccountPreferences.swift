@@ -17,19 +17,26 @@ struct AccountPreferences: Codable, Equatable {
     @Published private(set) var uncertain = false
     private var scope = ""
     private var generation = UUID()
+    private var loadTask: Task<Void, Never>?
     var dirty: Bool { edits != saved }
     func discard() { edits = saved; status = nil }
-    func invalidate() { generation = UUID(); scope = ""; edits = nil; saved = nil; loading = false; saving = false; uncertain = false; error = nil; status = nil }
+    func invalidate() { generation = UUID(); loadTask?.cancel(); loadTask = nil; scope = ""; edits = nil; saved = nil; loading = false; saving = false; uncertain = false; error = nil; status = nil }
     func load(state: AppState) async {
         if scope != state.ownerScope { invalidate(); scope = state.ownerScope }
+        if let loadTask { await loadTask.value; return }
         guard !loading, !saving, !dirty, let client = state.client else { return }
         loading = true; error = nil; let request = generation, owner = scope
-        defer { if generation == request { loading = false } }
-        do {
-            let value: AccountPreferences = try await client.request("v1/preferences")
-            guard !Task.isCancelled, generation == request, owner == state.ownerScope, state.phase == .ready else { return }
-            saved = value; edits = value
-        } catch { if generation == request && owner == state.ownerScope { self.error = error.localizedDescription } }
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { if generation == request { loading = false; loadTask = nil } }
+            do {
+                let value: AccountPreferences = try await client.request("v1/preferences")
+                guard !Task.isCancelled, generation == request, owner == state.ownerScope, state.phase == .ready else { return }
+                saved = value; edits = value
+            } catch { if generation == request && owner == state.ownerScope { self.error = error.localizedDescription } }
+        }
+        loadTask = task
+        await task.value
     }
     func checkCurrent(state: AppState) async {
         guard !saving, !loading, let client = state.client, scope == state.ownerScope else { return }

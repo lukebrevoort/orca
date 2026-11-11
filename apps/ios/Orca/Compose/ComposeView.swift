@@ -101,6 +101,7 @@ struct ComposeView: View {
     @State private var editorID = UUID()
     @State private var isVisible = false
     @State private var preparing = true
+    @State private var defaultsUnavailable = false
     @State private var completed = false
     @State private var staleConflict = false
     @State private var refreshingPermissions = false
@@ -243,6 +244,7 @@ struct ComposeView: View {
                         .accessibilityIdentifier("compose.refresh-permission")
                     }
                 }
+                if defaultsUnavailable { Text("Account defaults could not be loaded. Your writing is kept; add a signature if needed.").font(.caption).foregroundStyle(OrcaTheme.muted).padding(.horizontal, 18) }
                 Group {
                     if dynamicTypeSize.isAccessibilitySize { composeActionsVertical }
                     else { composeActionsHorizontal }
@@ -267,6 +269,11 @@ struct ComposeView: View {
             }
             if needsHydration {
                 let isNewWriting = local == nil && seedServer == nil
+                if isNewWriting {
+                    await preferences.load(state: state)
+                    guard !Task.isCancelled, isVisible, editorID == activeEditor, draftOwnerScope == state.ownerScope else { await state.draftStore.endEditing(activeEditor); return }
+                    defaultsUnavailable = preferences.saved == nil
+                }
                 seed()
                 if isNewWriting, let signature = preferences.saved?.signature, !signature.isEmpty {
                     messageBody = "\n\n" + signature + messageBody
