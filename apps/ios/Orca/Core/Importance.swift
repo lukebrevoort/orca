@@ -29,6 +29,11 @@ import SwiftUI
         // The server still enforces exact owned revision when Undo is submitted.
         return true
     }
+    private func discardKnownSupersededReceipt() {
+        if receipt != nil && !receiptMatchesKnownRevision {
+            receipt = nil; receiptThreadId = nil; status = "Choice changed elsewhere. Showing the current conversation."
+        }
+    }
     var originalTarget: String? {
         guard let pending else { return nil }
         let context = pending.contextSubject.flatMap { $0.isEmpty ? nil : $0 } ?? pending.contextThreadId ?? pending.command.target.threadId ?? "Earlier conversation"
@@ -57,7 +62,7 @@ import SwiftUI
         defer { if request == generation { busy = false } }
         do {
             let result = try await client.importance(accountId: accountId, threadId: threadId)
-            guard current(state, request) else { return }; snapshot = result
+            guard current(state, request) else { return }; snapshot = result; discardKnownSupersededReceipt()
         } catch { if current(state, request) { self.error = error.localizedDescription } }
     }
     private func persist(_ next: Pending?) {
@@ -166,7 +171,7 @@ import SwiftUI
         state.importanceDidChange(accountId: accountId)
         do {
             let latest = try await state.client?.importance(accountId: accountId, threadId: threadId)
-            guard current(state, request) else { return }; snapshot = latest
+            guard current(state, request) else { return }; snapshot = latest; discardKnownSupersededReceipt()
         } catch { if current(state, request) { snapshot = nil; self.error = "Choice recorded; current conversation could not be refreshed. Try again." } }
     }
 }

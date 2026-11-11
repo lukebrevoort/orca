@@ -44,7 +44,7 @@ import Foundation
         await undoController.reconcile(state: state)
         check("465-stale-test-established-current-receipt", undoController.receipt?.revision == 1 && undoController.canUndo, "must establish current revision1 receipt before checking revision2")
         revision = 2; await undoController.refresh(state: state)
-        check("465-known-newer-revision-disables-Undo", !undoController.canUndo, "current conversation revision2 supersedes receipt revision1")
+        check("465-known-newer-revision-disables-Undo", !undoController.canUndo && undoController.receipt == nil, "current conversation revision2 supersedes receipt revision1")
 
         let inbox = InboxViewModel(); inbox.view = "all"
         var networkOffline = false
