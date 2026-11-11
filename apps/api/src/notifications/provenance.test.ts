@@ -32,3 +32,17 @@ test("BRE-455 original ordered duplicate headers cannot override earlier deliver
   const own = smtpMessage(); own.payload!.headers![3]!.value = "u@example.com";
   expect(gmailArrivalEvidence(own, "u@example.com", now).reason).toBe("own_primary_sender");
 });
+test("BRE-455 imported old date, missing invalid time, duplicated From and trailing fake headers remain unknown", () => {
+  for (const internalDate of [undefined, "", "nan", "-1", String(now - 86400000)]) {
+    const value = smtpMessage(); value.internalDate = internalDate;
+    expect(gmailArrivalEvidence(value, "u@example.com", now).evidence).toBe("unknown");
+  }
+  const duplicate = smtpMessage(); duplicate.payload!.headers!.push({ name: "From", value: "u@example.com" });
+  expect(gmailArrivalEvidence(duplicate, "u@example.com", now).reason).toBe("ambiguous_sender");
+  const laterFake = smtpMessage();
+  laterFake.payload!.headers![2]!.value = laterFake.payload!.headers![2]!.value.replace("u@example.com", "other@example.com");
+  laterFake.payload!.headers!.push(smtpMessage().payload!.headers![2]!);
+  expect(gmailArrivalEvidence(laterFake, "u@example.com", now).evidence).toBe("unknown");
+  const wrongOrder = smtpMessage(); wrongOrder.payload!.headers!.push(wrongOrder.payload!.headers!.shift()!);
+  expect(gmailArrivalEvidence(wrongOrder, "u@example.com", now).reason).toBe("invalid_envelope_order");
+});

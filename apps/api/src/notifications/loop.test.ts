@@ -7,7 +7,7 @@ async function fixture(run: (f: Awaited<ReturnType<typeof notificationFixture>>)
   setMobilePushTestEnv(); const f = await notificationFixture();
   try { await run(f); } finally { f.sqlite.close(); clearMobilePushTestEnv(); }
 }
-async function claim(f: Awaited<ReturnType<typeof notificationFixture>>, revision = 1, operationId = randomUUID(), id = "browser") {
+async function claim(f: Awaited<ReturnType<typeof notificationFixture>>, revision = 1, operationId: string = randomUUID(), id = "browser") {
   const response = await f.request(`/v1/notifications/installations/${id}/claim`, { channel: "open_app", expectedRevision: revision, operationId, permission: "granted" }, "POST");
   expect(response.status).toBe(200); return await response.json() as ImportantNotificationClaimResponse;
 }
@@ -30,8 +30,8 @@ test("BRE-455 real authenticated browser feed claims important automated archive
 test("BRE-455 old mark before first scan, human unreviewed/not-important, unknown direction and read arrivals stay quiet", () => fixture(async f => {
   await f.adopt();
   await f.persist(f.message("old", "old")); await f.important("gmail:a:old");
-  await f.persist(f.message("human-unreviewed", "human"));
-  await f.persist(f.message("human-not-important", "human-not")); await f.important("gmail:a:human-not", "not_important");
+  await f.persist(f.human("human-unreviewed", "human"));
+  await f.persist(f.human("human-not-important", "human-not")); await f.important("gmail:a:human-not", "not_important");
   await f.fresh("known");
   await f.persist(f.message("unknown", "conversation", { payload: { headers: [{ name: "From", value: "alias@example.com" }] } }));
   await f.persist(f.message("read", "conversation", { labelIds: [] }));
@@ -80,4 +80,49 @@ test("BRE-455 authorization, foreign scopes, operation conflicts and malformed/o
   const receipt = await f.request(`/v1/notifications/operations/${command.operationId}`); expect(receipt.status).toBe(200);
   await f.adopt("open_app", "browser", 1, { enabled: false });
   const retry = await f.request("/v1/notifications/installations/browser", command); expect(retry.status).toBe(200); expect(await retry.json()).toMatchObject({ status: "superseded", appliedRevision: 1, current: { revision: 2, policy: { enabled: false } } });
+}));
+
+test("BRE-455 exact-sender inheritance uses all retained participants and conversation override wins", () => fixture(async f => {
+  const { previewImportance, mutateImportance } = await import("../importance/store.ts");
+  await f.adopt(); await f.persist(f.message("sender-seed", "participants"));
+  const preview = previewImportance(f.sqlite, { userId: "u", accountId: "a" }, { accountId: "a", address: "receipt@example.net", choice: "important" }, f.state.now);
+  mutateImportance(f.sqlite, { userId: "u", accountId: "a" }, { accountId: "a", target: { kind: "sender", address: "receipt@example.net" }, choice: "important", expectedRevision: 0, operationId: randomUUID(), confirmation: preview.confirmation }, f.state.now);
+  f.state.now += 1000;
+  const human = f.human("new-other-participant", "participants"); human.payload!.headers!.find(h => h.name === "From")!.value = "Other person <other@example.net>";
+  await f.persist(human);
+  expect((await claim(f)).notifications).toHaveLength(1);
+  await f.important("gmail:a:participants", "not_important");
+  f.state.now += 901000; await f.persist(f.message("overridden", "participants"));
+  expect((await claim(f)).notifications).toHaveLength(0);
+  expect(f.sqlite.query("SELECT effective,participant_count FROM importance_thread_state WHERE thread_id='gmail:a:participants'").get()).toEqual({ effective: "not_important", participant_count: 2 });
+}));
+
+test("BRE-455 concurrent browser claims and foreign-device reports cannot duplicate or steal envelopes", () => fixture(async f => {
+  await f.adopt(); await f.fresh("only-once");
+  const claims = await Promise.all([claim(f), claim(f)]); expect(claims.reduce((n, r) => n + r.notifications.length, 0)).toBe(1);
+  const owner = claims.find(r => r.notifications.length)!;
+  await f.adopt("open_app", "other-browser");
+  const foreign = await f.request("/v1/notifications/installations/other-browser/report", { operationId: owner.operationId, notificationIds: [owner.notifications[0]!.id], outcome: "constructed" }, "POST"); expect(foreign.status).toBe(404);
+  const changed = await f.request("/v1/notifications/installations/browser/claim", { channel: "open_app", expectedRevision: 9, operationId: owner.operationId, permission: "granted" }, "POST"); expect(changed.status).toBe(409);
+  expect(f.sqlite.query("SELECT count(*) n FROM important_notification_web_deliveries").get()).toEqual({ n: 1 });
+}));
+
+test("BRE-455 new selected account gets its own boundary and provider thread IDs do not cross-suppress", () => fixture(async f => {
+  f.sqlite.query("INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('second','u','gmail','second','u@example.com')").run();
+  await f.adopt(); await f.fresh("a-first", "same-provider-thread"); expect((await claim(f)).notifications).toHaveLength(1);
+  const { persistGmailMessages } = await import("../providers/gmail/sync.ts");
+  const writeSecond = async (id: string) => persistGmailMessages(f.db, { accountId: "second", accountEmail: "u@example.com", gmailMessages: [f.message(id, "same-provider-thread")], labelList: [], now: new Date(f.state.now), propagationTrigger: "push", propagationOptions: { enabled: false } });
+  await writeSecond("second-seed"); await f.important("gmail:second:same-provider-thread", "important", "second");
+  f.state.now += 1000; await writeSecond("before-selected");
+  await f.adopt("open_app", "browser", 1, { accountIds: ["a", "second"] }); expect((await claim(f, 2)).notifications).toHaveLength(0);
+  f.state.now += 1000; await writeSecond("after-selected"); const result = await claim(f, 2); expect(result.notifications).toHaveLength(1); expect(result.notifications[0]!.accountId).toBe("second");
+}));
+
+test("BRE-455 initially read, corrected-back and read-back arrivals cannot resurrect an interruption", () => fixture(async f => {
+  await f.adopt(); await f.fresh("to-correct"); await f.important("gmail:a:conversation", "not_important"); await f.important("gmail:a:conversation");
+  expect((await claim(f)).notifications).toHaveLength(0);
+  f.state.now += 1000; await f.persist(f.message("read-first", "conversation", { labelIds: [] })); f.sqlite.query("UPDATE emails SET is_read=0 WHERE id='gmail:a:read-first'").run();
+  expect((await claim(f)).notifications).toHaveLength(0);
+  f.state.now += 1000; await f.persist(f.message("read-back", "conversation")); f.sqlite.query("UPDATE emails SET is_read=1 WHERE id='gmail:a:read-back'").run(); f.sqlite.query("UPDATE emails SET is_read=0 WHERE id='gmail:a:read-back'").run();
+  expect((await claim(f)).notifications).toHaveLength(0);
 }));

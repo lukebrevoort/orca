@@ -31,7 +31,7 @@ CREATE TABLE important_notification_operations (
 --> statement-breakpoint
 CREATE TABLE important_notification_cooldowns (
  user_id TEXT NOT NULL, channel TEXT NOT NULL, installation_id TEXT NOT NULL,
- account_id TEXT NOT NULL, thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+ account_id TEXT NOT NULL, thread_id TEXT NOT NULL,
  reservation_id TEXT NOT NULL, attempted_at INTEGER NOT NULL,
  FOREIGN KEY(account_id,thread_id) REFERENCES threads(account_id,id) ON DELETE CASCADE,
  PRIMARY KEY(user_id,channel,installation_id,account_id,thread_id),
@@ -45,6 +45,8 @@ CREATE TABLE important_notification_web_claims (
  PRIMARY KEY(user_id,operation_id),
  FOREIGN KEY(user_id,channel,installation_id) REFERENCES important_notification_installations(user_id,channel,installation_id) ON DELETE CASCADE);
 --> statement-breakpoint
+CREATE UNIQUE INDEX important_notification_web_claim_scope_idx ON important_notification_web_claims(user_id,installation_id,operation_id,generation);
+--> statement-breakpoint
 CREATE TABLE important_notification_web_deliveries (
  id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL,
  channel TEXT NOT NULL DEFAULT 'open_app' CHECK(channel='open_app'),
@@ -54,7 +56,7 @@ CREATE TABLE important_notification_web_deliveries (
  state TEXT NOT NULL CHECK(state IN ('claimed','constructed','failed','dead')),
  created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, envelope_json TEXT NOT NULL,
  FOREIGN KEY(user_id,channel,installation_id) REFERENCES important_notification_installations(user_id,channel,installation_id) ON DELETE CASCADE,
- FOREIGN KEY(user_id,claim_operation_id) REFERENCES important_notification_web_claims(user_id,operation_id) ON DELETE CASCADE,
+ FOREIGN KEY(user_id,installation_id,claim_operation_id,generation) REFERENCES important_notification_web_claims(user_id,installation_id,operation_id,generation) ON DELETE CASCADE,
  FOREIGN KEY(user_id,account_id) REFERENCES oauth_accounts(user_id,id) ON DELETE CASCADE,
  FOREIGN KEY(account_id,thread_id,message_id) REFERENCES emails(account_id,thread_id,id) ON UPDATE CASCADE ON DELETE CASCADE);
 --> statement-breakpoint
@@ -111,3 +113,10 @@ CREATE TRIGGER important_notification_device_removed AFTER DELETE ON mobile_push
  boundary_sequence=(SELECT value FROM mobile_push_sequence_counter WHERE id=1),watermark_sequence=(SELECT value FROM mobile_push_sequence_counter WHERE id=1)
  WHERE user_id=OLD.user_id AND channel='apns' AND installation_id=OLD.installation_id;
 END;
+
+--> statement-breakpoint
+CREATE INDEX important_notification_arrivals_thread_fk_idx ON important_notification_arrivals(account_id,thread_id);
+--> statement-breakpoint
+CREATE INDEX important_notification_web_owner_account_fk_idx ON important_notification_web_deliveries(user_id,account_id);
+--> statement-breakpoint
+CREATE INDEX important_notification_web_message_fk_idx ON important_notification_web_deliveries(account_id,thread_id,message_id);

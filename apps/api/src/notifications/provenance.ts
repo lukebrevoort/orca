@@ -20,7 +20,10 @@ export function gmailArrivalEvidence(message: GmailMessage, accountEmail: string
   const values = (name: string) => headers.filter(h => h.name.toLowerCase() === name).map(h => h.value.replace(/\r?\n[ \t]+/g, " ").trim());
   const from = values("from");
   if (from.length !== 1) return unknown("ambiguous_sender");
-  const address = from[0]!.match(/<([^<>]+)>/)?.[1]?.trim().toLowerCase() ?? from[0]!.trim().toLowerCase();
+  const fromValue = from[0]!;
+  const angle = fromValue.match(/^[^<>,;]*<([^<>]+)>$/);
+  const address = (angle?.[1] ?? fromValue).trim().toLowerCase();
+  if (!/^[^\s<>@,;()]+@[^\s<>@,;()]+$/.test(address)) return unknown("ambiguous_sender");
   if (address === primary) return unknown("own_primary_sender");
   const deliveries = values("delivered-to");
   if (!deliveries.length || deliveries.some(value => value.toLowerCase() !== primary)) return unknown("missing_or_contradictory_recipient");
@@ -48,13 +51,15 @@ export function captureArrivals(sqlite: Database, input: { accountId: string; ac
   if (!input.messages.length) return;
   const owner = sqlite.query("SELECT provider_email FROM oauth_accounts WHERE id=? AND provider='gmail'").get(input.accountId) as { provider_email: string } | null;
   if (!owner || owner.provider_email.toLowerCase() !== input.accountEmail.toLowerCase()) throw Error("Arrival account mismatch");
+  const counts = new Map<string, number>();
+  for (const message of input.messages) counts.set(message.id, (counts.get(message.id) ?? 0) + 1);
   for (let start = 0; start < input.messages.length; start += 100) {
     const messages = input.messages.slice(start, start + 100);
     const targets = messages.map(message => ({ accountId: input.accountId, threadId: `gmail:${input.accountId}:${message.threadId}` }));
     const importance = readImportance(sqlite, targets);
     const values = messages.map(message => {
       const threadId = `gmail:${input.accountId}:${message.threadId}`, messageId = `gmail:${input.accountId}:${message.id}`;
-      const proof = gmailArrivalEvidence(message, owner.provider_email, input.now);
+      const proof = counts.get(message.id) === 1 ? gmailArrivalEvidence(message, owner.provider_email, input.now) : unknown("duplicate_provider_message");
       return [messageId, input.accountId, threadId, input.now, proof.receivedAt, proof.evidence, proof.reason,
         Number(message.labelIds?.includes("UNREAD")), Number(importance.get(importanceKey(input.accountId, threadId))?.effective === "important")];
     });
