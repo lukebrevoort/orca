@@ -38,7 +38,7 @@ async function fixture(run: (f: {
       }
       return db;
     } });
-    const request = (owner: "u" | "v" | null, expected: string | undefined, method: "GET" | "PATCH" = "GET", suffix = "", bearer?: string) => app.request("/v1/preferences" + suffix, {
+    const request = async (owner: "u" | "v" | null, expected: string | undefined, method: "GET" | "PATCH" = "GET", suffix = "", bearer?: string) => app.request("/v1/preferences" + suffix, {
       method, headers: { "content-type": "application/json", ...(bearer ? { authorization: `Bearer ${bearer}` } : owner ? { cookie: `orca_session=${owner === "u" ? sessionU.token : sessionV.token}` } : {}), ...(expected === undefined ? {} : { [ownerHeader]: expected }) },
       ...(method === "PATCH" ? { body: JSON.stringify({ signature: "Unsaved U draft", composeFormat: "rich" }) } : {}),
     });
