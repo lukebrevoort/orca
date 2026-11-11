@@ -71,10 +71,14 @@ struct NativeCatalogSectionPresentation {
             catalogError = staleCatalog ? "Offline — saved collections and pins; results may have changed." : "Collections and pins unavailable. Important and All Mail remain available."
         }
     }
-    /// Used by Settings; extraction preserves the pre-review presentation for
-    /// the failing baseline before its operational-state policy is corrected.
+    /// Settings uses the same independent catalog state as the mailbox picker.
+    /// An unavailable or stale catalog must never look like a resolved empty one.
     func settingsSection(_ section: String) -> NativeCatalogSectionPresentation {
-        NativeCatalogSectionPresentation(loading: false, message: nil, canShowEmpty: true)
+        let isSpaces = section == "spaces"
+        let message = isSpaces ? spaceError : catalogError
+        let resolved = isSpaces ? spaces != nil : catalog != nil
+        return NativeCatalogSectionPresentation(loading: loading, message: message,
+            canShowEmpty: resolved && !loading && message == nil)
     }
     static func offline(_ error: Error) -> Bool {
         if case APIClient.ClientError.http(let code, _) = error { return code >= 500 }

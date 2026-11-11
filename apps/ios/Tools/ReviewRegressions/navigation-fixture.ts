@@ -2,9 +2,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Database } from 'bun:sqlite';
 import { createDatabaseClient } from '../../../api/src/db/client.ts';
+import { createDestinations } from '../../../api/src/destinations/service.ts';
 
 type RequestProbe = { path: string; method: string; phase: string; connections: number };
-export function createNavigationProbe(sqlite: Database) {
+export function createNavigationProbe(sqlite: Database, db: ReturnType<typeof createDatabaseClient>["db"]) {
   const context = new AsyncLocalStorage<RequestProbe>();
   const connections: Array<{ path: string; method: string; phase: string; ordinal: number; totalChanges: number }> = [];
   const requests: Array<{ path: string; method: string; phase: string; status: number }> = [];
@@ -93,6 +94,13 @@ export function createNavigationProbe(sqlite: Database) {
       const pin = sqlite.query("INSERT INTO pins(id,account_id,kind,target_id,target_type,resource_family,saved_query_id,label,position,revision) VALUES(?,'account',?,?,?,?,?,?,?,3)");
       targets.forEach((target, position) => pin.run('nav-pin-' + position, target.family ?? 'filter', target.id, target.family ? 'resource' : 'query', target.family ?? null, target.family ? null : target.id, target.label, position));
     })();
+    // Fresh workspaces have Inbox only. Create a real named Focus through the
+    // production service instead of asserting that legacy defaults supplied one.
+    const destinations = createDestinations(db, 'owner');
+    const current = destinations.list();
+    if (!current.destinations.some(item => item.name === 'Focus' && item.retiredAt === null)) {
+      destinations.create({ expectedRevision: current.revision, name: 'Focus' });
+    }
     seedDML = changes() - before; seeded = true;
     return { seeded, seedDML };
   }

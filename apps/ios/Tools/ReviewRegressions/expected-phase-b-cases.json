@@ -71,6 +71,7 @@
       "NAV-B-settings-catalog-error-visible",
       "NAV-B-settings-intent-explicit-leave",
       "NAV-B-settings-intent-session-change",
+      "NAV-B-settings-intent-session-precondition",
       "NAV-B-settings-intent-stay-guard",
       "NAV-B-settings-loading-not-empty",
       "NAV-B-settings-spaces-error-visible",
@@ -162,7 +163,7 @@
     ]
   },
   "newCount": 139,
-  "expectedCount": 418,
+  "expectedCount": 419,
   "expectedCaseIDs": [
     "465-known-newer-revision-disables-Undo",
     "465-no-A-receipt-under-B",
@@ -527,6 +528,7 @@
     "NAV-B-settings-catalog-error-visible",
     "NAV-B-settings-intent-explicit-leave",
     "NAV-B-settings-intent-session-change",
+    "NAV-B-settings-intent-session-precondition",
     "NAV-B-settings-intent-stay-guard",
     "NAV-B-settings-loading-not-empty",
     "NAV-B-settings-spaces-error-visible",

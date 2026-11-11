@@ -261,7 +261,12 @@ private func nativePage(query: NativeSavedQuery? = nil, row: String = "row", cur
         state.stayInSettings(); state.routeMailbox(intent); state.discardSettingsAndLeave()
         check("NAV-B-settings-intent-explicit-leave", state.selectedTab == "inbox" && state.routedMailbox?.identity == intent.identity && !preferences.dirty, "explicit discard routes the originally captured owned target")
         state.selectedTab = "settings"; state.routedMailbox = nil
-        preferences.edits?.signature = "New unsaved"; state.routeMailbox(intent); state.mailConnectionGeneration = UUID(); state.discardSettingsAndLeave()
+        // discard() above restored saved=nil. Establish a real new edit rather
+        // than optional-chaining into that nil snapshot and skipping the guard.
+        preferences.edits = .init(signature: "New unsaved", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)
+        state.routeMailbox(intent)
+        check("NAV-B-settings-intent-session-precondition", preferences.dirty && state.pendingSettingsNavigation != nil && state.routedMailbox == nil, "a real new edit and captured pending intent precede the connection change")
+        state.mailConnectionGeneration = UUID(); state.discardSettingsAndLeave()
         check("NAV-B-settings-intent-session-change", state.routedMailbox == nil && state.selectedTab == "settings" && preferences.dirty, "delayed Leave cannot discard or route a superseded connection's target")
     }
 }

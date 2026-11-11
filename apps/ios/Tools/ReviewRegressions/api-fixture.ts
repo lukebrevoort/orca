@@ -14,7 +14,7 @@ process.env.SESSION_SECRET = 'synthetic-native-review-regressions-secret';
 process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 23).toString('base64');
 const scratch = mkdtempSync(join(tmpdir(), 'bre457-native-review-api-'));
 const path = join(scratch, 'fixture.sqlite'), { db, sqlite } = createDatabaseClient(path);
-const navigation = createNavigationProbe(sqlite);
+const navigation = createNavigationProbe(sqlite, db);
 migrate(db, { migrationsFolder: resolve(import.meta.dir, '../../../api/drizzle') });
 sqlite.exec(`INSERT INTO users(id,email) VALUES('owner','owner@example.com');
 INSERT INTO users(id,email) VALUES('owner-b','owner-b@example.com');
