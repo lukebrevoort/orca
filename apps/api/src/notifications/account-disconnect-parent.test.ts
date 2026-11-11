@@ -7,10 +7,11 @@ import { createDatabaseClient } from "../db/client.ts";
 import { createSession } from "../auth/session-store.ts";
 import { createApp } from "../index.ts";
 
-// Independent BRE-464 regression: no 0054 notification schema/fixtures required.
+// Independent BRE-464 regression: no 0055 notification schema/fixtures required.
 // Both historical baselines demonstrate the actual HTTP500 before applying 0054.
 for (const cutoff of [51, 53]) test(`BRE-464 authenticated retained-mail disconnect on <=005${cutoff === 51 ? "1" : "3"} upgrades independently through 0054`, async () => {
-  const prior = process.env.SESSION_SECRET; process.env.SESSION_SECRET = "bre464-synthetic-session-secret-long-enough";
+  const prior = { SESSION_SECRET: process.env.SESSION_SECRET, TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY };
+  process.env.SESSION_SECRET = "bre464-synthetic-session-secret-long-enough"; process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 14).toString("base64");
   const dir = mkdtempSync(join(tmpdir(), "orca-bre464-"));
   const path = join(dir, "test.sqlite"), client = createDatabaseClient(path);
   const source = resolve(import.meta.dir, "../../drizzle");
@@ -52,5 +53,5 @@ for (const cutoff of [51, 53]) test(`BRE-464 authenticated retained-mail disconn
     expect(client.sqlite.query("SELECT count(*) n FROM emails WHERE account_id='b'").get()).toEqual({ n: 1 });
     expect(client.sqlite.query("PRAGMA foreign_key_check").all()).toEqual([]);
     if (cutoff === 53) for (const table of ["importance_message_state", "importance_participants", "importance_thread_state", "importance_operations"]) expect(client.sqlite.query(`SELECT count(*) n FROM ${table} WHERE account_id='a'`).get()).toEqual({ n: 0 });
-  } finally { client.sqlite.close(); rmSync(dir, { recursive: true, force: true }); if (prior === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = prior; }
+  } finally { client.sqlite.close(); rmSync(dir, { recursive: true, force: true }); for (const [key, value] of Object.entries(prior)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } }
 });
