@@ -21,7 +21,7 @@ try{for(const theme of ['light','dark']){
   await page.waitForFunction(()=>document.body.textContent.includes('Account preferences saved.')||document.body.textContent.includes('Settings ownership changed.'));
   const after=await context.request.get(origin+'/v1/preferences').then(r=>r.json());
   await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-owner.png')});
-  const database=rows();result.scenarios.push({theme,before,after,database});
+  const database=rows();result.scenarios.push({theme,name:'owner-switched-before-save',before,after,database});
   check(after.signature===before.signature,'Old owner edits must never be saved into the new session owner');
   check(await page.getByRole('button',{name:'Check original session',exact:true}).isVisible(),'Owner change offers explicit recovery without exposing old account data');
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(out,theme+'-owner-mobile.png')});
@@ -29,5 +29,28 @@ try{for(const theme of ['light','dark']){
   check(await page.getByRole('button',{name:'Check original session',exact:true}).evaluate(node=>node.getBoundingClientRect().height>=44),'Owner recovery action retains touch target');
   await context.request.get(origin+'/__fixture/login');await page.getByRole('button',{name:'Check original session',exact:true}).click();await signature.waitFor();
   check(await signature.inputValue()==='Unsaved original owner '+theme,'Original owner recovery retains unsaved choices');
+  // The preflight identity is a real committed U response. A later V cookie
+  // must not turn this old editor into a V preferences mutation.
+  let releaseIdentity,identityStarted,holdIdentity=true;
+  const identityGate=new Promise(resolve=>releaseIdentity=resolve),identityHeld=new Promise(resolve=>identityStarted=resolve);
+  let identitySnapshot;
+  await page.route('**/v1/auth/session',async route=>{
+   if(!holdIdentity)return route.continue();
+   holdIdentity=false;const response=await route.fetch();assert(response.ok());identitySnapshot=await response.json();
+   identityStarted();await identityGate;await route.fulfill({response});
+  });
+  try{
+   await page.getByRole('button',{name:'Save account choices',exact:true}).click();
+   let timer;try{await Promise.race([identityHeld,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Identity preflight did not reach the real response barrier in 8s')),8000);})]);}finally{clearTimeout(timer);}
+   check(identitySnapshot.isAuthenticated&&identitySnapshot.user.id==='u','Held identity preflight really belongs to U');
+   await context.request.get(origin+'/__fixture/login-other');
+   const heldBefore=await context.request.get(origin+'/v1/preferences').then(response=>response.json());
+   releaseIdentity();
+   await page.waitForFunction(()=>document.body.textContent.includes('Account preferences saved.')||document.body.textContent.includes('Settings ownership changed.')||document.body.textContent.includes('Could not save your preferences.'));
+   const heldAfter=await context.request.get(origin+'/v1/preferences').then(response=>response.json());
+   await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-held-identity.png')});
+   result.scenarios.push({theme,name:'owner-switched-during-held-identity-preflight',identitySnapshot,before:heldBefore,after:heldAfter,database:rows()});
+   check(heldAfter.signature===heldBefore.signature,'Held stale U identity must never authorize a PATCH into V');
+  }finally{releaseIdentity();await page.unroute('**/v1/auth/session');}
  }catch(error){result.failures.push({theme,message:error.message});}finally{await context.close();}
 }}finally{await browser.close();await writeFile(join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({scenarios:result.scenarios.length,assertions:result.assertions,failures:result.failures,pageErrors:result.pageErrors}));}process.exitCode=result.failures.length||result.pageErrors.length?1:0;
