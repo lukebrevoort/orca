@@ -1,0 +1,16 @@
+{
+  "executedSource": "110a6f7b5987aec0580cb9f20eac766d971ffb38",
+  "stackedBase": "0182327c5fa36b8d686ed72130d8133ee9b3a1a2",
+  "baseline": "4f7aff92f4e1f93b86a95c6fd5e86e3bf3045da7",
+  "artifacts": {
+    "demo.json": "65d192b3c28056806aee44a498e88489dc938f00699a46ac68fc7e4c32338890",
+    "baseline.json": "57707c914bd6d23f3d94cb18fd1047d3b7eaca2eb1828b513f2162077f4af510",
+    "doctor.log": "9532bdc6291d0a8b7fee8a6830efd914f3d475c7da12fa25b71fe822b0c49225",
+    "baseline-initial-red.log": "f27562f73a3584d306db61bc7cb09746e1c53ade321d4aa9a24c20ce7df12003",
+    "baseline-red.log": "d2eedc5332ead302cf9ddd90a723f92ee18e5f51e73e4241855e3ed5c52cdb6c",
+    "doctor-node24.log": "6590243256e2d973ffc069017a51af708ebcfab876d10f3b76d7c0a5da14f4f1",
+    "demo.html": "d12ebd254ca7d5c4ff02042b45dfb0bf88a1312e2dea441e62ccf3c867d6c9af",
+    "query-work.json": "83c49661afc65bb2867f691103a612d8dc63352753d226f8ecf27f86a49b38eb",
+    "focused.log": "c4bb90545fc8b539b1416fea2649043c1289aacfe4f740b5aed4e616a0cb2c10"
+  }
+}

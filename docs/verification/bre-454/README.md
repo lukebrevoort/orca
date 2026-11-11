@@ -1,8 +1,12 @@
 # BRE-454 — durable account-scoped importance
 
-Status: implementation in progress; independent correctness/security review and root merge gate belong to the parent. This is API/shared-contract evidence, not web, native, delivery or real-mail acceptance.
+Status: implementation and focused regressions pass; independent correctness/security review and root merge gate belong to the parent. This is API/shared-contract evidence, not web, native, delivery or real-mail acceptance.
 
 Original failing source baseline: `4f7aff92f4e1f93b86a95c6fd5e86e3bf3045da7`. [Baseline log](baseline-red.log) captures six actual authenticated route failures (HTTP 404 where the contract requires 200), before implementation. No mocked absence assertion or mocked resolver is used. [Provenance](baseline.json).
+
+Stored evidence ran on clean source `110a6f7b` (full SHA in [manifest](manifest.json)), stacked on foundation-core `0182327c5fa36b8d686ed72130d8133ee9b3a1a2`. The final evidence commit adds only these artifacts/docs; full workspace gates and the fixture are rerun at that final commit before pushing. Original `4f7aff92` red provenance is retained; no parent product/design patches were duplicated.
+
+Open [the API-only demo](demo.html), [raw transcript](demo.json), [actual query work and plans](query-work.json), and [18 focused passes / 209 assertions](focused.log). The demo has eight independent API/DB/read assertions and zero provider calls. First/next 50-conversation pages use 5/6 SELECT statements on both 1,000 and 5,000 conversations; these counts include reader account authorization/revision/projection reads, exclude the constant session middleware, and include indexed correlated metadata probes inside the page SQL. The raw plans show all probes. Broad sender updates measured 347,980 and 1,727,977 progress callbacks at interval one, including triggers, for 1,000/5,000 affected conversations. Cold connection/schema preparation and query-plan compilation can affect callback totals; no latency or speedup conclusion is drawn.
 
 ## Contract for the next client/notification stages
 

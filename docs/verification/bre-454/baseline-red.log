@@ -1,99 +1,100 @@
 bun test v1.3.14 (d1632b29)
 
 apps/api/src/importance/routes.test.ts:
-55 | }
-56 | 
-57 | test("BRE-454 durable conversation choices, independent DB/read projections and no mail side effects", () => fixture(async f => {
-58 |   const before = f.sqlite.query("select * from emails order by id").all();
-59 |   const placement = f.sqlite.query("select * from organization_effective_destinations order by thread_id").all();
-60 |   expect((await f.read()).status).toBe(200);
+64 | }
+65 | 
+66 | test("BRE-454 durable conversation choices, independent DB/read projections and no mail side effects", () => fixture(async f => {
+67 |   const before = f.sqlite.query("select * from emails order by id").all();
+68 |   const placement = f.sqlite.query("select * from organization_effective_destinations order by thread_id").all();
+69 |   expect((await f.read()).status).toBe(200);
                                        ^
 error: expect(received).toBe(expected)
 
 Expected: 200
 Received: 404
 
-      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:60:35)
-      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:15:15)
-(fail) BRE-454 durable conversation choices, independent DB/read projections and no mail side effects [80.28ms]
-46 |   const read = (threadId = "t1", accountId = "a1") => req(`/v1/importance/conversations/${threadId}?accountId=${accountId}`);
-47 |   const write = (choice: string | null, expectedRevision = 0, threadId = "t1", accountId = "a1", operationId = randomUUID()) =>
-48 |     req("/v1/importance/choices", { accountId, target: target(threadId), choice, expectedRevision, operationId });
-49 |   const preview = (choice: string | null, address = "robot@example.com", accountId = "a1") => req("/v1/importance/preview", { accountId, address, choice });
-50 |   async function sender(choice: string | null, revision = 0, address = "robot@example.com", accountId = "a1") {
-51 |     const p = await preview(choice, address, accountId); expect(p.status).toBe(200);
+      at <anonymous> (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:69:35)
+      at async fixture (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:15:15)
+(fail) BRE-454 durable conversation choices, independent DB/read projections and no mail side effects [68.11ms]
+50 |   const read = (threadId = "t1", accountId = "a1") => req(`/v1/importance/conversations/${threadId}?accountId=${accountId}`);
+51 |   const write = (choice: string | null, expectedRevision = 0, threadId = "t1", accountId = "a1", operationId = randomUUID()) =>
+52 |     req("/v1/importance/choices", { accountId, target: target(threadId), choice, expectedRevision, operationId });
+53 |   const preview = (choice: string | null, address = "robot@example.com", accountId = "a1") => req("/v1/importance/preview", { accountId, address, choice });
+54 |   async function sender(choice: string | null, revision = 0, address = "robot@example.com", accountId = "a1") {
+55 |     const p = await preview(choice, address, accountId); expect(p.status).toBe(200);
                                                                                ^
 error: expect(received).toBe(expected)
 
 Expected: 200
 Received: 404
 
-      at sender (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:51:75)
-      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:78:19)
-      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:15:15)
-(fail) BRE-454 exact sender inheritance, distinct inbound aggregation, future mail and reset [52.28ms]
-100 |   f.thread("empty"); f.message("outgoing", "empty", "one@example.com"); f.message("draft", "empty", "robot@example.com", "a1", true);
-101 |   expect((await f.read("empty")).value.importance).toMatchObject({ effective: "unreviewed", participantCounts: { total: 0 } });
-102 | }));
-103 | 
-104 | test("BRE-454 sender preview is read only, explains overrides/other participants, and requires current confirmation", () => fixture(async f => {
-105 |   expect((await f.write("important")).status).toBe(200);
+      at sender (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:55:75)
+      at async <anonymous> (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:88:19)
+      at async fixture (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:15:15)
+(fail) BRE-454 exact sender inheritance, distinct inbound aggregation, future mail and reset [47.66ms]
+110 |   f.thread("empty"); f.message("outgoing", "empty", "one@example.com"); f.message("draft", "empty", "robot@example.com", "a1", true);
+111 |   expect((await f.read("empty")).value.importance).toMatchObject({ effective: "unreviewed", participantCounts: { total: 0 } });
+112 | }));
+113 | 
+114 | test("BRE-454 sender preview is read only, explains overrides/other participants, and requires current confirmation", () => fixture(async f => {
+115 |   expect((await f.write("important")).status).toBe(200);
                                                     ^
 error: expect(received).toBe(expected)
 
 Expected: 200
 Received: 404
 
-      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:105:47)
-      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:15:15)
-(fail) BRE-454 sender preview is read only, explains overrides/other participants, and requires current confirmation [49.00ms]
-118 |   expect((await f.read()).value.importance.effective).toBe("important");
-119 | }));
-120 | 
-121 | test("BRE-454 guarded Undo, ABA tombstones, retries and ambiguous-response reconciliation cannot overwrite newer choices", () => fixture(async f => {
-122 |   const op = randomUUID();
-123 |   const first = await f.write("important", 0, "t1", "a1", op); expect(first.status).toBe(200);
+      at <anonymous> (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:115:47)
+      at async fixture (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:15:15)
+(fail) BRE-454 sender preview is read only, explains overrides/other participants, and requires current confirmation [51.61ms]
+128 |   expect((await f.read()).value.importance.effective).toBe("important");
+129 | }));
+130 | 
+131 | test("BRE-454 guarded Undo, ABA tombstones, retries and ambiguous-response reconciliation cannot overwrite newer choices", () => fixture(async f => {
+132 |   const op = randomUUID();
+133 |   const first = await f.write("important", 0, "t1", "a1", op); expect(first.status).toBe(200);
                                                                                           ^
 error: expect(received).toBe(expected)
 
 Expected: 200
 Received: 404
 
-      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:123:85)
-      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:15:15)
-(fail) BRE-454 guarded Undo, ABA tombstones, retries and ambiguous-response reconciliation cannot overwrite newer choices [48.74ms]
-135 |   expect((await f.read()).value.importance.conversation.revision).toBe(3);
-136 |   const missing = await f.req(`/v1/importance/operations/${randomUUID()}?accountId=a1`); expect(missing.status).toBe(404);
-137 | }));
-138 | 
-139 | test("BRE-454 authorization, unknown/malformed targets, exact address and account isolation", () => fixture(async f => {
-140 |   expect((await f.write("important")).status).toBe(200);
+      at <anonymous> (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:133:85)
+      at async fixture (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:15:15)
+(fail) BRE-454 guarded Undo, ABA tombstones, retries and ambiguous-response reconciliation cannot overwrite newer choices [47.48ms]
+145 |   expect((await f.read()).value.importance.conversation.revision).toBe(3);
+146 |   const missing = await f.req(`/v1/importance/operations/${randomUUID()}?accountId=a1`); expect(missing.status).toBe(404);
+147 | }));
+148 | 
+149 | test("BRE-454 authorization, unknown/malformed targets, exact address and account isolation", () => fixture(async f => {
+150 |   expect((await f.write("important")).status).toBe(200);
                                                     ^
 error: expect(received).toBe(expected)
 
 Expected: 200
 Received: 404
 
-      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:140:47)
-      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:15:15)
-(fail) BRE-454 authorization, unknown/malformed targets, exact address and account isolation [49.46ms]
-149 |   expect((await f.req("/v1/importance/choices", { accountId: "a1", target: { kind: "conversation", threadId: "t1" }, choice: "unreviewed", expectedRevision: 1, operationId: randomUUID() })).status).toBe(400);
-150 |   expect((await f.app.request("/v1/importance/conversations/t1?accountId=a1")).status).toBe(401);
-151 | }));
-152 | 
-153 | test("BRE-454 Important retained-mail pages ignore provider placement, have scoped stale-safe cursors and load no bodies", () => fixture(async f => {
-154 |   expect((await f.write("important")).status).toBe(200);
+      at <anonymous> (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:150:47)
+      at async fixture (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:15:15)
+(fail) BRE-454 authorization, unknown/malformed targets, exact address and account isolation [47.28ms]
+159 |   expect((await f.req("/v1/importance/choices", { accountId: "a1", target: { kind: "conversation", threadId: "t1" }, choice: "unreviewed", expectedRevision: 1, operationId: randomUUID() })).status).toBe(400);
+160 |   expect((await f.app.request("/v1/importance/conversations/t1?accountId=a1")).status).toBe(401);
+161 | }));
+162 | 
+163 | test("BRE-454 Important retained-mail pages ignore provider placement, have scoped stale-safe cursors and load no bodies", () => fixture(async f => {
+164 |   expect((await f.write("important")).status).toBe(200);
                                                     ^
 error: expect(received).toBe(expected)
 
 Expected: 200
 Received: 404
 
-      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:154:47)
-      at async fixture (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.test.ts:15:15)
-(fail) BRE-454 Important retained-mail pages ignore provider placement, have scoped stale-safe cursors and load no bodies [49.78ms]
+      at <anonymous> (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:164:47)
+      at async fixture (/private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/orca-importance-baseline-qyqw0jl4/apps/api/src/importance/routes.test.ts:15:15)
+(fail) BRE-454 Important retained-mail pages ignore provider placement, have scoped stale-safe cursors and load no bodies [48.27ms]
 
  0 pass
+ 10 filtered out
  6 fail
  6 expect() calls
-Ran 6 tests across 1 file. [1299.00ms]
+Ran 6 tests across 1 file. [1362.00ms]
