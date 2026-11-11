@@ -1,0 +1,34 @@
+{
+  "baseline": "8e55183d",
+  "candidate": "44afb3b1aee5bab1592144ed083a5196d57dedf0",
+  "baselineResults": {
+    "tests": 4,
+    "pass": 2,
+    "fail": 2,
+    "exit": 1
+  },
+  "candidateResults": {
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "exit": 0
+  },
+  "scope": "Real evidence-runner main with actual pinned runtime/compiler metadata and ownership admission. Only type stage command is replaced with real true/false processes; final Git observations are simulated without source mutation. Not API, TypeScript, or native execution evidence.",
+  "controls": [
+    "clean success0",
+    "changed HEAD rejects2",
+    "dirty status rejects2",
+    "clean stage failure1 preserved"
+  ],
+  "resources": {
+    "baselineOwnerPid": 17100,
+    "candidateOwnerPid": 17368,
+    "freeMemoryPercentBeforeAfter": 56
+  },
+  "sha256": {
+    "correctness-review-0f07957a.md": "7626ff5b4d39c2d6b108fbe168f861ed406958a5b6469634dde5362aaeccd00b",
+    "candidate.log": "2e75e1cd062a2f36c41cd4365601a960cd8d598f602bb2aa72fc1ff220743d37",
+    "security-review-0f07957a.md": "6b7ee7985a87bc3d6f0a0dfd55c7055918dc8e48eba2de3313a279108dfaffd9",
+    "baseline.log": "7ea646d90bdd61aa5d943ca9882f2613b8bd491b97995bedf98c8a9f2be8ae55"
+  }
+}

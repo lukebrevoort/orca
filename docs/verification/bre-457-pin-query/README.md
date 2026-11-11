@@ -6,7 +6,7 @@ Source869ce35f passed78 focused tests, including28 first-executed semantic count
 
 Both type commands in that original manifest printed Bun usage with exit0 and DID NOT run TypeScript. ROOT corrected the runner; actual shared/API project types passed at f6d0e168 using pinned Node24.22.1/TypeScript5.9.3, and the retained usage-only0 is rejected by the new guard. [Actual type receipts and scope](root-type-correction-f6d0/README.md). Do not relabel the original usage-only stages.
 
-Independent correctness review approved0f07957a with nonblocking comment/entrypoint clarity findings now addressed by ROOT. Separate security review and final sequential lint/types/tests/build at the final committed head remain pending, as do wire publication and native-client integration. The inherited scan comment is clarified without changing executable behavior. No PR, native retrieval, full product, live-provider or OS completion is claimed.
+Independent correctness review approved0f07957a with nonblocking comment/entrypoint clarity findings now addressed by ROOT. Separate security review found no product security blocker but requested a fail-closed runner end-state guard. ROOT reproduced two false-success cases at8e55183d and fixed them at44afb3b1; all four boundary regressions then passed. [Exact runner-only scope and retained reviews](root-source-drift-44afb3b1/scope.json). Fresh narrow re-check and final sequential lint/types/tests/build remain pending, as do wire publication and native-client integration. The inherited scan comment is clarified without changing executable behavior. No PR, native retrieval, full product, live-provider or OS completion is claimed.
 
 ## Historical checkpoint below
 
