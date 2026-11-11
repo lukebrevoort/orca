@@ -16,6 +16,7 @@ import SwiftUI
     @Published var selectedAccountID: String? { didSet { UserDefaults.standard.set(selectedAccountID, forKey: "selectedAccountID") } }
     @Published var errorMessage: String?
     @Published var selectedTab = "inbox"
+    weak var accountPreferences: AccountPreferencesController?
     @Published private(set) var mailboxReadRevision = UUID()
     private var connectionGeneration = UUID()
     private var accountRefreshGeneration = UUID()
@@ -133,11 +134,6 @@ import SwiftUI
         let revision = UUID()
         UserDefaults.standard.set(revision.uuidString, forKey: "inboxReadRevision|\(ownerScope)|\(accountId)")
         mailboxReadRevision = revision
-    }
-    func routeNotification(_ userInfo: [AnyHashable: Any]) {
-        guard phase == .ready, let thread = userInfo["threadId"] as? String, !thread.isEmpty,
-              let account = userInfo["accountId"] as? String, accounts.contains(where: { $0.id == account }) else { return }
-        selectedAccountID = account; selectedTab = "inbox"; routedThread = (thread, account)
     }
     private func configure(_ url: URL) { connectionGeneration = UUID(); let keychain = keychain, fixtureToken = fixtureToken, key = origin(url); client = APIClient(baseURL: url) { if let fixtureToken { return fixtureToken }; return await keychain.read(origin: key) } }
     private func origin(_ url: URL) -> String { var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased(); parts.port = url.port == (url.scheme == "https" ? 443 : 80) ? nil : url.port; return parts.string ?? url.absoluteString }

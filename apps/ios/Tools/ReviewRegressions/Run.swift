@@ -56,6 +56,12 @@ import Foundation
         for query in ["A", "B", "A"] { inbox.search = query; await inbox.load(state: state) }
         networkOffline = true; inbox.search = "B"; await inbox.load(state: state)
         check("cached-query-provenance", inbox.messages.first?.id == "B" && inbox.resultSearch == "B", "cached row \(inbox.messages.first?.id ?? "none") labeled \(inbox.resultSearch)")
+        let preferences = AccountPreferencesController()
+        state.accountPreferences = preferences
+        preferences.edits = .init(signature: "Unsaved", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)
+        state.selectedTab = "settings"
+        state.routeNotification(["threadId": "incoming", "accountId": "account"])
+        check("notification-route-keeps-unsaved-settings", state.selectedTab == "settings" && state.routedThread == nil && preferences.dirty, "notification must use the shared Stay/Leave guard")
         if let connection {
             state.client = APIClient(baseURL: URL(string: connection.baseURL)!) { connection.token }
             let client = state.client!

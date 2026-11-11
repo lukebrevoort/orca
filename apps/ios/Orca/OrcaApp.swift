@@ -81,6 +81,7 @@ struct MainView: View {
         .environmentObject(mailboxes)
         .environmentObject(importance)
         .environmentObject(preferences)
+        .onAppear { state.accountPreferences = preferences }
         .onChange(of: state.ownerScope) { preferences.invalidate() }
         .confirmationDialog("Leave unsaved account choices?", isPresented: $confirmSettingsLeave, titleVisibility: .visible) {
             Button("Stay", role: .cancel) { pendingTab = nil }
