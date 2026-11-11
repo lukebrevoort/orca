@@ -106,7 +106,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         guard let state, let selection, !busy, current(generation), let client = state.client, let draft else { return }
         guard journal == nil || matchingContext else { error = "Reopen the original View to finish its retained edits before editing another View."; return }
         guard journal?.command == nil else { error = "Resolve the original Save for this account before previewing a replacement. Preview never replays a write."; return }
-        let request = generation; busy = true; error = nil; defer { if request == generation { busy = false } }
+        let request = generation, reviewedEdits = edits; busy = true; error = nil; defer { if request == generation { busy = false } }
         var input = draft.keeping(["mode", "skipInbox", "viewId", "viewRevision", "source", "identity", "definition", "unsupportedClauses"])
         input = input.setting("identity", to: draft["identity"].setting("name", to: .string(name.trimmingCharacters(in: .whitespacesAndNewlines))).setting("description", to: .string(description)))
         if selection.query != nil && replaceSearch && !subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -115,7 +115,8 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         }
         do {
             let result: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": input, "page": .object(["limit": .number(25)])]))
-            guard current(request) else { return }; preview = result
+            guard current(request) else { return }
+            guard edits == reviewedEdits else { error = "Your edits changed while previewing. Preview them again before saving."; return }; preview = result
         } catch { if current(request) { self.error = error.localizedDescription } }
     }
     func save() async -> String? {

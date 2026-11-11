@@ -3528,3 +3528,56 @@ extension NativePreferenceTests {
         XCTAssertTrue(preferences.dirty)
     }
 }
+
+final class NativeViewEditorRecoveryTests: XCTestCase {
+    @MainActor func testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "native-editor-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let definition: [String: Any] = ["revision": 1, "accountIds": ["demo-account"], "sender": ["addresses": ["maya@example.com"]], "thread": ["subjectContains": "fixture", "readState": "unread"]]
+        var creates = 0, commits = 0, replayBodies = [String: Data](), serverName = "Original", drop = true
+        StubURLProtocol.handler = { request in
+            let input = try JSONSerialization.jsonObject(with: requestBodyData(request)) as! [String: Any]
+            var draft: [String: Any] = ["mode": "create", "viewRevision": NSNull(), "source": ["kind": "search", "label": "fixture"], "identity": ["name": serverName, "description": ""], "definition": definition, "unsupportedClauses": [], "saveEligibility": ["allowed": true], "definitionDigest": "fixture-digest"]
+            let path = request.url!.path
+            if path.hasSuffix("/prepare") {
+                if input["viewId"] != nil { draft["mode"] = "update"; draft["viewId"] = "created-view"; draft["viewRevision"] = 1 }
+                return (200, try JSONSerialization.data(withJSONObject: ["draft": draft]))
+            }
+            if path.hasSuffix("/preview") {
+                draft = input["draft"] as! [String: Any]; draft["saveEligibility"] = ["allowed": true]; draft["definitionDigest"] = "fixture-digest"
+                return (200, try JSONSerialization.data(withJSONObject: ["draft": draft, "workspaceRevision": 2, "results": ["state": "matches", "count": ["value": 1, "kind": "exact"]]]))
+            }
+            XCTAssertTrue(path.hasSuffix("/commit"))
+            commits += 1
+            let key = input["retryKey"] as! String, canonical = try JSONSerialization.data(withJSONObject: input, options: .sortedKeys)
+            if let original = replayBodies[key] { XCTAssertEqual(canonical, original, "Recovery must replay the exact original command, not replacement edits") }
+            else {
+                replayBodies[key] = canonical
+                let submitted = input["draft"] as! [String: Any]
+                if submitted["mode"] as? String == "create" { creates += 1 }
+                XCTAssertTrue(NSDictionary(dictionary: submitted["definition"] as! [String: Any]).isEqual(to: definition), "Simple edits preserve every advanced predicate")
+                serverName = (submitted["identity"] as! [String: Any])["name"] as! String
+            }
+            if drop { drop = false; throw URLError(.networkConnectionLost) }
+            return (200, Data(#"{"view":{"id":"created-view"}}"#.utf8))
+        }
+        let selection = NativeViewSelection(query: "fixture", accountId: "demo-account")
+        let first = NativeViewEditorController(defaults: defaults)
+        await first.open(selection: selection, state: fixture.state)
+        first.name = "Submitted"; first.edited(); await first.review()
+        let lost = await first.save(); XCTAssertNil(lost); XCTAssertEqual(creates, 1)
+        first.name = "Newer preserved edit"; first.edited(); first.close()
+        let reopened = NativeViewEditorController(defaults: defaults)
+        await reopened.open(selection: selection, state: fixture.state)
+        XCTAssertEqual(reopened.name, "Newer preserved edit"); XCTAssertNotNil(reopened.pendingTarget)
+        await reopened.review(); XCTAssertNil(reopened.preview, "Preview remains read-only and cannot bypass reconciliation")
+        let recovered = await reopened.save()
+        XCTAssertNil(recovered, "Acknowledging the earlier Save must keep newer edits open")
+        XCTAssertEqual(creates, 1); XCTAssertEqual(commits, 2); XCTAssertEqual(replayBodies.count, 1)
+        XCTAssertEqual(reopened.name, "Newer preserved edit"); XCTAssertTrue(reopened.changed)
+        await reopened.review(); let saved = await reopened.save()
+        XCTAssertEqual(saved, "created-view"); XCTAssertEqual(creates, 1); XCTAssertEqual(serverName, "Newer preserved edit")
+        XCTAssertEqual(replayBodies.count, 2, "Newer edits receive a separate update command only after the original Save resolves")
+    }
+}

@@ -98,6 +98,21 @@ import Foundation
             await reopened.review(); _ = await reopened.save()
             let final: MailActionJSON = try await client.request("__bre457/state")
             check("466-dismiss-reopen-no-duplicate", final["count"].integer == committed["count"].integer, "actual view count after reopen = \(final["count"].integer ?? -1)")
+            let definition: MailActionJSON = .object(["revision": .number(1), "accountIds": .array([.string("account")]), "sender": .object(["addresses": .array([.string("person@example.com")])]), "thread": .object(["subjectContains": .string("Subject"), "readState": .string("unread")])])
+            let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("typed_definition"), "identity": .object(["name": .string("Advanced original")]), "definition": definition]))
+            let advancedPreview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": prepared["draft"], "page": .object(["limit": .number(25)])]))
+            let created: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object(["draft": advancedPreview["draft"], "expectedRevisions": .object(["workspace": advancedPreview["workspaceRevision"], "view": .null]), "retryKey": .string(UUID().uuidString), "confirmedZeroMatchDigest": advancedPreview["draft"]["definitionDigest"]]))
+            let advancedID = created["view"]["id"].text!
+            let editor = NativeViewEditorController(defaults: defaults)
+            await editor.open(selection: .init(viewId: advancedID, accountId: "account"), state: state)
+            editor.name = "Advanced renamed"; editor.edited(); await editor.review(); let updatedID = await editor.save()
+            let listed: MailActionJSON = try await client.request("v1/organization/views")
+            if case .array(let views) = listed["items"], let advanced = views.first(where: { $0["id"].text == advancedID }) {
+                let expected = try JSONEncoder().encode(definition)
+                let actual = try JSONEncoder().encode(advanced["definition"])
+                let same = try NSDictionary(dictionary: JSONSerialization.jsonObject(with: expected) as! [String: Any]).isEqual(to: JSONSerialization.jsonObject(with: actual) as! [String: Any])
+                check("466-advanced-definition-preserved", updatedID == advancedID && same && advanced["name"].text == "Advanced renamed", "actual API saved ID and complete sender/thread/readState definition retained")
+            } else { check("466-advanced-definition-preserved", false, "updated advanced view missing") }
             check("466-provider-boundary", final["providerCalls"].integer == 0, "synthetic provider calls = \(final["providerCalls"].integer ?? -1)")
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))

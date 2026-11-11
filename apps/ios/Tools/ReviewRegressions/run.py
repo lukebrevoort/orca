@@ -8,6 +8,7 @@ head = subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).st
 assert not subprocess.check_output(['git','status','--porcelain'],cwd=root,text=True).strip(), 'Commit regression source before execution'
 sources = ['Orca/Core/Models.swift','Orca/Core/APIClient.swift','Orca/Core/CacheStore.swift','Orca/Core/MailActionJSON.swift','Orca/Core/Importance.swift','Orca/Core/InboxViewModel.swift','Orca/Core/AccountPreferences.swift','Orca/Core/NotificationNavigation.swift','Orca/Core/NativeViewEditorController.swift','Tools/ReviewRegressions/Support.swift','Tools/ReviewRegressions/Run.swift']
 manifest = {'sourceSHA':head,'scope':'production Foundation controllers, synthetic URLProtocol and optional actual HTTP/API/SQLite; not Apple UI runtime','sourceHashes':{p:hashlib.sha256((root/'apps/ios'/p).read_bytes()).hexdigest() for p in sources}}
+manifest['harnessHashes'] = {p:hashlib.sha256((root/'apps/ios/Tools/ReviewRegressions'/p).read_bytes()).hexdigest() for p in ['run.py','api-fixture.ts','runner-lifecycle.py']}
 with tempfile.TemporaryDirectory(prefix='bre457-review-run-') as scratch:
     scratch = pathlib.Path(scratch); exe = scratch/'regressions'
     compile_sources = [str(root/'apps/ios'/p) for p in sources]

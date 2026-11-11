@@ -18,7 +18,7 @@ struct SettingsNavigationRequest {
         if case .tab("settings") = intent, selectedTab == "settings" { return }
         if selectedTab == "settings", let preferences = accountPreferences, preferences.dirty || preferences.saving {
             pendingSettingsNavigation = .init(owner: ownerScope, intent: intent)
-        } else { applyNavigation(intent) }
+        } else { pendingSettingsNavigation = nil; applyNavigation(intent) }
     }
     func stayInSettings() { pendingSettingsNavigation = nil }
     func discardSettingsAndLeave() {
