@@ -114,6 +114,53 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected)
     }
 
+    func test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof() throws {
+        let accounts = try composeFixtureRequest("/v1/accounts")
+        let accountID = try XCTUnwrap((accounts["items"] as? [[String: Any]])?.first?["id"] as? String)
+        let app = try launchApp()
+        app.tabBars.buttons["Settings"].tap(); chooseSettingsSection("Notifications", in: app)
+        let identity = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "notifications.installation.")).firstMatch
+        for _ in 0..<6 { if identity.exists { break }; app.swipeUp() }
+        XCTAssertTrue(identity.waitForExistence(timeout: 15), "A real server installation status must precede adoption")
+        let installationID = String(identity.identifier.dropFirst("notifications.installation.".count))
+        XCTAssertFalse(installationID.isEmpty)
+        func current() throws -> [String: Any] { try composeFixtureRequest("/v1/notifications/installations/" + installationID + "?channel=apns") }
+        let before = try current()
+        let edit = app.buttons["notifications.edit-important"]
+        for _ in 0..<8 { if edit.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(edit.isHittable); edit.tap()
+        // Entering/editing/canceling the review must not adopt or revise anything.
+        let cancel = app.buttons["Cancel changes"]
+        for _ in 0..<8 { if cancel.isHittable { break }; app.swipeUp() }
+        cancel.tap()
+        XCTAssertEqual(try current()["revision"] as? Int, before["revision"] as? Int)
+        for _ in 0..<8 { if edit.isHittable { break }; app.swipeDown() }
+        edit.tap()
+        let enable = app.switches["notifications.enabled"], account = app.switches["notifications.account." + accountID]
+        for _ in 0..<8 { if account.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(account.isHittable)
+        if enable.value as? String != "1" { enable.tap() }
+        if account.value as? String != "1" { account.tap() }
+        let review = app.buttons["notifications.review-important"]
+        for _ in 0..<8 { if review.isHittable { break }; app.swipeUp() }
+        review.tap()
+        XCTAssertTrue(app.buttons["Confirm device choices"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "bre457-important-notification-explicit-confirmation")
+        app.buttons["Confirm device choices"].tap()
+        let saved = app.staticTexts["notifications.important-status"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 15))
+        let after = try current(), policy = try XCTUnwrap(after["policy"] as? [String: Any])
+        XCTAssertEqual(policy["kind"] as? String, "important_only"); XCTAssertEqual(policy["enabled"] as? Bool, true)
+        XCTAssertTrue((policy["accountIds"] as? [String] ?? []).contains(accountID))
+        XCTAssertEqual(after["cooldownSeconds"] as? Int, 900)
+        let delivery = try XCTUnwrap(after["delivery"] as? [String: Any])
+        XCTAssertEqual(delivery["scope"] as? String, "apns")
+        // No system permission action was taken here; intent/status never proves an OS alert.
+        attachScreenshot(named: "bre457-important-notification-policy-and-delivery-separate")
+        let permission = after["permission"] as? String ?? "default"
+        _ = try composeFixtureRequest("/v1/notifications/installations/" + installationID, method: "PUT", body: ["channel": "apns", "policyVersion": 1, "enabled": false, "accountIds": policy["accountIds"] ?? [], "permission": permission == "unknown" ? "default" : permission, "expectedRevision": after["revision"]!, "operationId": UUID().uuidString.lowercased()])
+    }
+
     /// Runs in both themes against the authenticated loopback fixture only.
     func test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes() throws {
         try setFixtureSending(true)

@@ -27,7 +27,7 @@ struct DraftsView: View {
             }
             .background(OrcaTheme.paper.ignoresSafeArea())
             .navigationTitle("Drafts").navigationBarTitleDisplayMode(.inline)
-            .toolbar { NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose").accessibilityIdentifier("compose.open") }
+            .toolbar { NavigationLink(destination: MailSearchView()) { Image(systemName: "magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("Search All Mail"); NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil") }.accessibilityLabel("Compose").accessibilityIdentifier("compose.open") }
             .task(id: state.selectedAccountID) { await load() }
             .onAppear { Task { await load() } }
             .onDisappear { loadGeneration = UUID() }

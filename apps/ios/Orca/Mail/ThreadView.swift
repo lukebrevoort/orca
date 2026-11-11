@@ -16,6 +16,7 @@ struct ThreadView: View {
     @State private var entryID: String?
     @State private var unreadEntryID: String?
     @State private var imageRefreshGeneration = UUID()
+    @State private var importanceRefreshGeneration = UUID()
     @State private var messageFrames: [String: CGRect] = [:]
     private var visibleMessageIDs: Set<String> { Set(messageFrames.filter { ReaderNavigationVisibility.isVisible($0.value, viewportHeight: viewportHeight) }.map(\.key)) }
     @State private var viewportHeight: CGFloat = 0
@@ -176,6 +177,8 @@ struct ThreadView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 if let detail {
                     Menu {
+                        NavigationLink("Search All Mail") { MailSearchView() }
+                        NavigationLink("Compose") { ComposeView() }
                         Button("Importance…") { importanceTarget = .init(accountId: accountId, threadId: threadId, subject: detail.thread.subject) }
                         if let latest = detail.messages.sorted(by: { $0.receivedAt < $1.receivedAt }).last {
                             MailActionMenu(message: InboxMessage(id: latest.id, accountId: accountId, provider: latest.provider, providerMessageId: latest.providerMessageId, threadId: threadId, from: latest.from, subject: latest.subject, snippet: latest.snippet, receivedAt: latest.receivedAt, unread: latest.unread, labels: latest.labels, attentionBehavior: detail.thread.attention.attentionBehavior ?? "normal")) { mailActionTarget = $0 }
@@ -201,10 +204,13 @@ struct ThreadView: View {
         .onChange(of: state.ownerScope) { retireReader() }
         .onChange(of: state.phase) { if state.phase != .ready { retireReader() } }
         .onChange(of: state.mailboxReadRevision) {
+            let request = UUID(); importanceRefreshGeneration = request
             Task {
                 guard let client = state.client else { return }
                 let owner = state.ownerScope
-                if let result = try? await client.importance(accountId: accountId, threadId: threadId), owner == state.ownerScope, state.selectedAccount?.id == accountId {
+                if let result = try? await client.importance(accountId: accountId, threadId: threadId), !Task.isCancelled,
+                   request == importanceRefreshGeneration, owner == state.ownerScope, state.phase == .ready, state.selectedAccount?.id == accountId,
+                   result.accountRevision >= ((detail?.importance ?? detail?.thread.importance)?.accountRevision ?? 0) {
                     detail?.importance = result
                 }
             }
@@ -247,7 +253,7 @@ struct ThreadView: View {
     }
 
     private func retireReader() {
-        detail = nil; recovery = nil; imageRefreshGeneration = UUID(); recoveryRequest = UUID(); dismiss()
+        detail = nil; recovery = nil; imageRefreshGeneration = UUID(); importanceRefreshGeneration = UUID(); recoveryRequest = UUID(); dismiss()
     }
     private func accept(_ loaded: ThreadDetail) {
         if detail == nil {

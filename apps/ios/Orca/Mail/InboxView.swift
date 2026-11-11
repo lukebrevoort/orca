@@ -77,7 +77,6 @@ struct InboxView: View {
     private enum MailFocus: Hashable { case row(String), filter(String) }
     @AccessibilityFocusState private var mailFocus: MailFocus?
     @State private var importanceOrigin: String?
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var state: AppState; @StateObject private var model = InboxViewModel(); @State private var selected: InboxMessage?
     var body: some View {
@@ -145,7 +144,7 @@ struct InboxView: View {
                                     .accessibilityIdentifier("inbox.message.\(message.id)")
                                     .contextMenu {
                                         Button("Importance…") { importanceOrigin = message.threadId; importanceTarget = .init(message) }
-                                        MailActionMenu(message: message) { actionTarget = $0 }
+                                        MailActionMenu(message: message, resolveMessage: message.providerMessageId.isEmpty) { actionTarget = $0 }
                                     }
                                     .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
                             }
@@ -165,8 +164,8 @@ struct InboxView: View {
         .navigationTitle(mailboxes.title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $model.search, prompt: "Search All Mail")
-        .onChange(of: state.selectedAccountID) { model.invalidate() }
-        .onChange(of: state.ownerScope) { model.invalidate() }
+        .onChange(of: state.selectedAccountID) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
+        .onChange(of: state.ownerScope) { model.invalidate(); importanceOrigin = nil; importanceTarget = nil }
         .onChange(of: model.search) { if model.search.isEmpty { Task { await loadCurrent() } } }
         .onSubmit(of: .search) { Task { await loadCurrent() } }
         .toolbar {
@@ -325,16 +324,6 @@ struct ContactGlyph: View {
             .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(tone.opacity(0.35))).accessibilityHidden(true)
     }
 }
-
-private struct MailboxSearch: ViewModifier {
-    var enabled: Bool
-    @Binding var text: String
-    @ViewBuilder func body(content: Content) -> some View {
-        if enabled { content.searchable(text: $text, prompt: "Search mail") }
-        else { content }
-    }
-}
-
 
 enum MailPreview {
     static func day(_ value: String, calendar: Calendar = .current) -> Date? {

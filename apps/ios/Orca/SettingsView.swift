@@ -30,7 +30,7 @@ struct SettingsView: View {
             .safeAreaInset(edge: .bottom) {
                 if preferences.dirty || preferences.saving || preferences.status != nil {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(preferences.status ?? (preferences.saving ? "Saving account choices…" : "Unsaved account choices")).font(.subheadline)
+                        Text(preferences.status ?? (preferences.saving ? "Saving account choices…" : "Unsaved account choices — save or discard before opening another workspace")).font(.subheadline)
                         HStack {
                             Button("Save account choices") { Task { await preferences.save(state: state) } }.disabled(!preferences.dirty || preferences.loading || preferences.saving || preferences.uncertain)
                                 .accessibilityIdentifier("settings.save")
@@ -40,6 +40,12 @@ struct SettingsView: View {
                 }
             }
             .background(OrcaTheme.paper).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink(destination: MailSearchView()) { Image(systemName: "magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("Search All Mail").disabled(preferences.dirty || preferences.saving)
+                    NavigationLink(destination: ComposeView()) { Image(systemName: "square.and.pencil").frame(width: 44, height: 44) }.accessibilityLabel("Compose").disabled(preferences.dirty || preferences.saving)
+                }
+            }
             .accessibilityIdentifier("settings.root")
             .task { await preferences.load(state: state) }
             .confirmationDialog("Leave unsaved account choices?", isPresented: $confirmingAccount, titleVisibility: .visible) {
@@ -163,13 +169,13 @@ private struct ImportantNotificationSettings: View {
             Text("iOS permission, current registration and OS Focus control delivery. No Time Sensitive override or app quiet-hours scheduler. Manual reminders are separate.").font(.subheadline)
             if notifications.importantLoading { ProgressView("Checking current policy…") }
             if let current = notifications.importantInstallation {
-                SettingsValue(label: "Policy", value: current.policy == nil ? "Previous choices · not adopted" : "Important only")
+                SettingsValue(label: "Policy", value: current.policy == nil ? "Previous choices · not adopted" : "Important only").accessibilityIdentifier("notifications.installation." + notifications.installationID)
                 SettingsValue(label: "Permission", value: notifications.importantPermission)
                 SettingsValue(label: "Delivery", value: current.delivery.available && notifications.importantPermission == "granted" ? "Registration available · iOS controls display" : "Unavailable · " + (current.delivery.reason ?? "unknown"))
                 if reviewing {
-                    Toggle("Enable Important notifications", isOn: $enabled)
+                    Toggle("Enable Important notifications", isOn: $enabled).accessibilityIdentifier("notifications.enabled")
                     ForEach(state.accounts) { account in
-                        Toggle(account.email, isOn: Binding(get: { accounts.contains(account.id) }, set: { value in if value { accounts.insert(account.id) } else { accounts.remove(account.id) } }))
+                        Toggle(account.email, isOn: Binding(get: { accounts.contains(account.id) }, set: { value in if value { accounts.insert(account.id) } else { accounts.remove(account.id) } })).accessibilityIdentifier("notifications.account." + account.id)
                     }
                     if notifications.authorization == .notDetermined {
                         Button("Request iOS permission") { Task { await notifications.requestPermission(reconcileAfter: false) } }

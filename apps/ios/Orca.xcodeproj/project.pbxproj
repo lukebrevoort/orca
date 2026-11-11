@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B45700000000000000000006 /* NotificationIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000006 /* NotificationIdentity.swift */; };
+		B45700000000000000000005 /* MailSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000005 /* MailSearchView.swift */; };
 		B45700000000000000000004 /* NativeViewEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000004 /* NativeViewEditor.swift */; };
 		B45700000000000000000003 /* ImportanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000003 /* ImportanceView.swift */; };
 		B45700000000000000000002 /* AccountPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000002 /* AccountPreferences.swift */; };
@@ -63,6 +65,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B45710000000000000000006 /* NotificationIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationIdentity.swift; sourceTree = "<group>"; };
+		B45710000000000000000005 /* MailSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailSearchView.swift; sourceTree = "<group>"; };
 		B45710000000000000000004 /* NativeViewEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeViewEditor.swift; sourceTree = "<group>"; };
 		B45710000000000000000003 /* ImportanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportanceView.swift; sourceTree = "<group>"; };
 		B45710000000000000000002 /* AccountPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPreferences.swift; sourceTree = "<group>"; };
@@ -132,6 +136,7 @@
 		2DED08717BC463CBFCC5F794 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000006 /* NotificationIdentity.swift */,
 				B45710000000000000000002 /* AccountPreferences.swift */,
 				B45710000000000000000001 /* Importance.swift */,
 				FEE000000000000000000002 /* FeedbackCapture.swift */,
@@ -179,6 +184,7 @@
 		852DEF853D9EC074CD907BD4 /* Mail */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000005 /* MailSearchView.swift */,
 				B45710000000000000000004 /* NativeViewEditor.swift */,
 				B45710000000000000000003 /* ImportanceView.swift */,
 				AB208EA5B5621CF0102845A4 /* InboxView.swift */,
@@ -374,6 +380,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B45700000000000000000006 /* NotificationIdentity.swift in Sources */,
+				B45700000000000000000005 /* MailSearchView.swift in Sources */,
 				B45700000000000000000004 /* NativeViewEditor.swift in Sources */,
 				B45700000000000000000003 /* ImportanceView.swift in Sources */,
 				B45700000000000000000002 /* AccountPreferences.swift in Sources */,

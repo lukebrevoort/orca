@@ -1,0 +1,49 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "C669E71A-753B-4BDA-8F3F-CD3CC62A815D",
+        "deviceName" : "Orca CI 42986600346-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 1,
+      "passedTests" : 7,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 1,
+  "finishTime" : 1794387941.922,
+  "passedTests" : 7,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1794387085.222,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "Failed to get matching snapshot: No matches found for Elements matching predicate '\"Mail\" IN identifiers' from input {(\n    Button, label: 'Inbox', Selected,\n    Button, label: 'Drafts',\n    Button, label: 'Settings'\n)}\nPossibly caused by runtime issues:\nAutomation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {\n    \"XC_kAXXCAttributeAutomationType\" = 14;\n    \"XC_kAXXCAttributeElementBaseType\" = UIResponder;\n    \"XC_kAXXCAttributeElementType\" = \"SwiftUI.AccessibilityNode\";\n    \"XC_kAXXCAttributeTraits\" = 1108101562369;\n}\nSee test report attachments for more detail.",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 8,
+      "testIdentifierString" : "OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable",
+      "testName" : "test44MailStartsImportantAndKeepsAllMailReachable()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 8
+}

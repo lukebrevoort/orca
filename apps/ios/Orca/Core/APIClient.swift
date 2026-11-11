@@ -24,6 +24,11 @@ actor APIClient {
         self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
     }
     func updateBaseURL(_ url: URL) { baseURL = url }
+    func serverOrigin() -> String {
+        var parts = URLComponents(); parts.scheme = baseURL.scheme?.lowercased(); parts.host = baseURL.host?.lowercased()
+        parts.port = baseURL.port == (parts.scheme == "https" ? 443 : 80) ? nil : baseURL.port
+        return parts.string ?? baseURL.absoluteString
+    }
     func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> T {
         let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body, headers: headers)
         guard !data.isEmpty else { if T.self == EmptyResponse.self { return EmptyResponse() as! T }; throw ClientError.invalidResponse }

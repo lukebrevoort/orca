@@ -32,7 +32,7 @@ struct AccountPreferences: Codable, Equatable {
         } catch { if generation == request && owner == state.ownerScope { self.error = error.localizedDescription } }
     }
     func checkCurrent(state: AppState) async {
-        guard !saving, let client = state.client, scope == state.ownerScope else { return }
+        guard !saving, !loading, let client = state.client, scope == state.ownerScope else { return }
         let owner = scope, request = generation; loading = true
         defer { if generation == request { loading = false } }
         do {
