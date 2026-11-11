@@ -13,7 +13,7 @@
     "no fullcapture between original removalwait and next original formwait",
     "body.tap returns immediately to caller.typeText; only failureteardown captures after original issue"
   ],
-  "independentNarrowRecheck": "pending; no final UI approval",
+  "independentNarrowRecheck": "APPROVED: recheck-approved-b455.md; all three d485 timing blockers closed; no native runtime acceptance",
   "SDKReadOnlyReferences": [
     "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework/Headers/XCUIElementAttributes.h",
     "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework/Headers/XCUIElement.h",
