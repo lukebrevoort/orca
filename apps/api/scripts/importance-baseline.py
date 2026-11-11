@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory(prefix='orca-importance-baseline-') as temporar
     # Existing dependency tree only. Preserve relative workspace links inside the archive.
     subprocess.run(['cp', '-cR' if sys.platform == 'darwin' else '-a', str(root / 'node_modules'), str(scratch / 'node_modules')], check=True)
     for name, target in (('api', 'apps/api'), ('shared', 'packages/shared'), ('web', 'apps/web')):
-        assert (scratch / 'node_modules/@orca' / name).resolve() == scratch / target
+        assert (scratch / 'node_modules/@orca' / name).resolve() == (scratch / target).resolve()
     destination = scratch / 'apps/api/src/importance/routes.test.ts'
     destination.parent.mkdir()
     shutil.copyfile(regression, destination)
