@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794398460.970985,
+    "stage": "before",
+    "ownerPid": 29998,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "54277  18.6 457024 /Applications/Notion Calendar.app/Contents/Frameworks/Notion Calendar Helper (Renderer).app/Contents/MacOS/Notion Calendar Helper (Renderer)",
+      " 1152  13.7  21648 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15232  10.1 549360 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      "15214   6.5  94560 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper",
+      " 1046   6.5 871088 /Applications/Zen.app/Contents/MacOS/zen",
+      "  416   4.8  22176 /usr/sbin/coreaudiod"
+    ],
+    "memory": "System-wide memory free percentage: 75%"
+  },
+  {
+    "time": 1794398472.868855,
+    "stage": "after",
+    "ownerPid": 29998,
+    "childPid": 30019,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      " 1152  15.0  21648 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "  416   4.4  22128 /usr/sbin/coreaudiod",
+      "15232   3.8 552656 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      "  404   3.7 141040 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "25406   3.7 608416 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      " 1046   3.3 871264 /Applications/Zen.app/Contents/MacOS/zen"
+    ],
+    "memory": "System-wide memory free percentage: 76%"
+  }
+]
