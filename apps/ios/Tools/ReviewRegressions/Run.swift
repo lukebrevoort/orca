@@ -232,6 +232,31 @@ import Foundation
             await staleReopened.review(); let createdAfterConflict = await staleReopened.save()
             let afterStale: MailActionJSON = try await client.request("__bre457/state")
             check("478-stale-recovery-creates-exactly-once", createdAfterConflict != nil && afterStale["count"].integer == (beforeStale["count"].integer ?? 0) + 1, "one creation only after fresh preview/explicit Save")
+            for lostKind in ["noop", "stale"] {
+                let lostSuite = suite + ".lost-rejection." + lostKind, lostDefaults = UserDefaults(suiteName: lostSuite)!
+                defer { lostDefaults.removePersistentDomain(forName: lostSuite) }
+                let lostSelection = lostKind == "noop" ? NativeViewSelection(viewId: advancedID, accountId: "account") : createSelection
+                let lostEditor = NativeViewEditorController(defaults: lostDefaults)
+                await lostEditor.open(selection: lostSelection, state: state)
+                if lostKind == "stale" { lostEditor.name = "Lost stale original"; lostEditor.subject = "Subject"; lostEditor.replaceSearch = true; lostEditor.edited() }
+                await lostEditor.review()
+                if lostKind == "stale" { _ = try await createFixtureView("Advance before lost rejection") }
+                let beforeLost: MailActionJSON = try await client.request("__bre457/state")
+                let _: MailActionJSON = try await client.request("__bre457/drop-next-commit-response", method: "POST", body: ["drop": true])
+                _ = await lostEditor.save()
+                let afterLost: MailActionJSON = try await client.request("__bre457/state")
+                if case .array(let ledger) = afterLost["ledger"] {
+                    check("478-lost-" + lostKind + "-actual-rejection-hidden", ledger.last?["actualStatus"].integer == (lostKind == "noop" ? 400 : 409) && ledger.last?["deliveredStatus"].integer == 503 && afterLost["count"].integer == beforeLost["count"].integer && lostEditor.pendingTarget != nil, "actual server rejected without write, but client received503 and must preserve uncertainty")
+                }
+                lostEditor.name = "Recovered lost " + lostKind; lostEditor.edited(); lostEditor.close()
+                let lostReopened = NativeViewEditorController(defaults: lostDefaults)
+                await lostReopened.open(selection: lostSelection, state: state)
+                check("478-lost-" + lostKind + "-reopen-retains-command", lostReopened.pendingTarget != nil && lostReopened.name == "Recovered lost " + lostKind, "reopening retains original immutable pending command and newer edits")
+                _ = await lostReopened.save()
+                await lostReopened.review(); let recoveredID = await lostReopened.save()
+                let afterRecovery: MailActionJSON = try await client.request("__bre457/state")
+                check("478-lost-" + lostKind + "-recovery-completes-once", recoveredID != nil && (lostKind != "noop" || recoveredID == advancedID) && afterRecovery["count"].integer == (beforeLost["count"].integer ?? 0) + (lostKind == "noop" ? 0 : 1), "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation")
+            }
             } catch { check("466-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
