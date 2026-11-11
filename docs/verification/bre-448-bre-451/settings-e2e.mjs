@@ -33,12 +33,15 @@ try {
   assert.equal(await signature.inputValue(),'Synthetic protected signature');
   for (const width of [320,390,1024,1440]) {
    await page.setViewportSize({width,height:900});
+   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
    if(width<860) {
     const jump=page.getByRole('combobox',{name:'Jump to section'});
     assert.equal(await jump.locator('option:not([disabled])').count(),8);
     for(const id of ['account','appearance','attention','writing','notifications','connected','agents','privacy']) {
      await jump.selectOption(id);
+     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
      const heading=page.locator(`#${id} h2`); const bounds=await heading.boundingBox();
+     if (bounds.y < 140 || bounds.y >= 850) await page.screenshot({path:`${out}/${theme}-${width}-${id}-failed-landing.png`});
      assert(bounds.y>=140 && bounds.y<850,`${theme} ${width} ${id}: ${JSON.stringify(bounds)}`);
      assert.equal(await dialog.count(),0);
      assert.equal(await heading.evaluate(el=>el===document.activeElement),true);
