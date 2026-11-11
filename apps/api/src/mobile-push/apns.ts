@@ -10,10 +10,13 @@ export type ApnsDeliveryRequest = {
   payload: Record<string, unknown>;
   apnsId: string;
   collapseId: string;
+  /** Synchronous authority check after signing, before any connection/request. */
+  canDispatch?: () => boolean;
 };
 
 export type ApnsDeliveryResult =
   | { outcome: "success"; status: 200 }
+  | { outcome: "suppressed"; reason: string }
   | { outcome: "retry"; status: number | null; reason: string; retryAfterMs?: number }
   | { outcome: "invalid_token"; status: number; reason: string; invalidatedAt: number | null }
   | { outcome: "permanent"; status: number; reason: string };
@@ -90,6 +93,9 @@ export function createApnsTransport(config: MobilePushConfig, options: { now?: (
       const payload = JSON.stringify(input.payload);
       const jwt = await authorization();
       try {
+        if (!config.configured || input.canDispatch?.() === false) {
+          return { outcome: "suppressed", reason: "delivery_authority_lost" };
+        }
         return await new Promise<ApnsDeliveryResult>((resolve) => {
           const stream = session(input.environment).request({
             ":method": "POST",
