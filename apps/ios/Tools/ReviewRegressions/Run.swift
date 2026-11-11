@@ -157,6 +157,12 @@ import Foundation
                 let wrongOwner = requests.filter { $0["path"].text == "/v1/preferences" && $0["fixtureOwner"].text == "owner-b" }
                 check("469-real-server-rejects-patch-and-recovery", wrongOwner.count == 2 && wrongOwner.allSatisfy { $0["status"].integer == 409 && $0["expectedOwner"].text == authenticated.user?.id && ($0["error"].text ?? "").contains("session_owner_changed") }, "actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409")
             }
+            check("469-real-server-preference-write-probe-zero", try canonical.encode(preferencesBefore["preferenceWrites"]) == canonical.encode(preferencesAfter["preferenceWrites"]), "fixture-owned SQLite INSERT/UPDATE/DELETE triggers observe no preference writes on rejected held PATCH/recovery")
+            let _: AccountPreferences = try await client.request("v1/preferences", method: "PATCH", body: AccountPreferences(signature: "Owner A same-owner positive control", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false), headers: ["x-orca-expected-user-id": authenticated.user!.id])
+            let positivePreferences: MailActionJSON = try await client.request("__bre457/state")
+            if case .array(let observedWrites) = positivePreferences["preferenceWrites"] {
+                check("469-write-probe-positive-control", observedWrites.count == 1 && observedWrites[0]["user_id"].text == authenticated.user?.id, "same-owner real PATCH succeeds and independently records one A write; B remains untouched")
+            }
             let selection = NativeViewSelection(query: "Subject", accountId: "account")
             let view = NativeViewEditorController(defaults: defaults)
             await view.open(selection: selection, state: state)

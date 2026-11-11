@@ -19,6 +19,10 @@ INSERT INTO user_preferences(user_id,signature) VALUES('owner','Owner A original
 INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('account','owner','gmail','synthetic','owner@example.com');
 INSERT INTO threads(id,account_id,provider_thread_id,subject) VALUES('thread','account','thread','Subject fixture');
 INSERT INTO emails(id,account_id,thread_id,provider_message_id,from_address,subject,snippet,body_text,received_at) VALUES('mail','account','thread','mail','person@example.com','Subject fixture','Synthetic only','Synthetic only',1000);`);
+sqlite.exec(`CREATE TABLE bre457_preference_write_probe(user_id TEXT NOT NULL, operation TEXT NOT NULL);
+CREATE TRIGGER bre457_preference_insert_probe AFTER INSERT ON user_preferences BEGIN INSERT INTO bre457_preference_write_probe VALUES(new.user_id,'insert'); END;
+CREATE TRIGGER bre457_preference_update_probe AFTER UPDATE ON user_preferences BEGIN INSERT INTO bre457_preference_write_probe VALUES(new.user_id,'update'); END;
+CREATE TRIGGER bre457_preference_delete_probe AFTER DELETE ON user_preferences BEGIN INSERT INTO bre457_preference_write_probe VALUES(old.user_id,'delete'); END;`);
 const credential = createMobileSession(db, 'owner'), otherCredential = createMobileSession(db, 'owner-b');
 let providerCalls = 0, dropNext = false, dropAnyNext = false;
 const ledger: unknown[] = [], requests: unknown[] = [];
@@ -29,7 +33,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   if (!fixtureOwner || (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner')) return new Response(null, { status: 401 });
   if (url.pathname === '/__bre457/drop-next-commit-response') { dropAnyNext = true; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/drop-next-commit') { dropNext = true; return Response.json({ ok: true }); }
-  if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger, requests, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all() });
+  if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger, requests, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all() });
   const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
   const response = await app.fetch(request);
   requests.push({ method: request.method, path: url.pathname, status: response.status, fixtureOwner, expectedOwner: request.headers.get('x-orca-expected-user-id'), ...(response.status >= 400 ? { error: await response.clone().text() } : {}) });
@@ -41,5 +45,5 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   return response;
 } });
 writeFileSync(output, JSON.stringify({ baseURL: `http://127.0.0.1:${server.port}/`, token: credential.accessToken, otherToken: otherCredential.accessToken }), { mode: 0o600 });
-function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
+function cleanup() { writeFileSync(output + '.evidence.json', JSON.stringify({ ledger, requests, providerCalls, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all(), views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all() }, null, 2)); server.stop(true); sqlite.close(); rmSync(scratch, { recursive: true, force: true }); process.exit(0); }
 process.on('SIGTERM', cleanup); process.on('SIGINT', cleanup);
