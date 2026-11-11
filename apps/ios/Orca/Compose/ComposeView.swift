@@ -353,13 +353,14 @@ struct ComposeView: View {
             // A system keyboard toolbar clamps its button to 36pt on iOS26.
             // Own the target in the reserved action row, alongside Send, so it
             // remains 44pt without taking another row from the writing area.
-            Button("Done") { focusedField = nil }
-                .font(OrcaTheme.ui(13, weight: .semibold))
-                .foregroundStyle(OrcaTheme.ink)
-                .padding(.horizontal, 12)
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-                .buttonStyle(.plain)
+            Button { focusedField = nil } label: {
+                Text("Done")
+                    .font(OrcaTheme.ui(13, weight: .semibold))
+                    .foregroundStyle(OrcaTheme.ink)
+                    .padding(.horizontal, 12)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain)
                 .accessibilityIdentifier("compose.keyboard-done")
         }
     }
