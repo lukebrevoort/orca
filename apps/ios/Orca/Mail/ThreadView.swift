@@ -34,7 +34,7 @@ struct ThreadView: View {
                             .accessibilityIdentifier("thread.subject")
                         Button { importanceTarget = .init(accountId: accountId, threadId: threadId, subject: detail.thread.subject) } label: {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(detail.account.email).font(.subheadline).accessibilityIdentifier("thread.account")
+                                Text(detail.account.email).font(.subheadline).textSelection(.enabled).accessibilityIdentifier("thread.account")
                                 Label("Importance: " + ((detail.importance ?? detail.thread.importance)?.effective.title ?? "Review current choice"), systemImage: "flag")
                             }.fixedSize(horizontal: false, vertical: true).frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
                         }.accessibilityIdentifier("thread.importance")
