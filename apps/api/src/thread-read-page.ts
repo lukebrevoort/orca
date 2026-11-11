@@ -54,7 +54,7 @@ function readCursor(value: string, scope: { user: string; account: string; threa
   } catch { throw new ThreadPageError("invalid_cursor", "Invalid conversation page cursor"); }
 }
 
-export function readThreadPage(sqlite: Database, scope: { user: string; account: string; thread: string }, cursorValue?: string): ThreadReadPage {
+export function readThreadPage(sqlite: Database, scope: { user: string; account: string; thread: string }, cursorValue?: string, includeImportance = false): ThreadReadPage {
   if (Buffer.byteLength(JSON.stringify(scope)) > 2048) throw new ThreadPageError("payload_limit", "This conversation has an unsupported identifier.");
   const cursor = cursorValue === undefined ? null : readCursor(cursorValue, scope);
   const execute = sqlite.transaction(() => {
@@ -133,7 +133,7 @@ export function readThreadPage(sqlite: Database, scope: { user: string; account:
     if (reverse) { entries.reverse(); selected.reverse(); }
     const first = selected[0], last = selected.at(-1);
     const moreInDirection = candidates.length > selected.length;
-    const page = threadReadPageSchema.parse({ importance: readConversationImportance(sqlite, scope.account, scope.thread), entries,
+    const page = threadReadPageSchema.parse({ ...(includeImportance ? { importance: readConversationImportance(sqlite, scope.account, scope.thread) } : {}), entries,
       earlier: last && (reverse || moreInDirection) ? makeCursor(last, scope, "earlier", revision!) : null,
       newer: first && (!reverse && cursor || reverse && moreInDirection) ? makeCursor(first, scope, "newer", revision!) : null,
     });

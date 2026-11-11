@@ -135,17 +135,18 @@ INSERT INTO importance_participants SELECT e.account_id,e.thread_id,lower(trim(e
  not_important_count=excluded.not_important_count,unreviewed_count=excluded.unreviewed_count,participant_count=excluded.participant_count,
  received_at=excluded.received_at,retained_count=excluded.retained_count; END;
 --> statement-breakpoint
-CREATE TRIGGER importance_emails_update AFTER UPDATE OF account_id,thread_id,from_address,is_draft,received_at ON emails BEGIN DELETE FROM importance_participants WHERE account_id=OLD.account_id AND thread_id=OLD.thread_id;
+CREATE TRIGGER importance_emails_update AFTER UPDATE OF account_id,thread_id,from_address,is_draft,received_at ON emails WHEN OLD.account_id IS NOT NEW.account_id OR OLD.thread_id IS NOT NEW.thread_id
+ OR OLD.from_address IS NOT NEW.from_address OR OLD.is_draft IS NOT NEW.is_draft OR OLD.received_at IS NOT NEW.received_at BEGIN DELETE FROM importance_participants WHERE account_id=OLD.account_id AND thread_id=OLD.thread_id;
 INSERT INTO importance_participants SELECT e.account_id,e.thread_id,lower(trim(e.from_address)) address,count(*)
  FROM emails e JOIN oauth_accounts a ON a.id=e.account_id
  WHERE e.account_id=OLD.account_id AND e.thread_id=OLD.thread_id AND e.is_draft=0 AND trim(coalesce(e.from_address,''))<>''
  AND lower(trim(e.from_address))<>lower(trim(a.provider_email))
  AND NOT EXISTS (SELECT 1 FROM email_labels el JOIN labels l ON l.id=el.label_id
  WHERE el.email_id=e.id AND l.account_id=e.account_id AND l.provider_label_id IN ('SENT','DRAFT'))
- GROUP BY e.account_id,e.thread_id,lower(trim(e.from_address)); DELETE FROM importance_participants WHERE account_id=NEW.account_id AND thread_id=NEW.thread_id;
+ GROUP BY e.account_id,e.thread_id,lower(trim(e.from_address)); DELETE FROM importance_participants WHERE account_id=NEW.account_id AND thread_id=NEW.thread_id AND (OLD.account_id IS NOT NEW.account_id OR OLD.thread_id IS NOT NEW.thread_id);
 INSERT INTO importance_participants SELECT e.account_id,e.thread_id,lower(trim(e.from_address)) address,count(*)
  FROM emails e JOIN oauth_accounts a ON a.id=e.account_id
- WHERE e.account_id=NEW.account_id AND e.thread_id=NEW.thread_id AND e.is_draft=0 AND trim(coalesce(e.from_address,''))<>''
+ WHERE e.account_id=NEW.account_id AND e.thread_id=NEW.thread_id AND (OLD.account_id IS NOT NEW.account_id OR OLD.thread_id IS NOT NEW.thread_id) AND e.is_draft=0 AND trim(coalesce(e.from_address,''))<>''
  AND lower(trim(e.from_address))<>lower(trim(a.provider_email))
  AND NOT EXISTS (SELECT 1 FROM email_labels el JOIN labels l ON l.id=el.label_id
  WHERE el.email_id=e.id AND l.account_id=e.account_id AND l.provider_label_id IN ('SENT','DRAFT'))
@@ -172,9 +173,9 @@ INSERT INTO importance_participants SELECT e.account_id,e.thread_id,lower(trim(e
  LEFT JOIN (SELECT p.account_id,p.thread_id,count(*) total,
  sum(s.choice='important') i,sum(s.choice='not_important') n,sum(s.choice IS NULL) u
  FROM importance_participants p LEFT JOIN importance_choices s ON s.account_id=p.account_id AND s.kind='sender' AND s.target=p.address
- WHERE p.account_id=NEW.account_id AND p.thread_id=NEW.thread_id
+ WHERE p.account_id=NEW.account_id AND p.thread_id=NEW.thread_id AND (OLD.account_id IS NOT NEW.account_id OR OLD.thread_id IS NOT NEW.thread_id)
  GROUP BY p.account_id,p.thread_id) g ON g.account_id=t.account_id AND g.thread_id=t.id
- WHERE t.account_id=NEW.account_id AND t.id=NEW.thread_id
+ WHERE t.account_id=NEW.account_id AND t.id=NEW.thread_id AND (OLD.account_id IS NOT NEW.account_id OR OLD.thread_id IS NOT NEW.thread_id)
  ON CONFLICT(account_id,thread_id) DO UPDATE SET effective=excluded.effective,important_count=excluded.important_count,
  not_important_count=excluded.not_important_count,unreviewed_count=excluded.unreviewed_count,participant_count=excluded.participant_count,
  received_at=excluded.received_at,retained_count=excluded.retained_count; END;
@@ -309,3 +310,12 @@ INSERT INTO importance_participants SELECT e.account_id,e.thread_id,lower(trim(e
  ON CONFLICT(account_id,thread_id) DO UPDATE SET effective=excluded.effective,important_count=excluded.important_count,
  not_important_count=excluded.not_important_count,unreviewed_count=excluded.unreviewed_count,participant_count=excluded.participant_count,
  received_at=excluded.received_at,retained_count=excluded.retained_count; END;
+--> statement-breakpoint
+-- Local thread IDs are normally never reused. Still retain a revision barrier
+-- on deletion so a stale command/Undo cannot target a recreated identity.
+CREATE TRIGGER importance_threads_delete AFTER DELETE ON threads
+WHEN EXISTS(SELECT 1 FROM oauth_accounts WHERE id=OLD.account_id) BEGIN
+ INSERT INTO importance_choices(account_id,kind,target,choice,revision,updated_at)
+ VALUES(OLD.account_id,'conversation',OLD.id,NULL,1,unixepoch()*1000)
+ ON CONFLICT(account_id,kind,target) DO UPDATE SET choice=NULL,revision=revision+1,updated_at=excluded.updated_at;
+END;

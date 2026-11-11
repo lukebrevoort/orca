@@ -27,7 +27,7 @@ try {
   let providerCalls = 0;
   const app = createApp({ dbFactory: () => createDatabaseClient(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; throw Error("Provider access forbidden"); }; } }) as never });
   async function request(url: string, body?: unknown) {
-    const response = await app.request(url, { method: body ? "POST" : "GET", headers: { cookie: `orca_session=${session.token}`, ...(body ? { "content-type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const response = await app.request(url, { method: body ? "POST" : "GET", headers: { "x-orca-importance-version": "1", cookie: `orca_session=${session.token}`, ...(body ? { "content-type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
     const value = await response.json();
     if (response.status !== 200) throw Error(`Unexpected ${response.status}: ${JSON.stringify(value)}`);
     return value as any;
@@ -89,13 +89,15 @@ try {
       const first = readImportantPage(sqlite, { userId: "demo-user", accountId: account }, 50);
       const firstStatements = statements.splice(0);
       const second = readImportantPage(sqlite, { userId: "demo-user", accountId: account }, 50, first.nextCursor!);
+      if (first.items.length !== 50 || second.items.length !== 50 || firstStatements.length !== 5 || statements.length !== 6) throw Error("Important page query/count regression");
+      if ([...firstStatements, ...statements].some(statement => /body_(text|html)/i.test(statement.sql))) throw Error("Important lists selected a body column");
       workloads.push({ conversations: count, messages: count * 5, distinctParticipantRows: count * 2,
         first: { items: first.items.length, statements: firstStatements }, second: { items: second.items.length, statements: statements.splice(0) }, account });
     } finally { sqlite.query = original as typeof sqlite.query; }
   }
   sqlite.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   // Independent SQLite VM execution of captured real read statements on the same frozen fixture.
-  // Count every VM instruction using a progress callback; no timing or speedup claim.
+  // Count actual progress callbacks at interval one as a deterministic VM-work proxy; no timing/speedup claim.
   const measurement = spawnSync("python3", [resolve(import.meta.dir, "importance-query-work.py"), path], { input: JSON.stringify(workloads), encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
   if (measurement.status !== 0) throw Error(measurement.stderr);
   writeFileSync(join(output, "query-work.json"), JSON.stringify({ commit, dirty: Boolean(dirty), bun: Bun.version, source: "actual Bun reader statements replayed on independent Python SQLite VM over identical synthetic database", measurements: JSON.parse(measurement.stdout) }, null, 2) + "\n");

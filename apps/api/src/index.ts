@@ -2399,12 +2399,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       try {
         try {
           const { response: result, metric } = createMailboxReader(sqlite, {
+            includeImportance: c.req.header("x-orca-importance-version") === "1",
             capabilitiesFor: mailboxCapabilitiesFor,
             observe: options.mailboxReadObserver,
           }).read({
             authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
             query: { cursor, limit, view, classification, query, sender, collectionId, destinationId },
           });
+          c.header("Vary", "x-orca-importance-version", { append: true });
           c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
           c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
           return jsonWithSchema(c, inboxResponseSchema, {
@@ -2444,7 +2446,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
           c.header("Cache-Control", "private, no-store");
-          return c.json(readThreadPage(sqlite, { user, account: account.id, thread: c.req.param("threadId") }, c.req.valid("query").cursor));
+          c.header("Vary", "x-orca-importance-version", { append: true });
+          return c.json(readThreadPage(sqlite, { user, account: account.id, thread: c.req.param("threadId") }, c.req.valid("query").cursor, c.req.header("x-orca-importance-version") === "1"));
         } catch (error) {
           if (error instanceof ThreadPageError) return c.json({ error: { code: error.code, message: error.message } }, error.code === "not_found" ? 404 : error.code === "invalid_cursor" ? 400 : 413);
           throw error;
@@ -2468,7 +2471,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
           c.header("Cache-Control", "private, no-store");
-          c.header("Vary", "x-orca-image-version", { append: true });
+          c.header("Vary", "x-orca-image-version, x-orca-importance-version", { append: true });
           // The shared reader already applies threadDetailSchema, including its defaults and transforms.
           return c.json(readThreadDetail(
             db,
@@ -2476,6 +2479,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             serializeMailAccount(account),
             c.req.param("threadId"),
             c.req.header("x-orca-image-version") === "2",
+            c.req.header("x-orca-importance-version") === "1",
           ));
         } catch (error) {
           if (error instanceof McpReadError && error.code === "not_found") {
@@ -3241,8 +3245,8 @@ function checkThreadDetailBudget(db: Database, accountId: string, threadId: stri
   }
 }
 
-function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string, includeImageRevision = false): ThreadDetail {
-  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId, includeImageRevision), { behavior: "deferred" });
+function readThreadDetail(db: Database, account: ConnectedAccount, serializedAccount: MailAccount, threadId: string, includeImageRevision = false, includeImportance = false): ThreadDetail {
+  return db.transaction(() => readThreadDetailSnapshot(db, account, serializedAccount, threadId, includeImageRevision, includeImportance), { behavior: "deferred" });
 }
 
 function readThreadDetailSnapshot(
@@ -3251,6 +3255,7 @@ function readThreadDetailSnapshot(
   serializedAccount: MailAccount,
   threadId: string,
   includeImageRevision = false,
+  includeImportance = false,
 ): ThreadDetail {
   // Check bytes in SQLite before materializing bodies. The bounded probe and
   // subsequent read share this transaction's snapshot, including under sync.
@@ -3323,7 +3328,7 @@ function readThreadDetailSnapshot(
       id: thread.id, provider: account.provider, providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
       latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
       labels: [...new Set(messages.flatMap((message) => message.labels))],
-      importance: readImportance(db.$client, [{ accountId: account.id, threadId: thread.id }]).get(importanceKey(account.id, thread.id)),
+      ...(includeImportance ? { importance: readImportance(db.$client, [{ accountId: account.id, threadId: thread.id }]).get(importanceKey(account.id, thread.id)) } : {}),
       participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
       readState: thread.isRead ? "read" : "unread",
       attention: {

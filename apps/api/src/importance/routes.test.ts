@@ -43,7 +43,7 @@ async function setup() {
   const clock = { now: Date.now() };
   const app = createApp({ now: () => new Date(clock.now), dbFactory: () => createDatabaseClient(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; throw Error("No provider calls allowed"); }; } }) as never });
   async function req(url: string, body?: unknown, user = 1, method = body === undefined ? "GET" : "POST") {
-    const response = await app.request(url, { method, headers: { cookie: `orca_session=${user === 1 ? s1.token : s2.token}`, ...(body !== undefined ? { "content-type": "application/json" } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+    const response = await app.request(url, { method, headers: { "x-orca-importance-version": "1", cookie: `orca_session=${user === 1 ? s1.token : s2.token}`, ...(body !== undefined ? { "content-type": "application/json" } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
     return { status: response.status, value: await response.json().catch(() => null) as any };
   }
   const target = (threadId = "t1") => ({ kind: "conversation", threadId });
@@ -294,4 +294,42 @@ test("BRE-454 provenance is bounded and truthful while aggregate counts include 
   expect(importance.preferences.length).toBe(20); expect(importance.preferencesTruncated).toBe(true);
   expect(importance.preferences[0].address).toBe("person00@example.com");
   expect(importance.preferences[19].address).toBe("person19@example.com");
+}));
+
+test("BRE-454 projection opt-in preserves strict legacy mailbox/thread/page wire shapes", () => fixture(async f => {
+  expect((await f.write("important")).status).toBe(200);
+  for (const [url, select] of [
+    ["/v1/inbox?accountId=a1&view=all", (x: any) => x.messages[0]],
+    ["/v1/threads/t1?accountId=a1", (x: any) => x.thread],
+    ["/v1/threads/t1/messages?accountId=a1", (x: any) => x],
+  ] as const) {
+    const response = await f.app.request(url, { headers: f.headers }); expect(response.status).toBe(200);
+    expect(select(await response.json())).not.toHaveProperty("importance");
+    expect(select((await f.req(url)).value).importance.effective).toBe("important");
+  }
+}));
+
+test("BRE-454 deleted/recreated local conversation identity keeps an ABA barrier and rejects old Undo", () => fixture(async f => {
+  const first = await f.write("important"); expect(first.status).toBe(200);
+  f.sqlite.exec("delete from threads where id='t1'");
+  expect((await f.read()).status).toBe(404);
+  f.thread("t1"); f.message("recreated", "t1");
+  expect((await f.read()).value.importance).toMatchObject({ effective: "unreviewed", conversation: { choice: null, revision: 2 } });
+  expect((await f.write("important", 0)).status).toBe(409);
+  expect((await f.req(`/v1/importance/operations/${first.value.receipt.operationId}/undo`, { accountId: "a1", operationId: randomUUID(), expectedRevision: 1 })).status).toBe(409);
+  expect((await f.write("not_important", 2)).status).toBe(200);
+}));
+
+test("BRE-454 Undo restores an explicit choice, so null inherits current preferences and sender Undo preserves overrides", () => fixture(async f => {
+  const conversation = await f.write("not_important"); expect(conversation.status).toBe(200);
+  const sender = await f.sender("important"); expect(sender.status).toBe(200);
+  const restored = await f.req(`/v1/importance/operations/${conversation.value.receipt.operationId}/undo`, { accountId: "a1", operationId: randomUUID(), expectedRevision: 1 });
+  expect(restored.status).toBe(200);
+  expect(restored.value.importance).toMatchObject({ effective: "important", conversation: { choice: null, revision: 2 } });
+  expect((await f.write("not_important", 2)).status).toBe(200);
+  const undoSender = await f.req(`/v1/importance/operations/${sender.value.receipt.operationId}/undo`, { accountId: "a1", operationId: randomUUID(), expectedRevision: 1 });
+  expect(undoSender.status).toBe(200);
+  expect((await f.read()).value.importance).toMatchObject({ effective: "not_important", inherited: "unreviewed" });
+  expect((await f.sender("important", 0)).status).toBe(409);
+  expect((await f.sender("important", 2)).status).toBe(200);
 }));
