@@ -28,3 +28,11 @@ Keep the new policy disabled during review. Revert the candidate code as a unit 
 ## Final migration ordering correction
 
 Historical checkpoints through `c11cafe9` used policy `0054` and the new disposal fix `0055`. Those are unpublished synthetic-only checkpoints. Before final verification, the independent BRE-464 fix was renumbered to `0054_account_disposal_revisions` at timestamp `1791907200000`; notification policy became `0055_important_notification_policy` at `1791993600000`, preserving their SQL bytes. Parent PR311 must install only disposal 0054 before feature 0055. Drizzle compares the last applied timestamp, so publishing the reverse order would skip the later feature migration. The final suite includes an actual parent0054 → feature0055 → repeated no-op upgrade. Historical log filenames/SHAs remain historical and are not relabeled.
+
+## Prepared parent integration and final gate
+
+The backend normally merged prepared parent `4f582a97dc325161a8ed268c6622cd03bf258397` (descends `db8a1e6e`, includes foundation `5a07` and standalone disposal0054) before final verification. Conflict resolution preserved both journal entries and the parent's self-contained synthetic auth setup/assertions; migrations 0052/0053 remain unchanged. This branch integration is not a PR merge or release. Parent publication and hosted review remain separate gates.
+
+The final candidate also suppresses a provider attempt if configuration becomes unavailable during token decryption, and dead-letters an unreadable encrypted token rather than reclaiming it forever. These are new post-3842 guards with explicit zero-attempt fixtures; 3842 receipts are not relabeled as their verification.
+
+Final lint, typecheck, full tests and build must run sequentially by workspace from a clean committed head, through the shared wrapper. The same frozen head then runs the real TCP demo and SQL work capture/replay. Run receipts live in an owned `/tmp/bre455-final-<SHA>-<attempt>/manifest.json` directory so recording a result does not mutate the commit being verified; the draft PR must state that exact head, actual counts, evidence location and remaining independent/hosted/client gates. No source edits occur during that run.
