@@ -120,8 +120,12 @@ def main():
         manifest["finishedAt"] = time.time()
         manifest["finalHead"] = git("rev-parse", "HEAD")
         manifest["finalStatus"] = git("status", "--porcelain")
+        manifest["sourceStateMatched"] = manifest["finalHead"] == head and not manifest["finalStatus"]
+        manifest["sourceStateExit"] = 0 if manifest["sourceStateMatched"] else 2
         (evidence / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         print(f"BRE457 raw candidate evidence: {evidence}", flush=True)
+        if not manifest["sourceStateMatched"]:
+            raise SystemExit(2)
 
 
 if __name__ == "__main__":
