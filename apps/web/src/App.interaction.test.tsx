@@ -1472,7 +1472,7 @@ describe("Inbox row action affordances", () => {
     expect(tune).not.toBeNull();
     expect(tune?.querySelector("svg.message-action-icon")).not.toBeNull();
     expect(tune?.getAttribute("aria-label")).toBe("Manage mail from Jordan Bell");
-    expect(tune?.getAttribute("title")).toBe("Tune mail from Jordan Bell");
+    expect(tune?.getAttribute("title")).toBe("Move mail from Jordan Bell");
     expect(tune?.getAttribute("aria-expanded")).toBe("false");
 
     await act(async () => {
@@ -1913,13 +1913,14 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
-  test.each(["light", "dark"] as const)("Summary sits above Inbox and returns to Inbox in %s mode", async (theme) => {
+  test.each(["light", "dark"] as const)("Summary remains in Mailboxes and returns to Inbox in %s mode", async (theme) => {
     await renderApp(defaultReaderPreferences, false, { theme });
     const navigation = browserWindow.document.querySelector('nav[aria-label="Primary navigation"]')!;
     const items = [...navigation.querySelectorAll("button.desktop-sidebar-item")];
     const summary = items.find(item => item.textContent === "Summary")!;
     const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
-    expect(items.indexOf(summary) + 1).toBe(items.indexOf(inbox));
+    expect(summary.closest(".mailboxes-disclosure")).not.toBeNull();
+    expect(inbox.closest(".mailboxes-disclosure")).not.toBeNull();
     expect(inbox.getAttribute("aria-current")).toBe("page");
     expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
     await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
@@ -2218,7 +2219,7 @@ describe("Desktop evidence and navigation", () => {
   test("Settings Organization navigation opens the sender workspace", async () => {
     browserWindow.history.replaceState({}, "", "/dev/settings");
     await renderSettingsHome("light", true);
-    const entries = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization");
+    const entries = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organize");
     expect(entries).toHaveLength(1);
     await act(async () => (entries[0] as unknown as HTMLButtonElement).click());
     expect(browserWindow.location.pathname).toBe("/dev/inbox");
@@ -2238,12 +2239,12 @@ describe("Desktop evidence and navigation", () => {
     expect(browserWindow.document.querySelector(".desktop-spaces-dialog")?.textContent).toContain("Create a collection");
     await act(async () => (browserWindow.document.querySelector('.desktop-spaces-dialog button[aria-label="Close"]') as unknown as HTMLButtonElement).click());
     expect(new URL(browserWindow.location.href).searchParams.has("customize")).toBe(false);
-    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Organization") as unknown as HTMLButtonElement;
+    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Organize") as unknown as HTMLButtonElement;
     await act(async () => senders.click());
     expect(senders.getAttribute("aria-current")).toBe("page");
     expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Organization");
     expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("attention");
-    expect([...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization")).toHaveLength(1);
+    expect([...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organize")).toHaveLength(1);
     expect(browserWindow.document.querySelector(".simple-attention")?.textContent).not.toContain("Advanced organization");
   });
 
@@ -4782,7 +4783,7 @@ describe("BRE-415 unsaved View navigation", () => {
     await press("Keep editing");
     const unload = new browserWindow.Event("beforeunload", { cancelable: true });
     browserWindow.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(true);
-    await press("Organization", ".desktop-sidebar-item"); await press("Discard draft");
+    await press("Advanced Organization", ".desktop-sidebar-item"); await press("Discard draft");
     const clean = new browserWindow.Event("beforeunload", { cancelable: true });
     browserWindow.dispatchEvent(clean); expect(clean.defaultPrevented).toBe(false);
     // Organization studio sections share the same guard as the shell.

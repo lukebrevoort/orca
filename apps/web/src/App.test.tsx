@@ -187,7 +187,7 @@ describe("App", () => {
     const html = renderToStaticMarkup(<WelcomeOrientationPage setTheme={() => {}} theme="light" />);
 
     expect(html).toContain("Welcome to a");
-    expect(html).toContain("Open my inbox");
+    expect(html).toContain("Open my mail");
     expect(html).toContain("Import Gmail labels from Settings");
     expect(html).not.toContain("Checking your Gmail organization");
     expect(html).not.toContain("Import selected");
@@ -242,7 +242,7 @@ describe("App", () => {
     const html = renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="light" />);
     const darkHtml = renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="dark" />);
 
-    expect(html).toContain("Make Orca");
+    expect(html).toContain('id="settings-title"');
     expect(html).toContain("Appearance &amp; reading");
     expect(html).toContain("Inbox &amp; attention");
     expect(html).toContain("/dev/inbox?destination=inbox&amp;customize=spaces");
@@ -929,7 +929,7 @@ describe("App", () => {
         attachments: [{ id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, previewUrl: "blob:should-not-restore" }],
       }),
     };
-    expect(readComposeDraft("account", storage).attachments).toEqual([]);
+    expect(readComposeDraft("account", storage).attachments).toEqual([{ id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, file: null, previewUrl: null }]);
   });
 
   test("preserves server attachments while editing a reopened draft", () => {
@@ -986,7 +986,7 @@ describe("App", () => {
     expect(html).toContain("src=\"blob:sketch\"");
     expect(html).toContain("Remove sketch.png");
     expect(html).toContain("Remove notes.pdf");
-    expect(html).toContain("Text saved · attachments stay until you close this tab");
+    expect(html).toContain("Text saved · reattach files after closing this tab");
     expect(html).not.toContain("Saved on this device");
     expect(renderToStaticMarkup(
       <ComposeWorkspace

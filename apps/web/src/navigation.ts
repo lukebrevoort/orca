@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { Collection, OrganizationView, MailDestination } from "@orca/shared";
 
-export type DesktopDestination = "summary" | "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "organization-studio" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
+export type DesktopDestination = "important" | "summary" | "inbox" | "drafts" | "focus" | "signals" | "quiet" | "hidden" | "later" | "all" | "attention" | "organization" | "organization-studio" | "settings" | `destination:${string}` | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -47,7 +47,7 @@ export function formatNavigationCount(count: number) {
 type BuiltInSpaceId = "focus" | "signals" | "quiet" | "later";
 
 const builtInSpaceIds: BuiltInSpaceId[] = ["later"];
-const rootDestinations = new Set<DesktopDestination>(["summary", "inbox", "drafts", "focus", "signals", "quiet", "hidden", "later", "all", "attention", "organization"]);
+const rootDestinations = new Set<DesktopDestination>(["important", "summary", "inbox", "drafts", "focus", "signals", "quiet", "hidden", "later", "all", "attention", "organization"]);
 
 const builtInSpaces: Record<BuiltInSpaceId, Omit<WorkflowSpace, "count" | "hidden">> = {
   focus: { id: "focus", label: "Focus", description: "protected attention" },
@@ -97,7 +97,7 @@ export function parseDesktopDestination(value: string | null | undefined): Deskt
 
 export function desktopDestinationFromLocation(location: Pick<Location, "pathname" | "search">): DesktopDestination {
   if (location.pathname === "/settings" || location.pathname.startsWith("/settings/") || location.pathname === "/dev/settings") return "settings";
-  return parseDesktopDestination(new URLSearchParams(location.search).get("destination")) ?? "inbox";
+  return parseDesktopDestination(new URLSearchParams(location.search).get("destination")) ?? (location.pathname === "/dev/inbox" ? "inbox" : "important");
 }
 
 export function desktopDestinationHref(destination: DesktopDestination, sourcePathname = "/") {

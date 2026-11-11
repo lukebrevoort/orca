@@ -32,6 +32,7 @@ async function contextFor(theme, viewport, fontPath = 'blocked') {
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin === origin) {
+      if (mode === 'font-negative' && request.resourceType() === 'font') return route.fulfill({ status: 404, body: '' });
       if (fontPath === 'offline' && request.resourceType() === 'font') return route.abort('internetdisconnected');
       return route.continue();
     }
@@ -146,6 +147,11 @@ try {
         check(loadedFamilies.has('Sora') && loadedFamilies.has('Newsreader'), `${theme}/${fontPath}: both bundled faces loaded rather than fallback-only readiness`, fontState.loaded);
       }
       results.scenarios.push({ name: fontName, ready, screenshotError, requests, fontState });
+      if (mode === 'font-negative') {
+        await context.close();
+        assert(results.failures.some(f => f.label.includes('both bundled faces loaded')), '404 negative control must fail the bundled-font assertion');
+        throw new Error('Intentional font-404 negative control: verifier rejected fallback-only readiness');
+      }
       await context.close();
     }
     for (const [width, height, suffix] of [[1440,1000,'desktop'],[1024,768,'narrow-desktop'],[390,844,'mobile'],[320,568,'small'],[390,400,'short'],[720,450,'200pct-reflow']]) {

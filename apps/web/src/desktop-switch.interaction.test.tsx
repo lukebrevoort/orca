@@ -120,12 +120,13 @@ describe("AppSidebar mobile navigation", () => {
     root = createRoot(container as unknown as Element);
     const fallback = { id: "custom-fallback", name: "Correspondence", color: "#648ac4", isFallback: true, retiredAt: null, revision: 1, position: 0, notificationPreference: "quiet" as const, delivery: "proposal_only" as const, counts: { total: 0, unread: 0 } };
     const cases: [DesktopDestination, string | null][] = [
-      ["inbox", null], ["destination:custom-fallback", null], ["drafts", null],
-      ["summary", "Summary"], ["focus", "Focus"], ["all", "All Mail"],
-      ["settings", "Settings"], ["attention", "Organization"], ["organization-studio", "Organization"],
+      ["important", null], ["all", null], ["drafts", null],
+      ["inbox", "Correspondence"], ["destination:custom-fallback", "Correspondence"],
+      ["summary", "Summary"], ["focus", "Focus"], ["settings", "Settings"],
+      ["attention", "Organize"], ["organization-studio", "Advanced Organization"],
       ["destination:clients", "Clients"], ["view:weekly", "Weekly review"],
-      ["space:hidden-id", "Hidden projects"], ["destination:missing-id", "Unavailable space"],
-      ["view:missing-id", "Unavailable space"], ["space:missing-id", "Unavailable space"],
+      ["space:hidden-id", "Hidden projects"], ["destination:missing-id", "Mailboxes"],
+      ["view:missing-id", "Mailboxes"], ["space:missing-id", "Mailboxes"],
     ];
     for (const [active, currentLabel] of cases) {
       await act(async () => root!.render(<TopLayerProvider><AppSidebar theme="light"
@@ -138,9 +139,9 @@ describe("AppSidebar mobile navigation", () => {
           ] }}
       /></TopLayerProvider>));
       const mobile = container.querySelector('nav[aria-label="Mobile primary"]') as unknown as HTMLElement;
-      const more = button(mobile, "More");
+      const more = mobile.querySelector(".desktop-mobile-more") as unknown as HTMLButtonElement;
       expect(more.getAttribute("data-has-current"), active).toBe(currentLabel ? "true" : null);
-      expect(more.getAttribute("aria-label"), active).toBe(`Open all spaces${currentLabel ? `. Current space: ${currentLabel}` : ""}`);
+      expect(more.getAttribute("aria-label"), active).toBe(`Open Mailboxes. Current: ${currentLabel ?? (active === "all" ? "All Mail" : active === "drafts" ? "Drafts" : "Important")}`);
       expect(mobile.querySelectorAll('[aria-current="page"]').length, active).toBe(currentLabel ? 0 : 1);
     }
   });
@@ -183,11 +184,13 @@ describe("AppSidebar mobile navigation", () => {
     await click(button(mobile, "Compose"));
     expect(composeCalls).toBe(1);
 
-    const more = [...mobile.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === "More") as unknown as HTMLButtonElement;
+    await click(button(mobile, "Drafts"));
+    expect(destinations.at(-1)).toBe("drafts");
+    const more = [...mobile.querySelectorAll("button")].find((candidate) => candidate.classList.contains("desktop-mobile-more")) as unknown as HTMLButtonElement;
     more.focus();
     await click(more);
-    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Navigation menu"]') as unknown as HTMLElement;
-    const menu = dialog.querySelector('[role="menu"][aria-label="All Orca spaces"]') as unknown as HTMLElement;
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Mailboxes"]') as unknown as HTMLElement;
+    const menu = dialog.querySelector('[role="menu"][aria-label="All Orca mailboxes"]') as unknown as HTMLElement;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(dialog.closest("#orca-top-layer-root")).not.toBeNull();
     expect(container.inert).toBe(true);
@@ -195,10 +198,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Summary", "Inbox", "Focus", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Customize tools", "Organization", "Settings", "Account · Maya Chen"]);
-    expect(menu.querySelector('[role="group"][aria-label="Mail"]')?.textContent).toContain("Focus");
-    expect(menu.querySelector('[role="group"][aria-label="Spaces"]')).not.toBeNull();
-    expect(menu.querySelector('[role="group"][aria-label="Tools"]')?.textContent).toContain("Later");
+    expect(labels).toEqual(["Important", "All Mail", "Inbox", "Focus", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Summary", "Manage spaces", "Customize tools", "Organize", "Advanced Organization", "Settings", "Account · Maya Chen"]);
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
     expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
 
@@ -206,12 +206,12 @@ describe("AppSidebar mobile navigation", () => {
     expect(browserWindow.document.activeElement?.textContent).toContain("Later");
     await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" })); });
     await flush();
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
-    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
+    expect(browserWindow.document.querySelector('[aria-label="Mailboxes"]')).toBeNull();
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("Quiet");
 
     const expected = new Map<string, DesktopDestination>([
-      ["Summary", "summary"], ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
-      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organization", "attention"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+      ["Summary", "summary"], ["Inbox", "inbox"], ["Important", "important"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organize", "attention"], ["Advanced Organization", "organization-studio"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
     ]);
     for (const [label, destination] of expected) {
       await click(more);
@@ -227,14 +227,14 @@ describe("AppSidebar mobile navigation", () => {
     manage.focus();
     await click(manage);
     expect(manageCalls).toBe(1);
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Mailboxes"]')).toBeNull();
     await click(more);
     await click(findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "Customize tools")!);
     expect(customizeCalls).toBe(1);
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Mailboxes"]')).toBeNull();
     await flush();
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
-    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
+    expect(browserWindow.document.querySelector('[aria-label="Mailboxes"]')).toBeNull();
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("Quiet");
   });
 });
 

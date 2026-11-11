@@ -76,7 +76,7 @@ export function RoutingChooser({
     <>
       <button
         ref={trigger}
-        title={`Tune mail from ${message.from.name ?? address}`}
+        title={`Move mail from ${message.from.name ?? address}`}
         className="sender-attention-trigger"
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -90,7 +90,7 @@ export function RoutingChooser({
         type="button"
       >
         {reader ? (
-          "Attention"
+          "Move"
         ) : (
           <svg
             aria-hidden="true"

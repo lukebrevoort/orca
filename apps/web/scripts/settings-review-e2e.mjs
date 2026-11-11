@@ -26,7 +26,7 @@ try {
     const page = await context.newPage();
     let unloadPrompts = 0;
     page.on('dialog', async dialog => { if (dialog.type() === 'beforeunload') unloadPrompts++; await dialog.dismiss(); });
-    await page.goto(`${origin}/dev/settings`);
+    await page.goto(`${origin}/dev/settings#writing`);
     const signature = page.getByRole('textbox', { name: 'Default signature' });
     const dialog = page.getByRole('dialog', { name: 'Leave without saving account choices?' });
     await signature.fill(`Unsaved ${theme} ${failure}`);

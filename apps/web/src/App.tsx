@@ -1,3 +1,4 @@
+import { ImportanceControl, ImportanceProvider, ImportantMail, importanceChanged } from "./importance";
 import { SettingsLeaveDialog, useSettingsNavigationGuard } from "./settings-navigation-guard";
 import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
@@ -99,7 +100,7 @@ export const defaultReaderPreferences: ReaderPreferences = {
 
 const readerDensityHint = "Calm gives each message more room. Compact fits more mail and thread history on screen.";
 
-type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
+type Mailbox = "important" | "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
 
@@ -321,6 +322,7 @@ function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
 }
 
 const mailboxes: MailboxItem[] = [
+  { id: "important", label: "Important", description: "Conversations chosen for attention" },
   { id: "inbox", label: "Inbox", description: "What deserves your attention now" },
   { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
   { id: "signals", label: "Signals", description: "Important changes and high-consequence events" },
@@ -675,6 +677,12 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   demoMode?: boolean;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const sectionFromHash = () => settingsSections.find(([id]) => `#${id}` === (typeof window === "undefined" ? "" : window.location.hash))?.[0] ?? "account";
+  const [activeSection, setActiveSection] = useState<string>(sectionFromHash);
+  useEffect(() => { const update = () => setActiveSection(sectionFromHash()); window.addEventListener("hashchange", update); window.addEventListener("popstate", update); return () => { window.removeEventListener("hashchange", update); window.removeEventListener("popstate", update); }; }, []);
+  useLayoutEffect(() => { for (const panel of settingsEditorRef.current?.querySelectorAll<HTMLElement>(".settings-section") ?? []) panel.hidden = panel.id !== activeSection; }, [activeSection]);
+  function selectSettingsSection(id: string) { window.history.replaceState(window.history.state, "", `#${id}`); setActiveSection(id); }
+
   const [accountPreferences, setAccountPreferences] = useState<UserPreferences | null>(demoMode ? defaultAccountPreferences : null);
   const [accountLoadStatus, setAccountLoadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
   const [accountLoadError, setAccountLoadError] = useState<unknown>(null);
@@ -925,18 +933,10 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     <main className="settings-home-page" ref={settingsEditorRef}>
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
-      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p>{settingsSections.map(([id, title]) => <a href={`#${id}`} key={id}>{title}</a>)}</aside>
-      <label className="settings-mobile-jump"><span>Jump to section</span><select defaultValue="" onChange={event => {
-        const id = event.target.value;
-        const section = document.getElementById(id);
-        if (!section) return;
-        window.history.replaceState(window.history.state, "", `#${id}`);
-        section.scrollIntoView({ block: "start" });
-        section.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
-        event.target.value = "";
-      }}><option disabled value="">Choose a section…</option>{settingsSections.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p>{settingsSections.map(([id, title]) => <a aria-current={activeSection === id ? "page" : undefined} href={`#${id}`} key={id} onClick={() => selectSettingsSection(id)}>{title}</a>)}</aside>
+      <label className="settings-mobile-jump"><span>Jump to section</span><select aria-label="Settings section" value={activeSection} onChange={event => selectSettingsSection(event.target.value)}>{settingsSections.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
       <section className="settings-home-content" aria-labelledby="settings-title">
-        <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
+        <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Settings</h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
         <SettingsSection id="account" title="Account" note="Account-level">
           {profileAccount ? <div className="settings-profile">
@@ -957,9 +957,9 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
             <label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>This device choice stays available even if account choices cannot load.</small></span></label>
           </div>
         </SettingsSection>
-        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
+        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><p className="settings-section-copy">Important-only new-mail notifications are not available in this build. No browser delivery is enabled. Manual reminders are separate from new-mail importance.</p><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Saves your reminder intent. Browser reminder delivery is unavailable; reminders still resurface in Later.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
         <SettingsSection id="connected" title="Connected accounts" note="Provider access">
-          <p className="settings-section-copy">Gmail and Microsoft Outlook can live in the same Orca workspace. Each account stays separately permissioned and appears in the unified inbox when its sync is ready.</p>
+          <p className="settings-section-copy">Gmail supports mail sync, drafts and sending with the required permissions. Outlook sign-in is supported, but Outlook mail sync and sending are unavailable. Calendar free/busy access is separate from mail access.</p>
           <div aria-live="polite" className="settings-account-list">
             {connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking connected accounts…</p> : null}
             {connectedAccountsIssue ? <SettingsOperationalState issue={connectedAccountsIssue} onRetry={() => void loadConnectedAccounts()} /> : null}
@@ -1429,11 +1429,12 @@ export function InboxApp({
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>(() => {
     if (typeof window === "undefined") return "inbox";
     const destination = desktopDestinationFromLocation(window.location);
-    return ["inbox", "focus", "signals", "quiet", "hidden", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
+    return ["important", "inbox", "focus", "signals", "quiet", "hidden", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
   });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [readMutationRefreshKey, setReadMutationRefreshKey] = useState(0);
+  useEffect(() => { const changed = () => { setReadMutationRefreshKey(key => key + 1); setReaderRefreshKey(key => key + 1); }; const expired = () => setStatus("signedout"); window.addEventListener("orca:session-expired", expired); window.addEventListener(importanceChanged, changed); return () => { window.removeEventListener(importanceChanged, changed); window.removeEventListener("orca:session-expired", expired); }; }, []);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && readSurfaceLocation(window.location).composer ? "compose" : null);
@@ -2288,7 +2289,7 @@ export function InboxApp({
     })) ?? null,
     [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
-  const activeMailboxLabel = !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
+  const activeMailboxLabel = activeMailbox === "important" ? "Important" : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
       ?? allMailMessages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
@@ -2321,7 +2322,7 @@ export function InboxApp({
       closeTimerRef.current = null;
     }
 
-    const destination = parseDesktopDestination(location.destination) ?? "inbox";
+    const destination = parseDesktopDestination(location.destination) ?? "important";
     if (destination === "settings") {
       window.location.assign(demoMode ? "/dev/settings" : "/settings");
       return;
@@ -3383,7 +3384,7 @@ export function InboxApp({
   }
 
   return (
-    <AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
+    <ImportanceProvider key={account?.id ?? ""}><AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
     <div className="app-root">
       <main className={`desktop-shell mobile-mail-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
@@ -3405,6 +3406,7 @@ export function InboxApp({
             theme={theme}
             title={summaryOpen ? "Summary" : !activeDestinationId && activeMailbox === "focus" && !organizationStudioOpen ? "Focus" : requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
+          <nav className="mail-scope-switch" aria-label="Mail filters"><button aria-pressed={activeMailbox === "important" && !activeSavedViewId && !activeCollectionId && !organizationStudioOpen && !summaryOpen} onClick={() => navigateDesktop("important")} type="button">Important</button><button aria-pressed={activeMailbox === "all" && !activeSavedViewId && !activeCollectionId && !organizationStudioOpen && !summaryOpen} onClick={() => navigateDesktop("all")} type="button">All Mail</button></nav>
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} startDraftOpen={() => ++summaryDraftOpenGenerationRef.current} onOpenDraft={(draft, origin, generation) => { if (generation !== summaryDraftOpenGenerationRef.current) return; summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} /></div>}
@@ -3416,7 +3418,7 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeMailbox === "important" ? <ImportantMail accounts={syncStatus?.accounts} accountId={loadedInboxRef.current || demoMode ? account?.id ?? null : null} accountLabel={account?.email} disabled={demoMode} onOpen={openSavedViewThread} onAllMail={() => navigateDesktop("all")} /> : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${destinationPageIdentity}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
@@ -3607,7 +3609,7 @@ export function InboxApp({
         </>
       ) : null}
     </div>
-    </FirstViewGuidanceProvider></AttentionRoutingProvider>
+    </FirstViewGuidanceProvider></AttentionRoutingProvider></ImportanceProvider>
   );
 }
 
@@ -3826,13 +3828,13 @@ export function WelcomeOrientationPage({ onComplete, theme, setTheme }: {
     <section className="onboarding-card" aria-labelledby="onboarding-title">
       <p className="settings-eyebrow">You’re in</p>
       <h1 id="onboarding-title" ref={titleRef} tabIndex={-1}>Welcome to a<br /><em>quieter inbox.</em></h1>
-      <p className="onboarding-lede">Orca is syncing your Gmail now. Your workspace starts with the mail that feels most human, without changing anything in Gmail.</p>
+      <p className="onboarding-lede">Start with Important: conversations you choose to give attention. All Mail and search keep the rest within reach. Reading and importance choices stay separate from mail placement.</p>
       <ul className="onboarding-orientation">
-        <li><span>01</span><div><strong>Read what matters</strong><p>Your inbox brings people forward and keeps the rest within reach.</p></div></li>
-        <li><span>02</span><div><strong>Tune as you go</strong><p>Move senders into Focus, Quiet, or Hidden whenever their rhythm becomes clear.</p></div></li>
+        <li><span>01</span><div><strong>Read what matters</strong><p>Read complete conversations, then choose Important or Not important for this conversation in this account.</p></div></li>
+        <li><span>02</span><div><strong>Keep everything within reach</strong><p>All Mail is always available. Sender preferences need a separate preview and confirmation; Move and saved views have their own meanings.</p></div></li>
       </ul>
       <div className="onboarding-actions">
-        <a aria-busy={completionStatus === "loading" || undefined} className="onboarding-enter" href="/" onClick={onComplete ? (event) => void handleComplete(event) : undefined}>{completionStatus === "loading" ? "Opening your inbox…" : "Open my inbox"} <span aria-hidden="true">→</span></a>
+        <a aria-busy={completionStatus === "loading" || undefined} className="onboarding-enter" href="/" onClick={onComplete ? (event) => void handleComplete(event) : undefined}>{completionStatus === "loading" ? "Opening your mail…" : "Open my mail"} <span aria-hidden="true">→</span></a>
         {completionError ? <p className="onboarding-error" role="alert">{completionError}</p> : null}
         <p>Want your old organization later? Import Gmail labels from Settings.</p>
       </div>
@@ -4100,7 +4102,7 @@ function OAuthLoginPage({ loginIntent = false, returnToOverride }: { loginIntent
               ? returnProvider === "outlook"
                 ? "Orca is now connected to your Microsoft Outlook account. Outlook mail will appear after the Graph sync step is enabled."
                 : "Orca is now connected to your Gmail account. Your first inbox sync can begin when you enter your workspace."
-              : "Choose Gmail or Microsoft Outlook to sign in. Orca asks for read-only mail access to build a calmer inbox—never to send, delete, or modify your messages."}
+              : "Choose Gmail or Microsoft Outlook to sign in with read-first permissions. Gmail sending requires separate consent. Outlook mail sync and sending are currently unavailable."}
           </p>
 
           {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
@@ -5682,6 +5684,7 @@ function InboxView({
                       const snoozing = snoozingThreadId === message.threadId;
                       return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatInboxReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
+                    {!selectionMode ? <ImportanceControl accountId={message.accountId} threadId={message.threadId} address={message.from.email} initial={message.importance} accountLabel={syncStatus?.accounts.find(item => item.id === message.accountId)?.email ?? (account?.id === message.accountId ? account.email : undefined)} disabled={demoMode} /> : null}
                     {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
                   </div>
                 </li>
@@ -6137,11 +6140,11 @@ export function MessageReader({
         <div className="reader-document">
           <header className="reader-heading">
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
-            <p className="reader-attention-label">Attention: {(detail.thread.attention.attentionBehavior ?? "normal").replace(/^./, letter => letter.toUpperCase())}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
+            <ImportanceControl accountId={detail.account.id} accountLabel={detail.account.email} threadId={detail.thread.id} initial={detail.thread.importance} address={messages.find(message => message.from.email !== detail.account.email)?.from.email} disabled={demoMode} />
             <div className="reader-heading-actions">
-              <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
+              <details className="reader-organize-tools"><summary>Organize &amp; remind</summary><div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div></details>
               <details className="reader-thread-menu" ref={threadMenuRef} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
                 <summary role="button" aria-label="Conversation actions" title="Conversation actions">···</summary>
                 <div className="reader-thread-menu-items">
@@ -7068,7 +7071,7 @@ async function fetchJson<T>(
   signal?: AbortSignal,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, { ...init, credentials: "include", signal });
+  const response = await fetch(input, { ...init, credentials: "include", signal, headers: { ...Object.fromEntries(new Headers(init?.headers)), "x-orca-importance-version": "1" } });
 
   if (!response.ok) throw await buildApiRequestError(response);
 

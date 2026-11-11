@@ -17,11 +17,11 @@ try {
    if(url.pathname.startsWith('/v1/')&&!['GET','HEAD'].includes(request.method())) result.writes.push({method:request.method(),path:url.pathname});
    return url.origin===origin&&!url.pathname.startsWith('/v1/')?route.continue():route.abort();
   });
-  const page=await context.newPage();await page.goto(`${origin}/dev/settings`);
+  const page=await context.newPage();await page.goto(`${origin}/dev/settings#writing`);
   const signature=page.getByRole('textbox',{name:'Default signature'});
   const leaveDialog=page.getByRole('dialog',{name:'Leave without saving account choices?'});
-  const more=page.getByRole('button',{name:/^Open all spaces/});
-  const navDialog=page.getByRole('dialog',{name:'Navigation menu'});
+  const more=page.getByRole('button',{name:/^Open Mailboxes/});
+  const navDialog=page.getByRole('dialog',{name:'Mailboxes'});
   await signature.fill(`Combined ${theme} edit`);
   await more.click();await navDialog.waitFor();
   await page.getByRole('menuitem',{name:/^All Mail(?:\s*[0-9]+)?$/}).click();
@@ -41,10 +41,10 @@ try {
   await page.waitForURL(url=>url.pathname==='/dev/inbox'&&url.searchParams.get('destination')==='all');
   assert.equal(nativeDialogs.length,0,'Explicit leave requires no second native confirmation');
   const mobile=page.getByRole('navigation',{name:'Mobile primary',exact:true});
-  await mobile.getByRole('button',{name:/^Inbox/}).click();
+  await mobile.getByRole('button',{name:/^Mail$/}).click();
   assert.equal(await mobile.locator('[aria-current="page"]').count(),1);
   assert.equal(await more.getAttribute('data-has-current'),null);
-  assert.equal(await more.getAttribute('aria-label'),'Open all spaces');
+  assert.equal(await more.getAttribute('aria-label'),'Open Mailboxes. Current: Important');
   await page.screenshot({path:`${out}/${theme}-inbox-current.png`});
   result.cases.push({theme,pass:true,journeys:['More→All Mail→Stay preserves edit and focus','Repeated More→All Mail→Leave once','Inbox has one current marker'],nativeDialogs});
   await context.close();

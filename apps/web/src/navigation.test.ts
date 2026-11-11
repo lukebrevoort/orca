@@ -24,10 +24,10 @@ const collections: Collection[] = [
 ];
 
 describe("shared desktop navigation contract", () => {
-  test("Summary is a fixed destination while Inbox remains the default", () => {
+  test("Summary stays a fixed destination while production opens Important", () => {
     expect(parseDesktopDestination("summary")).toBe("summary");
     for (const pathname of ["/", "/dev/inbox"]) {
-      expect(desktopDestinationFromLocation({ pathname, search: "" })).toBe("inbox");
+      expect(desktopDestinationFromLocation({ pathname, search: "" })).toBe(pathname === "/dev/inbox" ? "inbox" : "important");
       expect(desktopDestinationFromLocation({ pathname, search: "?destination=summary" })).toBe("summary");
       expect(desktopDestinationHref("summary", pathname)).toBe(`${pathname}?destination=summary`);
     }

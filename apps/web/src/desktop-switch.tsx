@@ -1,7 +1,7 @@
 import { requestViewNavigation } from "./view-navigation-guard";
 import { SavedViewDeletion } from "./saved-view-deletion";
 import { DestinationManager, useDestinations } from "./mail-destinations";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { GlobalMailSearch, openMailSearch } from "./global-search";
@@ -62,135 +62,66 @@ function MobileMenuItem({ active = false, count, icon, label, savedView, onClick
 }
 
 export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onManageTools, onManageViews, onNavigate }: {
-  projection: SidebarNavigationProjection;
-  theme: "light" | "dark";
-  composeButtonRef?: RefObject<HTMLButtonElement | null>;
-  onCompose: () => void;
-  onManageSpaces: () => void;
-  onManageTools?: () => void;
-  onManageViews?: () => void;
+  projection: SidebarNavigationProjection; theme: "light" | "dark";
+  composeButtonRef?: RefObject<HTMLButtonElement | null>; onCompose: () => void;
+  onManageSpaces: () => void; onManageTools?: () => void; onManageViews?: () => void;
   onNavigate: (destination: DesktopDestination) => void;
 }) {
   const { account, active, draftCount, inboxCount, spaces, fallbackDestination } = projection;
-  const inboxActive = active === "inbox" || Boolean(fallbackDestination && active === `destination:${fallbackDestination.id}`);
-  const inboxLabel = fallbackDestination?.name ?? "Inbox";
-  const inboxIcon = fallbackDestination ? <span aria-hidden="true" className="desktop-space-mark" style={{ background: fallbackDestination.color }} /> : <NavIcon name="inbox" />;
-  const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
-  const visibleSpaces = spaces.filter((space) => !space.hidden);
-  const activeSpace = spaces.find((space) => active === destinationForSpace(space));
-  const mobileMenuOwnsCurrentDestination = !inboxActive && active !== "drafts";
-  // Routing IDs are internal. Resolve user-owned labels before using a readable
-  // fallback for stale or unavailable spaces (including hidden destinations).
-  const currentSpaceLabel = activeSpace?.label ?? ({
-    summary: "Summary", focus: "Focus", signals: "Signals", quiet: "Quiet",
-    hidden: "Hidden", later: "Later", all: "All Mail", attention: "Organization",
-    organization: "Organization", "organization-studio": "Organization", settings: "Settings",
-  } as Partial<Record<DesktopDestination, string>>)[active] ?? "Unavailable space";
-
-  function navigateFromMobileMenu(destination: DesktopDestination) {
-    setMobileMenuOpen(false);
-    onNavigate(destination);
-  }
-
-  function moveMobileMenuFocus(event: ReactKeyboardEvent<HTMLElement>) {
-    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const [mobileMenuOpen,setMobileMenuOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const primaryMail = active === "important" || active === "all";
+  const visibleSpaces = spaces.filter(space => !space.hidden);
+  const current = active === `destination:${fallbackDestination?.id}` ? fallbackDestination!.name : spaces.find(space => destinationForSpace(space) === active)?.label
+    ?? ({inbox:fallbackDestination?.name??"Inbox", all:"All Mail", important:"Important", summary:"Summary", focus:"Focus", drafts:"Drafts", settings:"Settings", attention:"Organize", "organization-studio":"Advanced Organization"} as Partial<Record<DesktopDestination,string>>)[active] ?? "Mailboxes";
+  const initials = account.displayName.split(/\s+/).map(part=>part[0]).join("").slice(0,2).toUpperCase() || "O";
+  const go = (destination:DesktopDestination) => {setMobileMenuOpen(false);onNavigate(destination);};
+  function moveMenuFocus(event: ReactKeyboardEvent<HTMLElement>) {
+    if (!["ArrowDown","ArrowUp","Home","End"].includes(event.key)) return;
     const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])')];
     if (!items.length) return;
     event.preventDefault();
     const current = items.indexOf(document.activeElement as HTMLButtonElement);
-    const next = event.key === "Home" ? 0
-      : event.key === "End" ? items.length - 1
-      : event.key === "ArrowUp" ? (current <= 0 ? items.length - 1 : current - 1)
-      : (current + 1) % items.length;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length-1 : event.key === "ArrowUp" ? (current-1+items.length)%items.length : (current+1)%items.length;
     items[next]?.focus();
   }
-
+  const mailboxItems = (mobile=false) => {
+    const Item = mobile ? MobileMenuItem : SidebarItem;
+    return <>
+      <Item active={active === "important"} icon={<NavIcon name="inbox"/>} label="Important" onClick={()=>go("important")}/>
+      <Item active={active === "all"} icon={<NavIcon name="all"/>} label="All Mail" onClick={()=>go("all")}/>
+      <Item active={active === "inbox" || active === `destination:${fallbackDestination?.id}`} count={inboxCount} icon={<NavIcon name="inbox"/>} label={fallbackDestination?.name??"Inbox"} onClick={()=>go("inbox")}/>
+      <Item active={active === "focus"} icon={<NavIcon name="view"/>} label="Focus" onClick={()=>go("focus")}/>
+      {visibleSpaces.map(space=><Item active={active === destinationForSpace(space)} count={space.count} icon={<ToolIcon space={space}/>} key={destinationForSpace(space)} label={space.label} savedView={space.kind === "view"} onClick={()=>go(destinationForSpace(space))}/>)}
+      <Item active={active === "summary"} icon={<NavIcon name="all"/>} label="Summary" onClick={()=>go("summary")}/>
+      <Item active={false} icon={<NavIcon name="settings"/>} label="Manage spaces" onClick={()=>{setMobileMenuOpen(false);onManageSpaces();}}/>
+      {onManageViews?<button type="button" onClick={()=>{setMobileMenuOpen(false);onManageViews();}}>Manage saved views</button>:null}
+      {onManageTools?<Item active={false} icon={<NavIcon name="settings"/>} label="Customize tools" onClick={()=>{setMobileMenuOpen(false);onManageTools();}}/>:null}
+      <Item active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization"/>} label="Organize" onClick={()=>go("attention")}/>
+      <Item active={active === "organization-studio"} icon={<NavIcon name="organization"/>} label="Advanced Organization" onClick={()=>go("organization-studio")}/>
+    </>;
+  };
   return <div className="desktop-sidebar">
     <nav aria-label="Primary navigation" className="desktop-sidebar-content">
-      <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <OrcaBlackMark /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
-      <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
-        <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
-      </button>
-      <p className="desktop-sidebar-label">Mail</p>
-      <SidebarItem active={active === "summary"} icon={<NavIcon name="all" />} label="Summary" onClick={() => onNavigate("summary")} />
-      <SidebarItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => onNavigate("inbox")} />
-      <SidebarItem active={active === "focus"} icon={<NavIcon name="view" />} label="Focus" onClick={() => onNavigate("focus")} />
-      <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
-      {(["Spaces", "Tools"] as const).map(group => <Fragment key={group}>
-        <div className="desktop-sidebar-section-head"><span>{group}</span>{(group === "Spaces" || onManageTools) && <button onClick={group === "Spaces" ? onManageSpaces : onManageTools} type="button">{group === "Tools" ? "Customize tools" : "Manage spaces"}</button>}</div>
-        {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <SidebarItem
-          key={destinationForSpace(space)} active={active === destinationForSpace(space)} count={space.count}
-          icon={<ToolIcon space={space}/>} savedView={space.kind === "view"}
-          label={space.label} onClick={() => onNavigate(destinationForSpace(space))}
-        />)}
-        {group === "Tools" && onManageViews ? <button className="desktop-manage-views" onClick={onManageViews} type="button">Manage saved views</button> : null}
-      </Fragment>)}
-      <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
-      <p className="desktop-sidebar-label">Workspace</p>
-      <SidebarItem active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("attention")} />
-      <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
+      <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark"?<OrcaBlackMark/>:<WaveMark/>}</div>
+      <button aria-keyshortcuts="c" className="desktop-compose" ref={composeButtonRef} onClick={onCompose} type="button"><NavIcon name="compose"/><span>Compose</span><kbd>C</kbd></button>
+      <SidebarItem active={active === "important"} icon={<NavIcon name="inbox"/>} label="Mail" onClick={()=>go("important")}/>
+      <SidebarItem active={active === "all"} icon={<NavIcon name="all"/>} label="All Mail" onClick={()=>go("all")}/>
+      <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts"/>} label="Drafts" onClick={()=>go("drafts")}/>
+      <details className="mailboxes-disclosure"><summary>Mailboxes{!primaryMail && active !== "drafts" && active !== "settings"?<small>{current}</small>:null}</summary><div>{mailboxItems()}</div></details>
       <div className="desktop-sidebar-spacer"/>
-      <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
-        <span className="desktop-account-avatar">{account.avatar ?? initials}</span><span><strong>{account.displayName}</strong><small>{account.detail ?? `${account.accountCount} ${account.accountCount === 1 ? "account" : "accounts"} · ${account.health}`}</small></span><span aria-hidden="true">›</span>
-      </button>
+      <SidebarItem active={active === "settings"} icon={<NavIcon name="settings"/>} label="Settings" onClick={()=>go("settings")}/>
+      <button className="desktop-account" onClick={()=>go("settings")} type="button"><span className="desktop-account-avatar">{account.avatar??initials}</span><span><strong>{account.displayName}</strong><small>{account.detail??`${account.accountCount} accounts · ${account.health}`}</small></span></button>
     </nav>
     <nav aria-label="Mobile primary" className="desktop-mobile-navigation">
-      {mobileMenuOpen ? <TopLayer
-        ariaLabel="Navigation menu"
-        as="section"
-        backdropAriaLabel="Close navigation menu"
-        backdropClassName="desktop-mobile-menu-backdrop"
-        className="desktop-mobile-menu"
-        initialFocusSelector={'[aria-current="page"]'}
-        layerClassName="desktop-mobile-menu-layer"
-        onClose={() => setMobileMenuOpen(false)}
-        returnFocusRef={mobileMenuTriggerRef}
-        surfaceProps={{ id: "desktop-mobile-navigation-dialog" }}
-      >
-        <header><div><span>Orca workspace</span><h2>All spaces</h2></div><button aria-label="Close navigation menu" className="desktop-mobile-menu-close" onClick={() => setMobileMenuOpen(false)} type="button">×</button></header>
-        <div aria-label="All Orca spaces" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
-          <div aria-label="Mail" role="group">
-            <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
-            <MobileMenuItem active={active === "summary"} icon={<NavIcon name="all" />} label="Summary" onClick={() => navigateFromMobileMenu("summary")} />
-            <MobileMenuItem active={inboxActive} count={inboxCount} icon={inboxIcon} label={inboxLabel} onClick={() => navigateFromMobileMenu("inbox")} />
-            <MobileMenuItem active={active === "focus"} icon={<NavIcon name="view" />} label="Focus" onClick={() => navigateFromMobileMenu("focus")} />
-            <MobileMenuItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => navigateFromMobileMenu("drafts")} />
-            <MobileMenuItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => navigateFromMobileMenu("all")} />
-          </div>
-          {(["Spaces", "Tools"] as const).map(group => <div aria-label={group} role="group" key={group}>
-            <p aria-hidden="true" className="desktop-mobile-menu-label">{group}</p>
-            {visibleSpaces.filter(space => (space.kind === "destination") === (group === "Spaces")).map(space => <MobileMenuItem
-              active={active === destinationForSpace(space)} count={space.count}
-              icon={<ToolIcon space={space}/>} savedView={space.kind === "view"}
-              key={destinationForSpace(space)} label={space.label} onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
-            />)}
-            {(group === "Spaces" || onManageTools) && <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label={group === "Tools" ? "Customize tools" : "Manage spaces"} onClick={() => { setMobileMenuOpen(false); (group === "Spaces" ? onManageSpaces : onManageTools)?.(); }} />}
-            {group === "Tools" && onManageViews ? <MobileMenuItem icon={<NavIcon name="view"/>} label="Manage saved views" onClick={() => { setMobileMenuOpen(false); onManageViews(); }}/> : null}
-          </div>)}
-          <div aria-label="Workspace" role="group">
-            <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
-            <MobileMenuItem active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => navigateFromMobileMenu("attention")} />
-            <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
-            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
-          </div>
-        </div>
-      </TopLayer> : null}
       <button aria-keyshortcuts="c" className="desktop-mobile-nav-item desktop-mobile-compose" onClick={onCompose} type="button"><NavIcon name="compose"/><span>Compose</span></button>
-      <button aria-current={inboxActive ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("inbox")} type="button">{inboxIcon}<span>{inboxLabel}</span></button>
-      <button aria-current={active === "drafts" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("drafts")} type="button"><NavIcon name="drafts"/><span>Drafts</span></button>
-      <button
-        aria-controls="desktop-mobile-navigation-dialog"
-        aria-expanded={mobileMenuOpen}
-        aria-haspopup="dialog"
-        aria-label={`Open all spaces${mobileMenuOwnsCurrentDestination ? `. Current space: ${currentSpaceLabel}` : ""}`}
-        className="desktop-mobile-nav-item desktop-mobile-more"
-        data-has-current={mobileMenuOwnsCurrentDestination || undefined}
-        onClick={() => setMobileMenuOpen((current) => !current)}
-        ref={mobileMenuTriggerRef}
-        type="button"
-      ><NavIcon name="more"/><span>More</span></button>
+      <button aria-current={primaryMail?"page":undefined} className="desktop-mobile-nav-item" onClick={()=>go("important")} type="button"><NavIcon name="inbox"/><span>Mail</span></button>
+      <button aria-current={active === "drafts"?"page":undefined} className="desktop-mobile-nav-item" onClick={()=>go("drafts")} type="button"><NavIcon name="drafts"/><span>Drafts</span></button>
+      <button aria-haspopup="dialog" aria-expanded={mobileMenuOpen} aria-label={`Open Mailboxes. Current: ${current}`} className="desktop-mobile-nav-item desktop-mobile-more" data-has-current={!primaryMail && active !== "drafts" || undefined} onClick={()=>setMobileMenuOpen(true)} ref={trigger} type="button"><NavIcon name="more"/><span>{!primaryMail && active !== "drafts"?current:"Mailboxes"}</span></button>
+      {mobileMenuOpen?<TopLayer ariaLabel="Mailboxes" as="section" className="desktop-mobile-menu" backdropClassName="desktop-mobile-menu-backdrop" layerClassName="desktop-mobile-menu-layer" initialFocusSelector={'[aria-current="page"]'} onClose={()=>setMobileMenuOpen(false)} returnFocusRef={trigger}>
+        <header><h2 tabIndex={-1}>Mailboxes</h2><button onClick={()=>setMobileMenuOpen(false)} type="button">Close</button></header>
+        <div aria-label="All Orca mailboxes" className="desktop-mobile-menu-list" role="menu" onKeyDown={moveMenuFocus}>{mailboxItems(true)}<MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings"/>} label="Settings" onClick={()=>go("settings")}/><MobileMenuItem icon={<NavIcon name="settings"/>} label={`Account · ${account.displayName}`} onClick={()=>go("settings")}/></div>
+      </TopLayer>:null}
     </nav>
   </div>;
 }

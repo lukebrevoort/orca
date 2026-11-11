@@ -240,6 +240,17 @@ async function checkFormatted(page, body, entry, scenario) {
     await poll(() => region.evaluate(node => node.scrollLeft > 0), 'Keyboard cannot reach overflowing formatted content');
     await region.evaluate(node => { node.scrollLeft = 0; });
   }
+  scenario.localOverflow = [];
+  for (const local of await html.locator('.reader-table-scroll,pre').all()) {
+    const measured = await local.evaluate(node => ({ label: node.getAttribute('aria-label'), width: node.clientWidth, scrollWidth: node.scrollWidth }));
+    if (measured.scrollWidth > measured.width + 1) {
+      await local.focus(); await page.keyboard.press('ArrowRight');
+      await poll(() => local.evaluate(node => node.scrollLeft > 0), 'Keyboard cannot reach local table/code overflow');
+      await local.evaluate(node => { node.scrollLeft = 0; });
+    }
+    scenario.localOverflow.push(measured);
+  }
+  assert(scenario.formattedRegion.scrollWidth <= scenario.formattedRegion.clientWidth + 1, 'Ordinary prose must reflow; only table/code regions own horizontal overflow');
   return html.innerHTML();
 }
 

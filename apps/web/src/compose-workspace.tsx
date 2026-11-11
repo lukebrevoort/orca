@@ -30,7 +30,8 @@ export type ComposeAttachment = {
   filename: string;
   mimeType: string;
   size: number;
-  file: File;
+  file: File | null;
+  contentBase64?: string | null;
   previewUrl: string | null;
 };
 
@@ -49,6 +50,8 @@ export type ComposeDraft = {
   writingPreferencesApplied?: boolean;
   context: OutboundContext | null;
   attachments: ComposeAttachment[];
+  attachmentManifest?: boolean;
+  attachmentsEdited?: boolean;
   updatedAt: string;
 };
 
@@ -205,7 +208,7 @@ export function acceptComposeFiles(
 
 function persistableDraft(draft: ComposeDraft) {
   const { attachments: _attachments, ...rest } = draft;
-  return rest;
+  return { ...rest, attachments: draft.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size })), attachmentManifest: true };
 }
 
 function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "attachments" | "composeFormat">) {
@@ -219,6 +222,14 @@ function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | 
     context: draft.context,
     attachments: draft.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size })),
   });
+}
+
+export async function serializeComposeAttachments(attachments: ComposeAttachment[]): Promise<MessageDraft["attachments"]> {
+  if (attachments.length > MAX_COMPOSE_ATTACHMENTS) throw new Error("Too many attachments. Remove files before saving.");
+  if (new Set(attachments.map(file => file.id)).size !== attachments.length) throw new Error("Attachment identities must be unique.");
+  return Promise.all(attachments.map(async ({ id, filename, mimeType, size, file, contentBase64 }) => ({
+    id, filename, mimeType, size, contentBase64: file ? await fileToBase64(file) : contentBase64 ?? null,
+  })));
 }
 
 function draftMatchesScope(draft: MessageDraft, scope: string) {
@@ -242,7 +253,7 @@ function fromMessageDraft(draft: MessageDraft): ComposeDraft {
     composeFormat: draft.body.html === null ? "plain" : "rich",
     writingPreferencesApplied: true,
     context: draft.context,
-    attachments: [],
+    attachments: draft.attachments.map(attachment => ({ ...attachment, file: null, previewUrl: null })),
     updatedAt: draft.updatedAt,
   };
 }
@@ -429,8 +440,10 @@ function readSavedComposeDraft(accountId: string, storage?: Pick<Storage, "getIt
       body: typeof parsed.body === "string" ? parsed.body : "",
       composeFormat: parsed.composeFormat === "plain" || parsed.composeFormat === "rich" ? parsed.composeFormat : undefined,
       writingPreferencesApplied: parsed.writingPreferencesApplied === true,
-      // Attachment bytes are kept in memory only — never round-trip through localStorage.
-      attachments: [],
+      // Keep identities for interrupted removals/additions; bytes are recovered
+      // only from the owned server draft, never stored in localStorage.
+      attachmentManifest: Array.isArray(parsed.attachments),
+      attachments: Array.isArray(parsed.attachments) ? parsed.attachments.filter(file => typeof file.id === "string" && typeof file.filename === "string" && typeof file.mimeType === "string" && Number.isFinite(file.size) && file.size > 0).map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size, file: null, previewUrl: null })) : [],
     };
   } catch {
     return null;
@@ -572,11 +585,18 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     void loadDrafts.then((drafts) => {
       if (cancelled || discardOperationRef.current || listEpoch !== draftListEpochRef.current) return;
       const editableDrafts = drafts.filter((item) => item.accountId === accountId && item.deliveryStatus === "draft");
-      const local = hasWritingEditsRef.current ? draftRef.current : readComposeDraft(accountId, window.localStorage, scope);
+      let local = hasWritingEditsRef.current ? draftRef.current : readComposeDraft(accountId, window.localStorage, scope);
       const sameDraft = local.revision === null ? null : editableDrafts.find((item) => item.id === local.id);
       const requestedDraft = requestedDraftId ? editableDrafts.find((item) => item.id === requestedDraftId) : null;
       const latest = requestedDraft ?? sameDraft ?? editableDrafts.find((item) => draftMatchesScope(item, scope)) ?? null;
       if (latest) isNewDraftRef.current = false;
+      if (latest && (!hasWritingEditsRef.current || !attachmentsDirtyRef.current)) {
+        const serverFiles = fromMessageDraft(latest).attachments;
+        local = { ...local, attachments: local.attachmentManifest && local.attachmentsEdited
+          ? local.attachments.map(file => serverFiles.find(saved => saved.id === file.id) ?? file)
+          : serverFiles, attachmentManifest: true };
+      }
+
       // A versioned local checkpoint may intentionally contain no writing.
       // Recover it like any other edit, rather than restoring deleted fields.
       const hasLocalDraft = hasComposeContent(local) || local.revision !== null || hasWritingEditsRef.current;
@@ -593,14 +613,16 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
         setSaveMessage(providerSaveMessage(latest));
       } else if (hasLocalDraft && latest) {
+        const attachmentEdits = attachmentsDirtyRef.current || local.attachmentsEdited === true;
         const serverDraft = fromMessageDraft(latest);
         // Legacy local drafts predate format persistence; absence of metadata
         // alone is not a content conflict with an otherwise identical server copy.
         if (local.composeFormat === undefined) serverDraft.composeFormat = undefined;
         serverIdRef.current = latest.id;
         serverRevisionRef.current = latest.revision;
-        attachmentsDirtyRef.current = false;
+        attachmentsDirtyRef.current = attachmentEdits;
         serverAttachmentsRef.current = latest.attachments;
+        setDraft(current => ({ ...current, attachments: local.attachments, attachmentManifest: true }));
         lastRemoteSignatureRef.current = remoteContentSignature(serverDraft);
         // Revisions order edits only within one draft. A same-scope fallback
         // with another ID must never silently replace its writing with ours.
@@ -609,7 +631,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
           setSaveStatus("failed");
           setSaveMessage("Another version was saved — choose which one to keep");
         } else {
-          setDraft((current) => ({ ...current, id: latest.id, revision: latest.revision, providerSyncStatus: latest.providerSyncStatus, providerSyncError: latest.providerSyncError }));
+          setDraft((current) => ({ ...current, id: latest.id, revision: latest.revision, providerSyncStatus: latest.providerSyncStatus, providerSyncError: latest.providerSyncError, attachments: local.attachments, attachmentManifest: true }));
           setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
           setSaveMessage(providerSaveMessage(latest));
         }
@@ -674,11 +696,13 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     if (!force && signature === lastRemoteSignatureRef.current && serverIdRef.current) return;
     setSaveStatus("saving");
     setSaveMessage("Saving to Orca…");
-    const attachments = snapshot.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size, contentBase64: null }));
     const serverId = serverIdRef.current;
     const revision = serverRevisionRef.current;
-    const content = buildDraftContent(snapshot, mergeDraftAttachments(serverAttachmentsRef.current, attachments), attachmentsDirtyRef.current || serverId === null);
     try {
+      const includeAttachments = attachmentsDirtyRef.current || serverId === null;
+      const attachments = includeAttachments ? await serializeComposeAttachments(snapshot.attachments) : [];
+      if (storageScopeRef.current !== expectedScopeKey || saveScopeRef.current !== expectedScopeKey) return;
+      const content = buildDraftContent(snapshot, attachments, includeAttachments);
       const saved = serverId !== null && revision !== null
         ? await requestDraft(draftRequestPath(accountId, serverId), messageDraftSchema, {
             method: "PATCH",
@@ -695,6 +719,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       serverIdRef.current = saved.id;
       serverRevisionRef.current = saved.revision;
       serverAttachmentsRef.current = saved.attachments;
+      if (JSON.stringify(snapshot.attachments.map(file => file.id)) === JSON.stringify(draftRef.current.attachments.map(file => file.id))) attachmentsDirtyRef.current = false;
       lastRemoteSignatureRef.current = signature;
       setDraft((current) => ({ ...current, id: saved.id, revision: saved.revision, providerSyncStatus: saved.providerSyncStatus, providerSyncError: saved.providerSyncError }));
       setSaveStatus(saved.providerSyncStatus === "pending" ? "saving" : saved.providerSyncStatus === "failed" ? "failed" : "saved");
@@ -782,7 +807,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   function updateDraft(update: Partial<ComposeDraftFields>) {
     if (discardOperationRef.current) return;
     hasWritingEditsRef.current = true;
-    setDraft((current) => ({ ...current, ...update, updatedAt: new Date().toISOString() }));
+    const next = { ...draftRef.current, ...update, updatedAt: new Date().toISOString() };
+    draftRef.current = next;
+    setDraft(next);
   }
 
   const updateRecipientQueries = useCallback<Dispatch<SetStateAction<RecipientQueries>>>((update) => {
@@ -796,26 +823,28 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   function attachFiles(files: Iterable<File>): ComposeAttachmentAcceptance {
     if (discardOperationRef.current) return { accepted: [], rejected: [] };
     hasWritingEditsRef.current = true;
-    let acceptance: ComposeAttachmentAcceptance = { accepted: [], rejected: [] };
-    setDraft((current) => {
-      acceptance = acceptComposeFiles(current.attachments, files);
-      if (!acceptance.accepted.length) return current;
+    const current = draftRef.current;
+    const acceptance = acceptComposeFiles(current.attachments, files);
+    if (acceptance.accepted.length) {
       attachmentsDirtyRef.current = true;
-      return { ...current, attachments: [...current.attachments, ...acceptance.accepted], updatedAt: new Date().toISOString() };
-    });
+      const next = { ...current, attachments: [...current.attachments, ...acceptance.accepted], attachmentsEdited: true, updatedAt: new Date().toISOString() };
+      draftRef.current = next;
+      setDraft(next);
+    }
     return acceptance;
   }
 
   function removeAttachment(attachmentId: string) {
     if (discardOperationRef.current) return;
     hasWritingEditsRef.current = true;
-    setDraft((current) => {
-      const remaining = current.attachments.filter((attachment) => attachment.id !== attachmentId);
-      if (remaining.length === current.attachments.length) return current;
-      attachmentsDirtyRef.current = true;
-      for (const attachment of current.attachments) if (attachment.id === attachmentId) revokeComposeAttachment(attachment);
-      return { ...current, attachments: remaining, updatedAt: new Date().toISOString() };
-    });
+    const current = draftRef.current;
+    const remaining = current.attachments.filter(attachment => attachment.id !== attachmentId);
+    if (remaining.length === current.attachments.length) return;
+    attachmentsDirtyRef.current = true;
+    for (const attachment of current.attachments) if (attachment.id === attachmentId) revokeComposeAttachment(attachment);
+    const next = { ...current, attachments: remaining, attachmentsEdited: true, updatedAt: new Date().toISOString() };
+    draftRef.current = next;
+    setDraft(next);
   }
 
   async function discardDraft() {
@@ -889,8 +918,6 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const resolvingConflict = conflictRef.current;
     if (!resolvingConflict || resolvingRef.current || discardOperationRef.current) return;
     const local = draftRef.current;
-    // Keep inherited attachments with this version while local bytes are read.
-    const inheritedAttachments = serverAttachmentsRef.current.map(attachment => ({ ...attachment }));
     const expectedScope = scopeKey;
     resolvingRef.current = true;
     setSaveStatus("saving");
@@ -898,10 +925,8 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     try {
       // Checkpoint the live editor, never the snapshot captured by the failed save.
       window.localStorage.setItem(draftStorageKey(accountId, scope), JSON.stringify(persistableDraft(local)));
-      const localAttachments = await Promise.all(local.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
-        id, filename, mimeType, size, contentBase64: await fileToBase64(file),
-      })));
-      const content = buildDraftContent(local, mergeDraftAttachments(inheritedAttachments, localAttachments), true);
+      const localAttachments = await serializeComposeAttachments(local.attachments);
+      const content = buildDraftContent(local, localAttachments, true);
       // Both choices preserve the local original in Drafts before switching away.
       // POST never patches the contested original or replays a send.
       const recovered = await requestDraft(draftRequestPath(accountId), messageDraftSchema, {
@@ -1002,15 +1027,10 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         context: deliveryDraft.context,
       };
       if (attachmentsDirtyRef.current || serverIdRef.current === null) {
-        const localAttachments = await Promise.all(deliveryDraft.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
-          id,
-          filename,
-          mimeType,
-          size,
-          contentBase64: await fileToBase64(file),
-        })));
+        const localAttachments = await serializeComposeAttachments(deliveryDraft.attachments);
         assertCurrent();
-        content.attachments = mergeDraftAttachments(serverAttachmentsRef.current, localAttachments);
+        if (localAttachments.some(file => file.contentBase64 === null)) throw new Error("Reattach files whose bytes are unavailable before sending. Your draft is still here.");
+        content.attachments = localAttachments;
       }
       const idempotencyKeyFor = (draftId: string) => {
         assertCurrent();
@@ -1737,7 +1757,7 @@ function RenderedBlockEditor({
       {attachments.length ? (
         <ul aria-label={attachments.length === 1 ? "1 attachment" : `${attachments.length} attachments`} className="compose-attachment-chips">
           {attachments.map((attachment) => (
-            <li key={attachment.id}>
+            <li data-attachment-id={attachment.id} key={attachment.id}>
               {attachment.previewUrl ? (
                 <img alt="" className="compose-attachment-chip-preview" src={attachment.previewUrl} />
               ) : (
@@ -1745,7 +1765,7 @@ function RenderedBlockEditor({
               )}
               <span className="compose-attachment-chip-meta">
                 <strong title={attachment.filename}>{attachment.filename}</strong>
-                <small>{formatAttachmentSize(attachment.size)}</small>
+                <small>{formatAttachmentSize(attachment.size)}{!attachment.file && attachment.contentBase64 == null ? " · Reattach before sending" : ""}</small>
               </span>
               <button aria-label={`Remove ${attachment.filename}`} onClick={() => onRemoveAttachment(attachment.id)} type="button">×</button>
             </li>
@@ -1782,7 +1802,7 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
       : "A blank page";
   return (
     <footer className="compose-delivery-bar">
-      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span className={draft.body.trim() ? "compose-delivery-word-count" : "compose-delivery-empty"}>{deliveryProgress}</span></div>
+      <div><DraftStatus hasUnavailableAttachments={draft.attachments.some(file => !file.file && file.contentBase64 == null)} hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span className={draft.body.trim() ? "compose-delivery-word-count" : "compose-delivery-empty"}>{deliveryProgress}</span></div>
       <div className="compose-delivery-actions">
         {hasContent ? <button className="compose-discard" disabled={controller.isDiscarding || deliveryStatus === "sending"} onClick={onDiscard} type="button">{controller.isDiscarding ? "Discarding…" : "Discard"}</button> : null}
         <button
@@ -2088,9 +2108,9 @@ function RecipientField({ autoFocus, contacts, error, inputRef, kind, label, onC
   );
 }
 
-function DraftStatus({ hasSessionAttachments, message, onRetry, status }: { hasSessionAttachments: boolean; message: string; onRetry: () => void; status: ComposeSaveStatus }) {
+function DraftStatus({ hasSessionAttachments, hasUnavailableAttachments = false, message, onRetry, status }: { hasSessionAttachments: boolean; hasUnavailableAttachments?: boolean; message: string; onRetry: () => void; status: ComposeSaveStatus }) {
   const label = hasSessionAttachments && status === "saved"
-    ? `${message} · attachments stay until you close this tab`
+    ? `${message} · ${hasUnavailableAttachments ? "some files need reattaching before sending" : message.startsWith("Saved to Orca") ? "attachments saved" : "reattach files after closing this tab"}`
     : message;
   return (
     <span aria-live="polite" className={`compose-save-status compose-save-status-${status}`}>

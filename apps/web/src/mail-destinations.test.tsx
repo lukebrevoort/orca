@@ -19,7 +19,7 @@ const space = (id: string, name: string, isFallback = false) => ({ id, name, isF
 let state: { revision: number; fallbackDestinationId: string; legacyDestinationIds: { normal: string; quiet: string }; destinations: ReturnType<typeof space>[] };
 
 beforeEach(async () => {
-  browser = new Window({ url: "http://localhost/" });
+  browser = new Window({ url: "http://localhost/?destination=inbox" });
   for (const key of globals) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === "window" ? browser : key === "document" ? browser.document : key === "navigator" ? browser.navigator : browser[key] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
   closed = 0; writes = []; fail = ""; hold = false; finish = undefined;

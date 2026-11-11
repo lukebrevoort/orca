@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { writeFile } from 'node:fs/promises';
+import { webSourceIdentity } from './verification-revision.mjs';
+const before=await webSourceIdentity();
+const run=spawnSync('/opt/homebrew/bin/bun',['run','--sequential','--filter','*','build'],{stdio:'inherit'});
+if(run.status)process.exit(run.status??1);
+const after=await webSourceIdentity();
+assert.equal(after.sourceSha256,before.sourceSha256,'Source changed during build; rebuild before browser evidence');
+await writeFile('apps/web/dist/bre456-source.json',JSON.stringify(after,null,2));
