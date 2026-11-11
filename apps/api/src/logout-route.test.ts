@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { buildClearedSessionCookie, getSessionCookieOptions } from "./auth/jwt.ts";
+import { buildClearedBrowserSessionCookiePair } from "./auth/browser-auth-context.ts";
 import { createSession, getSessionFromToken } from "./auth/session-store.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
@@ -67,7 +67,7 @@ test("revocation through real wiring: matching Origin clears cookie and old toke
   const response = await fixture.app.request("/v1/auth/logout", { method: "POST", headers: { origin, cookie } });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ ok: true });
-  expect(response.headers.get("set-cookie")).toBe(buildClearedSessionCookie(getSessionCookieOptions()));
+  expect(response.headers.getSetCookie()).toEqual(buildClearedBrowserSessionCookiePair());
   expect(await getSessionFromToken(fixture.db, fixture.session.token)).toBeNull();
   expect((await fixture.app.request("/v1/auth/session", { headers: { cookie } })).status).toBe(401);
 });
@@ -76,7 +76,7 @@ test("matching Origin with no cookie succeeds and clears the cookie", async () =
   const response = await fixture.app.request("/v1/auth/logout", { method: "POST", headers: { origin } });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ ok: true });
-  expect(response.headers.get("set-cookie")).toBe(buildClearedSessionCookie(getSessionCookieOptions()));
+  expect(response.headers.getSetCookie()).toEqual(buildClearedBrowserSessionCookiePair());
   expect(fixture.opens()).toBe(0);
 });
 
