@@ -3642,3 +3642,39 @@ extension NativeImportanceTests {
         XCTAssertFalse(controller.canUndo); XCTAssertNil(controller.receipt)
     }
 }
+
+extension NativeImportanceTests {
+    @MainActor func testAcknowledgedCorrectionRefreshesSubmittedGlobalSearchWithoutSubmittingNewTyping() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "search-correction-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var corrected = false, searched = [String]()
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                let command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); corrected = true
+                return (200, try Self.data(Self.operation(command)))
+            }
+            if request.url!.path.contains("/importance/conversations/") {
+                return (200, try Self.data(["accountId": "demo-account", "threadId": "submitted", "importance": Self.resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)]))
+            }
+            let query = InboxLoadingTestSupport.query(request)["query"]!; searched.append(query)
+            var message = InboxMessage(id: "submitted", accountId: "demo-account", provider: "gmail", providerMessageId: "submitted", threadId: "submitted", from: .init(email: "person@example.com"), subject: query, snippet: "Synthetic", receivedAt: "2026-11-11T00:00:00Z", unread: false, labels: [], attentionBehavior: "normal")
+            message.importance = try JSONDecoder().decode(ImportanceResolution.self, from: Self.data(Self.resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)))
+            return (200, try JSONEncoder().encode(InboxPage(accounts: [], messages: [message], nextCursor: nil, counts: .init(focus: 0, normal: 0, quiet: 0, hidden: 0, all: 1))))
+        }
+        let search = InboxViewModel(); search.search = "Submitted A"
+        _ = await search.openGlobalSearch(state: fixture.state)
+        search.search = "Unsubmitted B"
+        let identity = InboxViewModel.globalSearchRefreshIdentity(state: fixture.state)
+        let importance = ImportanceController(defaults: defaults)
+        await importance.open(state: fixture.state, accountId: "demo-account", threadId: "submitted")
+        await importance.choose(.important, state: fixture.state)
+        XCTAssertNotNil(importance.receipt, "Establish an acknowledged correction before checking search")
+        XCTAssertNotEqual(identity, InboxViewModel.globalSearchRefreshIdentity(state: fixture.state))
+        let shouldFocusQuery = await search.openGlobalSearch(state: fixture.state)
+        XCTAssertFalse(shouldFocusQuery, "A background revision refresh must not steal keyboard focus")
+        XCTAssertEqual(search.messages.first?.importance?.effective, .important)
+        XCTAssertEqual(search.resultSearch, "Submitted A"); XCTAssertEqual(search.search, "Unsubmitted B")
+        XCTAssertEqual(searched, ["Submitted A", "Submitted A"], "Revision refresh must not submit unfinished query text")
+    }
+}
