@@ -1,0 +1,18 @@
+{
+  "head": "013f24f74aabb6586d2deed14ec88e1bca5b0d52",
+  "checks": [
+    {
+      "name": "focused",
+      "exitCode": 0,
+      "seconds": 6.103,
+      "log": "/tmp/bre470-focused-013f24f7/focused.log"
+    },
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "seconds": 5.988,
+      "log": "/tmp/bre470-focused-013f24f7/typecheck.log"
+    }
+  ],
+  "cleanAfter": true
+}

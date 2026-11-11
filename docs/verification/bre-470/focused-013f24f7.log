@@ -1,0 +1,74 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/mobile-push/scheduler.test.ts:
+(pass) mobile push scheduler > isolates users, suppresses registration backfill, and deduplicates repeated scans [87.54ms]
+(pass) mobile push scheduler > uses actual Inbox routing instead of provider labels or Human Signal [73.76ms]
+(pass) mobile push scheduler > notifies selected Spaces outside Inbox, ignores unselected Spaces, and deduplicates overlap [103.55ms]
+(pass) mobile push scheduler > rechecks current mail and Space eligibility under the delivery lease [71.18ms]
+(pass) mobile push scheduler > delivers only each device's selected destinations, with one preview per matching message [85.79ms]
+(pass) mobile push scheduler > deselecting one Space suppresses its queued and future alerts while another remains enabled [88.53ms]
+(pass) mobile push scheduler > retries transient failures with backoff and succeeds later [62.28ms]
+(pass) mobile push scheduler > disables invalid tokens but cannot disable a concurrently refreshed registration [63.38ms]
+(pass) mobile push scheduler > removes stale registrations and their outbox rows [56.17ms]
+(pass) mobile push scheduler > suppresses queued and future pushes after the bound session is revoked or expired [55.38ms]
+(pass) mobile push scheduler > preference changes invalidate queued alerts, including off then on before delivery [54.34ms]
+(pass) mobile push scheduler > uses the production mobile session checker before scan and queued delivery [64.63ms]
+(pass) mobile push scheduler > atomically reassigns a token on account switch and removes the former owner's outbox [58.19ms]
+(pass) mobile push scheduler > uses a fresh lease timestamp for every serial delivery claim [58.15ms]
+(pass) mobile push scheduler > does not let a stale lease owner overwrite the current owner's completion [58.98ms]
+(pass) mobile push scheduler > scans newly committed mail by insertion order across accounts [58.74ms]
+
+apps/api/src/mobile-push/payload.test.ts:
+(pass) notification preview contains sender, subject and snippet with unchanged conversation routing [0.13ms]
+(pass) missing content uses sender address, plain-text fallback, then readable placeholders [0.05ms]
+(pass) preview normalizes whitespace and control characters without interpreting plain text as HTML [0.23ms]
+(pass) Gmail snippet entities decode once before normalization and truncation [0.58ms]
+(pass) entity-only snippet whitespace falls back without decoding literal body or header text [0.04ms]
+(pass) long Unicode previews remain valid and fit Apple's 4096-byte payload limit [0.64ms]
+
+apps/api/src/mobile-push/routes.test.ts:
+(pass) mobile push routes > requires authentication and keeps installation registrations isolated per user [142.59ms]
+(pass) mobile push routes > reports a clear disabled state when APNs credentials are absent [57.55ms]
+
+apps/api/src/mobile-push/migration.test.ts:
+(pass) mobile push commit-order migration replays from the earliest unprocessed sequence [63.60ms]
+
+apps/api/src/mobile-push/apns.test.ts:
+(pass) APNs configuration and response handling > disables delivery without throwing for absent, partial, or malformed credentials [1.24ms]
+(pass) APNs configuration and response handling > accepts a complete token-auth configuration and bounds scheduler settings [0.05ms]
+(pass) APNs configuration and response handling > distinguishes retryable, permanent, and token-invalidating APNs responses [0.09ms]
+
+apps/api/src/mobile-push/device-limit.test.ts:
+(pass) per-user cap rejects new devices without writes, permits refresh, and frees slots only on real deletion [165.78ms]
+(pass) capped account switching preserves the other user's device, spaces and pending outbox; store throws DeviceLimitError [135.13ms]
+(pass) reinstall at the cap replaces the same token and cascades the old registration [127.72ms]
+(pass) store permits reinstall at the cap but different environments and new tokens leave the database unchanged [134.83ms]
+(pass) concurrent processes competing for the last device slot respect the write lock [384.10ms]
+
+apps/api/src/notifications/apns-signing.test.ts:
+(pass) BRE-470 correction during production APNs signing prevents opening an HTTP/2 request [239.76ms]
+(pass) BRE-470 read during production APNs signing prevents opening an HTTP/2 request [240.14ms]
+(pass) BRE-470 session during production APNs signing prevents opening an HTTP/2 request [241.76ms]
+(pass) BRE-470 account during production APNs signing prevents opening an HTTP/2 request [241.61ms]
+(pass) BRE-470 permission during production APNs signing prevents opening an HTTP/2 request [244.68ms]
+(pass) BRE-470 token during production APNs signing prevents opening an HTTP/2 request [244.03ms]
+(pass) BRE-470 configuration during production APNs signing prevents opening an HTTP/2 request [238.79ms]
+(pass) BRE-470 lease during production APNs signing prevents opening an HTTP/2 request [235.84ms]
+(pass) BRE-470 lease-owner during production APNs signing prevents opening an HTTP/2 request [236.74ms]
+(pass) BRE-470 unchanged authority reaches the production request boundary once [235.35ms]
+
+apps/api/src/notifications/apns.test.ts:
+(pass) BRE-455 actual APNs policy dispatch sends automated Important archived incoming exactly once while U/N/unknown stay quiet [87.14ms]
+(pass) BRE-455 legacy choices survive status/cancel/adoption and older clients cannot downgrade or re-enable [108.24ms]
+(pass) BRE-455 correction/read/revoke/account removal during asynchronous decryption prevents provider I/O [456.47ms]
+(pass) BRE-455 concurrent workers share one lease and retry with a stable APNs ID [73.31ms]
+(pass) BRE-455 unchanged refresh preserves pending; replacement token creates a freshness barrier; deletion retains adoption tombstone [114.45ms]
+(pass) BRE-455 real opaque mobile-session adoption and revocation use mobile_sessions, not browser cookies [79.01ms]
+(pass) BRE-455 a fresh Important arrival after moving outside Inbox ignores placement and legacy selection [83.49ms]
+(pass) BRE-455 obsolete legacy selected Space does not block adopted token refresh or change saved intent [78.26ms]
+(pass) BRE-455 configuration loss and token decryption failure cannot start provider I/O or leave unbounded token retries [141.44ms]
+
+ 52 pass
+ 0 fail
+ 124 expect() calls
+Ran 52 tests across 8 files. [6.09s]
