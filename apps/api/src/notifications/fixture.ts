@@ -34,8 +34,13 @@ export async function notificationFixture() {
   function message(id: string, thread = `thread-${id}`, extra: Partial<GmailMessage> = {}): GmailMessage {
     return { id, threadId: thread, internalDate: String(state.now), labelIds: ["UNREAD"], payload: { headers: [
       { name: "Delivered-To", value: "u@example.com" }, { name: "Received", value: `from mail.example.net (mail.example.net [192.0.2.1]) by mx.google.com with ESMTPS id abc for <u@example.com>; ${new Date(state.now).toUTCString()}` },
-      { name: "From", value: "Receipt robot <receipt@example.net>" }, { name: "Subject", value: `Receipt ${id}` },
+      { name: "Auto-Submitted", value: "auto-generated" }, { name: "From", value: "Receipt robot <receipt@example.net>" }, { name: "Subject", value: `Receipt ${id}` },
     ] }, ...extra };
+  }
+  function human(id: string, thread: string) {
+    const value = message(id, thread);
+    value.payload!.headers = [...value.payload!.headers!.filter(h => h.name !== "Auto-Submitted"), { name: "To", value: "u@example.com" }];
+    return value;
   }
   async function fresh(id: string, thread = "conversation") {
     // Create conversation while disabled/unimportant, choose importance, then
@@ -44,5 +49,5 @@ export async function notificationFixture() {
     state.now += 1000;
     await persist(message(id, thread));
   }
-  return { ...f, app, request, command, adopt, persist, important, message, fresh, state, session, other };
+  return { ...f, app, request, command, adopt, persist, important, message, human, fresh, state, session, other };
 }

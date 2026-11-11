@@ -48,14 +48,21 @@ export function reserveCooldown(sqlite: Database, scope: Scope, row: Candidate, 
     DO UPDATE SET reservation_id=excluded.reservation_id,attempted_at=excluded.attempted_at`).run(scope.userId, scope.channel, scope.installationId, row.accountId, row.threadId, reservationId, now);
   return true;
 }
-export function stillEligible(sqlite: Database, scope: Scope, messageId: string, generation: number, now: number) {
+export function stillEligibleBatch(sqlite: Database, scope: Scope, messageIds: readonly string[], generation: number, now: number) {
+  if (!messageIds.length) return new Set<string>();
+  if (messageIds.length > 500) throw Error("Eligibility batch exceeds bound");
   const policy = activePolicy(sqlite, scope, now);
-  if (!policy || policy.generation !== generation) return false;
-  const row = sqlite.query(`SELECT ${projection},s.eligible_after_at boundary,s.boundary_sequence boundarySequence
+  if (!policy || policy.generation !== generation) return new Set<string>();
+  const rows = sqlite.query(`SELECT ${projection},s.eligible_after_at boundary,s.boundary_sequence boundarySequence
     FROM important_notification_arrivals a JOIN emails e ON e.id=a.message_id AND e.account_id=a.account_id AND e.thread_id=a.thread_id
     JOIN important_notification_accounts s ON s.user_id=? AND s.channel=? AND s.installation_id=? AND s.account_id=e.account_id
-    JOIN oauth_accounts o ON o.user_id=s.user_id AND o.id=s.account_id WHERE a.message_id=?`).get(scope.userId, scope.channel, scope.installationId, messageId) as (Candidate & { boundary: number; boundarySequence: number }) | null;
-  return Boolean(row && row.sequence > row.boundarySequence && baseEligible(row, now, row.boundary) && readImportance(sqlite, [row]).get(importanceKey(row.accountId, row.threadId))?.effective === "important");
+    JOIN oauth_accounts o ON o.user_id=s.user_id AND o.id=s.account_id WHERE a.message_id IN (${messageIds.map(() => "?").join(",")})`).all(scope.userId, scope.channel, scope.installationId, ...messageIds) as (Candidate & { boundary: number; boundarySequence: number })[];
+  const eligible = rows.filter(row => row.sequence > row.boundarySequence && baseEligible(row, now, row.boundary));
+  const importance = readImportance(sqlite, eligible);
+  return new Set(eligible.filter(row => importance.get(importanceKey(row.accountId, row.threadId))?.effective === "important").map(row => row.messageId));
+}
+export function stillEligible(sqlite: Database, scope: Scope, messageId: string, generation: number, now: number) {
+  return stillEligibleBatch(sqlite, scope, [messageId], generation, now).has(messageId);
 }
 /** No body, snippet, HTML, attachments or recipient data enters this payload. */
 export function importantPayload(row: Candidate) { return notificationPayload({ ...row, snippet: null, bodyText: null }); }

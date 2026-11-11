@@ -1,0 +1,8 @@
+{
+  "head": "101c45221f7ce1e452b5b9c4da3c86af69eb00f8",
+  "clean": true,
+  "log": "bre455-api-draft-101c4522.log",
+  "sha256": "9ee87c74d480034f426a4743434ea7ef20aed06d3acbdbc3544d6563a039d5c1",
+  "exitCode": 0,
+  "scope": "Real Hono settings/claims/reports, fresh SQLite, actual persistGmailMessages, 10 tests 77 expects. No APNs policy integration or browser/OS execution."
+}

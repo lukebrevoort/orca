@@ -59,6 +59,7 @@ export const mobilePushOutbox = sqliteTable("mobile_push_outbox", {
   userId: text("user_id").notNull(),
   installationId: text("installation_id").notNull(),
   deviceGeneration: integer("device_generation").notNull(),
+  importantGeneration: integer("important_generation"),
   messageId: text("message_id").notNull(),
   accountId: text("account_id").notNull(),
   threadId: text("thread_id").notNull(),
