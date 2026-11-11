@@ -22,7 +22,7 @@ struct NativeViewEditor: View {
                     Section(model.appliedTarget == nil ? "Save outcome unknown" : "Original View saved") {
                         Text(original).textSelection(.enabled)
                         Text(model.appliedTarget == nil ? "Retry sends the identical original command. Newer edits stay separate until its outcome is known. Closing this editor keeps that command." : "The original View was saved. Its current object must be loaded before editing; no replacement will be created.")
-                        Button("Check Save outcome") { Task { await save(checkOnly: true) } }.accessibilityIdentifier("view-editor.check-outcome")
+                        Button(model.recoveryActionTitle) { Task { await save(checkOnly: true) } }.accessibilityIdentifier("view-editor.check-outcome")
                         if model.appliedTarget == nil { Button("Retry original Save") { Task { await save() } }.accessibilityIdentifier("view-editor.reconcile") }
                     }
                 }

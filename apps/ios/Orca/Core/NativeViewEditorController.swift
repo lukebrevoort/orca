@@ -58,6 +58,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         let actualOrigin = await client.serverOrigin()
         return current(request) && actualOrigin == origin
     }
+    var recoveryActionTitle: String { appliedTarget == nil ? "Check Save outcome" : "Reload saved View" }
     var canFinishPresentation: Bool { current(generation) }
     private func persist() {
         appliedTarget = journal?.appliedViewId
@@ -184,7 +185,8 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
             if case let APIClient.ClientError.http(code, _) = error, [400, 404, 409].contains(code) {
                 return await resolve(command, client: client, state: state, request: request)
             }
-            self.error = "Save outcome unknown. The exact original Save and newer edits are kept. Check its outcome or retry safely."
+            self.error = journal?.appliedViewId.map { "Original Save applied as \($0), but its current View is unavailable. Reload it when connected; no replacement was created." }
+                ?? "Save outcome unknown. The exact original Save and newer edits are kept. Check its outcome or retry safely."
             return nil
         }
     }
@@ -192,7 +194,36 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
         guard let state, let client = state.client, let command = journal?.command, !busy, current(generation) else { return nil }
         let request = generation; busy = true; error = nil; defer { if request == generation { busy = false } }
         guard await currentClient(request) else { return nil }
+        if let applied = pinnedApplied(command) {
+            // The outcome was already validated and persisted before a failed
+            // prepare. Status may now be conservative after an account change;
+            // retry only the guarded original-ID read, never a replacement Save.
+            do {
+                return try await completeApplied(id: applied.id, workspaceRevision: applied.workspace, viewRevision: applied.view, command: command, client: client, state: state, request: request)
+            } catch {
+                if await currentClient(request) { error = "Original Save applied as \(applied.id), but that View is unavailable. No replacement was created. Reload it again when connected." }
+                return nil
+            }
+        }
         return await resolve(command, client: client, state: state, request: request)
+    }
+    private func pinnedApplied(_ command: Command) -> (id: String, workspace: Int, view: Int)? {
+        // appliedViewId is written only after validated exact200/applied proof.
+        // Its owner/origin/account remain bound by this scoped journal and the
+        // current-client guards; malformed or inconsistent local markers do not unlock.
+        guard let journal, let id = journal.appliedViewId, id == journal.adoptedViewId,
+              !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, id.utf16.count <= 200,
+              journal.context.accountId == selection?.accountId,
+              journal.command?.body["retryKey"].text == command.body["retryKey"].text,
+              let key = command.body["retryKey"].text, !key.isEmpty,
+              let w = command.body["expectedRevisions"]["workspace"].integer, w > 0, w < 9_007_199_254_740_991 else { return nil }
+        if case .null = command.body["expectedRevisions"]["view"] {
+            guard command.body["draft"]["mode"].text == "create", case .null = command.body["draft"]["viewId"] else { return nil }
+            return (id, w + 1, 1)
+        }
+        guard let v = command.body["expectedRevisions"]["view"].integer, v > 0, v < 9_007_199_254_740_991,
+              command.body["draft"]["mode"].text == "update", command.body["draft"]["viewId"].text == id else { return nil }
+        return (id, w + 1, v + 1)
     }
     private func validatedAcknowledgement(_ value: MailActionJSON, command: MailActionJSON) -> (id: String, workspace: Int, view: Int)? {
         // /commit reloads the CURRENT View/workspace. These may be newer than
