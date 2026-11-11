@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run through /tmp/orca-ui-heavy-slot.py. Foundation/HTTP, never simulator/Xcode UI."""
 import argparse, hashlib, json, os, pathlib, subprocess, tempfile, time
-parser = argparse.ArgumentParser(); parser.add_argument('output'); parser.add_argument('--api', action='store_true'); parser.add_argument('--importance-ref'); args = parser.parse_args()
+parser = argparse.ArgumentParser(); parser.add_argument('output'); parser.add_argument('--api', action='store_true'); parser.add_argument('--importance-ref'); parser.add_argument('--preferences-ref'); args = parser.parse_args()
 root = pathlib.Path(__file__).resolve().parents[4]
 out = pathlib.Path(args.output); out.mkdir(parents=True, exist_ok=False)
 head = subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
@@ -18,6 +18,12 @@ with tempfile.TemporaryDirectory(prefix='bre457-review-run-') as scratch:
         compile_sources[sources.index('Orca/Core/Importance.swift')] = str(frozen)
         manifest['importanceSourceRef'] = subprocess.check_output(['git','rev-parse',args.importance_ref],cwd=root,text=True).strip()
         manifest['sourceHashes']['Orca/Core/Importance.swift'] = hashlib.sha256(original).hexdigest()
+    if args.preferences_ref:
+        original = subprocess.check_output(['git','show',args.preferences_ref+':apps/ios/Orca/Core/AccountPreferences.swift'],cwd=root)
+        frozen = scratch/'AccountPreferences.swift'; frozen.write_bytes(original)
+        compile_sources[sources.index('Orca/Core/AccountPreferences.swift')] = str(frozen)
+        manifest['preferencesSourceRef'] = subprocess.check_output(['git','rev-parse',args.preferences_ref],cwd=root,text=True).strip()
+        manifest['sourceHashes']['Orca/Core/AccountPreferences.swift'] = hashlib.sha256(original).hexdigest()
     with (out/'compile.log').open('w') as log:
         code = subprocess.run(['/usr/bin/xcrun','swiftc','-swift-version','5','-parse-as-library',*compile_sources,'-o',str(exe)],cwd=root,stdout=log,stderr=subprocess.STDOUT).returncode
     manifest['compileExit'] = code
