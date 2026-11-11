@@ -12,6 +12,8 @@ The default correction applies to one conversation in one connected account, inc
 
 Resolution is explicit conversation choice, then an explicit account/sender choice, then Unreviewed. Unreviewed is distinct from Not important. Existing attention/destination rules remain their own supported concepts and are not silently renamed, deleted or converted into importance rules. No AI learning or automatic sender rule is implied by a conversation action.
 
+Removing a conversation choice means inherit the current sender preference, which may still be Important; explain that before applying the reset. Unreviewed is the effective result when neither explicit level supplies a choice, not a synonym for deleting a choice. Revision guards must retain reset history/tombstones so remove/recreate cycles cannot admit a stale initial write.
+
 ## D3 — Uncertainty and discoverability
 
 Only effective Important belongs in the Important filter and qualifies for important-only interruption. Unreviewed and Not important remain in All Mail/search. The empty Important state explains how to make a choice and offers All Mail directly. The interface must never say there is no mail when only the selected filter is empty. No precision/recall or classifier-reliability claim is made.

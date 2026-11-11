@@ -20,14 +20,26 @@
       "summary": "Five proposed journeys cover triage/correction, durable writing, safe saved views, important-only interruption and account/search recovery, including stale/failure exits."
     },
     "4": {
-      "status": "in_progress",
+      "status": "done",
       "file": "phase4-page-specs/",
-      "summary": "Critical Mail, reader, compose and Zen interaction specs written; remaining retrieval/settings/advanced/auth surface specs pending.",
+      "summary": "All16surfaceinteraction specs cover10sections each, platformgaps, loading/error/stale states, privacy and exact preservation walkthroughs; implementation remains unverified.",
       "pagesCompleted": [
         "P01",
+        "P02",
         "P03",
+        "P04",
         "P05",
-        "P06"
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+        "P13",
+        "P14",
+        "P15",
+        "P16"
       ],
       "pagesTotal": 16
     },
@@ -56,5 +68,5 @@
       "reviewResult": null
     }
   },
-  "lastUpdated": "2026-11-11T05:16:00Z"
+  "lastUpdated": "2026-11-11T05:40:00Z"
 }

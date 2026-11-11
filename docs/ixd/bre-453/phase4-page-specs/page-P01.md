@@ -10,7 +10,7 @@ Desktop: compact navigation beside a flexible mail pane; global search/Compose a
 - Primary navigation, global search and Compose use the shared shell contract.
 - Permanent Important/All Mail switch has readable selected labels in both themes.
 - A row contains contact identity, sender, subject, useful preview, received time and read indication; importance is the only new decision control.
-- A labeled Importance control exposes Important/Not important and its account/conversation scope. Reset to Unreviewed and broader sender choice are secondary explicit actions.
+- A labeled Importance control exposes Important/Not important and its account/conversation scope. Removing a conversation choice and broader sender choice are secondary explicit actions; removal explains any inherited sender preference.
 - Mailboxes disclosure retains saved views, user-owned spaces and supported optional tools.
 
 ## 4. Behavior
