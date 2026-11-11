@@ -72,7 +72,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
   onNavigate: (destination: DesktopDestination) => void;
 }) {
   const { account, active, draftCount, inboxCount, spaces, fallbackDestination } = projection;
-  const inboxActive = active === "inbox" || active === `destination:${fallbackDestination?.id}`;
+  const inboxActive = active === "inbox" || Boolean(fallbackDestination && active === `destination:${fallbackDestination.id}`);
   const inboxLabel = fallbackDestination?.name ?? "Inbox";
   const inboxIcon = fallbackDestination ? <span aria-hidden="true" className="desktop-space-mark" style={{ background: fallbackDestination.color }} /> : <NavIcon name="inbox" />;
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
@@ -80,7 +80,14 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const visibleSpaces = spaces.filter((space) => !space.hidden);
   const activeSpace = spaces.find((space) => active === destinationForSpace(space));
-  const mobileMenuOwnsCurrentDestination = active !== "inbox" && active !== "drafts";
+  const mobileMenuOwnsCurrentDestination = !inboxActive && active !== "drafts";
+  // Routing IDs are internal. Resolve user-owned labels before using a readable
+  // fallback for stale or unavailable spaces (including hidden destinations).
+  const currentSpaceLabel = activeSpace?.label ?? ({
+    summary: "Summary", focus: "Focus", signals: "Signals", quiet: "Quiet",
+    hidden: "Hidden", later: "Later", all: "All Mail", attention: "Organization",
+    organization: "Organization", "organization-studio": "Organization", settings: "Settings",
+  } as Partial<Record<DesktopDestination, string>>)[active] ?? "Unavailable space";
 
   function navigateFromMobileMenu(destination: DesktopDestination) {
     setMobileMenuOpen(false);
@@ -177,7 +184,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
         aria-controls="desktop-mobile-navigation-dialog"
         aria-expanded={mobileMenuOpen}
         aria-haspopup="dialog"
-        aria-label={`Open all spaces${activeSpace ? `. Current space: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current space: ${active === "all" ? "All Mail" : (active === "attention" || active === "organization-studio") ? "Organization" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
+        aria-label={`Open all spaces${mobileMenuOwnsCurrentDestination ? `. Current space: ${currentSpaceLabel}` : ""}`}
         className="desktop-mobile-nav-item desktop-mobile-more"
         data-has-current={mobileMenuOwnsCurrentDestination || undefined}
         onClick={() => setMobileMenuOpen((current) => !current)}
@@ -355,15 +362,15 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
   });
   const navigate = (destination: DesktopDestination) => {
     if (destination === "settings") return;
-    window.location.assign(desktopDestinationHref(destination, window.location.pathname));
+    requestViewNavigation(() => window.location.assign(desktopDestinationHref(destination, window.location.pathname)));
   };
   return <div className="desktop-shell desktop-settings-frame">
     {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
-      onCompose={() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`)}
+      onCompose={() => requestViewNavigation(() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`))}
       onManageSpaces={() => setManageDestinations(true)}
-      onManageTools={() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`)}
-      onManageViews={() => window.location.assign(viewsManagementHref(window.location.pathname))}
+      onManageTools={() => requestViewNavigation(() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`))}
+      onManageViews={() => requestViewNavigation(() => window.location.assign(viewsManagementHref(window.location.pathname)))}
       onNavigate={navigate}
       projection={projection}
       theme={theme}

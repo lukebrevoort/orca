@@ -1,0 +1,119 @@
+{
+  "baseline": "9ec3ca31afecc28a4af2bf8b40c48a5f1fb9a311",
+  "surface": "web demo settings using same SettingsHome navigation paths as production",
+  "syntheticOnly": true,
+  "node": "v24.22.1",
+  "browser": "151.0.7922.34",
+  "cases": [
+    {
+      "theme": "light",
+      "action": "compose",
+      "before": {
+        "url": "http://localhost:5188/dev/settings",
+        "signature": "Synthetic unsaved compose signature",
+        "saveDisabled": false
+      },
+      "after": {
+        "url": "http://localhost:5188/dev/inbox?compose=1",
+        "dialogs": [],
+        "signature": null,
+        "applicationDialogCount": 0,
+        "signatureAfterReturn": ""
+      },
+      "writes": [],
+      "expected": "Dirty settings require a leave decision or preserve edits",
+      "pass": false
+    },
+    {
+      "theme": "light",
+      "action": "reload",
+      "before": {
+        "url": "http://localhost:5188/dev/settings",
+        "signature": "Synthetic unsaved reload signature",
+        "saveDisabled": false
+      },
+      "after": {
+        "url": "http://localhost:5188/dev/settings",
+        "dialogs": [],
+        "signature": "",
+        "applicationDialogCount": 0
+      },
+      "writes": [],
+      "expected": "Dirty settings require a leave decision or preserve edits",
+      "pass": false
+    },
+    {
+      "theme": "light",
+      "action": "back",
+      "before": {
+        "url": "http://localhost:5188/dev/settings",
+        "signature": "Synthetic unsaved back signature",
+        "saveDisabled": false
+      },
+      "after": {
+        "url": "http://localhost:5188/dev/inbox",
+        "dialogs": [],
+        "signature": null,
+        "applicationDialogCount": 0
+      },
+      "writes": [],
+      "expected": "Dirty settings require a leave decision or preserve edits",
+      "pass": false
+    },
+    {
+      "theme": "dark",
+      "action": "compose",
+      "before": {
+        "url": "http://localhost:5188/dev/settings",
+        "signature": "Synthetic unsaved compose signature",
+        "saveDisabled": false
+      },
+      "after": {
+        "url": "http://localhost:5188/dev/inbox?compose=1",
+        "dialogs": [],
+        "signature": null,
+        "applicationDialogCount": 0,
+        "signatureAfterReturn": ""
+      },
+      "writes": [],
+      "expected": "Dirty settings require a leave decision or preserve edits",
+      "pass": false
+    },
+    {
+      "theme": "dark",
+      "action": "reload",
+      "before": {
+        "url": "http://localhost:5188/dev/settings",
+        "signature": "Synthetic unsaved reload signature",
+        "saveDisabled": false
+      },
+      "after": {
+        "url": "http://localhost:5188/dev/settings",
+        "dialogs": [],
+        "signature": "",
+        "applicationDialogCount": 0
+      },
+      "writes": [],
+      "expected": "Dirty settings require a leave decision or preserve edits",
+      "pass": false
+    },
+    {
+      "theme": "dark",
+      "action": "back",
+      "before": {
+        "url": "http://localhost:5188/dev/settings",
+        "signature": "Synthetic unsaved back signature",
+        "saveDisabled": false
+      },
+      "after": {
+        "url": "http://localhost:5188/dev/inbox",
+        "dialogs": [],
+        "signature": null,
+        "applicationDialogCount": 0
+      },
+      "writes": [],
+      "expected": "Dirty settings require a leave decision or preserve edits",
+      "pass": false
+    }
+  ]
+}

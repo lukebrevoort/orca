@@ -1,3 +1,4 @@
+import { SettingsLeaveDialog, useSettingsNavigationGuard } from "./settings-navigation-guard";
 import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
 import { ReaderSessions } from "./reader-session";
@@ -681,6 +682,11 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const [accountSaveError, setAccountSaveError] = useState<SettingsRequestError>(null);
   const [accountSaveNotice, setAccountSaveNotice] = useState<string | null>(null);
   const [accountDirty, setAccountDirty] = useState(false);
+  const settingsEditorRef = useRef<HTMLElement>(null);
+  const navigationGuard = useSettingsNavigationGuard(accountDirty, settingsEditorRef, () => {
+    accountSaveRequestRef.current += 1;
+    setAccountDirty(false);
+  });
   const accountEditVersionRef = useRef(0);
   const accountLoadRequestRef = useRef(0);
   const accountSaveRequestRef = useRef(0);
@@ -850,7 +856,11 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
   function connectOutlook() {
+    // The request can fail without leaving Settings. Keep edits dirty; the
+    // native unload guard protects the actual authorization redirect instead.
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
+      // A cancelled native unload leaves this component mounted and retryable.
+      if (result === "started") setOutlookAuthorizationStatus("idle");
       if (result !== "provider_unavailable") return;
       setOutlookAuthorizationStatus("error");
       setOutlookAuthorizationError("Microsoft Outlook connection is unavailable here. Your existing mail access was not changed. Check with your Orca administrator before trying again.");
@@ -912,10 +922,19 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }), [connectedAccounts.length, connectedAccountsStatus, demoMode, demoSavedViews, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
   return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
-    <main className="settings-home-page">
+    <main className="settings-home-page" ref={settingsEditorRef}>
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
-      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p>{settingsSections.map(([id, title]) => <a href={`#${id}`} key={id}>{title}</a>)}</aside>
+      <label className="settings-mobile-jump"><span>Jump to section</span><select defaultValue="" onChange={event => {
+        const id = event.target.value;
+        const section = document.getElementById(id);
+        if (!section) return;
+        window.history.replaceState(window.history.state, "", `#${id}`);
+        section.scrollIntoView({ block: "start" });
+        section.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+        event.target.value = "";
+      }}><option disabled value="">Choose a section…</option>{settingsSections.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
@@ -985,10 +1004,16 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       </section>
     </div>
   </main>
+  {navigationGuard.asking ? <SettingsLeaveDialog onStay={navigationGuard.keep} onLeave={navigationGuard.discard} /> : null}
   </DesktopSettingsFrame>;
 }
 
-function SettingsSection({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) { return <section className="settings-section" id={id}><header><h2>{title}</h2><span>{note}</span></header><div>{children}</div></section>; }
+const settingsSections = [
+  ["account", "Account"], ["appearance", "Appearance & reading"], ["attention", "Inbox & attention"], ["writing", "Writing"],
+  ["notifications", "Notifications & reminders"], ["connected", "Connected accounts"], ["agents", "Agent connections"], ["privacy", "Privacy & data"],
+] as const;
+
+function SettingsSection({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) { return <section className="settings-section" id={id}><header><h2 tabIndex={-1}>{title}</h2><span>{note}</span></header><div>{children}</div></section>; }
 
 function SettingsOperationalState({ issue, onRetry }: { issue: SettingsReadIssue; onRetry: () => void }) {
   return <div className="settings-operational-state" data-kind={issue.kind} role="alert">

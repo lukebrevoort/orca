@@ -53,7 +53,7 @@ export function installViewNavigationHistory(browser: Window) {
   };
 }
 
-export function useViewNavigationGuard({ dirty, saving, editor, onDiscard }: { dirty: boolean; saving: boolean; editor: RefObject<HTMLElement | null>; onDiscard: () => void }) {
+export function useViewNavigationGuard({ dirty, saving, editor, onDiscard, allowSectionLinks = false }: { dirty: boolean; saving: boolean; allowSectionLinks?: boolean; editor: RefObject<HTMLElement | null>; onDiscard: () => void }) {
   const latest = useRef({ dirty, saving }); latest.current = { dirty, saving };
   const pending = useRef<(() => void) | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -79,6 +79,10 @@ export function useViewNavigationGuard({ dirty, saving, editor, onDiscard }: { d
     const link = (event: MouseEvent) => {
       const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
       if (!blocked() || !(anchor instanceof window.HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download") || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (allowSectionLinks) {
+        const next = new URL(anchor.href);
+        if (next.origin === window.location.origin && next.pathname === window.location.pathname && next.search === window.location.search && next.hash) return;
+      }
       event.preventDefault(); event.stopPropagation();
       askRef.current(() => window.location.assign(anchor.href));
     };
