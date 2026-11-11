@@ -100,7 +100,7 @@ describe("M8 desktop presentation regressions", () => {
   test("gives Later its own non-overlapping action rail", () => {
     expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-row { padding-right: 430px; }");
     expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-evidence-button { right: 298px;");
-    expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-row-wrap > .sender-attention-control { right: 254px;");
+    expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-row-wrap .sender-attention-control { right: 254px;");
     expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .later-row-actions { right: 12px;");
     expect(desktopStyles).toContain("width: 230px;");
     expect(desktopStyles).toContain("@media (max-width: 1100px) and (min-width: 761px)");

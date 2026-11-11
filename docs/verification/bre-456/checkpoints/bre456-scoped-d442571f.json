@@ -1,0 +1,245 @@
+{
+  "head": "d442571fa693230bcc86fcda2fe763591114e5b1",
+  "overall": "NONPASS",
+  "stages": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "elapsedMs": 12771
+    },
+    {
+      "name": "entry-pointer",
+      "exitCode": 1,
+      "elapsedMs": 7184
+    },
+    {
+      "name": "summary",
+      "exitCode": 0,
+      "elapsedMs": 3514
+    },
+    {
+      "name": "notifications",
+      "exitCode": 0,
+      "elapsedMs": 16977
+    },
+    {
+      "name": "availability",
+      "exitCode": 0,
+      "elapsedMs": 16894
+    },
+    {
+      "name": "owner",
+      "exitCode": 0,
+      "elapsedMs": 3273
+    },
+    {
+      "name": "views",
+      "exitCode": 0,
+      "elapsedMs": 12367
+    },
+    {
+      "name": "compose",
+      "exitCode": 0,
+      "elapsedMs": 18581
+    },
+    {
+      "name": "reader-attachments",
+      "exitCode": 0,
+      "elapsedMs": 22572
+    },
+    {
+      "name": "format",
+      "exitCode": 0,
+      "elapsedMs": 20719
+    },
+    {
+      "name": "inventory",
+      "exitCode": 0,
+      "elapsedMs": 1987
+    },
+    {
+      "name": "web-tests",
+      "exitCode": 1,
+      "elapsedMs": 93054
+    }
+  ],
+  "results": [
+    {
+      "path": "/tmp/bre456-scoped-final-1/availability/results.json",
+      "sha256": "be039ff26e33fd6dff688316661cb04e7f253a9fa8e8f72ec63acca80a45fee2",
+      "assertions": 84,
+      "scenarios": 22,
+      "failures": [],
+      "pageErrors": []
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/compose/results.json",
+      "sha256": "a3a7393e34f8a878a06e4e30f9737b0084ede6d5d681b5b5e03250b88fe43bae",
+      "assertions": null,
+      "scenarios": 16,
+      "failures": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/entry-pointer/results.json",
+      "sha256": "e7cf5f79f8f1d2fec3b0245a152e8e51cd57839bca85637ee9fb362cd868ec12",
+      "assertions": 64,
+      "scenarios": 4,
+      "failures": [
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "light",
+            "width": 336,
+            "label": "MAMayanormal6:12 AMfirst account conversationCould you send me your latest writing notes?",
+            "receivesPointer": false,
+            "hit": "Drafts",
+            "height": 139.6875
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "light",
+            "width": 172,
+            "label": "Why hereAll mail",
+            "receivesPointer": false,
+            "hit": "Drafts",
+            "height": 44
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "light",
+            "width": 44,
+            "label": "Keep first account conversation in a collection",
+            "receivesPointer": false,
+            "hit": "Open Mailboxes. Current: All Mail",
+            "height": 44
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "light",
+            "width": 44,
+            "label": "Manage mail from Maya",
+            "receivesPointer": false,
+            "hit": "Open Mailboxes. Current: All Mail",
+            "height": 44
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "dark",
+            "width": 336,
+            "label": "MAMayanormal6:12 AMfirst account conversationCould you send me your latest writing notes?",
+            "receivesPointer": false,
+            "hit": "Drafts",
+            "height": 139.6875
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "dark",
+            "width": 172,
+            "label": "Why hereAll mail",
+            "receivesPointer": false,
+            "hit": "Drafts",
+            "height": 44
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "dark",
+            "width": 44,
+            "label": "Keep first account conversation in a collection",
+            "receivesPointer": false,
+            "hit": "Open Mailboxes. Current: All Mail",
+            "height": 44
+          }
+        },
+        {
+          "label": "Every visible row action receives its actual center pointer",
+          "detail": {
+            "theme": "dark",
+            "width": 44,
+            "label": "Manage mail from Maya",
+            "receivesPointer": false,
+            "hit": "Open Mailboxes. Current: All Mail",
+            "height": 44
+          }
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/format/results.json",
+      "sha256": "50604a61e1668838ab0826d4f3f92ec8784ca26105865ebe89b7a90545c167dc",
+      "assertions": null,
+      "scenarios": 4,
+      "failures": [],
+      "pageErrors": null
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/inventory/results.json",
+      "sha256": "aa5605899008e2906e2154af118bebb061272a8ba58b13728529127bca0b03eb",
+      "assertions": null,
+      "scenarios": 0,
+      "failures": null,
+      "pageErrors": null
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/notifications/results.json",
+      "sha256": "583dda17a0671d4e78861feb5990831021a2b26ac43d87815bc72ba95a2660f6",
+      "assertions": 94,
+      "scenarios": 14,
+      "failures": [],
+      "pageErrors": []
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/owner/results.json",
+      "sha256": "f75fb2fbfb9ceb1b86ed19b39ad915cd8653ea8684bc3e76b64cb68aa30954ef",
+      "assertions": 16,
+      "scenarios": 4,
+      "failures": [],
+      "pageErrors": []
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/reader-attachments/results.json",
+      "sha256": "4a81236a4affddaf494a9329f9f5aff81d33733ac0e08998fa7e2de120abaad3",
+      "assertions": 38,
+      "scenarios": 2,
+      "failures": [],
+      "pageErrors": null
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/summary/results.json",
+      "sha256": "d1c481b88b2cda3f5f6e61d9d7aa351f0e250de4da0d1b4754bf7d7cf2710528",
+      "assertions": 24,
+      "scenarios": 2,
+      "failures": [],
+      "pageErrors": []
+    },
+    {
+      "path": "/tmp/bre456-scoped-final-1/views/results.json",
+      "sha256": "29f8977e961d827e3a7ed797e8de63584308ece940f74c84790c105088691a83",
+      "assertions": 86,
+      "scenarios": 2,
+      "failures": [],
+      "pageErrors": []
+    }
+  ],
+  "webTests": {
+    "pass": 868,
+    "fail": 1,
+    "expectCalls": 6149,
+    "files": 70,
+    "reason": "Later selector still expected direct-child relationship; actual rail geometry assertions retained in descendant adaptation"
+  },
+  "pointerFailure": "Eight nearest-edge center hit misses behind fixed mobile nav; expanded centered-scroll and Later proof pending. Zero legacy-versus-importance rectangle collisions; not an overall pointer pass."
+}
