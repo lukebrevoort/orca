@@ -518,7 +518,7 @@ final class OrcaUITests: XCTestCase {
         _ = try composeFixtureRequest("__fixture/inbox-recovery/empty-once", method: "POST", body: [:])
         addTeardownBlock { _ = try self.composeFixtureRequest("__fixture/inbox-recovery/reset", method: "POST", body: [:]) }
         let app = try launchApp()
-        XCTAssertTrue(app.staticTexts["Nothing here"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["No matching mail"].waitForExistence(timeout: 20))
         attachScreenshot(named: "40-empty-inbox-before-refresh")
         let list = app.collectionViews["inbox.list"]
         XCTAssertTrue(list.exists, "An empty mailbox must retain its refreshable scrolling surface")
@@ -1355,7 +1355,7 @@ final class OrcaUITests: XCTestCase {
         app.buttons["mail-action.move"].tap()
         XCTAssertTrue(app.navigationBars["All Mail"].waitForExistence(timeout: 10))
         chooseMailbox("Focus", in: app)
-        XCTAssertTrue(app.staticTexts["Nothing here"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["No matching mail"].waitForExistence(timeout: 10))
         chooseMailbox("Inbox", in: app)
         XCTAssertTrue(maya.waitForExistence(timeout: 10))
 
