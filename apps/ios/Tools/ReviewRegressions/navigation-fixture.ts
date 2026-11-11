@@ -8,6 +8,7 @@ export function createNavigationProbe(sqlite: Database) {
   const context = new AsyncLocalStorage<RequestProbe>();
   const connections: Array<{ path: string; method: string; phase: string; ordinal: number; totalChanges: number }> = [];
   const requests: Array<{ path: string; method: string; phase: string; status: number }> = [];
+  const senderTransport: Array<{ rawPercentEncodedQuery: string; sender: string; accountId: string; view: string; status: number; rowIds: string[]; otherRowCount: number; decodeFailed: boolean }> = [];
   let seeded = false, sealed = false, seedDML = 0, providerClientCalls = 0;
   const originalFetch = globalThis.fetch;
   let outboundNetworkCalls = 0;
@@ -24,10 +25,31 @@ export function createNavigationProbe(sqlite: Database) {
     return connection;
   }
   async function dispatch(request: Request, invoke: () => Response | Promise<Response>) {
-    const probe = { path: new URL(request.url).pathname, method: request.method, phase: sealed ? 'navigation-reads' : seeded ? 'navigation-bootstrap' : 'prior-journeys', connections: 0 };
+    const url = new URL(request.url);
+    const probe = { path: url.pathname, method: request.method, phase: sealed ? 'navigation-reads' : seeded ? 'navigation-bootstrap' : 'prior-journeys', connections: 0 };
     return context.run(probe, async () => {
       const response = await invoke();
       requests.push({ path: probe.path, method: probe.method, phase: probe.phase, status: response.status });
+      // Fixed synthetic sender controls ONLY. Never inspect arbitrary request
+      // headers/body, mail content, or query strings from another journey.
+      const sender = url.searchParams.get('sender');
+      const allowedSenders = ['needle+nav@example.com', 'needle nav@example.com', 'neighbor@example.com', 'needle%2Bnav@example.com'];
+      const keys = [...url.searchParams.keys()].sort();
+      if (sealed && request.method === 'GET' && url.pathname === '/v1/inbox'
+        && url.hostname === '127.0.0.1' && keys.join(',') === 'accountId,sender,view'
+        && url.searchParams.get('accountId') === 'account' && url.searchParams.get('view') === 'all'
+        && sender !== null && allowedSenders.includes(sender) && senderTransport.length < 8) {
+        let rowIds: string[] = [], otherRowCount = 0, decodeFailed = false;
+        try {
+          const payload = await response.clone().json() as { messages?: Array<{ id?: unknown }> };
+          if (!Array.isArray(payload.messages)) decodeFailed = true;
+          else for (const row of payload.messages) {
+            if (typeof row.id === 'string' && /^nav-mail-(archived|quiet|inbox|focus)$/.test(row.id)) rowIds.push(row.id);
+            else otherRowCount++;
+          }
+        } catch { decodeFailed = true; }
+        senderTransport.push({ rawPercentEncodedQuery: url.search.slice(1), sender, accountId: 'account', view: 'all', status: response.status, rowIds, otherRowCount, decodeFailed });
+      }
       return response;
     });
   }
@@ -85,7 +107,9 @@ export function createNavigationProbe(sqlite: Database) {
       // requireAuth opens the first connection; keep renewal distinct from route DML.
       readAuthDML: reads.filter(item => item.ordinal === 1).reduce((n, item) => n + item.totalChanges, 0),
       readDomainDML: reads.filter(item => item.ordinal > 1).reduce((n, item) => n + item.totalChanges, 0),
-      connections, requests };
+      expectedExactSenderRows: sqlite.query("SELECT id FROM emails WHERE account_id='account' AND from_address='needle+nav@example.com' ORDER BY id").all().map(row => (row as { id: string }).id),
+      expectedNoPlusSenderRows: sqlite.query("SELECT id FROM emails WHERE account_id='account' AND from_address='neighbor@example.com' ORDER BY id").all().map(row => (row as { id: string }).id),
+      senderTransport, connections, requests };
   }
   return { dbFactory, dispatch, seed, snapshot, restore() { globalThis.fetch = originalFetch; }, recordProviderClientCall() { providerClientCalls++; }, seal() {
     if (!seeded || sealed) throw Error('Native navigation bootstrap must precede single seal');

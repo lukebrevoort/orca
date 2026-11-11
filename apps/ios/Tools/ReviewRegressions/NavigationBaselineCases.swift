@@ -76,7 +76,11 @@ import Foundation
     }
     let thread: MailActionJSON = try await client.request("v1/threads", pathSuffix: ["nav-thread-archived"], query: [.init(name: "accountId", value: "account")])
     check("NAV-API-thread-pin-direct", thread["thread"]["id"].text == "nav-thread-archived", "direct owned thread GET works without finding it in loaded Inbox rows")
-    let sender: InboxPage = try await client.request("v1/inbox", query: [.init(name: "accountId", value: "account"), .init(name: "view", value: "all"), .init(name: "sender", value: "needle+nav@example.com")])
+    let senderProbe = SyntheticSenderRequestProbe(baseURL: URL(string: connection.baseURL)!)
+    let senderTransport = URLSession(configuration: .ephemeral, delegate: senderProbe, delegateQueue: nil)
+    defer { senderTransport.invalidateAndCancel() }
+    let senderClient = APIClient(baseURL: URL(string: connection.baseURL)!, session: senderTransport) { connection.token }
+    let sender: InboxPage = try await senderClient.request("v1/inbox", query: [.init(name: "accountId", value: "account"), .init(name: "view", value: "all"), .init(name: "sender", value: "needle+nav@example.com")])
     check("NAV-API-sender-substring-scope", Set(sender.messages.map(\.id)) == Set(["nav-mail-archived", "nav-mail-quiet"]), "explicit All Mail literal sender name/address substring scope; not importance identity")
     for legacy in ["inbox", "focus", "quiet", "hidden", "all"] {
         var params = [URLQueryItem(name: "accountId", value: "account"), .init(name: "limit", value: "30")]
@@ -101,4 +105,5 @@ import Foundation
     check("NAV-API-independent-sqlite-membership", snapshot["membershipCount"].integer == 2 && snapshot["queryCount"].integer == 2 && snapshot["pinCount"].integer == 10, "independent SQLite counts, not response-derived totals")
     check("NAV-API-result-domain-dml-zero", snapshot["readDomainDML"].integer == 0 && snapshot["readRequests"].integer == 13, "13 measured read requests after explicit bootstrap; auth connection changes reported separately")
     check("NAV-API-provider-read-boundary-zero", snapshot["providerClientCalls"].integer == 0 && snapshot["outboundNetworkCalls"].integer == 0, "existing fail-closed GmailClient and sealed GET-only Bun fetch boundary both observe zero calls; not physical provider delivery")
+    try await runSenderTransportDiagnosticCases(connection: connection, client: senderClient, transport: senderTransport, probe: senderProbe, check: check)
 }
