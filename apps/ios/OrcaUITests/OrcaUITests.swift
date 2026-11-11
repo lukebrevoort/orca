@@ -18,6 +18,77 @@ final class OrcaUITests: XCTestCase {
     }
 
     /// Runs in both themes against the authenticated loopback fixture only.
+    func test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes() throws {
+        try setFixtureSending(true)
+        addTeardownBlock { try self.restoreFixtureSending() }
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
+            let name = size.contains("Accessibility") ? "short-accessibility" : "short-standard"
+            let subject = "Feedback layout " + UUID().uuidString
+            let attachments: [[String: Any]] = [["id": "layout-file", "filename": String(repeating: "synthetic-long-filename-", count: 4) + ".txt",
+                                                "mimeType": "text/plain", "size": 1, "contentBase64": "eA=="]]
+            let draft = try createComposeFixtureDraft(subject: subject, attachments: attachments)
+            let id = try XCTUnwrap(draft["id"] as? String)
+            let before = try composeFixtureRequest("__fixture/compose/state")
+            let app = try launchApp(contentSize: size, shortLayout: true)
+            assertInboxLoaded(in: app)
+            openConversation(subject: Fixture.inboxSubject, in: app)
+            assertFeedbackClear(of: [app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
+                                in: app, checkpoint: name + "-reader")
+            app.swipeUp()
+            assertFeedbackClear(of: [app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
+                                in: app, checkpoint: name + "-reader-scrolled")
+            navigateBack(in: app)
+            app.tabBars.buttons["Drafts"].tap()
+            let row = app.descendants(matching: .any)["draft.\(id)"]
+            revealDraftRow(row, in: app); row.tap()
+            let body = messageBody(in: app)
+            revealComposeBody(in: app)
+            for _ in 0..<8 { if body.isHittable { break }; app.swipeUp() }
+            XCTAssertTrue(body.isHittable); body.tap(); body.typeText(" Layout writing.")
+            dismissTypingIntroduction(in: app)
+            XCTAssertTrue(app.keyboards.firstMatch.exists)
+            let send = app.buttons["compose.send"]
+            let status = app.descendants(matching: .any)["compose.save-status"]
+            assertFeedbackClear(of: [send, status, app.buttons["compose.keyboard-done"]], in: app, checkpoint: name + "-keyboard")
+            let writing = try XCTUnwrap(body.value as? String)
+            app.buttons["feedback.open"].tap()
+            XCTAssertTrue(app.textViews["feedback.message"].waitForExistence(timeout: 5))
+            app.buttons["feedback.close"].tap()
+            XCTAssertTrue(body.waitForExistence(timeout: 5))
+            XCTAssertEqual(body.value as? String, writing)
+            // Resume actual editing after the support sheet, then interrupt the
+            // scene. Both transitions must preserve this account's draft.
+            for _ in 0..<8 { if body.isHittable { break }; app.swipeDown() }
+            XCTAssertTrue(body.isHittable); body.tap(); body.typeText(" Resumed.")
+            dismissTypingIntroduction(in: app)
+            let latest = try XCTUnwrap(body.value as? String)
+            XCTAssertTrue(latest.contains("Resumed."))
+            XCUIDevice.shared.press(.home); app.activate()
+            XCTAssertEqual(body.value as? String, latest)
+            assertFeedbackClear(of: [send, status], in: app, checkpoint: name + "-foreground")
+            if !app.keyboards.firstMatch.exists { body.tap() }
+            XCTAssertTrue(app.buttons["compose.keyboard-done"].waitForExistence(timeout: 5))
+            app.buttons["compose.keyboard-done"].tap()
+            XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+            let remove = app.buttons["compose.attachment.remove.layout-file"]
+            revealComposeControl(remove, in: app, scrollUp: true)
+            assertFeedbackClear(of: [remove, send, status], in: app, checkpoint: name + "-keyboard-down-attachment")
+            expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: send)
+            waitForExpectations(timeout: 10); send.tap()
+            XCTAssertTrue(app.navigationBars["Drafts"].waitForExistence(timeout: 15))
+            let sent = try composeFixtureRequest("v1/drafts/\(id)?accountId=ios-fixture-account")
+            XCTAssertEqual(sent["deliveryStatus"] as? String, "sent")
+            XCTAssertEqual((sent["body"] as? [String: Any])?["text"] as? String, latest)
+            XCTAssertEqual((sent["to"] as? [[String: Any]])?.compactMap { $0["email"] as? String }, ["maya@example.com"])
+            XCTAssertEqual((sent["attachments"] as? [[String: Any]])?.compactMap { $0["id"] as? String }, ["layout-file"])
+            let after = try composeFixtureRequest("__fixture/compose/state")
+            XCTAssertEqual(after["sendRequests"] as? Int, (before["sendRequests"] as? Int).map { $0 + 1 })
+            XCTAssertEqual(after["deliveries"] as? Int, (before["deliveries"] as? Int).map { $0 + 1 })
+            print("[bre-459] checkpoint=\(name)-delivered send_requests_delta=\(try XCTUnwrap(after["sendRequests"] as? Int) - XCTUnwrap(before["sendRequests"] as? Int)) deliveries_delta=\(try XCTUnwrap(after["deliveries"] as? Int) - XCTUnwrap(before["deliveries"] as? Int))")
+            app.terminate()
+        }
+    }
+
     func test38FeedbackCornerCreatesLinearTicket() throws {
         let message = "Synthetic feedback " + UUID().uuidString
         let app = try launchApp(); assertInboxLoaded(in: app)
@@ -381,6 +452,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertEqual(body.value as? String, "Keep these words while access changes.")
         XCTAssertTrue(body.isEnabled); XCTAssertFalse(app.buttons["compose.send"].isEnabled)
         attachScreenshot(named: "30-compose-capability-refresh-failed")
+        assertFeedbackClear(of: [refresh, status, app.buttons["compose.send"]], in: app, checkpoint: "permission-retry")
         try setFixtureSending(true)
         refresh.tap()
         expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: app.buttons["compose.send"])
@@ -409,6 +481,7 @@ final class OrcaUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label CONTAINS %@", "Delivery remains uncertain"), evaluatedWith: status)
         waitForExpectations(timeout: 5)
         attachScreenshot(named: "32-compose-server-delivery-check")
+        assertFeedbackClear(of: [check, status], in: app, checkpoint: "uncertain-delivery-check")
         _ = try composeFixtureRequest("__fixture/compose/delivery", method: "POST", body: ["draftId": id, "status": "sent"])
         check.tap()
         XCTAssertTrue(app.navigationBars["Drafts"].waitForExistence(timeout: 10))
@@ -437,6 +510,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(remove.waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.buttons["compose.attachment.remove.keep"].exists)
         attachScreenshot(named: "33-compose-attachment-removed")
+        assertFeedbackClear(of: [app.buttons["compose.attachment.remove.keep"], app.buttons["compose.send"]],
+                            in: app, checkpoint: "attachment-removed")
         navigateBack(in: app)
         let localRow = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "draft.", subject)).firstMatch
         XCTAssertTrue(localRow.waitForExistence(timeout: 10)); localRow.tap()
@@ -467,6 +542,8 @@ final class OrcaUITests: XCTestCase {
         waitForExpectations(timeout: 10)
         XCTAssertEqual(body.value as? String, "Words survive a trip to the browser.")
         attachScreenshot(named: "34-compose-foreground-upgraded")
+        assertFeedbackClear(of: [app.buttons["compose.send"], app.descendants(matching: .any)["compose.save-status"]],
+                            in: app, checkpoint: "writer-foreground")
     }
 
     func test18ConflictCopyKeepsLatestWritingAndRemovedAttachmentAfterTermination() throws {
@@ -513,14 +590,14 @@ final class OrcaUITests: XCTestCase {
         body.tap(); body.typeText(" Latest words before keeping both.")
         // A fresh simulator can show Apple's slide-to-type introduction after
         // the first spaced input. Dismiss it before testing our draft actions.
-        let typingIntroduction = app.buttons["Continue"]
-        if typingIntroduction.waitForExistence(timeout: 1) { typingIntroduction.tap() }
+        dismissTypingIntroduction(in: app)
         let latestWriting = try XCTUnwrap(body.value as? String)
         XCTAssertTrue(latestWriting.contains("Latest words before keeping both."))
         keepBoth.tap()
         let status = app.descendants(matching: .any)["compose.save-status"]
         expectation(for: NSPredicate(format: "label CONTAINS %@", "Both drafts kept"), evaluatedWith: status)
         waitForExpectations(timeout: 10)
+        dismissTypingIntroduction(in: app)
         attachScreenshot(named: "35-compose-conflict-copy-checkpoint")
         XCTAssertTrue(app.keyboards.firstMatch.exists, "Reproduce the recovered copy with its writing keyboard still visible")
         assertFeedbackClear(of: [app.buttons["compose.send"], status], in: app, checkpoint: "conflict-copy-keyboard")
@@ -557,6 +634,7 @@ final class OrcaUITests: XCTestCase {
         let after = try composeFixtureRequest("__fixture/compose/state")
         XCTAssertEqual(after["sendRequests"] as? Int, (before["sendRequests"] as? Int).map { $0 + 1 })
         XCTAssertEqual(after["deliveries"] as? Int, (before["deliveries"] as? Int).map { $0 + 1 })
+        print("[bre-459] checkpoint=conflict-copy-delivered send_requests_delta=\(try XCTUnwrap(after["sendRequests"] as? Int) - XCTUnwrap(before["sendRequests"] as? Int)) deliveries_delta=\(try XCTUnwrap(after["deliveries"] as? Int) - XCTUnwrap(before["deliveries"] as? Int))")
     }
 
     func test30BackAndReopenDuringFirstCreateDoesNotDeliverTwice() throws {
@@ -702,6 +780,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(recoveryStatus.isHittable)
         XCTAssertTrue(copy.isHittable)
         attachScreenshot(named: "42-compose-sent-local-edits-preserved")
+        assertFeedbackClear(of: [copy, recoveryStatus], in: app, checkpoint: "sent-recovery-\(contentSize.contains("Accessibility") ? "accessibility" : "standard")")
         copy.tap()
         expectation(for: NSPredicate(format: "label == %@ AND enabled == true", "Send"), evaluatedWith: copy)
         waitForExpectations(timeout: 10)
@@ -836,6 +915,8 @@ final class OrcaUITests: XCTestCase {
         let sentText = confirm ? try XCTUnwrap(reopenedBody.value as? String) : expectedText
         if confirm { XCTAssertTrue(sentText.contains("Updated words.")) }
         attachScreenshot(named: confirm ? "46-compose-converted-draft-reopened" : "47-compose-cancelled-conversion-reopened")
+        assertFeedbackClear(of: [reopened.buttons["compose.send"], reopened.descendants(matching: .any)["compose.save-status"]],
+                            in: reopened, checkpoint: "rich-recovery-\(contentSize.contains("Accessibility") ? "accessibility" : "standard")")
         let send = reopened.buttons["compose.send"]
         expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: send)
         waitForExpectations(timeout: 10); send.tap()
@@ -1458,6 +1539,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(jumpLatest.waitForExistence(timeout: 5), "Latest is below the long first-unread card and needs a jump")
         XCTAssertTrue(jumpLatest.isHittable)
         XCTAssertFalse(jumpUnread.exists, "Unread is already visible")
+        assertFeedbackClear(of: [jumpLatest, app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
+                            in: app, checkpoint: "reader-jump-latest")
         jumpLatest.tap()
         XCTAssertTrue(newest.waitForExistence(timeout: 5))
         XCTAssertTrue(newest.isHittable)
@@ -1477,6 +1560,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(jumpUnread.waitForExistence(timeout: 5))
         XCTAssertTrue(jumpLatest.isHittable)
         attachScreenshot(named: "reader-jumps-earlier-history")
+        assertFeedbackClear(of: [jumpUnread, jumpLatest, app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
+                            in: app, checkpoint: "reader-history-jumps")
         jumpUnread.tap()
         XCTAssertTrue(unread.isHittable)
         XCTAssertFalse(jumpUnread.exists)
@@ -1719,7 +1804,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.frame.contains(settings.frame), file: file, line: line)
     }
 
-    private func launchApp(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false) throws -> XCUIApplication {
+    private func launchApp(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false, shortLayout: Bool = false) throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
             XCTFail("Set ORCA_FIXTURE_API_URL to the isolated fixture API URL before running OrcaUITests.")
@@ -1739,6 +1824,7 @@ final class OrcaUITests: XCTestCase {
             "-UIPreferredContentSizeCategoryName", contentSize,
         ]
         if htmlDiagnostics { app.launchArguments.append("--fixture-html-diagnostics") }
+        if shortLayout { app.launchArguments.append("--fixture-short-layout") }
         app.launch()
         return app
     }
@@ -1828,6 +1914,18 @@ final class OrcaUITests: XCTestCase {
         back.tap()
     }
 
+    private func dismissTypingIntroduction(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        // Apple's first-use panel can appear after the initial tap has returned.
+        // Match its actual explanatory copy, never an arbitrary Continue button.
+        let introduction = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Speed up your typing")).firstMatch
+        if introduction.waitForExistence(timeout: 2) {
+            let proceed = app.buttons["Continue"]
+            XCTAssertTrue(proceed.waitForExistence(timeout: 5), file: file, line: line)
+            proceed.tap()
+            XCTAssertTrue(introduction.waitForNonExistence(timeout: 5), file: file, line: line)
+        }
+    }
+
     /// Measure actual accessibility frames, not SwiftUI padding constants.
     /// Keep diagnostics to fixed checkpoint names and numeric geometry; do not
     /// log recipients, writing, subjects, attachment names or API credentials.
@@ -1842,21 +1940,49 @@ final class OrcaUITests: XCTestCase {
             return intersection.isNull ? 0 : intersection.width * intersection.height
         }
         let overlapCount = overlaps.filter { $0 > 0 }.count
+        var protectedOverlapPairs = 0
+        for first in frames.indices {
+            for second in frames.indices where second > first {
+                let intersection = frames[first].intersection(frames[second])
+                if !intersection.isNull && intersection.width * intersection.height > 0 { protectedOverlapPairs += 1 }
+            }
+        }
+        let keyboard = app.keyboards.firstMatch
+        let keyboardFrame = keyboard.exists ? keyboard.frame : .zero
+        // A shifted footer must not solve Feedback by moving actions into the
+        // system keyboard. The Done toolbar is outside the keyboard's frame.
+        let keyboardOverlaps = keyboard.exists ? ([feedbackFrame] + frames).filter {
+            let intersection = $0.intersection(keyboardFrame)
+            return !intersection.isNull && intersection.width * intersection.height > 0
+        }.count : 0
         // Capture before any assertion aborts this test, including on baseline.
         attachScreenshot(named: "bre-459-\(checkpoint)")
         print("[bre-459] checkpoint=\(checkpoint) controls=\(controls.count) overlapping_controls=\(overlapCount) keyboard=\(app.keyboards.firstMatch.exists) feedback_frame=\(feedbackFrame) control_frames=\(frames) intersection_areas_pt2=\(overlaps)")
+        print("[bre-459] checkpoint=\(checkpoint) keyboard_overlap_controls=\(keyboardOverlaps) keyboard_frame=\(keyboardFrame)")
+        print("[bre-459] checkpoint=\(checkpoint) protected_overlap_pairs=\(protectedOverlapPairs)")
         XCTAssertFalse(feedbackFrame.isEmpty, file: file, line: line)
         XCTAssertTrue(app.frame.contains(feedbackFrame), "Feedback must be fully on screen", file: file, line: line)
         XCTAssertTrue(feedback.isHittable, "Feedback must remain operable", file: file, line: line)
         XCTAssertGreaterThanOrEqual(feedbackFrame.width, 44, file: file, line: line)
         XCTAssertGreaterThanOrEqual(feedbackFrame.height, 44, file: file, line: line)
         XCTAssertEqual(overlapCount, 0, "Feedback must not cover any protected control", file: file, line: line)
+        XCTAssertEqual(keyboardOverlaps, 0, "Feedback and protected controls must stay above the keyboard", file: file, line: line)
+        XCTAssertEqual(protectedOverlapPairs, 0, "Protected controls must not cover one another", file: file, line: line)
         for (index, control) in controls.enumerated() {
             XCTAssertTrue(control.exists, "Protected control \(index) must exist", file: file, line: line)
             XCTAssertFalse(frames[index].isEmpty, "Protected control \(index) needs visible geometry", file: file, line: line)
             XCTAssertTrue(app.frame.contains(frames[index]), "Protected control \(index) must be fully on screen", file: file, line: line)
             XCTAssertTrue(control.isHittable, "Protected control \(index) must remain reachable", file: file, line: line)
+            if control.elementType == .button {
+                XCTAssertGreaterThanOrEqual(frames[index].width, 44, file: file, line: line)
+                XCTAssertGreaterThanOrEqual(frames[index].height, 44, file: file, line: line)
+                XCTAssertFalse(control.label.isEmpty, "Protected action \(index) needs an accessible label", file: file, line: line)
+            }
         }
+        // setUp's continueAfterFailure=false means this record is reached only
+        // after every assertion above executed successfully, not on baseline.
+        let buttons = controls.filter { $0.elementType == .button }.count
+        print("[bre-459] checkpoint=\(checkpoint) geometry_assertions_passed=\(9 + 4 * controls.count + 3 * buttons)")
     }
 
     private func attachScreenshot(named name: String) {

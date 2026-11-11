@@ -103,6 +103,8 @@ struct ComposeView: View {
     @State private var completed = false
     @State private var staleConflict = false
     @State private var refreshingPermissions = false
+    private enum WritingField: Hashable { case to, cc, bcc, subject, body }
+    @FocusState private var focusedField: WritingField?
     init(context: ThreadDetail? = nil, kind: String = "new", localDraft: LocalDraft? = nil, serverDraft: MessageDraft? = nil) {
         self.context = context; self.kind = localDraft?.content.context?.kind ?? serverDraft?.context?.kind ?? kind; seedServer = serverDraft
         let content = localDraft?.content ?? serverDraft.map { DraftContent(to: $0.to, cc: $0.cc, bcc: $0.bcc, subject: $0.subject, body: $0.body, context: $0.context, attachments: $0.attachments) }
@@ -116,16 +118,16 @@ struct ComposeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(spacing: 0) {
-                    recipientField("To", text: $to)
+                    recipientField("To", text: $to, field: .to)
                         .textContentType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                     Divider().overlay(OrcaTheme.border)
                     DisclosureGroup {
                         VStack(spacing: 0) {
-                            recipientField("Cc", text: $cc)
+                            recipientField("Cc", text: $cc, field: .cc)
                             Divider().overlay(OrcaTheme.border)
-                            recipientField("Bcc", text: $bcc)
+                            recipientField("Bcc", text: $bcc, field: .bcc)
                         }
                     } label: {
                         Text("Cc and Bcc")
@@ -146,6 +148,7 @@ struct ComposeView: View {
                     .foregroundStyle(OrcaTheme.ink)
                     .padding(.vertical, 20)
                     .accessibilityIdentifier("compose.subject")
+                    .focused($focusedField, equals: .subject)
                     .disabled(deliveryFrozen || editingAttachments)
 
                 Divider().overlay(OrcaTheme.border)
@@ -178,6 +181,7 @@ struct ComposeView: View {
                     .padding(.vertical, 14)
                     .accessibilityLabel("Message body")
                     .accessibilityIdentifier("compose.body")
+                    .focused($focusedField, equals: .body)
                     .accessibilityHint(richBodyProtected ? "Read-only. Choose Edit as plain text to change this body." : "")
                     .disabled(deliveryFrozen || editingAttachments || richBodyProtected)
 
@@ -249,6 +253,15 @@ struct ComposeView: View {
         }
         .navigationTitle(kind == "new" ? "New message" : kind.replacingOccurrences(of: "_", with: " ").capitalized).navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button { focusedField = nil } label: {
+                    Text("Done").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }
+                    .accessibilityIdentifier("compose.keyboard-done")
+            }
+        }
         .task {
             let activeEditor = UUID(); editorID = activeEditor; isVisible = true
             let needsHydration = preparing; preparing = true
@@ -340,13 +353,14 @@ struct ComposeView: View {
             sendButton
         }
     }
-    private func recipientField(_ label: String, text: Binding<String>) -> some View {
+    private func recipientField(_ label: String, text: Binding<String>, field: WritingField) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 14) {
             Text(label)
                 .font(OrcaTheme.ui(12, weight: .semibold))
                 .foregroundStyle(OrcaTheme.muted)
                 .frame(width: 34, alignment: .leading)
             TextField(label, text: text, prompt: Text(label).foregroundStyle(OrcaTheme.muted))
+                .focused($focusedField, equals: field)
                 .accessibilityIdentifier("compose.\(label.lowercased())")
                 .textInputAutocapitalization(.never)
                 .keyboardType(.emailAddress)
