@@ -160,7 +160,9 @@ elif [[ $read_only == 1 ]]; then
   light_tests=(-only-testing:OrcaTests -only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
 else
-  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
+  # Explicit dependency checkpoint: scenario48 is not a pass and is not run
+  # until the real BRE-455 integration clears focused/type gates.
+  light_tests=(-skip-testing:OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof -skip-testing:OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize -skip-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -skip-testing:OrcaUITests/OrcaUITests/test05ReadOnlyAccountKeepsDraftEditable)
   dark_tests=(-only-testing:OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist -only-testing:OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable -only-testing:OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage -only-testing:OrcaUITests/OrcaUITests/test02SettingsRenderInDarkMode -only-testing:OrcaUITests/OrcaUITests/test03VisualControlStates -only-testing:OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas -only-testing:OrcaUITests/OrcaUITests/test06NotificationDestinationsPersist)
 fi
 
