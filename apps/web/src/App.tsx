@@ -1,3 +1,4 @@
+import { SettingsLeaveDialog, useSettingsNavigationGuard } from "./settings-navigation-guard";
 import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
 import { ReaderSessions } from "./reader-session";
@@ -681,6 +682,11 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const [accountSaveError, setAccountSaveError] = useState<SettingsRequestError>(null);
   const [accountSaveNotice, setAccountSaveNotice] = useState<string | null>(null);
   const [accountDirty, setAccountDirty] = useState(false);
+  const settingsEditorRef = useRef<HTMLElement>(null);
+  const navigationGuard = useSettingsNavigationGuard(accountDirty, settingsEditorRef, () => {
+    accountSaveRequestRef.current += 1;
+    setAccountDirty(false);
+  });
   const accountEditVersionRef = useRef(0);
   const accountLoadRequestRef = useRef(0);
   const accountSaveRequestRef = useRef(0);
@@ -850,11 +856,11 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
   function connectOutlook() {
-    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
+    navigationGuard.request(() => { void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
       if (result !== "provider_unavailable") return;
       setOutlookAuthorizationStatus("error");
       setOutlookAuthorizationError("Microsoft Outlook connection is unavailable here. Your existing mail access was not changed. Check with your Orca administrator before trying again.");
-    });
+    }); });
   }
   async function revokeConnection(connection: McpConnection) {
     if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
@@ -912,7 +918,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }), [connectedAccounts.length, connectedAccountsStatus, demoMode, demoSavedViews, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
   return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
-    <main className="settings-home-page">
+    <main className="settings-home-page" ref={settingsEditorRef}>
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
@@ -985,6 +991,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       </section>
     </div>
   </main>
+  {navigationGuard.asking ? <SettingsLeaveDialog onStay={navigationGuard.keep} onLeave={navigationGuard.discard} /> : null}
   </DesktopSettingsFrame>;
 }
 

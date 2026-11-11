@@ -355,15 +355,15 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
   });
   const navigate = (destination: DesktopDestination) => {
     if (destination === "settings") return;
-    window.location.assign(desktopDestinationHref(destination, window.location.pathname));
+    requestViewNavigation(() => window.location.assign(desktopDestinationHref(destination, window.location.pathname)));
   };
   return <div className="desktop-shell desktop-settings-frame">
     {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
-      onCompose={() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`)}
+      onCompose={() => requestViewNavigation(() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`))}
       onManageSpaces={() => setManageDestinations(true)}
-      onManageTools={() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`)}
-      onManageViews={() => window.location.assign(viewsManagementHref(window.location.pathname))}
+      onManageTools={() => requestViewNavigation(() => window.location.assign(`${desktopDestinationHref("inbox", window.location.pathname)}&customize=tools`))}
+      onManageViews={() => requestViewNavigation(() => window.location.assign(viewsManagementHref(window.location.pathname)))}
       onNavigate={navigate}
       projection={projection}
       theme={theme}
