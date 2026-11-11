@@ -24,7 +24,7 @@ struct MailSearchView: View {
                     ForEach(model.messages) { message in
                         NavigationLink(value: message) { MessageRow(message: message) }
                             .contextMenu { Button("Importance…") { importanceTarget = .init(message) } }
-                            .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
+                            .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false, submittedSearch: model.resultSearch) } } }
                     }
                     if model.messages.isEmpty && !model.isLoading {
                         Text("No matches in All Mail. Your query remains available.")

@@ -8,21 +8,27 @@ import SwiftUI
     @Published private(set) var resultSearch = ""
     private var requestGeneration = UUID()
     private var activeKey: String?
-    static func globalSearchRefreshIdentity(state: AppState) -> String { "\(state.ownerScope)|\(state.selectedAccountID ?? "")" }
+    private var globalSearchOwnerKey: String?
+    static func globalSearchRefreshIdentity(state: AppState) -> String { "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(state.mailboxReadRevision)" }
     func openGlobalSearch(state: AppState) async -> Bool {
-        invalidate(); view = "all"; await load(state: state); return true
+        let ownerKey = "\(state.ownerScope)|\(state.selectedAccountID ?? "")"
+        if globalSearchOwnerKey != ownerKey {
+            globalSearchOwnerKey = ownerKey; invalidate(); view = "all"; await load(state: state); return true
+        }
+        // Refresh the submitted result set, keeping unfinished query text intact.
+        await load(state: state, submittedSearch: resultSearch); return false
     }
     func invalidate() { requestGeneration = UUID(); activeKey = nil; messages = []; nextCursor = nil; isLoading = false; error = nil; resultSearch = "" }
-    func load(state: AppState, reset: Bool = true) async {
+    func load(state: AppState, reset: Bool = true, submittedSearch: String? = nil) async {
         guard let account = state.selectedAccount else { invalidate(); error = "No connected mailbox. Open Settings to review accounts."; return }
         guard reset || (!isLoading && nextCursor != nil) else { return }
-        let scope = state.ownerScope, requestedView = view, requestedSearch = search
+        let scope = state.ownerScope, requestedView = view, requestedSearch = submittedSearch ?? search
         let key = state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch)
         if activeKey != key { messages = []; nextCursor = nil; error = nil; activeKey = key }
         requestGeneration = UUID(); let generation = requestGeneration
         func current() -> Bool {
             !Task.isCancelled && generation == requestGeneration && scope == state.ownerScope && state.phase == .ready
-            && account.id == state.selectedAccount?.id && view == requestedView && search == requestedSearch
+            && account.id == state.selectedAccount?.id && view == requestedView && (submittedSearch != nil || search == requestedSearch)
             && key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch)
         }
         if state.demoMode { messages = requestedView == "important" ? [] : DemoData.inbox(view: requestedView); nextCursor = nil; return }
