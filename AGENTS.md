@@ -6,19 +6,19 @@ The primary purpose of this project is to build a human-first interactive email 
 
 ## Repository Overview
 
-Orca is an early-stage monorepo for a modern email client. It connects to Gmail (and eventually Outlook) via read-only OAuth, normalizes incoming mail into a clean internal model, and presents a calm, opinionated inbox experience. The project is actively being built — expect prototype UI, a growing API surface, and schema changes.
+Orca is a Gmail-first email client with web and native iPhone apps. It normalizes incoming mail into a local SQLite model and supports revisioned drafts, Gmail draft mirroring, and sending after an incremental compose-scope grant. Outlook has an OAuth adapter, but its sync and sending are not implemented. The project is actively being built; API and schema changes remain ongoing.
 
 ### Stack
 
 | Layer       | Technology                                                                  |
 | ----------- | --------------------------------------------------------------------------- |
-| Runtime     | **Bun 1.3+** (workspace, test runner, dev server)                           |
+| Runtime     | **Bun 1.3.14** (workspace, test runner, dev server)                           |
 | Language    | **TypeScript** (strict, ESM throughout)                                     |
-| Backend API | **Hono** (lightweight HTTP framework on Node)                               |
+| Backend API | **Hono** on Bun (using the Node HTTP adapter)                               |
 | Database    | **SQLite** via **Drizzle ORM** (file-backed at `apps/api/data/orca.sqlite`) |
 | Frontend    | **React 19** + **Vite 7** (SPA, no SSR)                                     |
 | Validation  | **Zod 4** (shared schemas in `packages/shared`)                             |
-| Auth        | **JWE session tokens** (jose) + **Google OAuth 2.0** (gmail.readonly scope) |
+| Auth        | **Signed JWT browser sessions** (jose), opaque mobile credentials, provider OAuth |
 
 ### Workspace Layout
 
@@ -30,12 +30,13 @@ orca/
 │   │   │   ├── auth/       # OAuth flows, session middleware, token encryption
 │   │   │   ├── config/     # Server config, validated env
 │   │   │   ├── db/         # Drizzle schema, migrations, client
-│   │   │   └── providers/  # Gmail normalizer + sync engine
+│   │   │   └── providers/  # Gmail sync/transport + Outlook adapter
 │   │   └── drizzle.config.ts
+│   ├── ios/          # Native SwiftUI iPhone client
 │   └── web/          # React/Vite SPA
 │       └── src/
 │           ├── App.tsx          # Main app shell (inbox, compose, zen mode)
-│           ├── demo-data.ts     # Demo messages shown when API is unreachable
+│           ├── demo-data.ts     # Synthetic messages for demo/preview mode
 │           └── contact-signature.ts
 ├── packages/
 │   └── shared/       # Shared Zod schemas, TypeScript types, fixtures
@@ -58,18 +59,23 @@ orca/
 
 ### Database Schema (SQLite / Drizzle)
 
-Core tables managed in `apps/api/src/db/schema.ts`:
+Selected tables managed in `apps/api/src/db/schema.ts` (not an exhaustive schema):
 
 | Table            | Purpose                                                                    |
 | ---------------- | -------------------------------------------------------------------------- |
 | `users`          | Orca user accounts (email, display name)                                   |
-| `sessions`       | Signed session tokens with expiry                                          |
+| `sessions`       | Browser session records with expiry and invalidation                       |
 | `oauth_accounts` | Connected provider accounts (encrypted tokens, sync cursor)                |
 | `threads`        | Normalized conversation threads per account                                |
 | `emails`         | Individual messages with body, read/starred/draft flags, and `humanSignal` |
 | `labels`         | Provider labels mapped per account                                         |
 | `email_labels`   | Many-to-many join between emails and labels                                |
 | `contacts`       | Known contacts per account                                                 |
+| `message_drafts` | Revisioned drafts, provider mirror state, and delivery state               |
+| `organization_*` | Workspace organization, rules, views, contexts, and change records          |
+| `collections`, `pins`, `thread_reminders` | Local organization and follow-up state               |
+| `calendar_connections`, `availability_calendars` | Separate Calendar grants and availability metadata |
+| `mcp_*`         | Agent OAuth clients, grants, connections, and token records                 |
 
 ### Running Locally
 
@@ -96,14 +102,15 @@ bun run lint        # type-level linting (tsc)
 
 - Gmail OAuth connect and callback flow is wired end-to-end.
 - Gmail sync engine fetches, normalizes, and persists messages to SQLite.
-- Frontend renders a real inbox from the API (with demo fallback).
-- Compose panel and zen writer are implemented as UI shells (no send path yet).
-- No Outlook support yet — schema and types are ready for it.
-- No user registration or multi-user auth — sessions exist but the login UX is OAuth-only for now.
+- Web and native clients read the inbox from the API; synthetic fixtures support development.
+- Compose and zen writing use persisted, revisioned drafts; Gmail mirroring and sending require the incremental `gmail.compose` grant.
+- Read/unread changes and organization actions are local to Orca, not Gmail mailbox mutations.
+- Outlook OAuth is implemented; its provider adapter does not implement sync, draft transport, or sending.
+- OAuth login establishes user-scoped sessions and connected accounts; native clients use revocable opaque credentials. Implementation and fixture checks do not establish production or device acceptance.
 
 ### Things to Know
 
-- All IDs in the database are **text UUIDs** (not auto-increment integers).
+- Core entity IDs are **text identifiers**, typically UUIDs; some tables use composite or derived keys.
 - Tokens are **encrypted at rest** using AES-GCM via `token-crypto.ts`.
 - The shared package is consumed as raw TypeScript (no build step, exports `./src/index.ts` directly).
 - Tests live next to source files (`*.test.ts`) and run via `bun test`.
@@ -141,7 +148,7 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 ### Domain docs
 
-Multi-context: root `CONTEXT-MAP.md` pointing at per-context `CONTEXT.md` files. See `docs/agents/domain.md`.
+The root `CONTEXT.md` defines the Organization domain vocabulary. See `docs/agents/domain.md` for domain documentation guidance.
 
 ### Desktop UI switch
 
