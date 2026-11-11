@@ -1,0 +1,7 @@
+{
+  "candidate": "4f582a97dc325161a8ed268c6622cd03bf258397",
+  "exitCode": 1,
+  "dirtyImportedNormalizerExecuted": true,
+  "outputCreated": false,
+  "scope": "Actual unmodified benchmark CLI with modified normalizer function; expected guard failed to reject dirty imported source before worker execution. No completed paired report claimed."
+}

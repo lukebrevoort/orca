@@ -9,8 +9,15 @@ import type { GmailMessage } from "../src/providers/gmail/types.ts";
 const root=resolve(import.meta.dir,"../../..");
 function git(...args:string[]){const r=spawnSync("git",["-C",root,...args],{encoding:"utf8"});if(r.status!==0)throw Error(r.stderr);return r.stdout.trim();}
 const hash=(s:string)=>createHash("sha256").update(s).digest("hex");
+function sourceIdentity(expectedCommit:string){
+  const commit=git("rev-parse","--verify","HEAD");
+  if(!/^[a-f0-9]{40}$/.test(expectedCommit)||commit!==expectedCommit)throw Error("Gmail benchmark must execute at the requested committed HEAD");
+  if(git("status","--porcelain=v1","--untracked-files=all"))throw Error("Gmail benchmark requires a clean checkout; imported worktree changes cannot be labeled with a commit");
+  return {commit,tree:git("rev-parse","HEAD^{tree}"),clean:true,lockfileBlob:git("rev-parse",commit+":bun.lock")};
+}
 if(process.argv.includes("--worker")){
-  const input=JSON.parse(await Bun.stdin.text()); const {db,sqlite}=createDatabaseClient(":memory:");
+  const input=JSON.parse(await Bun.stdin.text()); sourceIdentity(input.executionCommit);
+  const {db,sqlite}=createDatabaseClient(":memory:");
   try{
     for(const sql of input.sql) sqlite.exec(sql.text);
     sqlite.exec("INSERT INTO users(id,email) VALUES('u','u@example.com'); INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('a','u','gmail','a','self@example.com')");
@@ -28,19 +35,23 @@ if(process.argv.includes("--worker")){
       if(state.effective!=="unreviewed"||state.participant_count!==(input.distinct?input.n:1)||state.retained_count!==input.n)throw Error("Materialization diverged after actual Gmail persist");
       results.push({phase,sqliteVersion,wallMs,cpuMs:(used.user+used.system)/1000,rssBeforeBytes,rssAfterBytes:process.memoryUsage().rss,preparedStatements,changedEmailCount:result.changedEmailCount,labelAssociationRows:(sqlite.query("SELECT count(*) n FROM email_labels").get() as {n:number}).n});
     }
+    sourceIdentity(input.executionCommit);
     console.log(JSON.stringify(results));
   }finally{sqlite.close();}
 }else{
   const [candidate,output]=process.argv.slice(2);if(!candidate||!output)throw Error("Usage: importance-gmail-work.ts <candidate-commit> <new-output.json>");
   const old="2ebee41d73e3601610ef00dd39e5b81a60f486e2",head=git("rev-parse","--verify",candidate+"^{commit}");if(!/^[a-f0-9]{40}$/.test(head))throw Error("Full commit required");
+  const productionSource=sourceIdentity(head);
   const syncPath="apps/api/src/providers/gmail/sync.ts";
   if(git("show",old+":"+syncPath)!==git("show",head+":"+syncPath)||git("diff",head,"--",syncPath))throw Error("Production Gmail sync differs between paired sources");
   const sources=[...new Set([old,head])].map(sha=>({sha,sql:git("ls-tree","-r","--name-only",sha,"apps/api/drizzle").split("\n").filter(p=>p.endsWith(".sql")).sort().map(path=>{const text=spawnSync("git",["-C",root,"show",sha+":"+path],{encoding:"utf8"});if(text.status!==0)throw Error(text.stderr);return{path,text:text.stdout,sha256:hash(text.stdout)};})}));
   const runs=[];
   for(const n of [100,200,400])for(const distinct of [false,true])for(let sample=1;sample<=3;sample++)for(const source of sample%2?sources:[...sources].reverse()){
-    const child=spawnSync(process.execPath,[import.meta.path,"--worker"],{input:JSON.stringify({sql:source.sql,n,distinct}),encoding:"utf8",maxBuffer:1024*1024});if(child.status!==0)throw Error(child.stderr+child.stdout);
+    sourceIdentity(head);
+    const child=spawnSync(process.execPath,[import.meta.path,"--worker"],{input:JSON.stringify({executionCommit:head,sql:source.sql,n,distinct}),encoding:"utf8",maxBuffer:1024*1024});if(child.status!==0)throw Error(child.stderr+child.stdout);
     runs.push({sha:source.sha,messages:n,distinct,sample,results:JSON.parse(child.stdout)});
   }
-  writeFileSync(output,JSON.stringify({baseline:old,candidate:head,runtime:Bun.version,productionSyncSha256:hash(git("show",head+":"+syncPath)),scope:"Actual production persistGmailMessages + normalization, synthetic same-thread messages, changed normal-label sets force wholesale refresh; no network/provider; fresh Bun subprocess per paired sample",rss:"actual before/after process RSS bytes, not per-phase peak",sources:sources.map(s=>({sha:s.sha,sql:s.sql.map(({text,...metadata})=>metadata)})),runs},null,2)+"\n",{flag:"wx"});
+  sourceIdentity(head);
+  writeFileSync(output,JSON.stringify({baseline:old,candidate:head,productionSource,runtime:Bun.version,productionSyncSha256:hash(git("show",head+":"+syncPath)),scope:"Actual production persistGmailMessages + normalization from the clean candidate tree with each source revision's immutable migration SQL; synthetic same-thread messages, changed normal-label sets force wholesale refresh; no network/provider; fresh Bun subprocess per paired sample",rss:"actual before/after process RSS bytes, not per-phase peak",sources:sources.map(s=>({sha:s.sha,sql:s.sql.map(({text,...metadata})=>metadata)})),runs},null,2)+"\n",{flag:"wx"});
   console.log(JSON.stringify({candidate:head,pairedSamples:runs.length,output}));
 }
