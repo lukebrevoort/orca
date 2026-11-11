@@ -274,7 +274,7 @@ describe("AppSidebar mobile navigation", () => {
       expect(labels.includes("Focus")).toBe(false);
       expect(labels.includes("Deep work")).toBe(!hidden);
       if (!hidden) expect(labels.indexOf("Follow-ups")).toBeLessThan(labels.indexOf("Deep work"));
-      await click([...browserWindow.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(node => node.textContent?.trim() === "Close")!);
+      await click([...browserWindow.document.querySelectorAll('[role="dialog"] button')].find(node => node.textContent?.trim() === "Close") as unknown as HTMLButtonElement);
     }
   });
 });
