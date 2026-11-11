@@ -1,0 +1,25 @@
+{
+  "baseline": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+  "filesSha256": {
+    "paired-gmail.log": "9b55e7ea0341ad48e9dbdc62be6b711c21a63c6164a52797435a18e4626caa8a",
+    "upgrade-revision-regression.json": "3096b9d3e587e855ed95c9b38d19fb1fae77653d269f756f9e61f33351422229",
+    "summary.json": "dd47c9489229a80c4f57d555ce0b098d5b4a20988ac26eebed15f3a735b3eb52",
+    "paired-sql-work.json": "b1287f8b3e08bad3acad6f45353d24e1b8bd9ec88d6fb380be9e8f5357b0ea86",
+    "demo.json": "e93f165092228cd4009d5d7ca973f00c9f883915de8f518ff5f88d65ee552be5",
+    "paired-gmail.json": "8d1ccd5e209c61edac4838ff821cb48fc7769631247b00261dd594084c82b39d",
+    "comparison.html": "918d2119fb044eb2d74d564e3a7fb1550a3bf2f60cc05565149843c9f513e6e3",
+    "README.md": "11085474c3dc06d26b44b66ddc54ebc86116865ea6cfeec114ae415651aacd76",
+    "paired-sql-work.log": "8a7ce71ff6d62255341810646963254b1747da4472b548af1630a9c5b1905430",
+    "baseline-red-work.json": "c5581bd0b102e3bb24c9f385e84da6a9b7479f1d07feac1c77c599059bb7a91c",
+    "baseline-red-work.log": "ac683d83456ce0b06653192778c21323834962525a29b8722a18ae6929fbe539",
+    "query-work.json": "a755835fae3e4430fa69980aa241b69adff555a09ceddf224391638d57b12da4",
+    "focused.log": "f6dfbfffd67e59726c4bfff530cbd76f92a89789ecd3aa29a87b387c012c30b5"
+  },
+  "benchmarkCandidate": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+  "executedSources": {
+    "baseline-red-work": "ac8eba208d56a643a40772ecefef5c7e4e7c159a",
+    "paired-sql-work-and-gmail": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+    "api-demo-query-and-focused": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+    "upgrade-revision-regression": "66e156e5b3d7d99268b3055dad095487497cc5b1"
+  }
+}
