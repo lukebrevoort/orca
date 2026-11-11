@@ -59,7 +59,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     func close() { edited(); presented = false; generation = UUID(); busy = false }
     /// Unacknowledged commands are never discarded. Only ordinary local edits can be discarded.
     func discardEdits() {
-        guard journal?.command == nil else { return }
+        guard journal?.command == nil, journal == nil || matchingContext else { return }
         journal = nil; persist(); changed = false
     }
     func edited() {
@@ -146,7 +146,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
                 error = "Finish the original View before saving a different View in this account."; return nil
             }
             if retained == command.submitted {
-                journal = nil; persist(); changed = false; status = "View saved."; return id
+                journal = nil; persist(); baseline = edits; changed = false; status = "View saved."; return id
             }
             // Acknowledge only the submitted definition. Preserve newer edits on the
             // created identity; they need their own fresh preview and explicit Save.
