@@ -1,0 +1,3 @@
+# Preserve byte-exact captured baseline output and its recorded hashes.
+/docs/verification/bre-454/baseline-initial-red.log -whitespace
+/docs/verification/bre-454/baseline-red.log -whitespace
