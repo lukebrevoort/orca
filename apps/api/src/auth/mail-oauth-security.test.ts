@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, mailOAuthTransactions, oauthAccounts, threads, users } from "../db/schema.ts";
+import { emails, mailOAuthTransactions, oauthAccounts, pendingMailLogins, sessions, threads, users } from "../db/schema.ts";
 import { createSession, getSessionFromToken, invalidateSession, renewSession } from "./session-store.ts";
 import { buildSessionCookie } from "./jwt.ts";
 import { createGmailAuthApp } from "./gmail/routes.ts";
@@ -15,6 +15,7 @@ import { DatabaseMailOAuthTransactionStore } from "./mail-oauth-transactions.ts"
 import { completeMailOAuthLogin } from "./mail-oauth-login.ts";
 import type { GmailOAuthConfig } from "./gmail/config.ts";
 import type { OutlookOAuthConfig } from "./outlook/config.ts";
+import { maxPendingMailLogins } from "./mail-oauth-admission.ts";
 import { createMobileSession } from "./mobile/store.ts";
 
 const key = Buffer.alloc(32, 7).toString("base64");
@@ -290,3 +291,114 @@ describe("Gmail returning-login scope reporting", () => {
     });
   }
 });
+
+
+test("shared login admission bounds abandoned allocations and recovers after expiry", async () => {
+  const f = await fixture("gmail");
+  const client = f.dbFactory();
+  try {
+    client.db.transaction((tx) => {
+      for (let i = 0; i < maxPendingMailLogins - 1; i++) {
+        tx.insert(users).values({ id: `filler-${i}`, email: `pending-filler-${i}@orca.invalid` }).run();
+      }
+    });
+    const gmail = createGmailAuthApp({ config: gmailConfig, dbFactory: f.dbFactory });
+    const outlook = createOutlookAuthApp({ config: outlookConfig, dbFactory: f.dbFactory });
+    const concurrent = await Promise.all([gmail.request("/login"), outlook.request("/login")]);
+    expect(concurrent.map(response => response.status).sort()).toEqual([200, 503]);
+    const first = concurrent.find(response => response.status === 200)!;
+    expect(first.status).toBe(200);
+    expect(first.headers.get("set-cookie")).toBeTruthy();
+    const state = await first.json() as { state: string };
+    const counts = () => [client.db.select().from(users).all().length, client.db.select().from(sessions).all().length, client.db.select().from(mailOAuthTransactions).all().length];
+    const before = counts();
+    for (const app of [outlook, gmail]) {
+      const response = await app.request("/login", { headers: { cookie: f.cookie(f.victim.token), "x-forwarded-for": crypto.randomUUID() } });
+      expect(response.status).toBe(503);
+      expect(response.headers.get("retry-after")).toBe("60");
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(await response.json()).toMatchObject({ error: { code: "login_capacity", retryable: true } });
+      expect(counts()).toEqual(before);
+    }
+    // The established session and account remain usable at capacity.
+    expect((await gmail.request("/connect", { headers: { cookie: f.cookie(f.victim.token) } })).status).toBe(200);
+    const pending = client.db.select().from(mailOAuthTransactions).all().find(row => row.pendingEmail)!;
+    // Model an interrupted callback after provider grant persistence.
+    client.db.insert(oauthAccounts).values({ id: "orphan-grant", userId: pending.userId, provider: "gmail", providerId: "orphan", providerEmail: "orphan@example.test" }).run();
+    client.db.update(users).set({ createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) }).where(eq(users.id, pending.userId)).run();
+    const retried = await outlook.request("/login");
+    expect(retried.status).toBe(200);
+    expect(client.db.select().from(users).where(eq(users.id, pending.userId)).get()).toBeUndefined();
+    expect(client.db.select().from(sessions).where(eq(sessions.userId, pending.userId)).all()).toHaveLength(0);
+    expect(client.db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, pending.userId)).all()).toHaveLength(0);
+    expect(client.db.select().from(mailOAuthTransactions).where(eq(mailOAuthTransactions.userId, pending.userId)).all()).toHaveLength(0);
+    expect(state.state).toBeTruthy();
+  } finally { client.sqlite.close(); }
+});
+
+
+for (const provider of ["gmail", "outlook"] as const) {
+  test(`${provider} admission reclaims a stale synced login without touching protected owners`, async () => {
+    const f = await fixture(provider);
+    const started = await f.start("login");
+    const client = f.dbFactory();
+    try {
+      const pending = client.db.select().from(mailOAuthTransactions).get()!;
+      const old = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const guardIds = ["legacy", "authenticated", "onboarded", "changed-email", "recent"];
+      for (const id of guardIds) {
+        const pendingEmail = `pending-${id}@orca.invalid`;
+        client.db.insert(users).values({
+          id, email: id === "changed-email" ? "changed@example.test" : pendingEmail,
+          createdAt: id === "recent" ? new Date() : old,
+          authenticatedAt: id === "authenticated" ? new Date() : null,
+          onboardingCompletedAt: id === "onboarded" ? new Date() : null,
+        }).run();
+        if (id !== "legacy") client.db.insert(pendingMailLogins).values({ userId: id, pendingEmail }).run();
+        client.db.insert(sessions).values({ id: `${id}-session`, userId: id, expiresAt: new Date(Date.now() + 3600_000) }).run();
+        client.db.insert(oauthAccounts).values({ id: `${id}-account`, userId: id, provider, providerId: id, providerEmail: `${id}@example.test` }).run();
+        client.db.insert(threads).values({ id: `${id}-thread`, accountId: `${id}-account`, providerThreadId: id }).run();
+        client.db.insert(emails).values({ id: `${id}-email`, accountId: `${id}-account`, threadId: `${id}-thread`, providerMessageId: id, bodyText: `Retain ${id}` }).run();
+      }
+      const protectedSnapshot = () => Object.fromEntries([...guardIds, "victim"].map(id => [id, {
+        user: client.db.select().from(users).where(eq(users.id, id)).get(),
+        marker: client.db.select().from(pendingMailLogins).where(eq(pendingMailLogins.userId, id)).get(),
+        sessions: client.db.select().from(sessions).where(eq(sessions.userId, id)).all(),
+        accounts: client.db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, id)).all(),
+        laneStates: client.sqlite.query("SELECT * FROM organization_thread_lane_states WHERE workspace_id = ?").all(id),
+        threads: client.sqlite.query("SELECT threads.* FROM threads JOIN oauth_accounts ON oauth_accounts.id = threads.account_id WHERE oauth_accounts.user_id = ?").all(id),
+        emails: client.sqlite.query("SELECT emails.* FROM emails JOIN oauth_accounts ON oauth_accounts.id = emails.account_id WHERE oauth_accounts.user_id = ?").all(id),
+      }]));
+      const before = protectedSnapshot();
+      // A callback can persist its grant before promotion is interrupted. The
+      // scheduler can then sync a thread, whose trigger creates lane state.
+      const accountId = "synced-orphan-account";
+      client.db.insert(oauthAccounts).values({ id: accountId, userId: pending.userId, provider, providerId: "synced-orphan", providerEmail: "synced-orphan@example.test" }).run();
+      client.db.insert(threads).values({ id: "synced-orphan-thread", accountId, providerThreadId: "synced-orphan" }).run();
+      client.db.insert(emails).values({ id: "synced-orphan-email", accountId, threadId: "synced-orphan-thread", providerMessageId: "synced-orphan", bodyText: "Abandoned login mail" }).run();
+      client.db.update(users).set({ createdAt: old }).where(eq(users.id, pending.userId)).run();
+      expect(client.sqlite.query("SELECT * FROM organization_thread_lane_states WHERE workspace_id = ?").all(pending.userId)).toHaveLength(1);
+      expect(client.sqlite.query("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
+      const app = f.makeApp();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const retried = await app.request("/login");
+        expect(retried.status).toBe(200);
+        expect(retried.headers.get("set-cookie")).toBeTruthy();
+        expect((await retried.json() as { state: string }).state).toBeTruthy();
+      }
+      expect(client.db.select().from(users).where(eq(users.id, pending.userId)).get()).toBeUndefined();
+      expect(client.db.select().from(pendingMailLogins).where(eq(pendingMailLogins.userId, pending.userId)).all()).toHaveLength(0);
+      expect(client.db.select().from(sessions).where(eq(sessions.userId, pending.userId)).all()).toHaveLength(0);
+      expect(client.db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, pending.userId)).all()).toHaveLength(0);
+      expect(client.db.select().from(mailOAuthTransactions).where(eq(mailOAuthTransactions.userId, pending.userId)).all()).toHaveLength(0);
+      expect(client.db.select().from(threads).where(eq(threads.accountId, accountId)).all()).toHaveLength(0);
+      expect(client.db.select().from(emails).where(eq(emails.accountId, accountId)).all()).toHaveLength(0);
+      for (const table of ["organization_thread_lane_states", "organization_lanes", "organization_lane_policies", "organization_workspace_lane_settings"]) {
+        expect(client.sqlite.query(`SELECT * FROM ${table} WHERE workspace_id = ?`).all(pending.userId)).toHaveLength(0);
+      }
+      expect(client.sqlite.query("PRAGMA foreign_key_check").all()).toEqual([]);
+      expect(protectedSnapshot()).toEqual(before);
+      expect(started.state).toBeTruthy();
+    } finally { client.sqlite.close(); }
+  });
+}
