@@ -44,9 +44,9 @@
       "pagesTotal": 16
     },
     "5": {
-      "status": "pending",
-      "file": null,
-      "summary": null
+      "status": "done",
+      "file": "phase5-components.md",
+      "summary": "Twelve component responsibilities use Orca semantic tokens, explicit ownership/revision/availability, safe selected states and separate importance/placement/notification contracts."
     },
     "6": {
       "status": "pending",
@@ -68,5 +68,5 @@
       "reviewResult": null
     }
   },
-  "lastUpdated": "2026-11-11T05:40:00Z"
+  "lastUpdated": "2026-11-11T05:48:00Z"
 }
