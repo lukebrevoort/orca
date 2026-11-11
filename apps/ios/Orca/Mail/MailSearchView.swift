@@ -43,7 +43,7 @@ struct MailSearchView: View {
             .navigationDestination(for: InboxMessage.self) { ThreadView(message: $0) }
             .sheet(item: $viewEditor) { selection in NativeViewEditor(selection: selection) }
             .sheet(item: $importanceTarget) { selection in ImportanceView(selection: selection) }
-            .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")") { model.invalidate(); model.view = "all"; await model.load(state: state); queryFocused = true }
+            .task(id: InboxViewModel.globalSearchRefreshIdentity(state: state)) { if await model.openGlobalSearch(state: state) { queryFocused = true } }
             .onChange(of: state.ownerScope) { model.invalidate(); dismiss() }
             .onChange(of: state.phase) { if state.phase != .ready { model.invalidate(); dismiss() } }
     }

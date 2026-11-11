@@ -57,6 +57,20 @@ import Foundation
         for query in ["A", "B", "A"] { inbox.search = query; await inbox.load(state: state) }
         networkOffline = true; inbox.search = "B"; await inbox.load(state: state)
         check("cached-query-provenance", inbox.messages.first?.id == "B" && inbox.resultSearch == "B", "cached row \(inbox.messages.first?.id ?? "none") labeled \(inbox.resultSearch)")
+        var corrected = false
+        ReviewURLProtocol.handler = { request in
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!.first { $0.name == "query" }!.value!
+            var message = InboxMessage(id: query, accountId: "account", provider: "gmail", providerMessageId: query, threadId: query, from: .init(email: "person@example.com"), subject: query, snippet: query, receivedAt: "2026-11-11T00:00:00Z", unread: false, labels: [], attentionBehavior: "normal")
+            message.importance = try JSONDecoder().decode(ImportanceResolution.self, from: json(resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)))
+            return (200, try JSONEncoder().encode(InboxPage(accounts: [], messages: [message], nextCursor: nil, counts: .init(focus: 0, normal: 0, quiet: 0, hidden: 0, all: 1))))
+        }
+        let globalSearch = InboxViewModel(); globalSearch.search = "Submitted A"
+        _ = await globalSearch.openGlobalSearch(state: state)
+        globalSearch.search = "Unsubmitted B"
+        let beforeCorrectionKey = InboxViewModel.globalSearchRefreshIdentity(state: state)
+        corrected = true; state.importanceDidChange(accountId: "account")
+        if beforeCorrectionKey != InboxViewModel.globalSearchRefreshIdentity(state: state) { _ = await globalSearch.openGlobalSearch(state: state) }
+        check("480-acknowledged-correction-refreshes-submitted-search", globalSearch.messages.first?.importance?.effective == .important && globalSearch.resultSearch == "Submitted A" && globalSearch.search == "Unsubmitted B" && globalSearch.messages.first?.id == "Submitted A", "actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime")
         let preferences = AccountPreferencesController()
         state.accountPreferences = preferences
         preferences.edits = .init(signature: "Unsaved", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)

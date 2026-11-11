@@ -20,7 +20,8 @@ import SwiftUI
     let cache: CacheStore
     init(cache: CacheStore) { self.cache = cache }
     func validatedBaseURL(_ value: String) -> URL? { URL(string: value) }
-    func importanceDidChange(accountId: String) {}
+    var mailboxReadRevision = UUID()
+    func importanceDidChange(accountId: String) { mailboxReadRevision = UUID() }
     func inboxCacheKey(accountID: String, view: String, search: String) -> String { "\(ownerScope)|\(accountID)|\(view)|\(search)" }
 }
 enum DemoData { static func inbox(view: String) -> [InboxMessage] { [] } }

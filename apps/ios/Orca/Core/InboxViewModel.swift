@@ -8,6 +8,10 @@ import SwiftUI
     @Published private(set) var resultSearch = ""
     private var requestGeneration = UUID()
     private var activeKey: String?
+    static func globalSearchRefreshIdentity(state: AppState) -> String { "\(state.ownerScope)|\(state.selectedAccountID ?? "")" }
+    func openGlobalSearch(state: AppState) async -> Bool {
+        invalidate(); view = "all"; await load(state: state); return true
+    }
     func invalidate() { requestGeneration = UUID(); activeKey = nil; messages = []; nextCursor = nil; isLoading = false; error = nil; resultSearch = "" }
     func load(state: AppState, reset: Bool = true) async {
         guard let account = state.selectedAccount else { invalidate(); error = "No connected mailbox. Open Settings to review accounts."; return }
