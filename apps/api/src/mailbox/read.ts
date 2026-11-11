@@ -324,7 +324,9 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       let accountPageQueries = 0;
       let candidateRowsScanned = 0;
       let maxRetainedRows = 0;
-      // Two keyset streams keep projection bounded without sorting the complete mailbox.
+      // Default Inbox uses two keyset streams with bounded projected page rows.
+      // Saved-query content matching may scan/sort all candidate metadata;
+      // retained application rows do not bound SQLite work or sort/cache memory.
       // All other surfaces retain their existing ordering and eligibility.
       const groups = applyInboxPolicy
         ? [

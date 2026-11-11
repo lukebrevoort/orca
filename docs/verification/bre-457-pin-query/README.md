@@ -1,5 +1,15 @@
 # BRE-457 saved-query results: approved contract and test-only baseline
 
+## Current verification index
+
+Source869ce35f passed78 focused tests, including28 first-executed semantic counterexamples, and an actual three-request HTTP/SQLite demo. Sparse work scanned104 candidates for3 returned rows and4 retained rows; SELECT counts are not VM work or a database-memory bound. Provider/domain-write tripwires passed; auth renewal is separately recorded. [Exact source869 receipts](focused-869ce35f/manifest.json) and [demo/work](focused-869ce35f/demo-work.json).
+
+Both type commands in that original manifest printed Bun usage with exit0 and DID NOT run TypeScript. ROOT corrected the runner; actual shared/API project types passed at f6d0e168 using pinned Node24.22.1/TypeScript5.9.3, and the retained usage-only0 is rejected by the new guard. [Actual type receipts and scope](root-type-correction-f6d0/README.md). Do not relabel the original usage-only stages.
+
+Independent correctness review approved0f07957a with nonblocking comment/entrypoint clarity findings now addressed by ROOT. Separate security review and final sequential lint/types/tests/build at the final committed head remain pending, as do wire publication and native-client integration. The inherited scan comment is clarified without changing executable behavior. No PR, native retrieval, full product, live-provider or OS completion is claimed.
+
+## Historical checkpoint below
+
 Status: corrected source/test preparation only; rerun awaits a new ROOT allocation.
 At the previous frozen test-only SHA `bc6b447240dea2d0a0ca354fe62724a9a98b26a9`,
 frozen install passed in 1.95 seconds and baseline failed during fixture seeding
