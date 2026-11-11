@@ -1,0 +1,595 @@
+{
+  "rawDirectory": "/tmp/bre452-baseline-complete",
+  "files": [
+    {
+      "name": "BRE452-states-dark-1024x768-failed.png",
+      "bytes": 401906,
+      "sha256": "eb5f8bf75dce3d3f0fda595b707f65e9e0680fb275b3d2225d1487140056ecd7"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-failure.png",
+      "bytes": 403138,
+      "sha256": "ef437c16399862ef3dab439b3d67bebbc36d558efd59ecaaa152522441c05202"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-pending.png",
+      "bytes": 385936,
+      "sha256": "44282e9e20e3dfae1e755feeef4da3127800455951fb46154bd594052dbb518e"
+    },
+    {
+      "name": "BRE452-states-dark-1024x768-saved.png",
+      "bytes": 392477,
+      "sha256": "38c221662d31e4b7e5891b8f6654344afeaa24eae4579053cdc78ffb7c7ae8c8"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-failed.png",
+      "bytes": 563104,
+      "sha256": "c25b2bbc0b05b7848e4db71048b4ca75d905c7f379ce24ce181fd489a2e6ebe4"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-failure.png",
+      "bytes": 564192,
+      "sha256": "dc59c47c18d1b4afa1b8b486566e94c1e405be7c5f213061b5d3cdeba6883b56"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-pending.png",
+      "bytes": 549717,
+      "sha256": "3507da13bb783502b59aae3246d9b337e1ad462041b139df672c8083dbda1d64"
+    },
+    {
+      "name": "BRE452-states-dark-1440x1000-saved.png",
+      "bytes": 554947,
+      "sha256": "350e6113d85f2e4c205ba3b7070608ba6a4abb7a791167d51ec964b5ec85b0f1"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-failed.png",
+      "bytes": 74486,
+      "sha256": "a3508e2316f6c14868d260c0c8eacf1c2e7745f1a668623bcb12786797ce86ed"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-failure.png",
+      "bytes": 70041,
+      "sha256": "452e64a989edcc72119967e3d989ad290eb7416feb908e48ab73b7bb93327697"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-pending.png",
+      "bytes": 70194,
+      "sha256": "d12072acad1fff27b52d0e55d3c7d4ca2795d8b12626184a9fd74f18bb9f9aa0"
+    },
+    {
+      "name": "BRE452-states-dark-320x568-saved.png",
+      "bytes": 72763,
+      "sha256": "2d4721ce267d5315e00627fb70ea3505317bc7e176bf70acbcf5e57a3adcb1cf"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-failed.png",
+      "bytes": 56376,
+      "sha256": "43c6413430c40f47a1f485316fb47b722f2c53d6a096d0eafa04d77d8b16daed"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-failure.png",
+      "bytes": 59920,
+      "sha256": "8c1da9a2d7bfdba28692571bfd4619f6eea634ee65a2da7a2697bfde0d744374"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-pending.png",
+      "bytes": 57521,
+      "sha256": "a0e515f26b89098eb7f61d765ed63b61189f88e1a794e08b6a9880fd60c6c367"
+    },
+    {
+      "name": "BRE452-states-dark-390x400-saved.png",
+      "bytes": 61368,
+      "sha256": "6cbe7e9564020f435a090c0caf0792589be9a13851afb65c7dc89271e1c7d726"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-failed.png",
+      "bytes": 98138,
+      "sha256": "682dbe836cdb4d252e19702ae57f5f611172cd28c50ab7f4bd4f36d2691e4dbf"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-failure.png",
+      "bytes": 98139,
+      "sha256": "76f64673aff929c3d710f2c6d01fdae8a5ad87cae0984d627fb443945e909933"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-pending.png",
+      "bytes": 94843,
+      "sha256": "0b50ee6998b4175d3b3cd7bf63ac7ac815d9494239e0c47b451a9eafa4791727"
+    },
+    {
+      "name": "BRE452-states-dark-390x844-saved.png",
+      "bytes": 97634,
+      "sha256": "857972945ae832e2d7e3cb6329575bdd2bfbed64ccde38823dc11aca801c60e6"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-failed.png",
+      "bytes": 75852,
+      "sha256": "c21999752d86c121c40ba620832ffac509ca7c8dad2a790d267ececcfd1c1809"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-failure.png",
+      "bytes": 74173,
+      "sha256": "bd5463f9db56f0cedb67bc626f0d844ad7ef3e62636b39c6e23bfe8a7c7f1283"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-pending.png",
+      "bytes": 69192,
+      "sha256": "a9c4cd6b7567763e84ee83bcd0df63e0b8113438bc64be6e722869e90459bb17"
+    },
+    {
+      "name": "BRE452-states-dark-720x450-saved.png",
+      "bytes": 72084,
+      "sha256": "6361f5154afe77929819d15706db306b885feefdfdb07ae37e99c1c86e5dfcc2"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-failed.png",
+      "bytes": 494972,
+      "sha256": "0a026f10d0f6323a04a7a380611af357c58fca99fa78f62850cf70571632ba84"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-failure.png",
+      "bytes": 497224,
+      "sha256": "5d45da05959e81d3311ad2220732fa2efc3d47db535350da3b9ac3d827929c11"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-pending.png",
+      "bytes": 477113,
+      "sha256": "5f23e00949163c8d99efb138b7e2f5a17aa5667830b53e3fb60ae25269d5e2f7"
+    },
+    {
+      "name": "BRE452-states-light-1024x768-saved.png",
+      "bytes": 484022,
+      "sha256": "bbccd23668c96713451833551150a8e4ea44687f1a66f7245972684ddc2ceaff"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-failed.png",
+      "bytes": 710400,
+      "sha256": "82f3441129bdb12ce5113bed3572d5342cc330280474597eec9e8d37f43d3fac"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-failure.png",
+      "bytes": 711475,
+      "sha256": "29bff410cf1023d4be7e1cf0228949fe578c1aae3bde53087b00be3a288554a2"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-pending.png",
+      "bytes": 695688,
+      "sha256": "e31c707edc9ec282aedfad622bb1e3ec7323f6851cb323f6069e49883ee6182a"
+    },
+    {
+      "name": "BRE452-states-light-1440x1000-saved.png",
+      "bytes": 701039,
+      "sha256": "c52fa25b52f18fc754e4789035a7923a13f1c944f04c1134738aebe728bed405"
+    },
+    {
+      "name": "BRE452-states-light-320x568-failed.png",
+      "bytes": 74739,
+      "sha256": "0ff258912656cfeca4d39d12f8586fd4f1a2ac0bdf55721d5db9b2d75fc81a21"
+    },
+    {
+      "name": "BRE452-states-light-320x568-failure.png",
+      "bytes": 69528,
+      "sha256": "f2b6b9f1e565d92ebd237eb88de9ea4abea725db963036dff64b32196d357710"
+    },
+    {
+      "name": "BRE452-states-light-320x568-pending.png",
+      "bytes": 70806,
+      "sha256": "fd622b3a0bac87fac329d4f73f1fb5240ec238ff56188cea10f38e4e68cf50ee"
+    },
+    {
+      "name": "BRE452-states-light-320x568-saved.png",
+      "bytes": 73590,
+      "sha256": "9742a563356a055ade7a3c2ab5910f878dff1b976885614272036405c1104943"
+    },
+    {
+      "name": "BRE452-states-light-390x400-failed.png",
+      "bytes": 56939,
+      "sha256": "ec04d22f42b3726f7a592b1d3cc01adbe25137e58079cafda19827596211e836"
+    },
+    {
+      "name": "BRE452-states-light-390x400-failure.png",
+      "bytes": 59761,
+      "sha256": "d066bfd8bdccac94e58a53c07fb1c35f6a8922031281a75dad7253b43489be86"
+    },
+    {
+      "name": "BRE452-states-light-390x400-pending.png",
+      "bytes": 58161,
+      "sha256": "9e067cebb6f79905662e32d4d14e61a36873b1d7321407cebd7acb8c7facd2dc"
+    },
+    {
+      "name": "BRE452-states-light-390x400-saved.png",
+      "bytes": 62720,
+      "sha256": "da9cbcfb555bbeab92e28a391cac7931b19a5fc5642a9e5f22f0d249090ac198"
+    },
+    {
+      "name": "BRE452-states-light-390x844-failed.png",
+      "bytes": 98867,
+      "sha256": "65bd1612d4055c997f7260a9a96324fe090da333a2b39e6b1fa4eec948bc8be9"
+    },
+    {
+      "name": "BRE452-states-light-390x844-failure.png",
+      "bytes": 99184,
+      "sha256": "ad7ff2c3fa582b147dd1a56490472fda117602e99dc9994da776e7536a6a29cf"
+    },
+    {
+      "name": "BRE452-states-light-390x844-pending.png",
+      "bytes": 95815,
+      "sha256": "33d37120c9ba51e1f3945ffe265e7bd10ffc0bff51623864feacb20214906155"
+    },
+    {
+      "name": "BRE452-states-light-390x844-saved.png",
+      "bytes": 98851,
+      "sha256": "6bb53d8eb4784162a91e4ea6f61863afc78e3496d6beb1387877c7168959c471"
+    },
+    {
+      "name": "BRE452-states-light-720x450-failed.png",
+      "bytes": 72684,
+      "sha256": "46af9b2958330cf6867c2998155c140c3fa9935b04ee894fe26dd9704bde3e55"
+    },
+    {
+      "name": "BRE452-states-light-720x450-failure.png",
+      "bytes": 73282,
+      "sha256": "991156bb08c0d312e97178d602e289bc5b2b5c0b708874a468d4ba203efaac88"
+    },
+    {
+      "name": "BRE452-states-light-720x450-pending.png",
+      "bytes": 67590,
+      "sha256": "6ae7483d88e358dc7e1dc307c3bf5c8309ab8581aa9af7d8cdff8e7af8554a45"
+    },
+    {
+      "name": "BRE452-states-light-720x450-saved.png",
+      "bytes": 70723,
+      "sha256": "85cefa4650504b53bbe500e5c506e8e7eebdcc3331abff3ca1ca6928d23b2c8f"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-interaction-failure.png",
+      "bytes": 282108,
+      "sha256": "860c058c81b2b7fc21e653934741b626e252de12794128057b63561010643319"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-multiple-long.png",
+      "bytes": 387271,
+      "sha256": "9e03931166b692b1ab0603a6ff9c93048ba72372ab5023942237b0fd574f6078"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-one.png",
+      "bytes": 381848,
+      "sha256": "5f367c1950ef5bb5af99b3504de013a8b646a38736ee81198b3bbc4f798fab69"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-plain-removed.png",
+      "bytes": 399990,
+      "sha256": "d84f3c78e8f2b98749a1bf72401ac00aa24b3cb4e93cafc6544ba9412dbd67dc"
+    },
+    {
+      "name": "dark-1024-narrow-desktop-zero.png",
+      "bytes": 377687,
+      "sha256": "9981ffb3cdbd0ad42aae9ebe99582cde7363e705122a917102fab86a71c8e5cb"
+    },
+    {
+      "name": "dark-1440-desktop-interaction-failure.png",
+      "bytes": 341157,
+      "sha256": "5af166bfaae8ca9117656b0c1914a5d5c5cc3feaa8c1913a835a997480811602"
+    },
+    {
+      "name": "dark-1440-desktop-multiple-long.png",
+      "bytes": 546549,
+      "sha256": "50a0dc48473bc0019c143364e377c0477e18da4f8501cfb75446885c58683f43"
+    },
+    {
+      "name": "dark-1440-desktop-one.png",
+      "bytes": 539881,
+      "sha256": "0d301192e039f3f56a445dacffdf845baa24e362d65b01ef9740e70536b7223b"
+    },
+    {
+      "name": "dark-1440-desktop-plain-removed.png",
+      "bytes": 559473,
+      "sha256": "1b5e195ca7592ed31b4e60b90ed1491aee5763f58918fecf687c48d22a56a718"
+    },
+    {
+      "name": "dark-1440-desktop-zero.png",
+      "bytes": 533159,
+      "sha256": "a1ab8d0bdc19320633a71217a6f3d79f0a02b7a36d4bd90f1724ee4371b6198c"
+    },
+    {
+      "name": "dark-320-small-interaction-failure.png",
+      "bytes": 77370,
+      "sha256": "56df78c3872708bd865008363e144d5453ed853382789a99533e06d1f9636d78"
+    },
+    {
+      "name": "dark-320-small-multiple-long.png",
+      "bytes": 68836,
+      "sha256": "b48c63786524c3fa2a20b25bae6af83f97f2d1bafaf8e9e017ebc175a6383df5"
+    },
+    {
+      "name": "dark-320-small-one.png",
+      "bytes": 64076,
+      "sha256": "feac0a8d9dac7ed5390d7cfcd3254cb325e01fb3d75bb29ad87b213869c31d60"
+    },
+    {
+      "name": "dark-320-small-plain-removed.png",
+      "bytes": 72270,
+      "sha256": "1c3cc29379ce5a307a2d6ac0348921c26d17b0ecb08a5e7af8eea2252c50a48f"
+    },
+    {
+      "name": "dark-320-small-zero.png",
+      "bytes": 70685,
+      "sha256": "8ecfc0eb0a0a4c4cb22808ba0757e2694597abe19d5b9a7540ba2018792eb8b1"
+    },
+    {
+      "name": "dark-390-mobile-interaction-failure.png",
+      "bytes": 123398,
+      "sha256": "549906ad508fe903f9201df14764796a1fd13a5e32874e567567bed386cf3511"
+    },
+    {
+      "name": "dark-390-mobile-multiple-long.png",
+      "bytes": 93376,
+      "sha256": "8f0e41446812f037789955f70c8a1c89d5456e03786d07d7aac9dec5f82bb2a4"
+    },
+    {
+      "name": "dark-390-mobile-one.png",
+      "bytes": 80206,
+      "sha256": "1130e3c2ace5c06a0be96aef1c7cb7d992d89159cc707b945b2aa071ea8bbf02"
+    },
+    {
+      "name": "dark-390-mobile-plain-removed.png",
+      "bytes": 96533,
+      "sha256": "66d2b99a31e580ff28f006c2c571266ef7196e875b0f93873ed911c3d48e09b3"
+    },
+    {
+      "name": "dark-390-mobile-zero.png",
+      "bytes": 85504,
+      "sha256": "10564b1098e81d05b79c7566b72ad642a4f5224a62579a9cbf641b135097b0b8"
+    },
+    {
+      "name": "dark-390-short-interaction-failure.png",
+      "bytes": 59063,
+      "sha256": "1dc53f45f780e4d863b929079170a047949294cf639c826860b48d10e7dfaceb"
+    },
+    {
+      "name": "dark-390-short-multiple-long.png",
+      "bytes": 56462,
+      "sha256": "5df88a288dfb54800858cda8e291befb177a7da5c46307644fd50301eff54f26"
+    },
+    {
+      "name": "dark-390-short-one.png",
+      "bytes": 54013,
+      "sha256": "4936c3793dc2405ce1e746179e4d35c319127bd72e25c69efb191806db18de08"
+    },
+    {
+      "name": "dark-390-short-plain-removed.png",
+      "bytes": 58630,
+      "sha256": "689dc25660d4b4d6e5cfc1515542e45569294def8ab327bd0c009f31607461d3"
+    },
+    {
+      "name": "dark-390-short-zero.png",
+      "bytes": 51287,
+      "sha256": "7133977f9b76a48a34636f5d467d039ce58a6a3bc1d7ebc4e82d3c01aae64adf"
+    },
+    {
+      "name": "dark-720-200pct-reflow-interaction-failure.png",
+      "bytes": 74473,
+      "sha256": "b0458178e677019be73349ec5e9bb3e9130ce4e2a301fc9f897ca2c28de203d1"
+    },
+    {
+      "name": "dark-720-200pct-reflow-multiple-long.png",
+      "bytes": 69865,
+      "sha256": "9dbf27019061ea205225cc3cd7065985511e91af0746c98c7e9e9d3fe488043a"
+    },
+    {
+      "name": "dark-720-200pct-reflow-one.png",
+      "bytes": 60700,
+      "sha256": "571fafd9d4d15ab41e50850e7ab2fa9556414ecd384006290e89dad297013a40"
+    },
+    {
+      "name": "dark-720-200pct-reflow-plain-removed.png",
+      "bytes": 73067,
+      "sha256": "fb1eb79c0dc9cc35e80eb6725af90c8242894651d494dbfffbd9dddfa1a7a79c"
+    },
+    {
+      "name": "dark-720-200pct-reflow-zero.png",
+      "bytes": 64698,
+      "sha256": "5a88f28ebf59b27289a797bf433b2d14a2f220d1641f4ed82b310081d6cafb67"
+    },
+    {
+      "name": "dark-font-cold.png",
+      "bytes": 80419,
+      "sha256": "f1a2315a574d5abf14a2f796c0295bbdafbe1ca8f9c736f6e44c2918f958c5f8"
+    },
+    {
+      "name": "dark-font-offline.png",
+      "bytes": 80419,
+      "sha256": "f1a2315a574d5abf14a2f796c0295bbdafbe1ca8f9c736f6e44c2918f958c5f8"
+    },
+    {
+      "name": "dark-font-reload.png",
+      "bytes": 31727,
+      "sha256": "c866e5a8609431c126f2e2270ca88952d2d1c4c4bb56d6a73d337d5806d0a114"
+    },
+    {
+      "name": "dark-font-stall-after-release.png",
+      "bytes": 84435,
+      "sha256": "2ea4419ee3ad7909378fd76a9330839bcb67f825892aa9c2e9ad959ce8fcc18b"
+    },
+    {
+      "name": "driver-used.mjs",
+      "bytes": 20473,
+      "sha256": "c58fa83ce8b1cbbd0f38da28866a75c01aca2bcfc55e1c4c82caff7547d8f5f2"
+    },
+    {
+      "name": "light-1024-narrow-desktop-interaction-failure.png",
+      "bytes": 308292,
+      "sha256": "4af61d0fdaad3b983fa55693497fd9a406b2b6b9dce203de4e3bbdd49a8ccf47"
+    },
+    {
+      "name": "light-1024-narrow-desktop-multiple-long.png",
+      "bytes": 480830,
+      "sha256": "db1aebe3c17e23aff3043c3c61ea05293d6bccfb432373a46c5a79dbc01495f2"
+    },
+    {
+      "name": "light-1024-narrow-desktop-one.png",
+      "bytes": 486024,
+      "sha256": "ffeee4de22d7926d9685f06c140918a29b49418620ae29c41c868f802ff719aa"
+    },
+    {
+      "name": "light-1024-narrow-desktop-plain-removed.png",
+      "bytes": 499336,
+      "sha256": "1bc7eda189e64eda2e8a5337add8579c257c5a5172db2b0be4a6377d1c48c196"
+    },
+    {
+      "name": "light-1024-narrow-desktop-zero.png",
+      "bytes": 481180,
+      "sha256": "09dad74558e4d918ff8d782db4aabac619a1f031ea90cb70947a402159cff40d"
+    },
+    {
+      "name": "light-1440-desktop-interaction-failure.png",
+      "bytes": 372899,
+      "sha256": "4bb6ce653b044506f591b415da80de1269662618ef60944c91daa37f1b795b6a"
+    },
+    {
+      "name": "light-1440-desktop-multiple-long.png",
+      "bytes": 691991,
+      "sha256": "d7f5dc98679f090a02c64c4d1291e7b79430587d8116e7921fe0c534cda504ce"
+    },
+    {
+      "name": "light-1440-desktop-one.png",
+      "bytes": 692290,
+      "sha256": "7e11783daea3b7616c199530de1fc01e59849d126e613ebe078ea0983a67825b"
+    },
+    {
+      "name": "light-1440-desktop-plain-removed.png",
+      "bytes": 702591,
+      "sha256": "119a5b4bd75e3dccd4f9fd59878d35acccc58cc7f16f631a884e79e181babe13"
+    },
+    {
+      "name": "light-1440-desktop-zero.png",
+      "bytes": 694339,
+      "sha256": "bc4add6358de8d3fffe50de7050c717363fbd5f58927ea20d9f37208dddf9997"
+    },
+    {
+      "name": "light-320-small-interaction-failure.png",
+      "bytes": 79563,
+      "sha256": "84174404200f22406cd1e934f5ce4526bd9df570aeb2da1b5ef2731da976ffee"
+    },
+    {
+      "name": "light-320-small-multiple-long.png",
+      "bytes": 69912,
+      "sha256": "c9afd858c90de89a1ea588c84ba729fa513fa9ddc4f996db557144739806565e"
+    },
+    {
+      "name": "light-320-small-one.png",
+      "bytes": 64185,
+      "sha256": "5df52f659ea7028dc01eea0b3682bbeb84004c55ad2ae3b935c1298e46c3e099"
+    },
+    {
+      "name": "light-320-small-plain-removed.png",
+      "bytes": 73186,
+      "sha256": "97ef9aafd00594e0c4e0b481786a8d156f749b7c81475e20ee8d59deff211237"
+    },
+    {
+      "name": "light-320-small-zero.png",
+      "bytes": 70970,
+      "sha256": "db95c0952d68d08f7a652ef7540a23b7841a094bedd101f70f0daf83327dc12d"
+    },
+    {
+      "name": "light-390-mobile-interaction-failure.png",
+      "bytes": 125831,
+      "sha256": "a9bbd2466548f45f3a5981796261a4ab60bb6105c8fb2284c7b7cd08a7e9fe5f"
+    },
+    {
+      "name": "light-390-mobile-multiple-long.png",
+      "bytes": 94376,
+      "sha256": "fc539a09253cad99fae58cdec9a05dc46df490014eb6ce7087ac653b84cfd2dc"
+    },
+    {
+      "name": "light-390-mobile-one.png",
+      "bytes": 81152,
+      "sha256": "e098f1108d68afce0e61478db5d6971b476f133aa4d71860178edbbfdfdefd62"
+    },
+    {
+      "name": "light-390-mobile-plain-removed.png",
+      "bytes": 97938,
+      "sha256": "fe9efb690fbef490bac42af7709f3d472af1027881148981923696a17661a3a8"
+    },
+    {
+      "name": "light-390-mobile-zero.png",
+      "bytes": 86771,
+      "sha256": "0f7aff33a431393ad85fa5daea0a556b4e54ced706eef886e5d55eaad8ca5fc1"
+    },
+    {
+      "name": "light-390-short-interaction-failure.png",
+      "bytes": 59477,
+      "sha256": "7da41ace4ff195c0dbac75644bcdc7b3d22f30e4facee0f46f2dc2c7a2aef4d5"
+    },
+    {
+      "name": "light-390-short-multiple-long.png",
+      "bytes": 57711,
+      "sha256": "166fb9c137fbc5cada0704323e217ae085423c1b3222bf5ba135b7c19e530ff5"
+    },
+    {
+      "name": "light-390-short-one.png",
+      "bytes": 55072,
+      "sha256": "c951353b3159280a3f2ce1e48a09a8c72536554930e7041ce9eab9251f108a6a"
+    },
+    {
+      "name": "light-390-short-plain-removed.png",
+      "bytes": 60186,
+      "sha256": "d9a237fa730dbe950c44dc641e3997788a7576a2ccdecf36d1cd54b2c2d16425"
+    },
+    {
+      "name": "light-390-short-zero.png",
+      "bytes": 52130,
+      "sha256": "ca23f1f6ec4ce7591eb62b0f1a85a81f4bfbd0f62d0f1623365f227b4560288e"
+    },
+    {
+      "name": "light-720-200pct-reflow-interaction-failure.png",
+      "bytes": 74736,
+      "sha256": "634a58296d945eaf1ca79178081b30d5bba044de085a6361c35964e4125c89dc"
+    },
+    {
+      "name": "light-720-200pct-reflow-multiple-long.png",
+      "bytes": 70436,
+      "sha256": "27d9576481763c64d19b525d27a0836cba8a249e6e4a20d898b12d9e59541fd4"
+    },
+    {
+      "name": "light-720-200pct-reflow-one.png",
+      "bytes": 61021,
+      "sha256": "b7e8c87c8f134e087a27f5f26f7f4299e4174a9f5594c01d2c0edf358f778ac8"
+    },
+    {
+      "name": "light-720-200pct-reflow-plain-removed.png",
+      "bytes": 73903,
+      "sha256": "8196a7b65b583da2247e25c7205f788edbaa3d3983fee9110b3fbf450f74f073"
+    },
+    {
+      "name": "light-720-200pct-reflow-zero.png",
+      "bytes": 65476,
+      "sha256": "ec4304243b8529c14ec280f65bd6b89290e855673667e612e330aaf55a5c9520"
+    },
+    {
+      "name": "light-font-cold.png",
+      "bytes": 84394,
+      "sha256": "cdb7675cf108cadb3afb055559bd87bcc809f39c5b42a71c96408a2bab42cf90"
+    },
+    {
+      "name": "light-font-offline.png",
+      "bytes": 84394,
+      "sha256": "cdb7675cf108cadb3afb055559bd87bcc809f39c5b42a71c96408a2bab42cf90"
+    },
+    {
+      "name": "light-font-reload.png",
+      "bytes": 31730,
+      "sha256": "27a253f3bee8cb73c6f218dc090a28d42ea5fbe61a17553a938483dfc4d30cc0"
+    },
+    {
+      "name": "light-font-stall-after-release.png",
+      "bytes": 89226,
+      "sha256": "bcde4ba592239f63211c1a126c4a5ee7daac27098738e7fe61cf4c66d8fdbbdb"
+    },
+    {
+      "name": "results.json",
+      "bytes": 434649,
+      "sha256": "123e867b28c6e120954ec6b978190b1a5a7fa4a66047307e17760fa98c2b8b4d"
+    }
+  ]
+}

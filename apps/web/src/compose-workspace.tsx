@@ -1467,10 +1467,15 @@ export function ComposeWorkspace({
         onChange={(body) => { updateDraft({ body }); if (body.trim()) setDeliveryValidationError(null); }}
         onFormatChange={(composeFormat) => updateDraft({ composeFormat })}
         onRemoveAttachment={onRemoveAttachment}
+        toolbarAfterWriting={variant === "zen"}
         placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? actionLabel === "Forward" ? "Add a note above the forwarded message…" : "Write a reply…" : "Start with the human part…"}
       />
       {controller.writingPreferenceStatus === "loading" ? <p className="writing-preferences-note" role="status">Loading your writing defaults. You can start writing.</p> : controller.writingPreferenceStatus === "unavailable" ? <p className="writing-preferences-note" role="status">Writing defaults unavailable. New drafts use plain text without a signature.</p> : null}
-      {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
+      {attachmentError || (variant === "zen" && draft.attachments.length >= MAX_COMPOSE_ATTACHMENTS) ? (
+        <p className="compose-attachment-error" role={attachmentError ? "alert" : "status"}>
+          {attachmentError ?? `${MAX_COMPOSE_ATTACHMENTS} attachments. Remove a file before attaching another.`}
+        </p>
+      ) : null}
       <input
         accept="*/*"
         aria-hidden="true"
@@ -1493,7 +1498,6 @@ export function ComposeWorkspace({
       <TopLayer ariaLabel="Zen writing mode" as="section" backdrop={false} className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} dismissible={!closing} initialFocusSelector={'[contenteditable="true"]'} onClose={() => onExitZen?.("escape")} surfaceProps={dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={() => onExitZen?.("button")} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
-          <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />
         </header>
         <div className="zen-stage">
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
@@ -1546,6 +1550,7 @@ function RenderedBlockEditor({
   onFormatChange,
   onRemoveAttachment,
   placeholder,
+  toolbarAfterWriting = false,
 }: {
   attachments: ComposeAttachment[];
   autoFocus: boolean;
@@ -1560,6 +1565,7 @@ function RenderedBlockEditor({
   onFormatChange: (format: WritingPreferences["composeFormat"]) => void;
   onRemoveAttachment: (attachmentId: string) => void;
   placeholder: string;
+  toolbarAfterWriting?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const commandListId = useId();
@@ -1679,17 +1685,21 @@ function RenderedBlockEditor({
     }
   }
 
+  const toolbar = (
+    <div aria-describedby={format === "plain" ? formattingHintId : undefined} aria-label="Formatting" className="compose-formatting" role="toolbar">
+      <button aria-label="Bold, Command B" title="Bold, Command B" disabled={format === "plain"} onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
+      <button aria-label="Italic, Command I" title="Italic, Command I" disabled={format === "plain"} onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
+      <button aria-label="Bulleted list" title="Bulleted list" disabled={format === "plain"} onClick={() => runToolbar("insertUnorderedList")} type="button">Bulleted list</button>
+      <button aria-label="Quote" title="Quote" disabled={format === "plain"} onClick={() => runToolbar("blockquote")} type="button">Quote</button>
+      <button aria-label="Attach files" title="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach files</button>
+      {format === "plain" ? <span className="compose-formatting-hint" id={formattingHintId}>Choose Rich text to use formatting.</span> : <span>Type / for structure · drop anywhere to attach</span>}
+    </div>
+  );
+
   return (
     <div className="compose-writing-field">
       <label className="writing-format-choice"><span>Message format</span><select aria-label="Message format" onChange={(event) => { setSlash(null); onFormatChange(event.target.value as WritingPreferences["composeFormat"]); }} value={format}><option value="plain">Plain text</option><option value="rich">Rich text</option></select></label>
-      <div aria-describedby={format === "plain" ? formattingHintId : undefined} aria-label="Formatting" className="compose-formatting" role="toolbar">
-        <button aria-label="Bold, Command B" title="Bold, Command B" disabled={format === "plain"} onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
-        <button aria-label="Italic, Command I" title="Italic, Command I" disabled={format === "plain"} onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
-        <button aria-label="Bulleted list" title="Bulleted list" disabled={format === "plain"} onClick={() => runToolbar("insertUnorderedList")} type="button">Bulleted list</button>
-        <button aria-label="Quote" title="Quote" disabled={format === "plain"} onClick={() => runToolbar("blockquote")} type="button">Quote</button>
-        <button aria-label="Attach files" title="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach files</button>
-        {format === "plain" ? <span className="compose-formatting-hint" id={formattingHintId}>Choose Rich text to use formatting.</span> : <span>Type / for structure · drop anywhere to attach</span>}
-      </div>
+      {!toolbarAfterWriting ? toolbar : null}
       <div
         aria-activedescendant={slash && commands.length ? `${commandListId}-${commands[activeCommand]?.id}` : undefined}
         aria-autocomplete={slash && commands.length ? "list" : undefined}
@@ -1742,6 +1752,7 @@ function RenderedBlockEditor({
           ))}
         </ul>
       ) : null}
+      {toolbarAfterWriting ? toolbar : null}
       <span className="sr-only">Use Command B for bold, Command I for italic, Command Z to undo, and arrow keys to move through slash commands. Drop files onto the compose canvas to attach them.</span>
     </div>
   );
