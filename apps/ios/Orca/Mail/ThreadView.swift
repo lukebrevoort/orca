@@ -400,7 +400,22 @@ private struct NativeReaderBody: View {
                         Button { findRequest = UUID() } label: {
                             Text("Find in message").frame(minHeight: 44).contentShape(Rectangle())
                         }.accessibilityIdentifier("reader.find")
-                        Toggle("Keep tables and code wide", isOn: $wideContent).font(.subheadline).frame(minHeight: 44)
+                        HStack(alignment: .center, spacing: 12) {
+                            Text("Keep tables and code wide")
+                                .font(.subheadline)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityHidden(true)
+                            // Keep the readable label separate from the native
+                            // switch's own interaction frame.
+                            Toggle("Keep tables and code wide", isOn: $wideContent)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .fixedSize()
+                                .frame(minWidth: 64, minHeight: 44)
+                                .contentShape(Rectangle())
+                                .accessibilityLabel("Keep tables and code wide")
+                        }.frame(minHeight: 44)
                         if wideContent { Text("Scroll within this message to reach wide content. Ordinary prose keeps the reading width.").font(.caption) }
                     } else if text != nil {
                         Button { findingText.toggle(); query = "" } label: {

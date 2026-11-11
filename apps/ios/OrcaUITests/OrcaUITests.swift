@@ -1963,13 +1963,36 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(unread.isHittable)
         XCTAssertTrue(jumpLatest.waitForExistence(timeout: 5))
         XCTAssertFalse(jumpUnread.exists)
-        // Return to the history divider, then reveal the 21 preceding cards.
+        // AX may report a disclosure behind native navigation as hittable.
+        // Use the SAME reveal gesture/budget, but require its full44pt target
+        // inside actual reading content before the original single tap.
+        let history = app.buttons["Show 21 earlier messages"]
+        func historyViewport() -> CGRect {
+            let reader = app.descendants(matching: .any)["thread.reader"]
+            let navigation = app.navigationBars.firstMatch, reply = app.buttons["Reply"]
+            guard reader.exists, navigation.exists, reply.exists else { return .null }
+            let bounds = reader.frame.intersection(app.frame)
+            guard !bounds.isNull, !bounds.isEmpty else { return .null }
+            let top = max(bounds.minY, navigation.frame.maxY) + 8
+            let bottom = min(bounds.maxY, reply.frame.minY) - 8
+            guard bottom > top else { return .null }
+            return CGRect(x: bounds.minX, y: top, width: bounds.width, height: bottom - top)
+        }
+        func historyIsFullyReachable() -> Bool {
+            guard history.exists, history.isHittable else { return false }
+            let viewport = historyViewport(), target = history.frame
+            return !viewport.isNull && target.width >= 44 && target.height >= 44 && viewport.contains(target)
+        }
         for _ in 0..<6 {
-            if app.buttons["Show 21 earlier messages"].isHittable { break }
+            if historyIsFullyReachable() { break }
             app.swipeDown()
         }
-        captureHistoryBoundary(in: app, stage: "history-before-show21")
-        app.buttons["Show 21 earlier messages"].tap()
+        let historyReachableBeforeTap = historyIsFullyReachable()
+        captureHistoryBoundary(in: app, stage: "history-before-show21", observed: [
+            "full_target_reachable": String(historyReachableBeforeTap), "reading_viewport": String(describing: historyViewport())
+        ])
+        XCTAssertTrue(historyReachableBeforeTap, "Show21 needs its full44pt target below navigation and above Reply before tapping")
+        history.tap()
         // Keep the original5s predicate and capture its result before the
         // first extra AX read or hierarchy/PNG work. Diagnostics cannot rescue
         // a failure by moving the original wait's start later.

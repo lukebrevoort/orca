@@ -1,0 +1,40 @@
+{
+  "baselineSHA": "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f",
+  "baselineReading": {
+    "run": 43087654927,
+    "job": 130756175858,
+    "artifact": 13887304884,
+    "zipSHA256": "a8a6764843fd4c955f10ba8e709d3a23c76d0ecb77a9dab5174baba3884f2f83",
+    "testedSHA": "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f",
+    "eventSHA": "56a2b65594ca10d6a07cce82e9ddee2665af93ed",
+    "light": {
+      "pass": 186,
+      "fail": 2,
+      "scopeSkips": 5,
+      "total": 193
+    },
+    "dark": "not run"
+  },
+  "candidateSourceHashes": {
+    "apps/ios/Orca/Mail/ThreadView.swift": "1566776109cb54c8b8183849d4322b7c3258fbba8e7b2825a0f8e76da0511e40",
+    "apps/ios/OrcaUITests/OrcaUITests.swift": "d8c4bfcf31eec4761f0e6b58251a2f7c941a3a5d019804facb2ae9fcd3c21c86"
+  },
+  "retainedUnchangedSourceHashes": {
+    "apps/ios/OrcaUITests/ReaderUITests.swift": "a0b299eb7006da067f7e1c41718d20c772ae33d5a4cf1e00a11499dbbf229f0a",
+    "apps/ios/OrcaUITests/run-fixture-tests.sh": "c44a0b43934705c35922f230dace39c41636c6ad85980e6e87b8da7aecfa042f"
+  },
+  "scope": "Only wide native Toggle presentation/accessibility structure plus test37 fully reachable precondition; no jump/anchor/visibility policy or other reader body/security/fixture change.",
+  "evidenceHashes": {
+    "triage-before-edit.md": "bc6ca95213c7ba6eeae1fb6c86e105348f1ea647866ff7f3debd4b32ccd73707",
+    "Orca-summary.json": "abcf4392886b74af191b0b4134d41036cdd775eded1e7e1ae7d8c24b30e07f12",
+    "outcome.json": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107",
+    "Orca-9.png": "7bbe775357d1507d6d42001a129888b5511405511c6c5981532cb26b2d3086fb",
+    "ordered-boundary-excerpts.log": "05b95c517e3bee93764cb30c155059f6cade6f6982d68405a6f0a74c6bdd8422",
+    "identity.log": "689631bf460a5c94dbb00a2fa01ed21f725de79ba9f6ef690574b0a910aba779",
+    "Orca-63.png": "6e85b462084ddfa294a5aa537285767a51387e43949892bd784eb923a34ecee5",
+    "Orca-76.png": "6e85b462084ddfa294a5aa537285767a51387e43949892bd784eb923a34ecee5",
+    "Orca-99.png": "ddb6d25d4f2b788173517a9574ecb16306eee141772b61ffc14f081dfdd59456"
+  },
+  "screenshotAttribution": "63/76 byte-identical expanded/off pair;99/9 strong time/content/frame correlation to history pre/post, not manifest-verified ordinal mapping.",
+  "execution": "No candidate grammar/typecheck/XCTest/runtime executed; root source review then one <=5s36grammar allocation requested.223 not repeated because Core/API/harness unchanged."
+}
