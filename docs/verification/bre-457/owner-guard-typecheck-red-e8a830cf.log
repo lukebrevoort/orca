@@ -1,0 +1,97 @@
+Clean source SHA: e8a830cf1b9017af7fc41efe58c9a3494002f934
+SOURCE CHECK: /usr/bin/xcrun swiftc -frontend -parse apps/ios/Orca/Compose/ComposeView.swift apps/ios/Orca/Compose/DraftStore.swift apps/ios/Orca/Compose/DraftsView.swift apps/ios/Orca/Core/APIClient.swift apps/ios/Orca/Core/AccountPreferences.swift apps/ios/Orca/Core/AppState.swift apps/ios/Orca/Core/CacheStore.swift apps/ios/Orca/Core/FeedbackCapture.swift apps/ios/Orca/Core/Importance.swift apps/ios/Orca/Core/Models.swift apps/ios/Orca/Core/NotificationIdentity.swift apps/ios/Orca/Core/OrcaTheme.swift apps/ios/Orca/Core/Security.swift apps/ios/Orca/Mail/ImportanceView.swift apps/ios/Orca/Mail/InboxView.swift apps/ios/Orca/Mail/MailActions.swift apps/ios/Orca/Mail/MailSearchView.swift apps/ios/Orca/Mail/MailboxViews.swift apps/ios/Orca/Mail/NativeViewEditor.swift apps/ios/Orca/Mail/SafeHTMLView.swift apps/ios/Orca/Mail/SavedMailboxResults.swift apps/ios/Orca/Mail/ThreadView.swift apps/ios/Orca/Mail/VerificationCode.swift apps/ios/Orca/Notifications/NotificationManager.swift apps/ios/Orca/OrcaApp.swift apps/ios/Orca/SettingsView.swift apps/ios/OrcaTests/OrcaTests.swift apps/ios/OrcaTests/SafeHTMLOverflowTests.swift apps/ios/OrcaTests/SafeHTMLViewTests.swift apps/ios/OrcaUITests/OrcaUITests.swift apps/ios/OrcaUITests/ReaderUITests.swift
+SOURCE CHECK: /usr/bin/xcrun swiftc -typecheck apps/ios/Orca/Core/Models.swift apps/ios/Orca/Core/APIClient.swift
+SOURCE CHECK: /usr/bin/xcrun swiftc -typecheck apps/ios/Orca/Core/Models.swift apps/ios/Orca/Core/APIClient.swift apps/ios/Orca/Core/AccountPreferences.swift apps/ios/Orca/Core/Importance.swift apps/ios/Orca/Core/NotificationIdentity.swift /tmp/bre457-source-check-support.swift
+apps/ios/Orca/Core/NotificationIdentity.swift:47:49: error: main actor-isolated property 'generation' can not be referenced from a nonisolated autoclosure
+18 |     private var scope: String?
+19 |     private var verifiedClient: APIClient?
+20 |     private var generation = UUID()
+   |                 `- note: property declared here
+21 |     private var resolution: Task<String?, Never>?
+22 |     init(store: NotificationInstallationStore = .init()) { self.store = store }
+   :
+45 |             guard let self else { return nil }
+46 |             func current() -> Bool {
+47 |                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
+   |                                                 `- error: main actor-isolated property 'generation' can not be referenced from a nonisolated autoclosure
+48 |                     && state.userID == userID && state.phase == .ready && state.client === client
+49 |             }
+
+apps/ios/Orca/Core/NotificationIdentity.swift:47:63: error: main actor-isolated property 'scope' can not be referenced from a nonisolated autoclosure
+16 |     @Published private(set) var status = "Checking authenticated device owner…"
+17 |     private let store: NotificationInstallationStore
+18 |     private var scope: String?
+   |                 `- note: property declared here
+19 |     private var verifiedClient: APIClient?
+20 |     private var generation = UUID()
+   :
+45 |             guard let self else { return nil }
+46 |             func current() -> Bool {
+47 |                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
+   |                                                               `- error: main actor-isolated property 'scope' can not be referenced from a nonisolated autoclosure
+48 |                     && state.userID == userID && state.phase == .ready && state.client === client
+49 |             }
+
+apps/ios/Orca/Core/NotificationIdentity.swift:47:87: error: main actor-isolated property 'ownerScope' can not be referenced from a nonisolated autoclosure
+45 |             guard let self else { return nil }
+46 |             func current() -> Bool {
+47 |                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
+   |                                                                                       `- error: main actor-isolated property 'ownerScope' can not be referenced from a nonisolated autoclosure
+48 |                     && state.userID == userID && state.phase == .ready && state.client === client
+49 |             }
+
+/tmp/bre457-source-check-support.swift:10:9: note: property declared here
+ 8 |     var accounts = [MailAccount]()
+ 9 |     var selectedAccount: MailAccount? { accounts.first }
+10 |     var ownerScope = ""
+   |         `- note: property declared here
+11 |     var userID: String?
+12 |     var baseURLText = "https://example.invalid"
+
+apps/ios/Orca/Core/NotificationIdentity.swift:48:30: error: main actor-isolated property 'userID' can not be referenced from a nonisolated autoclosure
+46 |             func current() -> Bool {
+47 |                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
+48 |                     && state.userID == userID && state.phase == .ready && state.client === client
+   |                              `- error: main actor-isolated property 'userID' can not be referenced from a nonisolated autoclosure
+49 |             }
+50 |             do {
+
+/tmp/bre457-source-check-support.swift:11:9: note: property declared here
+ 9 |     var selectedAccount: MailAccount? { accounts.first }
+10 |     var ownerScope = ""
+11 |     var userID: String?
+   |         `- note: property declared here
+12 |     var baseURLText = "https://example.invalid"
+13 |     func validatedBaseURL(_ value: String) -> URL? { URL(string: value) }
+
+apps/ios/Orca/Core/NotificationIdentity.swift:48:56: error: main actor-isolated property 'phase' can not be referenced from a nonisolated autoclosure
+46 |             func current() -> Bool {
+47 |                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
+48 |                     && state.userID == userID && state.phase == .ready && state.client === client
+   |                                                        `- error: main actor-isolated property 'phase' can not be referenced from a nonisolated autoclosure
+49 |             }
+50 |             do {
+
+/tmp/bre457-source-check-support.swift:6:9: note: property declared here
+ 4 | @MainActor final class AppState {
+ 5 |     enum Phase { case ready, signedOut }
+ 6 |     var phase: Phase = .ready
+   |         `- note: property declared here
+ 7 |     var client: APIClient?
+ 8 |     var accounts = [MailAccount]()
+
+apps/ios/Orca/Core/NotificationIdentity.swift:48:81: error: main actor-isolated property 'client' can not be referenced from a nonisolated autoclosure
+46 |             func current() -> Bool {
+47 |                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
+48 |                     && state.userID == userID && state.phase == .ready && state.client === client
+   |                                                                                 `- error: main actor-isolated property 'client' can not be referenced from a nonisolated autoclosure
+49 |             }
+50 |             do {
+
+/tmp/bre457-source-check-support.swift:7:9: note: property declared here
+ 5 |     enum Phase { case ready, signedOut }
+ 6 |     var phase: Phase = .ready
+ 7 |     var client: APIClient?
+   |         `- note: property declared here
+ 8 |     var accounts = [MailAccount]()
+ 9 |     var selectedAccount: MailAccount? { accounts.first }

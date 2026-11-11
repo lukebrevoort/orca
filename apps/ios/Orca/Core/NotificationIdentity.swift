@@ -43,7 +43,7 @@ struct NotificationInstallationStore {
         status = "Checking authenticated device owner…"
         let task = Task { @MainActor [weak self] () -> String? in
             guard let self else { return nil }
-            func current() -> Bool {
+            @MainActor func current() -> Bool {
                 !Task.isCancelled && request == generation && scope == owner && state.ownerScope == owner
                     && state.userID == userID && state.phase == .ready && state.client === client
             }
