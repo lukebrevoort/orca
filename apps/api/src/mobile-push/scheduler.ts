@@ -267,7 +267,9 @@ export async function deliverReady(sqlite: Database, options: { now: Date | (() 
       counts.discarded += discarded;
       continue;
     }
-    const token = await (options.readToken ?? readDeviceToken)(sqlite, row.userId, row.installationId, row.deviceGeneration);
+    let token: string | null;
+    try { token = await (options.readToken ?? readDeviceToken)(sqlite, row.userId, row.installationId, row.deviceGeneration); }
+    catch { token = null; }
     if (!token) {
       const discarded = sqlite.query("UPDATE mobile_push_outbox SET state='dead', updated_at=?, lease_owner=NULL, lease_expires_at=NULL, last_error='token_unavailable' WHERE id=? AND state='delivering' AND lease_owner=?")
         .run(readNow().getTime(), row.id, workerId).changes;
@@ -301,6 +303,10 @@ export async function deliverReady(sqlite: Database, options: { now: Date | (() 
         last_error='message_no_longer_eligible' WHERE id=? AND state='delivering' AND lease_owner=?`)
         .run(readNow().getTime(), row.id, workerId).changes;
       counts.discarded += discarded;
+      continue;
+    }
+    if (!options.config.configured) {
+      counts.discarded += sqlite.query("UPDATE mobile_push_outbox SET state='dead',updated_at=?,lease_owner=NULL,lease_expires_at=NULL,last_error='configuration_unavailable' WHERE id=? AND state='delivering' AND lease_owner=?").run(readNow().getTime(), row.id, workerId).changes;
       continue;
     }
     // A worker that lost/expired its lease during asynchronous decryption has
