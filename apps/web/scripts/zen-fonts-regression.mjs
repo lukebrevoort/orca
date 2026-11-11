@@ -14,7 +14,7 @@ const origin = new URL(JSON.parse(await readFile(connection, 'utf8')).url).origi
 assert(['127.0.0.1', 'localhost'].includes(new URL(origin).hostname));
 const out = resolve(output); await mkdir(out, { recursive: true });
 const results = { commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), mode,
-  syntheticOnly: true, scenarios: [], assertions: 0, failures: [], externalRequests: [], fontResponses: [], screenshots: [], pageErrors: [] };
+  syntheticOnly: true, scenarios: [], assertions: 0, failures: [], externalRequests: [], fontResponses: [], draftResponses: [], screenshots: [], pageErrors: [] };
 const browser = await chromium.launch({ headless: true, executablePath: process.env.ORCA_CHROMIUM_EXECUTABLE, args: ['--disable-background-networking'] });
 results.browserVersion = browser.version();
 results.nodeVersion = process.version;
@@ -49,6 +49,8 @@ async function contextFor(theme, viewport, fontPath = 'blocked') {
   const page = await context.newPage(); activePage = page;
   page.on('pageerror', error => results.pageErrors.push(error.message));
   page.on('response', async response => {
+    const path = new URL(response.url()).pathname;
+    if (path.startsWith('/v1/drafts')) results.draftResponses.push({ method: response.request().method(), path, status: response.status() });
     if (response.request().resourceType() === 'font') results.fontResponses.push({ url: response.url(), status: response.status(), bytes: (await response.body().catch(() => Buffer.alloc(0))).length });
   });
   await context.request.get(origin + '/__fixture/login');
@@ -62,6 +64,7 @@ async function compose(page, label) {
   await panel.getByRole('textbox', { name: 'Message body', exact: true }).fill('Quiet correspondence.\n\nPreserve this writing and every attachment.');
   await panel.getByRole('combobox', { name: 'Add To recipient' }).fill('maya@example.com');
   await panel.getByRole('combobox', { name: 'Add To recipient' }).press('Enter');
+  await panel.getByText('Saved to Orca and Gmail', { exact: true }).waitFor();
   return panel;
 }
 const file = name => ({ name, mimeType: 'text/plain', buffer: Buffer.from('Synthetic attachment bytes: ' + name) });
@@ -137,6 +140,7 @@ try {
       try {
       const panel = await compose(page, label);
       await panel.getByRole('combobox', { name: 'Message format' }).selectOption('rich');
+      await panel.locator('.compose-save-status-saved').waitFor();
       await page.getByRole('button', { name: 'Open in Zen', exact: true }).click();
       const zen = page.locator('.compose-workspace-zen'); await zen.waitFor();
       await measure(page, `${theme}-${width}-${suffix}-zero`, 0);
@@ -149,6 +153,7 @@ try {
       await zen.getByRole('combobox', { name: 'Message format' }).selectOption('plain');
       check(await zen.getByRole('button', { name: 'Bold, Command B', exact: true }).isDisabled(), label + ': plain disables formatting');
       await measure(page, `${theme}-${width}-${suffix}-plain-removed`, 2);
+      await zen.locator('.compose-save-status-saved').waitFor();
       if (width === 1440 || (width === 390 && height === 844)) {
         const control = zen.getByRole('button', { name: 'Attach files', exact: true });
         await control.hover(); await screenshot(page, `${theme}-${width}-attach-hover`);
@@ -159,10 +164,12 @@ try {
         await page.keyboard.press('Tab');
         check(await zen.getByRole('button', { name: 'Discard', exact: true }).evaluate(el => el === document.activeElement), label + ': toolbar-to-delivery keyboard order');
         await zen.getByRole('combobox', { name: 'Message format' }).selectOption('rich');
+        await zen.locator('.compose-save-status-saved').waitFor();
         const bold = zen.getByRole('button', { name: 'Bold, Command B', exact: true });
         await bold.scrollIntoViewIfNeeded(); await bold.hover(); await page.mouse.down();
         await screenshot(page, `${theme}-${width}-bold-pressed`); await page.mouse.up();
         await zen.getByRole('combobox', { name: 'Message format' }).selectOption('plain');
+        await zen.locator('.compose-save-status-saved').waitFor();
         await screenshot(page, `${theme}-${width}-plain-disabled`);
       }
       if (width === 1440) {
