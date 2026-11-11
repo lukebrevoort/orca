@@ -20,7 +20,15 @@ import SwiftUI
     private var pending: Pending?
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
     private var pendingKey: String { "importance.pending.v1|\(scope)|\(accountId)" }
-    var canUndo: Bool { !busy && !uncertain && receiptThreadId == threadId && receipt.flatMap { MailDate.parse($0.undoUntil) }.map { $0 > Date() } == true }
+    var canUndo: Bool { !busy && !uncertain && receiptThreadId == threadId && receiptMatchesKnownRevision && receipt.flatMap { MailDate.parse($0.undoUntil) }.map { $0 > Date() } == true }
+    private var receiptMatchesKnownRevision: Bool {
+        guard let receipt, let snapshot else { return false }
+        if receipt.target.kind == "conversation" { return receipt.target.threadId == threadId && receipt.revision == snapshot.conversation.revision }
+        if let preference = snapshot.preferences.first(where: { $0.address == receipt.target.address }) { return preference.revision == receipt.revision }
+        // Resets and truncated preference lists carry no newer target revision.
+        // The server still enforces exact owned revision when Undo is submitted.
+        return true
+    }
     var originalTarget: String? {
         guard let pending else { return nil }
         let context = pending.contextSubject.flatMap { $0.isEmpty ? nil : $0 } ?? pending.contextThreadId ?? pending.command.target.threadId ?? "Earlier conversation"

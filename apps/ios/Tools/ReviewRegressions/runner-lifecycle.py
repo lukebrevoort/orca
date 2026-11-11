@@ -9,7 +9,7 @@ import json, os, pathlib, subprocess, sys, tempfile
 
 runner = pathlib.Path(__file__).resolve().parents[2] / 'OrcaUITests/run-fixture-tests.sh'
 source = runner.read_text()
-selection = source.split('if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then', 1)[1].split('\n# Check the recovered writer', 1)[0]
+selection = source.split('if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then', 1)[1].split('\n# BRE-468 adoption', 1)[0].split('\n# Check the recovered writer', 1)[0]
 phases = source.split('light_exit=0\n', 1)[1]
 adoption = source.split('# BEGIN isolated_adoption_phases\n', 1)[1].split('# END isolated_adoption_phases', 1)[0] if '# BEGIN isolated_adoption_phases' in source else ''
 results = []

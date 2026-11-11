@@ -4,7 +4,7 @@ import Foundation
     @MainActor static func main() async throws {
         let connection = CommandLine.arguments.count > 1 ? try JSONDecoder().decode(Connection.self, from: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))) : nil
         var results = [[String: Any]]()
-        func check(_ name: String, _ ok: Bool, _ detail: String) { results.append(["case": name, "pass": ok, "detail": detail]) }
+        func check(_ name: String, _ ok: Bool, _ detail: String) { results.append(["case": name, "pass": ok, "detail": detail]); FileHandle.standardOutput.write(Data("CASE \(name): \(ok ? "PASS" : "FAIL") — \(detail)\n".utf8)) }
         let root = FileManager.default.temporaryDirectory.appending(path: "bre457-controller-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -99,7 +99,7 @@ import Foundation
             let final: MailActionJSON = try await client.request("__bre457/state")
             check("466-dismiss-reopen-no-duplicate", final["count"].integer == committed["count"].integer, "actual view count after reopen = \(final["count"].integer ?? -1)")
             let definition: MailActionJSON = .object(["revision": .number(1), "accountIds": .array([.string("account")]), "sender": .object(["addresses": .array([.string("person@example.com")])]), "thread": .object(["subjectContains": .string("Subject"), "readState": .string("unread")])])
-            let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("typed_definition"), "identity": .object(["name": .string("Advanced original")]), "definition": definition]))
+            let prepared: MailActionJSON = try await client.request("v1/organization/views/prepare", method: "POST", body: MailActionJSON.object(["kind": .string("typed_definition"), "source": .object(["kind": .string("manual"), "label": .string("Synthetic advanced View")]), "identity": .object(["name": .string("Advanced original")]), "definition": definition]))
             let advancedPreview: MailActionJSON = try await client.request("v1/organization/views/preview", method: "POST", body: MailActionJSON.object(["draft": prepared["draft"], "page": .object(["limit": .number(25)])]))
             let created: MailActionJSON = try await client.request("v1/organization/views/commit", method: "POST", body: MailActionJSON.object(["draft": advancedPreview["draft"], "expectedRevisions": .object(["workspace": advancedPreview["workspaceRevision"], "view": .null]), "retryKey": .string(UUID().uuidString), "confirmedZeroMatchDigest": advancedPreview["draft"]["definitionDigest"]]))
             let advancedID = created["view"]["id"].text!
