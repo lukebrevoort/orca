@@ -25,9 +25,12 @@ const sanitizerRequire = createRequire(require.resolve('sanitize-html'));
 const sanitizerParserVersion = sanitizerRequire('htmlparser2/package.json').version;
 assert.equal(parserVersion, '12.0.0'); assert.equal(sanitizerParserVersion, '12.0.0');
 const provider = await import('../src/mail/provider-html.ts');
-const sanitize = provider.sanitizeProviderHtml;
+// Current inbound image scans use a distinct sanitizer. The old export is
+// intentionally retained only for replay on pre-split immutable revisions.
+const sanitizerExport = 'sanitizeImageSourceHtml' in provider ? 'sanitizeImageSourceHtml' : 'sanitizeProviderHtml';
+const sanitize = provider[sanitizerExport];
 let providerCalls=0, providerInputBytes=0;
-const providerSpy=spyOn(provider,'sanitizeProviderHtml').mockImplementation(html => {
+const providerSpy=spyOn(provider,sanitizerExport).mockImplementation(html => {
   providerCalls++; providerInputBytes += Buffer.byteLength(html ?? ''); return sanitize(html);
 });
 const render = await import('../src/mail/images/render.ts');
@@ -131,6 +134,6 @@ try {
   console.error(`completed ${w.name}`);
  }
  assert.equal(downloadCalls,0);assert.deepEqual(sqlite.query('PRAGMA page_count').get(),dbBefore);
- const output={revision:sha,role,mode:'bounded-detail-batches-v2; one immutable revision per process; labels A/B are same-code repeats; instrumented warm in-process GET, no sockets',parserVersion,sanitizerParserVersion,lockSha256:createHash('sha256').update(readFileSync('bun.lock')).digest('hex'),harnessSha256:createHash('sha256').update(readFileSync(import.meta.path)).digest('hex'),runtime:Bun.version,cpu:cpus()[0]?.model,cpus:cpus().length,loadavg:loadavg(),workloads:workloads.map(({html,...w})=>({...w,batches:batches({...w,html}),bytesPerMessage:Buffer.byteLength(html??''),payloadSha256:createHash('sha256').update(html??'').digest('hex')})),controls,downloadCalls,dbPageCount:dbBefore,rows};
+ const output={revision:sha,role,mode:'bounded-detail-batches-v2; one immutable revision per process; labels A/B are same-code repeats; instrumented warm in-process GET, no sockets',sanitizerExport,parserVersion,sanitizerParserVersion,lockSha256:createHash('sha256').update(readFileSync('bun.lock')).digest('hex'),harnessSha256:createHash('sha256').update(readFileSync(import.meta.path)).digest('hex'),runtime:Bun.version,cpu:cpus()[0]?.model,cpus:cpus().length,loadavg:loadavg(),workloads:workloads.map(({html,...w})=>({...w,batches:batches({...w,html}),bytesPerMessage:Buffer.byteLength(html??''),payloadSha256:createHash('sha256').update(html??'').digest('hex')})),controls,downloadCalls,dbPageCount:dbBefore,rows};
  writeFileSync(process.argv[2]!,JSON.stringify(output,null,2)+'\n',{flag:'wx'});
 }finally{sqlite?.close();rmSync(directory,{recursive:true,force:true});providerSpy.mockRestore();mock.restore();}
