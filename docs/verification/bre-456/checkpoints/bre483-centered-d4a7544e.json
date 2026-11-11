@@ -1,0 +1,69 @@
+{
+  "head": "d4a7544ee3fb31dd44da885d5c80169047cb56a0",
+  "revision": {
+    "head": "d4a7544ee3fb31dd44da885d5c80169047cb56a0",
+    "sourceSha256": "8e8a6d46cb15c25ea09c7f5da82769182e6948e2645c1abaadbbbf0fe855a80f",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "overall": "NONPASS",
+  "scenarios": 4,
+  "assertions": 152,
+  "failures": [
+    {
+      "label": "Every visible row action receives its actual center pointer",
+      "detail": {
+        "theme": "light",
+        "viewportWidth": 1440,
+        "surface": "later",
+        "label": "MAMayanormal6:26 AMfirst account conversationCould you send me your latest writing notes?",
+        "receivesPointer": false,
+        "hit": "Why hereLater",
+        "x": 438,
+        "y": 351,
+        "buttonWidth": 810,
+        "buttonHeight": 88,
+        "scrollY": 0,
+        "viewportHeight": 1000
+      }
+    },
+    {
+      "label": "Every visible row action receives its actual center pointer",
+      "detail": {
+        "theme": "dark",
+        "viewportWidth": 1440,
+        "surface": "later",
+        "label": "MAMayanormal6:26 AMfirst account conversationCould you send me your latest writing notes?",
+        "receivesPointer": false,
+        "hit": "Why hereLater",
+        "x": 438,
+        "y": 351,
+        "buttonWidth": 810,
+        "buttonHeight": 88,
+        "scrollY": 0,
+        "viewportHeight": 1000
+      }
+    }
+  ],
+  "pageErrors": [],
+  "raw": "/tmp/bre456-483-centered-d4a7544e/entry/results.json",
+  "rawSha256": "48f75e5e8f1e0742575171ce7ec9d02602ca326fb81d02b5fbb063b118b2a9b3",
+  "sequence": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "elapsedMs": 12453
+    },
+    {
+      "name": "entry",
+      "exitCode": 1,
+      "elapsedMs": 12468
+    },
+    {
+      "name": "styles",
+      "exitCode": 0,
+      "elapsedMs": 263
+    }
+  ],
+  "scope": "All mobile first/last/Later action pointers, all utility button centers, zero rail collisions, real Snooze/Done pass. Two desktop Later whole-row centers hit reserved WhyHere utility rail; visible-subject targeting and actual reader open/back/focus pending. Never an overall pointer pass."
+}

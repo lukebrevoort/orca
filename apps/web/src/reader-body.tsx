@@ -1,6 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import { markReadableTableCells } from "./reader-table";
+import { containReaderTables, markReadableTableCells } from "./reader-table";
 import type { ImageSlot } from "./image-stream";
 const noImageSlots:ImageSlot[]=[];
 
@@ -59,6 +59,7 @@ export function ReaderBody({ html, text, imageSlots=noImageSlots }: { html: stri
     const body = formattedBody.current;
     if (!body) return;
     markReadableTableCells(body);
+    containReaderTables(body);
     // Only whitespace may follow history. Never fold a quote with an inline
     // answer or footer after it, or search inside arbitrary sender layouts.
     const meaningfulNodes = (element: Element) => [...element.childNodes].filter(node =>

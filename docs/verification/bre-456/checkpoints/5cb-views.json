@@ -1,0 +1,25 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "commit": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+  "assertions": 86,
+  "failures": [],
+  "pageErrors": [],
+  "scenarioCount": 2,
+  "rawPath": "/tmp/bre456-runtime-committed-2/views/results.json",
+  "rawSha256": "93a0a981a19749d80a1c938a24e7ffefeca8fcdcdf94f938df73de5123182b5c",
+  "browserRequestCount": 731,
+  "fixtureApiRequestCount": 18,
+  "completedRepresentativeTaskSteps": {
+    "light: Empty Important to All Mail": 1,
+    "light: Search to saved View": 6,
+    "light: Save choices from another Settings section": 3,
+    "dark: Empty Important to All Mail": 1,
+    "dark: Search to saved View": 6,
+    "dark: Save choices from another Settings section": 3
+  }
+}

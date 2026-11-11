@@ -1,0 +1,62 @@
+/* November foundation: one semantic palette shared by retained product surfaces. */
+:root, :root[data-theme="light"] {
+  --orca-ink:#132b24; --orca-paper:#f7faf8; --orca-muted:#53665d; --orca-surface:#fff; --orca-surface-hover:#e8f1eb; --orca-border:#c8d5cd; --orca-accent:#166248; --orca-accent-ink:#fff; --orca-danger:#9f3c35; --orca-warning:#805900;
+  --orca-font-body:"Sora","Avenir Next","Segoe UI",sans-serif; --orca-font-display:"Newsreader","Iowan Old Style",Georgia,serif; --orca-font-reader:var(--orca-font-display);
+  --orca-canvas:var(--orca-paper); --orca-canvas-ink:var(--orca-ink); --orca-control:var(--orca-surface); --orca-control-hover:var(--orca-surface-hover); --orca-control-ink:var(--orca-ink);
+}
+:root[data-theme="dark"] { --orca-ink:#edf4ef; --orca-paper:#111914; --orca-muted:#acbcb1; --orca-surface:#19251d; --orca-surface-hover:#25392d; --orca-border:#3b5042; --orca-accent:#a6d4b9; --orca-accent-ink:#111914; --orca-danger:#f2a19a; --orca-warning:#e6c376; }
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:2px solid var(--orca-accent); outline-offset:3px; }
+button:disabled { opacity:1; color:var(--orca-muted); cursor:not-allowed; }
+[hidden] { display:none !important; }
+.desktop-sidebar { background:var(--orca-paper); }
+.desktop-sidebar-content { gap:4px; }
+.desktop-workspace-header { background:var(--orca-paper); }
+.desktop-workspace-header h1 { font-size:20px; }
+.desktop-sidebar-item { min-height:44px; font-size:14px; }
+.desktop-sidebar-item[aria-current="page"] { background:var(--orca-surface-hover); color:var(--orca-ink); border-color:var(--orca-border); }
+.message-row-wrap > .message-row-body { position:relative; min-width:0; }
+@media(max-width:760px) { .message-row-wrap > .message-row-body .message-evidence-button { min-height:44px; } }
+.stream-header h1 { font-size:32px; line-height:1.2; }
+.message-copy > p { font-size:14px; line-height:1.6; }
+.message-meta { font-size:13px; }
+.message-subject-row h2 { font-size:16px; line-height:1.5; }
+.message-meta .attention-badge { display:none; }
+.message-row .importance-control { grid-column:2; }
+.message-row .message-evidence-button, .message-row .keep-thread-button, .message-row .pin-sender-button { opacity:1; }
+.reader-body { font-size:18px; line-height:1.65; }
+.reader-heading h1 { font-size:32px; line-height:1.3; }
+.reader-heading .importance-control { margin:20px 0; }
+.settings-home-intro h1 { font-size:32px; }
+.settings-home-intro { margin-bottom:24px; }
+.settings-home-nav a[aria-current="page"] { background:var(--orca-surface-hover); color:var(--orca-ink); border-radius:8px; }
+.settings-owner-recovery .login-required-shell { width:min(640px,100%); }
+.settings-owner-recovery h1 { font:500 32px/1.2 var(--orca-font-display); letter-spacing:normal; margin-bottom:24px; }
+.settings-owner-recovery p { font:400 16px/1.65 var(--orca-font-body); margin-bottom:24px; }
+.settings-owner-recovery button,.settings-owner-recovery a { display:block; min-height:44px; padding:12px 16px; border:1px solid var(--orca-border); border-radius:8px; background:var(--orca-surface); color:var(--orca-ink); font:500 14px/1.5 var(--orca-font-body); margin:12px 0; cursor:pointer; }
+.settings-owner-recovery button:hover,.settings-owner-recovery a:hover { background:var(--orca-surface-hover); }
+@media(max-width:760px) { .settings-owner-recovery { padding:24px 16px; } }
+.settings-section { scroll-margin-top:24px; }
+.settings-save-bar { position:sticky; bottom:0; z-index:2; background:var(--orca-paper); border-top:1px solid var(--orca-border); padding:16px 0; }
+@media(max-width:760px) { .settings-save-bar { bottom:80px; } .message-subject-row h2 { white-space:normal; } .desktop-mobile-nav-item { color:var(--orca-ink); } }
+.reader-organize-tools > summary { min-height:44px; display:flex; align-items:center; border:1px solid var(--orca-border); border-radius:8px; padding:8px 14px; cursor:pointer; background:var(--orca-surface); color:var(--orca-ink); font-size:14px; }
+.reader-organize-tools .reader-top-actions { padding:12px 0; }
+.reader-heading-actions { align-items:start; }
+.reader-kicker, .reader-participants { font-size:13px; }
+.reader-heading .importance-control { gap:6px; margin:16px 0; }
+.reader-heading .importance-control > span { flex-basis:100%; }
+.reader-heading .importance-control button { padding:8px 12px; }
+/* Switching a current task never starts a staggered fade with hidden labels. */
+.settings-home-layout, .settings-section { animation:none; }
+.settings-save-bar { border-radius:12px; padding:16px; }
+.settings-home-intro { margin-bottom:24px; }
+@media(max-width:760px) { .settings-home-layout { margin-top:24px; } .settings-home-intro { margin-bottom:20px; } }
+:root, :root[data-theme="dark"] {
+  --desktop-paper:var(--orca-paper); --desktop-panel:var(--orca-paper); --desktop-surface:var(--orca-surface); --desktop-surface-hover:var(--orca-surface-hover); --desktop-raised:var(--orca-surface);
+  --desktop-ink:var(--orca-ink); --desktop-muted:var(--orca-muted); --desktop-faint:var(--orca-muted); --desktop-border:var(--orca-border); --desktop-border-strong:var(--orca-border);
+  --desktop-accent:var(--orca-accent); --desktop-focus:var(--orca-accent); --desktop-danger:var(--orca-danger); --desktop-warning:var(--orca-warning);
+  --desktop-accent-soft:var(--orca-surface-hover); --desktop-sans:var(--orca-font-body); --desktop-serif:var(--orca-font-display);
+}
+.desktop-account small, .desktop-workspace-header .desktop-health, .settings-section > header span, .reader-sent-time, .reader-sender-address { font-size:13px; line-height:1.5; }
+.desktop-account small { white-space:normal; }
+.desktop-shell .stream-title-line h1 { font-size:32px; line-height:1.25; }
+.desktop-shell .stream-date { font-size:13px; }

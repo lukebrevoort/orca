@@ -1,0 +1,43 @@
+.mail-scope-switch { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 32px; border-bottom: 1px solid var(--orca-border); }
+.mail-scope-switch button, .importance-control button, .importance-dialog button, .importance-receipt button, .important-mail > button, .important-mail p[role="alert"] button, .mail-empty button { min-height: 44px; border: 1px solid var(--orca-border); border-radius: 8px; padding: 8px 14px; background: var(--orca-surface); color: var(--orca-ink); font: 500 14px/1.4 var(--orca-font-body); cursor: pointer; }
+.mail-scope-switch button[aria-pressed="true"], .importance-dialog button[aria-pressed="true"], .importance-control button:hover, .importance-dialog button:hover, .importance-receipt button:hover { background: var(--orca-surface-hover); color: var(--orca-ink); border-color: var(--orca-border); }
+.importance-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.importance-control > span { color: var(--orca-muted); min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.importance-dialog { width: min(640px,calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 24px; background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 16px; color: var(--orca-ink); box-shadow: var(--orca-shadow); }
+.importance-dialog header { display:flex; align-items:start; justify-content:space-between; gap:16px; }
+.importance-dialog h2 { font: 500 28px/1.2 var(--orca-font-display); margin:0; }
+.importance-dialog p { font-size: 14px; line-height:1.6; overflow-wrap:anywhere; }
+.importance-dialog summary { cursor:pointer; padding:16px 0; font-size:14px; }
+.importance-dialog details { margin-top:16px; border-top:1px solid var(--orca-border); }
+.importance-choices { display:flex; flex-wrap:wrap; gap:8px; }
+.importance-sender-review { margin-top:16px; }
+.importance-sender-review label { display:grid; gap:8px; margin:16px 0; font-size:14px; }
+.importance-sender-review :is(input,select) { min-height:44px; width:100%; border:1px solid var(--orca-border); padding:8px; color:var(--orca-ink); background:var(--orca-surface); }
+.importance-receipt { position:fixed; z-index:60; left:16px; right:16px; bottom:16px; width:fit-content; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow-y:auto; margin-inline:auto; display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 16px; border:1px solid var(--orca-border); border-radius:12px; box-shadow:var(--orca-shadow); background:var(--orca-surface); color:var(--orca-ink); font-size:14px; }
+.global-mail-search > .importance-receipt-inline { grid-area:importance; position:relative; z-index:2; inset:auto; width:auto; max-width:none; max-height:40dvh; margin:0; border-width:1px 0 0; border-radius:0; box-shadow:none; }
+.important-mail { padding:32px; max-width:1080px; margin:0 auto; }
+.important-mail h1 { font:500 32px/1.2 var(--orca-font-display); margin:8px 0 16px; }
+.important-mail header > p, .mail-count { font-size:14px; line-height:1.6; color:var(--orca-muted); }
+.important-list { list-style:none; padding:0; margin:24px 0; }
+.important-list > li { border-top:1px solid var(--orca-border); padding:16px 0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; }
+.important-row { border:0; background:none; text-align:left; color:var(--orca-ink); cursor:pointer; padding:8px 0; display:grid; gap:6px; min-width:0; }
+.important-row strong { font:500 14px var(--orca-font-body); }
+.important-row > span { font:500 18px/1.4 var(--orca-font-body); overflow-wrap:anywhere; }
+.important-row p { color:var(--orca-muted); font:400 14px/1.6 var(--orca-font-body); margin:0; overflow-wrap:anywhere; }
+.important-row small { color:var(--orca-muted); font:400 13px var(--orca-font-body); }
+.mail-empty { padding:32px 0; max-width:560px; }
+.mail-empty h2 { font:500 24px/1.3 var(--orca-font-display); }
+.mail-empty p { line-height:1.65; color:var(--orca-muted); }
+.mailboxes-disclosure { margin-top:16px; }
+.mailboxes-disclosure > summary { cursor:pointer; min-height:44px; padding:12px; color:var(--orca-ink); font-size:14px; }
+.mailboxes-disclosure > summary small { display:block; margin-top:8px; color:var(--orca-muted); overflow-wrap:anywhere; }
+.mailboxes-disclosure > div { display:grid; gap:4px; padding:8px 0; }
+.mailboxes-disclosure > div > button:not(.desktop-sidebar-item) { min-height:44px; text-align:left; border:0; background:transparent; color:var(--orca-muted); padding:8px 12px; cursor:pointer; }
+@media(max-width:760px) { .mail-scope-switch { padding:12px 16px; } .important-mail { padding:24px 16px; } .important-list > li { grid-template-columns:1fr; gap:8px; } .importance-receipt { bottom:calc(96px + env(safe-area-inset-bottom)); max-height:calc(100dvh - 128px); } .global-mail-search > .importance-receipt-inline { bottom:auto; max-height:40dvh; } }
+.importance-direct { display:flex; flex-wrap:wrap; gap:4px; }
+.importance-direct button[aria-pressed="true"] { background:var(--orca-surface-hover); border-color:var(--orca-border); color:var(--orca-ink); }
+.important-account { display:flex; flex-wrap:wrap; gap:12px; align-items:center; font-size:14px; }
+.important-account select { min-height:44px; padding:8px; border:1px solid var(--orca-border); background:var(--orca-surface); color:var(--orca-ink); max-width:100%; }
+.importance-layer { display:grid; place-items:center; padding:16px; }
+.importance-backdrop { position:absolute; inset:0; width:100%; height:100%; border:0; background:rgb(10 20 15 / 24%); cursor:default; }
+.importance-dialog { position:relative; width:min(640px,100%); }

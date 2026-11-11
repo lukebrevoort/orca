@@ -1,0 +1,28 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "assertions": 8,
+  "failures": [
+    {
+      "theme": "light",
+      "message": "locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('navigation', { name: 'Reader controls', exact: true }).getByRole('button', { name: 'Summary', exact: true })\u001b[22m\n"
+    },
+    {
+      "theme": "dark",
+      "message": "locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('navigation', { name: 'Reader controls', exact: true }).getByRole('button', { name: 'Summary', exact: true })\u001b[22m\n"
+    }
+  ],
+  "pageErrors": [],
+  "notApplicable": [
+    "Waiting and codes: unavailable in canonical P15 current base",
+    "Enabled reply-review-specific behavior: PR295 is unintegrated draft"
+  ],
+  "scenarioCount": 0,
+  "rawPath": "/tmp/bre456-runtime-committed-2/summary/results.json",
+  "rawSha256": "d13243454cd1e10a285de1d44915bc1853d8a841e071a431fdf4bf012b088af0",
+  "browserRequestCount": 85
+}

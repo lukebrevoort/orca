@@ -56,7 +56,7 @@ export function readSurfaceLocation(location: { pathname: string; search: string
   const compose = params.get("compose") === "1";
   const viewsManagement = viewsManagementFromLocation(location);
   return {
-    destination: params.get("destination") ?? "inbox",
+    destination: params.get("destination") ?? (location.pathname === "/dev/inbox" ? "inbox" : "important"),
     ...(viewsManagement ? { viewsManagement } : {}),
     query: params.get("q") ?? "",
     reader: selection.threadId ? { threadId: selection.threadId, accountId: selection.accountId } : null,

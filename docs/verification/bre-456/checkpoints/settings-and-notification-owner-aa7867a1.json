@@ -1,0 +1,347 @@
+{
+  "head": "aa7867a1",
+  "stages": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "elapsedMs": 12631
+    },
+    {
+      "name": "settings-owner",
+      "exitCode": 0,
+      "elapsedMs": 3746
+    },
+    {
+      "name": "notification-owner-red",
+      "exitCode": 1,
+      "elapsedMs": 4420
+    }
+  ],
+  "results": [
+    {
+      "name": "settings-owner",
+      "revision": {
+        "head": "aa7867a1f7094a8136e9290ea6127d852d6f270e",
+        "sourceSha256": "9ef662cf1dc5e9c2a118610b5ff580766d41138b54ac471abb4e6c449419c75a",
+        "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+        "dirty": []
+      },
+      "scenarios": 6,
+      "assertions": 20,
+      "failures": [],
+      "pageErrors": [],
+      "raw": "/tmp/bre456-notification-red-aa7867a1/settings-owner/results.json",
+      "sha256": "c257e8c51f43e9846cd90789e6e74cd74a6dd4ec1818a41a34999b2016b3ec41"
+    },
+    {
+      "name": "notification-owner-red",
+      "revision": {
+        "head": "aa7867a1f7094a8136e9290ea6127d852d6f270e",
+        "sourceSha256": "9ef662cf1dc5e9c2a118610b5ff580766d41138b54ac471abb4e6c449419c75a",
+        "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+        "dirty": []
+      },
+      "scenarios": 4,
+      "assertions": 10,
+      "failures": [
+        {
+          "label": "U revision-zero Pause never creates a replacement-V installation/operation",
+          "detail": {
+            "theme": "light",
+            "before": {
+              "installations": [],
+              "operations": []
+            },
+            "after": {
+              "installations": [
+                {
+                  "user_id": "v",
+                  "channel": "open_app",
+                  "installation_id": "b3d3724c-dc7a-4c33-a34c-7476ce002d2a",
+                  "session_id": "2f57a0fd-40bb-423a-9ae3-d3a0e9034238",
+                  "enabled": 0,
+                  "permission": "granted",
+                  "revision": 1,
+                  "generation": 1,
+                  "previous_selection": null,
+                  "created_at": 1794398665179,
+                  "updated_at": 1794398665179,
+                  "last_scan_at": 0
+                }
+              ],
+              "operations": [
+                {
+                  "user_id": "v",
+                  "operation_id": "d7b79181-f102-4441-9c77-88e3974ed636",
+                  "channel": "open_app",
+                  "installation_id": "b3d3724c-dc7a-4c33-a34c-7476ce002d2a",
+                  "fingerprint": "15f671836da6dd9300fbbf3e51374ce7556867d94ac811162da705cd0bb4a102",
+                  "applied_revision": 1,
+                  "created_at": 1794398665179
+                }
+              ]
+            }
+          }
+        },
+        {
+          "label": "U UI never confirms a replacement-owner Pause as its own success",
+          "detail": {
+            "theme": "light",
+            "falseSuccess": true,
+            "status": 200
+          }
+        },
+        {
+          "label": "Original U installation identity remains available after stale Pause",
+          "detail": {
+            "theme": "light",
+            "status": 404,
+            "body": {
+              "error": {
+                "code": "not_found",
+                "message": "Installation not found"
+              }
+            }
+          }
+        },
+        {
+          "label": "Cookie V after final actual U claim cannot construct an old-owner Notification",
+          "detail": {
+            "theme": "light",
+            "before": {
+              "constructors": [],
+              "events": {
+                "focus": 0,
+                "expired": 0
+              }
+            },
+            "after": {
+              "constructors": [
+                {
+                  "title": "Receipt robot",
+                  "options": {
+                    "body": "Receipt fresh-final-owner-light\nOpen Orca to read this message.",
+                    "tag": "bb62ae20cc6cb0e7571d1bb4c43d98e1de370b977aace15bd2765df811f7df3d",
+                    "data": {
+                      "accountId": "a",
+                      "threadId": "gmail:a:final-owner-light"
+                    }
+                  },
+                  "native": true
+                }
+              ],
+              "events": {
+                "focus": 0,
+                "expired": 0
+              }
+            },
+            "claims": [
+              {
+                "command": {
+                  "channel": "open_app",
+                  "expectedRevision": 1,
+                  "operationId": "da36474d-7b1e-4dc8-9ea9-46d67ccc7ca7",
+                  "permission": "granted"
+                },
+                "status": 200,
+                "response": {
+                  "operationId": "da36474d-7b1e-4dc8-9ea9-46d67ccc7ca7",
+                  "installationId": "ba122209-4402-43e2-9e14-31bbc22cf481",
+                  "policyRevision": 1,
+                  "scope": "open_app",
+                  "notifications": [
+                    {
+                      "id": "2e847c6c-28b0-457d-91a2-8e6fa4a085a6",
+                      "accountId": "a",
+                      "threadId": "gmail:a:final-owner-light",
+                      "title": "Receipt robot",
+                      "subtitle": "Receipt fresh-final-owner-light",
+                      "body": "Open Orca to read this message.",
+                      "tag": "bb62ae20cc6cb0e7571d1bb4c43d98e1de370b977aace15bd2765df811f7df3d"
+                    }
+                  ]
+                }
+              },
+              {
+                "command": {
+                  "channel": "open_app",
+                  "expectedRevision": 1,
+                  "operationId": "da36474d-7b1e-4dc8-9ea9-46d67ccc7ca7",
+                  "permission": "granted"
+                },
+                "status": 200,
+                "response": {
+                  "operationId": "da36474d-7b1e-4dc8-9ea9-46d67ccc7ca7",
+                  "installationId": "ba122209-4402-43e2-9e14-31bbc22cf481",
+                  "policyRevision": 1,
+                  "scope": "open_app",
+                  "notifications": [
+                    {
+                      "id": "2e847c6c-28b0-457d-91a2-8e6fa4a085a6",
+                      "accountId": "a",
+                      "threadId": "gmail:a:final-owner-light",
+                      "title": "Receipt robot",
+                      "subtitle": "Receipt fresh-final-owner-light",
+                      "body": "Open Orca to read this message.",
+                      "tag": "bb62ae20cc6cb0e7571d1bb4c43d98e1de370b977aace15bd2765df811f7df3d"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "label": "U revision-zero Pause never creates a replacement-V installation/operation",
+          "detail": {
+            "theme": "dark",
+            "before": {
+              "installations": [],
+              "operations": []
+            },
+            "after": {
+              "installations": [
+                {
+                  "user_id": "v",
+                  "channel": "open_app",
+                  "installation_id": "96d341fd-6636-43d1-badd-e6ee43605074",
+                  "session_id": "2f57a0fd-40bb-423a-9ae3-d3a0e9034238",
+                  "enabled": 0,
+                  "permission": "granted",
+                  "revision": 1,
+                  "generation": 1,
+                  "previous_selection": null,
+                  "created_at": 1794398666179,
+                  "updated_at": 1794398666179,
+                  "last_scan_at": 0
+                }
+              ],
+              "operations": [
+                {
+                  "user_id": "v",
+                  "operation_id": "26b7a0ff-04cd-41c6-a6f5-2fc314b3111d",
+                  "channel": "open_app",
+                  "installation_id": "96d341fd-6636-43d1-badd-e6ee43605074",
+                  "fingerprint": "51dedd56dc77da523f9c003cf2bc1b37d34ca244e11cafe70443c6b078847385",
+                  "applied_revision": 1,
+                  "created_at": 1794398666179
+                }
+              ]
+            }
+          }
+        },
+        {
+          "label": "U UI never confirms a replacement-owner Pause as its own success",
+          "detail": {
+            "theme": "dark",
+            "falseSuccess": true,
+            "status": 200
+          }
+        },
+        {
+          "label": "Original U installation identity remains available after stale Pause",
+          "detail": {
+            "theme": "dark",
+            "status": 404,
+            "body": {
+              "error": {
+                "code": "not_found",
+                "message": "Installation not found"
+              }
+            }
+          }
+        },
+        {
+          "label": "Cookie V after final actual U claim cannot construct an old-owner Notification",
+          "detail": {
+            "theme": "dark",
+            "before": {
+              "constructors": [],
+              "events": {
+                "focus": 0,
+                "expired": 0
+              }
+            },
+            "after": {
+              "constructors": [
+                {
+                  "title": "Receipt robot",
+                  "options": {
+                    "body": "Receipt fresh-final-owner-dark\nOpen Orca to read this message.",
+                    "tag": "12ad5f54c35549b67ede47e659a17690aba95fdf3c6d4ff199fef11a3a4b90b0",
+                    "data": {
+                      "accountId": "a",
+                      "threadId": "gmail:a:final-owner-dark"
+                    }
+                  },
+                  "native": true
+                }
+              ],
+              "events": {
+                "focus": 0,
+                "expired": 0
+              }
+            },
+            "claims": [
+              {
+                "command": {
+                  "channel": "open_app",
+                  "expectedRevision": 1,
+                  "operationId": "bbc1a241-3066-4ac6-93b3-c34ac99a5e1b",
+                  "permission": "granted"
+                },
+                "status": 200,
+                "response": {
+                  "operationId": "bbc1a241-3066-4ac6-93b3-c34ac99a5e1b",
+                  "installationId": "2248a63c-4066-4dfb-82fe-11305ef021a6",
+                  "policyRevision": 1,
+                  "scope": "open_app",
+                  "notifications": [
+                    {
+                      "id": "512fa044-ed3b-455f-b87a-ec689a257333",
+                      "accountId": "a",
+                      "threadId": "gmail:a:final-owner-dark",
+                      "title": "Receipt robot",
+                      "subtitle": "Receipt fresh-final-owner-dark",
+                      "body": "Open Orca to read this message.",
+                      "tag": "12ad5f54c35549b67ede47e659a17690aba95fdf3c6d4ff199fef11a3a4b90b0"
+                    }
+                  ]
+                }
+              },
+              {
+                "command": {
+                  "channel": "open_app",
+                  "expectedRevision": 1,
+                  "operationId": "bbc1a241-3066-4ac6-93b3-c34ac99a5e1b",
+                  "permission": "granted"
+                },
+                "status": 200,
+                "response": {
+                  "operationId": "bbc1a241-3066-4ac6-93b3-c34ac99a5e1b",
+                  "installationId": "2248a63c-4066-4dfb-82fe-11305ef021a6",
+                  "policyRevision": 1,
+                  "scope": "open_app",
+                  "notifications": [
+                    {
+                      "id": "512fa044-ed3b-455f-b87a-ec689a257333",
+                      "accountId": "a",
+                      "threadId": "gmail:a:final-owner-dark",
+                      "title": "Receipt robot",
+                      "subtitle": "Receipt fresh-final-owner-dark",
+                      "body": "Open Orca to read this message.",
+                      "tag": "12ad5f54c35549b67ede47e659a17690aba95fdf3c6d4ff199fef11a3a4b90b0"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "pageErrors": [],
+      "raw": "/tmp/bre456-notification-red-aa7867a1/notification-owner-red/results.json",
+      "sha256": "34abb3a77c37a41edfe15f21f9b18dda812f7edcdcfc3c993504ba653e1fe4ea"
+    }
+  ]
+}

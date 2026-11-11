@@ -1,0 +1,14 @@
+{
+  "revision": {
+    "head": "534ec7cf165f3b817784d8b29012e2338606e6a4",
+    "sourceSha256": "456dc99a7f7267a0fb4f6a3057110d29e692d9678e370b6f36c83a2c8d2dafb9",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "failures": [],
+  "assertions": 84,
+  "pageErrors": [],
+  "scenarioCount": 22,
+  "rawPath": "/tmp/bre456-targeted-534ec7cf/availability/results.json",
+  "rawSha256": "c70dae24ea7c4e548fb1d4f4e18a202e7015fe73bbb6b415e04ebb11a2dca6af"
+}

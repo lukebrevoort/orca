@@ -1,0 +1,8 @@
+.important-notification-settings { border-bottom:1px solid var(--orca-border); margin:0 0 24px; padding-bottom:24px; }
+.important-notification-settings p { font-size:14px; line-height:1.65; color:var(--orca-muted); }
+.important-notification-settings button { min-height:44px; padding:8px 12px; border:1px solid var(--orca-border); border-radius:8px; color:var(--orca-ink); background:var(--orca-surface); cursor:pointer; margin:4px; }
+.important-notification-settings button:hover { background:var(--orca-surface-hover); }
+.notification-check { display:flex; align-items:center; gap:12px; min-height:44px; font-size:14px; overflow-wrap:anywhere; }
+.notification-check input { width:20px; height:20px; accent-color:var(--orca-accent); flex:none; }
+.important-notification-settings fieldset { border:1px solid var(--orca-border); border-radius:8px; padding:12px; margin:16px 0; }
+.important-notification-settings footer { display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; }

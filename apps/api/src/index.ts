@@ -9,6 +9,7 @@ import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createLogoutApp } from "./auth/logout.ts";
 import { requirePreferenceOwner } from "./auth/preference-owner.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
+import { createNotificationApp } from "./notifications/routes.ts";
 import { registerMobilePushRoutes, createMobilePushScheduler } from "./mobile-push/index.ts";
 import { isMobilePushSessionActive } from "./mobile-session-policy.ts";
 import { readThreadDestination } from "./destinations/resolution.ts";
@@ -298,6 +299,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   registerMessageImageRoutes(app, { dbFactory, downloadImage: options.downloadMessageImage, allowedOrigin: serverConfig.webOrigin });
   app.route("/v1/mobile/auth", createMobileAuthApp({ dbFactory }));
   registerMobilePushRoutes(app, { dbFactory });
+  app.route("/", createNotificationApp({ dbFactory }));
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 

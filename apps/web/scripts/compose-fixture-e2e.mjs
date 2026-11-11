@@ -205,6 +205,7 @@ try {
   await scope.waitFor({state:'hidden'});
   results.scenarios.push({theme,name:'new-compose-reload-recipients-attachment-removal-double-send',status:'passed',account:'first',draftId:delivery.draft.id});
   // A reply from the second account while the workspace profile remains first.
+  await page.getByRole('navigation',{name:'Mail filters',exact:true}).getByRole('button',{name:'All Mail',exact:true}).click();
   await page.locator('button.message-row').filter({hasText:'second account conversation'}).click();
   await page.getByRole('button',{name:'Reply',exact:true}).click();
   const reply=page.locator('.compose-workspace-reply');await reply.waitFor();

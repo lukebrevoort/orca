@@ -1,0 +1,1249 @@
+{
+  "commit": "bdec28426de57b8833ae29743eef330f391f63cb",
+  "mode": "baseline",
+  "scenarios": [
+    {
+      "theme": "light",
+      "geometry": {
+        "width": 324,
+        "scroll": 1366
+      },
+      "visibleAttachments": 25,
+      "serializedCounts": [
+        0,
+        24,
+        25
+      ],
+      "db": [
+        {
+          "subject": "BRE456 light",
+          "attachments": "[{\"id\":\"3bd57292-4619-404b-beac-69795062aab3\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"b20a7dfe-d525-4d2d-894f-3f6cf5edab78\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"0cbeadcc-e4ad-4d75-8cc7-b0d46099036d\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"0ea1c3ab-1d22-40dd-a90f-d6e5ccb7ef7e\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"048e31b9-f905-4cee-b75d-a6d008bf6100\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"19fff649-0a40-4165-9090-b49a4e15070f\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"ad2e0464-f97e-43da-8207-edb7a63431f8\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"57b2390b-0e8f-4d11-9af4-cd3e0d35d3be\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"aa799c16-ff44-45e1-8677-88e25f2c939e\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"5d4e9720-9306-4186-80fc-7d0e002700de\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"d3db70cf-aca4-4fb2-86e8-56e30961b6d7\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"5211a519-cea7-4b72-b20a-2e75aae82183\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"35a96a30-d91a-4c2f-ba73-ac58fd086257\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"790e2f7f-256e-4aa1-b26d-21d463b0fbc6\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"fbf08f76-f6d0-47d8-97e6-bf81f36bf267\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"90a4331e-af8f-4738-ae88-59c5f46607cd\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"d1134b73-2c0a-4dd0-85e9-08b9c6cb7c18\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"6da95c7a-fef9-4554-8e20-bf9f1458534f\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"68b2f305-df35-4489-8dbf-6a11584b5f71\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"cf5e845e-9bb3-4af1-a3c9-621c23364136\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"53d27f71-d412-40cc-8640-f4589ea710da\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"2176d062-83c9-4782-b680-16790c0afbb2\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"e317d82d-0366-4d30-9e1a-6329fc0bfbc7\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"d278a034-0fcf-4842-9c4b-2fac33296075\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"47faaf11-66b8-4a3c-ace8-e8ace9384105\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null}]"
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "geometry": {
+        "width": 324,
+        "scroll": 1366
+      },
+      "visibleAttachments": 25,
+      "serializedCounts": [
+        49,
+        50
+      ],
+      "db": [
+        {
+          "subject": "BRE456 dark",
+          "attachments": "[{\"id\":\"3bd57292-4619-404b-beac-69795062aab3\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"b20a7dfe-d525-4d2d-894f-3f6cf5edab78\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"0cbeadcc-e4ad-4d75-8cc7-b0d46099036d\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"0ea1c3ab-1d22-40dd-a90f-d6e5ccb7ef7e\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"048e31b9-f905-4cee-b75d-a6d008bf6100\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"19fff649-0a40-4165-9090-b49a4e15070f\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"ad2e0464-f97e-43da-8207-edb7a63431f8\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"57b2390b-0e8f-4d11-9af4-cd3e0d35d3be\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"aa799c16-ff44-45e1-8677-88e25f2c939e\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"5d4e9720-9306-4186-80fc-7d0e002700de\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null},{\"id\":\"d3db70cf-aca4-4fb2-86e8-56e30961b6d7\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"5211a519-cea7-4b72-b20a-2e75aae82183\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"35a96a30-d91a-4c2f-ba73-ac58fd086257\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"790e2f7f-256e-4aa1-b26d-21d463b0fbc6\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"fbf08f76-f6d0-47d8-97e6-bf81f36bf267\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"90a4331e-af8f-4738-ae88-59c5f46607cd\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"d1134b73-2c0a-4dd0-85e9-08b9c6cb7c18\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"6da95c7a-fef9-4554-8e20-bf9f1458534f\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"68b2f305-df35-4489-8dbf-6a11584b5f71\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"cf5e845e-9bb3-4af1-a3c9-621c23364136\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"53d27f71-d412-40cc-8640-f4589ea710da\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"2176d062-83c9-4782-b680-16790c0afbb2\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"e317d82d-0366-4d30-9e1a-6329fc0bfbc7\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"d278a034-0fcf-4842-9c4b-2fac33296075\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":7,\"contentBase64\":null},{\"id\":\"47faaf11-66b8-4a3c-ace8-e8ace9384105\",\"filename\":\"same-name.txt\",\"mimeType\":\"text/plain\",\"size\":6,\"contentBase64\":null}]"
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "label": "BRE-460 ordinary formatted prose reflows",
+      "detail": {
+        "width": 324,
+        "scroll": 1366
+      }
+    },
+    {
+      "label": "BRE-460 ordinary formatted prose reflows",
+      "detail": {
+        "width": 324,
+        "scroll": 1366
+      }
+    },
+    {
+      "label": "BRE-463 serialized attachments never exceed visible cap",
+      "detail": [
+        49,
+        50
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "theme": "light",
+      "method": "POST",
+      "path": "/v1/drafts",
+      "body": {
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 light",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": null
+        },
+        "context": null,
+        "attachments": []
+      }
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 0,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 light",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": "<p>Plain writing without rich formatting.</p>"
+        },
+        "context": null
+      }
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 1,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 light",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": "<p>Plain writing without rich formatting.</p>"
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "3bd57292-4619-404b-beac-69795062aab3",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "b20a7dfe-d525-4d2d-894f-3f6cf5edab78",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0cbeadcc-e4ad-4d75-8cc7-b0d46099036d",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0ea1c3ab-1d22-40dd-a90f-d6e5ccb7ef7e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "048e31b9-f905-4cee-b75d-a6d008bf6100",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "19fff649-0a40-4165-9090-b49a4e15070f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "ad2e0464-f97e-43da-8207-edb7a63431f8",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "57b2390b-0e8f-4d11-9af4-cd3e0d35d3be",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "aa799c16-ff44-45e1-8677-88e25f2c939e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "5d4e9720-9306-4186-80fc-7d0e002700de",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "d3db70cf-aca4-4fb2-86e8-56e30961b6d7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "5211a519-cea7-4b72-b20a-2e75aae82183",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "35a96a30-d91a-4c2f-ba73-ac58fd086257",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "790e2f7f-256e-4aa1-b26d-21d463b0fbc6",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "fbf08f76-f6d0-47d8-97e6-bf81f36bf267",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "90a4331e-af8f-4738-ae88-59c5f46607cd",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d1134b73-2c0a-4dd0-85e9-08b9c6cb7c18",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6da95c7a-fef9-4554-8e20-bf9f1458534f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "68b2f305-df35-4489-8dbf-6a11584b5f71",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "cf5e845e-9bb3-4af1-a3c9-621c23364136",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "53d27f71-d412-40cc-8640-f4589ea710da",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "2176d062-83c9-4782-b680-16790c0afbb2",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "e317d82d-0366-4d30-9e1a-6329fc0bfbc7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d278a034-0fcf-4842-9c4b-2fac33296075",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          }
+        ]
+      }
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 2,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 light",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": "<p>Plain writing without rich formatting.</p>"
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "3bd57292-4619-404b-beac-69795062aab3",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "b20a7dfe-d525-4d2d-894f-3f6cf5edab78",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0cbeadcc-e4ad-4d75-8cc7-b0d46099036d",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0ea1c3ab-1d22-40dd-a90f-d6e5ccb7ef7e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "048e31b9-f905-4cee-b75d-a6d008bf6100",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "19fff649-0a40-4165-9090-b49a4e15070f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "ad2e0464-f97e-43da-8207-edb7a63431f8",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "57b2390b-0e8f-4d11-9af4-cd3e0d35d3be",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "aa799c16-ff44-45e1-8677-88e25f2c939e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "5d4e9720-9306-4186-80fc-7d0e002700de",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "d3db70cf-aca4-4fb2-86e8-56e30961b6d7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "5211a519-cea7-4b72-b20a-2e75aae82183",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "35a96a30-d91a-4c2f-ba73-ac58fd086257",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "790e2f7f-256e-4aa1-b26d-21d463b0fbc6",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "fbf08f76-f6d0-47d8-97e6-bf81f36bf267",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "90a4331e-af8f-4738-ae88-59c5f46607cd",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d1134b73-2c0a-4dd0-85e9-08b9c6cb7c18",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6da95c7a-fef9-4554-8e20-bf9f1458534f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "68b2f305-df35-4489-8dbf-6a11584b5f71",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "cf5e845e-9bb3-4af1-a3c9-621c23364136",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "53d27f71-d412-40cc-8640-f4589ea710da",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "2176d062-83c9-4782-b680-16790c0afbb2",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "e317d82d-0366-4d30-9e1a-6329fc0bfbc7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d278a034-0fcf-4842-9c4b-2fac33296075",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "47faaf11-66b8-4a3c-ace8-e8ace9384105",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 3,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 dark",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": null
+        },
+        "context": null
+      }
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 4,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 dark",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": "<p>Plain writing without rich formatting.</p>"
+        },
+        "context": null
+      }
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 5,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 dark",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": "<p>Plain writing without rich formatting.</p>"
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "3bd57292-4619-404b-beac-69795062aab3",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "b20a7dfe-d525-4d2d-894f-3f6cf5edab78",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0cbeadcc-e4ad-4d75-8cc7-b0d46099036d",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0ea1c3ab-1d22-40dd-a90f-d6e5ccb7ef7e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "048e31b9-f905-4cee-b75d-a6d008bf6100",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "19fff649-0a40-4165-9090-b49a4e15070f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "ad2e0464-f97e-43da-8207-edb7a63431f8",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "57b2390b-0e8f-4d11-9af4-cd3e0d35d3be",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "aa799c16-ff44-45e1-8677-88e25f2c939e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "5d4e9720-9306-4186-80fc-7d0e002700de",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "d3db70cf-aca4-4fb2-86e8-56e30961b6d7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "5211a519-cea7-4b72-b20a-2e75aae82183",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "35a96a30-d91a-4c2f-ba73-ac58fd086257",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "790e2f7f-256e-4aa1-b26d-21d463b0fbc6",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "fbf08f76-f6d0-47d8-97e6-bf81f36bf267",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "90a4331e-af8f-4738-ae88-59c5f46607cd",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d1134b73-2c0a-4dd0-85e9-08b9c6cb7c18",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6da95c7a-fef9-4554-8e20-bf9f1458534f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "68b2f305-df35-4489-8dbf-6a11584b5f71",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "cf5e845e-9bb3-4af1-a3c9-621c23364136",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "53d27f71-d412-40cc-8640-f4589ea710da",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "2176d062-83c9-4782-b680-16790c0afbb2",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "e317d82d-0366-4d30-9e1a-6329fc0bfbc7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d278a034-0fcf-4842-9c4b-2fac33296075",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "47faaf11-66b8-4a3c-ace8-e8ace9384105",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "fe9861f9-747b-4677-9c78-a9b3889d6ef7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "97712d15-5f44-4705-ac78-09401e55a271",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "7812d5e0-0ee5-458e-a191-990372c5e7ac",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "ae92585c-433f-4493-b81d-480da6cc7f29",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "7ce7abb8-f386-4c9c-89fc-33016940dd37",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "5d16c64f-53cf-4aa8-ba41-ebba57b4a3d7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "483f8b3c-ec58-4800-a051-3ff0aee614f3",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "070d1bd0-7eff-460d-b175-566ede114743",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "55958a6e-b022-4917-9e3d-910c8f0ac2dc",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "d8bd4dd9-6d55-4d37-977b-80d0a3402632",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "3eef3dca-120f-4cef-9d02-79ff448c51a4",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "b5a9c457-ae67-4d90-9a23-a2ff235de574",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "1f643d4f-53e9-4863-95a7-9e06f012417c",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6d1d98a3-be93-4f93-83d8-aa96bd1ea705",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "413b0c34-e47a-42a8-986a-7106d132d753",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "0105ad68-2d7c-4927-958b-8b0b009344ba",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "e944506e-2572-497a-9848-6ee9f9e1e36c",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "526e7fd2-ff1a-4d97-b602-9202f0092fa2",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "86f70e1b-5bc5-4f95-afd0-4bffc50a8f83",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "9e54c86e-34b8-42fd-8757-8e7997297a4f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "b31233b2-dea6-4ca8-a644-625be702d4a7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "4714ad38-fd84-40ae-9c3a-56e0b28a46da",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "ca2e0ba1-e7ea-45e1-93cf-f90d3e663714",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6494080e-ecb4-41a6-b654-a11e3f9eaff5",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "path": "/v1/drafts/1e6bb36f-999b-47df-9578-fe7e709730cd",
+      "body": {
+        "revision": 5,
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "subject": "BRE456 dark",
+        "body": {
+          "text": "Plain writing without rich formatting.",
+          "html": "<p>Plain writing without rich formatting.</p>"
+        },
+        "context": null,
+        "attachments": [
+          {
+            "id": "3bd57292-4619-404b-beac-69795062aab3",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "b20a7dfe-d525-4d2d-894f-3f6cf5edab78",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0cbeadcc-e4ad-4d75-8cc7-b0d46099036d",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "0ea1c3ab-1d22-40dd-a90f-d6e5ccb7ef7e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "048e31b9-f905-4cee-b75d-a6d008bf6100",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "19fff649-0a40-4165-9090-b49a4e15070f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "ad2e0464-f97e-43da-8207-edb7a63431f8",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "57b2390b-0e8f-4d11-9af4-cd3e0d35d3be",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "aa799c16-ff44-45e1-8677-88e25f2c939e",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "5d4e9720-9306-4186-80fc-7d0e002700de",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "d3db70cf-aca4-4fb2-86e8-56e30961b6d7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "5211a519-cea7-4b72-b20a-2e75aae82183",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "35a96a30-d91a-4c2f-ba73-ac58fd086257",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "790e2f7f-256e-4aa1-b26d-21d463b0fbc6",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "fbf08f76-f6d0-47d8-97e6-bf81f36bf267",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "90a4331e-af8f-4738-ae88-59c5f46607cd",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d1134b73-2c0a-4dd0-85e9-08b9c6cb7c18",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6da95c7a-fef9-4554-8e20-bf9f1458534f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "68b2f305-df35-4489-8dbf-6a11584b5f71",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "cf5e845e-9bb3-4af1-a3c9-621c23364136",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "53d27f71-d412-40cc-8640-f4589ea710da",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "2176d062-83c9-4782-b680-16790c0afbb2",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "e317d82d-0366-4d30-9e1a-6329fc0bfbc7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "d278a034-0fcf-4842-9c4b-2fac33296075",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "47faaf11-66b8-4a3c-ace8-e8ace9384105",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "fe9861f9-747b-4677-9c78-a9b3889d6ef7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "97712d15-5f44-4705-ac78-09401e55a271",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "7812d5e0-0ee5-458e-a191-990372c5e7ac",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "ae92585c-433f-4493-b81d-480da6cc7f29",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "7ce7abb8-f386-4c9c-89fc-33016940dd37",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "5d16c64f-53cf-4aa8-ba41-ebba57b4a3d7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "483f8b3c-ec58-4800-a051-3ff0aee614f3",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "070d1bd0-7eff-460d-b175-566ede114743",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "55958a6e-b022-4917-9e3d-910c8f0ac2dc",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "d8bd4dd9-6d55-4d37-977b-80d0a3402632",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          },
+          {
+            "id": "3eef3dca-120f-4cef-9d02-79ff448c51a4",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "b5a9c457-ae67-4d90-9a23-a2ff235de574",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "1f643d4f-53e9-4863-95a7-9e06f012417c",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6d1d98a3-be93-4f93-83d8-aa96bd1ea705",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "413b0c34-e47a-42a8-986a-7106d132d753",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "0105ad68-2d7c-4927-958b-8b0b009344ba",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "e944506e-2572-497a-9848-6ee9f9e1e36c",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "526e7fd2-ff1a-4d97-b602-9202f0092fa2",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "86f70e1b-5bc5-4f95-afd0-4bffc50a8f83",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "9e54c86e-34b8-42fd-8757-8e7997297a4f",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "b31233b2-dea6-4ca8-a644-625be702d4a7",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "4714ad38-fd84-40ae-9c3a-56e0b28a46da",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "ca2e0ba1-e7ea-45e1-93cf-f90d3e663714",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "6494080e-ecb4-41a6-b654-a11e3f9eaff5",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 7,
+            "contentBase64": null
+          },
+          {
+            "id": "942e117c-c5c0-44ca-a857-625fb1c26475",
+            "filename": "same-name.txt",
+            "mimeType": "text/plain",
+            "size": 6,
+            "contentBase64": null
+          }
+        ]
+      }
+    }
+  ],
+  "assertions": 8
+}

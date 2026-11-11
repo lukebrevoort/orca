@@ -4,20 +4,23 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { FirstViewGuidanceProvider, FirstViewInvitation, ViewGettingStarted, useViewGuidanceSelectionRequest } from "./first-view-guidance";
 import { TopLayerProvider } from "./top-layer";
-import { organizationViewsFixture } from "@orca/shared";
+import { authSessionFixture, organizationViewsFixture } from "@orca/shared";
 import { demoAccount, demoMessages } from "./demo-data";
 
 const names = ["window", "document", "HTMLElement", "Element", "Node", "Event", "KeyboardEvent", "MouseEvent", "MutationObserver", "getComputedStyle", "requestAnimationFrame", "cancelAnimationFrame"] as const;
 const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 const originalFetch = globalThis.fetch;
 let browser: Window; let root: Root; let writes: string[]; let completed: string | null; let empty: boolean; let listFails: boolean; let saveFails: boolean; let searches: number; let selections: number;
+let preferenceOwners: {method: string; owner: string | null}[];
 const preferences = () => ({ signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: completed });
 beforeEach(() => {
   browser = new Window({ url: "http://localhost/" });
   for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === "window" ? browser : typeof (browser as any)[name] === "function" && ["getComputedStyle", "requestAnimationFrame", "cancelAnimationFrame"].includes(name) ? (browser as any)[name].bind(browser) : (browser as any)[name] });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
+  preferenceOwners = [];
   writes = []; completed = null; empty = false; listFails = false; saveFails = false; searches = 0; selections = 0;
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    if (url.startsWith("/v1/preferences")) preferenceOwners.push({ method: init?.method ?? "GET", owner: new Headers(init?.headers).get("x-orca-expected-user-id") });
     if (init?.method === "PATCH") { writes.push(url); if (saveFails) return new Response("Unavailable", { status: 503 }); completed = "2026-09-06T12:00:00.000Z"; return Response.json(preferences()); }
     if (url === "/v1/preferences?include=first_view_guidance") return Response.json(preferences());
     if (url === "/v1/organization/views") return listFails ? new Response("Unavailable", { status: 503 }) : Response.json({ workspaceId: "owner", workspaceRevision: 1, items: [] });
@@ -27,7 +30,7 @@ beforeEach(() => {
   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
 });
 afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
-async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+async function render(ownerUserId: string = authSessionFixture.user!.id) { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider ownerUserId={ownerUserId} onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
 function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
 async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
 
@@ -110,7 +113,7 @@ test("a selected-mail invitation is consumed once instead of reselecting after l
   let starts = 0;
   function Inbox() { const request = useViewGuidanceSelectionRequest(); useEffect(() => { if (request) starts++; }, [request]); return null; }
   function Navigation() { const [visible, setVisible] = useState(true); return <><button onClick={() => setVisible(value => !value)}>Switch destination</button>{visible ? <Inbox/> : null}</>; }
-  await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => {}} onSelect={() => {}}><FirstViewInvitation/><Navigation/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); });
+  await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider ownerUserId={authSessionFixture.user!.id} onSearch={() => {}} onSelect={() => {}}><FirstViewInvitation/><Navigation/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); });
   await click("Use selected mail");
   expect(starts).toBe(1);
   await click("Switch destination"); await click("Switch destination");
@@ -145,4 +148,23 @@ test("a late dismissal failure cannot revive an alert after confirmed completion
   await act(async () => { rejectSave(new Error("Late response failure")); await new Promise(resolve => setTimeout(resolve, 20)); });
   expect(browser.document.body.textContent).not.toContain("Hidden for this visit");
   expect(button("Retry saving choice")).toBeUndefined();
+});
+
+// The actual HTTP/SQLite mounted-U -> V red is retained in BRE-456 evidence.
+// This checks the client retains the original owner instead of recapturing V.
+test("guidance GET and dismissal remain bound to the original verified user", async () => {
+  await render();
+  await render("replacement-user");
+  await click("Skip for now");
+  expect(preferenceOwners.length).toBeGreaterThan(1);
+  expect(preferenceOwners.every(request => request.owner === authSessionFixture.user!.id)).toBe(true);
+  expect(preferenceOwners.some(request => request.method === "PATCH")).toBe(true);
+});
+
+test("unknown guidance owner blocks preference reads and dismissal writes", async () => {
+  await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => {}} onSelect={() => {}}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); });
+  await click("Getting started");
+  await act(async () => { (browser.document.querySelector('[aria-label="Close Getting started"]') as unknown as HTMLButtonElement).click(); });
+  expect(preferenceOwners).toHaveLength(0);
+  expect(writes).toHaveLength(0);
 });

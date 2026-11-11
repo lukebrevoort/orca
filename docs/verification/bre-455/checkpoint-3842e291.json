@@ -1,0 +1,26 @@
+{
+  "head": "3842e2918886454e0a3bf20796110eb1877c3907",
+  "clean": true,
+  "focused": {
+    "tests": 81,
+    "failures": 0,
+    "expects": 1155,
+    "seconds": 7.22,
+    "scope": "notifications/mobile-push/importance; includes historical baseline negative controls"
+  },
+  "apiTypecheck": {
+    "exitCode": 0
+  },
+  "tcpDemo": {
+    "httpRequests": 7,
+    "syntheticApnsAttempts": 1,
+    "syntheticApnsDeliveries": 1,
+    "browserEnvelopes": 1,
+    "simulatedConstructorReports": 1,
+    "actualBrowserConstructors": 0,
+    "externalProviderNetworkCalls": 0,
+    "osDisplayConfirmed": false
+  },
+  "fullWorkspace": "pending",
+  "independentReviews": "root-owned pending"
+}

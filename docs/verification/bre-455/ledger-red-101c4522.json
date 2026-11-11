@@ -1,0 +1,8 @@
+{
+  "head": "101c45221f7ce1e452b5b9c4da3c86af69eb00f8",
+  "clean": true,
+  "log": "bre455-ledger-red-101c4522.log",
+  "sha256": "360dbc46e17fb610974002f54f27207eddc24e3ccdf8ec2356220480bcc3f131",
+  "exitCode": 1,
+  "scope": "Actual fresh SQLite and real legacy dispatcher; adopted Unreviewed human mail produced 1 synthetic provider attempt and delivery; expected zero. Production dispatcher unchanged."
+}

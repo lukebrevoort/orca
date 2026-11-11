@@ -1,0 +1,63 @@
+{
+  "revision": {
+    "head": "8daef6bf1435df88641a8387af614205cde9a571",
+    "sourceSha256": "0060f740b2a01b2a810400b86aa4c1ba12d6518b7fa2b9d77337214dcc6b23ad",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": [
+      "M apps/web/scripts/bre-455-browser.mjs",
+      " M apps/web/src/App.interaction.test.tsx",
+      " M apps/web/src/App.tsx",
+      "?? docs/verification/bre-456/checkpoints/bre469-settings-owner-red-8955eab4.json",
+      "?? docs/verification/bre-456/checkpoints/bre469-settings-owner-red-light.png"
+    ]
+  },
+  "scenarios": [
+    {
+      "theme": "light",
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    },
+    {
+      "theme": "dark",
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    }
+  ],
+  "assertions": 6,
+  "failures": [],
+  "requests": [
+    {
+      "theme": "light",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "body": null
+    }
+  ],
+  "pageErrors": []
+}

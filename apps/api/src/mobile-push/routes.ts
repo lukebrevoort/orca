@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import { bodyLimit } from "../request-body.ts";
 import { z } from "zod";
 
+import { policyRow, readInstallation } from "../notifications/policy.ts";
 import { requireAuth, type AuthVariables } from "../auth/middleware.ts";
 import { createDatabaseClient } from "../db/client.ts";
 import { listNotificationSpaces, NotificationSelectionError } from "./catalog.ts";
@@ -104,7 +105,9 @@ export function registerMobilePushRoutes(app: MobilePushApp, options: {
       return c.json({
         configured: config.configured,
         deliveryEnabled: config.configured && devices.some((device) => device.disabledAt === null
-          && (device.notificationSelection.inbox || device.notificationSelection.spaceIds.length > 0)),
+          && (policyRow(client.sqlite, { userId: c.get("auth").userId, channel: "apns", installationId: device.installationId })
+            ? readInstallation(client.sqlite, { userId: c.get("auth").userId, channel: "apns", installationId: device.installationId }, c.get("auth").sessionId, config, now().getTime()).delivery.available
+            : (device.notificationSelection.inbox || device.notificationSelection.spaceIds.length > 0))),
         disabledReason: config.disabledReason,
         devices,
       });

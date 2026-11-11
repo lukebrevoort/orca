@@ -342,9 +342,9 @@
   width: min(760px,100%);
   max-height: calc(100dvh - clamp(48px,14vh,128px));
   display: grid;
-  grid-template-areas: "heading" "form" "toolbar" "filters" "actions" "results";
+  grid-template-areas: "heading" "form" "toolbar" "filters" "actions" "results" "importance";
   grid-template-columns: minmax(0,1fr);
-  grid-template-rows: auto auto auto auto auto minmax(0,1fr);
+  grid-template-rows: auto auto auto auto auto minmax(0,1fr) auto;
   overflow: hidden;
   border: 1px solid var(--desktop-border-strong);
   border-radius: 16px;
@@ -424,7 +424,7 @@
 
 @media (max-width: 760px) {
   .global-mail-search-layer { align-items: stretch; padding: 0; }
-  .global-mail-search { width: 100%; max-height: 100dvh; min-height: 100dvh; border: 0; border-radius: 0; grid-template-rows: auto auto auto auto auto minmax(120px,1fr); }
+  .global-mail-search { width: 100%; max-height: 100dvh; min-height: 100dvh; border: 0; border-radius: 0; grid-template-rows: auto auto auto auto auto minmax(120px,1fr) auto; }
   .global-mail-search-heading { padding-inline: 12px; }
   .global-mail-search-return span { display: none; }
   .global-mail-search-form { padding: 10px 12px 8px; }
@@ -539,7 +539,7 @@
 .desktop-shell .reader-why-here:hover,.desktop-shell .reader-why-here:focus-visible,.desktop-shell .reader-why-here[aria-expanded="true"] { border-color: var(--desktop-accent); color: var(--desktop-accent); }
 .desktop-shell .pin-sender-button { display: none; }
 .desktop-shell .keep-thread-button { right: 12px; top: 41px; }
-.desktop-shell .message-row-wrap > .sender-attention-control { right: 52px; top: 40px; }
+.desktop-shell .message-row-wrap .sender-attention-control { right: 52px; top: 40px; }
 
 /* BRE-371 / BRE-376: Compact is a quieter, information-dense version of the
    same row. Unread mail keeps the neutral list surface and is distinguished by
@@ -593,7 +593,7 @@
   }
 }
 :root[data-reader-density="compact"] .desktop-shell .keep-thread-button { top: 19px; }
-:root[data-reader-density="compact"] .desktop-shell .message-row-wrap > .sender-attention-control { top: 20px; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-wrap .sender-attention-control { top: 20px; }
 
 :root[data-theme="dark"] .desktop-shell .message-list {
   box-shadow: 0 22px 70px rgba(0, 0, 0, .26);
@@ -604,15 +604,15 @@
 :root[data-theme="dark"][data-reader-density="compact"] .desktop-shell .message-row-unread:hover {
   background: var(--desktop-surface-hover);
 }
-:root[data-theme="dark"] .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger,
+:root[data-theme="dark"] .desktop-shell .message-row-wrap .sender-attention-control > .sender-attention-trigger,
 :root[data-theme="dark"] .desktop-shell .keep-thread-button {
   border-color: transparent;
   background: transparent;
   color: var(--desktop-faint);
 }
-:root[data-theme="dark"] .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger:hover,
-:root[data-theme="dark"] .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger:focus-visible,
-:root[data-theme="dark"] .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger[aria-expanded="true"],
+:root[data-theme="dark"] .desktop-shell .message-row-wrap .sender-attention-control > .sender-attention-trigger:hover,
+:root[data-theme="dark"] .desktop-shell .message-row-wrap .sender-attention-control > .sender-attention-trigger:focus-visible,
+:root[data-theme="dark"] .desktop-shell .message-row-wrap .sender-attention-control > .sender-attention-trigger[aria-expanded="true"],
 :root[data-theme="dark"] .desktop-shell .keep-thread-button:hover,
 :root[data-theme="dark"] .desktop-shell .keep-thread-button:focus-visible {
   border-color: var(--desktop-border-strong);
@@ -977,7 +977,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
    reminder, evidence, and attention controls separate right-hand bands. */
 .desktop-shell .inbox-view-later .message-row { padding-right: 430px; }
 .desktop-shell .inbox-view-later .message-evidence-button { right: 298px; top: 31px; }
-.desktop-shell .inbox-view-later .message-row-wrap > .sender-attention-control { right: 254px; top: 33px; }
+.desktop-shell .inbox-view-later .message-row-wrap .sender-attention-control { right: 254px; top: 33px; }
 .desktop-shell .inbox-view-later .later-row-actions { right: 12px; gap: 6px; top: 31px; width: 230px; }
 .desktop-shell .inbox-view-later .later-row-actions span,
 .desktop-shell .inbox-view-later .later-row-actions button { font-size: 9px; padding: 8px 10px; }
@@ -986,7 +986,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media (max-width: 1100px) and (min-width: 761px) {
   .desktop-shell .inbox-view-later .message-row { min-height: 126px; padding: 12px 100px 58px 16px; }
   .desktop-shell .inbox-view-later .message-evidence-button { bottom: 10px; top: auto; }
-  .desktop-shell .inbox-view-later .message-row-wrap > .sender-attention-control { bottom: 12px; top: auto; }
+  .desktop-shell .inbox-view-later .message-row-wrap .sender-attention-control { bottom: 12px; top: auto; }
   .desktop-shell .inbox-view-later .later-row-actions { bottom: 11px; top: auto; }
 }
 
@@ -1051,12 +1051,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .desktop-shell .message-evidence-button span { flex: 0 0 auto; }
   .desktop-shell .message-evidence-button strong { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .desktop-shell .keep-thread-button { right: 8px; bottom: 10px; top: auto; width: 44px; height: 44px; }
-  .desktop-shell .message-row-wrap > .sender-attention-control { right: 56px; bottom: 10px; top: auto; }
+  .desktop-shell .message-row-wrap .sender-attention-control { right: 56px; bottom: 10px; top: auto; }
   .desktop-shell .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .keep-thread-button { right: 8px; bottom: 10px; top: auto; }
-  .desktop-shell .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .message-row-wrap > .sender-attention-control { right: 56px; bottom: 10px; top: auto; }
-  .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger { width: 44px; height: 44px; min-height: 44px; }
+  .desktop-shell .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .message-row-wrap .sender-attention-control { right: 56px; bottom: 10px; top: auto; }
+  .desktop-shell .message-row-wrap .sender-attention-control > .sender-attention-trigger { width: 44px; height: 44px; min-height: 44px; }
   :root[data-reader-density="compact"] .desktop-shell .message-row { min-height: 126px; padding: 10px 12px 62px; }
-  :root[data-reader-density="compact"] .desktop-shell .message-row-wrap > .sender-attention-control { bottom: 9px; top: auto; }
+  :root[data-reader-density="compact"] .desktop-shell .message-row-wrap .sender-attention-control { bottom: 9px; top: auto; }
   :root[data-reader-density="compact"] .desktop-shell .keep-thread-button { bottom: 9px; top: auto; }
   .desktop-shell .message-row-wrap-selecting .message-row,
   :root[data-reader-density="compact"] .desktop-shell .message-row-wrap-selecting .message-row { min-height: 88px; padding: 12px 12px 12px 62px; }
@@ -1064,8 +1064,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .desktop-shell .inbox-view-later .message-row,
   :root[data-reader-density="compact"] .desktop-shell .inbox-view-later .message-row { min-height: 202px; padding: 12px 12px 118px; }
   .desktop-shell .inbox-view-later .message-evidence-button { left: 12px; right: 64px; bottom: 64px; top: auto; }
-  .desktop-shell .inbox-view-later .message-row-wrap > .sender-attention-control { right: 12px; bottom: 64px; top: auto; }
-  :root[data-reader-density="compact"] .desktop-shell .inbox-view-later .message-row-wrap > .sender-attention-control { right: 12px; bottom: 64px; top: auto; }
+  .desktop-shell .inbox-view-later .message-row-wrap .sender-attention-control { right: 12px; bottom: 64px; top: auto; }
+  :root[data-reader-density="compact"] .desktop-shell .inbox-view-later .message-row-wrap .sender-attention-control { right: 12px; bottom: 64px; top: auto; }
   .desktop-shell .inbox-view-later .later-row-actions { left: 12px; right: 12px; bottom: 10px; top: auto; width: auto; min-width: 0; gap: 6px; }
   .desktop-shell .inbox-view-later .later-row-actions span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .desktop-shell .inbox-view-later .later-row-actions button { min-height: 44px; flex: 0 0 auto; }

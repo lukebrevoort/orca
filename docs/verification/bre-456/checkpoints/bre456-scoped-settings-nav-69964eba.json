@@ -1,0 +1,16 @@
+{
+  "rawPath": "/tmp/bre456-scoped-settings-nav-69964eba.log",
+  "sha256": "83bfc7d5a096887be374437284773274545093693cbc4ee6fb67e9340e523c8f",
+  "summary": [
+    "162 pass",
+    "4 fail",
+    "1263 expect() calls",
+    "Ran 166 tests across 2 files. [14.37s]"
+  ],
+  "failures": [
+    "(fail) AppSidebar mobile navigation > includes saved-view management in arrow navigation and marks only the actual advanced destination current [10.22ms]",
+    "(fail) AppSidebar mobile navigation > uses the configured Focus shortcut name, position and visibility without an extra built-in shortcut [7.61ms]",
+    "(fail) Settings recovery > gives session, account, agent, and sync read failures scoped recovery [20.05ms]",
+    "(fail) Settings recovery > retries agent connections and sync status without reloading other Settings reads [21.27ms]"
+  ]
+}

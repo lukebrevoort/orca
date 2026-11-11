@@ -1,3 +1,5 @@
+import { ImportantNotificationSettings, useImportantNotifications } from "./important-notifications";
+import { ImportanceControl, ImportanceProvider, ImportantMail, importanceChanged, type ImportantConversation } from "./importance";
 import { SettingsLeaveDialog, useSettingsNavigationGuard } from "./settings-navigation-guard";
 import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
@@ -99,7 +101,7 @@ export const defaultReaderPreferences: ReaderPreferences = {
 
 const readerDensityHint = "Calm gives each message more room. Compact fits more mail and thread history on screen.";
 
-type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
+type Mailbox = "important" | "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
 
@@ -321,6 +323,7 @@ function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
 }
 
 const mailboxes: MailboxItem[] = [
+  { id: "important", label: "Important", description: "Conversations chosen for attention" },
   { id: "inbox", label: "Inbox", description: "What deserves your attention now" },
   { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
   { id: "signals", label: "Signals", description: "Important changes and high-consequence events" },
@@ -424,10 +427,12 @@ export function App() {
     }));
   };
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
+  const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
   const devPreview = isDevPreviewRoute();
   const onboardingPreview = isOnboardingDevPreviewRoute();
   const calendarPreview = isCalendarSettingsDevPreviewRoute();
   const availabilityPreview = isSchedulingAvailabilityDevPreviewRoute();
+  const importantNotifications = useImportantNotifications(!devPreview && !onboardingPreview && !calendarPreview && !availabilityPreview && !isSettingsDevPreviewRoute() && !isLoginRoute() && !isMobileAuthRoute());
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -455,6 +460,7 @@ export function App() {
           return;
         }
         const session = authSessionSchema.parse(await response.json());
+        setAuthenticatedUserId(session.isAuthenticated ? session.user?.id ?? null : null);
         setAccess("authenticated");
         if (isOnboardingRoute() && session.onboardingCompletedAt) {
           window.location.replace("/");
@@ -497,7 +503,7 @@ export function App() {
   }
 
   if (isSettingsRoute()) {
-    return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} />;
+    return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} notificationClient={importantNotifications} />;
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
@@ -522,7 +528,7 @@ export function App() {
     return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Attention views"><AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} /></DesktopSettingsFrame>;
   }
 
-  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
+  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} notificationClient={importantNotifications} verifiedUserId={authenticatedUserId} />;
 
   async function completeOnboarding() {
     const response = await fetch("/v1/auth/onboarding/complete", {
@@ -666,15 +672,23 @@ function buildSettingsReadIssue(resource: SettingsReadResource, error: unknown):
   return { kind: "server", title: copy.serverTitle, detail, preserved: copy.preserved, effect: copy.effect, actionLabel: copy.retryLabel };
 }
 
-export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false }: {
+export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false, notificationClient }: {
   preferences: ReaderPreferences;
   setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
   systemTheme: Theme;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
   demoMode?: boolean;
+  notificationClient?: ReturnType<typeof useImportantNotifications>;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const ownNotifications = useImportantNotifications(!demoMode && !notificationClient);
+  const importantNotifications = notificationClient ?? ownNotifications;
+  const sectionFromHash = () => settingsSections.find(([id]) => `#${id}` === (typeof window === "undefined" ? "" : window.location.hash))?.[0] ?? "account";
+  const [activeSection, setActiveSection] = useState<string>(sectionFromHash);
+  useEffect(() => { const update = () => setActiveSection(sectionFromHash()); window.addEventListener("hashchange", update); window.addEventListener("popstate", update); return () => { window.removeEventListener("hashchange", update); window.removeEventListener("popstate", update); }; }, []);
+  function selectSettingsSection(id: string) { window.history.replaceState(window.history.state, "", `#${id}`); setActiveSection(id); }
+
   const [accountPreferences, setAccountPreferences] = useState<UserPreferences | null>(demoMode ? defaultAccountPreferences : null);
   const [accountLoadStatus, setAccountLoadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
   const [accountLoadError, setAccountLoadError] = useState<unknown>(null);
@@ -690,6 +704,20 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const accountEditVersionRef = useRef(0);
   const accountLoadRequestRef = useRef(0);
   const accountSaveRequestRef = useRef(0);
+  const settingsOwnerRef = useRef<string | null>(null);
+  const [settingsOwnerBlocked, setSettingsOwnerBlocked] = useState(false);
+  const focusRecoveredSection = useRef(false);
+  useLayoutEffect(() => {
+    for (const panel of settingsEditorRef.current?.querySelectorAll<HTMLElement>(".settings-section") ?? []) panel.hidden = panel.id !== activeSection;
+    if (!settingsOwnerBlocked && focusRecoveredSection.current) {
+      focusRecoveredSection.current = false;
+      const heading = settingsEditorRef.current?.querySelector<HTMLHeadingElement>(".settings-section:not([hidden]) h2");
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeSection, settingsOwnerBlocked]);
+  const [settingsOwnerRecoveryBusy, setSettingsOwnerRecoveryBusy] = useState(false);
+  const [settingsOwnerRecoveryError, setSettingsOwnerRecoveryError] = useState<string | null>(null);
   const accountLoadControllerRef = useRef<AbortController | null>(null);
   const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[]>(demoMode ? [demoAccount] : []);
   const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
@@ -715,7 +743,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   useEffect(() => {
     if (demoMode) return;
     void loadAccountPreferences();
-    return () => { accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; };
+    return () => { accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; accountSaveRequestRef.current += 1; };
   }, [demoMode]);
   useEffect(() => {
     if (demoMode) return;
@@ -733,6 +761,45 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     return () => { settingsSyncControllerRef.current?.abort(); settingsSyncRequestRef.current += 1; };
   }, [demoMode]);
 
+  useEffect(() => {
+    if (importantNotifications.state.error?.startsWith("Notification ownership changed.")) blockSettingsOwner();
+  }, [importantNotifications.state.error]);
+  useEffect(() => { if (settingsOwnerBlocked) titleRef.current?.focus(); }, [settingsOwnerBlocked]);
+
+  function blockSettingsOwner() {
+    accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; accountSaveRequestRef.current += 1;
+    connectedAccountsControllerRef.current?.abort(); connectedAccountsRequestRef.current += 1;
+    settingsSyncControllerRef.current?.abort(); settingsSyncRequestRef.current += 1;
+    agentConnectionsControllerRef.current?.abort(); agentConnectionsRequestRef.current += 1;
+    setSettingsOwnerBlocked(true);
+    setAccountSaveStatus("idle");
+  }
+  async function requireSettingsOwner(signal?: AbortSignal, establish = false) {
+    const session = await fetchJson("/v1/auth/session", authSessionSchema, signal);
+    if (!session.isAuthenticated || !session.user) throw new ApiRequestError(401, "Your Orca session expired.", "unauthorized");
+    if (!settingsOwnerRef.current && !establish) throw new Error("Load the original Settings session before changing account choices.");
+    if (settingsOwnerRef.current && settingsOwnerRef.current !== session.user.id) {
+      blockSettingsOwner();
+      throw new Error("These choices belong to the original account. Return to that account to keep editing.");
+    }
+    settingsOwnerRef.current = session.user.id;
+    return session.user.id;
+  }
+  async function recoverSettingsOwner() {
+    if (settingsOwnerRecoveryBusy) return;
+    setSettingsOwnerRecoveryBusy(true); setSettingsOwnerRecoveryError(null);
+    try {
+      await requireSettingsOwner();
+      focusRecoveredSection.current = true;
+      setSettingsOwnerBlocked(false);
+      setAccountSaveNotice("Original account restored. Your unsaved choices are still here.");
+      void loadConnectedAccounts(); void loadSettingsSyncStatus(); void loadAgentConnections();
+      // An interrupted first load has no editable draft to restore.
+      if (!accountPreferences) void loadAccountPreferences();
+    } catch (error) { setSettingsOwnerRecoveryError(getErrorMessage(error)); }
+    finally { setSettingsOwnerRecoveryBusy(false); }
+  }
+
   async function loadAccountPreferences() {
     if (demoMode) return;
     const requestId = ++accountLoadRequestRef.current;
@@ -742,7 +809,9 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     setAccountLoadStatus("loading");
     setAccountLoadError(null);
     try {
-      const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal);
+      const ownedUserId = await requireSettingsOwner(controller.signal, true);
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal, { headers: { "x-orca-expected-user-id": ownedUserId } });
+      await requireSettingsOwner(controller.signal);
       if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
       setAccountPreferences(value);
       accountEditVersionRef.current = 0;
@@ -752,6 +821,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       setAccountSaveError(null);
       setAccountSaveNotice(null);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === "session_owner_changed") blockSettingsOwner();
       if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
       setAccountLoadStatus("error");
       setAccountLoadError(error);
@@ -831,12 +901,19 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     const requestId = ++accountSaveRequestRef.current;
     const editVersion = accountEditVersionRef.current;
     const payload = accountPreferences;
+    // Bind the command to the original loaded editor before any preflight
+    // await. A late U identity response cannot authorize V's request cookie.
+    const ownedUserId = settingsOwnerRef.current;
     if (demoMode) { setAccountDirty(false); setAccountSaveStatus("saved"); return; }
     setAccountSaveStatus("saving");
     setAccountSaveError(null);
     setAccountSaveNotice(null);
     try {
-      const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      if (!ownedUserId) throw new Error("Load the original Settings session before saving account choices.");
+      await requireSettingsOwner();
+      if (requestId !== accountSaveRequestRef.current) return;
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json", "x-orca-expected-user-id": ownedUserId }, body: JSON.stringify(payload) });
+      await requireSettingsOwner();
       invalidateWritingPreferences();
       if (requestId !== accountSaveRequestRef.current) return;
       if (editVersion === accountEditVersionRef.current) {
@@ -849,15 +926,18 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         setAccountSaveNotice("Your earlier account choices were saved. Newer edits are still here and need saving.");
       }
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === "session_owner_changed") blockSettingsOwner();
       if (requestId !== accountSaveRequestRef.current) return;
       setAccountSaveError(error instanceof Error ? error : new Error(getErrorMessage(error)));
       setAccountSaveStatus("error");
     }
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
-  function connectOutlook() {
+  async function connectOutlook() {
     // The request can fail without leaving Settings. Keep edits dirty; the
     // native unload guard protects the actual authorization redirect instead.
+    try { if (!demoMode) await requireSettingsOwner(); }
+    catch (error) { setOutlookAuthorizationStatus("error"); setOutlookAuthorizationError(getErrorMessage(error)); return; }
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
       // A cancelled native unload leaves this component mounted and retryable.
       if (result === "started") setOutlookAuthorizationStatus("idle");
@@ -870,7 +950,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
     setRevokingAgentConnection(connection.id); setAgentConnectionsError(null);
     try {
-      if (!demoMode) await revokeAgentConnection(connection.id);
+      if (!demoMode) { await requireSettingsOwner(); await revokeAgentConnection(connection.id); }
       const revokedAt = new Date().toISOString();
       setAgentConnections((current) => current.map((item) => item.id === connection.id ? { ...item, revokedAt } : item));
     } catch (error) { setAgentConnectionsError(`Could not revoke this connection. ${getErrorMessage(error)}`); }
@@ -880,7 +960,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     if (!window.confirm("Revoke every active ChatGPT and Codex connection?")) return;
     setRevokingAgentConnection("all"); setAgentConnectionsError(null);
     try {
-      if (!demoMode) await revokeAllAgentConnections();
+      if (!demoMode) { await requireSettingsOwner(); await revokeAllAgentConnections(); }
       const revokedAt = new Date().toISOString();
       setAgentConnections((current) => current.map((item) => item.revokedAt ? item : { ...item, revokedAt }));
     } catch (error) { setAgentConnectionsError(`Could not revoke agent connections. ${getErrorMessage(error)}`); }
@@ -921,22 +1001,21 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     syncing: !demoMode && (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "syncing"))),
   }), [connectedAccounts.length, connectedAccountsStatus, demoMode, demoSavedViews, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
+  if (settingsOwnerBlocked) return <><main className="oauth-page login-required-page settings-owner-recovery" ref={settingsEditorRef}><section className="login-required-shell">
+    <h1 ref={titleRef} tabIndex={-1}>Your signed-in account changed</h1>
+    <p>Your unsaved choices are still here for the account you opened Settings with. Return to that account to keep editing, or leave Settings and discard these changes.</p>
+    <button disabled={settingsOwnerRecoveryBusy} onClick={() => void recoverSettingsOwner()} type="button">{settingsOwnerRecoveryBusy ? "Checking original account…" : "Check original account"}</button>
+    <a href="/login?returnTo=%2Fsettings">Sign in to the original account</a><a href="/">Leave Settings</a>
+    {settingsOwnerRecoveryError ? <p role="alert">{settingsOwnerRecoveryError}</p> : null}
+  </section></main>{navigationGuard.asking ? <SettingsLeaveDialog onStay={navigationGuard.keep} onLeave={navigationGuard.discard} /> : null}</>;
   return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
     <main className="settings-home-page" ref={settingsEditorRef}>
     {demoMode ? <p role="note">{demoSessionNotice}</p> : null}
     <div className="settings-home-layout">
-      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p>{settingsSections.map(([id, title]) => <a href={`#${id}`} key={id}>{title}</a>)}</aside>
-      <label className="settings-mobile-jump"><span>Jump to section</span><select defaultValue="" onChange={event => {
-        const id = event.target.value;
-        const section = document.getElementById(id);
-        if (!section) return;
-        window.history.replaceState(window.history.state, "", `#${id}`);
-        section.scrollIntoView({ block: "start" });
-        section.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
-        event.target.value = "";
-      }}><option disabled value="">Choose a section…</option>{settingsSections.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p>{settingsSections.map(([id, title]) => <a aria-current={activeSection === id ? "page" : undefined} href={`#${id}`} key={id} onClick={() => selectSettingsSection(id)}>{title}</a>)}</aside>
+      <label className="settings-mobile-jump"><span>Jump to section</span><select aria-label="Settings section" value={activeSection} onChange={event => selectSettingsSection(event.target.value)}>{settingsSections.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
       <section className="settings-home-content" aria-labelledby="settings-title">
-        <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
+        <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Settings</h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
         <SettingsSection id="account" title="Account" note="Account-level">
           {profileAccount ? <div className="settings-profile">
@@ -957,9 +1036,9 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
             <label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>This device choice stays available even if account choices cannot load.</small></span></label>
           </div>
         </SettingsSection>
-        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
+        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><ImportantNotificationSettings client={importantNotifications}/><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Saves your reminder intent. Browser reminder delivery is unavailable; reminders still resurface in Later.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
         <SettingsSection id="connected" title="Connected accounts" note="Provider access">
-          <p className="settings-section-copy">Gmail and Microsoft Outlook can live in the same Orca workspace. Each account stays separately permissioned and appears in the unified inbox when its sync is ready.</p>
+          <p className="settings-section-copy">Gmail supports mail sync, drafts and sending with the required permissions. Outlook sign-in is supported, but Outlook mail sync and sending are unavailable. Calendar free/busy access is separate from mail access.</p>
           <div aria-live="polite" className="settings-account-list">
             {connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking connected accounts…</p> : null}
             {connectedAccountsIssue ? <SettingsOperationalState issue={connectedAccountsIssue} onRetry={() => void loadConnectedAccounts()} /> : null}
@@ -1300,6 +1379,8 @@ export function InboxApp({
   setTheme,
   bulkAttentionClient,
   initialDemoMessages,
+  notificationClient,
+  verifiedUserId = null,
 }: {
   demoMode?: boolean;
   preferences?: ReaderPreferences;
@@ -1307,6 +1388,8 @@ export function InboxApp({
   setTheme: Dispatch<SetStateAction<Theme>>;
   bulkAttentionClient?: BulkAttentionClient;
   initialDemoMessages?: InboxMessage[];
+  notificationClient?: ReturnType<typeof useImportantNotifications>;
+  verifiedUserId?: string | null;
 }) {
   const topLayerActive = useTopLayerActive();
   const online = useOnlineStatus();
@@ -1341,6 +1424,7 @@ export function InboxApp({
   const [classificationActionMessage, setClassificationActionMessage] = useState<string | null>(null);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">(demoMode ? "ready" : "loading");
+  useImportantNotifications(!demoMode && !notificationClient && status !== "signedout");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
@@ -1429,11 +1513,12 @@ export function InboxApp({
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>(() => {
     if (typeof window === "undefined") return "inbox";
     const destination = desktopDestinationFromLocation(window.location);
-    return ["inbox", "focus", "signals", "quiet", "hidden", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
+    return ["important", "inbox", "focus", "signals", "quiet", "hidden", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
   });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [readMutationRefreshKey, setReadMutationRefreshKey] = useState(0);
+  useEffect(() => { const changed = () => { setReadMutationRefreshKey(key => key + 1); setReaderRefreshKey(key => key + 1); }; const expired = () => setStatus("signedout"); window.addEventListener("orca:session-expired", expired); window.addEventListener(importanceChanged, changed); return () => { window.removeEventListener(importanceChanged, changed); window.removeEventListener("orca:session-expired", expired); }; }, []);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && readSurfaceLocation(window.location).composer ? "compose" : null);
@@ -1443,7 +1528,7 @@ export function InboxApp({
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const readingSessions = useMemo(() => new ReaderSessions(), [account?.id, demoMode, status === "signedout"]);
   useEffect(() => () => readingSessions.clear(), [readingSessions]);
-  const pendingReaderRead = useRef<InboxMessage | null>(null);
+  const pendingReaderRead = useRef<Pick<InboxMessage, "accountId" | "threadId" | "subject" | "unread"> | null>(null);
   useEffect(() => { pendingReaderRead.current = null; }, [account?.id, status === "signedout"]);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -2010,7 +2095,7 @@ export function InboxApp({
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
-    : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+    : summaryOpen ? "Summary" : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;
@@ -2288,7 +2373,7 @@ export function InboxApp({
     })) ?? null,
     [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
-  const activeMailboxLabel = !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
+  const activeMailboxLabel = activeMailbox === "important" ? "Important" : !activeDestinationId && activeMailbox === "focus" ? "Focus" : requestedDestinationId ? catalog.label(requestedDestinationId) : activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
       ?? allMailMessages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
@@ -2321,7 +2406,7 @@ export function InboxApp({
       closeTimerRef.current = null;
     }
 
-    const destination = parseDesktopDestination(location.destination) ?? "inbox";
+    const destination = parseDesktopDestination(location.destination) ?? "important";
     if (destination === "settings") {
       window.location.assign(demoMode ? "/dev/settings" : "/settings");
       return;
@@ -2495,6 +2580,27 @@ export function InboxApp({
           });
       }
     }
+  }
+
+  function importantSourceKey(target: { accountId: string; threadId: string }) {
+    return JSON.stringify(["important", target.accountId, target.threadId]);
+  }
+
+  function openImportantThread(item: ImportantConversation) {
+    summaryDraftOpenGenerationRef.current += 1;
+    if (panelClosing) return;
+    pendingReaderRead.current = item;
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    const returnContext = captureSurfaceReturnContext({ kind: "message", id: importantSourceKey(item) });
+    surfaceHistoryRef.current?.openReader({ accountId: item.accountId, threadId: item.threadId }, returnContext);
+    runUiTransition("reader-forward", () => {
+      setPanelClosing(false); setZenClosing(false);
+      setSelectedThreadId(item.threadId); setSelectedThreadAccountId(item.accountId);
+    });
   }
 
   function openSavedViewThread(target: { accountId: string; threadId: string }) {
@@ -3383,7 +3489,7 @@ export function InboxApp({
   }
 
   return (
-    <AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
+    <ImportanceProvider key={account?.id ?? ""}><AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} ownerUserId={verifiedUserId} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
     <div className="app-root">
       <main className={`desktop-shell mobile-mail-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
@@ -3405,6 +3511,7 @@ export function InboxApp({
             theme={theme}
             title={summaryOpen ? "Summary" : !activeDestinationId && activeMailbox === "focus" && !organizationStudioOpen ? "Focus" : requestedDestinationId && !organizationStudioOpen ? catalog.label(requestedDestinationId) : organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
+          <nav className="mail-scope-switch" aria-label="Mail filters"><button aria-pressed={activeMailbox === "important" && !activeSavedViewId && !activeCollectionId && !organizationStudioOpen && !summaryOpen} onClick={() => navigateDesktop("important")} type="button">Important</button><button aria-pressed={activeMailbox === "all" && !activeSavedViewId && !activeCollectionId && !organizationStudioOpen && !summaryOpen} onClick={() => navigateDesktop("all")} type="button">All Mail</button></nav>
           {demoMode ? <p className="view-state" role="note">{demoSessionNotice}</p> : null}
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {summaryOpen && <div style={{ display: selectedThreadId ? "none" : undefined }}><SummaryPage demoMode={demoMode} accountId={account?.id} accountEmail={account?.email} onOpenDrafts={() => navigateDesktop("drafts")} onOpenInbox={() => navigateDesktop("inbox")} onOpenMessage={(message, origin) => { summaryReaderOriginRef.current = origin; openThread(message); }} startDraftOpen={() => ++summaryDraftOpenGenerationRef.current} onOpenDraft={(draft, origin, generation) => { if (generation !== summaryDraftOpenGenerationRef.current) return; summaryDraftOriginRef.current = origin; openCompose(draft.id, draft); }} /></div>}
@@ -3416,7 +3523,7 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeMailbox === "important" ? <ImportantMail accounts={syncStatus?.accounts} accountId={loadedInboxRef.current || demoMode ? account?.id ?? null : null} accountLabel={account?.email} disabled={demoMode} readRefresh={readMutationRefreshKey} onOpen={openImportantThread} onRowRef={(item, node) => { const key = importantSourceKey(item); if (node) messageRowRefs.current.set(key, node); else messageRowRefs.current.delete(key); }} onAllMail={() => navigateDesktop("all")} /> : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${destinationPageIdentity}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
@@ -3607,7 +3714,7 @@ export function InboxApp({
         </>
       ) : null}
     </div>
-    </FirstViewGuidanceProvider></AttentionRoutingProvider>
+    </FirstViewGuidanceProvider></AttentionRoutingProvider></ImportanceProvider>
   );
 }
 
@@ -3826,13 +3933,13 @@ export function WelcomeOrientationPage({ onComplete, theme, setTheme }: {
     <section className="onboarding-card" aria-labelledby="onboarding-title">
       <p className="settings-eyebrow">You’re in</p>
       <h1 id="onboarding-title" ref={titleRef} tabIndex={-1}>Welcome to a<br /><em>quieter inbox.</em></h1>
-      <p className="onboarding-lede">Orca is syncing your Gmail now. Your workspace starts with the mail that feels most human, without changing anything in Gmail.</p>
+      <p className="onboarding-lede">Start with Important: conversations you choose to give attention. All Mail and search keep the rest within reach. Reading and importance choices stay separate from mail placement.</p>
       <ul className="onboarding-orientation">
-        <li><span>01</span><div><strong>Read what matters</strong><p>Your inbox brings people forward and keeps the rest within reach.</p></div></li>
-        <li><span>02</span><div><strong>Tune as you go</strong><p>Move senders into Focus, Quiet, or Hidden whenever their rhythm becomes clear.</p></div></li>
+        <li><span>01</span><div><strong>Read what matters</strong><p>Read complete conversations, then choose Important or Not important for this conversation in this account.</p></div></li>
+        <li><span>02</span><div><strong>Keep everything within reach</strong><p>All Mail is always available. Sender preferences need a separate preview and confirmation; Move and saved views have their own meanings.</p></div></li>
       </ul>
       <div className="onboarding-actions">
-        <a aria-busy={completionStatus === "loading" || undefined} className="onboarding-enter" href="/" onClick={onComplete ? (event) => void handleComplete(event) : undefined}>{completionStatus === "loading" ? "Opening your inbox…" : "Open my inbox"} <span aria-hidden="true">→</span></a>
+        <a aria-busy={completionStatus === "loading" || undefined} className="onboarding-enter" href="/" onClick={onComplete ? (event) => void handleComplete(event) : undefined}>{completionStatus === "loading" ? "Opening your mail…" : "Open my mail"} <span aria-hidden="true">→</span></a>
         {completionError ? <p className="onboarding-error" role="alert">{completionError}</p> : null}
         <p>Want your old organization later? Import Gmail labels from Settings.</p>
       </div>
@@ -4100,7 +4207,7 @@ function OAuthLoginPage({ loginIntent = false, returnToOverride }: { loginIntent
               ? returnProvider === "outlook"
                 ? "Orca is now connected to your Microsoft Outlook account. Outlook mail will appear after the Graph sync step is enabled."
                 : "Orca is now connected to your Gmail account. Your first inbox sync can begin when you enter your workspace."
-              : "Choose Gmail or Microsoft Outlook to sign in. Orca asks for read-only mail access to build a calmer inbox—never to send, delete, or modify your messages."}
+              : "Choose Gmail or Microsoft Outlook to sign in with read-first permissions. Gmail sending requires separate consent. Outlook mail sync and sending are currently unavailable."}
           </p>
 
           {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
@@ -5616,6 +5723,7 @@ function InboxView({
               return (
                 <li key={messageIdentityKey(message)}>
                   <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
+                    <div className="message-row-body">
                     <button
                       aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
                       aria-pressed={selectionMode ? selected : undefined}
@@ -5683,6 +5791,8 @@ function InboxView({
                       return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatInboxReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
                     {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
+                    </div>
+                    {!selectionMode ? <ImportanceControl accountId={message.accountId} threadId={message.threadId} address={message.from.email} initial={message.importance} accountLabel={syncStatus?.accounts.find(item => item.id === message.accountId)?.email ?? (account?.id === message.accountId ? account.email : undefined)} disabled={demoMode} /> : null}
                   </div>
                 </li>
               );
@@ -6137,11 +6247,11 @@ export function MessageReader({
         <div className="reader-document">
           <header className="reader-heading">
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
-            <p className="reader-attention-label">Attention: {(detail.thread.attention.attentionBehavior ?? "normal").replace(/^./, letter => letter.toUpperCase())}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
+            <ImportanceControl accountId={detail.account.id} accountLabel={detail.account.email} threadId={detail.thread.id} initial={detail.thread.importance} address={messages.find(message => message.from.email !== detail.account.email)?.from.email} disabled={demoMode} />
             <div className="reader-heading-actions">
-              <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
+              <details className="reader-organize-tools"><summary>Organize &amp; remind</summary><div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div></details>
               <details className="reader-thread-menu" ref={threadMenuRef} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
                 <summary role="button" aria-label="Conversation actions" title="Conversation actions">···</summary>
                 <div className="reader-thread-menu-items">
@@ -7068,7 +7178,7 @@ async function fetchJson<T>(
   signal?: AbortSignal,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, { ...init, credentials: "include", signal });
+  const response = await fetch(input, { ...init, credentials: "include", signal, headers: { ...Object.fromEntries(new Headers(init?.headers)), "x-orca-importance-version": "1" } });
 
   if (!response.ok) throw await buildApiRequestError(response);
 

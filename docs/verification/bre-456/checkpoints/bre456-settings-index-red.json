@@ -1,0 +1,141 @@
+{
+  "revision": {
+    "head": "4c4a61e87a1d71fbbcbd19192f4686d7c34315a7",
+    "sourceSha256": "7c9b9241b7c19ba532b4e34bd9c28ea3a081d9665f647d3a71bbc1bc5732a7d5",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": [
+      "M apps/web/scripts/bre-456-importance-recovery.mjs",
+      " M apps/web/scripts/build-bre-456.mjs",
+      " M apps/web/scripts/run-bre-456.mjs",
+      " M apps/web/scripts/verification-revision.mjs",
+      " M apps/web/src/App.tsx",
+      " M docs/verification/bre-456/README.md",
+      "?? apps/web/scripts/bre-455-browser-fixture.ts",
+      "?? apps/web/scripts/bre-455-browser.mjs",
+      "?? apps/web/scripts/bre-456-settings-index.mjs",
+      "?? apps/web/src/important-notifications.css",
+      "?? apps/web/src/important-notifications.tsx",
+      "?? docs/verification/bre-456/checkpoints/"
+    ]
+  },
+  "states": [
+    {
+      "theme": "light",
+      "links": [
+        {
+          "text": "Account",
+          "current": null,
+          "border": "rgb(22, 98, 72)",
+          "weight": "600"
+        },
+        {
+          "text": "Appearance & reading",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Inbox & attention",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Writing",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Notifications & reminders",
+          "current": "page",
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Connected accounts",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Agent connections",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Privacy & data",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "links": [
+        {
+          "text": "Account",
+          "current": null,
+          "border": "rgb(166, 212, 185)",
+          "weight": "600"
+        },
+        {
+          "text": "Appearance & reading",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Inbox & attention",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Writing",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Notifications & reminders",
+          "current": "page",
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Connected accounts",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Agent connections",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        },
+        {
+          "text": "Privacy & data",
+          "current": null,
+          "border": "rgba(0, 0, 0, 0)",
+          "weight": "400"
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "theme": "light",
+      "message": "Inactive index links must not retain selected border/weight"
+    },
+    {
+      "theme": "dark",
+      "message": "Inactive index links must not retain selected border/weight"
+    }
+  ],
+  "rawPath": "/tmp/bre456-settings-index-red/results.json",
+  "rawSha256": "4388d094b8bb6194870a6340fc386dcc41e89785780c1f77ae3d84bfc8b80b29"
+}

@@ -1,0 +1,12 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "failures": [],
+  "scenarioCount": 4,
+  "rawPath": "/tmp/bre456-runtime-committed-2/format/results.json",
+  "rawSha256": "5536534a289fe788716b43c674a162b13a3d6719035b9c5f03a38d94897b4ba9"
+}

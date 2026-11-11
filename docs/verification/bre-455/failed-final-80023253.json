@@ -1,0 +1,66 @@
+{
+  "head": "80023253519f82f97b77587c8e027aeb6a9b526d",
+  "cleanAfter": true,
+  "workspaceMode": "sequential",
+  "checks": [
+    {
+      "check": "focused",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "test",
+        "apps/api/src/notifications/apns.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.4427621364593506,
+      "log": "/tmp/bre455-final-80023253519f-1/focused.log"
+    },
+    {
+      "check": "lint",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "lint"
+      ],
+      "exitCode": 0,
+      "seconds": 16.16142201423645,
+      "log": "/tmp/bre455-final-80023253519f-1/lint.log"
+    },
+    {
+      "check": "typecheck",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "seconds": 12.036135911941528,
+      "log": "/tmp/bre455-final-80023253519f-1/typecheck.log"
+    },
+    {
+      "check": "test",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "test"
+      ],
+      "exitCode": 1,
+      "seconds": 89.4321870803833,
+      "log": "/tmp/bre455-final-80023253519f-1/test.log"
+    }
+  ],
+  "demo": "/tmp/bre455-demo-final-80023253519f-1",
+  "sqlWork": "/tmp/bre455-work-final-80023253519f-1",
+  "externalProviders": "none; synthetic fixtures only"
+}

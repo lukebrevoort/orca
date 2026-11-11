@@ -4,11 +4,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, selectedSenderPreparation, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
-import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
+import { accountFixture, authSessionFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
 import { demoStore } from "./demo-store";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
+import { useImportantNotifications } from "./important-notifications";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -152,12 +153,15 @@ function restoreDom() {
 async function renderApp(
   preferences: ReaderPreferences = defaultReaderPreferences,
   strict = false,
-  options: Pick<Parameters<typeof InboxApp>[0], "demoMode" | "theme" | "bulkAttentionClient" | "initialDemoMessages"> = { theme: "light" },
+  options: Pick<Parameters<typeof InboxApp>[0], "demoMode" | "theme" | "bulkAttentionClient" | "initialDemoMessages" | "verifiedUserId"> = { theme: "light" },
 ) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} /></TopLayerProvider>;
+  // Direct controller fixtures bypass App's authenticated entry gate. Supply
+  // its shared synthetic owner explicitly; null still exercises unknown owner.
+  const verifiedUserId = options.verifiedUserId === undefined ? authSessionFixture.user!.id : options.verifiedUserId;
+  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} verifiedUserId={verifiedUserId} /></TopLayerProvider>;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
@@ -346,11 +350,23 @@ async function waitFor(milliseconds: number) {
 }
 
 async function renderSettingsHome(theme: "light" | "dark" = "light", demoMode = false) {
+  // These fixtures exercise scoped Settings transport failures, with a stable
+  // authenticated owner. Account-switch coverage uses the real HTTP fixture.
+  const settingsTransport = globalThis.fetch;
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => String(input) === "/v1/auth/session"
+    ? Promise.resolve(jsonResponse({ isAuthenticated: true, user: { id: "settings-fixture-owner", email: "owner@example.com", name: "Owner" }, expiresAt: "2027-01-01T00:00:00.000Z", onboardingCompletedAt: null }))
+    : settingsTransport(input, init)) as typeof fetch;
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
+  function SettingsControllerFixture() {
+    // Keep these scoped read/retry counts about the Settings controllers. The
+    // real notification runtime has its own HTTP/SQLite browser integration.
+    const notifications = useImportantNotifications(false);
+    return <SettingsHome notificationClient={notifications} demoMode={demoMode} preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />;
+  }
   await act(async () => {
-    root!.render(<SettingsHome demoMode={demoMode} preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />);
+    root!.render(<SettingsControllerFixture />);
   });
   return container;
 }
@@ -1472,7 +1488,7 @@ describe("Inbox row action affordances", () => {
     expect(tune).not.toBeNull();
     expect(tune?.querySelector("svg.message-action-icon")).not.toBeNull();
     expect(tune?.getAttribute("aria-label")).toBe("Manage mail from Jordan Bell");
-    expect(tune?.getAttribute("title")).toBe("Tune mail from Jordan Bell");
+    expect(tune?.getAttribute("title")).toBe("Move mail from Jordan Bell");
     expect(tune?.getAttribute("aria-expanded")).toBe("false");
 
     await act(async () => {
@@ -1913,13 +1929,14 @@ describe("Desktop evidence and navigation", () => {
     }
   });
 
-  test.each(["light", "dark"] as const)("Summary sits above Inbox and returns to Inbox in %s mode", async (theme) => {
+  test.each(["light", "dark"] as const)("Summary remains in Mailboxes and returns to Inbox in %s mode", async (theme) => {
     await renderApp(defaultReaderPreferences, false, { theme });
     const navigation = browserWindow.document.querySelector('nav[aria-label="Primary navigation"]')!;
     const items = [...navigation.querySelectorAll("button.desktop-sidebar-item")];
     const summary = items.find(item => item.textContent === "Summary")!;
     const inbox = items.find(item => item.textContent?.startsWith("Inbox"))!;
-    expect(items.indexOf(summary) + 1).toBe(items.indexOf(inbox));
+    expect(summary.closest(".mailboxes-disclosure")).not.toBeNull();
+    expect(inbox.closest(".mailboxes-disclosure")).not.toBeNull();
     expect(inbox.getAttribute("aria-current")).toBe("page");
     expect(desktopWorkspace().querySelector(".summary-page")).toBeNull();
     await act(async () => { (summary as unknown as HTMLButtonElement).click(); });
@@ -2218,7 +2235,7 @@ describe("Desktop evidence and navigation", () => {
   test("Settings Organization navigation opens the sender workspace", async () => {
     browserWindow.history.replaceState({}, "", "/dev/settings");
     await renderSettingsHome("light", true);
-    const entries = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization");
+    const entries = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organize");
     expect(entries).toHaveLength(1);
     await act(async () => (entries[0] as unknown as HTMLButtonElement).click());
     expect(browserWindow.location.pathname).toBe("/dev/inbox");
@@ -2238,12 +2255,12 @@ describe("Desktop evidence and navigation", () => {
     expect(browserWindow.document.querySelector(".desktop-spaces-dialog")?.textContent).toContain("Create a collection");
     await act(async () => (browserWindow.document.querySelector('.desktop-spaces-dialog button[aria-label="Close"]') as unknown as HTMLButtonElement).click());
     expect(new URL(browserWindow.location.href).searchParams.has("customize")).toBe(false);
-    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Organization") as unknown as HTMLButtonElement;
+    const senders = [...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].find(button => button.textContent === "Organize") as unknown as HTMLButtonElement;
     await act(async () => senders.click());
     expect(senders.getAttribute("aria-current")).toBe("page");
     expect(browserWindow.document.querySelector("#simple-attention-title")?.textContent).toBe("Organization");
     expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("attention");
-    expect([...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organization")).toHaveLength(1);
+    expect([...browserWindow.document.querySelectorAll(".desktop-sidebar-item")].filter(button => button.textContent === "Organize")).toHaveLength(1);
     expect(browserWindow.document.querySelector(".simple-attention")?.textContent).not.toContain("Advanced organization");
   });
 
@@ -4637,7 +4654,7 @@ describe("BRE-386 guidance navigation", () => {
       return base(input, init);
     }) as typeof fetch;
     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=all");
-    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light", verifiedUserId: authSessionFixture.user!.id });
     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
     expect(browserWindow.document.querySelector(".first-view-starts")).not.toBeNull();
     for (const kind of ["attention", "classification"]) {
@@ -4655,7 +4672,7 @@ describe("BRE-386 guidance navigation", () => {
       return base(input, init);
     }) as typeof fetch;
     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${source}`);
-    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light", verifiedUserId: authSessionFixture.user!.id });
     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
     const start = [...browserWindow.document.querySelectorAll("button")].find(button => button.querySelector("strong")?.textContent === "Use selected mail");
     expect(start).toBeDefined();
@@ -4782,7 +4799,7 @@ describe("BRE-415 unsaved View navigation", () => {
     await press("Keep editing");
     const unload = new browserWindow.Event("beforeunload", { cancelable: true });
     browserWindow.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(true);
-    await press("Organization", ".desktop-sidebar-item"); await press("Discard draft");
+    await press("Advanced Organization", ".desktop-sidebar-item"); await press("Discard draft");
     const clean = new browserWindow.Event("beforeunload", { cancelable: true });
     browserWindow.dispatchEvent(clean); expect(clean.defaultPrevented).toBe(false);
     // Organization studio sections share the same guard as the shell.

@@ -19,7 +19,7 @@ async function read(url: string, signal: AbortSignal, init?: RequestInit): Promi
   return response.json();
 }
 
-export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch, onSelect }: { children: ReactNode; demoMode?: boolean; onSearch: () => void; onSelect: () => "inbox" | "all" | void }) {
+export function FirstViewGuidanceProvider({ children, demoMode = false, ownerUserId = null, onSearch, onSelect }: { children: ReactNode; demoMode?: boolean; ownerUserId?: string | null; onSearch: () => void; onSelect: () => "inbox" | "all" | void }) {
   const [state, setState] = useState<ReadState>(initial);
   const [refresh, setRefresh] = useState(0);
   const [hidden, setHidden] = useState(false);
@@ -33,6 +33,9 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
   const mutation = useRef<AbortController | null>(null);
   const startFrame = useRef<number | null>(null);
   const completed = useRef<string | null>(null);
+  // This provider's original authenticated Orca user, independent of provider
+  // account IDs. Never replace it from a later session during retry/dismiss.
+  const owner = useRef<string | null>(ownerUserId);
   useEffect(() => () => { mutation.current?.abort(); if (startFrame.current !== null) window.cancelAnimationFrame(startFrame.current); generation.current++; }, []);
   useEffect(() => {
     const update = () => setRefresh(value => value + 1);
@@ -47,16 +50,19 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
     setState(value => ({ ...value, status: "loading" }));
     // A failed canonical View list is not an empty workspace. All three reads
     // must succeed before presenting an invitation or an empty-mail example.
-    void Promise.all([
-      read("/v1/preferences?include=first_view_guidance", controller.signal).then(value => guidanceUserPreferencesResponseSchema.parse(value)),
-      read("/v1/organization/views", controller.signal).then(value => organizationViewListResponseSchema.parse(value)),
-      read("/v1/inbox?view=all&classification=all&limit=1", controller.signal).then(value => inboxClassificationResponseSchema.parse(value)),
-    ]).then(([preferences, views, mail]) => {
+    const ownedUserId = owner.current;
+    if (!ownedUserId) { setState(value => ({ ...value, status: "error" })); return () => controller.abort(); }
+    void (async () => {
+      const [preferences, views, mail] = await Promise.all([
+        read("/v1/preferences?include=first_view_guidance", controller.signal, { headers: { "x-orca-expected-user-id": ownedUserId } }).then(value => guidanceUserPreferencesResponseSchema.parse(value)),
+        read("/v1/organization/views", controller.signal).then(value => organizationViewListResponseSchema.parse(value)),
+        read("/v1/inbox?view=all&classification=all&limit=1", controller.signal).then(value => inboxClassificationResponseSchema.parse(value)),
+      ]);
       if (controller.signal.aborted || request !== generation.current) return;
       completed.current = completed.current ?? preferences.firstViewGuidanceCompletedAt;
       if (completed.current) setSaveError(false);
       setState({ status: "ready", completedAt: completed.current, hasViews: views.items.length > 0, hasMail: mail.messages.length > 0 });
-    }).catch(() => { if (!controller.signal.aborted && request === generation.current) setState(value => ({ ...value, status: "error" })); });
+    })().catch(() => { if (!controller.signal.aborted && request === generation.current) setState(value => ({ ...value, status: "error" })); });
     return () => controller.abort();
   }, [demoMode, refresh]);
 
@@ -64,10 +70,12 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
     setHidden(true);
     if (completed.current) { setSaveError(false); return; }
     if (mutation.current || demoMode) return;
+    const ownedUserId = owner.current;
+    if (!ownedUserId) { setSaveError(true); return; }
     const controller = new AbortController(); mutation.current = controller;
     setSaving(true); setSaveError(false);
     try {
-      const value = guidanceUserPreferencesResponseSchema.parse(await read("/v1/preferences?include=first_view_guidance", controller.signal, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstViewGuidanceCompletedAt: new Date().toISOString() }) }));
+      const value = guidanceUserPreferencesResponseSchema.parse(await read("/v1/preferences?include=first_view_guidance", controller.signal, { method: "PATCH", headers: { "content-type": "application/json", "x-orca-expected-user-id": ownedUserId }, body: JSON.stringify({ firstViewGuidanceCompletedAt: new Date().toISOString() }) }));
       if (controller.signal.aborted) return;
       completed.current = value.firstViewGuidanceCompletedAt;
       setState(current => ({ ...current, completedAt: value.firstViewGuidanceCompletedAt }));

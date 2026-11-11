@@ -1,0 +1,26 @@
+[Orca resources] {"time": 1794387991.7390919, "stage": "before", "ownerPid": 43656, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  17.5 532176 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "15214  12.6  92816 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", " 1152  11.2  21568 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "  627  10.4  24304 /System/Library/PrivateFrameworks/CloudKitDaemon.framework/Support/cloudd", "  373   9.9  29952 /System/Library/PrivateFrameworks/ApplePushService.framework/apsd", "  632   9.5  62096 /System/Library/PrivateFrameworks/IDS.framework/identityservicesd.app/Contents/MacOS/identityservicesd"], "memory": "System-wide memory free percentage: 74%"}
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/notifications/database.test.ts:
+(pass) BRE-455 migration enforces owner/account/message boundaries and leaves stable importance migrations intact [56.91ms]
+
+apps/api/src/notifications/loop.test.ts:
+(pass) BRE-455 real authenticated browser feed claims important automated archived arrivals and records constructor reports [120.75ms]
+(pass) BRE-455 old mark before first scan, human unreviewed/not-important, unknown direction and read arrivals stay quiet [100.74ms]
+(pass) BRE-455 persistent cooldown suppresses arrivals permanently and allows exact fifteen-minute boundary [172.96ms]
+(pass) BRE-455 identical save retains fresh pending, disable/re-enable and new accounts do not replay backlog [97.42ms]
+(pass) BRE-455 correction, lease expiry, permission and stale generations prevent claim retry/report reuse [113.16ms]
+(pass) BRE-455 authorization, foreign scopes, operation conflicts and malformed/oversized bodies fail closed [104.40ms]
+
+apps/api/src/notifications/important-routes.test.ts:
+(pass) BRE-455 explicit open-app adoption persists and reconciles without replaying old settings [91.81ms]
+
+apps/api/src/notifications/provenance.test.ts:
+(pass) BRE-455 SMTP metadata is exact-account bounded evidence independent of Inbox [0.21ms]
+(pass) BRE-455 original ordered duplicate headers cannot override earlier delivery evidence [0.12ms]
+
+ 10 pass
+ 0 fail
+ 77 expect() calls
+Ran 10 tests across 4 files. [1.90s]
+[Orca resources] {"time": 1794387993.751401, "stage": "after", "ownerPid": 43656, "childPid": 43659, "command": "bun", "exitCode": 0, "cpuRssTop": ["  PID  %CPU    RSS COMM", "43178  49.6  37648 /System/Library/PrivateFrameworks/XprotectFramework.framework/Versions/A/XPCServices/XprotectService.xpc/Contents/MacOS/XprotectService", "  627  13.7  25568 /System/Library/PrivateFrameworks/CloudKitDaemon.framework/Support/cloudd", "  636  13.6  12448 /usr/libexec/trustd", "  383  12.2  25136 /usr/libexec/dasd", " 1152  11.9  21568 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "  651  10.5  16240 /usr/libexec/nsurlsessiond"], "memory": "System-wide memory free percentage: 74%"}

@@ -1,0 +1,110 @@
+{
+  "head": "3842e2918886454e0a3bf20796110eb1877c3907",
+  "cleanAtStart": true,
+  "scope": "Actual loopback TCP HTTP, authenticated Hono, fresh SQLite and persistGmailMessages; injected APNs transport; synthetic client constructor REPORT only, no actual Notification API/OS display",
+  "providerNetworkCalls": 0,
+  "http": [
+    {
+      "method": "GET",
+      "path": "/v1/notifications/installations/browser?channel=open_app",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/mobile/devices/phone",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/notifications/installations/phone",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/notifications/installations/browser",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/installations/browser/claim",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/installations/browser/claim",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/installations/browser/report",
+      "status": 200
+    }
+  ],
+  "scan": {
+    "scanned": 5,
+    "enqueued": 1
+  },
+  "delivery": {
+    "delivered": 1,
+    "retried": 0,
+    "discarded": 0,
+    "disabledDevices": 0
+  },
+  "syntheticApnsAttempts": [
+    {
+      "accountId": "a",
+      "threadId": "gmail:a:conversation",
+      "apnsId": "f217c6f0-bc0b-45c0-8fb0-5ef4eb1fa48e"
+    }
+  ],
+  "browserEnvelopes": [
+    {
+      "id": "5bc025d4-e703-4d0e-9fac-05439322a03e",
+      "accountId": "a",
+      "threadId": "gmail:a:conversation",
+      "title": "Receipt robot",
+      "subtitle": "Receipt automated-important",
+      "body": "Open Orca to read this message.",
+      "tag": "c9bef579d24b58d630613f98cba836a9b3f2460d1810bbc1d4fb204d3454b597"
+    }
+  ],
+  "constructorReport": {
+    "operationId": "138da35b-9d6d-48e9-a3d3-7de766baae7c",
+    "outcome": "constructed",
+    "reported": 1,
+    "displayConfirmed": false
+  },
+  "terminal": [
+    {
+      "state": "constructed",
+      "count": 1
+    }
+  ],
+  "classifications": [
+    {
+      "id": "gmail:a:automated-important",
+      "human_classification": "automated_or_bulk"
+    },
+    {
+      "id": "gmail:a:human-not-important",
+      "human_classification": "likely_human"
+    },
+    {
+      "id": "gmail:a:human-unreviewed",
+      "human_classification": "likely_human"
+    }
+  ],
+  "proofCounts": [
+    {
+      "evidence": "gmail_smtp_metadata",
+      "reason": "provider_observed_primary_smtp",
+      "count": 5
+    },
+    {
+      "evidence": "unknown",
+      "reason": "missing_or_contradictory_recipient",
+      "count": 1
+    }
+  ],
+  "laterCorrectedEnqueues": 0
+}

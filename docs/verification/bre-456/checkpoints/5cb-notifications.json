@@ -1,0 +1,28 @@
+{
+  "revision": {
+    "head": "5cbf636c62dfab8fa5ee3576a2b39d162032c260",
+    "sourceSha256": "73f172e10d13f156e6a8c3892a66ec398ae00333c3f9f0a1d234a7d43636a2ae",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "scope": "Real browser constructor and server report; no OS display or closed-tab delivery proof",
+  "assertions": 62,
+  "failures": [
+    {
+      "theme": "light",
+      "message": "Cancel restores setup trigger focus undefined",
+      "stack": "AssertionError [ERR_ASSERTION]: Cancel restores setup trigger focus undefined\n    at check (file:///Users/lbrevoort/.t3/worktrees/orca/t3-f70e67bc-21bc1c33e37d930a/apps/web/scripts/bre-455-browser.mjs:12:53)\n    at file:///Users/lbrevoort/.t3/worktrees/orca/t3-f70e67bc-21bc1c33e37d930a/apps/web/scripts/bre-455-browser.mjs:48:2"
+    },
+    {
+      "theme": "dark",
+      "message": "Cancel restores setup trigger focus undefined",
+      "stack": "AssertionError [ERR_ASSERTION]: Cancel restores setup trigger focus undefined\n    at check (file:///Users/lbrevoort/.t3/worktrees/orca/t3-f70e67bc-21bc1c33e37d930a/apps/web/scripts/bre-455-browser.mjs:12:53)\n    at file:///Users/lbrevoort/.t3/worktrees/orca/t3-f70e67bc-21bc1c33e37d930a/apps/web/scripts/bre-455-browser.mjs:48:2"
+    }
+  ],
+  "pageErrors": [],
+  "scenarioCount": 12,
+  "rawPath": "/tmp/bre456-runtime-committed-2/notifications/results.json",
+  "rawSha256": "d6a5ff62462e6b1657bf8e0961ec4bb8e5635fa821d1ba1212c5463c2b7e01dc",
+  "browserRequestCount": 106,
+  "fixtureApiRequestCount": 26
+}

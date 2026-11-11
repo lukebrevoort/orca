@@ -1,0 +1,18 @@
+{
+  "revision": {
+    "head": "534ec7cf165f3b817784d8b29012e2338606e6a4",
+    "sourceSha256": "456dc99a7f7267a0fb4f6a3057110d29e692d9678e370b6f36c83a2c8d2dafb9",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "assertions": 24,
+  "failures": [],
+  "pageErrors": [],
+  "notApplicable": [
+    "Waiting and codes: unavailable in canonical P15 current base",
+    "Enabled reply-review-specific behavior: PR295 is unintegrated draft"
+  ],
+  "scenarioCount": 2,
+  "rawPath": "/tmp/bre456-targeted-534ec7cf/summary/results.json",
+  "rawSha256": "76499bf30f35bc613f40d654f95d56ddd6119142fe6a1b975e40e6e066543cfc"
+}

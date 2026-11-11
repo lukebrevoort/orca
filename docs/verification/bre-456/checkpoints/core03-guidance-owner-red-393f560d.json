@@ -1,0 +1,350 @@
+{
+  "revision": {
+    "head": "393f560dd4b7bf78b27077e5eaad42a7313dfc49",
+    "sourceSha256": "8e8a6d46cb15c25ea09c7f5da82769182e6948e2645c1abaadbbbf0fe855a80f",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "scenarios": [
+    {
+      "theme": "light",
+      "action": "close",
+      "identity": "u",
+      "replacement": "v",
+      "originalU": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      },
+      "originalV": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      },
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": "2026-11-11T11:35:54.235Z"
+      },
+      "databaseBefore": [],
+      "databaseAfter": [
+        {
+          "user_id": "v",
+          "first_view_guidance_completed_at": "2026-11-11T11:35:54.235Z"
+        }
+      ],
+      "patch": {
+        "status": 200,
+        "body": {
+          "signature": "",
+          "composeFormat": "plain",
+          "replyBehavior": "reply",
+          "notifyByDefault": false,
+          "firstViewGuidanceCompletedAt": "2026-11-11T11:35:54.235Z"
+        },
+        "writes": [
+          {
+            "theme": "light",
+            "action": "close",
+            "method": "PATCH",
+            "expectedOwner": null,
+            "body": {
+              "firstViewGuidanceCompletedAt": "2026-11-11T11:35:54.223Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "action": "close",
+      "identity": "u",
+      "replacement": "v",
+      "originalU": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      },
+      "originalV": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      },
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": "2026-11-11T11:36:03.386Z"
+      },
+      "databaseBefore": [],
+      "databaseAfter": [
+        {
+          "user_id": "v",
+          "first_view_guidance_completed_at": "2026-11-11T11:36:03.386Z"
+        }
+      ],
+      "patch": {
+        "status": 200,
+        "body": {
+          "signature": "",
+          "composeFormat": "plain",
+          "replyBehavior": "reply",
+          "notifyByDefault": false,
+          "firstViewGuidanceCompletedAt": "2026-11-11T11:36:03.386Z"
+        },
+        "writes": [
+          {
+            "theme": "dark",
+            "action": "close",
+            "method": "PATCH",
+            "expectedOwner": null,
+            "body": {
+              "firstViewGuidanceCompletedAt": "2026-11-11T11:36:03.376Z"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "assertions": 4,
+  "failures": [
+    {
+      "theme": "light",
+      "action": "skip",
+      "message": "locator.waitFor: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Getting started with Views', exact: true }).getByRole('button', { name: 'Skip for now', exact: true }) to be visible\u001b[22m\n"
+    },
+    {
+      "label": "Mounted U guidance dismissal never completes replacement V guidance",
+      "detail": {
+        "theme": "light",
+        "action": "close",
+        "before": {
+          "signature": "",
+          "composeFormat": "plain",
+          "replyBehavior": "reply",
+          "notifyByDefault": false,
+          "firstViewGuidanceCompletedAt": null
+        },
+        "after": {
+          "signature": "",
+          "composeFormat": "plain",
+          "replyBehavior": "reply",
+          "notifyByDefault": false,
+          "firstViewGuidanceCompletedAt": "2026-11-11T11:35:54.235Z"
+        }
+      }
+    },
+    {
+      "label": "Independent SQLite preferences remain unchanged after cross-owner guidance dismissal",
+      "detail": {
+        "theme": "light",
+        "action": "close",
+        "databaseBefore": [],
+        "databaseAfter": [
+          {
+            "user_id": "v",
+            "first_view_guidance_completed_at": "2026-11-11T11:35:54.235Z"
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "action": "skip",
+      "message": "locator.waitFor: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Getting started with Views', exact: true }).getByRole('button', { name: 'Skip for now', exact: true }) to be visible\u001b[22m\n"
+    },
+    {
+      "label": "Mounted U guidance dismissal never completes replacement V guidance",
+      "detail": {
+        "theme": "dark",
+        "action": "close",
+        "before": {
+          "signature": "",
+          "composeFormat": "plain",
+          "replyBehavior": "reply",
+          "notifyByDefault": false,
+          "firstViewGuidanceCompletedAt": null
+        },
+        "after": {
+          "signature": "",
+          "composeFormat": "plain",
+          "replyBehavior": "reply",
+          "notifyByDefault": false,
+          "firstViewGuidanceCompletedAt": "2026-11-11T11:36:03.386Z"
+        }
+      }
+    },
+    {
+      "label": "Independent SQLite preferences remain unchanged after cross-owner guidance dismissal",
+      "detail": {
+        "theme": "dark",
+        "action": "close",
+        "databaseBefore": [],
+        "databaseAfter": [
+          {
+            "user_id": "v",
+            "first_view_guidance_completed_at": "2026-11-11T11:36:03.386Z"
+          }
+        ]
+      }
+    }
+  ],
+  "requests": [
+    {
+      "theme": "light",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "light",
+      "action": "close",
+      "method": "PATCH",
+      "expectedOwner": null,
+      "body": {
+        "firstViewGuidanceCompletedAt": "2026-11-11T11:35:54.223Z"
+      }
+    },
+    {
+      "theme": "dark",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "skip",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "close",
+      "method": "GET",
+      "expectedOwner": null,
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "action": "close",
+      "method": "PATCH",
+      "expectedOwner": null,
+      "body": {
+        "firstViewGuidanceCompletedAt": "2026-11-11T11:36:03.376Z"
+      }
+    }
+  ],
+  "pageErrors": []
+}

@@ -135,7 +135,7 @@ beforeEach(async () => {
   cookie = `orca_session=${(await createSession(client.db, "owner")).token}`;
   client.sqlite.close();
   app = createApp({ dbFactory: () => createDatabaseClient(path) });
-  browser = new Window({ url: "http://localhost/" });
+  browser = new Window({ url: "http://localhost/?destination=inbox" });
   for (const name of globals)
     Object.defineProperty(globalThis, name, {
       configurable: true,
@@ -657,13 +657,16 @@ async function renderMailbox() {
   await settle(); await settle();
 }
 async function nav(label: string) {
+  if (label === "Organization") label = "Organize";
   if (label === "Signals") {
     const catalog = await (await request("/v1/destinations")).json();
     label = catalog.destinations.find((item: {id: string}) => item.id === catalog.legacyDestinationIds.notify)?.name ?? label;
   }
   const target = (label === "Signals" ? document.querySelector(".desktop-space-signals")?.closest("button") : null) ?? document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
-    ?? [...document.querySelectorAll<HTMLButtonElement>(".desktop-sidebar button")].find(b => b.textContent?.includes(label));
+    ?? [...document.querySelectorAll<HTMLButtonElement>(".desktop-sidebar button")].find(b => b.querySelector(":scope > span:not([aria-hidden])")?.textContent === label);
   expect(target).toBeDefined();
+  const disclosure = target?.closest<HTMLDetailsElement>("details");
+  if (disclosure && !disclosure.open) await act(async () => disclosure.querySelector<HTMLElement>("summary")!.click());
   await act(async () => target!.click());
   await settle();
 }
