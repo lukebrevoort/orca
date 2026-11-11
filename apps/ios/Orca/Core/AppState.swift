@@ -116,7 +116,7 @@ import SwiftUI
     /// identity/account, including pages saved before a later app launch.
     func inboxCacheKey(accountID: String, view: String, search: String) -> String {
         let revision = UserDefaults.standard.string(forKey: "inboxReadRevision|\(ownerScope)|\(accountID)") ?? "initial"
-        return "\(ownerScope)|\(accountID)|inbox-unread-focus-v1|\(revision)|\(view)|\(search)"
+        return "\(ownerScope)|\(accountID)|inbox-importance-v1|\(revision)|\(view)|\(search)"
     }
     func markThreadRead(_ threadID: String, accountID: String, isRead: Bool = true) async throws {
         guard let client else { throw APIClient.ClientError.invalidResponse }
@@ -127,6 +127,11 @@ import SwiftUI
         let revision = UUID()
         UserDefaults.standard.set(revision.uuidString, forKey: "inboxReadRevision|\(scope)|\(accountID)")
         guard scope == ownerScope else { return }
+        mailboxReadRevision = revision
+    }
+    func importanceDidChange(accountId: String) {
+        let revision = UUID()
+        UserDefaults.standard.set(revision.uuidString, forKey: "inboxReadRevision|\(ownerScope)|\(accountId)")
         mailboxReadRevision = revision
     }
     func routeNotification(_ userInfo: [AnyHashable: Any]) {

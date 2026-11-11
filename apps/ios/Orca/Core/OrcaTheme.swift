@@ -5,21 +5,21 @@ enum OrcaTheme {
     static func adaptive(_ light: UInt32, _ dark: UInt32) -> Color {
         Color(uiColor: UIColor { traits in UIColor(orcaHex: traits.userInterfaceStyle == .dark ? dark : light) })
     }
-    static let paper = adaptive(0xf6faf7, 0x050505)
-    static let surface = adaptive(0xffffff, 0x0d0d0d)
-    static let ink = adaptive(0x102522, 0xf4f3ef)
-    static let muted = adaptive(0x51645e, 0xb1b1ab)
-    static let border = adaptive(0xd2ddd7, 0x242424)
-    static let danger = adaptive(0xa8463f, 0xff8b87)
-    static let accent = adaptive(0x087461, 0x6aa9f5)
-    static let selected = adaptive(0xe8f1ec, 0x171717)
-    static let unread = adaptive(0xf0f8f4, 0x121212)
-    static let primary = adaptive(0x087461, 0xf4f3ef)
+    static let paper = adaptive(0xf7faf8, 0x111914)
+    static let surface = adaptive(0xffffff, 0x19251d)
+    static let ink = adaptive(0x132b24, 0xedf4ef)
+    static let muted = adaptive(0x53665d, 0xacbcb1)
+    static let border = adaptive(0xc8d5cd, 0x3b5042)
+    static let danger = adaptive(0x9f3c35, 0xf2a19a)
+    static let accent = adaptive(0x166248, 0xa6d4b9)
+    static let selected = adaptive(0xe8f1eb, 0x25392d)
+    static let unread = adaptive(0xf0f8f4, 0x1d2c22)
+    static let primary = adaptive(0x166248, 0xedf4ef)
     static let primaryPressed = adaptive(0x065746, 0xd5d4d0)
-    static let onPrimary = adaptive(0xffffff, 0x050505)
+    static let onPrimary = adaptive(0xffffff, 0x111914)
 
     static func ui(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .custom("Sora-Regular", size: size, relativeTo: .body).weight(weight)
+        .custom("Sora-Regular", size: max(13, size), relativeTo: .body).weight(weight)
     }
     static func reader(_ size: CGFloat) -> Font {
         .custom("Newsreader16pt-Regular", size: size, relativeTo: .body)
@@ -27,8 +27,8 @@ enum OrcaTheme {
     static func configureNavigation() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(orcaHex: 0x050505) : UIColor(orcaHex: 0xf6faf7) }
-        let label = UIColor { $0.userInterfaceStyle == .dark ? UIColor(orcaHex: 0xf4f3ef) : UIColor(orcaHex: 0x102522) }
+        appearance.backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(orcaHex: 0x111914) : UIColor(orcaHex: 0xf7faf8) }
+        let label = UIColor { $0.userInterfaceStyle == .dark ? UIColor(orcaHex: 0xedf4ef) : UIColor(orcaHex: 0x132b24) }
         appearance.titleTextAttributes = [.font: UIFont(name: "Sora-Regular", size: 15) ?? UIFont.systemFont(ofSize: 15), .foregroundColor: label]
         appearance.largeTitleTextAttributes = [.font: UIFont(name: "Newsreader16pt-Regular", size: 38) ?? UIFont.systemFont(ofSize: 38, weight: .regular), .foregroundColor: label]
         appearance.shadowColor = .clear

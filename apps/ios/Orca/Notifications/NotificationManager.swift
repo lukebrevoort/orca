@@ -34,6 +34,14 @@ struct NotificationPreferenceStore {
 }
 
 @MainActor final class NotificationManager: NSObject, ObservableObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    @Published private(set) var importantInstallation: ImportantNotificationInstallation?
+    @Published private(set) var importantLoading = false
+    @Published private(set) var importantSaving = false
+    @Published private(set) var importantUncertain = false
+    @Published private(set) var importantError: String?
+    @Published private(set) var importantStatus: String?
+    private var importantGeneration = UUID()
+    private var importantPending: ImportantNotificationCommand?
     @Published private(set) var selection: NotificationSelection = .inboxOnly
     @Published private(set) var spaces = [NotificationSpace]()
     @Published private(set) var catalogLoading = false
@@ -81,11 +89,11 @@ struct NotificationPreferenceStore {
     }
 
     func refreshPermission() async { authorization = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
-    func requestPermission() async {
+    func requestPermission(reconcileAfter: Bool = true) async {
         do {
             _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
             await refreshPermission()
-            reconcile()
+            if reconcileAfter { reconcile() }
         } catch { errorMessage = error.localizedDescription; statusText = "Permission request failed" }
     }
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken token: Data) {
@@ -104,6 +112,14 @@ struct NotificationPreferenceStore {
         reconciliation = Task { [weak self] in
             await previous?.value
             guard let self, isCurrent(operation, scope) else { return }
+            await loadImportantStatus()
+            guard isCurrent(operation, scope) else { return }
+            if let policy = importantInstallation?.policy {
+                guard policy.enabled else { statusText = "Important notifications are off"; return }
+                await registerImportantTransport(client: client, operation: operation, scope: scope)
+                return
+            }
+            if importantWasAdopted { statusText = "Important choices could not be verified. Retry when connected."; return }
             if !desiredSelection.isEnabled {
                 await removeRegistration(client: client, operation: operation, scope: scope)
                 return
@@ -145,6 +161,119 @@ struct NotificationPreferenceStore {
         }
     }
 
+    var importantPermission: String { Self.permission(for: authorization) }
+    nonisolated static func permission(for authorization: UNAuthorizationStatus) -> String {
+        switch authorization {
+        case .authorized, .provisional, .ephemeral: "granted"
+        case .denied: "denied"
+        case .notDetermined: "default"
+        @unknown default: "unavailable"
+        }
+    }
+    var importantWasAdopted: Bool { importantInstallation?.policy != nil || UserDefaults.standard.bool(forKey: "important-notifications.adopted|\(activeScope ?? "")|\(installationID)") }
+    private func retainAdoption(_ value: ImportantNotificationInstallation) {
+        if value.policy != nil { UserDefaults.standard.set(true, forKey: "important-notifications.adopted|\(activeScope ?? "")|\(installationID)") }
+    }
+    private var importantPendingKey: String { "important-notifications.pending|\(activeScope ?? "")|\(installationID)" }
+    private func retainImportantCommand(_ command: ImportantNotificationCommand?) {
+        importantPending = command; importantUncertain = command != nil
+        if let command, let data = try? JSONEncoder().encode(command) { UserDefaults.standard.set(data, forKey: importantPendingKey) }
+        else { UserDefaults.standard.removeObject(forKey: importantPendingKey) }
+    }
+    func loadImportantStatus() async {
+        guard let state, state.phase == .ready, let client = state.client else { return }
+        activateScope(state.ownerScope)
+        guard !importantLoading, !importantSaving else { return }
+        let owner = state.ownerScope, generation = importantGeneration
+        importantLoading = true
+        defer { if generation == importantGeneration { importantLoading = false } }
+        do {
+            let value = try await client.importantNotificationStatus(installationId: installationID)
+            guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration, state.phase == .ready else { return }
+            importantInstallation = value; retainAdoption(value); importantError = nil
+        } catch {
+            guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+            importantError = "Important notification settings could not be loaded. Previous choices are unchanged."
+            // Do not erase an adopted policy on a failed refresh or downgrade into legacy registration.
+        }
+    }
+    func saveImportantNotifications(enabled: Bool, accountIds: [String]) async {
+        guard let state, let client = state.client, state.phase == .ready, !importantSaving, !importantUncertain,
+              let current = importantInstallation, !enabled || !accountIds.isEmpty,
+              Set(accountIds).isSubset(of: Set(state.accounts.map(\.id))) else { return }
+        await refreshPermission()
+        let command = ImportantNotificationCommand(enabled: enabled, accountIds: accountIds.sorted(), permission: importantPermission, expectedRevision: current.revision)
+        retainImportantCommand(command); importantSaving = true; importantError = nil; importantStatus = nil
+        let owner = state.ownerScope, generation = importantGeneration
+        do {
+            let result = try await client.setImportantNotifications(installationId: installationID, command: command)
+            guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+            acceptImportant(result, command: command)
+        } catch {
+            guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+            importantSaving = false; await reconcileImportantNotifications(); return
+        }
+        if generation == importantGeneration { importantSaving = false; reconcile() }
+    }
+    private func acceptImportant(_ result: ImportantNotificationOperation, command: ImportantNotificationCommand) {
+        guard result.operationId == command.operationId, result.current.installationId == installationID,
+              result.current.channel == "apns", result.current.cooldownSeconds == 900,
+              ["current", "superseded"].contains(result.status), result.current.revision >= result.appliedRevision else {
+            importantError = "Acknowledgement did not match this device. Check the save outcome."; return
+        }
+        importantInstallation = result.current; retainAdoption(result.current)
+        importantStatus = result.status == "superseded" ? "Choices changed elsewhere. Current device settings are shown." : "Notification choices saved. Delivery status is separate."
+        retainImportantCommand(nil)
+    }
+    func reconcileImportantNotifications(retryIfAbsent: Bool = false, reviewIfAbsent: Bool = false) async {
+        guard let state, let client = state.client, let command = importantPending, !importantSaving else { return }
+        importantSaving = true; let owner = state.ownerScope, generation = importantGeneration
+        defer { if generation == importantGeneration { importantSaving = false; if !importantUncertain { reconcile() } } }
+        do {
+            let result = try await client.importantNotificationOperation(command.operationId)
+            guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+            acceptImportant(result, command: command)
+        } catch APIClient.ClientError.http(404, _) {
+            guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+            if reviewIfAbsent {
+                do {
+                    let value = try await client.importantNotificationStatus(installationId: installationID)
+                    guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+                    importantInstallation = value; retainAdoption(value); retainImportantCommand(nil)
+                    importantError = nil; importantStatus = "Original operation was not recorded. Current device choices are shown."
+                } catch { if owner == state.ownerScope, generation == importantGeneration { importantError = "Current settings could not be verified. Your original operation is retained." } }
+            } else if retryIfAbsent {
+                do {
+                    let result = try await client.setImportantNotifications(installationId: installationID, command: command)
+                    guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration else { return }
+                    acceptImportant(result, command: command)
+                } catch { importantError = "Original choices were not confirmed. Review current settings before trying another change." }
+            } else { importantError = "This operation is not recorded. You may retry the same guarded choice." }
+        } catch { if state.phase == .ready, owner == state.ownerScope, generation == importantGeneration { importantError = "Save outcome unknown. Reconnect and check again before changing choices." } }
+    }
+    private func registerImportantTransport(client: APIClient, operation: UUID, scope: String) async {
+        await refreshPermission()
+        guard isCurrent(operation, scope) else { return }
+        if let current = importantInstallation, let policy = current.policy, current.permission != importantPermission, !importantUncertain {
+            await saveImportantNotifications(enabled: policy.enabled, accountIds: policy.accountIds)
+            return
+        }
+        guard importantPermission == "granted" else { statusText = "Important policy saved · iOS permission is \(importantPermission)"; return }
+        guard let deviceToken else { UIApplication.shared.registerForRemoteNotifications(); statusText = "Registering with Apple…"; return }
+#if DEBUG
+        let environment = "sandbox"
+#else
+        let environment = "production"
+#endif
+        do {
+            _ = try await client.registerDevice(installationId: installationID, token: deviceToken, environment: environment, selection: selection)
+            guard isCurrent(operation, scope) else { return }
+            await loadImportantStatus()
+            guard isCurrent(operation, scope) else { return }
+            statusText = importantInstallation?.delivery.available == true ? "Important policy · registration available; iOS controls delivery" : "Important policy saved · delivery unavailable"
+        } catch { if isCurrent(operation, scope) { errorMessage = error.localizedDescription; statusText = "Important policy saved · registration failed" } }
+    }
+
     func loadCatalog() async {
         guard let state, state.phase == .ready, let client = state.client else { return }
         let scope = state.ownerScope
@@ -176,7 +305,10 @@ struct NotificationPreferenceStore {
         do {
             let result = try await client.pushStatus(installationId: installationID)
             guard isCurrent(operation, scope) else { return }
-            if !selection.isEnabled { statusText = result.devices.isEmpty ? "Off" : "Turning off…" }
+            if importantWasAdopted {
+                statusText = importantInstallation?.delivery.available == true ? "Important policy · registration available; iOS controls delivery" : "Important policy saved · delivery unavailable"
+            }
+            else if !selection.isEnabled { statusText = result.devices.isEmpty ? "Off" : "Turning off…" }
             else if !unavailableIDs(in: selection).isEmpty { statusText = "Review unavailable Spaces" }
             else if authorization != .authorized && authorization != .provisional {
                 statusText = authorization == .denied ? "Saved · denied in System Settings" : "Saved · permission not requested"
@@ -216,7 +348,10 @@ struct NotificationPreferenceStore {
 
     private func activateScope(_ scope: String) {
         guard activeScope != scope else { return }
-        operationID = UUID(); catalogOperationID = UUID()
+        operationID = UUID(); catalogOperationID = UUID(); importantGeneration = UUID()
+        importantInstallation = nil; importantError = nil; importantStatus = nil; importantLoading = false; importantSaving = false
+        importantPending = UserDefaults.standard.data(forKey: "important-notifications.pending|\(scope)|\(installationID)").flatMap { try? JSONDecoder().decode(ImportantNotificationCommand.self, from: $0) }
+        importantUncertain = importantPending != nil
         activeScope = scope; catalogScope = nil
         selection = preferenceStore.load(scope: scope)
         spaces = []; catalogLoading = false; catalogErrorMessage = nil
@@ -255,6 +390,8 @@ struct NotificationPreferenceStore {
     func identityWillChange() {
         operationID = UUID(); catalogOperationID = UUID(); pendingNotification = nil
         activeScope = nil; catalogScope = nil; spaces = []
+        importantGeneration = UUID(); importantInstallation = nil; importantPending = nil; importantUncertain = false
+        importantLoading = false; importantSaving = false; importantError = nil; importantStatus = nil
         selection = .inboxOnly; catalogLoading = false; catalogErrorMessage = nil
         statusText = "Not configured"; errorMessage = nil
     }
@@ -263,13 +400,26 @@ struct NotificationPreferenceStore {
         self.pendingNotification = nil; state?.routeNotification(pendingNotification)
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        await MainActor.run {
-            if let state, state.phase == .ready { activateScope(state.ownerScope) }
-            guard selection.isEnabled, state?.phase == .ready,
-                  let account = notification.request.content.userInfo["accountId"] as? String,
-                  state?.accounts.contains(where: { $0.id == account }) == true else { return [] }
-            return [.banner, .list, .sound]
+        await presentationForNotification(notification.request.content.userInfo)
+    }
+    private func presentationForNotification(_ info: [AnyHashable: Any]) async -> UNNotificationPresentationOptions {
+        guard let state, state.phase == .ready, let client = state.client,
+              let account = info["accountId"] as? String, let thread = info["threadId"] as? String,
+              state.accounts.contains(where: { $0.id == account }) else { return [] }
+        activateScope(state.ownerScope)
+        let owner = state.ownerScope, generation = importantGeneration
+        if importantInstallation?.policy != nil {
+            do {
+                let current = try await client.importantNotificationStatus(installationId: installationID)
+                guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration, current.policy?.enabled == true,
+                      current.policy?.accountIds.contains(account) == true, current.permission == "granted", current.delivery.available else { return [] }
+                let importance = try await client.importance(accountId: account, threadId: thread)
+                guard state.phase == .ready, owner == state.ownerScope, generation == importantGeneration, importance.effective == .important else { return [] }
+                return [.banner, .list, .sound] // Ordinary interruption; iOS Focus remains authoritative.
+            } catch { return [] }
         }
+        guard !importantWasAdopted else { return [] }
+        return selection.isEnabled ? [.banner, .list, .sound] : []
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         await MainActor.run {

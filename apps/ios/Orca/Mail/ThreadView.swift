@@ -1,9 +1,13 @@
 import SwiftUI
 
 struct ThreadView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var preferences: AccountPreferencesController
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; let accountId: String; let threadId: String; @State private var detail: ThreadDetail?; @State private var error: String?; @State private var shareURL: URL?
     @State private var expanded: Set<String> = []
+    @State private var importanceTarget: ImportanceSelection?
+    @State private var mailActionTarget: MailActionTarget?
     @State private var overflow = false
     @State private var recovery: ThreadReadPage?
     @State private var recoveryLoading = false
@@ -29,6 +33,11 @@ struct ThreadView: View {
                         DisclosureGroup("Attention: " + (detail.thread.attention.attentionBehavior ?? "normal").capitalized) {
                             Text("Unread Focus and Notify conversations appear first in Inbox, newest first. Read conversations return to date order and keep their attention setting. Focus filters the same Inbox without moving mail. The winning rule is unavailable in this response.").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted)
                         }.font(OrcaTheme.ui(12))
+                        Text(detail.account.email).font(.subheadline).textSelection(.enabled)
+                        Button { importanceTarget = .init(accountId: accountId, threadId: threadId, subject: detail.thread.subject) } label: {
+                            Label("Importance: " + ((detail.importance ?? detail.thread.importance)?.effective.title ?? "Review current choice"), systemImage: "flag")
+                                .frame(minHeight: 44)
+                        }.accessibilityIdentifier("thread.importance")
                         Text(detail.thread.subject.isEmpty ? "(No subject)" : detail.thread.subject).font(OrcaTheme.reader(34)).tracking(-0.6).foregroundStyle(OrcaTheme.ink).fixedSize(horizontal: false, vertical: true)
                     }
                     if let error { Label(error, systemImage: "info.circle").font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).accessibilityIdentifier("thread.status") }
@@ -167,6 +176,10 @@ struct ThreadView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 if let detail {
                     Menu {
+                        Button("Importance…") { importanceTarget = .init(accountId: accountId, threadId: threadId, subject: detail.thread.subject) }
+                        if let latest = detail.messages.sorted(by: { $0.receivedAt < $1.receivedAt }).last {
+                            MailActionMenu(message: InboxMessage(id: latest.id, accountId: accountId, provider: latest.provider, providerMessageId: latest.providerMessageId, threadId: threadId, from: latest.from, subject: latest.subject, snippet: latest.snippet, receivedAt: latest.receivedAt, unread: latest.unread, labels: latest.labels, attentionBehavior: detail.thread.attention.attentionBehavior ?? "normal")) { mailActionTarget = $0 }
+                        }
                         Button("Expand all") { expanded = Set(detail.messages.map(\.id)); showEarlier = true }
                         Button("Collapse all") { expanded = Set(entryID.map { [$0] } ?? []); showEarlier = false }
                     } label: {
@@ -182,6 +195,20 @@ struct ThreadView: View {
                     .overlay(alignment: .top) { Rectangle().fill(OrcaTheme.border).frame(height: 1) }
             }
         }
+        .sheet(item: $mailActionTarget) { target in MailActionsSheet(target: target) { await load() } }
+        .sheet(item: $importanceTarget) { target in ImportanceView(selection: target) }
+        .onChange(of: state.selectedAccountID) { retireReader() }
+        .onChange(of: state.ownerScope) { retireReader() }
+        .onChange(of: state.phase) { if state.phase != .ready { retireReader() } }
+        .onChange(of: state.mailboxReadRevision) {
+            Task {
+                guard let client = state.client else { return }
+                let owner = state.ownerScope
+                if let result = try? await client.importance(accountId: accountId, threadId: threadId), owner == state.ownerScope, state.selectedAccount?.id == accountId {
+                    detail?.importance = result
+                }
+            }
+        }
         .task { await load() }.onDisappear { recoveryRequest = UUID() }.sheet(isPresented: .constant(shareURL != nil), onDismiss: { if let shareURL { try? FileManager.default.removeItem(at: shareURL.deletingLastPathComponent()) }; shareURL = nil }) { if let shareURL { ShareSheet(items: [shareURL]) } }
     }
     @ViewBuilder
@@ -193,20 +220,20 @@ struct ThreadView: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
             : AnyLayout(HStackLayout(spacing: 12))
         layout {
-            NavigationLink(destination: ComposeView(context: detail, kind: "reply")) {
-                Label("Reply", systemImage: "arrowshape.turn.up.left")
+            NavigationLink(destination: ComposeView(context: detail, kind: preferences.saved?.replyBehavior == "reply_all" ? "reply_all" : "reply")) {
+                Label(preferences.saved?.replyBehavior == "reply_all" ? "Reply all" : "Reply", systemImage: "arrowshape.turn.up.left")
                     .fixedSize(horizontal: true, vertical: false)
                     .frame(maxWidth: stacked ? .infinity : nil)
-            }.buttonStyle(OrcaPrimaryButtonStyle()).accessibilityLabel("Reply")
+            }.buttonStyle(OrcaPrimaryButtonStyle()).accessibilityLabel(preferences.saved?.replyBehavior == "reply_all" ? "Reply all" : "Reply")
             Spacer(minLength: 0)
                 .frame(width: stacked ? 0 : nil, height: stacked ? 0 : nil)
                 .accessibilityHidden(true)
-            NavigationLink(destination: ComposeView(context: detail, kind: "reply_all")) {
-                Text("Reply all")
+            NavigationLink(destination: ComposeView(context: detail, kind: preferences.saved?.replyBehavior == "reply_all" ? "reply" : "reply_all")) {
+                Text(preferences.saved?.replyBehavior == "reply_all" ? "Reply" : "Reply all")
                     .frame(maxWidth: stacked ? .infinity : nil, minHeight: 44,
                            alignment: stacked ? .leading : .center)
                     .padding(.horizontal, stacked ? 16 : 0).contentShape(Rectangle())
-            }.accessibilityLabel("Reply all")
+            }.accessibilityLabel(preferences.saved?.replyBehavior == "reply_all" ? "Reply" : "Reply all")
             NavigationLink(destination: ComposeView(context: detail, kind: "forward")) {
                 if stacked {
                     Label("Forward", systemImage: "arrowshape.turn.up.right")
@@ -219,6 +246,9 @@ struct ThreadView: View {
         }
     }
 
+    private func retireReader() {
+        detail = nil; recovery = nil; imageRefreshGeneration = UUID(); recoveryRequest = UUID(); dismiss()
+    }
     private func accept(_ loaded: ThreadDetail) {
         if detail == nil {
             let ordered = loaded.messages.sorted { $0.receivedAt == $1.receivedAt ? $0.id < $1.id : $0.receivedAt < $1.receivedAt }
@@ -281,8 +311,8 @@ struct ThreadView: View {
             if await handleThreadOverflow(error) { return }
             if overflow {
                 self.error = error.localizedDescription
-            } else if let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
-            else { self.error = error.localizedDescription }
+            } else if MailboxViews.permitsOfflineCache(error), let cached: ThreadDetail = await state.cache.load(ThreadDetail.self, key: key) { guard identityIsCurrent() else { return }; accept(cached); self.error = "Offline — showing saved conversation" }
+            else { detail = nil; recovery = nil; self.error = error.localizedDescription }
         }
     }
     func loadPage(_ cursor: String?) async {
@@ -325,14 +355,28 @@ private struct NativeReaderBody: View {
     let text: String?
     @State private var original = false
     @State private var plain: Bool?
+    @State private var findRequest: UUID?
+    @State private var wideContent = false
+    @State private var findingText = false
+    @State private var query = ""
     var body: some View {
         let showPlain = plain ?? (text.map { ReaderQuoteParts.split($0).quoted != nil } ?? false)
         VStack(alignment: .leading, spacing: 12) {
-            if let html, !html.isEmpty, !showPlain { SafeHTMLView(html: html).fixedSize(horizontal: false, vertical: true) }
+            if let html, !html.isEmpty, !showPlain {
+                Button("Find in message") { findRequest = UUID() }.frame(minHeight: 44).accessibilityIdentifier("reader.find")
+                Toggle("Keep tables and code wide", isOn: $wideContent).font(.subheadline)
+                if wideContent { Text("Scroll within this message to reach wide content. Ordinary prose keeps the reading width.").font(.caption) }
+                SafeHTMLView(html: html, findRequest: findRequest, wideContent: wideContent).fixedSize(horizontal: false, vertical: true)
+            }
             else if let text {
                 let parts = ReaderQuoteParts.split(text)
-                Text(original ? text : parts.current).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled)
-                if !original, let quote = parts.quoted {
+                Button(findingText ? "Close Find" : "Find in message") { findingText.toggle(); query = "" }.frame(minHeight: 44)
+                if findingText {
+                    TextField("Find in complete message", text: $query).textFieldStyle(.roundedBorder).accessibilityIdentifier("reader.find-query")
+                    Text("\(ReaderFind.count(query, in: text)) matches in the complete message").font(.caption)
+                }
+                ReaderFind.displayText(query, in: original || !query.isEmpty ? text : parts.current).font(OrcaTheme.reader(22)).lineSpacing(7).foregroundStyle(OrcaTheme.ink).textSelection(.enabled)
+                if !original, query.isEmpty, let quote = parts.quoted {
                     DisclosureGroup("Show quoted history") { Text(quote).font(OrcaTheme.reader(20)).textSelection(.enabled) }
                 }
                 Button(original ? "Return to reading view" : "Show complete original text") { original.toggle() }.font(OrcaTheme.ui(12))
@@ -341,6 +385,27 @@ private struct NativeReaderBody: View {
                 Button(showPlain ? "Formatted message" : "Plain text") { plain = !showPlain }.font(OrcaTheme.ui(12))
             }
         }
+    }
+}
+
+enum ReaderFind {
+    static func displayText(_ query: String, in text: String) -> Text {
+        guard !query.isEmpty else { return Text(text) }
+        var result = Text(""), start = text.startIndex
+        while start < text.endIndex, let range = text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: start..<text.endIndex) {
+            result = result + Text(String(text[start..<range.lowerBound])) + Text(String(text[range])).bold().underline()
+            start = range.upperBound
+        }
+        return result + Text(String(text[start...]))
+    }
+
+    static func count(_ query: String, in text: String) -> Int {
+        guard !query.isEmpty else { return 0 }
+        var count = 0, start = text.startIndex
+        while start < text.endIndex, let range = text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: start..<text.endIndex) {
+            count += 1; start = range.upperBound
+        }
+        return count
     }
 }
 

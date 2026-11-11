@@ -19,7 +19,7 @@ final class OrcaUITests: XCTestCase {
 
     /// BRE-457 acceptance baseline. Runs against real native controls, never source text.
     func test44MailStartsImportantAndKeepsAllMailReachable() throws {
-        let app = try launchApp()
+        let app = try launchApp(openInbox: false)
         XCTAssertTrue(app.buttons["inbox.view-picker"].waitForExistence(timeout: 20))
         attachScreenshot(named: "bre457-mail-entry-before-choice")
         XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, "The primary native destination is Mail.")
@@ -32,6 +32,86 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "bre457-all-mail-recovery")
         app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].press(forDuration: 1)
         XCTAssertTrue(app.buttons["Importance…"].waitForExistence(timeout: 5), "Importance must be distinct from Move mail.")
+    }
+
+    func test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen() throws {
+        let thread = "ios-fixture-thread-1"
+        // Resolve actual account ownership from the authenticated fixture, never a live account.
+        let accounts = try composeFixtureRequest("/v1/accounts")
+        let accountID = try XCTUnwrap((accounts["items"] as? [[String: Any]])?.first?["id"] as? String)
+        XCTAssertFalse(accountID.isEmpty)
+        func current() throws -> [String: Any] {
+            let envelope = try composeFixtureRequest("/v1/importance/conversations/" + thread + "?accountId=" + accountID)
+            return try XCTUnwrap(envelope["importance"] as? [String: Any])
+        }
+        func reset() throws {
+            let original = try current(), choice = try XCTUnwrap(original["conversation"] as? [String: Any])
+            _ = try composeFixtureRequest("/v1/importance/choices", method: "POST", body: ["accountId": accountID, "target": ["kind": "conversation", "threadId": thread], "choice": NSNull(), "expectedRevision": choice["revision"]!, "operationId": UUID().uuidString.lowercased()])
+        }
+        try reset()
+        addTeardownBlock { try reset() }
+        let providerBefore = try composeFixtureRequest("/__fixture/compose/state")
+        let before = try composeFixtureRequest("/v1/inbox?accountId=" + accountID + "&view=all&limit=30")
+        let beforeRow = try XCTUnwrap((before["messages"] as? [[String: Any]])?.first { $0["threadId"] as? String == thread })
+        let app = try launchApp(openInbox: false)
+        app.buttons["mail.filter.all"].tap()
+        let choiceButton = app.buttons["mail.importance." + thread]
+        XCTAssertTrue(choiceButton.waitForExistence(timeout: 15)); choiceButton.tap()
+        XCTAssertTrue(app.buttons["importance.important"].waitForExistence(timeout: 10))
+        attachScreenshot(named: "bre457-conversation-scope-before-choice")
+        app.buttons["importance.important"].tap()
+        XCTAssertTrue(app.staticTexts["importance.status"].waitForExistence(timeout: 10))
+        XCTAssertEqual(try current()["effective"] as? String, "important")
+        XCTAssertTrue(app.buttons["importance.undo"].isEnabled)
+        attachScreenshot(named: "bre457-importance-acknowledged-undo")
+        app.buttons["Done"].tap()
+        app.terminate()
+        let reopened = try launchApp(openInbox: false)
+        XCTAssertTrue(reopened.descendants(matching: .any)["inbox.message." + thread].waitForExistence(timeout: 15))
+        attachScreenshot(named: "bre457-important-reopened")
+        reopened.buttons["mail.importance." + thread].tap()
+        XCTAssertTrue(reopened.buttons["importance.not-important"].waitForExistence(timeout: 10))
+        reopened.buttons["importance.not-important"].tap()
+        XCTAssertTrue(reopened.staticTexts["importance.status"].waitForExistence(timeout: 10))
+        XCTAssertEqual(try current()["effective"] as? String, "not_important")
+        reopened.buttons["Done"].tap()
+        let removed = reopened.descendants(matching: .any)["inbox.message." + thread]
+        let disappears = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: removed)
+        wait(for: [disappears], timeout: 10)
+        XCTAssertTrue(reopened.buttons["mail.filter.all"].isHittable)
+        let after = try composeFixtureRequest("/v1/inbox?accountId=" + accountID + "&view=all&limit=30")
+        let afterRow = try XCTUnwrap((after["messages"] as? [[String: Any]])?.first { $0["threadId"] as? String == thread })
+        XCTAssertEqual(beforeRow["unread"] as? Bool, afterRow["unread"] as? Bool, "Importance does not mark read")
+        XCTAssertEqual(beforeRow["labels"] as? [String], afterRow["labels"] as? [String], "Importance does not move provider mail")
+        let providerAfter = try composeFixtureRequest("/__fixture/compose/state")
+        XCTAssertEqual(providerBefore["sendRequests"] as? Int, providerAfter["sendRequests"] as? Int)
+        XCTAssertEqual(providerBefore["deliveries"] as? Int, providerAfter["deliveries"] as? Int)
+        let report: [String: Any] = ["scenario": "native-importance-correction", "acknowledgedUIChoices": 2,
+            "sendRequestsBefore": providerBefore["sendRequests"] ?? NSNull(), "sendRequestsAfter": providerAfter["sendRequests"] ?? NSNull(),
+            "deliveriesBefore": providerBefore["deliveries"] ?? NSNull(), "deliveriesAfter": providerAfter["deliveries"] ?? NSNull(),
+            "allMailTargetWidth": reopened.buttons["mail.filter.all"].frame.width, "allMailTargetHeight": reopened.buttons["mail.filter.all"].frame.height]
+        print("NATIVE_BRE457_RESULT " + String(decoding: try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
+        attachScreenshot(named: "bre457-important-removal-all-mail-recovery")
+    }
+
+    func test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving() throws {
+        let app = try launchApp()
+        app.tabBars.buttons["Settings"].tap()
+        chooseSettingsSection("Writing", in: app)
+        let signature = app.textFields["settings.signature"]
+        XCTAssertTrue(signature.waitForExistence(timeout: 10))
+        signature.tap(); signature.typeText(" Unsaved synthetic edit")
+        chooseSettingsSection("Appearance & reading", in: app)
+        XCTAssertTrue(app.buttons["settings.save"].isEnabled, "Shared account Save stays reachable outside Writing")
+        app.tabBars.buttons["Mail"].tap()
+        XCTAssertTrue(app.buttons["Stay"].waitForExistence(timeout: 5)); app.buttons["Stay"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Settings"].isSelected)
+        chooseSettingsSection("Writing", in: app)
+        XCTAssertTrue((signature.value as? String ?? "").contains("Unsaved synthetic edit"))
+        attachScreenshot(named: "bre457-settings-unsaved-stay")
+        app.buttons["Discard edits"].tap()
+        app.tabBars.buttons["Mail"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected)
     }
 
     /// Runs in both themes against the authenticated loopback fixture only.
@@ -742,7 +822,7 @@ final class OrcaUITests: XCTestCase {
         addTeardownBlock { _ = try self.composeFixtureRequest("v1/drafts/\(markerID)?accountId=ios-fixture-account", method: "DELETE") }
         // Re-enter the tab to run the production onAppear load reliably; a
         // short swipe may merely scroll and never cross refresh's threshold.
-        app.tabBars.buttons["Inbox"].tap()
+        app.tabBars.buttons["Mail"].tap()
         app.tabBars.buttons["Drafts"].tap()
         // Seeing a server row created after the sent transition proves the
         // fresh server list has been applied, avoiding transient-empty passes.
@@ -783,7 +863,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(latestWriting.contains("These local edits were never sent."))
         navigateBack(in: app)
         _ = try composeFixtureRequest("__fixture/compose/delivery", method: "POST", body: ["draftId": id, "status": "sent"])
-        app.tabBars.buttons["Inbox"].tap(); app.tabBars.buttons["Drafts"].tap()
+        app.tabBars.buttons["Mail"].tap(); app.tabBars.buttons["Drafts"].tap()
         let preserved = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@ AND label CONTAINS[c] %@", "draft.", subject, "Sent elsewhere")).firstMatch
         revealDraftRow(preserved, in: app); preserved.tap()
         XCTAssertTrue(app.scrollViews["compose.form"].waitForExistence(timeout: 10))
@@ -1058,8 +1138,8 @@ final class OrcaUITests: XCTestCase {
         let list = app.collectionViews["inbox.list"]
         let picker = app.buttons["inbox.view-picker"]
         let settings = app.buttons["Choose visible views"]
-        let search = app.searchFields["Search mail"]
-        let title = app.staticTexts["What deserves you now"]
+        let search = app.searchFields["Search All Mail"]
+        let title = app.staticTexts["mail.list-heading"]
         XCTAssertTrue(list.waitForExistence(timeout: 5))
         XCTAssertTrue(search.isHittable)
         XCTAssertTrue(picker.isHittable)
@@ -1081,7 +1161,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(picker.isHittable)
         XCTAssertTrue(settings.isHittable)
         XCTAssertTrue(app.buttons["compose.open"].isHittable)
-        XCTAssertTrue(app.tabBars.buttons["Inbox"].isHittable)
+        XCTAssertTrue(app.tabBars.buttons["Mail"].isHittable)
         XCTAssertTrue(app.tabBars.buttons["Drafts"].isHittable)
         XCTAssertTrue(app.tabBars.buttons["Settings"].isHittable)
         XCTAssertEqual(picker.frame.minY, initialPickerY, accuracy: 2)
@@ -1134,7 +1214,7 @@ final class OrcaUITests: XCTestCase {
         assertInboxLoaded(in: app)
         let list = app.collectionViews["inbox.list"]
         XCTAssertTrue(list.waitForExistence(timeout: 5))
-        let title = app.staticTexts["What deserves you now"]
+        let title = app.staticTexts["mail.list-heading"]
         XCTAssertTrue(title.isHittable)
         let initialY = title.frame.minY
         attachScreenshot(named: "24-inbox-before-scroll")
@@ -1375,8 +1455,10 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", Fixture.account)).firstMatch.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "Gmail")).firstMatch.exists)
+        chooseSettingsSection("Notifications", in: app)
         let allowNotifications = app.buttons["settings.allow-notifications"]
         XCTAssertTrue(allowNotifications.exists || app.buttons["Allow notifications"].exists)
+        chooseSettingsSection("Privacy & data", in: app)
         XCTAssertTrue(app.buttons["Sign out"].exists)
         XCTAssertTrue(app.buttons["Change server"].exists)
         attachScreenshot(named: "08-dark-settings")
@@ -1404,6 +1486,7 @@ final class OrcaUITests: XCTestCase {
         navigateBack(in: app)
         app.tabBars.buttons["Settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
+        chooseSettingsSection("Notifications", in: app)
         let inboxNotifications = app.switches["settings.notifications.inbox"]
         XCTAssertTrue(inboxNotifications.waitForExistence(timeout: 10))
         inboxNotifications.tap()
@@ -1500,6 +1583,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.buttons["compose.send"].waitForExistence(timeout: 10))
         navigateBack(in: app)
         app.tabBars.buttons["Settings"].tap()
+        chooseSettingsSection("Notifications", in: app)
         let inbox = app.switches["settings.notifications.inbox"]
         XCTAssertTrue(inbox.waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["Human mail"].exists)
@@ -1522,6 +1606,7 @@ final class OrcaUITests: XCTestCase {
         let reopened = try launchApp()
         assertInboxLoaded(in: reopened)
         reopened.tabBars.buttons["Settings"].tap()
+        chooseSettingsSection("Notifications", in: reopened)
         let restoredInbox = reopened.switches["settings.notifications.inbox"]
         XCTAssertTrue(restoredInbox.waitForExistence(timeout: 10))
         XCTAssertEqual(restoredInbox.value as? String, "0")
@@ -1651,6 +1736,7 @@ final class OrcaUITests: XCTestCase {
         if focus.value as? String != "0" { focus.tap() }
         attachScreenshot(named: "19-visible-views-selected")
         navigateBack(in: app)
+        chooseSettingsSection("Notifications", in: app)
         let notification = app.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.notifications.space.view:", "Hub notifications")).firstMatch
         for _ in 0..<8 {
             if notification.exists && notification.isHittable { break }
@@ -1659,7 +1745,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(notification.exists)
         XCTAssertEqual(notification.value as? String, "0", "Showing a View must not enable its notifications")
         attachScreenshot(named: "20-view-notifications-still-off")
-        app.tabBars.buttons["Inbox"].tap()
+        app.tabBars.buttons["Mail"].tap()
         app.buttons["inbox.view-picker"].tap()
         attachScreenshot(named: "21-visible-views-menu")
         XCTAssertFalse(app.buttons["Focus"].exists)
@@ -1688,8 +1774,8 @@ final class OrcaUITests: XCTestCase {
         XCTAssertEqual(restored.value as? String, "1")
         restored.tap()
         reopened.switches["settings.views.focus"].tap()
-        reopened.tabBars.buttons["Inbox"].tap()
-        XCTAssertTrue(reopened.navigationBars["Inbox"].waitForExistence(timeout: 10), "Hiding the active View must return to Inbox")
+        reopened.tabBars.buttons["Mail"].tap()
+        XCTAssertTrue(reopened.navigationBars["Important"].waitForExistence(timeout: 10), "Hiding the active View must return to Important")
     }
 
     func test09EmptySavedViewKeepsMailboxMenuAvailable() throws {
@@ -1700,7 +1786,7 @@ final class OrcaUITests: XCTestCase {
         let empty = app.switches.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "settings.views.view:", "Empty view")).firstMatch
         XCTAssertTrue(empty.waitForExistence(timeout: 10))
         if empty.value as? String != "1" { empty.tap() }
-        app.tabBars.buttons["Inbox"].tap()
+        app.tabBars.buttons["Mail"].tap()
         app.buttons["inbox.view-picker"].tap()
         app.buttons["Empty view"].tap()
         XCTAssertTrue(app.staticTexts["No matching mail"].waitForExistence(timeout: 10))
@@ -1744,7 +1830,7 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "mailbox-selector-repeated-return")
         app.buttons["inbox.visible-views"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
-        app.tabBars.buttons["Inbox"].tap()
+        app.tabBars.buttons["Mail"].tap()
         assertMailboxControl("Inbox", in: app)
         attachScreenshot(named: "mailbox-selector-settings-return")
     }
@@ -1805,6 +1891,14 @@ final class OrcaUITests: XCTestCase {
         attachScreenshot(named: "mailbox-selector-refresh-switch-return")
     }
 
+    private func chooseSettingsSection(_ title: String, in app: XCUIApplication) {
+        let picker = app.buttons["settings.section"]
+        for _ in 0..<6 { if picker.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(picker.waitForExistence(timeout: 10)); picker.tap()
+        let option = app.buttons[title]
+        XCTAssertTrue(option.waitForExistence(timeout: 5)); option.tap()
+    }
+
     private func assertMailboxControl(_ title: String, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let picker = app.buttons["inbox.view-picker"]
         let settings = app.buttons["inbox.visible-views"]
@@ -1821,7 +1915,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(app.frame.contains(settings.frame), file: file, line: line)
     }
 
-    private func launchApp(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false, shortLayout: Bool = false) throws -> XCUIApplication {
+    private func launchApp(contentSize: String = "UICTContentSizeCategoryL", htmlDiagnostics: Bool = false, shortLayout: Bool = false, openInbox: Bool = true) throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
         guard let apiURL = environment["ORCA_FIXTURE_API_URL"], !apiURL.isEmpty else {
             XCTFail("Set ORCA_FIXTURE_API_URL to the isolated fixture API URL before running OrcaUITests.")
@@ -1843,6 +1937,12 @@ final class OrcaUITests: XCTestCase {
         if htmlDiagnostics { app.launchArguments.append("--fixture-html-diagnostics") }
         if shortLayout { app.launchArguments.append("--fixture-short-layout") }
         app.launch()
+        if openInbox {
+            // Existing compose/reader/placement fixtures explicitly enter Inbox.
+            // test44 separately asserts the real default Important entry.
+            XCTAssertTrue(app.buttons["inbox.view-picker"].waitForExistence(timeout: 20))
+            chooseMailbox("Inbox", in: app)
+        }
         return app
     }
 
@@ -1861,7 +1961,7 @@ final class OrcaUITests: XCTestCase {
         // Leave callers at their original inbox entry point.
         for _ in 0..<scrolls { app.swipeDown() }
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists, file: file, line: line)
-        XCTAssertTrue(app.tabBars.buttons["Inbox"].isSelected, file: file, line: line)
+        XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, file: file, line: line)
     }
 
     private func openConversation(subject: String, in app: XCUIApplication) {
@@ -1897,7 +1997,7 @@ final class OrcaUITests: XCTestCase {
 
     private func search(for query: String, in app: XCUIApplication) {
         let identified = app.searchFields["inbox.search"]
-        let search = identified.exists ? identified : app.searchFields["Search mail"]
+        let search = identified.exists ? identified : app.searchFields["Search All Mail"]
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         search.tap()
         search.typeText(query)
@@ -1908,7 +2008,7 @@ final class OrcaUITests: XCTestCase {
 
     private func clearSearch(in app: XCUIApplication) {
         let identified = app.searchFields["inbox.search"]
-        let search = identified.exists ? identified : app.searchFields["Search mail"]
+        let search = identified.exists ? identified : app.searchFields["Search All Mail"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.buttons["Clear text"].tap()
         // Clearing triggers InboxView's empty-search reload immediately. iOS

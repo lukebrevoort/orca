@@ -14,6 +14,7 @@ import ImageIO
 }
 
 struct RootView: View {
+    @AppStorage("orca.appearance") private var appearance = "system"
     @EnvironmentObject var state: AppState
     var body: some View { Group { switch state.phase {
     case .configuring:
@@ -25,7 +26,7 @@ struct RootView: View {
     case .signedOut: SignInView()
     case .loading: ProgressView("Opening Orca")
     case .ready: MainView()
-    } }.background(OrcaTheme.paper).preferredColorScheme(nil) }
+    } }.background(OrcaTheme.paper).preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil) }
 }
 
 struct ServerSetupView: View {
@@ -44,6 +45,10 @@ struct MainView: View {
     @EnvironmentObject var state: AppState
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var mailboxes = MailboxViews()
+    @StateObject private var importance = ImportanceController()
+    @StateObject private var preferences = AccountPreferencesController()
+    @State private var pendingTab: String?
+    @State private var confirmSettingsLeave = false
     @StateObject private var feedback = FeedbackTicketModel()
     @StateObject private var capture = FeedbackCaptureController()
     @StateObject private var captureWindow = FeedbackWindowReference()
@@ -60,8 +65,11 @@ struct MainView: View {
         // Keyboard avoidance and Dynamic Type resize this one shared row;
         // there is no per-screen visibility bookkeeping or guessed padding.
         VStack(spacing: 0) {
-            TabView(selection: $state.selectedTab) {
-                InboxView().tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox")
+            TabView(selection: Binding(get: { state.selectedTab }, set: { tab in
+                if state.selectedTab == "settings", tab != "settings", preferences.dirty || preferences.saving { pendingTab = tab; confirmSettingsLeave = true }
+                else { state.selectedTab = tab }
+            })) {
+                InboxView().tabItem { Label("Mail", systemImage: "tray") }.tag("inbox")
                 DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
                 SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
             }
@@ -71,6 +79,14 @@ struct MainView: View {
         }
         .background(OrcaTheme.paper)
         .environmentObject(mailboxes)
+        .environmentObject(importance)
+        .environmentObject(preferences)
+        .onChange(of: state.ownerScope) { preferences.invalidate() }
+        .confirmationDialog("Leave unsaved account choices?", isPresented: $confirmSettingsLeave, titleVisibility: .visible) {
+            Button("Stay", role: .cancel) { pendingTab = nil }
+            Button("Discard edits and leave", role: .destructive) { if !preferences.saving { preferences.discard(); state.selectedTab = pendingTab ?? "settings"; pendingTab = nil } }.disabled(preferences.saving)
+        } message: { Text("Stay to save or continue editing. Section changes keep your edits.") }
+        .onChange(of: captureScope) { importance.invalidate() }
         .background(FeedbackWindowProbe(reference: captureWindow).frame(width: 0, height: 0))
         .sheet(isPresented: $feedbackPresented, onDismiss: performCaptureAfterDismissal) {
             FeedbackTicketComposer(model: feedback, capture: capture) { action in
@@ -101,6 +117,7 @@ struct MainView: View {
             feedback.configure(scope: scope)
         }
         .task(id: state.ownerScope) { await mailboxes.load(state: state) }
+        .task(id: state.ownerScope) { await preferences.load(state: state) }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 Task {

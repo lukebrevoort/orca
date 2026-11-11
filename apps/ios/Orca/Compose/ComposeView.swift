@@ -78,6 +78,7 @@ struct ComposeOperationReservation {
 
 struct ComposeView: View {
     @EnvironmentObject var state: AppState; @Environment(\.dismiss) var dismiss
+    @EnvironmentObject private var preferences: AccountPreferencesController
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var context: ThreadDetail?; var kind = "new"; private var seedServer: MessageDraft?
@@ -273,7 +274,13 @@ struct ComposeView: View {
                 guard let current else { completed = true; preparing = false; dismiss(); return }
                 if needsHydration { adopt(current) }
             }
-            if needsHydration { seed() }
+            if needsHydration {
+                let isNewWriting = local == nil && seedServer == nil
+                seed()
+                if isNewWriting, let signature = preferences.saved?.signature, !signature.isEmpty {
+                    messageBody = "\n\n" + signature + messageBody
+                }
+            }
             if heldByAnotherComposer { status = "This draft is being updated in another window" }
             else if deliveryRecoveryAction { status = Self.savedStatus(local?.deliveryState ?? "local") }
             else if !draftOperation.isBusy { _ = await saveLocal() }

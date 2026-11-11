@@ -3,13 +3,16 @@ import WebKit
 
 struct SafeHTMLView: UIViewRepresentable {
     let html: String
-    func makeUIView(context: Context) -> WKWebView { let config = WKWebViewConfiguration(); config.websiteDataStore = .nonPersistent(); config.defaultWebpagePreferences.allowsContentJavaScript = false; let view = ContentSizedWebView(frame: .zero, configuration: config); view.navigationDelegate = context.coordinator; view.isOpaque = false; view.scrollView.isScrollEnabled = false; return view }
+    var findRequest: UUID? = nil
+    var wideContent = false
+    func makeUIView(context: Context) -> WKWebView { let config = WKWebViewConfiguration(); config.websiteDataStore = .nonPersistent(); config.defaultWebpagePreferences.allowsContentJavaScript = false; let view = ContentSizedWebView(frame: .zero, configuration: config); view.navigationDelegate = context.coordinator; view.isFindInteractionEnabled = true; view.isOpaque = false; view.scrollView.isScrollEnabled = false; return view }
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.sizeCategory) private var sizeCategory
     private static let readerFont = Bundle.main.url(forResource: "Newsreader", withExtension: "ttf").flatMap { try? Data(contentsOf: $0).base64EncodedString() } ?? ""
     func updateUIView(_ view: WKWebView, context: Context) {
         let size = UIFontMetrics(forTextStyle: .body).scaledValue(for: 22)
-        context.coordinator.update(view, html: html, colorScheme: colorScheme, size: size)
+        context.coordinator.update(view, html: html, colorScheme: colorScheme, size: size, wideContent: wideContent)
+        context.coordinator.find(view, request: findRequest)
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     final class Coordinator: NSObject, WKNavigationDelegate {
@@ -17,15 +20,22 @@ struct SafeHTMLView: UIViewRepresentable {
             let html: String
             let colorScheme: ColorScheme
             let size: CGFloat
+            let wideContent: Bool
         }
         // Retain only this reader's current inputs, not another copy of the
         // complete document (which also embeds the ~600 KB base64 font).
         private var renderedInputs: RenderInputs?
+        private var lastFindRequest: UUID?
+        func find(_ view: WKWebView, request: UUID?) {
+            guard let request, request != lastFindRequest else { return }
+            lastFindRequest = request
+            view.findInteraction?.presentFindNavigator(showingReplace: false)
+        }
 
         // Keep preparation in the coordinator so repeated update work can be
         // measured independently of asynchronous WebKit navigation/layout.
-        func update(_ view: WKWebView, html: String, colorScheme: ColorScheme, size: CGFloat) {
-            let inputs = RenderInputs(html: html, colorScheme: colorScheme, size: size)
+        func update(_ view: WKWebView, html: String, colorScheme: ColorScheme, size: CGFloat, wideContent: Bool = false) {
+            let inputs = RenderInputs(html: html, colorScheme: colorScheme, size: size, wideContent: wideContent)
             // SwiftUI may update the representable without changing its body.
             // Check before interpolation so a no-op does not rebuild the font
             // payload or disturb the existing WebKit document/selection.
@@ -63,8 +73,12 @@ struct SafeHTMLView: UIViewRepresentable {
             table.orca-mail-layout,table.orca-mail-layout>tbody,table.orca-mail-layout>thead,table.orca-mail-layout>tfoot,table.orca-mail-layout>tr,table.orca-mail-layout>tbody>tr,table.orca-mail-layout>thead>tr,table.orca-mail-layout>tfoot>tr,table.orca-mail-layout>tr>td,table.orca-mail-layout>tbody>tr>td,table.orca-mail-layout>thead>tr>td,table.orca-mail-layout>tfoot>tr>td{display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important}
             table.orca-mail-layout>tr>td,table.orca-mail-layout>tbody>tr>td,table.orca-mail-layout>thead>tr>td,table.orca-mail-layout>tfoot>tr>td{padding:0 0 0.5em!important}
             .orca-mail-image-note{display:block;font-size:0.9em;line-height:1.4;margin:0.3em 0 0.65em;overflow-wrap:anywhere}
+            .orca-wide-content{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+            .orca-wide-content pre,.orca-wide-content pre *{white-space:pre!important;overflow-wrap:normal!important;max-width:none!important}
+            .orca-wide-content table:not(.orca-mail-layout):not(.orca-mail-spacer-table){width:max-content!important;min-width:100%!important;max-width:none!important;table-layout:auto!important}
+            .orca-wide-content table:not(.orca-mail-layout):not(.orca-mail-spacer-table) th,.orca-wide-content table:not(.orca-mail-layout):not(.orca-mail-spacer-table) td{white-space:nowrap!important;overflow-wrap:normal!important}
             </style>
-            """ + html
+            """ + (wideContent ? "<div class=\"orca-wide-content\" tabindex=\"0\" role=\"region\" aria-label=\"Wide message content, scroll horizontally\">" + html + "</div>" : html)
 #if DEBUG
             (view as? ContentSizedWebView)?.recordFixtureEvent(.requested)
 #endif

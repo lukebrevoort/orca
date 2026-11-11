@@ -474,6 +474,9 @@ final class ReaderUITests: XCTestCase {
             app.launchArguments.append("--fixture-html-diagnostics")
         }
         app.launch()
+        XCTAssertTrue(app.buttons["inbox.view-picker"].waitForExistence(timeout: 20))
+        app.buttons["inbox.view-picker"].tap()
+        XCTAssertTrue(app.buttons["Inbox"].waitForExistence(timeout: 5)); app.buttons["Inbox"].tap()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20))
         return app
     }

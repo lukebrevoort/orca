@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B45700000000000000000004 /* NativeViewEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000004 /* NativeViewEditor.swift */; };
+		B45700000000000000000003 /* ImportanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000003 /* ImportanceView.swift */; };
+		B45700000000000000000002 /* AccountPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000002 /* AccountPreferences.swift */; };
+		B45700000000000000000001 /* Importance.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000001 /* Importance.swift */; };
 		FEE000000000000000000001 /* FeedbackCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE000000000000000000002 /* FeedbackCapture.swift */; };
 		AC0DE0000000000000000001 /* VerificationCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0DE0000000000000000002 /* VerificationCode.swift */; };
 		E7502EA5193F48CA8261B7AE /* SafeHTMLOverflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF00DA38C5EA46A7B1BD4F0C /* SafeHTMLOverflowTests.swift */; };
@@ -59,6 +63,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B45710000000000000000004 /* NativeViewEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeViewEditor.swift; sourceTree = "<group>"; };
+		B45710000000000000000003 /* ImportanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportanceView.swift; sourceTree = "<group>"; };
+		B45710000000000000000002 /* AccountPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPreferences.swift; sourceTree = "<group>"; };
+		B45710000000000000000001 /* Importance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Importance.swift; sourceTree = "<group>"; };
 		FEE000000000000000000002 /* FeedbackCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackCapture.swift; sourceTree = "<group>"; };
 		AC0DE0000000000000000002 /* VerificationCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationCode.swift; sourceTree = "<group>"; };
 		EF00DA38C5EA46A7B1BD4F0C /* SafeHTMLOverflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLOverflowTests.swift; sourceTree = "<group>"; };
@@ -124,6 +132,8 @@
 		2DED08717BC463CBFCC5F794 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000002 /* AccountPreferences.swift */,
+				B45710000000000000000001 /* Importance.swift */,
 				FEE000000000000000000002 /* FeedbackCapture.swift */,
 				A07450C2D63ED60304D85D8E /* APIClient.swift */,
 				654DBEFED4AB0FA22340D491 /* AppState.swift */,
@@ -169,6 +179,8 @@
 		852DEF853D9EC074CD907BD4 /* Mail */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000004 /* NativeViewEditor.swift */,
+				B45710000000000000000003 /* ImportanceView.swift */,
 				AB208EA5B5621CF0102845A4 /* InboxView.swift */,
                 AABB00112233445566778802 /* MailActions.swift */,
 				434EE936EE558743123D3016 /* MailboxViews.swift */,
@@ -362,6 +374,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B45700000000000000000004 /* NativeViewEditor.swift in Sources */,
+				B45700000000000000000003 /* ImportanceView.swift in Sources */,
+				B45700000000000000000002 /* AccountPreferences.swift in Sources */,
+				B45700000000000000000001 /* Importance.swift in Sources */,
 				FEE000000000000000000001 /* FeedbackCapture.swift in Sources */,
 				ED573088B33A83A102E6FD17 /* APIClient.swift in Sources */,
 				CE2B1790BCC8808A1B7B934A /* AppState.swift in Sources */,

@@ -62,13 +62,13 @@ extension APIClient {
         var q = [URLQueryItem(name: "accountId", value: accountId), .init(name: "view", value: view), .init(name: "limit", value: "30")]
         if let text, !text.isEmpty { q.append(.init(name: "query", value: text)) }; if let cursor { q.append(.init(name: "cursor", value: cursor)) }
         if let destinationId { q.append(.init(name: "destinationId", value: destinationId)) }
-        return try await request("v1/inbox", query: q)
+        return try await request("v1/inbox", query: q, headers: ["x-orca-importance-version": "1"])
     }
-    func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)], headers: ["x-orca-image-version": "2"]) }
+    func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)], headers: ["x-orca-image-version": "2", "x-orca-importance-version": "1"]) }
     func threadPage(_ id: String, accountId: String, cursor: String?) async throws -> ThreadReadPage {
         var query = [URLQueryItem(name: "accountId", value: accountId)]
         if let cursor { query.append(.init(name: "cursor", value: cursor)) }
-        return try await request("v1/threads/\(id)/messages", query: query)
+        return try await request("v1/threads/\(id)/messages", query: query, headers: ["x-orca-importance-version": "1"])
     }
     func markRead(_ id: String, accountId: String, isRead: Bool = true) async throws { struct Ack: Decodable { var ok: Bool }; let _: Ack = try await request("v1/threads/\(id)/read", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: ["isRead": isRead]) }
     // Sent rows supply delivery reconciliation metadata only; use draft(_:accountId:)
