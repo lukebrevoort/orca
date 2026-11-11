@@ -19,11 +19,11 @@ struct NativeViewEditor: View {
                     }
                 }
                 if let original = model.pendingTarget {
-                    Section("Save outcome unknown") {
+                    Section(model.appliedTarget == nil ? "Save outcome unknown" : "Original View saved") {
                         Text(original).textSelection(.enabled)
-                        Text("Retry sends the identical original command. Newer edits stay separate until its outcome is known. Closing this editor keeps that command.")
+                        Text(model.appliedTarget == nil ? "Retry sends the identical original command. Newer edits stay separate until its outcome is known. Closing this editor keeps that command." : "The original View was saved. Its current object must be loaded before editing; no replacement will be created.")
                         Button("Check Save outcome") { Task { await save(checkOnly: true) } }.accessibilityIdentifier("view-editor.check-outcome")
-                        Button("Retry original Save") { Task { await save() } }.accessibilityIdentifier("view-editor.reconcile")
+                        if model.appliedTarget == nil { Button("Retry original Save") { Task { await save() } }.accessibilityIdentifier("view-editor.reconcile") }
                     }
                 }
                 if let status = model.status { Section { Text(status).accessibilityIdentifier("view-editor.status") } }
@@ -67,7 +67,7 @@ struct NativeViewEditor: View {
                 .interactiveDismissDisabled(model.changed || model.busy)
                 .confirmationDialog("Discard view edits?", isPresented: $leave, titleVisibility: .visible) {
                     Button("Keep editing", role: .cancel) { }
-                    Button(model.pendingTarget == nil ? "Discard edits" : "Close and keep pending Save", role: .destructive) { model.discardEdits(); dismiss() }
+                    Button(model.pendingTarget == nil ? "Discard edits" : (model.appliedTarget == nil ? "Close and keep pending Save" : "Close and keep recovered View"), role: .destructive) { model.discardEdits(); dismiss() }
                 }
                 .task { await model.open(selection: selection, state: state) }
                 .onChange(of: model.name) { model.edited() }.onChange(of: model.description) { model.edited() }

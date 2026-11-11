@@ -27,6 +27,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     @Published private(set) var status: String?
     @Published private(set) var changed = false
     @Published private(set) var pendingTarget: String?
+    @Published private(set) var appliedTarget: String?
     private var baseline: Edits?
     private var scope = ""
     private var ownerID = "", origin = ""
@@ -59,6 +60,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     }
     var canFinishPresentation: Bool { current(generation) }
     private func persist() {
+        appliedTarget = journal?.appliedViewId
         pendingTarget = journal?.command == nil ? nil : "Original Save: \(journal!.command!.submitted.name) (\(journal!.context.viewId ?? journal!.context.query ?? "new View"))."
         if let journal, let data = try? JSONEncoder().encode(journal) { defaults.set(data, forKey: key) }
         else { defaults.removeObject(forKey: key) }
@@ -66,7 +68,7 @@ struct NativeViewSelection: Identifiable, Codable, Equatable {
     private func restore(_ value: Edits) { name = value.name; description = value.description; subject = value.subject; replaceSearch = value.replaceSearch }
     func open(selection: NativeViewSelection, state: AppState) async {
         generation = UUID(); self.selection = selection; self.state = state; scope = state.ownerScope; presented = true
-        draft = nil; preview = nil; status = nil; baseline = nil; changed = false; journal = nil; error = nil; pendingTarget = nil; busy = false; ownerID = ""; origin = ""; ownerClient = nil
+        draft = nil; preview = nil; status = nil; baseline = nil; changed = false; journal = nil; error = nil; pendingTarget = nil; appliedTarget = nil; busy = false; ownerID = ""; origin = ""; ownerClient = nil
         let request = generation, capturedScope = scope
         guard let client = state.client, let owner = state.userID, !owner.isEmpty else { error = "Verified account identity is unavailable. Reconnect to edit Views."; return }
         let capturedOrigin = await client.serverOrigin()

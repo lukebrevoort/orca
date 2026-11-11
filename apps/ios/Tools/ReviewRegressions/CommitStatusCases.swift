@@ -12,6 +12,9 @@ import Foundation
         guard let data = defaults.data(forKey: "native-view.pending.v1|\(state.ownerScope)|account"), let json = try? JSONDecoder().decode(MailActionJSON.self, from: data) else { return .null }
         return json["command"]["body"]
     }
+    func sameCommand(_ defaults: UserDefaults, _ original: MailActionJSON) -> Bool {
+        guard let lhs = try? encoder.encode(pendingBody(defaults)), let rhs = try? encoder.encode(original) else { return false }; return lhs == rhs
+    }
     func beginHeld(_ name: String, defaults: UserDefaults) async throws -> NativeViewEditorController {
         let editor = NativeViewEditorController(defaults: defaults)
         await editor.open(selection: .init(query: "Subject", accountId: "account"), state: state)
@@ -38,18 +41,18 @@ import Foundation
     let original = pendingBody(defaults), before = try await statusState()
     held.name = "Newer unknown edits"; held.edited()
     _ = await held.checkSaveOutcome()
-    check("478-eligible-unknown-keeps-exact-command", held.pendingTarget != nil && held.name == "Newer unknown edits" && (try encoder.encode(pendingBody(defaults))) == encoder.encode(original), "actual eligible/unresolved status never releases the original command")
+    check("478-eligible-unknown-keeps-exact-command", held.pendingTarget != nil && held.name == "Newer unknown edits" && sameCommand(defaults, original), "actual eligible/unresolved status never releases the original command")
     let originalBinding: MailActionJSON = .object(["operation": .string("view_commit"), "workspaceId": .string(id), "retryKey": original["retryKey"], "expectedRevisions": original["expectedRevisions"], "outcome": .string("not_applied"), "reason": .string("workspace_advanced"), "observedWorkspaceRevision": .number(Double(original["expectedRevisions"]["workspace"].integer! + 1)), "observedViewRevision": .null])
     let shiftedRevisions: MailActionJSON = .object(["workspace": .number(Double(original["expectedRevisions"]["workspace"].integer! + 1)), "view": original["expectedRevisions"]["view"]])
     let hostile = [originalBinding.setting("retryKey", to: .string("wrong-key")), originalBinding.setting("workspaceId", to: .string("wrong-owner")), originalBinding.setting("observedWorkspaceRevision", to: original["expectedRevisions"]["workspace"]), originalBinding.setting("extra", to: .bool(true)), originalBinding.setting("expectedRevisions", to: shiftedRevisions).setting("observedWorkspaceRevision", to: .number(Double(original["expectedRevisions"]["workspace"].integer! + 2)))]
     for (index, body) in hostile.enumerated() {
         try await control("status-response", .object(["status": .number(200), "body": body])); _ = await held.checkSaveOutcome()
-        check("478-invalid-proof-keeps-command-\(index)", held.pendingTarget != nil && (try encoder.encode(pendingBody(defaults))) == encoder.encode(original), "mismatched or malformed injected transport proof cannot unlock")
+        check("478-invalid-proof-keeps-command-\(index)", held.pendingTarget != nil && sameCommand(defaults, original), "mismatched or malformed injected transport proof cannot unlock")
     }
     for status in [401, 404, 503] {
         try await control("status-response", .object(["status": .number(Double(status)), "body": .object(["error": .object(["code": .string("synthetic_unavailable"), "message": .string("Unverified")])])]))
         _ = await held.checkSaveOutcome()
-        check("478-status-failure-keeps-command-\(status)", held.pendingTarget != nil && (try encoder.encode(pendingBody(defaults))) == encoder.encode(original), "auth/foreign404/unavailable status never becomes a no-write proof")
+        check("478-status-failure-keeps-command-\(status)", held.pendingTarget != nil && sameCommand(defaults, original), "auth/foreign404/unavailable status never becomes a no-write proof")
     }
     for (label, credential) in [("unauthenticated", "invalid-owned-fixture-token"), ("foreign-owner", otherToken)] {
         let authState = AppState(cache: state.cache)
@@ -59,7 +62,7 @@ import Foundation
         await authEditor.open(selection: .init(query: "Subject", accountId: "account"), state: authState); _ = await authEditor.checkSaveOutcome()
         let authObservation = try await statusState()
         if case .array(let requests) = authObservation["requests"] {
-            check("478-real-" + label + "-cannot-unlock", authEditor.pendingTarget != nil && requests.last?["path"].text == "/v1/organization/views/commit-status" && requests.last?["status"].integer == (label == "unauthenticated" ? 401 : 403) && (try encoder.encode(pendingBody(defaults))) == encoder.encode(original), "real API auth/ownership rejection retains the exact original command")
+            check("478-real-" + label + "-cannot-unlock", authEditor.pendingTarget != nil && requests.last?["path"].text == "/v1/organization/views/commit-status" && requests.last?["status"].integer == (label == "unauthenticated" ? 401 : 403) && sameCommand(defaults, original), "real API auth/ownership rejection retains the exact original command")
         }
     }
     let switched = AppState(cache: state.cache), hold = SearchRequestHold()
@@ -71,7 +74,7 @@ import Foundation
     offline.client = APIClient(baseURL: URL(string: state.baseURLText)!, session: URLSession(configuration: offlineConfig)) { "synthetic-offline" }
     let offlineEditor = NativeViewEditorController(defaults: defaults)
     await offlineEditor.open(selection: .init(query: "Subject", accountId: "account"), state: offline); _ = await offlineEditor.checkSaveOutcome()
-    check("478-offline-keeps-command", offlineEditor.pendingTarget != nil && (try encoder.encode(pendingBody(defaults))) == encoder.encode(original), "actual URLSession transport failure retains uncertainty")
+    check("478-offline-keeps-command", offlineEditor.pendingTarget != nil && sameCommand(defaults, original), "actual URLSession transport failure retains uncertainty")
     // A held status response is tested below with a URLProtocol boundary: no server proof is invented as acceptance.
     ReviewURLProtocol.handler = { request in
         let reply = originalBinding.setting("observedWorkspaceRevision", to: .number(Double(original["expectedRevisions"]["workspace"].integer! + 1)))
@@ -82,7 +85,7 @@ import Foundation
     await switchedEditor.open(selection: .init(query: "Subject", accountId: "account"), state: switched)
     let checking = Task { _ = await switchedEditor.checkSaveOutcome() }
     await hold.waitUntilHeld(); switched.selectedAccountID = "other-account"; await hold.release(); await checking.value
-    check("478-held-other-account-cannot-accept-proof", switchedEditor.pendingTarget != nil && (try encoder.encode(pendingBody(defaults))) == encoder.encode(original), "account change during held proof rejects publication and retirement")
+    check("478-held-other-account-cannot-accept-proof", switchedEditor.pendingTarget != nil && sameCommand(defaults, original), "account change during held proof rejects publication and retirement")
     _ = await held.save() // Explicit safe original retry; commits exactly the original command once.
     let afterRetry = try await statusState()
     let release: MailActionJSON = try await client.request("__bre457/release-held", method: "POST", body: MailActionJSON.object([:]))
@@ -100,7 +103,7 @@ import Foundation
     _ = await mismatched.checkSaveOutcome(); _ = await mismatched.save()
     let mismatchLate: MailActionJSON = try await client.request("__bre457/release-held", method: "POST", body: MailActionJSON.object([:]))
     let mismatchedAfter = try await statusState()
-    check("478-real-command-mismatch-stays-locked", mismatched.pendingTarget != nil && mismatchLate["status"].integer == 409 && mismatchedBefore["count"].integer == mismatchedAfter["count"].integer && (try encoder.encode(pendingBody(mismatchDefaults))) == encoder.encode(mismatchedOriginal), "actual owned key collision is unknown, never a no-write fence for this command")
+    check("478-real-command-mismatch-stays-locked", mismatched.pendingTarget != nil && mismatchLate["status"].integer == 409 && mismatchedBefore["count"].integer == mismatchedAfter["count"].integer && sameCommand(mismatchDefaults, mismatchedOriginal), "actual owned key collision is unknown, never a no-write fence for this command")
 
     let fenceSuite = suite + ".status-fence", fenceDefaults = UserDefaults(suiteName: fenceSuite)!
     defer { fenceDefaults.removePersistentDomain(forName: fenceSuite) }
@@ -125,6 +128,6 @@ import Foundation
     let _: EmptyResponse = try await client.request("v1/organization/views", pathSuffix: [savedID], method: "DELETE", query: [.init(name: "expectedRevision", value: "1"), .init(name: "expectedWorkspaceRevision", value: String(catalog["workspaceRevision"].integer!)), .init(name: "idempotencyKey", value: UUID().uuidString)])
     let removed = try await statusState(); _ = await deleted.checkSaveOutcome(); _ = await deleted.save(); await deleted.review()
     let stillRemoved = try await statusState()
-    check("478-applied-deleted-never-recreates", deleted.pendingTarget != nil && deleted.error?.contains(savedID) == true && removed["count"].integer == stillRemoved["count"].integer && (try encoder.encode(pendingBody(deletedDefaults))) == encoder.encode(deletedOriginal), "applied receipt pins original deleted ID and exact command; no new UUID or replacement View")
+    check("478-applied-deleted-never-recreates", deleted.pendingTarget != nil && deleted.error?.contains(savedID) == true && removed["count"].integer == stillRemoved["count"].integer && sameCommand(deletedDefaults, deletedOriginal), "applied receipt pins original deleted ID and exact command; no new UUID or replacement View")
     check("478-status-provider-boundary", stillRemoved["providerCalls"].integer == 0, "all status, fence and recovery cases use zero external provider calls")
 }
