@@ -36,6 +36,8 @@ Only effective Important belongs in the Important filter and qualifies for impor
 - Manual reminders are a different user-chosen return-time feature. Keep their preferences and resurfacing/delivery explanation separate.
 - Preserve legacy notification configuration for compatibility/rollback, but never let an older client update silently downgrade an adopted Important-only policy. Specify and test the upgrade behavior before enabling it in either client.
 
+Migration interaction: an already-enabled legacy installation retains its previous placement-based policy until explicit adoption, labeled as previous notification choices. Adoption requires choosing accounts and actual platform permission; cancellation leaves configuration unchanged. Establish a server-owned freshness boundary on adoption, re-enable and new device registration; newly added accounts need their own boundary. Existing unread backlog must not become a fresh interruption. Invalidate queued legacy work through policy/device generations when adoption succeeds. Routine launches, reads and unchanged saves must not reset freshness. BRE-455 must verify these transitions against the synthetic delivery ledger before either client activates the policy.
+
 These are policy defaults, not measured notification usefulness. Real provider/OS delivery and physical-device acceptance require their own evidence before those claims can be made.
 
 ## D5 — Organization exposure
@@ -51,6 +53,8 @@ Directly changing a choice remains possible after reopening/reloading. Provide a
 Engineering evidence covers responsive web at 320/390/760/1024/1440 where relevant, both themes, keyboard/focus and all changed control states. Native evidence covers standard and accessibility text, light/dark, appropriate fixture suites, account switching and interruptions. Representative fixtures include human plain text, quoted/forwarded mail, GitHub/table-heavy notifications, newsletters, receipts, long threads, attachments and hostile/remote content.
 
 Every final result identifies the tested revision, environment, actual scenario/work counts and limitations. Representative real-mail and physical-device acceptance remain separate from synthetic browser and unsigned hosted simulator results. They must not be invented or used to call the app a proven Gmail replacement. Keep a specific handoff of remaining real-use cases if authorization/data/device access is unavailable.
+
+The real-use session covers finding missed mail through All Mail/search; reading plain, forwarded, table-heavy and long conversations; correcting importance and reopening across accounts; compose/reply/forward with recipients and attachments plus interrupted recovery; previewing, refining and reopening a view without moving mail; notification adoption, denial and correction on an authorized physical device; and offline/auth-expiry recovery without lost writing. Record failures and reasons to return to Gmail. A handoff or synthetic fixture alone cannot pass ACCEPT-01; unavailable access or device evidence leaves the corresponding result unverified.
 
 ## Source and risk notes
 
