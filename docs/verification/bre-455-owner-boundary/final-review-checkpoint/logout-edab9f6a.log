@@ -1,0 +1,16 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/logout-route.test.ts:
+(pass) origin guard: rejects https://evil.example before opening the handler database [83.08ms]
+(pass) origin guard: rejects missing Origin before opening the handler database [60.93ms]
+(pass) origin guard: rejects null before opening the handler database [62.73ms]
+(pass) origin guard: rejects http://localhost:5173.evil.example before opening the handler database [61.64ms]
+(pass) origin guard: rejects http://localhost:5173/ before opening the handler database [61.60ms]
+(pass) revocation through real wiring: matching Origin clears cookie and old token receives 401 [61.79ms]
+(pass) matching Origin with no cookie succeeds and clears the cookie [53.76ms]
+(pass) other methods cannot revoke through real wiring [59.75ms]
+
+ 8 pass
+ 0 fail
+ 53 expect() calls
+Ran 8 tests across 1 file. [964.00ms]

@@ -1,0 +1,59 @@
+{
+  "synthetic": true,
+  "pauseStatus": 409,
+  "accountsStatus": 409,
+  "before": {
+    "installations": [],
+    "operations": []
+  },
+  "afterMismatch": {
+    "installations": [],
+    "operations": []
+  },
+  "sameOwnerStatus": 200,
+  "afterPositive": {
+    "installations": [
+      {
+        "user_id": "u",
+        "installation_id": "original-u",
+        "enabled": 0,
+        "revision": 1
+      }
+    ],
+    "operations": [
+      {
+        "user_id": "u",
+        "operation_id": "a27acfc0-73ec-4187-aa6f-f0a8461ffd57",
+        "installation_id": "original-u"
+      }
+    ]
+  },
+  "heldSession": {
+    "status": 200,
+    "computedHeader": true,
+    "cookieWrites": 0,
+    "differsFromReplacement": true
+  },
+  "realPairedTransition": {
+    "status": 200,
+    "cookieNames": [
+      "orca_session",
+      "orca_browser_auth_context"
+    ],
+    "markerReadable": true
+  },
+  "logout": {
+    "status": 200,
+    "clearedCookies": [
+      {
+        "name": "orca_session",
+        "expired": true
+      },
+      {
+        "name": "orca_browser_auth_context",
+        "expired": true
+      }
+    ]
+  },
+  "osDisplayVerified": false
+}

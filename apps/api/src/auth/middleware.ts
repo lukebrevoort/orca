@@ -5,7 +5,7 @@ import { createDatabaseClient } from "../db/client.ts";
 import { isPendingUser } from "./pending-user.ts";
 export { isPendingUser as isPendingSessionUser } from "./pending-user.ts";
 import { sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
-import { buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
+import { setBrowserSessionCookies } from "./browser-auth-context.ts";
 import { getMobileSessionFromToken } from "./mobile/store.ts";
 import { getSessionFromToken, renewSession } from "./session-store.ts";
 
@@ -17,6 +17,7 @@ export type AuthContext = {
 
 export type AuthVariables = {
   auth: AuthContext;
+  authSource?: "cookie" | "mobile_bearer";
 };
 
 type RequireAuthOptions = {
@@ -62,6 +63,7 @@ export function requireAuth(
         const mobileAuth = getMobileSessionFromToken(db, bearerToken);
         if (!mobileAuth) return unauthorized(c);
         c.set("auth", mobileAuth);
+        c.set("authSource", "mobile_bearer");
         await next();
         return;
       }
@@ -82,6 +84,7 @@ export function requireAuth(
         return unauthorized(c);
       }
 
+      c.set("authSource", "cookie");
       const pending = isPendingUser(db, auth.userId);
       if (pending) {
         if (!options.allowPending) return unauthorized(c);
@@ -98,7 +101,7 @@ export function requireAuth(
           return unauthorized(c);
         }
 
-        c.header("Set-Cookie", buildSessionCookie(renewed.token, renewed.expiresAt, getSessionCookieOptions()));
+        setBrowserSessionCookies(c, renewed);
         c.set("auth", {
           sessionId: renewed.sessionId,
           userId: renewed.userId,
@@ -116,6 +119,7 @@ export function requireAuth(
 }
 
 function unauthorized(c: Parameters<MiddlewareHandler>[0]) {
+  c.header("Cache-Control", "private, no-store");
   return c.json(
     {
       error: {

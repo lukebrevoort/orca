@@ -9,7 +9,7 @@ import { Hono } from "hono";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { sessions, users } from "../db/schema.ts";
-import { buildClearedSessionCookie, buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
+import { buildClearedBrowserSessionCookiePair } from "./browser-auth-context.ts";
 import { createLogoutApp } from "./logout.ts";
 import { createSession, getSessionFromToken, invalidateSession } from "./session-store.ts";
 
@@ -59,10 +59,7 @@ async function createFixture() {
 async function expectOk(response: Response) {
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ ok: true });
-  expect(response.headers.get("set-cookie")).toBe(
-    buildSessionCookie("", new Date(0), getSessionCookieOptions()),
-  );
-  expect(response.headers.get("set-cookie")).toBe(buildClearedSessionCookie(getSessionCookieOptions()));
+  expect(response.headers.getSetCookie()).toEqual(buildClearedBrowserSessionCookiePair());
   for (const handle of fixture.handles) {
     expect(() => handle.sqlite.query("SELECT 1").get()).toThrow();
   }
@@ -130,7 +127,10 @@ test("only own session: ignores body, query, session headers and Authorization b
     body: JSON.stringify({ sessionId: fixture.otherUser.sessionId, token: fixture.otherUser.token }),
   };
   const path = `/v1/auth/logout?sessionId=${fixture.otherUser.sessionId}&token=${fixture.otherUser.token}`;
-  await expectOk(await post(undefined, path, init));
+  const bearerOnly = await post(undefined, path, init);
+  expect(bearerOnly.status).toBe(200);
+  expect(await bearerOnly.json()).toEqual({ ok: true });
+  expect(bearerOnly.headers.getSetCookie()).toEqual([]);
   await expectLive(fixture.own.token, fixture.sameUser.token, fixture.otherUser.token);
   await expectOk(await post(`orca_session=${fixture.own.token}`, path, init));
   expect(await getSessionFromToken(fixture.db, fixture.own.token)).toBeNull();

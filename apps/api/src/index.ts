@@ -7,6 +7,9 @@ import { hasLoadableImages, imageSourceRevision, imageSourceWithinLimit } from "
 import { registerDestinationRoutes } from "./destinations/routes.ts";
 import { registerAttachmentRoutes } from "./attachments/routes.ts";
 import { createLogoutApp } from "./auth/logout.ts";
+import { browserAuthContextHeaderName } from "@orca/shared";
+import { createBrowserAuthContext } from "./auth/browser-auth-context.ts";
+import { requireSessionOwner } from "./auth/session-owner.ts";
 import { requirePreferenceOwner } from "./auth/preference-owner.ts";
 import { createMobileAuthApp } from "./auth/mobile/routes.ts";
 import { createNotificationApp } from "./notifications/routes.ts";
@@ -1024,8 +1027,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     });
   });
 
-  app.get("/v1/auth/session", requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/auth/session", requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const auth = c.get("auth");
+    if (c.get("authSource") === "cookie") c.header(browserAuthContextHeaderName, createBrowserAuthContext(auth));
     const { db, sqlite } = dbFactory();
     try {
       const user = db.select().from(users).where(eq(users.id, auth.userId)).get();
@@ -1176,7 +1180,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }
   });
 
-  app.get("/v1/accounts", requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/accounts", requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const { db, sqlite } = dbFactory();
     try {
       return jsonWithSchema(c, mailAccountPageSchema, {
