@@ -8,6 +8,7 @@ import Foundation
         let root = FileManager.default.temporaryDirectory.appending(path: "bre457-controller-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
+        try await runSavedFirstSearchSurfaceCases(cacheRoot: root.appending(path: "saved-first-search"), check: check)
         try await runDiscardStoreBoundaryCases(cacheRoot: root.appending(path: "discard-store"), check: check)
         try await runPrimaryMailCases(cacheRoot: root.appending(path: "primary-mail"), check: check)
         try await runPaginationCases(cacheRoot: root.appending(path: "pagination"), check: check)

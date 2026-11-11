@@ -11,6 +11,9 @@ import SwiftUI
     private var globalSearchOwnerKey: String?
     private var primarySubmittedQuery = ""
     private var primaryMailboxView: String?
+    // Exact current InboxView surface policy, extracted before correcting the
+    // independently reviewed first-submit pending/error visibility defect.
+    func showsSavedMailboxResults(hasSavedView: Bool) -> Bool { hasSavedView && resultSearch.isEmpty }
     enum PrimaryMailEvent { case submit, refresh, page }
     // Only explicit Submit or a mailbox/clear action changes this query.
     // Every background/read/foreground/page refresh retains that owned intent.

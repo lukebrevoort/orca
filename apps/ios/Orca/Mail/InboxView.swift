@@ -17,7 +17,7 @@ struct InboxView: View {
             // inset that the List's native refresh control can scroll underneath.
             mailboxControls.fixedSize(horizontal: false, vertical: true)
             ZStack {
-                if let view = mailboxes.selectedView, model.resultSearch.isEmpty {
+                if let view = mailboxes.selectedView, model.showsSavedMailboxResults(hasSavedView: true) {
                     SavedMailboxResults(view: view) { item in
                         guard state.selectSavedViewThread(item) else { return }
                         savedThread = item
