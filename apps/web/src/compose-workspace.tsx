@@ -1563,6 +1563,7 @@ function RenderedBlockEditor({
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const commandListId = useId();
+  const formattingHintId = useId();
   const lastBodyRef = useRef(body);
   const lastFormatRef = useRef(format);
   const [slash, setSlash] = useState<{ query: string; top: number } | null>(null);
@@ -1681,13 +1682,13 @@ function RenderedBlockEditor({
   return (
     <div className="compose-writing-field">
       <label className="writing-format-choice"><span>Message format</span><select aria-label="Message format" onChange={(event) => { setSlash(null); onFormatChange(event.target.value as WritingPreferences["composeFormat"]); }} value={format}><option value="plain">Plain text</option><option value="rich">Rich text</option></select></label>
-      <div aria-label="Formatting" className="compose-formatting" role="toolbar">
-        <button aria-label="Bold, Command B" disabled={format === "plain"} onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
-        <button aria-label="Italic, Command I" disabled={format === "plain"} onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
-        <button aria-label="Bulleted list" disabled={format === "plain"} onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
-        <button aria-label="Quote" disabled={format === "plain"} onClick={() => runToolbar("blockquote")} type="button">Quote</button>
-        <button aria-label="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach</button>
-        <span>Type / for structure · drop anywhere to attach</span>
+      <div aria-describedby={format === "plain" ? formattingHintId : undefined} aria-label="Formatting" className="compose-formatting" role="toolbar">
+        <button aria-label="Bold, Command B" title="Bold, Command B" disabled={format === "plain"} onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
+        <button aria-label="Italic, Command I" title="Italic, Command I" disabled={format === "plain"} onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
+        <button aria-label="Bulleted list" title="Bulleted list" disabled={format === "plain"} onClick={() => runToolbar("insertUnorderedList")} type="button">Bulleted list</button>
+        <button aria-label="Quote" title="Quote" disabled={format === "plain"} onClick={() => runToolbar("blockquote")} type="button">Quote</button>
+        <button aria-label="Attach files" title="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach files</button>
+        {format === "plain" ? <span className="compose-formatting-hint" id={formattingHintId}>Choose Rich text to use formatting.</span> : <span>Type / for structure · drop anywhere to attach</span>}
       </div>
       <div
         aria-activedescendant={slash && commands.length ? `${commandListId}-${commands[activeCommand]?.id}` : undefined}
