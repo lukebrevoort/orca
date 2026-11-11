@@ -71,7 +71,7 @@ async function attach(scope, page, files) {
 async function measure(page, name, expectedAttachments) {
   const scope = page.locator('.compose-workspace-zen');
   const measurements = await scope.evaluate(root => {
-    const selectors = ['.compose-attachment-chips', '.compose-formatting', '.compose-delivery-bar', '.compose-conflict'];
+    const selectors = ['.compose-attachment-chips', '.compose-formatting', '.compose-delivery-bar', '.compose-conflict', '.compose-attachment-error'];
     const rect = element => { const r = element.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height, right: r.right, bottom: r.bottom }; };
     const regions = selectors.flatMap(selector => [...root.querySelectorAll(selector)].map(el => ({ selector, ...rect(el) })));
     const collisions = [];
@@ -159,6 +159,15 @@ try {
         await screenshot(page, `${theme}-${width}-bold-pressed`); await page.mouse.up();
         await zen.getByRole('combobox', { name: 'Message format' }).selectOption('plain');
         await screenshot(page, `${theme}-${width}-plain-disabled`);
+      }
+      if (width === 1440) {
+        await attach(zen, page, Array.from({ length: 24 }, (_, i) => `limit-${i}.txt`));
+        await zen.locator('.compose-attachment-error').waitFor();
+        check(await zen.getByRole('button', { name: 'Attach files', exact: true }).isDisabled(), label + ': attachment limit is enforced');
+        await measure(page, `${theme}-${width}-attachment-limit-error-disabled`, 25);
+        for (let i = 0; i < 23; i++) await zen.getByRole('button', { name: `Remove limit-${i}.txt`, exact: true }).click();
+        check(await zen.getByRole('button', { name: 'Attach files', exact: true }).isEnabled(), label + ': removing files restores chooser');
+        check(await zen.locator('.compose-attachment-error').count() === 0, label + ': removal clears attachment error');
       }
       await page.getByRole('button', { name: 'Save & close', exact: true }).click();
       await page.locator('.compose-workspace-panel').waitFor();
