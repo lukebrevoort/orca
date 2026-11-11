@@ -2,7 +2,7 @@
 .mail-scope-switch button, .importance-control button, .importance-dialog button, .importance-receipt button, .important-mail > button, .important-mail p[role="alert"] button, .mail-empty button { min-height: 44px; border: 1px solid var(--orca-border); border-radius: 8px; padding: 8px 14px; background: var(--orca-surface); color: var(--orca-ink); font: 500 14px/1.4 var(--orca-font-body); cursor: pointer; }
 .mail-scope-switch button[aria-pressed="true"], .importance-dialog button[aria-pressed="true"], .importance-control button:hover, .importance-dialog button:hover, .importance-receipt button:hover { background: var(--orca-surface-hover); color: var(--orca-ink); border-color: var(--orca-border); }
 .importance-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-.importance-control > span { color: var(--orca-muted); }
+.importance-control > span { color: var(--orca-muted); min-width:0; max-width:100%; overflow-wrap:anywhere; }
 .importance-dialog { width: min(640px,calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 24px; background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 16px; color: var(--orca-ink); box-shadow: var(--orca-shadow); }
 .importance-dialog header { display:flex; align-items:start; justify-content:space-between; gap:16px; }
 .importance-dialog h2 { font: 500 28px/1.2 var(--orca-font-display); margin:0; }

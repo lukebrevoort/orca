@@ -5688,6 +5688,7 @@ function InboxView({
               return (
                 <li key={messageIdentityKey(message)}>
                   <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
+                    <div className="message-row-body">
                     <button
                       aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
                       aria-pressed={selectionMode ? selected : undefined}
@@ -5754,8 +5755,9 @@ function InboxView({
                       const snoozing = snoozingThreadId === message.threadId;
                       return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatInboxReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
-                    {!selectionMode ? <ImportanceControl accountId={message.accountId} threadId={message.threadId} address={message.from.email} initial={message.importance} accountLabel={syncStatus?.accounts.find(item => item.id === message.accountId)?.email ?? (account?.id === message.accountId ? account.email : undefined)} disabled={demoMode} /> : null}
                     {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
+                    </div>
+                    {!selectionMode ? <ImportanceControl accountId={message.accountId} threadId={message.threadId} address={message.from.email} initial={message.importance} accountLabel={syncStatus?.accounts.find(item => item.id === message.accountId)?.email ?? (account?.id === message.accountId ? account.email : undefined)} disabled={demoMode} /> : null}
                   </div>
                 </li>
               );

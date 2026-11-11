@@ -52,6 +52,10 @@ That same frozen sequence remains nonpassing overall. [BRE-481](https://linear.a
 
 The controlled source-pinned desktop sidebar inventory measures 14 visible baseline controls versus seven candidate controls (six buttons plus the Mailboxes disclosure) with identical synthetic owner/views/counts. This is an interaction inventory, not a latency or performance benchmark. The actual two-theme journey records one completed action from empty Important to All Mail, six from entering a query through explicit refinement/Save View, and three to edit a signature/switch section/use shared Save. API request counts and their scopes are in the manifests; no speedup is claimed.
 
+The subsequent clean `534ec7cf165f3b817784d8b29012e2338606e6a4` replay verifies BRE-481’s actual Back destination and source-card focus (P15 two themes/24 assertions), notifications (14 scenarios/94 assertions), BRE-482 and other importance recovery/availability states (22 scenarios/84 assertions), and the exact owner/header/SQLite flow (four scenarios/16 assertions). P15 Waiting/codes/reply-review remains explicitly N/A. Notification Cancel focus passes after waiting its existing single restoration frame, without changing its target or timeout.
+
+[BRE-483](https://linear.app/brevoort/issue/BRE-483) is the remaining actual mobile layout red at that checkpoint: four entry cases/32 assertions/two failures. Legacy Why here, collection and routing controls overlap the direct importance control rectangles in both mobile themes. More’s center pointer still reaches More; no misrouted-center claim is made. The fix anchors legacy utilities to the original message body while importance occupies a separate flow row, retaining DOM identities, controls and API behavior. Its all-visible-action pointer/geometry replay is pending.
+
 ## Commands
 
 Use the existing absolute Bun 1.3.14 and Node 24.22.1 paths. Every heavy command runs through the cooperative nonblocking lock/resource sampler; exit 75 means not started and is never bypassed. One owned fixture/browser run at a time:

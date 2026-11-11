@@ -101,8 +101,8 @@ export function useImportantNotifications(enabled=true){
      const notification=new Notification(envelope.title,{body:`${envelope.subtitle}${envelope.subtitle?'\n':''}${envelope.body}`,tag:envelope.tag,data:{accountId:envelope.accountId,threadId:envelope.threadId}});
      constructed.current.set(envelope.id,notification);outcome='constructed';
      notification.onclick=()=>{void readCurrent(snapshot).then(()=>{if(!owns())return;window.focus();window.location.assign(`/?destination=important&thread=${encodeURIComponent(envelope.threadId)}&accountId=${encodeURIComponent(envelope.accountId)}`);}).catch(()=>notification.close());};
-     notification.onerror=()=>{if(owns())setState(value=>({...value,notice:'The browser could not display an alert. Your Important-only policy is unchanged.'}));};
-    }catch{if(owns())setState(value=>({...value,notice:'Browser notification construction failed. Your policy remains saved; alerts are unavailable here.'}));}
+     notification.onerror=()=>{if(owns())setState(value=>({...value,notice:'The browser could not display an alert. Your Important-only choices are unchanged.'}));};
+    }catch{if(owns())setState(value=>({...value,notice:'This browser could not start an alert. Your Important-only choices stay saved.'}));}
     if(!owns())break;
     const report={operationId:command.operationId,notificationIds:[envelope.id],outcome};
     try{await request(`/v1/notifications/installations/${snapshot.installationId}/report`,anyJson,controller.signal,'POST',report);}
@@ -144,7 +144,7 @@ export function useImportantNotifications(enabled=true){
     catch(reconcile){if(reconcile instanceof NotificationRequestError&&reconcile.status===404)result=await request(path,decode,undefined,'PUT',command);else throw new Error('Could not confirm this change. Check current choices before trying again.');}
    }
    if(!owns())return false;
-   setState(value=>({...value,current:result.current,error:null,notice:result.status==='superseded'?'A newer notification choice is current. Review it before changing again.':result.current.policy?.enabled?'Important-only choices saved. Browser construction is separate from OS display.':'Important-only alerts paused. Manual reminders are unchanged.'}));
+   setState(value=>({...value,current:result.current,error:null,notice:result.status==='superseded'?'A newer notification choice is current. Review it before changing again.':result.current.policy?.enabled?'Your Important-only choices are saved. Your browser and OS decide whether an alert appears.':'Important-only alerts paused. Manual reminders are unchanged.'}));
    return result.status==='current';
   }catch(error){if(owns()){setState(value=>({...value,error:error instanceof Error?error.message:String(error)}));try{const current=await readCurrent(snapshot);if(owns())setState(value=>({...value,current}));}catch(ownerError){if(ownerError instanceof NotificationOwnerChanged){stop();if(mounted.current)setState({...initial,status:'unavailable',error:ownerError.message});}/* Otherwise keep ambiguity explicit. */}}return false;}
   finally{saving.current=false;}
@@ -156,23 +156,27 @@ export function ImportantNotificationSettings({client}:{client:ReturnType<typeof
  const {state,permission}=client;
  const [open,setOpen]=useState(false),[accounts,setAccounts]=useState<string[]>([]),[enabled,setEnabled]=useState(true),[busy,setBusy]=useState(false);
  const pending=useRef(false);
+ const permissionLabel=({granted:'Allowed',denied:'Blocked',default:'Not asked yet',unavailable:'Not supported here'} as const)[permission];
+ const availability=state.current?.delivery.available
+  ? permission==='granted'?'This browser can check for new Important mail while this tab is visible.':'Allow browser notifications before alerts can appear. Your saved choices stay on.'
+  : state.current?.delivery.reason?({not_adopted:'Choose which accounts can interrupt you.',disabled:'Alerts are paused.',permission_required:'Browser permission is needed before alerts can appear.',registration_required:'Notification setup is incomplete in this browser.',server_unavailable:'Orca’s alert service is unavailable. Your choices are unchanged.',no_accounts:'Choose a connected account before enabling alerts.'} as const)[state.current.delivery.reason]:'';
  function configure(){setAccounts(state.current?.policy?.accountIds??[]);setEnabled(state.current?.policy?.enabled??true);setOpen(true);}
  async function save(){if(pending.current)return;pending.current=true;setBusy(true);try{if(await client.save(enabled,accounts))setOpen(false);}finally{pending.current=false;setBusy(false);}}
  return <section className="important-notification-settings" aria-label="Important-only mail notifications">
   <h3>Important-only mail notifications</h3>
-  {state.status==='loading'?<p role="status">Checking this browser’s notification installation…</p>:null}
-  {state.status==='unavailable'?<p>Notification delivery is unavailable in this build or session. {state.error} Existing choices were not changed.</p>:null}
-  {state.current?<><p>{state.current.policy?.enabled?'Important-only policy enabled for the selected accounts.':state.current.policy?'Important-only alerts are paused.':'Important-only notifications have not been adopted on this browser.'}</p>
-   {state.current.previousSelection?<p>Previous notification choices remain until explicit adoption: Inbox {state.current.previousSelection.inbox?'on':'off'}, {state.current.previousSelection.spaceIds.length} spaces. Cancel preserves them.</p>:null}
-   <p>Browser permission: {permission}. Server readiness: {state.current.delivery.available?'eligible feed available':state.current.delivery.reason?.replaceAll('_',' ')??'unavailable'}.</p>
+  {state.status==='loading'?<p role="status">Checking notifications for this browser…</p>:null}
+  {state.status==='unavailable'?<p>Notifications are unavailable in this browser or account right now. {state.error} Your existing choices were not changed.</p>:null}
+  {state.current?<><p>{state.current.policy?.enabled?'Important-only alert choices are on for your selected accounts.':state.current.policy?'Important-only alerts are paused.':'You haven’t set up Important-only notifications in this browser yet.'}</p>
+   {state.current.previousSelection?<p>Previous alert settings: Inbox {state.current.previousSelection.inbox?'on':'off'}, {state.current.previousSelection.spaceIds.length} spaces. These stay in place until you explicitly enable Important-only alerts. Cancel keeps them.</p>:null}
+   <p>Browser permission: {permissionLabel}. {availability}</p>
    <button disabled={busy} onClick={configure} type="button">{state.current.policy?'Review important-only choices':'Set up important-only notifications'}</button>
    {state.current.policy?.enabled?<button disabled={state.checking||busy} onClick={()=>void client.check()} type="button">{state.checking?'Checking important arrivals…':'Check for important mail now'}</button>:null}
   </>:null}
-  <p>Open-tab delivery only. Orca pauses checks while this tab is hidden; background tabs may delay alerts. Closing the tab or browser stops delivery. OS Focus, quiet settings and browser support can suppress alerts; constructing an alert does not confirm it appeared.</p>
-  <p>Only fresh unread incoming mail already Important at arrival can interrupt you. Old mail is not replayed. Repeats for the same account/conversation/browser are suppressed for 15 minutes. Manual reminders are separate.</p>
+  <p>Keep this tab open and visible for alerts. Orca pauses checks when the tab is hidden; closing it or the browser stops alerts. OS Focus and browser quiet settings can still prevent an alert from appearing.</p>
+  <p>Only new unread mail that was already Important when it arrived can interrupt you. Old mail is not replayed. This browser limits alerts for each account and conversation to one every 15 minutes. Manual reminders are separate.</p>
   {state.error?<p role="alert">{state.error}</p>:null}{state.notice?<p role="status">{state.notice}</p>:null}
   {open?<TopLayer ariaLabel="Important-only notification choices" className="importance-dialog" layerClassName="importance-layer" backdropClassName="importance-backdrop" onClose={busy?()=>{}:()=>setOpen(false)} initialFocusSelector="h2">
-   <h2 tabIndex={-1}>Choose what can interrupt</h2><p>This browser, for your selected accounts. Cancel leaves the current policy unchanged.</p>
+   <h2 tabIndex={-1}>Choose what can interrupt</h2><p>This browser, for your selected accounts. Cancel keeps your current alert settings.</p>
    <label className="notification-check"><input type="checkbox" checked={enabled} disabled={busy} onChange={event=>setEnabled(event.target.checked)}/>Enable Important-only alerts</label>
    <fieldset disabled={busy}><legend>Connected accounts</legend>{state.accounts.map(account=><label className="notification-check" key={account.id}><input type="checkbox" checked={accounts.includes(account.id)} onChange={event=>setAccounts(current=>event.target.checked?[...current,account.id]:current.filter(id=>id!==account.id))}/>{account.email}</label>)}</fieldset>
    {accounts.some(id=>!state.accounts.some(account=>account.id===id))?<p role="alert">Some selected accounts are no longer available. Check current account access before saving.</p>:null}

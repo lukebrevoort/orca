@@ -1,0 +1,293 @@
+{
+  "revision": {
+    "head": "534ec7cf165f3b817784d8b29012e2338606e6a4",
+    "sourceSha256": "456dc99a7f7267a0fb4f6a3057110d29e692d9678e370b6f36c83a2c8d2dafb9",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "assertions": 32,
+  "failures": [
+    {
+      "label": "Legacy row utilities never overlap direct importance controls",
+      "detail": {
+        "theme": "light",
+        "width": 390,
+        "collisions": [
+          {
+            "action": "Important",
+            "utility": "Why hereAll mail",
+            "width": 42.375,
+            "height": 34,
+            "area": 1440.75
+          },
+          {
+            "action": "Not important",
+            "utility": "Why hereAll mail",
+            "width": 125.625,
+            "height": 34,
+            "area": 4271.25
+          },
+          {
+            "action": "Not important",
+            "utility": "Manage mail from Maya",
+            "width": 3.296875,
+            "height": 34,
+            "area": 112.09375
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Keep first account conversation in a collection",
+            "width": 30.25,
+            "height": 34,
+            "area": 1028.5
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Manage mail from Maya",
+            "width": 32.703125,
+            "height": 34,
+            "area": 1111.90625
+          }
+        ],
+        "moreReceivesPointer": true,
+        "pointerTarget": "Review importance of first-thread"
+      }
+    },
+    {
+      "label": "Legacy row utilities never overlap direct importance controls",
+      "detail": {
+        "theme": "dark",
+        "width": 390,
+        "collisions": [
+          {
+            "action": "Important",
+            "utility": "Why hereAll mail",
+            "width": 42.375,
+            "height": 34,
+            "area": 1440.75
+          },
+          {
+            "action": "Not important",
+            "utility": "Why hereAll mail",
+            "width": 125.625,
+            "height": 34,
+            "area": 4271.25
+          },
+          {
+            "action": "Not important",
+            "utility": "Manage mail from Maya",
+            "width": 3.296875,
+            "height": 34,
+            "area": 112.09375
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Keep first account conversation in a collection",
+            "width": 30.25,
+            "height": 34,
+            "area": 1028.5
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Manage mail from Maya",
+            "width": 32.703125,
+            "height": 34,
+            "area": 1111.90625
+          }
+        ],
+        "moreReceivesPointer": true,
+        "pointerTarget": "Review importance of first-thread"
+      }
+    }
+  ],
+  "pageErrors": [],
+  "scenarioCount": 4,
+  "rawPath": "/tmp/bre456-targeted-534ec7cf/entry-pointer/results.json",
+  "rawSha256": "b743794bfb7e1960407248d6862deaf9584fb2ecc56f8a69fb5db2cf735b0d98",
+  "scenarios": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "mailUndo": {
+        "x": 811.453125,
+        "y": 927,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      },
+      "settingsUndo": {
+        "x": 849.90625,
+        "y": 507,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      },
+      "utilityGeometry": {
+        "collisions": [],
+        "moreReceivesPointer": true,
+        "pointerTarget": "Review importance of first-thread"
+      },
+      "directSearchActions": 2
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "mailUndo": {
+        "x": 33,
+        "y": 691,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      },
+      "settingsUndo": {
+        "x": 16,
+        "y": 788,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      },
+      "utilityGeometry": {
+        "collisions": [
+          {
+            "action": "Important",
+            "utility": "Why hereAll mail",
+            "width": 42.375,
+            "height": 34,
+            "area": 1440.75
+          },
+          {
+            "action": "Not important",
+            "utility": "Why hereAll mail",
+            "width": 125.625,
+            "height": 34,
+            "area": 4271.25
+          },
+          {
+            "action": "Not important",
+            "utility": "Manage mail from Maya",
+            "width": 3.296875,
+            "height": 34,
+            "area": 112.09375
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Keep first account conversation in a collection",
+            "width": 30.25,
+            "height": 34,
+            "area": 1028.5
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Manage mail from Maya",
+            "width": 32.703125,
+            "height": 34,
+            "area": 1111.90625
+          }
+        ],
+        "moreReceivesPointer": true,
+        "pointerTarget": "Review importance of first-thread"
+      },
+      "directSearchActions": 2
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "mailUndo": {
+        "x": 811.453125,
+        "y": 927,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      },
+      "settingsUndo": {
+        "x": 849.90625,
+        "y": 507,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      },
+      "utilityGeometry": {
+        "collisions": [],
+        "moreReceivesPointer": true,
+        "pointerTarget": "Review importance of first-thread"
+      },
+      "directSearchActions": 2
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "mailUndo": {
+        "x": 33,
+        "y": 691,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      },
+      "settingsUndo": {
+        "x": 16,
+        "y": 788,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      },
+      "utilityGeometry": {
+        "collisions": [
+          {
+            "action": "Important",
+            "utility": "Why hereAll mail",
+            "width": 42.375,
+            "height": 34,
+            "area": 1440.75
+          },
+          {
+            "action": "Not important",
+            "utility": "Why hereAll mail",
+            "width": 125.625,
+            "height": 34,
+            "area": 4271.25
+          },
+          {
+            "action": "Not important",
+            "utility": "Manage mail from Maya",
+            "width": 3.296875,
+            "height": 34,
+            "area": 112.09375
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Keep first account conversation in a collection",
+            "width": 30.25,
+            "height": 34,
+            "area": 1028.5
+          },
+          {
+            "action": "Review importance of first-thread",
+            "utility": "Manage mail from Maya",
+            "width": 32.703125,
+            "height": 34,
+            "area": 1111.90625
+          }
+        ],
+        "moreReceivesPointer": true,
+        "pointerTarget": "Review importance of first-thread"
+      },
+      "directSearchActions": 2
+    }
+  ]
+}

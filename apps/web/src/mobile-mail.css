@@ -80,8 +80,8 @@
   :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-evidence-button strong { font-size: 10px; text-transform: none; letter-spacing: 0; }
   :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .keep-thread-button,
   :root[data-reader-density="compact"] .mobile-mail-shell .inbox-view-inbox .keep-thread-button { right: 16px; bottom: 6px; }
-  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-wrap > .sender-attention-control,
-  :root[data-reader-density="compact"] .mobile-mail-shell .inbox-view-inbox .message-row-wrap > .sender-attention-control { right: 64px; bottom: 6px; }
+  :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-wrap .sender-attention-control,
+  :root[data-reader-density="compact"] .mobile-mail-shell .inbox-view-inbox .message-row-wrap .sender-attention-control { right: 64px; bottom: 6px; }
   :root .desktop-shell.mobile-mail-shell .inbox-view-inbox .message-row-wrap-selecting .message-row { padding: 16px 20px; min-height: 112px; }
   .mobile-mail-shell .mail-selection { margin-inline: 20px; }
   .mobile-mail-shell .selection-context .bulk-selection-exit,

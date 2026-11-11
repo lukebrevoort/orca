@@ -11,6 +11,7 @@ const [output] = process.argv.slice(2);
 if(!output)throw new Error('Output directory required');
 const baseline='bdec28426de57b8833ae29743eef330f391f63cb';
 const source=execFileSync('git',['show',`${baseline}:apps/web/src/desktop-switch.tsx`],{encoding:'utf8'});
+const candidate=await readFile('apps/web/src/desktop-switch.tsx','utf8');
 const temporary=await mkdtemp(resolve('apps/web/scripts/.bre456-inventory-'));
 try{
  // Only import locations adapt to the temporary fixture path; component bytes
@@ -25,7 +26,7 @@ try{
   const styles=[];for(const file of files)styles.push(name==='baseline'?execFileSync('git',['show',`${baseline}:apps/web/src/${file}`],{encoding:'utf8'}):await readFile('apps/web/src/'+file,'utf8'));
   const markup=renderToStaticMarkup(<TopLayerProvider><Component {...props} projection={{...projection,active}}/></TopLayerProvider>);
   await writeFile(join(output,name+'.html'),`<!doctype html><html data-theme="light"><head><meta charset="utf-8"><style>${styles.join('\n')}</style></head><body><main class="desktop-shell">${markup}<section class="desktop-workspace"><h1>Same synthetic workspace</h1></section></main></body></html>`);
-  cases.push({name,active,baseline:name==='baseline'?baseline:null,componentSourceSha256:name==='baseline'?createHash('sha256').update(source).digest('hex'):null});
+  cases.push({name,active,head:name==='baseline'?baseline:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),componentSourceSha256:createHash('sha256').update(name==='baseline'?source:candidate).digest('hex'),styleSourceSha256:createHash('sha256').update(styles.join('\n')).digest('hex')});
  }
  await writeFile(join(output,'source.json'),JSON.stringify({baseline,cases},null,2));
 }finally{await rm(temporary,{recursive:true,force:true});}
