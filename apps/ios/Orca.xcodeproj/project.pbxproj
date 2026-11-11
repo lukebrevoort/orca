@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B45700000000000000000013 /* ViewportGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000013 /* ViewportGeometry.swift */; };
 		B45700000000000000000012 /* NativeMailboxProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000012 /* NativeMailboxProjection.swift */; };
 		B45700000000000000000011 /* ViewCommitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000011 /* ViewCommitStatus.swift */; };
 		B45700000000000000000010 /* NotificationNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45710000000000000000010 /* NotificationNavigation.swift */; };
@@ -71,6 +72,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B45710000000000000000013 /* ViewportGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewportGeometry.swift; sourceTree = "<group>"; };
 		B45710000000000000000012 /* NativeMailboxProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMailboxProjection.swift; sourceTree = "<group>"; };
 		B45710000000000000000011 /* ViewCommitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewCommitStatus.swift; sourceTree = "<group>"; };
 		B45710000000000000000010 /* NotificationNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationNavigation.swift; sourceTree = "<group>"; };
@@ -239,6 +241,7 @@
 		B49A8BEC19BAFA2AE0214C8F /* OrcaUITests */ = {
 			isa = PBXGroup;
 			children = (
+				B45710000000000000000013 /* ViewportGeometry.swift */,
 				22789472C398207011CE37F6 /* OrcaUITests.swift */,
 				AADDEE020000000000000002 /* ReaderUITests.swift */,
 				D55D7D1A9F41B9B7A8D1CC6D /* run-fixture-tests.sh */,
@@ -390,6 +393,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				06A9A8C4D16531064FD85A9C /* OrcaUITests.swift in Sources */,
+				B45700000000000000000013 /* ViewportGeometry.swift in Sources */,
 				AADDEE020000000000000001 /* ReaderUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

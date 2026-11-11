@@ -1091,16 +1091,16 @@ final class OrcaUITests: XCTestCase {
 
     func test36SentRecoveryStatusAtAccessibilitySize() throws {
         boundaryDiagnostics = true
-        try exerciseSentLocalEditsRecovery(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+        try exerciseSentLocalEditsRecovery(contentSize: "UICTContentSizeCategoryAccessibilityXXXL", revealInitialInbox: true)
     }
 
-    private func exerciseSentLocalEditsRecovery(contentSize: String = "UICTContentSizeCategoryL") throws {
+    private func exerciseSentLocalEditsRecovery(contentSize: String = "UICTContentSizeCategoryL", revealInitialInbox: Bool = false) throws {
         try setFixtureSending(true)
         addTeardownBlock { try self.restoreFixtureSending() }
         let subject = "Sent with local edits " + UUID().uuidString
         let draft = try createComposeFixtureDraft(subject: subject)
         let id = try XCTUnwrap(draft["id"] as? String)
-        let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app)
+        let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app, boundedListReveal: revealInitialInbox)
         app.tabBars.buttons["Drafts"].tap()
         let serverRow = app.descendants(matching: .any)["draft.\(id)"]
         revealDraftRow(serverRow, in: app); serverRow.tap()
@@ -1157,10 +1157,10 @@ final class OrcaUITests: XCTestCase {
 
     func test35RichDraftConversionAtAccessibilitySize() throws {
         boundaryDiagnostics = true
-        try exerciseRichDraftConversion(confirm: false, contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
+        try exerciseRichDraftConversion(confirm: false, contentSize: "UICTContentSizeCategoryAccessibilityXXXL", revealInitialInbox: true)
     }
 
-    private func exerciseRichDraftConversion(confirm: Bool, contentSize: String = "UICTContentSizeCategoryL") throws {
+    private func exerciseRichDraftConversion(confirm: Bool, contentSize: String = "UICTContentSizeCategoryL", revealInitialInbox: Bool = false) throws {
         try setFixtureSending(true)
         addTeardownBlock { try self.restoreFixtureSending() }
         let subject = "Rich conversion " + UUID().uuidString
@@ -1175,7 +1175,7 @@ final class OrcaUITests: XCTestCase {
         XCTAssertTrue(canonicalHTML.contains("target=\"_blank\""))
         XCTAssertTrue(canonicalHTML.contains("rel=\"noopener noreferrer\""))
         let id = try XCTUnwrap(draft["id"] as? String)
-        let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app)
+        let app = try launchApp(contentSize: contentSize); assertInboxLoaded(in: app, boundedListReveal: revealInitialInbox)
         app.tabBars.buttons["Drafts"].tap()
         let row = app.descendants(matching: .any)["draft.\(id)"]
         if contentSize.contains("Accessibility") { attachScreenshot(named: "48-compose-large-draft-list-before-locating") }
@@ -1326,12 +1326,13 @@ final class OrcaUITests: XCTestCase {
         if !originalFormFound { captureComposeBoundary(in: app, stage: "original-form-wait-failed", observed: ["original_10s_result": "false"]) }
         XCTAssertTrue(originalFormFound, file: file, line: line)
         for _ in 0..<12 {
-            let top = max(form.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 2
-            let bottom = min(form.frame.maxY, status.frame.minY) - 2
-            let viewport = CGRect(x: form.frame.minX, y: top, width: form.frame.width, height: max(0, bottom - top))
+            let fixed = [status, app.descendants(matching: .any)["compose.send-permission"], app.buttons["compose.refresh-permission"],
+                         app.staticTexts["Account defaults could not be loaded. Your writing is kept; add a signature if needed."]]
+                .filter(\.exists).map(\.frame)
+            guard let viewport = ViewportGeometry.content(form: form.frame, application: app.frame, navigation: app.navigationBars.firstMatch.frame, fixed: fixed) else { break }
             let visible = body.exists ? body.frame.intersection(viewport) : .null
             if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() { print("[native-writing-area] viewport=\(viewport) intersection=\(visible)") }
-            if body.exists && body.isHittable && !visible.isNull && visible.width >= 44 && visible.height >= 44 {
+            if body.exists && body.isHittable, let visible = ViewportGeometry.writingArea(body: body.frame, viewport: viewport) {
                 // TextEditor is taller than the keyboard-reduced viewport.
                 // XCTest's default center may be behind the fixed footer;
                 // tap its actual visible writing area, as a user does.
@@ -1343,9 +1344,9 @@ final class OrcaUITests: XCTestCase {
                 body.coordinate(withNormalizedOffset: offset).tap()
                 return
             }
-            let up = !body.exists || body.frame.minY >= top
-            form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.75 : 0.25))
-                .press(forDuration: 0.05, thenDragTo: form.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: up ? 0.25 : 0.75)))
+            let up = !body.exists || body.frame.minY >= viewport.minY
+            guard let pan = ViewportGeometry.pan(in: viewport, up: up) else { break }
+            panContent(pan, in: form)
         }
         captureComposeBoundary(in: app, stage: "original-writing-area-attempts-exhausted")
         attachScreenshot(named: "bre-459-writing-area-unreachable")
@@ -2311,6 +2312,8 @@ final class OrcaUITests: XCTestCase {
             ("form", app.scrollViews["compose.form"]), ("body", messageBody(in: app)),
             ("navigation", app.navigationBars.firstMatch), ("inbox-nav", app.navigationBars["Inbox"]),
             ("drafts-nav", app.navigationBars["Drafts"]), ("footer-status", app.descendants(matching: .any)["compose.save-status"]),
+            ("permission-footer", app.descendants(matching: .any)["compose.send-permission"]), ("refresh-footer", app.buttons["compose.refresh-permission"]),
+            ("defaults-footer", app.staticTexts["Account defaults could not be loaded. Your writing is kept; add a signature if needed."]),
             ("send", app.buttons["compose.send"]), ("done", app.buttons["compose.keyboard-done"]),
             ("keyboard", app.keyboards.firstMatch), ("feedback", app.buttons["feedback.open"]),
             ("removed-attachment", app.buttons["compose.attachment.remove.remove"]),
@@ -2354,8 +2357,16 @@ final class OrcaUITests: XCTestCase {
         image.name = "native-boundary-" + stage; image.lifetime = .keepAlways; add(image)
     }
 
-    private func assertInboxLoaded(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+    private func assertInboxLoaded(in app: XCUIApplication, boundedListReveal: Bool = false, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20), file: file, line: line)
+        if boundedListReveal {
+            for _ in 0..<6 {
+                if app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists { break }
+                XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, file: file, line: line)
+                guard revealInboxContent(in: app, up: true) else { break }
+                XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, file: file, line: line)
+            }
+        }
         let firstRowFound = app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].waitForExistence(timeout: 20)
         if !firstRowFound && boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() {
             let id = "inbox.message." + Fixture.inboxMessageID
@@ -2374,14 +2385,39 @@ final class OrcaUITests: XCTestCase {
         let secondRow = app.descendants(matching: .any)["inbox.message.\(Fixture.searchResultMessageID)"]
         var scrolls = 0
         while !secondRow.exists && scrolls < 5 {
-            app.swipeUp()
+            if boundedListReveal {
+                guard revealInboxContent(in: app, up: true) else { break }
+            } else { app.swipeUp() }
             scrolls += 1
         }
         XCTAssertTrue(secondRow.exists, file: file, line: line)
         // Leave callers at their original inbox entry point.
-        for _ in 0..<scrolls { app.swipeDown() }
+        for _ in 0..<scrolls {
+            if boundedListReveal { _ = revealInboxContent(in: app, up: false) }
+            else { app.swipeDown() }
+        }
         XCTAssertTrue(app.descendants(matching: .any)["inbox.message.\(Fixture.inboxMessageID)"].exists, file: file, line: line)
         XCTAssertTrue(app.tabBars.buttons["Mail"].isSelected, file: file, line: line)
+    }
+
+    private func panContent(_ pan: ViewportGeometry.Pan, in element: XCUIElement) {
+        let frame = element.frame
+        guard frame.width > 0, frame.height > 0 else { return }
+        func coordinate(_ point: CGPoint) -> XCUICoordinate {
+            element.coordinate(withNormalizedOffset: CGVector(dx: (point.x - frame.minX) / frame.width, dy: (point.y - frame.minY) / frame.height))
+        }
+        coordinate(pan.start).press(forDuration: 0.05, thenDragTo: coordinate(pan.end))
+    }
+    private func revealInboxContent(in app: XCUIApplication, up: Bool) -> Bool {
+        let list = app.descendants(matching: .any)["inbox.list"]
+        guard list.exists, app.navigationBars["Inbox"].exists, app.tabBars.buttons["Mail"].isSelected else { return false }
+        var fixed = [CGRect]()
+        if app.tabBars.element.exists { fixed.append(app.tabBars.element.frame) }
+        if app.buttons["feedback.open"].exists { fixed.append(app.buttons["feedback.open"].frame) }
+        guard let viewport = ViewportGeometry.content(form: list.frame, application: app.frame, navigation: app.navigationBars["Inbox"].frame, fixed: fixed),
+              let pan = ViewportGeometry.pan(in: viewport, up: up) else { return false }
+        panContent(pan, in: list)
+        return true
     }
 
     private func openConversation(subject: String, in app: XCUIApplication) {
