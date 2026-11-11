@@ -101,7 +101,12 @@ import SwiftUI
     private func submit(_ pending: Pending, state: AppState) async {
         guard let client = state.client, !busy, current(state, generation) else { return }
         var pending = pending
-        if pending.contextThreadId == nil { pending.contextThreadId = threadId; pending.contextSubject = subject }
+        if pending.contextThreadId == nil {
+            // Legacy journals have no presentation context. A conversation target
+            // identifies itself; never assign an old command to the newly open sheet.
+            let originalThread = pending.command.target.threadId ?? (self.pending == nil ? threadId : nil)
+            pending.contextThreadId = originalThread; pending.contextSubject = originalThread == threadId ? subject : nil
+        }
         persist(pending); busy = true; preview = nil; receipt = nil; status = nil; error = nil; let request = generation
         do {
             let result: ImportanceOperation
