@@ -11,6 +11,7 @@ import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace, type ViewPreviewEvidenceState } from "./organization-views";
 import { createTidePreviewRequest, TideTableEditor, type TideCompileSuccess } from "./tide-table";
 import { TopLayer, useTopLayerActive } from "./top-layer";
+import { ImportanceProvider } from "./importance";
 
 export { DesktopDrawer } from "./desktop-drawer";
 export type { DesktopDestination, SidebarAccount, SidebarNavigationProjection, WorkflowSpace } from "./navigation";
@@ -295,7 +296,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     if (destination === "settings") return;
     requestViewNavigation(() => window.location.assign(desktopDestinationHref(destination, window.location.pathname)));
   };
-  return <div className="desktop-shell desktop-settings-frame">
+  return <ImportanceProvider key={source.accountId ?? "loading"}><div className="desktop-shell desktop-settings-frame">
     {manageDestinations && <DestinationManager preview={Boolean(navigationPreview?.complete)} onClose={() => setManageDestinations(false)} onCreated={id => navigate(`destination:${id}`)} />}
     <AppSidebar
       onCompose={() => requestViewNavigation(() => window.location.assign(`${window.location.pathname.startsWith("/dev/") ? "/dev/inbox" : "/"}?compose=1`))}
@@ -307,7 +308,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
       theme={theme}
     />
     <div className="desktop-workspace"><WorkspaceHeader health={projection.account.health} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/><ConnectivityNotice onOpenDrafts={() => navigate("drafts")} online={online}/>{children}</div>
-  </div>;
+  </div></ImportanceProvider>;
 }
 
 export function ConnectivityNotice({ online, onOpenDrafts }: { online: boolean; onOpenDrafts: () => void }) {

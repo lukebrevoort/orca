@@ -13,7 +13,8 @@
 .importance-sender-review { margin-top:16px; }
 .importance-sender-review label { display:grid; gap:8px; margin:16px 0; font-size:14px; }
 .importance-sender-review :is(input,select) { min-height:44px; width:100%; border:1px solid var(--orca-border); padding:8px; color:var(--orca-ink); background:var(--orca-surface); }
-.importance-receipt { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:16px 24px; border-top:1px solid var(--orca-border); background:var(--orca-surface); color:var(--orca-ink); font-size:14px; }
+.importance-receipt { position:fixed; z-index:60; left:16px; right:16px; bottom:16px; width:fit-content; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow-y:auto; margin-inline:auto; display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 16px; border:1px solid var(--orca-border); border-radius:12px; box-shadow:var(--orca-shadow); background:var(--orca-surface); color:var(--orca-ink); font-size:14px; }
+.global-mail-search > .importance-receipt-inline { grid-area:importance; position:relative; z-index:2; inset:auto; width:auto; max-width:none; max-height:40dvh; margin:0; border-width:1px 0 0; border-radius:0; box-shadow:none; }
 .important-mail { padding:32px; max-width:1080px; margin:0 auto; }
 .important-mail h1 { font:500 32px/1.2 var(--orca-font-display); margin:8px 0 16px; }
 .important-mail header > p, .mail-count { font-size:14px; line-height:1.6; color:var(--orca-muted); }
@@ -32,7 +33,7 @@
 .mailboxes-disclosure > summary small { display:block; margin-top:8px; color:var(--orca-muted); overflow-wrap:anywhere; }
 .mailboxes-disclosure > div { display:grid; gap:4px; padding:8px 0; }
 .mailboxes-disclosure > div > button:not(.desktop-sidebar-item) { min-height:44px; text-align:left; border:0; background:transparent; color:var(--orca-muted); padding:8px 12px; cursor:pointer; }
-@media(max-width:760px) { .mail-scope-switch { padding:12px 16px; } .important-mail { padding:24px 16px; } .important-list > li { grid-template-columns:1fr; gap:8px; } .importance-receipt { padding-bottom:calc(90px + env(safe-area-inset-bottom)); } }
+@media(max-width:760px) { .mail-scope-switch { padding:12px 16px; } .important-mail { padding:24px 16px; } .important-list > li { grid-template-columns:1fr; gap:8px; } .importance-receipt { bottom:calc(96px + env(safe-area-inset-bottom)); max-height:calc(100dvh - 128px); } .global-mail-search > .importance-receipt-inline { bottom:auto; max-height:40dvh; } }
 .importance-direct { display:flex; flex-wrap:wrap; gap:4px; }
 .importance-direct button[aria-pressed="true"] { background:var(--orca-surface-hover); border-color:var(--orca-border); color:var(--orca-ink); }
 .important-account { display:flex; flex-wrap:wrap; gap:12px; align-items:center; font-size:14px; }

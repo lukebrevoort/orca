@@ -84,9 +84,12 @@ try{for(const theme of ['light','dark']){
   check(await row.getByRole('button',{name:'Important',exact:true}).count()===0,'Missing legacy projection cannot become an editable Unreviewed choice');
   check(await row.locator('.importance-control').innerText().then(text=>!text.includes('Unreviewed')),'Missing projection is unavailable, not Unreviewed');
  });
- for(const failure of ['old-server','offline'])await scenario(theme,failure,async({page})=>{
-  await page.route('**/v1/important?*',route=>failure==='offline'?route.abort('internetdisconnected'):route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({error:{code:'not_found',message:'Synthetic older-server endpoint unavailable'}})}));
-  await page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'Important',exact:true}).click();await page.getByRole('alert').filter({hasText:'Importance could not load.'}).waitFor();
+ for(const failure of ['old-server','offline','offline-after-empty'])await scenario(theme,failure,async({page})=>{
+  const important=page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'Important',exact:true});
+  if(failure==='offline-after-empty'){await important.click();await page.getByRole('heading',{name:'No important conversations yet',exact:true}).waitFor();}
+  await page.route('**/v1/important?*',route=>failure.startsWith('offline')?route.abort('internetdisconnected'):route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({error:{code:'not_found',message:'Synthetic older-server endpoint unavailable'}})}));
+  if(failure==='offline-after-empty')await page.evaluate(()=>window.dispatchEvent(new Event('focus')));else await important.click();
+  await page.getByRole('alert').filter({hasText:'Importance could not load.'}).waitFor();
   check(await page.getByRole('heading',{name:'No important conversations yet',exact:true}).count()===0,'Unavailable Important is never shown as an empty mailbox');
   await page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'All Mail',exact:true}).click();await page.locator('button.message-row').filter({hasText:'first account conversation'}).first().waitFor();
   check(await page.getByRole('navigation',{name:'Mail filters'}).getByRole('button',{name:'Important',exact:true}).isVisible(),'Important and All Mail remain reachable after '+failure);

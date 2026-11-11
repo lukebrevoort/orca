@@ -1,0 +1,154 @@
+{
+  "revision": {
+    "head": "5403565d38cd9cb8180598782ca926df210bcfc3",
+    "sourceSha256": "a546df94a3a175f362785e107b050f8ddbfc93f47f2f7930964056ffc0fb6333",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "assertions": 12,
+  "failures": [
+    {
+      "label": "mail Undo is immediately in viewport",
+      "detail": {
+        "x": 516.90625,
+        "y": 1017,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      }
+    },
+    {
+      "label": "Utility-entry global search retains both direct importance choices",
+      "detail": {
+        "theme": "light",
+        "width": 1440,
+        "actions": 0
+      }
+    },
+    {
+      "label": "mail Undo is immediately in viewport",
+      "detail": {
+        "x": 24,
+        "y": 986,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      }
+    },
+    {
+      "label": "Utility-entry global search retains both direct importance choices",
+      "detail": {
+        "theme": "light",
+        "width": 390,
+        "actions": 0
+      }
+    },
+    {
+      "label": "mail Undo is immediately in viewport",
+      "detail": {
+        "x": 516.90625,
+        "y": 1017,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      }
+    },
+    {
+      "label": "Utility-entry global search retains both direct importance choices",
+      "detail": {
+        "theme": "dark",
+        "width": 1440,
+        "actions": 0
+      }
+    },
+    {
+      "label": "mail Undo is immediately in viewport",
+      "detail": {
+        "x": 24,
+        "y": 986,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      }
+    },
+    {
+      "label": "Utility-entry global search retains both direct importance choices",
+      "detail": {
+        "theme": "dark",
+        "width": 390,
+        "actions": 0
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "mailUndo": {
+        "x": 516.90625,
+        "y": 1017,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      },
+      "settingsUndo": null,
+      "directSearchActions": 0
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "mailUndo": {
+        "x": 24,
+        "y": 986,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      },
+      "settingsUndo": null,
+      "directSearchActions": 0
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "mailUndo": {
+        "x": 516.90625,
+        "y": 1017,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 1440,
+        "viewportHeight": 1000,
+        "scrollY": 0
+      },
+      "settingsUndo": null,
+      "directSearchActions": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "mailUndo": {
+        "x": 24,
+        "y": 986,
+        "width": 211.671875,
+        "height": 44,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollY": 0
+      },
+      "settingsUndo": null,
+      "directSearchActions": 0
+    }
+  ],
+  "pageErrors": []
+}

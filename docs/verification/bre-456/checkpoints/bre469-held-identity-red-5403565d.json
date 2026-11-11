@@ -1,0 +1,159 @@
+{
+  "revision": {
+    "head": "5403565d38cd9cb8180598782ca926df210bcfc3",
+    "sourceSha256": "a546df94a3a175f362785e107b050f8ddbfc93f47f2f7930964056ffc0fb6333",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "scenarios": [
+    {
+      "theme": "light",
+      "name": "owner-switched-before-save",
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": []
+    },
+    {
+      "theme": "light",
+      "name": "owner-switched-during-held-identity-preflight",
+      "identitySnapshot": {
+        "isAuthenticated": true,
+        "user": {
+          "id": "u",
+          "email": "u@example.com",
+          "name": null
+        },
+        "expiresAt": "2026-12-11T10:21:40.328Z",
+        "onboardingCompletedAt": null
+      },
+      "before": {
+        "signature": "",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": [
+        {
+          "user_id": "v",
+          "signature": "Unsaved original owner light"
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "name": "owner-switched-before-save",
+      "before": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": [
+        {
+          "user_id": "v",
+          "signature": "Unsaved original owner light"
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "name": "owner-switched-during-held-identity-preflight",
+      "identitySnapshot": {
+        "isAuthenticated": true,
+        "user": {
+          "id": "u",
+          "email": "u@example.com",
+          "name": null
+        },
+        "expiresAt": "2026-12-11T10:21:40.328Z",
+        "onboardingCompletedAt": null
+      },
+      "before": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "after": {
+        "signature": "Unsaved original owner dark",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false
+      },
+      "database": [
+        {
+          "user_id": "v",
+          "signature": "Unsaved original owner dark"
+        }
+      ]
+    }
+  ],
+  "assertions": 14,
+  "failures": [
+    {
+      "theme": "light",
+      "message": "Held stale U identity must never authorize a PATCH into V"
+    },
+    {
+      "theme": "dark",
+      "message": "Held stale U identity must never authorize a PATCH into V"
+    }
+  ],
+  "requests": [
+    {
+      "theme": "light",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "theme": "light",
+      "method": "PATCH",
+      "body": {
+        "signature": "Unsaved original owner light",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      }
+    },
+    {
+      "theme": "dark",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "theme": "dark",
+      "method": "PATCH",
+      "body": {
+        "signature": "Unsaved original owner dark",
+        "composeFormat": "plain",
+        "replyBehavior": "reply",
+        "notifyByDefault": false,
+        "firstViewGuidanceCompletedAt": null
+      }
+    }
+  ],
+  "pageErrors": []
+}

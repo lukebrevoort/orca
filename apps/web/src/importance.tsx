@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { importantPageSchema, importanceMutationSchema, importanceOperationSchema, importancePreviewSchema, importanceResolutionSchema, type ImportanceChoice, type ImportanceMutation, type ImportanceOperation, type ImportanceResolution } from '@orca/shared';
-import { TopLayer } from './top-layer';
+import { TopLayer, useTopLayerActive } from './top-layer';
 import { decodeMailPreview } from './mail-preview';
 import './importance.css';
 
@@ -18,7 +18,7 @@ const snapshotSchema = {parse(value:unknown) { const v=value as {accountId:strin
 const keyFor = (accountId:string,threadId:string) => JSON.stringify([accountId,threadId]);
 type Command = {path:string;body:ImportanceMutation | {accountId:string;operationId:string;expectedRevision:number}};
 type Receipt = {operation:ImportanceOperation;command:Command};
-type ImportanceContextValue = {observe:(accountId:string,threadId:string,importance:ImportanceResolution)=>void; changed: (accountId:string,threadId?:string,importance?:ImportanceResolution)=>void; receipt:(value:Receipt)=>void; snapshots:Map<string,ImportanceResolution>};
+type ImportanceContextValue = {observe:(accountId:string,threadId:string,importance:ImportanceResolution)=>void; changed: (accountId:string,threadId?:string,importance?:ImportanceResolution)=>void; receipt:(value:Receipt)=>void; snapshots:Map<string,ImportanceResolution>;status:{notice:string;busy:boolean;undo:(()=>Promise<void>)|null;dismiss:()=>void}};
 const ImportanceContext = createContext<ImportanceContextValue | null>(null);
 
 /** Transient receipts belong to this mounted owner. Nothing persists locally. */
@@ -50,9 +50,19 @@ export function ImportanceProvider({children}:{children:ReactNode}) {
     }catch(error){if(alive.current){setReceipt(null);setNotice(String(error instanceof Error?error.message:error));}}
     finally{pending.current=false;if(alive.current)setBusy(false);}
   }
-  return <ImportanceContext.Provider value={{snapshots,observe:(accountId,threadId,importance)=>setSnapshots(current=>new Map(current).set(keyFor(accountId,threadId),importance)),changed,receipt:value=>{if(alive.current){setReceipt(value);setNotice('Choice saved in Orca. Mail placement and read state are unchanged.');}}}}>{children}
-    {notice ? <aside className="importance-receipt" aria-live="polite"><span>{notice}</span>{receipt&&receipt.operation.status==='current'?<button disabled={busy} onClick={()=>void undo()} type="button">{busy?'Checking Undo…':'Undo importance change'}</button>:null}<button aria-label="Dismiss importance status" type="button" onClick={()=>{setReceipt(null);setNotice('');}}>Dismiss</button></aside>:null}
+  return <ImportanceContext.Provider value={{snapshots,observe:(accountId,threadId,importance)=>setSnapshots(current=>new Map(current).set(keyFor(accountId,threadId),importance)),changed,receipt:value=>{if(alive.current){setReceipt(value);setNotice('Choice saved in Orca. Mail placement and read state are unchanged.');}},status:{notice,busy,undo:receipt&&receipt.operation.status==='current'?undo:null,dismiss:()=>{setReceipt(null);setNotice('');}}}}>{children}
+    <ImportanceStatus/>
   </ImportanceContext.Provider>;
+}
+
+/** A modal's status belongs INSIDE its active focus/inert boundary. The normal
+ * mail status stays visible without scrolling or moving focus after a write. */
+export function ImportanceStatus({inline=false}:{inline?:boolean}) {
+  const context=useContext(ImportanceContext);
+  const layerActive=useTopLayerActive();
+  const status=context?.status;
+  if(!status?.notice||(!inline&&layerActive))return null;
+  return <aside className={`importance-receipt${inline?' importance-receipt-inline':''}`} aria-live="polite"><span>{status.notice}</span>{status.undo?<button disabled={status.busy} onClick={()=>void status.undo?.()} type="button">{status.busy?'Checking Undo…':'Undo importance change'}</button>:null}<button aria-label="Dismiss importance status" type="button" onClick={status.dismiss}>Dismiss</button></aside>;
 }
 
 /** Reconcile ambiguity before allowing a stable-ID retry. Never replay a newer state. */

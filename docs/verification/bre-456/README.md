@@ -42,6 +42,10 @@ Later source inspection found an inherited `:first-of-type` Settings link style 
 
 The remaining actual navigation children are [BRE-474](https://linear.app/brevoort/issue/BRE-474) (saved-view menu arrow participation) and [BRE-475](https://linear.app/brevoort/issue/BRE-475) (configured Focus shortcut name/order/visibility). Their red source and green scope are the same retained receipts above.
 
+The stronger BRE-469 interrupted probe remains **red** at clean `5403565d38cd9cb8180598782ca926df210bcfc3`: hold a real authenticated U identity response during Save, switch the session cookie to V, then release U’s response. Both themes write U’s signature into V before the post-save check hides the editor. [HTTP/SQLite receipt](checkpoints/bre469-held-identity-red-5403565d.json) records four scenarios/14 assertions/two failures; the earlier six-assertion green does not cover this race. Root owns the agreed atomic `x-orca-expected-user-id` GET/PATCH preference precondition. The web header is captured from the original verified editor/load owner before awaits; it is not authentication, and protection is not claimed before the real server patch and exact replay pass.
+
+[BRE-476](https://linear.app/brevoort/issue/BRE-476) and [BRE-477](https://linear.app/brevoort/issue/BRE-477) are additional actual entry regressions. The same clean head yields four cases/12 assertions/eight failures: utility-entry search has no direct importance actions, and Undo lies below the viewport (`y=1017` at 1000px desktop; `y=986` at 844px mobile). [Receipt](checkpoints/bre476-477-entry-red-5403565d.json) and selected inspected images are retained. Product fixes now give utility frames the shared importance controller and render status within the active modal focus boundary or a visible mail status overlay. Their green replay is pending.
+
 ## Commands
 
 Use the existing absolute Bun 1.3.14 and Node 24.22.1 paths. Every heavy command runs through the cooperative nonblocking lock/resource sampler; exit 75 means not started and is never bypassed. One owned fixture/browser run at a time:

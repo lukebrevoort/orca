@@ -772,6 +772,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       throw new Error("Settings ownership changed. Your unsaved choices remain with their original session.");
     }
     settingsOwnerRef.current = session.user.id;
+    return session.user.id;
   }
   async function recoverSettingsOwner() {
     if (settingsOwnerRecoveryBusy) return;
@@ -796,8 +797,8 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     setAccountLoadStatus("loading");
     setAccountLoadError(null);
     try {
-      await requireSettingsOwner(controller.signal, true);
-      const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal);
+      const ownedUserId = await requireSettingsOwner(controller.signal, true);
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal, { headers: { "x-orca-expected-user-id": ownedUserId } });
       await requireSettingsOwner(controller.signal);
       if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
       setAccountPreferences(value);
@@ -808,6 +809,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       setAccountSaveError(null);
       setAccountSaveNotice(null);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === "session_owner_changed") blockSettingsOwner();
       if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
       setAccountLoadStatus("error");
       setAccountLoadError(error);
@@ -887,14 +889,18 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     const requestId = ++accountSaveRequestRef.current;
     const editVersion = accountEditVersionRef.current;
     const payload = accountPreferences;
+    // Bind the command to the original loaded editor before any preflight
+    // await. A late U identity response cannot authorize V's request cookie.
+    const ownedUserId = settingsOwnerRef.current;
     if (demoMode) { setAccountDirty(false); setAccountSaveStatus("saved"); return; }
     setAccountSaveStatus("saving");
     setAccountSaveError(null);
     setAccountSaveNotice(null);
     try {
+      if (!ownedUserId) throw new Error("Load the original Settings session before saving account choices.");
       await requireSettingsOwner();
       if (requestId !== accountSaveRequestRef.current) return;
-      const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json", "x-orca-expected-user-id": ownedUserId }, body: JSON.stringify(payload) });
       await requireSettingsOwner();
       invalidateWritingPreferences();
       if (requestId !== accountSaveRequestRef.current) return;
@@ -908,6 +914,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         setAccountSaveNotice("Your earlier account choices were saved. Newer edits are still here and need saving.");
       }
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === "session_owner_changed") blockSettingsOwner();
       if (requestId !== accountSaveRequestRef.current) return;
       setAccountSaveError(error instanceof Error ? error : new Error(getErrorMessage(error)));
       setAccountSaveStatus("error");

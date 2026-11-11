@@ -1,4 +1,4 @@
-import { ImportanceControl } from "./importance";
+import { ImportanceControl, ImportanceStatus } from "./importance";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   inboxClassificationResponseSchema,
@@ -551,6 +551,7 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
       {status === "ready" && messages.length > 0 ? <><header className="global-mail-result-count"><strong>Results</strong><span>{messages.length}{nextCursor ? "+" : ""} {messages.length === 1 && !nextCursor ? "message" : "messages"} · ↓ to browse</span></header><ol className="global-mail-result-list" onFocus={(event) => { lastResultFocus.current = (event.target as HTMLElement).closest("a")?.getAttribute("href") ?? lastResultFocus.current; }} onKeyDown={moveResultFocus} ref={resultListRef}>{messages.map((message) => <li key={`${message.accountId}:${message.id}`}><a href={mailSearchReaderUrl(message)} onClick={(event) => { event.preventDefault(); openMailSearchResult(message); }}><span className="global-mail-result-sender">{message.from.name ?? message.from.email}</span><time dateTime={message.receivedAt}>{searchResultDate(message.receivedAt)}</time><strong>{message.subject || "(no subject)"}</strong><span className="global-mail-result-snippet">{message.snippet || "No preview available."}</span><small>{evidenceLabel(message)}</small></a><ImportanceControl accountId={message.accountId} threadId={message.threadId} address={message.from.email} initial={message.importance} disabled={isDemoSearch()}/></li>)}</ol>{nextCursor ? <button className="global-mail-load-more" disabled={loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more…" : "Load more matches"}</button> : null}</> : null}
       {status === "ready" && error ? <p className="global-mail-search-inline-error" role="alert">{error}</p> : null}
     </section>
+    <ImportanceStatus inline/>
   </TopLayer>{authoring ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAccessible={false} backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring search-view-authoring" layerClassName="selected-view-authoring-layer" onClose={() => authoringDismissRef.current?.()} returnFocusRef={saveButtonRef}>
     <p className="search-view-transition">Previewing conversations for this View. Search message order and counts may differ. Your original search stays unchanged.</p>
     <OrganizationViewAuthoringWorkspace entry={authoring} demoMode={isDemoSearch()} dismissRef={authoringDismissRef} compact
