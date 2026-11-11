@@ -1,0 +1,263 @@
+bun test v1.3.14 (d1632b29)
+
+packages/shared/src/organization-saved-query-results.test.ts:
+(pass) saved-query result additive wire contract > requires selected account, bounds pages, and rejects definitions/actors/dates [2.34ms]
+(pass) saved-query result additive wire contract > strict response carries object provenance and loaded rows, never aggregate counts [0.73ms]
+
+packages/shared/src/organization-collections-pins.test.ts:
+(pass) Organization Collections/Pins contract > provides a clean-reset fixture with explicit membership and stable shortcut identity [0.28ms]
+(pass) Organization Collections/Pins contract > keeps Collection membership distinct from live query shortcuts [0.11ms]
+(pass) Organization Collections/Pins contract > requires Pins to use stable resource or query identity [0.41ms]
+(pass) Organization Collections/Pins contract > round-trips every compatibility-representable saved-query selection [2.49ms]
+(pass) Organization Collections/Pins contract > preserves exact stored-mail account and custom-space scope [0.08ms]
+(pass) Organization Collections/Pins contract > expresses auditable membership and shortcut changes without mail authority [1.34ms]
+
+apps/api/src/mailbox/read.test.ts:
+(pass) bounded mailbox reader > projects one keyset page while SQL aggregates the complete mailbox counts [121.08ms]
+(pass) bounded mailbox reader > rejects stale cursors after attention, classification, label, and concurrent email mutations [83.68ms]
+(pass) bounded mailbox reader > owns mutable account metadata and revision in one snapshot [74.79ms]
+(pass) bounded mailbox reader > merges two index-backed account pages without duplicates or omissions [133.96ms]
+(pass) bounded mailbox reader > reports high-association enrichment separately and projects one effective override per message row [71.68ms]
+(pass) empty attention page pruning > uses zero snapshot aggregates to skip scans across two authorized accounts [117.53ms]
+(pass) empty attention page pruning > keeps notify rows, including combined notify/focus counts [59.44ms]
+(pass) empty attention page pruning > keeps focus rows, including combined notify/focus counts [61.18ms]
+(pass) empty attention page pruning > keeps normal rows, including combined notify/focus counts [59.94ms]
+(pass) empty attention page pruning > keeps quiet rows, including combined notify/focus counts [62.50ms]
+(pass) empty attention page pruning > keeps hidden rows, including combined notify/focus counts [55.89ms]
+(pass) empty attention page pruning > keeps a nonempty group in either account and honors effective attention precedence [62.25ms]
+(pass) empty attention page pruning > preserves timestamp and ID ties across accounts and empty ranks on later pages [78.67ms]
+(pass) empty attention page pruning > retains collection, destination, and account scope checks even for empty filters [64.47ms]
+(pass) empty attention page pruning > applies Inbox skip rules to both the aggregate proof and page predicates [57.35ms]
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [59.39ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [63.47ms]
+(pass) Inbox unread Focus timeline > read Focus returns to chronological Inbox; unread Notify and Focus share one newest-first promotion [58.11ms]
+(pass) Inbox unread Focus timeline > latest representative uses any-message unread and repromotes after mark unread; stale cursors rejected [61.98ms]
+(pass) Inbox unread Focus timeline > cursor pages equal complete ordering across accounts and read/promotion boundaries [104.04ms]
+(pass) Gmail archive excludes the whole thread from Inbox and Focus without deleting All Mail [66.96ms]
+(pass) a newly synced unread reply repromotes a read Focus conversation once, at latest date [57.64ms]
+(pass) Inbox search matches earlier thread content but returns its latest representative [58.71ms]
+(pass) Focus pages traverse combined unread and read ranks across accounts and reject old cursor format [152.72ms]
+
+apps/api/src/organization/collections-pins/query-results.test.ts:
+BRE457 {"stage":"candidate","name":"real-auth-catalog-query-mailbox-preconditions","unauthenticatedStatus":401,"catalogStatus":200,"inboxStatus":200,"allMailStatus":200,"observedBehaviors":{"notify":"notify","focus":"focus","normal":"normal","quiet-new":"quiet","hidden-new":"hidden"},"queryId":"bre457-query-1","objectRevision":7,"schemaRevision":1,"connectionChanges":[0,0,0,0,0,0],"providerCalls":{"network":0,"sync":0,"transport":0}}
+BRE457 {"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","semanticsExecuted":true,"matchedIds":["notify"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > notify-only distinguishes sender-routed threads sharing content/classification [12.51ms]
+BRE457 {"stage":"candidate","name":"normal-only is independent from Inbox attention union","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"normal-only is independent from Inbox attention union","semanticsExecuted":true,"matchedIds":["normal"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > normal-only is independent from Inbox attention union [7.21ms]
+BRE457 {"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","semanticsExecuted":true,"matchedIds":["notify","focus","bulk-focus"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > focus execution union deliberately differs from old strict-focus preview [7.42ms]
+BRE457 {"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored attention on quiet is conjunctive and contradictory [8.24ms]
+BRE457 {"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","semanticsExecuted":true,"matchedIds":["notify"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored legacy collection limits All Mail [7.30ms]
+BRE457 {"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","semanticsExecuted":true,"matchedIds":["notify","focus","normal"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored explicit All Mail classification is honored [8.91ms]
+BRE457 {"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","semanticsExecuted":true,"matchedIds":["bulk-focus"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy Focus explicit evidence never inherits mutable browser state [10.17ms]
+BRE457 {"stage":"candidate","name":"legacy Inbox absent classification defaults human","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy Inbox absent classification defaults human","semanticsExecuted":true,"matchedIds":["notify","focus","normal"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy Inbox absent classification defaults human [7.44ms]
+BRE457 {"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","semanticsExecuted":true,"matchedIds":["notify","focus","bulk-focus"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy Focus absent classification deterministically defaults all [8.06ms]
+BRE457 {"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person retains non-ASCII and cross-name-address boundary plus independent text [10.50ms]
+BRE457 {"stage":"candidate","name":"person matches subject/snippet rather than author identity","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person matches subject/snippet rather than author identity","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person matches subject/snippet rather than author identity [7.66ms]
+BRE457 {"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","semanticsExecuted":true,"matchedIds":["unicode"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person uses JS Unicode expanding lowercase not SQLite ASCII lower [8.87ms]
+BRE457 {"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","semanticsExecuted":true,"matchedIds":["sigma"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person retains JS context-sensitive Greek lowercase [11.30ms]
+BRE457 {"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy field text uses JS non-ASCII lowercase [8.49ms]
+BRE457 {"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy text cannot cross subject/snippet newline boundary [10.30ms]
+BRE457 {"stage":"candidate","name":"legacy latest representative excludes historical-only content","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy latest representative excludes historical-only content","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy latest representative excludes historical-only content [8.21ms]
+BRE457 {"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > quiet latest-before-person deliberately replaces old person-before-dedup [9.44ms]
+BRE457 {"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > quiet explicit classification is applied after global latest selection [7.08ms]
+BRE457 {"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > hidden latest-before-person deliberately replaces old person-before-dedup [7.95ms]
+BRE457 {"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","semanticsExecuted":true,"matchedIds":["tie-a"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > equal-time SQL tie chooses ascending ID instead of old JS descending ID [11.95ms]
+BRE457 {"stage":"candidate","name":"equal-time winner chosen before person predicate","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"equal-time winner chosen before person predicate","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > equal-time winner chosen before person predicate [8.61ms]
+BRE457 {"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > archived notify conversation is excluded from legacy Inbox [9.91ms]
+BRE457 {"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > moved normal conversation is excluded from legacy Inbox [7.20ms]
+BRE457 {"stage":"candidate","name":"All Mail still retains archived conversation","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"All Mail still retains archived conversation","semanticsExecuted":true,"matchedIds":["archived"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > All Mail still retains archived conversation [8.94ms]
+BRE457 {"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","semanticsExecuted":true,"matchedIds":["notify"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail retained notify extension is conjunctive [11.80ms]
+BRE457 {"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail retained sender extension preserves broad migrated-person meaning [8.53ms]
+BRE457 {"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","semanticsExecuted":true,"matchedIds":["boundary"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail text preserves existing newline-concatenated search [8.98ms]
+BRE457 {"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","semanticsExecuted":true,"matchedIds":["history-new"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail Inbox retains historical witness/latest representative [7.40ms]
+BRE457 {"stage":"candidate","name":"generated-stored-mail-inbox","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-focus","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-quiet","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-hidden","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-all","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > generated stored-mail profiles delegate to existing public mailbox behavior and order [88.66ms]
+BRE457 {"stage":"candidate","name":"strict-legacy-raw","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > strict legacy raw definition remains readable without changing its bytes [8.17ms]
+BRE457 {"stage":"candidate","name":"digest-first","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"digest-second","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > canonical definition digest is independent from JSON formatting/key order [19.67ms]
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"null"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":2,\"filters\":{}}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"receivedAfter\":\"2026-01-01\"}}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"mailbox\":\"all\"}}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"mailbox\":\"all\",\"attention\":\"all\",\"person\":null,\"query\":\"\",\"date\":\"2026-01-01\"}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"accountId\":\"bre457-account-b\"}}"}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > corrupt/unknown/date/conflicting-account definitions fail closed without catalog normalization [44.28ms]
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > foreign/missing account, query and collection have indistinguishable 404 [49.18ms]
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > request account is mandatory; arbitrary definitions, actors and dates are rejected [22.18ms]
+BRE457 {"stage":"candidate","name":"paging-complete","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > repeatable keyset paging equals complete deterministic order including tied keys [501.08ms]
+BRE457 {"stage":"candidate","name":"cursor-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > cursor rejects changed query, account, limit, original session and public inbox cursor [50.55ms]
+BRE457 {"stage":"candidate","name":"tamper-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > valid-shaped keyset tampering retains original signature and fails integrity [15.33ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > unauthenticated, expired and revoked sessions cannot read saved results [13.19ms]
+BRE457 {"stage":"candidate","name":"stale-object-first","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stale-mailbox-first","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stale-digest-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > object revision and mailbox changes invalidate outstanding cursors [43.07ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > snapshot rechecks revocation after successful middleware authentication [7.53ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > mobile bearer uses the same owner projection and revocation guard [13.93ms]
+BRE457 {"stage":"candidate","name":"auth-renewal-exception","authChanges":1,"domainChanges":0,"connectionCloseOrder":["domain","auth"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > near-expiry browser renewal is separately scoped auth DML, never domain DML [13.01ms]
+BRE457 {"stage":"candidate","name":"actual-read-only-transaction","queryOnly":1,"changes":0,"metric":{"durationMs":2.6442919999999503,"countDurationMs":0.5487079999998059,"pageDurationMs":1.9515839999999116,"enrichmentDurationMs":0.04591699999991761,"accountCount":1,"limit":1,"returnedMessages":1,"aggregateRowsReturned":1,"pageRowsProjected":1,"lookaheadRowsProjected":0,"labelAssociationRowsLoaded":1,"effectiveOverridesProjected":0,"accountPageQueries":2,"maxPageRowsBound":2,"revision":"mailbox-v2:b9609ea759f714d5c2ad8a3b61c84b0ed726f6564bc5e7b7c72d5baa39cb3f58","savedQuery":{"candidateRowsScanned":1,"candidateSelects":2,"candidateBatchSize":1,"maxRetainedRows":1}}}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > actual read transaction rejects attempted DML while serving a bounded page [5.97ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > missing derived mailbox state is unavailable without lazy repair [12.63ms]
+BRE457 {"stage":"candidate","name":"sparse-complete","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > sparse Unicode and tied-key pages scan beyond an arbitrary first batch without skipping matches [300.45ms]
+BRE457 {"stage":"candidate","name":"delete-query-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > deleted saved query and disconnected account cannot continue or expose old results [30.35ms]
+
+ 78 pass
+ 0 fail
+ 199 expect() calls
+Ran 78 tests across 4 files. [3.89s]

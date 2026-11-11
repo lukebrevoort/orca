@@ -1,0 +1,23 @@
+BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=0
+BRE457 starting api-types; timeout=90s
+BRE457 finished api-types; exit=0
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-ssqq7q4c/evidence
+.BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=1
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-b63fugvr/evidence
+.BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=0
+BRE457 starting api-types; timeout=90s
+BRE457 finished api-types; exit=0
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-7vzw1udk/evidence
+.BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=0
+BRE457 starting api-types; timeout=90s
+BRE457 finished api-types; exit=0
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-tsawhyix/evidence
+.
+----------------------------------------------------------------------
+Ran 4 tests in 0.978s
+
+OK

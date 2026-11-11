@@ -1,0 +1,41 @@
+BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=0
+BRE457 starting api-types; timeout=90s
+BRE457 finished api-types; exit=0
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-it37sayz/evidence
+FBRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=1
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-_nag66u0/evidence
+.BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=0
+BRE457 starting api-types; timeout=90s
+BRE457 finished api-types; exit=0
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-j1nhwptt/evidence
+.BRE457 starting shared-types; timeout=60s
+BRE457 finished shared-types; exit=0
+BRE457 starting api-types; timeout=90s
+BRE457 finished api-types; exit=0
+BRE457 raw candidate evidence: /private/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-boundary-miss_zoh/evidence
+F
+======================================================================
+FAIL: test_changed_head_rejects_success (__main__.FinalSourceBoundary.test_changed_head_rejects_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/docs/verification/bre-457-pin-query/run-candidate.test.py", line 57, in test_changed_head_rejects_success
+    self.assertEqual(code, 2)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^
+AssertionError: 0 != 2
+
+======================================================================
+FAIL: test_dirty_source_rejects_success (__main__.FinalSourceBoundary.test_dirty_source_rejects_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/docs/verification/bre-457-pin-query/run-candidate.test.py", line 62, in test_dirty_source_rejects_success
+    self.assertEqual(code, 2)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^
+AssertionError: 0 != 2
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.038s
+
+FAILED (failures=2)

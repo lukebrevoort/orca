@@ -1,0 +1,394 @@
+{
+  "http": [
+    {
+      "name": "notify-only",
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "body": {
+        "query": {
+          "id": "bre457-query-2",
+          "accountId": "bre457-account-a",
+          "revision": 7,
+          "definitionDigest": "d36aab6465df8abf042d118ed9b877a9b938f29f5d4511460ac5412e9c06857c",
+          "evaluationProfile": "legacy-pin-v1"
+        },
+        "accounts": [
+          {
+            "id": "bre457-account-a",
+            "provider": "gmail",
+            "email": "a@synthetic.example",
+            "displayName": "a",
+            "capabilities": {
+              "read": true,
+              "draft": false,
+              "send": false
+            }
+          }
+        ],
+        "messages": [
+          {
+            "id": "notify",
+            "accountId": "bre457-account-a",
+            "provider": "gmail",
+            "providerMessageId": "notify",
+            "threadId": "thread-notify",
+            "from": {
+              "name": "Human",
+              "email": "thread-notify@synthetic.example"
+            },
+            "subject": "attention-marker",
+            "snippet": "latest",
+            "receivedAt": "2026-11-01T12:00:00.000Z",
+            "unread": true,
+            "labels": [
+              "INBOX"
+            ],
+            "attentionBehavior": "notify",
+            "destination": {
+              "destinationId": "a80c0575-5bb9-4bda-afbf-43bc9201c67c",
+              "source": "fallback",
+              "locked": false,
+              "reason": "Placement from fallback"
+            },
+            "humanSignal": null,
+            "humanClassification": {
+              "automatic": {
+                "classification": "likely_human",
+                "score": null,
+                "reasonCodes": [],
+                "classifierVersion": null
+              },
+              "effective": {
+                "classification": "likely_human",
+                "score": null,
+                "reasonCodes": [],
+                "classifierVersion": null,
+                "source": "automatic_heuristic",
+                "userOverride": null
+              },
+              "userOverride": null
+            }
+          }
+        ],
+        "nextCursor": null,
+        "freshness": {
+          "revision": "mailbox-v2:20901aa83f9c31ab4a5304c6b70a2c0cadbde08b0f9589807a2b293023f932ec",
+          "lastSyncedAt": null
+        }
+      }
+    },
+    {
+      "name": "Unicode-cross-field-person",
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "body": {
+        "query": {
+          "id": "bre457-query-3",
+          "accountId": "bre457-account-a",
+          "revision": 7,
+          "definitionDigest": "aa3b6e0313738d2f5ec295f829e71937bbe6f585d4ec7329f4a6576a3e49304c",
+          "evaluationProfile": "legacy-pin-v1"
+        },
+        "accounts": [
+          {
+            "id": "bre457-account-a",
+            "provider": "gmail",
+            "email": "a@synthetic.example",
+            "displayName": "a",
+            "capabilities": {
+              "read": true,
+              "draft": false,
+              "send": false
+            }
+          }
+        ],
+        "messages": [
+          {
+            "id": "person",
+            "accountId": "bre457-account-a",
+            "provider": "gmail",
+            "providerMessageId": "person",
+            "threadId": "thread-person",
+            "from": {
+              "name": "ÉLODIE",
+              "email": "other@synthetic.example"
+            },
+            "subject": "Launch",
+            "snippet": "MAYA outcome",
+            "receivedAt": "2026-11-01T12:00:00.000Z",
+            "unread": true,
+            "labels": [
+              "INBOX"
+            ],
+            "attentionBehavior": "normal",
+            "destination": {
+              "destinationId": "a80c0575-5bb9-4bda-afbf-43bc9201c67c",
+              "source": "conversation",
+              "locked": false,
+              "reason": "Placement from conversation"
+            },
+            "humanSignal": null,
+            "humanClassification": {
+              "automatic": {
+                "classification": "likely_human",
+                "score": null,
+                "reasonCodes": [],
+                "classifierVersion": null
+              },
+              "effective": {
+                "classification": "likely_human",
+                "score": null,
+                "reasonCodes": [],
+                "classifierVersion": null,
+                "source": "automatic_heuristic",
+                "userOverride": null
+              },
+              "userOverride": null
+            }
+          }
+        ],
+        "nextCursor": null,
+        "freshness": {
+          "revision": "mailbox-v2:20901aa83f9c31ab4a5304c6b70a2c0cadbde08b0f9589807a2b293023f932ec",
+          "lastSyncedAt": null
+        }
+      }
+    },
+    {
+      "name": "foreign-account",
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "Saved query or Account scope was not found"
+        }
+      }
+    }
+  ],
+  "work": [
+    {
+      "name": "dense",
+      "round": 0,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 11.720082999999931,
+      "rssBefore": 286588928,
+      "rssAfter": 287064064,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 10.32100000000014,
+        "countDurationMs": 2.9025410000001557,
+        "pageDurationMs": 7.089333000000124,
+        "enrichmentDurationMs": 0.14670799999998962,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 0,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 10.739333999999872,
+      "rssBefore": 286703616,
+      "rssAfter": 287145984,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.93950000000018,
+        "countDurationMs": 2.9161249999999654,
+        "pageDurationMs": 6.738999999999805,
+        "enrichmentDurationMs": 0.15841599999998834,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 1,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 10.230125000000044,
+      "rssBefore": 286752768,
+      "rssAfter": 287178752,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.487792000000127,
+        "countDurationMs": 2.871417000000065,
+        "pageDurationMs": 6.3462919999999485,
+        "enrichmentDurationMs": 0.140041999999994,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "round": 1,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 9.407375000000002,
+      "rssBefore": 286785536,
+      "rssAfter": 287391744,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 8.754625000000033,
+        "countDurationMs": 2.869374999999991,
+        "pageDurationMs": 5.659792000000152,
+        "enrichmentDurationMs": 0.10174999999981083,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "round": 2,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 10.33199999999988,
+      "rssBefore": 287031296,
+      "rssAfter": 287424512,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.709540999999945,
+        "countDurationMs": 3.0414170000001377,
+        "pageDurationMs": 6.416125000000193,
+        "enrichmentDurationMs": 0.12687500000015461,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 2,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 9.939499999999953,
+      "rssBefore": 287064064,
+      "rssAfter": 287555584,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.253958999999895,
+        "countDurationMs": 2.8554169999999885,
+        "pageDurationMs": 6.162959000000001,
+        "enrichmentDurationMs": 0.10325000000011642,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    }
+  ],
+  "localHttpRequests": 3,
+  "runtimeSqlFunctionRegistration": false,
+  "providerCalls": {
+    "network": 0,
+    "sync": 0,
+    "transport": 0
+  },
+  "requestConnectionChanges": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "limitations": [
+    "Synthetic loopback HTTP, not live mail/native acceptance",
+    "Worst-case streaming work is O(candidates); no database-work bound follows from the page limit",
+    "SELECT preparation count is not VM-step count; timings/RSS are noisy finite-run observations"
+  ]
+}

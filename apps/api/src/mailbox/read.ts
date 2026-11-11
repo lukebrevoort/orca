@@ -48,6 +48,14 @@ export type MailboxReadQuery = {
   receivedBefore?: string;
 };
 
+/** Trusted saved-query extension only; no public inbox input accepts this. */
+export type MailboxSavedQueryProfile = {
+  legacy: boolean;
+  attention: "all" | "notify" | "focus" | "normal";
+  person?: string;
+  text?: string;
+};
+
 export type MailboxReadMetric = {
   durationMs: number;
   countDurationMs: number;
@@ -64,6 +72,13 @@ export type MailboxReadMetric = {
   accountPageQueries: number;
   maxPageRowsBound: number;
   revision: string;
+  savedQuery?: {
+    candidateRowsScanned: number;
+    candidateSelects: number;
+    // The iterator holds one candidate in addition to accepted page/lookahead.
+    candidateBatchSize: 1;
+    maxRetainedRows: number;
+  };
 };
 
 export type MailboxPageQueryPlan = {
@@ -233,12 +248,14 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
   const capabilitiesFor = options.capabilitiesFor ?? defaultCapabilitiesFor;
 
   return {
-    read(input: { authorization: MailboxReadAuthorization; query: MailboxReadQuery }): MailboxReadResult {
+    read(input: { authorization: MailboxReadAuthorization; query: MailboxReadQuery; savedQueryProfile?: MailboxSavedQueryProfile }): MailboxReadResult {
       // Account metadata, revision, counts, page, and enrichment share one
       // SQLite snapshot. Callers provide only stable authorization context, so
       // no mutable response field can be paired with a newer revision.
       return sqlite.transaction(() => {
       const startedAt = clock();
+      const savedProfile = input.savedQueryProfile;
+      const streamContent = Boolean(savedProfile?.person || savedProfile?.text);
       const accountRows = readMailboxAccounts(sqlite, input.authorization);
       if (accountRows.length === 0) throw new MailboxScopeError();
       const accounts = accountRows.map((account) => serializeMailboxAccount(account, capabilitiesFor));
@@ -262,7 +279,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const effectiveQuery = applyInboxPolicy ? { ...input.query, ...(inboxId ? { destinationId: inboxId } : {}), query: undefined, sender: undefined, receivedAfter: undefined, receivedBefore: undefined } : input.query;
       const threadMatchClauses: string[] = [];
       const threadMatchParams: Array<string | number | null> = [];
-      if (applyInboxPolicy) addMailboxFilters(threadMatchClauses, threadMatchParams, {
+      if (applyInboxPolicy && !savedProfile?.legacy) addMailboxFilters(threadMatchClauses, threadMatchParams, {
         limit: input.query.limit, query: input.query.query, sender: input.query.sender,
         receivedAfter: input.query.receivedAfter, receivedBefore: input.query.receivedBefore,
       });
@@ -270,8 +287,12 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         ? ` AND exists (select 1 from emails matching where matching.account_id=e.account_id and matching.thread_id=e.thread_id and ${threadMatchClauses.join(" AND ").replaceAll("e.", "matching.")})`
         : "";
       const inboxPolicy = applyInboxPolicy ? inboxVisibilityPredicate(sqlite, input.authorization.userId) : { sql: "1", params: [] };
+      const savedAttention = savedProfile?.attention;
+      const savedAttentionSql = savedAttention === "notify" ? ` AND ${attentionSql}='notify'`
+        : savedAttention === "normal" ? ` AND ${attentionSql}='normal'`
+        : savedAttention === "focus" ? ` AND ${attentionSql} in ('notify','focus')` : "";
       const withInboxPolicy = (base: { sql: string; params: Array<string | number | null> }) => ({
-        sql: `${base.sql} AND ${inboxPolicy.sql}${applyInboxPolicy ? ` AND ${latestThreadMessageSql} AND (${providerInboxSql})${threadMatchSql}` : ""}`,
+        sql: `${base.sql} AND ${inboxPolicy.sql}${applyInboxPolicy ? ` AND ${latestThreadMessageSql} AND (${providerInboxSql})${threadMatchSql}` : savedProfile?.legacy ? ` AND ${latestThreadMessageSql}` : ""}${savedAttentionSql}`,
         params: [...base.params, ...inboxPolicy.params, ...threadMatchParams],
       });
       const base = withInboxPolicy(buildBaseWhere(accountIds, effectiveQuery));
@@ -301,7 +322,11 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const pageRows: RawMailboxMessage[] = [];
       let pageRowsProjected = 0;
       let accountPageQueries = 0;
-      // Two keyset streams keep projection bounded without sorting the complete mailbox.
+      let candidateRowsScanned = 0;
+      let maxRetainedRows = 0;
+      // Default Inbox uses two keyset streams with bounded projected page rows.
+      // Saved-query content matching may scan/sort all candidate metadata;
+      // retained application rows do not bound SQLite work or sort/cache memory.
       // All other surfaces retain their existing ordering and eligibility.
       const groups = applyInboxPolicy
         ? [
@@ -327,7 +352,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
             select
               e.id, e.account_id, e.provider_message_id, e.thread_id,
               e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
-              ${applyInboxPolicy ? `case when ${threadUnreadSql} then 0 else 1 end` : "e.is_read"} as is_read, e.human_signal, e.human_classification,
+              ${applyInboxPolicy || savedProfile?.legacy ? `case when ${threadUnreadSql} then 0 else 1 end` : "e.is_read"} as is_read, e.human_signal, e.human_classification,
               e.human_classification_reasons, e.human_classifier_version,
               ${attentionSql} as attention_behavior,
               destination.destination_id,destination.source destination_source,destination.locked destination_locked,
@@ -347,8 +372,8 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
               and ${classificationPredicate}
               ${keyset.sql}
             order by coalesce(e.received_at, 0) desc, e.id asc
-            limit ?`;
-          const pageParams = [...accountBase.params, ...keyset.params, remaining];
+            ${streamContent ? "" : "limit ?"}`;
+          const pageParams = [...accountBase.params, ...keyset.params, ...(streamContent ? [] : [remaining])];
           if (options.observePageQueryPlan) {
             options.observePageQueryPlan({
               accountId,
@@ -356,7 +381,26 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
               details: queryAll<RawQueryPlanRow>(sqlite, `explain query plan ${pageSql}`, pageParams).map((row) => row.detail),
             });
           }
-          const rows = queryAll<RawMailboxMessage>(sqlite, pageSql, pageParams);
+          let rows: RawMailboxMessage[];
+          if (streamContent) {
+            rows = [];
+            // No first-page cap: consume the ordered SQL stream until enough
+            // exact-JS content matches or true exhaustion. No per-row queries or
+            // enrichment. Worst-case scan/projection work is O(candidates).
+            for (const row of sqlite.query<RawMailboxMessage, Array<string | number | null>>(pageSql).iterate(...pageParams)) {
+              candidateRowsScanned += 1;
+              maxRetainedRows = Math.max(maxRetainedRows, pageRows.length + accountRowsForBehavior.reduce((total, page) => total + page.length, 0) + rows.length + 1);
+              if (!matchesSavedQueryContent(row, savedProfile!)) continue;
+              rows.push(row);
+              if (rows.length === remaining) break;
+            }
+          } else {
+            rows = queryAll<RawMailboxMessage>(sqlite, pageSql, pageParams);
+            if (savedProfile) {
+              candidateRowsScanned += rows.length;
+              maxRetainedRows = Math.max(maxRetainedRows, pageRows.length + accountRowsForBehavior.reduce((total, page) => total + page.length, 0) + rows.length);
+            }
+          }
           accountPageQueries += 1;
           pageRowsProjected += rows.length;
           accountRowsForBehavior.push(rows);
@@ -454,6 +498,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         accountPageQueries,
         maxPageRowsBound,
         revision,
+        ...(savedProfile ? { savedQuery: { candidateRowsScanned, candidateSelects: accountPageQueries, candidateBatchSize: 1 as const, maxRetainedRows } } : {}),
       };
       options.observe?.(metric);
       return { response, metric };
@@ -502,6 +547,25 @@ function serializeMailboxAccount(
 
 function defaultCapabilitiesFor(provider: MailProvider, scopes: string | null) {
   return provider === "gmail" ? detectGmailCapabilities(scopes) : detectOutlookCapabilities(scopes);
+}
+
+function matchesSavedQueryContent(row: RawMailboxMessage, profile: MailboxSavedQueryProfile) {
+  const name = (row.from_name ?? "").toLowerCase();
+  const address = (row.from_address ?? "unknown@invalid").toLowerCase();
+  const subject = row.subject ?? "";
+  const snippet = row.snippet ?? "";
+  if (profile.person) {
+    const needle = profile.person.toLowerCase();
+    // Match the migrated legacy person predicate exactly, including spaces,
+    // context-sensitive/expanding Unicode lowercasing and independent fields.
+    if (!name.includes(needle) && !address.includes(needle)
+      && !`${name} ${address} ${subject} ${snippet}`.toLowerCase().includes(needle)) return false;
+  }
+  if (profile.text) {
+    const needle = profile.text.trim().toLowerCase();
+    if (![row.from_name ?? "", row.from_address ?? "unknown@invalid", subject, snippet].some(value => value.toLowerCase().includes(needle))) return false;
+  }
+  return true;
 }
 
 function pageKeyset(cursor: InboxCursor | null, rank: number, accountId: string) {
@@ -615,7 +679,7 @@ function behaviorsForView(view: MailboxReadQuery["view"]): AttentionBehavior[] {
   return ["notify", "focus", "normal"];
 }
 
-function mailboxRevision(sqlite: Database, accountIds: string[]) {
+export function mailboxRevision(sqlite: Database, accountIds: string[]) {
   const rows = queryAll<RawRevisionRow>(sqlite, `
     select account_id, revision
     from mailbox_revisions

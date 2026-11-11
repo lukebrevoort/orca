@@ -1,0 +1,851 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/organization/collections-pins/query-results.test.ts:
+BRE457 {"stage":"candidate","name":"real-auth-catalog-query-mailbox-preconditions","unauthenticatedStatus":401,"catalogStatus":200,"inboxStatus":200,"allMailStatus":200,"observedBehaviors":{"notify":"notify","focus":"focus","normal":"normal","quiet-new":"quiet","hidden-new":"hidden"},"queryId":"bre457-query-1","objectRevision":7,"schemaRevision":1,"connectionChanges":[0,0,0,0,0,0],"providerCalls":{"network":0,"sync":0,"transport":0}}
+BRE457 {"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: notify-only distinguishes sender-routed threads sharing content/classification: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > notify-only distinguishes sender-routed threads sharing content/classification [9.87ms]
+BRE457 {"stage":"candidate","name":"normal-only is independent from Inbox attention union","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: normal-only is independent from Inbox attention union: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > normal-only is independent from Inbox attention union [4.62ms]
+BRE457 {"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: focus execution union deliberately differs from old strict-focus preview: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > focus execution union deliberately differs from old strict-focus preview [3.93ms]
+BRE457 {"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: formerly ignored attention on quiet is conjunctive and contradictory: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored attention on quiet is conjunctive and contradictory [3.88ms]
+BRE457 {"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: formerly ignored legacy collection limits All Mail: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored legacy collection limits All Mail [3.96ms]
+BRE457 {"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: formerly ignored explicit All Mail classification is honored: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored explicit All Mail classification is honored [6.97ms]
+BRE457 {"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: legacy Focus explicit evidence never inherits mutable browser state: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > legacy Focus explicit evidence never inherits mutable browser state [4.15ms]
+BRE457 {"stage":"candidate","name":"legacy Inbox absent classification defaults human","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: legacy Inbox absent classification defaults human: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > legacy Inbox absent classification defaults human [4.12ms]
+BRE457 {"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: legacy Focus absent classification deterministically defaults all: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > legacy Focus absent classification deterministically defaults all [3.94ms]
+BRE457 {"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: person retains non-ASCII and cross-name-address boundary plus independent text: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > person retains non-ASCII and cross-name-address boundary plus independent text [4.21ms]
+BRE457 {"stage":"candidate","name":"person matches subject/snippet rather than author identity","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: person matches subject/snippet rather than author identity: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > person matches subject/snippet rather than author identity [7.18ms]
+BRE457 {"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: person uses JS Unicode expanding lowercase not SQLite ASCII lower: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > person uses JS Unicode expanding lowercase not SQLite ASCII lower [3.75ms]
+BRE457 {"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: person retains JS context-sensitive Greek lowercase: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > person retains JS context-sensitive Greek lowercase [3.24ms]
+BRE457 {"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: legacy field text uses JS non-ASCII lowercase: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > legacy field text uses JS non-ASCII lowercase [4.32ms]
+BRE457 {"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: legacy text cannot cross subject/snippet newline boundary: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > legacy text cannot cross subject/snippet newline boundary [4.53ms]
+BRE457 {"stage":"candidate","name":"legacy latest representative excludes historical-only content","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: legacy latest representative excludes historical-only content: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > legacy latest representative excludes historical-only content [4.07ms]
+BRE457 {"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: quiet latest-before-person deliberately replaces old person-before-dedup: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > quiet latest-before-person deliberately replaces old person-before-dedup [6.58ms]
+BRE457 {"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: quiet explicit classification is applied after global latest selection: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > quiet explicit classification is applied after global latest selection [4.20ms]
+BRE457 {"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: hidden latest-before-person deliberately replaces old person-before-dedup: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > hidden latest-before-person deliberately replaces old person-before-dedup [3.93ms]
+BRE457 {"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: equal-time SQL tie chooses ascending ID instead of old JS descending ID: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > equal-time SQL tie chooses ascending ID instead of old JS descending ID [3.83ms]
+BRE457 {"stage":"candidate","name":"equal-time winner chosen before person predicate","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: equal-time winner chosen before person predicate: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > equal-time winner chosen before person predicate [7.52ms]
+BRE457 {"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: archived notify conversation is excluded from legacy Inbox: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > archived notify conversation is excluded from legacy Inbox [4.16ms]
+BRE457 {"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: moved normal conversation is excluded from legacy Inbox: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > moved normal conversation is excluded from legacy Inbox [4.52ms]
+BRE457 {"stage":"candidate","name":"All Mail still retains archived conversation","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: All Mail still retains archived conversation: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > All Mail still retains archived conversation [5.62ms]
+BRE457 {"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: stored-mail retained notify extension is conjunctive: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail retained notify extension is conjunctive [7.90ms]
+BRE457 {"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: stored-mail retained sender extension preserves broad migrated-person meaning: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail retained sender extension preserves broad migrated-person meaning [4.00ms]
+BRE457 {"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: stored-mail text preserves existing newline-concatenated search: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail text preserves existing newline-concatenated search [4.27ms]
+BRE457 {"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: stored-mail Inbox retains historical witness/latest representative: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:89:15
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail Inbox retains historical witness/latest representative [4.32ms]
+BRE457 {"stage":"candidate","name":"generated-stored-mail-inbox","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: generated-stored-mail-inbox: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:105:53
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > generated stored-mail profiles delegate to existing public mailbox behavior and order [19.92ms]
+BRE457 {"stage":"candidate","name":"strict-legacy-raw","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: strict-legacy-raw: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:117:24
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > strict legacy raw definition remains readable without changing its bytes [4.04ms]
+BRE457 {"stage":"candidate","name":"digest-first","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: digest-first: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:125:27
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > canonical definition digest is independent from JSON formatting/key order [6.98ms]
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":404,"raw":"{"}
+134 |         '{"revision":1,"filters":{"mailbox":"all"}}', '{"mailbox":"all","attention":"all","person":null,"query":"","date":"2026-01-01"}',
+135 |         JSON.stringify({ revision: 1, filters: { accountId: secondAccount } }),
+136 |       ]) {
+137 |         const response = await fixture.request(fixture.url(fixture.rawQuery(raw)));
+138 |         receipt({ name: "invalid-raw-definition", expectedStatus: 422, actualStatus: response.status, raw });
+139 |         assert.equal(response.status, 422);
+                     ^
+AssertionError: Expected values to be strictly equal:
+
+404 !== 422
+
+ generatedMessage: true,
+     actual: 404,
+   expected: 422,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:139:16
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > corrupt/unknown/date/conflicting-account definitions fail closed without catalog normalization [4.34ms]
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+155 |       const errors: unknown[] = [];
+156 |       for (const path of paths) {
+157 |         const response = await fixture.request(path);
+158 |         receipt({ name: "foreign-or-missing", expectedStatus: 404, actualStatus: response.status });
+159 |         assert.equal(response.status, 404);
+160 |         errors.push(await response.json());
+                                         ^
+SyntaxError: Failed to parse JSON
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:160:36)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > foreign/missing account, query and collection have indistinguishable 404 [5.19ms]
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":404}
+164 | 
+165 |     test("request account is mandatory; arbitrary definitions, actors and dates are rejected", async () => {
+166 |       for (const params of ["limit=1", `accountId=${ownerAccount}&actor=someone`, `accountId=${ownerAccount}&definition={}`, `accountId=${ownerAccount}&receivedAfter=2026-01-01`, `accountId=${ownerAccount}&limit=101`]) {
+167 |         const response = await fixture.request(`${fixture.url(fixture.catalogQueryId).split("?")[0]}?${params}`);
+168 |         receipt({ name: "strict-request", expectedStatus: 400, actualStatus: response.status });
+169 |         assert.equal(response.status, 400);
+                     ^
+AssertionError: Expected values to be strictly equal:
+
+404 !== 400
+
+ generatedMessage: true,
+     actual: 404,
+   expected: 400,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:169:16
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > request account is mandatory; arbitrary definitions, actors and dates are rejected [4.36ms]
+BRE457 {"stage":"candidate","name":"paging-complete","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: paging-complete: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:177:27
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > repeatable keyset paging equals complete deterministic order including tied keys [7.09ms]
+BRE457 {"stage":"candidate","name":"cursor-first","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: cursor-first: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:201:7
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > cursor rejects changed query, account, limit, original session and public inbox cursor [4.19ms]
+BRE457 {"stage":"candidate","name":"tamper-first","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: tamper-first: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:227:23
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > valid-shaped keyset tampering retains original signature and fails integrity [3.97ms]
+251 |       const path = fixture.url(fixture.catalogQueryId);
+252 |       assert.equal((await fixture.request(path, {})).status, 401);
+253 |       const session = await createSession(fixture.db, "bre457-owner");
+254 |       const headers = { cookie: `orca_session=${session.token}` };
+255 |       const response = await fixture.request(path, headers);
+256 |       assert.equal(response.status, 200);
+                   ^
+AssertionError: Expected values to be strictly equal:
+
+404 !== 200
+
+ generatedMessage: true,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:256:14
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > unauthenticated, expired and revoked sessions cannot read saved results [4.95ms]
+BRE457 {"stage":"candidate","name":"stale-object-first","expectedStatus":200,"actualStatus":404}
+35 | afterAll(() => fixture?.close());
+36 | 
+37 | async function result(queryId: string, name: string, params: Record<string, string> = {}) {
+38 |   const response = await fixture.request(fixture.url(queryId, params));
+39 |   receipt({ name, expectedStatus: 200, actualStatus: response.status });
+40 |   assert.equal(response.status, 200, `${name}: evaluator route must exist before semantic assertions can execute`);
+              ^
+AssertionError: stale-object-first: evaluator route must exist before semantic assertions can execute
+
+404 !== 200
+
+ generatedMessage: false,
+     actual: 404,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at result (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:40:10)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:266:27
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 approved deterministic counterexamples (candidate only) > object revision and mailbox changes invalidate outstanding cursors [7.24ms]
+
+ 0 pass
+ 39 fail
+Ran 39 tests across 1 file. [717.00ms]
