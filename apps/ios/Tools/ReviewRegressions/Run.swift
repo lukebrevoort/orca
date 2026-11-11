@@ -115,11 +115,11 @@ import Foundation
             let client = state.client!
             let authenticated: AuthSession = try await client.request("v1/auth/session")
             state.userID = authenticated.user?.id; state.baseURLText = connection.baseURL
-            state.ownerScope = client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
+            state.ownerScope = await client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
             let apiHold = PreferenceCredentialHold(first: connection.token, second: connection.otherToken)
             let realPreferencesState = AppState(cache: state.cache)
             realPreferencesState.userID = authenticated.user?.id
-            realPreferencesState.ownerScope = client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
+            realPreferencesState.ownerScope = await client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
             realPreferencesState.client = APIClient(baseURL: URL(string: connection.baseURL)!) { await apiHold.token() }
             let realPreferences = AccountPreferencesController()
             let preferencesBefore: MailActionJSON = try await client.request("__bre457/state")
