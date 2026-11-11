@@ -63,7 +63,7 @@ test("BRE-455 real renewal reissues an authentication/witness pair", async () =>
   expect(cookies[1]).not.toContain("HttpOnly");
 });
 test("BRE-455 missing cookie logout clears authentication/witness pair", async () => {
-  const response = await fixture.app.request("/v1/auth/logout", { method: "POST" });
+  const response = await fixture.app.request("/v1/auth/logout", { method: "POST", headers: { origin: "http://localhost:5173" } });
   expect(response.status).toBe(200);
   expect(response.headers.getSetCookie()).toHaveLength(2);
   expect(response.headers.getSetCookie()[1]).toContain(`${contextCookie}=; Path=/; SameSite=Lax;`);
