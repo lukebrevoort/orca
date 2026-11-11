@@ -59,6 +59,11 @@ import Foundation
         check("cached-query-provenance", inbox.messages.first?.id == "B" && inbox.resultSearch == "B", "cached row \(inbox.messages.first?.id ?? "none") labeled \(inbox.resultSearch)")
         var corrected = false
         ReviewURLProtocol.handler = { request in
+            if request.url!.path == "/v1/importance/choices" {
+                let command = try JSONDecoder().decode(ImportanceCommand.self, from: body(request)); corrected = true
+                return (200, try json(["status": "current", "receipt": ["operationId": command.operationId, "accountId": "account", "target": ["kind": "conversation", "threadId": "Submitted A"], "choice": "important", "previousChoice": NSNull(), "revision": 1, "undoUntil": ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))], "current": ["choice": "important", "revision": 1]]))
+            }
+            if request.url!.path.contains("/importance/conversations/") { return (200, try json(["accountId": "account", "threadId": "Submitted A", "importance": resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)])) }
             let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!.first { $0.name == "query" }!.value!
             var message = InboxMessage(id: query, accountId: "account", provider: "gmail", providerMessageId: query, threadId: query, from: .init(email: "person@example.com"), subject: query, snippet: query, receivedAt: "2026-11-11T00:00:00Z", unread: false, labels: [], attentionBehavior: "normal")
             message.importance = try JSONDecoder().decode(ImportanceResolution.self, from: json(resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)))
@@ -68,7 +73,10 @@ import Foundation
         _ = await globalSearch.openGlobalSearch(state: state)
         globalSearch.search = "Unsubmitted B"
         let beforeCorrectionKey = InboxViewModel.globalSearchRefreshIdentity(state: state)
-        corrected = true; state.importanceDidChange(accountId: "account")
+        let acknowledgedSearchChoice = ImportanceController(defaults: defaults)
+        await acknowledgedSearchChoice.open(state: state, accountId: "account", threadId: "Submitted A")
+        await acknowledgedSearchChoice.choose(.important, state: state)
+        check("480-correction-actually-acknowledged", acknowledgedSearchChoice.receipt?.target.threadId == "Submitted A", "production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback")
         if beforeCorrectionKey != InboxViewModel.globalSearchRefreshIdentity(state: state) { _ = await globalSearch.openGlobalSearch(state: state) }
         check("480-acknowledged-correction-refreshes-submitted-search", globalSearch.messages.first?.importance?.effective == .important && globalSearch.resultSearch == "Submitted A" && globalSearch.search == "Unsubmitted B" && globalSearch.messages.first?.id == "Submitted A", "actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime")
         let preferences = AccountPreferencesController()
