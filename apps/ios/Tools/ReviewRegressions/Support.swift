@@ -73,6 +73,8 @@ actor PreferenceCredentialHold {
 
 actor SearchRequestHold {
     private var first = true, held = false
+    private let credential: String
+    init(credential: String = "synthetic-search") { self.credential = credential }
     private var continuation: CheckedContinuation<Void, Never>?
     private var started: CheckedContinuation<Void, Never>?
     func token() async -> String {
@@ -80,7 +82,7 @@ actor SearchRequestHold {
             first = false; held = true; started?.resume(); started = nil
             await withCheckedContinuation { continuation = $0 }
         }
-        return "synthetic-search"
+        return credential
     }
     func waitUntilHeld() async { if !held { await withCheckedContinuation { started = $0 } } }
     func release() { continuation?.resume(); continuation = nil }

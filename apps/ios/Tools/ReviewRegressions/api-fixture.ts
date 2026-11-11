@@ -28,13 +28,15 @@ const credential = createMobileSession(db, 'owner'), otherCredential = createMob
 let providerCalls = 0, dropNext = false, dropAnyNext = false;
 const ledger: unknown[] = [], requests: unknown[] = [];
 let holdNext = false, heldRequest: Request | null = null, heldCommand: unknown = null;
+let savedPrepareFailures = 0;
 let nextStatusResponse: { status: number; body: unknown } | null = null;
 const app = createApp({ dbFactory: () => createDatabaseClient(path), gmailClient: new Proxy({}, { get() { return () => { providerCalls++; throw Error('Provider forbidden'); }; } }) as never });
 const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
   const url = new URL(request.url);
   const fixtureOwner = request.headers.get('authorization') === `Bearer ${credential.accessToken}` ? 'owner' : request.headers.get('authorization') === `Bearer ${otherCredential.accessToken}` ? 'owner-b' : null;
   if (url.pathname.startsWith('/__bre457/') && fixtureOwner !== 'owner') return new Response(null, { status: 401 });
-  if (url.pathname === '/__bre457/add-account') { sqlite.query("INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES('added-account','owner','gmail','synthetic-added','added@example.com')").run(); return Response.json({ ok: true }); }
+  if (url.pathname === '/__bre457/add-account') { const body = await request.json() as { id?: string }; const id = body.id ?? 'added-account'; if (!/^[a-z0-9-]{1,80}$/.test(id)) throw Error('Invalid owned fixture account'); sqlite.query("INSERT INTO oauth_accounts(id,user_id,provider,provider_id,provider_email) VALUES(?,'owner','gmail',?,?)").run(id, 'synthetic-' + id, id + '@example.com'); return Response.json({ ok: true }); }
+  if (url.pathname === '/__bre457/saved-prepare-failures') { const body = await request.json() as { count: number }; if (!Number.isInteger(body.count) || body.count < 0 || body.count > 20) throw Error('Invalid fixture failure count'); savedPrepareFailures = body.count; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/hold-next-commit') { if (heldRequest) throw Error('Own held request must be released first'); holdNext = true; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/status-response') { nextStatusResponse = await request.json() as { status: number; body: unknown }; return Response.json({ ok: true }); }
   if (url.pathname === '/__bre457/release-held') {
@@ -49,8 +51,10 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
   if (url.pathname === '/__bre457/state') return Response.json({ count: (sqlite.query('SELECT count(*) n FROM organization_views').get() as { n: number }).n, views: sqlite.query('SELECT id,name,definition,revision FROM organization_views ORDER BY id').all(), providerCalls, ledger, requests, heldCommand, preferences: sqlite.query('SELECT * FROM user_preferences ORDER BY user_id').all(), preferenceWrites: sqlite.query('SELECT user_id,operation FROM bre457_preference_write_probe').all() });
   const command = request.method === 'POST' && url.pathname === '/v1/organization/views/commit' ? await request.clone().json() : null;
   if (command && holdNext) { holdNext = false; heldRequest = request.clone(); heldCommand = command; ledger.push({ path: url.pathname, actualStatus: null, deliveredStatus: 503, command, held: true }); return Response.json({ error: { code: 'synthetic_held_original', message: 'Original request deliberately delayed before API dispatch' } }, { status: 503 }); }
+  const prepareBody = request.method === 'POST' && url.pathname === '/v1/organization/views/prepare' ? await request.clone().json() as { kind?: string; viewId?: string } : null;
   const response = await app.fetch(request);
-  requests.push({ method: request.method, path: url.pathname, status: response.status, fixtureOwner, expectedOwner: request.headers.get('x-orca-expected-user-id'), ...(response.status >= 400 ? { error: await response.clone().text() } : {}) });
+  if (prepareBody?.kind === 'saved_view' && response.ok && savedPrepareFailures > 0) { savedPrepareFailures--; requests.push({ method: request.method, path: url.pathname, status: response.status, deliveredStatus: 503, fixtureOwner, kind: prepareBody.kind, viewId: prepareBody.viewId }); return Response.json({ error: { code: 'synthetic_saved_prepare_unavailable', message: 'Owned API read succeeded; acknowledgement deliberately replaced503' } }, { status: 503 }); }
+  requests.push({ method: request.method, path: url.pathname, status: response.status, ...(prepareBody ? { kind: prepareBody.kind, viewId: prepareBody.viewId } : {}), fixtureOwner, expectedOwner: request.headers.get('x-orca-expected-user-id'), ...(response.status >= 400 ? { error: await response.clone().text() } : {}) });
   if (url.pathname === '/v1/organization/views/commit-status' && nextStatusResponse) { const substitute = nextStatusResponse; nextStatusResponse = null; return Response.json(substitute.body, { status: substitute.status }); }
   if (request.method === 'POST' && url.pathname === '/v1/organization/views/commit') {
     const payload = await response.clone().json();

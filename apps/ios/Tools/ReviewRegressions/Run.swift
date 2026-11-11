@@ -280,6 +280,7 @@ import Foundation
                 check("478-lost-" + lostKind + "-recovery-completes-once", recoveredID != nil && (lostKind != "noop" || recoveredID == advancedID) && afterRecovery["count"].integer == (beforeLost["count"].integer ?? 0) + (lostKind == "noop" ? 0 : 1), "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation")
             }
             try await runCommitStatusCases(state: state, client: client, suite: suite, otherToken: connection.otherToken, createFixtureView: createFixtureView, check: check)
+            try await runAppliedReloadCases(state: state, client: client, suite: suite, token: connection.token, otherToken: connection.otherToken, check: check)
             } catch { check("native-actual-api-journey", false, String(describing: error)) }
         }
         print(String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "production native controllers/Foundation HTTP/cache; not Apple UI", "results": results], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
