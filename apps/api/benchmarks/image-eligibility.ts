@@ -63,6 +63,15 @@ const workloads=[
  {name:'1MiB-1-noimg',count:1,html:payload(1048576,false)},
  {name:'1MiB-10-tailimg',count:10,html:payload(1048576,true)},
 ];
+// Preserve every message/byte while admitting each request under the bounded
+// legacy detail API (100 messages, 8 MiB of text + HTML). Use identical batches
+// on old revisions too; results from the original single-request harness are
+// historical and must not be compared to this request shape.
+const plainText='Synthetic plain text';
+const batches=(w:typeof workloads[number])=>{
+ const size=Math.min(100,Math.floor(8*1024*1024/(Buffer.byteLength(w.html??'')+Buffer.byteLength(plainText))));
+ return Array.from({length:Math.ceil(w.count/size)},(_,i)=>({id:i?`${w.name}-batch-${i}`:w.name,count:Math.min(size,w.count-i*size)}));
+};
 try {
  const client=createDatabaseClient(path); sqlite=client.sqlite; const db=client.db;
  migrate(db,{migrationsFolder:resolve(import.meta.dir,'../drizzle')});
@@ -76,8 +85,10 @@ try {
  const session=await createSession(db,'owner');
  const headers={cookie:`orca_session=${session.token}`};
  for(const workload of workloads){
-  db.insert(schema.threads).values({id:workload.name,accountId:'account',providerThreadId:workload.name,messageCount:workload.count}).run();
-  for(let i=0;i<workload.count;i++) db.insert(schema.emails).values({id:`${workload.name}-${i}`,accountId:'account',threadId:workload.name,providerMessageId:`${workload.name}-${i}`,fromAddress:'sender@example.com',toRecipients:JSON.stringify([{name:null,email:'owner@example.com'}]),bodyHtml:workload.html,bodyText:'Synthetic plain text',receivedAt:new Date(1000+i),createdAt:new Date(1000+i)}).run();
+  for(const batch of batches(workload)){
+   db.insert(schema.threads).values({id:batch.id,accountId:'account',providerThreadId:batch.id,messageCount:batch.count}).run();
+   for(let i=0;i<batch.count;i++) db.insert(schema.emails).values({id:`${batch.id}-${i}`,accountId:'account',threadId:batch.id,providerMessageId:`${batch.id}-${i}`,fromAddress:'sender@example.com',toRecipients:JSON.stringify([{name:null,email:'owner@example.com'}]),bodyHtml:workload.html,bodyText:plainText,receivedAt:new Date(1000+i),createdAt:new Date(1000+i)}).run();
+  }
  }
  db.insert(schema.threads).values({id:'private',accountId:'foreign',providerThreadId:'private',messageCount:1}).run();
  db.insert(schema.emails).values({id:'secret',accountId:'foreign',threadId:'private',providerMessageId:'secret',bodyHtml:payload(102400,true)}).run();
@@ -99,13 +110,20 @@ try {
   let signature='';
   for(let pair=-1;pair<6;pair++){
    for(const label of pair%2===0?['A','B']:['B','A']){
-    const r=await request(`/v1/threads/${w.name}?accountId=account`);
-    assert.equal(r.status,200);assert.equal(r.scanCalls,w.count);assert.equal(r.scanBytes,w.count*Buffer.byteLength(w.html??''));
+    const responses=[];
+    for(const batch of batches(w)){
+     const response=await request(`/v1/threads/${batch.id}?accountId=account`);
+     assert.equal(response.status,200,`${batch.id}: ${response.body.slice(0,200)}`);
+     const body=JSON.parse(response.body);assert.equal(body.messages.length,batch.count);
+     for(const m of body.messages){assert.equal(m.accountId,'account');assert.equal(m.imageLoadAvailable,w.name.includes('tailimg'));assert.ok(!m.bodyHtml?.includes('<img'));}
+     responses.push(response);
+    }
+    const sum=(key:'wallMs'|'cpuMs'|'scanCalls'|'scanBytes'|'scanMs'|'providerCalls'|'providerInputBytes')=>responses.reduce((n,r)=>n+r[key],0);
+    const r={status:200,body:responses.map(r=>r.body).join('\n'),wallMs:sum('wallMs'),cpuMs:sum('cpuMs'),rssBefore:responses[0]!.rssBefore,rssAfter:responses.at(-1)!.rssAfter,scanCalls:sum('scanCalls'),scanBytes:sum('scanBytes'),scanMs:sum('scanMs'),providerCalls:sum('providerCalls'),providerInputBytes:sum('providerInputBytes'),requestCount:responses.length};
+    assert.equal(r.scanCalls,w.count);assert.equal(r.scanBytes,w.count*Buffer.byteLength(w.html??''));
     const expectedProviderCalls: number=role==='baseline'||w.name.includes('tailimg')?w.count:0;
     assert.equal(r.providerCalls,expectedProviderCalls);
     assert.equal(r.providerInputBytes,expectedProviderCalls*Buffer.byteLength(w.html??''));
-    const body=JSON.parse(r.body);assert.equal(body.messages.length,w.count);
-    for(const m of body.messages){assert.equal(m.accountId,'account');assert.equal(m.imageLoadAvailable,w.name.includes('tailimg'));assert.ok(!m.bodyHtml?.includes('<img'));}
     const hash=createHash('sha256').update(r.body).digest('hex');signature ||=hash;assert.equal(hash,signature);
     if(pair>=0){const {body:_,...metrics}=r;rows.push({workload:w.name,pair,label,...metrics,responseBytes:Buffer.byteLength(r.body),responseSha256:hash});}
    }
@@ -113,6 +131,6 @@ try {
   console.error(`completed ${w.name}`);
  }
  assert.equal(downloadCalls,0);assert.deepEqual(sqlite.query('PRAGMA page_count').get(),dbBefore);
- const output={revision:sha,role,mode:'one immutable revision per process; labels A/B are same-code repeats; instrumented warm in-process GET, no sockets',parserVersion,sanitizerParserVersion,lockSha256:createHash('sha256').update(readFileSync('bun.lock')).digest('hex'),harnessSha256:createHash('sha256').update(readFileSync(import.meta.path)).digest('hex'),runtime:Bun.version,cpu:cpus()[0]?.model,cpus:cpus().length,loadavg:loadavg(),workloads:workloads.map(({html,...w})=>({...w,bytesPerMessage:Buffer.byteLength(html??''),payloadSha256:createHash('sha256').update(html??'').digest('hex')})),controls,downloadCalls,dbPageCount:dbBefore,rows};
+ const output={revision:sha,role,mode:'bounded-detail-batches-v2; one immutable revision per process; labels A/B are same-code repeats; instrumented warm in-process GET, no sockets',parserVersion,sanitizerParserVersion,lockSha256:createHash('sha256').update(readFileSync('bun.lock')).digest('hex'),harnessSha256:createHash('sha256').update(readFileSync(import.meta.path)).digest('hex'),runtime:Bun.version,cpu:cpus()[0]?.model,cpus:cpus().length,loadavg:loadavg(),workloads:workloads.map(({html,...w})=>({...w,batches:batches({...w,html}),bytesPerMessage:Buffer.byteLength(html??''),payloadSha256:createHash('sha256').update(html??'').digest('hex')})),controls,downloadCalls,dbPageCount:dbBefore,rows};
  writeFileSync(process.argv[2]!,JSON.stringify(output,null,2)+'\n',{flag:'wx'});
 }finally{sqlite?.close();rmSync(directory,{recursive:true,force:true});providerSpy.mockRestore();mock.restore();}
