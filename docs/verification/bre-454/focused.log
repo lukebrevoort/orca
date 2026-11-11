@@ -1,0 +1,56 @@
+[Orca resources] {"time": 1794380446.779928, "stage": "before", "ownerPid": 84663, "childPid": null, "command": "bun", "exitCode": null, "cpuRssTop": ["  PID  %CPU    RSS COMM", "15232  19.4 516528 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "37901  12.3 475936 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15214  12.1  95392 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper", " 1152  11.7  21888 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "47179   8.7 159216 /Applications/Dispatch.app/Contents/Helpers/dispatch", "  404   6.1 169712 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"], "memory": "System-wide memory free percentage: 79%"}
+bun test v1.3.14 (d1632b29)
+
+packages/shared/src/importance.test.ts:
+(pass) importance contracts preserve explicit Not important, Unreviewed, reset revision and participant provenance [4.40ms]
+
+apps/api/src/importance/routes.test.ts:
+(pass) BRE-454 durable conversation choices, independent DB/read projections and no mail side effects [162.10ms]
+(pass) BRE-454 exact sender inheritance, distinct inbound aggregation, future mail and reset [182.94ms]
+(pass) BRE-454 sender preview is read only, explains overrides/other participants, and requires current confirmation [126.86ms]
+(pass) BRE-454 guarded Undo, ABA tombstones, retries and ambiguous-response reconciliation cannot overwrite newer choices [139.15ms]
+(pass) BRE-454 authorization, unknown/malformed targets, exact address and account isolation [116.28ms]
+(pass) BRE-454 Important retained-mail pages ignore provider placement, have scoped stale-safe cursors and load no bodies [157.28ms]
+(pass) BRE-454 revisions remain monotonic through reset/recreate and stale Undo, with current reset inheritance [124.81ms]
+140 |   if (current.revision !== input.expectedRevision) throw new ImportanceError("stale_revision", "Choice changed. Read the current choice before trying again.", current);
+141 |   if (current.revision >= Number.MAX_SAFE_INTEGER) throw new ImportanceError("stale_revision", "Revision exhausted", current);
+142 |   const next = current.revision + 1;
+143 |   sqlite.query(`INSERT INTO importance_choices(account_id,kind,target,choice,revision,updated_at) VALUES(?,?,?,?,?,?)
+144 |     ON CONFLICT(account_id,kind,target) DO UPDATE SET choice=excluded.choice,revision=excluded.revision,updated_at=excluded.updated_at`).run(scope.accountId, input.target.kind, value, input.choice, next, now);
+145 |   sqlite.query("INSERT INTO importance_operations VALUES(?,?,?,?,?,?,?,?,?,?)").run(scope.accountId, input.operationId, scope.userId, input.target.kind, value, input.choice, current.choice, next, fingerprint, now);
+                                                                                      ^
+SQLiteError: synthetic write failure
+      errno: 1811,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_TRIGGER"
+
+      at #run (bun:sqlite:185:20)
+      at apply (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/store.ts:145:81)
+      at transaction (bun:sqlite:416:27)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.ts:57:25)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/node_modules/hono/dist/hono-base.js:118:73)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/apps/api/src/importance/routes.ts:20:13)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/node_modules/hono/dist/hono-base.js:118:73)
+      at async dispatch (/Users/lbrevoort/.t3/worktrees/orca/t3-7dea0367-936fc13c5133f5a0/node_modules/hono/dist/compose.js:22:23)
+
+(pass) BRE-454 failed transaction rolls back; dropped response reconciles after restart without replaying over a newer write [97.09ms]
+(pass) BRE-454 provider SENT/draft transitions, sender updates/deletion, account address changes and cascades update participants [124.75ms]
+(pass) BRE-454 invalid JSON, content type, oversized body, operation ownership and cursor tampering are rejected [89.49ms]
+(pass) BRE-454 preview and immediate Undo expire, concurrent initial writes serialize, and replay remains reconciliation [88.78ms]
+(pass) BRE-454 existing routing/rule/read/provider state survives automated Important and human Not important choices [95.71ms]
+(pass) BRE-454 provenance is bounded and truthful while aggregate counts include every distinct exact participant [81.13ms]
+(pass) BRE-454 projection opt-in preserves strict legacy mailbox/thread/page wire shapes [97.30ms]
+(pass) BRE-454 deleted/recreated local conversation identity keeps an ABA barrier and rejects old Undo [89.64ms]
+(pass) BRE-454 Undo restores an explicit choice, so null inherits current preferences and sender Undo preserves overrides [117.12ms]
+
+apps/api/src/importance/migration.test.ts:
+(pass) BRE-454 additive migration backfills existing retained mail without changing legacy state; rerun is stable [60.84ms]
+
+ 18 pass
+ 0 fail
+ 209 expect() calls
+Ran 18 tests across 3 files. [2.27s]
+[Orca resources] {"time": 1794380449.159138, "stage": "after", "ownerPid": 84663, "childPid": 84666, "command": "bun", "exitCode": 0, "cpuRssTop": ["  PID  %CPU    RSS COMM", " 1152  17.2  21888 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", " 1296  10.8 631680 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "25406   4.3 570144 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container", "15232   4.3 516528 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)", "  416   4.3  24560 /usr/sbin/coreaudiod", " 1046   3.3 803856 /Applications/Zen.app/Contents/MacOS/zen"], "memory": "System-wide memory free percentage: 80%"}

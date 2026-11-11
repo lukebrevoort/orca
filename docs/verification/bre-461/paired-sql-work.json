@@ -1,0 +1,1002 @@
+{
+  "baseline": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+  "candidate": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+  "sqliteVersion": "3.53.4",
+  "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "source": "immutable Git SQL, each file SHA256 recorded; no worktree migration reads",
+  "units": "progress callbacks at interval1; separate callback-free wall/processCPU ms; fresh subprocess peak RSS includes setup/migration",
+  "runs": [
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 100,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 352104,
+      "wallMs": 38.69775,
+      "cpuMs": 38.624,
+      "processPeakRssBytes": 26738688
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 100,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 55436,
+      "wallMs": 8.174833,
+      "cpuMs": 8.12,
+      "processPeakRssBytes": 26738688
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 100,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 3.189708,
+      "cpuMs": 3.184,
+      "processPeakRssBytes": 26738688
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 100,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 8.029375,
+      "cpuMs": 8.01,
+      "processPeakRssBytes": 26968064
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 100,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 8.357083,
+      "cpuMs": 8.336,
+      "processPeakRssBytes": 26722304
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 100,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 3.253667,
+      "cpuMs": 3.235,
+      "processPeakRssBytes": 26689536
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 100,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 3.232333,
+      "cpuMs": 3.229,
+      "processPeakRssBytes": 26820608
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 100,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 8.025125,
+      "cpuMs": 8.01,
+      "processPeakRssBytes": 26787840
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 200,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 1264004,
+      "wallMs": 135.457542,
+      "cpuMs": 135.049,
+      "processPeakRssBytes": 26673152
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 200,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 110636,
+      "wallMs": 15.865584,
+      "cpuMs": 15.812,
+      "processPeakRssBytes": 26869760
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 200,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 6.154625,
+      "cpuMs": 6.148,
+      "processPeakRssBytes": 26542080
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 200,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 24.824125,
+      "cpuMs": 24.765,
+      "processPeakRssBytes": 26574848
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 200,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 24.928292,
+      "cpuMs": 24.88,
+      "processPeakRssBytes": 26656768
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 200,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 6.145709,
+      "cpuMs": 6.136,
+      "processPeakRssBytes": 26853376
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 200,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 6.202125,
+      "cpuMs": 6.186,
+      "processPeakRssBytes": 26591232
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 200,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 25.238542,
+      "cpuMs": 25.108,
+      "processPeakRssBytes": 26673152
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 400,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 4767804,
+      "wallMs": 501.151292,
+      "cpuMs": 499.581,
+      "processPeakRssBytes": 26968064
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 400,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 221036,
+      "wallMs": 31.825459,
+      "cpuMs": 31.716,
+      "processPeakRssBytes": 26918912
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 400,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 12.201792,
+      "cpuMs": 12.199,
+      "processPeakRssBytes": 26804224
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 400,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 87.435,
+      "cpuMs": 87.232,
+      "processPeakRssBytes": 26918912
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 400,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 87.022792,
+      "cpuMs": 86.652,
+      "processPeakRssBytes": 27164672
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 400,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 12.384291,
+      "cpuMs": 12.375,
+      "processPeakRssBytes": 27115520
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "insert",
+      "messages": 400,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 12.275125,
+      "cpuMs": 12.228,
+      "processPeakRssBytes": 27049984
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "insert",
+      "messages": 400,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 86.956917,
+      "cpuMs": 86.621,
+      "processPeakRssBytes": 26918912
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 2996440,
+      "wallMs": 327.944959,
+      "cpuMs": 327.041,
+      "processPeakRssBytes": 26968064
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 47312,
+      "wallMs": 5.418458,
+      "cpuMs": 5.397,
+      "processPeakRssBytes": 27000832
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 1.281584,
+      "cpuMs": 1.279,
+      "processPeakRssBytes": 26820608
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 65.509083,
+      "cpuMs": 65.285,
+      "processPeakRssBytes": 26918912
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 65.406375,
+      "cpuMs": 65.194,
+      "processPeakRssBytes": 27230208
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 1.387833,
+      "cpuMs": 1.383,
+      "processPeakRssBytes": 26656768
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 1.286833,
+      "cpuMs": 1.286,
+      "processPeakRssBytes": 26902528
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 100,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 66.142583,
+      "cpuMs": 66.012,
+      "processPeakRssBytes": 26951680
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 11512440,
+      "wallMs": 1271.200334,
+      "cpuMs": 1261.403,
+      "processPeakRssBytes": 27443200
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 94512,
+      "wallMs": 10.871708,
+      "cpuMs": 10.836,
+      "processPeakRssBytes": 27344896
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 2.648542,
+      "cpuMs": 2.584,
+      "processPeakRssBytes": 27361280
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 244.62475,
+      "cpuMs": 244.036,
+      "processPeakRssBytes": 27410432
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 246.482,
+      "cpuMs": 245.41,
+      "processPeakRssBytes": 27148288
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 2.3205,
+      "cpuMs": 2.316,
+      "processPeakRssBytes": 27246592
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 2.287791,
+      "cpuMs": 2.281,
+      "processPeakRssBytes": 27049984
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 200,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 244.373083,
+      "cpuMs": 243.805,
+      "processPeakRssBytes": 27525120
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 45104457,
+      "wallMs": 4903.879459,
+      "cpuMs": 4890.28,
+      "processPeakRssBytes": 27541504
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": true,
+      "sample": 0,
+      "callbacksInterval1": 188929,
+      "wallMs": 20.525459,
+      "cpuMs": 20.522,
+      "processPeakRssBytes": 27410432
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 4.249834,
+      "cpuMs": 4.247,
+      "processPeakRssBytes": 27475968
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": false,
+      "sample": 1,
+      "callbacksInterval1": null,
+      "wallMs": 946.756333,
+      "cpuMs": 944.683,
+      "processPeakRssBytes": 27869184
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 942.423334,
+      "cpuMs": 940.003,
+      "processPeakRssBytes": 27541504
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": false,
+      "sample": 2,
+      "callbacksInterval1": null,
+      "wallMs": 4.278,
+      "cpuMs": 4.272,
+      "processPeakRssBytes": 27639808
+    },
+    {
+      "sha": "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 4.279917,
+      "cpuMs": 4.272,
+      "processPeakRssBytes": 27475968
+    },
+    {
+      "sha": "2ebee41d73e3601610ef00dd39e5b81a60f486e2",
+      "phase": "labelRefresh",
+      "messages": 400,
+      "profile": false,
+      "sample": 3,
+      "callbacksInterval1": null,
+      "wallMs": 964.367375,
+      "cpuMs": 959.46,
+      "processPeakRssBytes": 27721728
+    }
+  ],
+  "hashes": {
+    "2ebee41d73e3601610ef00dd39e5b81a60f486e2": [
+      {
+        "path": "apps/api/drizzle/0000_melted_fenris.sql",
+        "sha256": "f144a68a1394284c33d61cd11896ff3ba41013fe9c9c18bbea6a1e7bdc84c4e3"
+      },
+      {
+        "path": "apps/api/drizzle/0001_legal_tempest.sql",
+        "sha256": "7ea3b9241dbc98636b687fda24aec4069023935c9f322bb8030ffbb885eb994b"
+      },
+      {
+        "path": "apps/api/drizzle/0002_overjoyed_lockjaw.sql",
+        "sha256": "f62680fb39a58c35e855f8e098217268b3f9d1b6a43d5bc03688d7fcb37e308f"
+      },
+      {
+        "path": "apps/api/drizzle/0003_google_login.sql",
+        "sha256": "39c5b7074cdbea204f2167739609622ecfa502d27ed800bcc4217efadba03421"
+      },
+      {
+        "path": "apps/api/drizzle/0004_sender_attention_preferences.sql",
+        "sha256": "c15ed8525dfcf0e3344340106f8c3ba32e999346a4e0a60ff3f1a15814001f71"
+      },
+      {
+        "path": "apps/api/drizzle/0005_hard_ted_forrester.sql",
+        "sha256": "85c816cc93bd2f6873b23556d1e64b74e6dc3403f012fd4593b5fb179b39e1ac"
+      },
+      {
+        "path": "apps/api/drizzle/0006_yellow_pete_wisdom.sql",
+        "sha256": "0c370a0f02e41e88c3abd01ca612972c3a7b8739fcb2f15073501beab84e6129"
+      },
+      {
+        "path": "apps/api/drizzle/0007_additive_collections_and_pins.sql",
+        "sha256": "be104911938c457113c3b572dbfb6b411becb67d28979e960cd42cc62dfecdb0"
+      },
+      {
+        "path": "apps/api/drizzle/0008_thread_reminders.sql",
+        "sha256": "91056093081c5e24c294839362ddc99de3f328da5e53edf4bd023e0267550240"
+      },
+      {
+        "path": "apps/api/drizzle/0009_gmail_label_migration.sql",
+        "sha256": "0c185418ba4aee94a40391c641e78b5f747c2536fb9dcb85a824cfc8fb8b92f9"
+      },
+      {
+        "path": "apps/api/drizzle/0010_tearful_randall_flagg.sql",
+        "sha256": "3e14667c6e14e75b66afcb189e9374e88686a64fabc19b499f72e569c08de4f4"
+      },
+      {
+        "path": "apps/api/drizzle/0011_unified_settings.sql",
+        "sha256": "ecb2efb63f6f14207de0d32124ad79a57840fd7a72bc40a6d4e641ac9bc10eb2"
+      },
+      {
+        "path": "apps/api/drizzle/0012_durable_draft_provider_sync.sql",
+        "sha256": "b40f491c0f2a99c15e2dd89494edd0f1a8ab14143da13e9f310c6a0e7e9cf303"
+      },
+      {
+        "path": "apps/api/drizzle/0013_reply_threading_headers.sql",
+        "sha256": "e73a184c8d6ec9d846eda8753e2dc104fca7d38e95f28428c3441e7739f8bf89"
+      },
+      {
+        "path": "apps/api/drizzle/0014_persistent_onboarding.sql",
+        "sha256": "d2cba4d2d0c2ee3e20829c41a9564de5a66970bd9f87a9c300085405f3b0e164"
+      },
+      {
+        "path": "apps/api/drizzle/0015_human_classification.sql",
+        "sha256": "b4baf00aed396b90e37335f64c7658f4a7b4bbba728a528cfc45701aca01f98e"
+      },
+      {
+        "path": "apps/api/drizzle/0016_human_classification_overrides.sql",
+        "sha256": "1e507b54ceba05a69c1b4e76da6da650d9ed1e54a6b080993e88e196ddf7568d"
+      },
+      {
+        "path": "apps/api/drizzle/0017_pin_appearance.sql",
+        "sha256": "b31a3f3e432ba8c9c9750e8a87fc2d4b7ec26a37082cebd774e0e94eb28fecd2"
+      },
+      {
+        "path": "apps/api/drizzle/0018_gmail_push_notifications.sql",
+        "sha256": "ef6fd6a2811488165436394e8e832c80c01f053f3331f820ecd4b255e7d7f195"
+      },
+      {
+        "path": "apps/api/drizzle/0019_provider_profile_images.sql",
+        "sha256": "51cec388ff96010ce7693fafd93dd3046747d3a316853844dc256312ec0d2e71"
+      },
+      {
+        "path": "apps/api/drizzle/0020_mcp_oauth.sql",
+        "sha256": "55c5a1fda875279862ba1b50f745a345a22710ca77f4f9d51dfcabf4de098591"
+      },
+      {
+        "path": "apps/api/drizzle/0021_calendar_availability.sql",
+        "sha256": "936e040812641b393864e65038947535a491634e027ecda342d1b8a4203d8067"
+      },
+      {
+        "path": "apps/api/drizzle/0022_agent_propagation_contract.sql",
+        "sha256": "af948de7a324d0abf5ab019f5531c697d0da04633c2e8b95cd2ef465ef6730dc"
+      },
+      {
+        "path": "apps/api/drizzle/0023_typed_facets_workflow.sql",
+        "sha256": "daf41eb857d8fe769680d18b0d1b60f2423b4db45749018d3ecc4c006f6b1275"
+      },
+      {
+        "path": "apps/api/drizzle/0024_organization_collections_pins.sql",
+        "sha256": "12514aeeb4b9bc373b40ef5c6ceb6b57e2d3c2bc722cd37cd5a862236294af48"
+      },
+      {
+        "path": "apps/api/drizzle/0025_organization_context_relationships.sql",
+        "sha256": "ffb92d892564c285403f0adeafee50811c9550d61119cbcd14fbd023d45fab80"
+      },
+      {
+        "path": "apps/api/drizzle/0026_organization_lanes.sql",
+        "sha256": "cca641337482ba4c57e2f632230d93f7ff05c47efa12f1f5a7d2edf874704ae9"
+      },
+      {
+        "path": "apps/api/drizzle/0027_organization_live_views.sql",
+        "sha256": "1f1dc588fca4514f92f438aa85e61d1f767ea5f17c6b6a8944e84b8edc5e840d"
+      },
+      {
+        "path": "apps/api/drizzle/0028_orca_rule_revisions.sql",
+        "sha256": "cea5e473dfc01872286fe90c4a0da46228cc42dc639c61cd57f41703ce0c20e5"
+      },
+      {
+        "path": "apps/api/drizzle/0029_orca_rule_evaluations.sql",
+        "sha256": "1d93c6cea224f6048553f51abd3e3cc5fb9283b8af9db7bdc6671cb80d7f1a0c"
+      },
+      {
+        "path": "apps/api/drizzle/0030_rule_set_ordering.sql",
+        "sha256": "22f4eda170b4e6ba4913c7164a60c41e7996e14000a189ef8b54e5d26cdc4b4a"
+      },
+      {
+        "path": "apps/api/drizzle/0031_rule_compilation_workspace.sql",
+        "sha256": "7750002fa43ffc59746f14e97ea864d07f4834cbe364950b76130dc53ec2864e"
+      },
+      {
+        "path": "apps/api/drizzle/0032_rule_simulation_change_sets.sql",
+        "sha256": "7037f1558ca897f4976d0a4ea3e55a43c7887e66a215d63e11fe299ad82bd685"
+      },
+      {
+        "path": "apps/api/drizzle/0033_g2_authority_concurrency.sql",
+        "sha256": "adc3593dd95dbedf568d499be5e8c2226a1f2275794593ac7b7edb603b4b2fbb"
+      },
+      {
+        "path": "apps/api/drizzle/0034_user_correction_receipts.sql",
+        "sha256": "56904d139cd598ecfc4c9277c1205fce4f9351b9f25fb8efd0d64e6d8db6bbee"
+      },
+      {
+        "path": "apps/api/drizzle/0035_bounded_mailbox_reads.sql",
+        "sha256": "e594d382b304efcff1d5596fa9f7fe45e327b230bc1c9239a239d7e411d627c9"
+      },
+      {
+        "path": "apps/api/drizzle/0036_mailbox_revision_root.sql",
+        "sha256": "23559907a72478b22cb011c894655794e00ccb2fb02d3cce942c4dd5977f0101"
+      },
+      {
+        "path": "apps/api/drizzle/0037_gmail_sync_coordinator.sql",
+        "sha256": "ae8b93007daf1421db98729ad65573b6eada0479fe17fc2cf18b5514267c9a14"
+      },
+      {
+        "path": "apps/api/drizzle/0038_first_view_guidance.sql",
+        "sha256": "155625a29571e85eeb85a66856f155963ead6e4b2fdb082cfbb3b0d1e585f11e"
+      },
+      {
+        "path": "apps/api/drizzle/0039_classifier_lookup_index.sql",
+        "sha256": "befc4d5100ac850a523a11c78f331bc6461d883bdff157d5b466422f96810c69"
+      },
+      {
+        "path": "apps/api/drizzle/0040_attention_preferences.sql",
+        "sha256": "7f7b3aaaa9d7a00d02aeb33b2c1f2a11174de71449fd6b2aac8db8d949515961"
+      },
+      {
+        "path": "apps/api/drizzle/0041_attention_routing.sql",
+        "sha256": "5a5dad2e4e561045b85348275dce3a1ef9b9832a0131283902d5c6bee1756896"
+      },
+      {
+        "path": "apps/api/drizzle/0042_custom_destinations.sql",
+        "sha256": "87ceab8c8bf94d65111d84accf9bfc16ac9ecc47d01de1bb24d957d076076b0c"
+      },
+      {
+        "path": "apps/api/drizzle/0043_destination_latest_index.sql",
+        "sha256": "340d92279f684180ef3be71211e42cc76790fc12de8a5cbd30257895d31a5549"
+      },
+      {
+        "path": "apps/api/drizzle/0044_destination_colors.sql",
+        "sha256": "faff1ef944da034a6634a79d142458ec8dac6a22def2c6d7e1a10086c072a36d"
+      },
+      {
+        "path": "apps/api/drizzle/0045_view_inbox_policy.sql",
+        "sha256": "438e11cff33caa1f7871f8c8ac812a1940a9e1504943313900e148c308401f93"
+      },
+      {
+        "path": "apps/api/drizzle/0046_mobile_auth.sql",
+        "sha256": "0f6251aa511046c73ffd65f4aabb6b0f798fdd8163e6fbe809b4afda4c84bec0"
+      },
+      {
+        "path": "apps/api/drizzle/0047_mobile_push.sql",
+        "sha256": "9a2762cb6d6aeb7428f5337f9a58347ed08e038071e620ac490985ed14dc23e6"
+      },
+      {
+        "path": "apps/api/drizzle/0048_mobile_push_commit_order.sql",
+        "sha256": "7902a2364989a7dcf46a5d823473b83631d32f362f832d29870ecfdaaf6e1050"
+      },
+      {
+        "path": "apps/api/drizzle/0049_mobile_push_destinations.sql",
+        "sha256": "921a14494e8c2487e69b7778eef74bf36aedc35b730b81168061d61b873f736a"
+      },
+      {
+        "path": "apps/api/drizzle/0050_mail_oauth_transactions.sql",
+        "sha256": "47173b0fd4b6d152f0bf62dc9a8a49222f5f5c8b0eeb0a6e883859e06c052226"
+      },
+      {
+        "path": "apps/api/drizzle/0051_focus_is_attention.sql",
+        "sha256": "4e5ee9117686a4156a975cb22ca78337aa55df49c9c889aa5b15b23f72b0405c"
+      },
+      {
+        "path": "apps/api/drizzle/0052_durable_importance.sql",
+        "sha256": "9eaff2d0a9c8ffcc6973ff5d28b075acf515382f4ecbf5e2f33fe5ff0e967957"
+      }
+    ],
+    "26b52c9b1b50805c4e7f3d0a6c5e72e8f6d5e3fe": [
+      {
+        "path": "apps/api/drizzle/0000_melted_fenris.sql",
+        "sha256": "f144a68a1394284c33d61cd11896ff3ba41013fe9c9c18bbea6a1e7bdc84c4e3"
+      },
+      {
+        "path": "apps/api/drizzle/0001_legal_tempest.sql",
+        "sha256": "7ea3b9241dbc98636b687fda24aec4069023935c9f322bb8030ffbb885eb994b"
+      },
+      {
+        "path": "apps/api/drizzle/0002_overjoyed_lockjaw.sql",
+        "sha256": "f62680fb39a58c35e855f8e098217268b3f9d1b6a43d5bc03688d7fcb37e308f"
+      },
+      {
+        "path": "apps/api/drizzle/0003_google_login.sql",
+        "sha256": "39c5b7074cdbea204f2167739609622ecfa502d27ed800bcc4217efadba03421"
+      },
+      {
+        "path": "apps/api/drizzle/0004_sender_attention_preferences.sql",
+        "sha256": "c15ed8525dfcf0e3344340106f8c3ba32e999346a4e0a60ff3f1a15814001f71"
+      },
+      {
+        "path": "apps/api/drizzle/0005_hard_ted_forrester.sql",
+        "sha256": "85c816cc93bd2f6873b23556d1e64b74e6dc3403f012fd4593b5fb179b39e1ac"
+      },
+      {
+        "path": "apps/api/drizzle/0006_yellow_pete_wisdom.sql",
+        "sha256": "0c370a0f02e41e88c3abd01ca612972c3a7b8739fcb2f15073501beab84e6129"
+      },
+      {
+        "path": "apps/api/drizzle/0007_additive_collections_and_pins.sql",
+        "sha256": "be104911938c457113c3b572dbfb6b411becb67d28979e960cd42cc62dfecdb0"
+      },
+      {
+        "path": "apps/api/drizzle/0008_thread_reminders.sql",
+        "sha256": "91056093081c5e24c294839362ddc99de3f328da5e53edf4bd023e0267550240"
+      },
+      {
+        "path": "apps/api/drizzle/0009_gmail_label_migration.sql",
+        "sha256": "0c185418ba4aee94a40391c641e78b5f747c2536fb9dcb85a824cfc8fb8b92f9"
+      },
+      {
+        "path": "apps/api/drizzle/0010_tearful_randall_flagg.sql",
+        "sha256": "3e14667c6e14e75b66afcb189e9374e88686a64fabc19b499f72e569c08de4f4"
+      },
+      {
+        "path": "apps/api/drizzle/0011_unified_settings.sql",
+        "sha256": "ecb2efb63f6f14207de0d32124ad79a57840fd7a72bc40a6d4e641ac9bc10eb2"
+      },
+      {
+        "path": "apps/api/drizzle/0012_durable_draft_provider_sync.sql",
+        "sha256": "b40f491c0f2a99c15e2dd89494edd0f1a8ab14143da13e9f310c6a0e7e9cf303"
+      },
+      {
+        "path": "apps/api/drizzle/0013_reply_threading_headers.sql",
+        "sha256": "e73a184c8d6ec9d846eda8753e2dc104fca7d38e95f28428c3441e7739f8bf89"
+      },
+      {
+        "path": "apps/api/drizzle/0014_persistent_onboarding.sql",
+        "sha256": "d2cba4d2d0c2ee3e20829c41a9564de5a66970bd9f87a9c300085405f3b0e164"
+      },
+      {
+        "path": "apps/api/drizzle/0015_human_classification.sql",
+        "sha256": "b4baf00aed396b90e37335f64c7658f4a7b4bbba728a528cfc45701aca01f98e"
+      },
+      {
+        "path": "apps/api/drizzle/0016_human_classification_overrides.sql",
+        "sha256": "1e507b54ceba05a69c1b4e76da6da650d9ed1e54a6b080993e88e196ddf7568d"
+      },
+      {
+        "path": "apps/api/drizzle/0017_pin_appearance.sql",
+        "sha256": "b31a3f3e432ba8c9c9750e8a87fc2d4b7ec26a37082cebd774e0e94eb28fecd2"
+      },
+      {
+        "path": "apps/api/drizzle/0018_gmail_push_notifications.sql",
+        "sha256": "ef6fd6a2811488165436394e8e832c80c01f053f3331f820ecd4b255e7d7f195"
+      },
+      {
+        "path": "apps/api/drizzle/0019_provider_profile_images.sql",
+        "sha256": "51cec388ff96010ce7693fafd93dd3046747d3a316853844dc256312ec0d2e71"
+      },
+      {
+        "path": "apps/api/drizzle/0020_mcp_oauth.sql",
+        "sha256": "55c5a1fda875279862ba1b50f745a345a22710ca77f4f9d51dfcabf4de098591"
+      },
+      {
+        "path": "apps/api/drizzle/0021_calendar_availability.sql",
+        "sha256": "936e040812641b393864e65038947535a491634e027ecda342d1b8a4203d8067"
+      },
+      {
+        "path": "apps/api/drizzle/0022_agent_propagation_contract.sql",
+        "sha256": "af948de7a324d0abf5ab019f5531c697d0da04633c2e8b95cd2ef465ef6730dc"
+      },
+      {
+        "path": "apps/api/drizzle/0023_typed_facets_workflow.sql",
+        "sha256": "daf41eb857d8fe769680d18b0d1b60f2423b4db45749018d3ecc4c006f6b1275"
+      },
+      {
+        "path": "apps/api/drizzle/0024_organization_collections_pins.sql",
+        "sha256": "12514aeeb4b9bc373b40ef5c6ceb6b57e2d3c2bc722cd37cd5a862236294af48"
+      },
+      {
+        "path": "apps/api/drizzle/0025_organization_context_relationships.sql",
+        "sha256": "ffb92d892564c285403f0adeafee50811c9550d61119cbcd14fbd023d45fab80"
+      },
+      {
+        "path": "apps/api/drizzle/0026_organization_lanes.sql",
+        "sha256": "cca641337482ba4c57e2f632230d93f7ff05c47efa12f1f5a7d2edf874704ae9"
+      },
+      {
+        "path": "apps/api/drizzle/0027_organization_live_views.sql",
+        "sha256": "1f1dc588fca4514f92f438aa85e61d1f767ea5f17c6b6a8944e84b8edc5e840d"
+      },
+      {
+        "path": "apps/api/drizzle/0028_orca_rule_revisions.sql",
+        "sha256": "cea5e473dfc01872286fe90c4a0da46228cc42dc639c61cd57f41703ce0c20e5"
+      },
+      {
+        "path": "apps/api/drizzle/0029_orca_rule_evaluations.sql",
+        "sha256": "1d93c6cea224f6048553f51abd3e3cc5fb9283b8af9db7bdc6671cb80d7f1a0c"
+      },
+      {
+        "path": "apps/api/drizzle/0030_rule_set_ordering.sql",
+        "sha256": "22f4eda170b4e6ba4913c7164a60c41e7996e14000a189ef8b54e5d26cdc4b4a"
+      },
+      {
+        "path": "apps/api/drizzle/0031_rule_compilation_workspace.sql",
+        "sha256": "7750002fa43ffc59746f14e97ea864d07f4834cbe364950b76130dc53ec2864e"
+      },
+      {
+        "path": "apps/api/drizzle/0032_rule_simulation_change_sets.sql",
+        "sha256": "7037f1558ca897f4976d0a4ea3e55a43c7887e66a215d63e11fe299ad82bd685"
+      },
+      {
+        "path": "apps/api/drizzle/0033_g2_authority_concurrency.sql",
+        "sha256": "adc3593dd95dbedf568d499be5e8c2226a1f2275794593ac7b7edb603b4b2fbb"
+      },
+      {
+        "path": "apps/api/drizzle/0034_user_correction_receipts.sql",
+        "sha256": "56904d139cd598ecfc4c9277c1205fce4f9351b9f25fb8efd0d64e6d8db6bbee"
+      },
+      {
+        "path": "apps/api/drizzle/0035_bounded_mailbox_reads.sql",
+        "sha256": "e594d382b304efcff1d5596fa9f7fe45e327b230bc1c9239a239d7e411d627c9"
+      },
+      {
+        "path": "apps/api/drizzle/0036_mailbox_revision_root.sql",
+        "sha256": "23559907a72478b22cb011c894655794e00ccb2fb02d3cce942c4dd5977f0101"
+      },
+      {
+        "path": "apps/api/drizzle/0037_gmail_sync_coordinator.sql",
+        "sha256": "ae8b93007daf1421db98729ad65573b6eada0479fe17fc2cf18b5514267c9a14"
+      },
+      {
+        "path": "apps/api/drizzle/0038_first_view_guidance.sql",
+        "sha256": "155625a29571e85eeb85a66856f155963ead6e4b2fdb082cfbb3b0d1e585f11e"
+      },
+      {
+        "path": "apps/api/drizzle/0039_classifier_lookup_index.sql",
+        "sha256": "befc4d5100ac850a523a11c78f331bc6461d883bdff157d5b466422f96810c69"
+      },
+      {
+        "path": "apps/api/drizzle/0040_attention_preferences.sql",
+        "sha256": "7f7b3aaaa9d7a00d02aeb33b2c1f2a11174de71449fd6b2aac8db8d949515961"
+      },
+      {
+        "path": "apps/api/drizzle/0041_attention_routing.sql",
+        "sha256": "5a5dad2e4e561045b85348275dce3a1ef9b9832a0131283902d5c6bee1756896"
+      },
+      {
+        "path": "apps/api/drizzle/0042_custom_destinations.sql",
+        "sha256": "87ceab8c8bf94d65111d84accf9bfc16ac9ecc47d01de1bb24d957d076076b0c"
+      },
+      {
+        "path": "apps/api/drizzle/0043_destination_latest_index.sql",
+        "sha256": "340d92279f684180ef3be71211e42cc76790fc12de8a5cbd30257895d31a5549"
+      },
+      {
+        "path": "apps/api/drizzle/0044_destination_colors.sql",
+        "sha256": "faff1ef944da034a6634a79d142458ec8dac6a22def2c6d7e1a10086c072a36d"
+      },
+      {
+        "path": "apps/api/drizzle/0045_view_inbox_policy.sql",
+        "sha256": "438e11cff33caa1f7871f8c8ac812a1940a9e1504943313900e148c308401f93"
+      },
+      {
+        "path": "apps/api/drizzle/0046_mobile_auth.sql",
+        "sha256": "0f6251aa511046c73ffd65f4aabb6b0f798fdd8163e6fbe809b4afda4c84bec0"
+      },
+      {
+        "path": "apps/api/drizzle/0047_mobile_push.sql",
+        "sha256": "9a2762cb6d6aeb7428f5337f9a58347ed08e038071e620ac490985ed14dc23e6"
+      },
+      {
+        "path": "apps/api/drizzle/0048_mobile_push_commit_order.sql",
+        "sha256": "7902a2364989a7dcf46a5d823473b83631d32f362f832d29870ecfdaaf6e1050"
+      },
+      {
+        "path": "apps/api/drizzle/0049_mobile_push_destinations.sql",
+        "sha256": "921a14494e8c2487e69b7778eef74bf36aedc35b730b81168061d61b873f736a"
+      },
+      {
+        "path": "apps/api/drizzle/0050_mail_oauth_transactions.sql",
+        "sha256": "47173b0fd4b6d152f0bf62dc9a8a49222f5f5c8b0eeb0a6e883859e06c052226"
+      },
+      {
+        "path": "apps/api/drizzle/0051_focus_is_attention.sql",
+        "sha256": "4e5ee9117686a4156a975cb22ca78337aa55df49c9c889aa5b15b23f72b0405c"
+      },
+      {
+        "path": "apps/api/drizzle/0052_durable_importance.sql",
+        "sha256": "9eaff2d0a9c8ffcc6973ff5d28b075acf515382f4ecbf5e2f33fe5ff0e967957"
+      },
+      {
+        "path": "apps/api/drizzle/0053_incremental_importance.sql",
+        "sha256": "96168f44048abee93660fff7afd386955230b3c43532995145f57dd1e6e861fd"
+      }
+    ]
+  },
+  "scalingAssertions": [
+    {
+      "phase": "insert",
+      "from": 100,
+      "to": 200,
+      "ratio": 1.9957428385886427,
+      "nearLinear": true
+    },
+    {
+      "phase": "insert",
+      "from": 200,
+      "to": 400,
+      "ratio": 1.997866878773636,
+      "nearLinear": true
+    },
+    {
+      "phase": "labelRefresh",
+      "from": 100,
+      "to": 200,
+      "ratio": 1.9976327358809605,
+      "nearLinear": true
+    },
+    {
+      "phase": "labelRefresh",
+      "from": 200,
+      "to": 400,
+      "ratio": 1.9989948366345014,
+      "nearLinear": true
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "baseline": "4f7aff92f4e1f93b86a95c6fd5e86e3bf3045da7",
+  "status": "red",
+  "command": [
+    "bun",
+    "test",
+    "apps/api/src/importance/routes.test.ts",
+    "--test-name-pattern",
+    "BRE-454 (durable conversation|exact sender|sender preview|guarded Undo|authorization|Important retained-mail)"
+  ],
+  "result": "0 pass, 6 fail; six actual HTTP 404 responses where HTTP 200 is required",
+  "regressionSha256": "d93f386ed2e008003ebc6e1cfa77470efbcb53fa3ca87f84257dfb44ab962f68",
+  "dependencyLockSha256": "b716f52383585ab058f94872a11c468258069ae8158c19014b66775aeb6acff7",
+  "source": "clean git archive of immutable baseline, with only the current synthetic test overlaid; no implementation/migration/schema overlay",
+  "dependencies": "copy of existing frozen dependencies, no install; workspace links verified inside scratch",
+  "scope": "first six original product regressions; later failure-injection/migration cases require the implemented tables and are intentionally excluded",
+  "cleanup": "only owned temporary archive/database removed in finally; evidence retained"
+}

@@ -1,0 +1,212 @@
+{
+  "commit": "110a6f7b5987aec0580cb9f20eac766d971ffb38",
+  "dirty": false,
+  "scope": "synthetic API and database only; no product UI",
+  "before": {
+    "accountId": "demo-account",
+    "threadId": "receipt",
+    "importance": {
+      "effective": "unreviewed",
+      "source": "participants",
+      "conversation": {
+        "choice": null,
+        "revision": 0
+      },
+      "inherited": "unreviewed",
+      "participantCounts": {
+        "important": 0,
+        "notImportant": 0,
+        "unreviewed": 1,
+        "total": 1
+      },
+      "preferences": [],
+      "preferencesTruncated": false,
+      "accountRevision": 3
+    }
+  },
+  "mutation": {
+    "status": "current",
+    "receipt": {
+      "operationId": "060415f5-41ce-4a23-8e58-57020bb0836c",
+      "accountId": "demo-account",
+      "target": {
+        "kind": "conversation",
+        "threadId": "receipt"
+      },
+      "choice": "important",
+      "previousChoice": null,
+      "revision": 1,
+      "undoUntil": "2026-11-11T07:08:09.585Z"
+    },
+    "current": {
+      "choice": "important",
+      "revision": 1
+    },
+    "importance": {
+      "effective": "important",
+      "source": "conversation",
+      "conversation": {
+        "choice": "important",
+        "revision": 1
+      },
+      "inherited": "unreviewed",
+      "participantCounts": {
+        "important": 0,
+        "notImportant": 0,
+        "unreviewed": 1,
+        "total": 1
+      },
+      "preferences": [],
+      "preferencesTruncated": false,
+      "accountRevision": 4
+    }
+  },
+  "independentDB": [
+    {
+      "account_id": "demo-account",
+      "kind": "conversation",
+      "target": "receipt",
+      "choice": "important",
+      "revision": 1
+    }
+  ],
+  "persistedAfterReopen": [
+    {
+      "choice": "important",
+      "revision": 1
+    }
+  ],
+  "mailbox": {
+    "accounts": [
+      {
+        "id": "demo-account",
+        "provider": "gmail",
+        "email": "demo@example.com",
+        "displayName": "demo",
+        "capabilities": {
+          "read": true,
+          "draft": false,
+          "send": false
+        }
+      }
+    ],
+    "messages": [
+      {
+        "id": "receipt-mail",
+        "accountId": "demo-account",
+        "provider": "gmail",
+        "providerMessageId": "receipt-mail",
+        "threadId": "receipt",
+        "from": {
+          "name": null,
+          "email": "robot@example.com"
+        },
+        "subject": "Your receipt",
+        "snippet": "Receipt from a useful automated sender",
+        "receivedAt": "1970-01-01T00:00:01.000Z",
+        "unread": true,
+        "labels": [],
+        "attentionBehavior": "normal",
+        "destination": {
+          "destinationId": "2a21de1a-0042-4ad6-acf5-900fb3ee5496",
+          "source": "fallback",
+          "locked": false,
+          "reason": "Placement from fallback"
+        },
+        "importance": {
+          "effective": "important",
+          "source": "conversation",
+          "conversation": {
+            "choice": "important",
+            "revision": 1
+          },
+          "inherited": "unreviewed",
+          "participantCounts": {
+            "important": 0,
+            "notImportant": 0,
+            "unreviewed": 1,
+            "total": 1
+          },
+          "preferences": [],
+          "preferencesTruncated": false,
+          "accountRevision": 4
+        },
+        "humanSignal": 0,
+        "humanClassification": {
+          "automatic": {
+            "classification": "automated_or_bulk",
+            "score": 0,
+            "reasonCodes": [],
+            "classifierVersion": null
+          },
+          "effective": {
+            "classification": "automated_or_bulk",
+            "score": 0,
+            "reasonCodes": [],
+            "classifierVersion": null,
+            "source": "automatic_heuristic",
+            "userOverride": null
+          },
+          "userOverride": null
+        }
+      }
+    ],
+    "nextCursor": null,
+    "freshness": {
+      "revision": "mailbox-v2:c1f00d4f0894f90fcb88ec1e540fdff5a8d0f662bbb37d509b1c441c74ce2814",
+      "lastSyncedAt": null
+    },
+    "counts": {
+      "focus": 0,
+      "normal": 1,
+      "quiet": 0,
+      "hidden": 0,
+      "all": 1
+    }
+  },
+  "important": {
+    "accountId": "demo-account",
+    "revision": 4,
+    "items": [
+      {
+        "accountId": "demo-account",
+        "threadId": "receipt",
+        "subject": "Your receipt",
+        "snippet": "Receipt from a useful automated sender",
+        "from": "robot@example.com",
+        "receivedAt": "1970-01-01T00:00:01.000Z",
+        "unread": true,
+        "importance": {
+          "effective": "important",
+          "source": "conversation",
+          "conversation": {
+            "choice": "important",
+            "revision": 1
+          },
+          "inherited": "unreviewed",
+          "participantCounts": {
+            "important": 0,
+            "notImportant": 0,
+            "unreviewed": 1,
+            "total": 1
+          },
+          "preferences": [],
+          "preferencesTruncated": false,
+          "accountRevision": 4
+        }
+      }
+    ],
+    "nextCursor": null
+  },
+  "assertions": {
+    "initiallyUnreviewed": true,
+    "dbImportant": true,
+    "persistedAfterReopen": true,
+    "mailboxImportant": true,
+    "importantMembership": true,
+    "unchangedMail": true,
+    "unchangedPlacement": true,
+    "zeroProviderCalls": true
+  },
+  "providerCalls": 0
+}
