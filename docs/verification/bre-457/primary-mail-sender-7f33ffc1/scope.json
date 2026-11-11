@@ -1,0 +1,15 @@
+{
+  "testedSHA": "7f33ffc16912e5b9f0b66481a7d839a7fdfaaf52",
+  "foundationCases": 152,
+  "passed": 152,
+  "failed": 0,
+  "priorCases": 125,
+  "priorPassed": 125,
+  "providerCalls": 0,
+  "swiftGrammarFiles": 36,
+  "runnerSyntaxExit": 0,
+  "runnerLifecycleScopes": 3,
+  "runnerLifecyclePassed": 3,
+  "elapsedSeconds": 23.959433249983704,
+  "scope": "production Foundation/API/controller, actual synthetic HTTP/SQLite, synthetic argv/installation lifecycle; no SwiftUI/XCTest typecheck/runtime/screenshots. Excludes From/P04/discard and reader/tools/jump fixes."
+}

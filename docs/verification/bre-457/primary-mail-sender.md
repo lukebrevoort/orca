@@ -20,6 +20,12 @@ Historical b3 keeps its original assertion: three requests/one key expected, thr
 
 Two additional actual API cases verify explicit subject refinement previews real mail without writing, then Save/reopen updates the same original ID and retains the predicate without another creation. With four additional primary cases the expected full candidate set is152 (125 inherited +21 baseline, with the documented count correction +6 added); actual executed counts must be read from the future receipt. This is not a current green claim.
 
+## Actual clean-head green
+
+Clean `7f33ffc16912e5b9f0b66481a7d839a7fdfaaf52` completed the separately allocated40s overall gate in23.96s: [scope](primary-mail-sender-7f33ffc1/scope.json), [execution](primary-mail-sender-7f33ffc1/execution.json), [manifest](primary-mail-sender-7f33ffc1/manifest.json), [all152 results](primary-mail-sender-7f33ffc1/results.log), [actual API/SQLite evidence](primary-mail-sender-7f33ffc1/api-evidence.json). Compile0/runtime0, **152/152 passed**, all prior125 passed, provider0,36 grammar files, zsh syntax0, and [all three synthetic runner lifecycle scopes passed](primary-mail-sender-7f33ffc1/runner-lifecycle.log). The actual lost sender command ledger has200→delivered503 then the exact original200 replay, one key, count15→15, and no later POST after acknowledgement. Both real refinement cases passed. The before/after resource snapshots are retained; no speedup comparison is claimed.
+
+This is Foundation/API and mocked Apple-command lifecycle evidence only. It does not execute the new native test50/51, establish matching rows/refinement as visible, verify SwiftUI types or inspect current after-screenshots. A later evidence-only commit changes no source. Fresh independent source review and root-owned hosted native acceptance remain pending.
+
 ## Scope and remaining work
 
 From identity, P04 metadata and OptionA discard remain a separate following phase, authorized but not implemented or verified by these152 cases. Reader/tools/jump source/tests remain unchanged while root independently triages e061's actual AppleUI186pass/2fail/5scoped skips, separately from its earlier destination70 failure. Root owns current inspected images and reading/runtime acceptance. No local Apple runtime, full Bun, CI retry/watch/dispatch/push, merge or release has been performed for this correction. Request the bounded clean-head Foundation/API/grammar gate only when the candidate is committed; then obtain fresh independent source reviews and hosted native acceptance.
