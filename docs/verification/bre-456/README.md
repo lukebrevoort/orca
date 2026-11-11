@@ -19,6 +19,8 @@ The prepared baseline is `bdec28426de57b8833ae29743eef330f391f63cb`. Public impo
 
 BRE-455 was absent when this checkpoint began. The actual browser API checkpoint `101c45221f7ce1e452b5b9c4da3c86af69eb00f8` and subsequent complete wired backend `3842e2918886454e0a3bf20796110eb1877c3907` are now integrated with normal merges, preserving all earlier ancestry. The new open-tab client uses the unchanged shared contract. Its expanded actual browser constructor/API/SQLite probe passes 14 scenarios/66 assertions on dirty source atop integrated `4c4a61e87a1d71fbbcbd19192f4686d7c34315a7`; original claim/report UUID retries, terminal constructor failure, lease expiry, identical-policy revision and superseded settings are included. The first four-scenario probe constructs two native Chromium Notifications per theme and independently confirms SQLite reports, without provider writes. Constructor success does not prove OS display. Final integrated gates and parent reviews remain required.
 
+Published PR314 source `bc6768a80a8339d3b485f1e28b8dd2ed48914928` is subsequently integrated by normal merge. Its independent review requested an APNs signing-boundary correction under BRE-470, owned by root; it is not approved backend delivery. The public browser wire is unchanged. Web must integrate the corrected published parent and repeat final checks before completion.
+
 ## Reproductions and current limits
 
 Baseline build initially failed because this checkout had no dependencies. A necessary unchanged frozen-lockfile installation succeeded; baseline full build then passed.

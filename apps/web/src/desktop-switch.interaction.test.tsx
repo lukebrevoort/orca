@@ -255,6 +255,28 @@ describe("AppSidebar mobile navigation", () => {
     expect(browserWindow.document.activeElement?.textContent?.trim()).toBe("Manage saved views");
     expect(browserWindow.document.activeElement?.getAttribute("role")).toBe("menuitem");
   });
+
+  test("uses the configured Focus shortcut name, position and visibility without an extra built-in shortcut", async () => {
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    for (const hidden of [false, true]) {
+      await act(async () => root!.render(<TopLayerProvider><AppSidebar
+        theme="dark" onCompose={() => {}} onManageSpaces={() => {}} onNavigate={() => {}}
+        projection={{ account: { displayName: "Owner", email: "owner@example.com", accountCount: 1, health: "synced" }, active: "all", online: true, spaces: [
+          { id: "later", label: "Follow-ups", description: "", kind: "built_in" },
+          { id: "focus", label: "Deep work", description: "", kind: "built_in", hidden },
+        ] }}
+      /></TopLayerProvider>));
+      await click(container.querySelector('.desktop-mobile-more') as unknown as HTMLButtonElement);
+      const menu = browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement;
+      const labels = [...menu.querySelectorAll('button')].map(node => node.textContent?.trim());
+      expect(labels.includes("Focus")).toBe(false);
+      expect(labels.includes("Deep work")).toBe(!hidden);
+      if (!hidden) expect(labels.indexOf("Follow-ups")).toBeLessThan(labels.indexOf("Deep work"));
+      await click([...browserWindow.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(node => node.textContent?.trim() === "Close")!);
+    }
+  });
 });
 
 describe("OrganizationStudio integration", () => {

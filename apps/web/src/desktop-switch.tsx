@@ -97,7 +97,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       <Item active={false} icon={<NavIcon name="settings"/>} label="Manage spaces" onClick={()=>{setMobileMenuOpen(false);onManageSpaces();}}/>
       {onManageViews?<button type="button" onClick={()=>{setMobileMenuOpen(false);onManageViews();}}>Manage saved views</button>:null}
       {onManageTools?<Item active={false} icon={<NavIcon name="settings"/>} label="Customize tools" onClick={()=>{setMobileMenuOpen(false);onManageTools();}}/>:null}
-      <Item active={active === "attention" || active === "organization-studio"} icon={<NavIcon name="organization"/>} label="Organize" onClick={()=>go("attention")}/>
+      <Item active={active === "attention"} icon={<NavIcon name="organization"/>} label="Organize" onClick={()=>go("attention")}/>
       <Item active={active === "organization-studio"} icon={<NavIcon name="organization"/>} label="Advanced Organization" onClick={()=>go("organization-studio")}/>
     </>;
   };
