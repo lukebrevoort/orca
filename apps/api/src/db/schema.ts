@@ -928,6 +928,8 @@ export const emails = sqliteTable(
       sql`${table.createdAt} DESC`,
       table.id,
     ),
+    importanceParticipantsIdx: index("emails_importance_participants_idx").on(table.accountId, table.threadId, table.isDraft, table.fromAddress),
+    importanceUnreadIdx: index("emails_importance_unread_idx").on(table.accountId, table.threadId, table.isRead),
     threadIdx: index("emails_thread_idx").on(table.threadId),
   }),
 );
@@ -1678,3 +1680,38 @@ export const organizationDestinationBindings = sqliteTable("organization_destina
 export const organizationDestinationLegacy = sqliteTable("organization_destination_legacy", {
   workspaceId:text("workspace_id").notNull(),behavior:text("behavior").notNull(),destinationId:text("destination_id").notNull(),
 },t=>({pk:primaryKey({columns:[t.workspaceId,t.behavior]}),destinationFk:foreignKey({columns:[t.workspaceId,t.destinationId],foreignColumns:[organizationLanes.workspaceId,organizationLanes.id]})}));
+
+/** Independent user choices; null is a revision-bearing reset tombstone, never a deleted row. */
+export const importanceChoices = sqliteTable("importance_choices", {
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), target: text("target").notNull(), choice: text("choice"),
+  revision: integer("revision").notNull(), updatedAt: integer("updated_at").notNull(),
+}, table => ({ pk: primaryKey({ columns: [table.accountId, table.kind, table.target] }),
+  kindCheck: check("importance_choice_kind", sql`${table.kind} IN ('conversation','sender')`),
+  choiceCheck: check("importance_choice_value", sql`${table.choice} IN ('important','not_important')`),
+  revisionCheck: check("importance_choice_revision", sql`${table.revision}>0`),
+}));
+export const importanceOperations = sqliteTable("importance_operations", {
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  operationId: text("operation_id").notNull(), userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), target: text("target").notNull(), choice: text("choice"), previousChoice: text("previous_choice"),
+  revision: integer("revision").notNull(), fingerprint: text("fingerprint").notNull(), createdAt: integer("created_at").notNull(),
+}, table => ({ pk: primaryKey({ columns: [table.accountId, table.operationId] }),
+  targetIdx: index("importance_operations_target_idx").on(table.accountId, table.kind, table.target, table.revision),
+}));
+export const importanceParticipants = sqliteTable("importance_participants", {
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+  address: text("address").notNull(), messageCount: integer("message_count").notNull(),
+}, table => ({ pk: primaryKey({ columns: [table.accountId, table.threadId, table.address] }),
+  senderIdx: index("importance_participants_sender_idx").on(table.accountId, table.address, table.threadId),
+}));
+export const importanceThreadState = sqliteTable("importance_thread_state", {
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+  effective: text("effective").notNull(), importantCount: integer("important_count").notNull(), notImportantCount: integer("not_important_count").notNull(),
+  unreviewedCount: integer("unreviewed_count").notNull(), participantCount: integer("participant_count").notNull(),
+  receivedAt: integer("received_at").notNull(), retainedCount: integer("retained_count").notNull(),
+}, table => ({ pk: primaryKey({ columns: [table.accountId, table.threadId] }),
+  pageIdx: index("importance_thread_page_idx").on(table.accountId, table.effective, sql`${table.receivedAt} DESC`, table.threadId).where(sql`${table.retainedCount}>0`),
+}));

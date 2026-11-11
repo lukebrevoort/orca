@@ -1,3 +1,4 @@
+import { readConversationImportance } from "./importance/store.ts";
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import { threadReadPageSchema, type ThreadReadPage } from "@orca/shared";
@@ -132,7 +133,7 @@ export function readThreadPage(sqlite: Database, scope: { user: string; account:
     if (reverse) { entries.reverse(); selected.reverse(); }
     const first = selected[0], last = selected.at(-1);
     const moreInDirection = candidates.length > selected.length;
-    const page = threadReadPageSchema.parse({ entries,
+    const page = threadReadPageSchema.parse({ importance: readConversationImportance(sqlite, scope.account, scope.thread), entries,
       earlier: last && (reverse || moreInDirection) ? makeCursor(last, scope, "earlier", revision!) : null,
       newer: first && (!reverse && cursor || reverse && moreInDirection) ? makeCursor(first, scope, "newer", revision!) : null,
     });

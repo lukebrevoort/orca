@@ -597,3 +597,6 @@ export * from "./summary.ts";
 export { detectVerificationCodes } from "./verification-code.ts";
 
 export * from "./feedback-ticket.ts";
+
+export * from "./importance.ts";
+export * from "./importance-fixtures.ts";

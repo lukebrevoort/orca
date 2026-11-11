@@ -1,3 +1,4 @@
+import { readImportance, importanceKey } from "../importance/store.ts";
 import { inboxDestinationId, inboxVisibilityPredicate, latestThreadMessageSql, providerInboxSql } from "../organization/views/inbox-policy.ts";
 import { createHash } from "node:crypto";
 
@@ -371,6 +372,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
 
       const enrichmentStartedAt = clock();
       const labels = readLabels(sqlite, pageRows.map((row) => row.id));
+      const importance = readImportance(sqlite, pageRows.map(row => ({ accountId: row.account_id, threadId: row.thread_id })));
       const accountById = new Map(accountRows.map((account) => [account.id, account]));
       const messages = pageRows.map((row): InboxMessage => {
         const account = accountById.get(row.account_id);
@@ -392,6 +394,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
           destination: { destinationId:row.destination_id,source:row.destination_source,locked:Boolean(row.destination_locked),reason:`Placement from ${row.destination_source}` },
           humanSignal: humanClassification.effective.score,
           humanClassification,
+          importance: importance.get(importanceKey(row.account_id, row.thread_id)),
         };
       });
       const enrichmentDurationMs = clock() - enrichmentStartedAt;

@@ -1,3 +1,5 @@
+import { createImportanceApp } from "./importance/routes.ts";
+import { readImportance, importanceKey } from "./importance/store.ts";
 import { checkDraftQuota, draftStorageBytes, draftQuotaResponse } from "./draft-quota.ts";
 import { registerMessageImageRoutes } from "./mail/images/routes.ts";
 import { readThreadPage, ThreadPageError } from "./thread-read-page.ts";
@@ -278,6 +280,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.post("/v1/auth/logout", (c, next) => c.req.header("origin") === serverConfig.webOrigin ? next() : c.json({ error: { code: "invalid_origin", message: "Sign-out must come from Orca" } }, 403));
   app.route("/v1/auth", createLogoutApp({ dbFactory }));
+  app.route("/", createImportanceApp({ dbFactory, now }));
 
   app.use("/v1/organization/*", requireAuth({ dbFactory }));
   app.use("/v1/organization/*", bodyLimit({
@@ -3320,6 +3323,7 @@ function readThreadDetailSnapshot(
       id: thread.id, provider: account.provider, providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
       latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
       labels: [...new Set(messages.flatMap((message) => message.labels))],
+      importance: readImportance(db.$client, [{ accountId: account.id, threadId: thread.id }]).get(importanceKey(account.id, thread.id)),
       participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
       readState: thread.isRead ? "read" : "unread",
       attention: {

@@ -1,0 +1,9 @@
+{
+  "baseline": "4f7aff92f4e1f93b86a95c6fd5e86e3bf3045da7",
+  "status": "red",
+  "command": "nice -n 10 bun test apps/api/src/importance/routes.test.ts",
+  "result": "0 pass, 6 fail, 6 assertions; actual authenticated API routes returned 404 instead of 200",
+  "dependencyLockSha256": "b716f52383585ab058f94872a11c468258069ae8158c19014b66775aeb6acff7",
+  "dependencies": "Reused existing installation with identical frozen lockfile; workspace symlinks resolve inside this checkout",
+  "scope": "Uncommitted synthetic regression file only; all application/shared/migration files were exact baseline when captured. Final fixture corrections only fix later test setup constraints and do not alter baseline's absent route failures."
+}

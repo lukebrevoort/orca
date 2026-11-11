@@ -1,3 +1,4 @@
+import { importanceResolutionSchema } from "./importance.ts";
 import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
 
@@ -294,6 +295,7 @@ export const inboxMessageSchema = z
     labels: labelListSchema,
     attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]),
     destination: destinationResolutionSchema.optional(),
+    importance: importanceResolutionSchema.optional(),
     humanSignal: humanSignalScoreSchema,
     humanClassification: humanClassificationResultSchema.nullable().default(null),
   })
@@ -527,6 +529,7 @@ export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;
 export const threadDetailSchema = z.object({
   account: mailAccountSchema,
   thread: normalizedThreadSchema.extend({
+    importance: importanceResolutionSchema.optional(),
     participants: z.array(mailContactSchema),
     readState: threadReadStateSchema,
     attention: threadAttentionSchema,
@@ -537,6 +540,7 @@ export type ThreadDetail = z.infer<typeof threadDetailSchema>;
 
 // Recovery pages are read-only and never satisfy the full ThreadDetail contract.
 export const threadReadPageSchema = z.object({
+  importance: importanceResolutionSchema.optional(),
   entries: z.array(z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("message"), id: z.string(), from: z.string(), subject: z.string(), receivedAt: z.string().nullable(), bodyText: z.string().nullable(), bodyHtml: z.string().nullable(), htmlPresent: z.boolean() }).strict(),
     z.object({ kind: z.literal("unavailable"), id: z.string() }).strict(),
