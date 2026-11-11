@@ -29,6 +29,11 @@ try{for(const theme of ['light','dark']){
   check(await page.getByRole('button',{name:'Check original account',exact:true}).evaluate(node=>node.getBoundingClientRect().height>=44),'Owner recovery action retains touch target');
   await context.request.get(origin+'/__fixture/login');await page.getByRole('button',{name:'Check original account',exact:true}).click();await signature.waitFor();
   check(await signature.inputValue()==='Unsaved original owner '+theme,'Original owner recovery retains unsaved choices');
+  const recoveredPanels=await page.locator('.settings-section:visible').count(),recoveredFocus=await page.evaluate(()=>({tag:document.activeElement?.tagName,id:document.activeElement?.id,label:document.activeElement?.getAttribute('aria-label'),insideActivePanel:Boolean(document.activeElement?.closest('.settings-section:not([hidden])'))}));
+  result.scenarios.push({theme,name:'original-owner-restored-panel-state',recoveredPanels,recoveredFocus,retainedSignature:await signature.inputValue()});
+  await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(out,theme+'-recovered-panels-mobile.png')});
+  check(recoveredPanels===1,'Original owner recovery retains exactly one visible Settings panel');
+  check(recoveredFocus.insideActivePanel,'Original owner recovery returns keyboard focus to its active Settings section');
   // The preflight identity is a real committed U response. A later V cookie
   // must not turn this old editor into a V preferences mutation.
   let releaseIdentity,identityStarted,holdIdentity=true;

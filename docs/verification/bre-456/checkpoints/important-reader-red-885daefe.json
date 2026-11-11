@@ -1,0 +1,18 @@
+{
+  "revision": {
+    "head": "885daefe40443246fa6118e19fb1a0735f919a45",
+    "sourceSha256": "fb1f092a47a944df9572593faa3ac3bb89e141ccdab86f5be91c5d45c936633c",
+    "sharedSourceSha256": "e5668d9d1ab3f82e94280befa69b425833c11c482de475523a8aea4fbb762bfa",
+    "dirty": []
+  },
+  "raw": "/tmp/bre456-484-candidate-important-red/important-reader/results.json",
+  "rawSha256": "2b28aead00f35b848ca5b60b940a1c9f2063c19db42ceb78a0b9e5645c1356f1",
+  "scenarios": 2,
+  "assertions": 16,
+  "rawFailureCount": 10,
+  "actualReadFailures": 4,
+  "actualFocusFailures": 4,
+  "fixtureFailures": 2,
+  "fixtureCorrection": "Actual normal read route returns200, not probe-assumed204. HTTPreadState read and SQLite1 establish normal policy; Important has noPATCH and remainsunread/SQLite0; bothBack/Escape focusBODY. Corrected sameprobe uses200 without changing read/focus invariants.",
+  "pageErrors": []
+}

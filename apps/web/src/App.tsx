@@ -1,5 +1,5 @@
 import { ImportantNotificationSettings, useImportantNotifications } from "./important-notifications";
-import { ImportanceControl, ImportanceProvider, ImportantMail, importanceChanged } from "./importance";
+import { ImportanceControl, ImportanceProvider, ImportantMail, importanceChanged, type ImportantConversation } from "./importance";
 import { SettingsLeaveDialog, useSettingsNavigationGuard } from "./settings-navigation-guard";
 import { VerificationCodeStrip } from "./verification-code-strip";
 import { AttachmentList } from "./attachment-list";
@@ -1518,7 +1518,7 @@ export function InboxApp({
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const readingSessions = useMemo(() => new ReaderSessions(), [account?.id, demoMode, status === "signedout"]);
   useEffect(() => () => readingSessions.clear(), [readingSessions]);
-  const pendingReaderRead = useRef<InboxMessage | null>(null);
+  const pendingReaderRead = useRef<Pick<InboxMessage, "accountId" | "threadId" | "subject" | "unread"> | null>(null);
   useEffect(() => { pendingReaderRead.current = null; }, [account?.id, status === "signedout"]);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -2572,6 +2572,27 @@ export function InboxApp({
     }
   }
 
+  function importantSourceKey(target: { accountId: string; threadId: string }) {
+    return JSON.stringify(["important", target.accountId, target.threadId]);
+  }
+
+  function openImportantThread(item: ImportantConversation) {
+    summaryDraftOpenGenerationRef.current += 1;
+    if (panelClosing) return;
+    pendingReaderRead.current = item;
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    const returnContext = captureSurfaceReturnContext({ kind: "message", id: importantSourceKey(item) });
+    surfaceHistoryRef.current?.openReader(item, returnContext);
+    runUiTransition("reader-forward", () => {
+      setPanelClosing(false); setZenClosing(false);
+      setSelectedThreadId(item.threadId); setSelectedThreadAccountId(item.accountId);
+    });
+  }
+
   function openSavedViewThread(target: { accountId: string; threadId: string }) {
     summaryDraftOpenGenerationRef.current += 1;
     if (panelClosing) return;
@@ -3492,7 +3513,7 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && !destinationPage && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry space</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading spaces…" : "This legacy space is unavailable. Choose a space from the sidebar."}</p>}
-            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeMailbox === "important" ? <ImportantMail accounts={syncStatus?.accounts} accountId={loadedInboxRef.current || demoMode ? account?.id ?? null : null} accountLabel={account?.email} disabled={demoMode} onOpen={openSavedViewThread} onAllMail={() => navigateDesktop("all")} /> : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeMailbox === "important" ? <ImportantMail accounts={syncStatus?.accounts} accountId={loadedInboxRef.current || demoMode ? account?.id ?? null : null} accountLabel={account?.email} disabled={demoMode} readRefresh={readMutationRefreshKey} onOpen={openImportantThread} onRowRef={(item, node) => { const key = importantSourceKey(item); if (node) messageRowRefs.current.set(key, node); else messageRowRefs.current.delete(key); }} onAllMail={() => navigateDesktop("all")} /> : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onAddSenders={id => requestViewNavigation(() => { const location = surfaceHistoryRef.current?.openSenderSelection(id); if (location) synchronizeSurfaceLocation(location); })} onManage={() => navigateViews()} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               key={requestedDestinationId ? `destination:${destinationPageIdentity}` : activeCollectionId ? `collection:${activeCollectionId}` : activeMailbox}
               account={account}
               demoMode={demoMode}
