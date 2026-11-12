@@ -41,7 +41,8 @@ if a[:2] == ['xcresulttool', 'get']:
         raise SystemExit(65)
     print(json.dumps({'result':'Failed','failedTests':1,'passedTests':0,'testNodes':[]}))
 elif a[:3] == ['xcresulttool', 'export', 'attachments']:
-    out = pathlib.Path(a[a.index('--output-path') + 1]); out.mkdir(exist_ok=True)
+    # Model an exporter that refuses an already-existing output directory.
+    out = pathlib.Path(a[a.index('--output-path') + 1]); out.mkdir()
     if (work/'inject-secret-image').exists():
         (out/'synthetic.png').write_bytes(b'synthetic-image:' + os.environ['MOCK_SECRET'].encode())
 ''')

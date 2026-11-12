@@ -200,7 +200,7 @@ def hosted_crash_summaries(work, simulator=""):
     return output[:72]
 
 
-def export(work, evidence, connection, status, simulator=""):
+def export(work, evidence, connection, status, simulator="", attachments_root=None):
     tokens = []
     if connection:
         connection_path = Path(connection).resolve()
@@ -239,7 +239,7 @@ def export(work, evidence, connection, status, simulator=""):
                                      '--path', str(bundle)], capture_output=True, text=True, check=True)
             json.loads(result.stdout)  # fail closed on a malformed export
             write(f'{bundle.stem}-{kind}.json', result.stdout)
-        attachments = work / f'{bundle.stem}-attachments'
+        attachments = (attachments_root or work) / f'{bundle.stem}-attachments'
         subprocess.run(['xcrun', 'xcresulttool', 'export', 'attachments', '--path', str(bundle),
                         '--output-path', str(attachments)], capture_output=True, check=True)
         for index, source in enumerate(sorted(attachments.rglob('*'))):
@@ -314,12 +314,13 @@ def export_staged(work, evidence, connection, status, simulator="", checkpoint_p
         (evidence / 'outcome.json').unlink(missing_ok=True)
     with tempfile.TemporaryDirectory(prefix='validated-export-', dir=work) as directory:
         stage = Path(directory) / 'content'; stage.mkdir()
+        attachments = Path(directory) / 'attachments'; attachments.mkdir()
         output = io.StringIO()
         with redirect_stdout(output):
             # A checkpoint has no final exit or crash collection. Its null
             # outcome below, not this internal export argument, is published.
             export(work, stage, connection, 0 if checkpoint_phase else status,
-                   '' if checkpoint_phase else simulator)
+                   '' if checkpoint_phase else simulator, attachments_root=attachments)
         if checkpoint_phase:
             (stage / 'outcome.json').write_text(json.dumps({
                 'exitCode': None, 'complete': False, 'checkpointPhase': checkpoint_phase,
