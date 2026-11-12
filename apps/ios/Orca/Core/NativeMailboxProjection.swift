@@ -39,9 +39,12 @@ enum NativeMailboxProjection {
         }
     }
 
-    /// Extracted current post-refresh policy for a failing compatibility baseline.
+    /// Preserve the legacy Saved View fallback without changing new catalog routes.
     static func selectionAfterCatalogRefresh(_ selectedID: String, options: [MailboxOption]) -> String {
-        selectedID
+        if selectedID.hasPrefix("view:") && !options.contains(where: { $0.id == selectedID }) {
+            return "important"
+        }
+        return selectedID
     }
 
     static func unavailableIDs(enabledIDs: Set<String>, views: [SavedMailboxView]) -> [String] {
