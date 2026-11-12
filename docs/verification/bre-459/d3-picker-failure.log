@@ -1,0 +1,66 @@
+    t =    52.79s Waiting 10.0s for Image (First Match) to exist
+    t =    53.82s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+    t =    53.83s         Checking existence of `Image (First Match)`
+    t =    54.49s         Capturing element debug description
+    t =    54.80s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+    t =    54.81s         Checking existence of `Image (First Match)`
+    t =    55.72s         Capturing element debug description
+    t =    55.82s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+    t =    55.82s         Checking existence of `Image (First Match)`
+    t =    58.50s         Capturing element debug description
+    t =    58.82s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+    t =    58.83s         Checking existence of `Image (First Match)`
+    t =    60.55s         Capturing element debug description
+    t =    60.83s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+    t =    60.84s         Checking existence of `Image (First Match)`
+    t =    63.22s         Capturing element debug description
+    t =    63.26s     Checking existence of `Image (First Match)`
+    t =    68.69s Collecting debug information to assist test failure triage
+    t =    68.69s     Requesting snapshot of accessibility hierarchy for app with pid 47272
+    t =    70.97s Checking existence of `"Loading..." StaticText`
+    t =    71.85s Added attachment named 'feedback-system-picker-before-selection'
+    t =    71.86s Find the Target Application 'com.orca.mail'
+[feedback picker] snapshot_nodes=108 truncated=false app_state=4
+[feedback picker] kind=Button count=10
+[feedback picker] kind=Button label=Cancel identifier=Cancel
+[feedback picker] kind=Button label=Photos identifier=
+[feedback picker] kind=Button label=Collections identifier=
+[feedback picker] kind=Button label=Done identifier=
+[feedback picker] kind=Button label=Close identifier=
+[feedback picker] kind=Button label=Learn More… identifier=
+[feedback picker] kind=Button label=Close identifier=
+[feedback picker] kind=Button label=Learn More… identifier=
+[feedback picker] kind=StaticText count=5
+[feedback picker] kind=StaticText label=Select up to 3 items. identifier=
+[feedback picker] kind=StaticText label=Learn More… identifier=
+[feedback picker] kind=StaticText label=Learn More… identifier=
+[feedback picker] kind=StaticText label=Select Items identifier=
+[feedback picker] kind=StaticText label= Location Is Included identifier=
+[feedback picker] kind=Image count=11
+[feedback picker] kind=Image label=Photo, November 11, 9:36 AM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Video, one second, November 11, 9:26 AM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Photo, March 30, 2018, 7:14 PM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Photo, August 08, 2012, 9:55 PM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Photo, August 08, 2012, 9:29 PM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Photo, August 08, 2012, 6:52 PM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Photo, March 13, 2011, 12:17 AM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label=Photo, October 09, 2009, 9:09 PM identifier=PXGGridLayout-Info
+[feedback picker] kind=Image label= identifier=
+[feedback picker] kind=Image label= identifier=PickerOnboardingHeaderViewIcon
+[feedback picker] kind=Image label= identifier=PickerOnboardingHeaderViewIcon
+[feedback picker] kind=Cell count=0
+[feedback picker] kind=CollectionView count=0
+[feedback picker] kind=ScrollView count=1
+[feedback picker] kind=ScrollView label= identifier=photosView_content_scroll_view
+[feedback picker] kind=Sheet count=0
+[feedback picker] kind=Other count=75
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+[feedback picker] kind=Other label= identifier=
+/Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:142: error: -[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket] : failed - System picker must expose exactly one photo imported for this fixture day
+    t =    74.15s Tear Down
