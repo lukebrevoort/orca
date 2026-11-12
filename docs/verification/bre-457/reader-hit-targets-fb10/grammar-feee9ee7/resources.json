@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794428042.555671,
+    "stage": "before",
+    "ownerPid": 30555,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "30553  60.4 211984 node",
+      "45771  24.6  67664 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+      "  404  17.2 129456 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      " 1152  12.5  22320 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "45776   8.3 272928 /Applications/Slack.app/Contents/Frameworks/Slack Helper (Renderer).app/Contents/MacOS/Slack Helper (Renderer)",
+      "  416   4.6  18352 /usr/sbin/coreaudiod"
+    ],
+    "memory": "System-wide memory free percentage: 62%"
+  },
+  {
+    "time": 1794428043.213082,
+    "stage": "after",
+    "ownerPid": 30555,
+    "childPid": 30574,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "30578  82.4 189296 node",
+      "    1  27.5  21504 /sbin/launchd",
+      "  404  21.1 129456 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "45771  18.3  67664 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+      " 1152  15.0  22320 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "45776   6.4 272928 /Applications/Slack.app/Contents/Frameworks/Slack Helper (Renderer).app/Contents/MacOS/Slack Helper (Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 62%"
+  }
+]

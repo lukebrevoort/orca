@@ -1,0 +1,34 @@
+{
+  "source": "exact numeric excerpts transcribed from wrapper tool output; unrelated user-process names omitted",
+  "samples": [
+    {
+      "source": "wrapper tool output chunk9786de",
+      "time": 1794431316.092354,
+      "stage": "before",
+      "ownerPid": 50968,
+      "childPid": null,
+      "freeMemoryPercent": 46
+    },
+    {
+      "source": "wrapper tool output chunk199f4f",
+      "time": 1794431331.1559749,
+      "stage": "running",
+      "ownerPid": 50968,
+      "childPid": 50986,
+      "sampledSwiftFrontendPid": 51030,
+      "sampledSwiftFrontendCPUPercent": 98.9,
+      "sampledSwiftFrontendRSSKiB": 708176,
+      "freeMemoryPercent": 46
+    },
+    {
+      "source": "wrapper tool output chunk37cb9f",
+      "time": 1794431337.079475,
+      "stage": "after",
+      "ownerPid": 50968,
+      "childPid": 50986,
+      "exitCode": 1,
+      "freeMemoryPercent": 47
+    }
+  ],
+  "performanceClaim": null
+}

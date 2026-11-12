@@ -1,0 +1,7 @@
+# Actual appearance baseline: two singleton failures, capped NONPASS
+
+Exactclean4a0ba775babb8f85988491c6f0ba82933895169f. ROOT allocated and executed the actual runner tail with mock executables, no Apple commands. Requested Dark and Light both actually invoked Light+Dark, created both proper bundles, returned65, and failed the first singleton-phase assertion. This establishes the ignored-appearance/wrong-phase baseline. Downstream selected-exit/absence assertions were not reached in those failures.
+
+Existing mailbox method completed all4 parameter controls PASS. Other-scopes method STARTED but the outer12s work cap interrupted it: exit124/12.008743s, wrapper5592/session46419 terminal after14.53s. No completed4methods/38invocations/default-other-scope pass is claimed. The cap is NONPASS/partial, not a per-test timeout change or a universal semantic-red claim. ROOT confirmed clean start/end/all tracked hashes equal and no remaining owned group; wrapper retains actual47%→47% free-memory/resources. Manifest stages[] is preserved, not filled with invented completions. No retry was made.
+
+All three complete original files are retained byte-exact, including the partial final log line. The source correction is separately authorized after these actual two wrong-phase failures; any later candidate proof must have its own exact identity and complete counts. No Apple/native UI or current publication acceptance follows.

@@ -1,0 +1,209 @@
+{
+  "before": {
+    "accountId": "ios-fixture-account",
+    "ordinal": 0,
+    "truncated": false,
+    "receipts": [],
+    "sqlite": {
+      "threadId": "ios-fixture-thread-1",
+      "manualOverrideDestinationId": null,
+      "bindingDestinationId": null,
+      "importanceChoice": null,
+      "importanceState": {
+        "effective": "unreviewed"
+      },
+      "syntheticRows": [
+        {
+          "id": "ios-fixture-message-1",
+          "threadId": "ios-fixture-thread-1",
+          "isRead": 0
+        },
+        {
+          "id": "ios-fixture-message-2",
+          "threadId": "ios-fixture-thread-2",
+          "isRead": 0
+        }
+      ]
+    }
+  },
+  "afterFocus": {
+    "accountId": "ios-fixture-account",
+    "ordinal": 1,
+    "truncated": false,
+    "receipts": [
+      {
+        "ordinal": 1,
+        "receivedAt": 1794442844702,
+        "responseAt": 1794442844721,
+        "accountId": "ios-fixture-account",
+        "command": {
+          "expectedRevision": 6,
+          "target": {
+            "scope": "conversation",
+            "threadId": "ios-fixture-thread-1"
+          },
+          "destinationId": "7fad417c-ac04-4f04-ad24-c98702529de9"
+        },
+        "status": 200,
+        "receipt": {
+          "state": {
+            "accountId": "ios-fixture-account",
+            "revision": 7,
+            "selection": {
+              "target": {
+                "scope": "conversation",
+                "threadId": "ios-fixture-thread-1"
+              },
+              "explicitDestinationId": "7fad417c-ac04-4f04-ad24-c98702529de9"
+            }
+          },
+          "undo": {
+            "expectedRevision": 7,
+            "target": {
+              "scope": "conversation",
+              "threadId": "ios-fixture-thread-1"
+            },
+            "destinationId": null
+          }
+        }
+      }
+    ],
+    "sqlite": {
+      "threadId": "ios-fixture-thread-1",
+      "manualOverrideDestinationId": "7fad417c-ac04-4f04-ad24-c98702529de9",
+      "bindingDestinationId": null,
+      "importanceChoice": null,
+      "importanceState": {
+        "effective": "unreviewed"
+      },
+      "syntheticRows": [
+        {
+          "id": "ios-fixture-message-1",
+          "threadId": "ios-fixture-thread-1",
+          "isRead": 0
+        },
+        {
+          "id": "ios-fixture-message-2",
+          "threadId": "ios-fixture-thread-2",
+          "isRead": 0
+        }
+      ]
+    }
+  },
+  "afterRestoreAndStale": {
+    "accountId": "ios-fixture-account",
+    "ordinal": 3,
+    "truncated": false,
+    "receipts": [
+      {
+        "ordinal": 1,
+        "receivedAt": 1794442844702,
+        "responseAt": 1794442844721,
+        "accountId": "ios-fixture-account",
+        "command": {
+          "expectedRevision": 6,
+          "target": {
+            "scope": "conversation",
+            "threadId": "ios-fixture-thread-1"
+          },
+          "destinationId": "7fad417c-ac04-4f04-ad24-c98702529de9"
+        },
+        "status": 200,
+        "receipt": {
+          "state": {
+            "accountId": "ios-fixture-account",
+            "revision": 7,
+            "selection": {
+              "target": {
+                "scope": "conversation",
+                "threadId": "ios-fixture-thread-1"
+              },
+              "explicitDestinationId": "7fad417c-ac04-4f04-ad24-c98702529de9"
+            }
+          },
+          "undo": {
+            "expectedRevision": 7,
+            "target": {
+              "scope": "conversation",
+              "threadId": "ios-fixture-thread-1"
+            },
+            "destinationId": null
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "receivedAt": 1794442844733,
+        "responseAt": 1794442844746,
+        "accountId": "ios-fixture-account",
+        "command": {
+          "expectedRevision": 7,
+          "target": {
+            "scope": "conversation",
+            "threadId": "ios-fixture-thread-1"
+          },
+          "destinationId": null
+        },
+        "status": 200,
+        "receipt": {
+          "state": {
+            "accountId": "ios-fixture-account",
+            "revision": 8,
+            "selection": {
+              "target": {
+                "scope": "conversation",
+                "threadId": "ios-fixture-thread-1"
+              },
+              "explicitDestinationId": null
+            }
+          },
+          "undo": {
+            "expectedRevision": 8,
+            "target": {
+              "scope": "conversation",
+              "threadId": "ios-fixture-thread-1"
+            },
+            "destinationId": "7fad417c-ac04-4f04-ad24-c98702529de9"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "receivedAt": 1794442844753,
+        "responseAt": 1794442844759,
+        "accountId": "ios-fixture-account",
+        "command": {
+          "expectedRevision": 7,
+          "target": {
+            "scope": "conversation",
+            "threadId": "ios-fixture-thread-1"
+          },
+          "destinationId": null
+        },
+        "status": 409,
+        "receipt": null
+      }
+    ],
+    "sqlite": {
+      "threadId": "ios-fixture-thread-1",
+      "manualOverrideDestinationId": null,
+      "bindingDestinationId": null,
+      "importanceChoice": null,
+      "importanceState": {
+        "effective": "unreviewed"
+      },
+      "syntheticRows": [
+        {
+          "id": "ios-fixture-message-1",
+          "threadId": "ios-fixture-thread-1",
+          "isRead": 0
+        },
+        {
+          "id": "ios-fixture-message-2",
+          "threadId": "ios-fixture-thread-2",
+          "isRead": 0
+        }
+      ]
+    }
+  }
+}

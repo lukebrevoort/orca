@@ -1,0 +1,15 @@
+# PR313 current compose-job triage
+
+Job 130867673812, run 43122924544, attempt1. Artifact ZIP SHA256 `8c083d1930352645789b33960e41cafa295f72520af0c4728475101108714106`; extracted `/tmp/bre313-41a-compose`. Identity, complete file hashes and inspected-image inventory are in `/tmp/bre313-41a-compose-inspection.json`.
+
+Published head `41a0998b14428f62280027f504678b1c243e5a77`; actual tested/event commit `24e231a6253dc8f51db7e1d51f501c56f01e6374`. ROOT fetched that exact Git object. Its parents are main97 and41a; its entire tree `abec51f7274d9bc8802c765d5dfa3ff4053c13a0` equals41a's entire tree. The identities are distinct, with content equality actually verified rather than assumed.
+
+Actual early gate outcomes: FeedbackLayoutlight1/1 PASS, FeedbackLayoutdark1/1 PASS, DirectCaptureLight16/16 PASS. FeedbackLight0/1 FAIL: test38 at OrcaUITests.swift593, unique recording selection. Main compose/unit Light and Dark suites never started because the feedback prelude failed. These outcomes do not establish the formerly failing composer journeys or new catalog XCTest cases.
+
+Observed picker readiness: injected expected_day=November12; exact photo count1 and completed original60s readiness. After photo selection, the actual system AX inventory contains one video labeled `Video, one second, November 11, 11:51 PM`; the photo is `Photo, November 12, 12:03 AM`. The old video predicate interpolates the photo/import day November12, so it excludes the actual fixture video. The original video10s wait fails. This is a test identity/precondition defect; feedback review, POST, retry, and final attachment assertions are not reached. The precise Photos timestamp-source algorithm was not instrumented; do not claim file-birth metadata causation from the date mismatch alone.
+
+ROOT actually inspected all five FeedbackLight PNGs (2/4/11/20/26). They show real Orca feedback, the system privacy banner and media grid with a single generated one-second video, and the generated photo. The other13 PNGs were not inspected in this triage. Export ordinal names are not a verified assertion-to-image manifest.
+
+Narrow candidate `b795d3e57e30dc211dc816e18a2ffe452982b19f`: change only the video query to PXGGridLayout-Info + Video prefix, retaining the owned fresh simulator's unique-one guard and original10s bound. Existing subsequent two-preview/review/retry/SQL behavior and exact submitted video SHA256 `0a901c954fd7f21eeab6c48c2ac77e74368df72f9d2a061e88a1a462b1b376d4` remain unchanged. No arbitrary first asset or new coordinate/force-click action, extra tap, timeout extension, production/runner/fixture-media modification or local Apple execution. The existing bounded tapFeedbackPickerAsset helper is unchanged; it already has an element-frame coordinate fallback after an ordinary tap.
+
+44 Swift grammar inputs passed at exactclean b795 in0.462s; `/tmp/bre457-grammar-b795d3e5`. This is syntax only. Real picker and all blocked downstream UI assertions remain hosted acceptance gates. No CI retry, dispatch, push, merge or whole-app/all33 completion follows from this triage.

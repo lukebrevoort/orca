@@ -14,6 +14,7 @@ import ImageIO
 }
 
 struct RootView: View {
+    @AppStorage("orca.appearance") private var appearance = "system"
     @EnvironmentObject var state: AppState
     var body: some View { Group { switch state.phase {
     case .configuring:
@@ -25,7 +26,7 @@ struct RootView: View {
     case .signedOut: SignInView()
     case .loading: ProgressView("Opening Orca")
     case .ready: MainView()
-    } }.background(OrcaTheme.paper).preferredColorScheme(nil) }
+    } }.background(OrcaTheme.paper).preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil) }
 }
 
 struct ServerSetupView: View {
@@ -44,6 +45,8 @@ struct MainView: View {
     @EnvironmentObject var state: AppState
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var mailboxes = MailboxViews()
+    @StateObject private var importance = ImportanceController()
+    @StateObject private var preferences = AccountPreferencesController()
     @StateObject private var feedback = FeedbackTicketModel()
     @StateObject private var capture = FeedbackCaptureController()
     @StateObject private var captureWindow = FeedbackWindowReference()
@@ -53,12 +56,35 @@ struct MainView: View {
     private var captureScope: String { state.ownerScope + "|" + (state.selectedAccount?.id ?? "") }
     @State private var feedbackPresented = false
     var body: some View {
-        TabView(selection: $state.selectedTab) {
-            InboxView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Inbox", systemImage: "tray") }.tag("inbox")
-            DraftsView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
-            SettingsView().safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) { feedbackCorner }.tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
+        // NavigationStack destinations own their reading/writing insets. An
+        // inset outside those stacks can be reset by destination/tab-bar layout,
+        // painting Feedback over the destination's actions above the keyboard.
+        // A sibling takes real height out of the navigation proposal instead.
+        // Keyboard avoidance and Dynamic Type resize this one shared row;
+        // there is no per-screen visibility bookkeeping or guessed padding.
+        VStack(spacing: 0) {
+            TabView(selection: Binding(get: { state.selectedTab }, set: { tab in
+                state.navigate(to: tab)
+            })) {
+                InboxView().tabItem { Label("Mail", systemImage: "tray") }.tag("inbox")
+                DraftsView().tabItem { Label("Drafts", systemImage: "doc.text") }.tag("drafts")
+                SettingsView().tabItem { Label("Settings", systemImage: "gearshape") }.tag("settings")
+            }
+            feedbackCorner
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .background(OrcaTheme.paper)
         .environmentObject(mailboxes)
+        .environmentObject(importance)
+        .environmentObject(preferences)
+        .onAppear { state.accountPreferences = preferences }
+        .onChange(of: state.ownerScope) { preferences.invalidate(); state.stayInSettings() }
+        .confirmationDialog("Leave unsaved account choices?", isPresented: Binding(get: { state.pendingSettingsNavigation != nil }, set: { if !$0 { state.stayInSettings() } }), titleVisibility: .visible) {
+            Button("Stay", role: .cancel) { state.stayInSettings() }
+            Button("Discard edits and leave", role: .destructive) { state.discardSettingsAndLeave() }.disabled(preferences.saving)
+        } message: { Text("Stay to save or continue editing. Section changes keep your edits.") }
+        .onChange(of: captureScope) { importance.invalidate() }
         .background(FeedbackWindowProbe(reference: captureWindow).frame(width: 0, height: 0))
         .sheet(isPresented: $feedbackPresented, onDismiss: performCaptureAfterDismissal) {
             FeedbackTicketComposer(model: feedback, capture: capture) { action in
@@ -88,7 +114,9 @@ struct MainView: View {
             feedbackPresented = false
             feedback.configure(scope: scope)
         }
-        .task(id: state.ownerScope) { await mailboxes.load(state: state) }
+        .onChange(of: state.selectedAccountID) { mailboxes.accountDidChange(to: state.selectedAccount?.id) }
+        .task(id: state.nativeMailContext()?.key) { await mailboxes.load(state: state) }
+        .task(id: state.ownerScope) { await preferences.load(state: state) }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 Task {
@@ -100,6 +128,7 @@ struct MainView: View {
                 }
             }
         }
+        .modifier(FeedbackShortLayoutFixture())
     }
     private func performCaptureAfterDismissal() {
         guard let action = captureRequest else { return }
@@ -156,6 +185,37 @@ struct MainView: View {
                 .padding(.trailing, 16).padding(.vertical, 4)
         }
     }
+}
+
+/// Only the authenticated loopback UI harness can request a shorter proposal.
+/// This drives the real navigation/footer/keyboard hierarchy on the hosted
+/// phone; it does not substitute a screenshot or change production sizing.
+private struct FeedbackShortLayoutFixture: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+#if DEBUG
+        if Self.enabled {
+            GeometryReader { geometry in
+                content
+                    .frame(height: max(1, geometry.size.height - 120))
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        } else { content }
+#else
+        content
+#endif
+    }
+#if DEBUG
+    private static var enabled: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("--fixture-short-layout"),
+              let index = args.firstIndex(of: "--fixture-api-url"), args.indices.contains(index + 1),
+              let url = URL(string: args[index + 1]), url.scheme == "http",
+              ["127.0.0.1", "localhost"].contains(url.host),
+              let tokenIndex = args.firstIndex(of: "--fixture-access-token"), args.indices.contains(tokenIndex + 1),
+              !args[tokenIndex + 1].isEmpty else { return false }
+        return true
+    }
+#endif
 }
 
 private struct FeedbackPickedMedia: Transferable {

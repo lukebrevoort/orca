@@ -1,0 +1,47 @@
+{
+  "head": "b4aa758786511ab145e6807620623138c554cd20",
+  "testedMerge": "e8f05b26b625b049b5b8a669afeac6dafa882d81",
+  "identicalTree": "5fe5b503af4d34b468e88c02682cec950cf6c41b",
+  "job": "https://github.com/lukebrevoort/orca/actions/runs/42975878269/job/130374715883",
+  "exitCode": 65,
+  "expectedFailure": "XCTAssertEqual overlapping protected controls1 versus0 atOrcaUITests.swift526",
+  "summaries": {
+    "light": {
+      "failed": 1,
+      "passed": 0,
+      "skipped": 0
+    },
+    "dark": {
+      "failed": 1,
+      "passed": 0,
+      "skipped": 0
+    }
+  },
+  "perTheme": {
+    "protectedControls": 2,
+    "overlapping": 1,
+    "sendIntersectionPt2": 2518.5,
+    "sendAreaPt2": 3036,
+    "saveStatusIntersectionPt2": 0,
+    "keyboardVisible": true
+  },
+  "screenshotsInspected": [
+    "FeedbackLayoutlight-5.png",
+    "FeedbackLayoutdark-5.png"
+  ],
+  "limits": "dark capture includes swipe-keyboard Continue panel; app control geometry above it still matches light; no completed delivery/newcandidate proof",
+  "retainedFiles": {
+    "baseline-conflict-light.png": "d118c504b3ee4cff8c14e0d6e1ffe56c36e5b19e91aaf8f31aacac40b26cf17b",
+    "baseline-conflict-dark.png": "f87c682573503efb1a9f868f91e4e3545a26ab3fc330f6cf4ae16778c414a742",
+    "baseline-reader-light.png": "622a28df41dc0ab5690504cb59a3d522e2bc0bf72726ac6151fbf293fad43be2",
+    "baseline-reader-dark.png": "4f032e63732d8dcabb73c156e5de45b31ad584131edd51eed4cee8154437f03d"
+  },
+  "readerBaseline": {
+    "head": "0182327c5fa36b8d686ed72130d8133ee9b3a1a2",
+    "sourceDirectory": "/tmp/bre453-hosted-native-images-0182327c",
+    "geometryAssertionsExecuted": false,
+    "readerRunCancelled": "42975878279",
+    "mailboxRunCancelled": "42975878271",
+    "limits": "Inspected pixels only; baseline cancellations are not passes."
+  }
+}

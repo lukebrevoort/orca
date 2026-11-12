@@ -1,0 +1,23 @@
+{
+  "source": "b455ae183ae7073b3e2ceb1f63bf490ff0f2cfda",
+  "baseDiagnostic": "d485fae8138ce0ecdb49f5508c6ab360be7487c2",
+  "grammar": "36 syntax parses only,0.517s, no SwiftUI/XCTest typecheck/runtime",
+  "sourceHashes": {
+    "apps/ios/OrcaUITests/OrcaUITests.swift": "7018fe4aad9613161b30759a3fe7adb039a7b1e090b2c4bd1d08d80e85e2e0bb",
+    "apps/ios/OrcaUITests/ReaderUITests.swift": "a0b299eb7006da067f7e1c41718d20c772ae33d5a4cf1e00a11499dbbf229f0a"
+  },
+  "productAndHarnessIdenticalTo": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+  "runnerSelectionIdenticalTo": "1748efb952763968ff8fe121d82911e29486764a",
+  "corrections": [
+    "original5sjumpwait precedes all extra posttapAXreads",
+    "no fullcapture between original removalwait and next original formwait",
+    "body.tap returns immediately to caller.typeText; only failureteardown captures after original issue"
+  ],
+  "independentNarrowRecheck": "APPROVED: recheck-approved-b455.md; all three d485 timing blockers closed; no native runtime acceptance",
+  "SDKReadOnlyReferences": [
+    "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework/Headers/XCUIElementAttributes.h",
+    "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework/Headers/XCUIElement.h",
+    "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework/Headers/XCTestRun.h"
+  ],
+  "scopeLimit": "hasFocus is public UI focus, not keyboard focus; totalFailureCount/snapshot APIs inspected in headers, not typechecked by grammar."
+}

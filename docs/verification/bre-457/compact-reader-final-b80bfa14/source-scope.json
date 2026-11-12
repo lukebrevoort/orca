@@ -1,0 +1,62 @@
+{
+  "baseline125SHA": "a4cf0372b5cb864be3cad4303bad118dba88db24",
+  "candidateSHA": "b80bfa14a9a0f6448bb59138b599c12f44dd44a2",
+  "reviewedBaseline": "08f0db15fde1ab992eedcd46a49d70af348594dd",
+  "reviewedCandidate": "a4cf0372b5cb864be3cad4303bad118dba88db24",
+  "trees": {
+    "apps/ios/Orca": {
+      "baseline": "e6b91e165cce8e8bda439bb4c201bdcb6199709f",
+      "candidate": "e6b91e165cce8e8bda439bb4c201bdcb6199709f",
+      "identical": true
+    },
+    "apps/ios/Orca/Core": {
+      "baseline": "cf3020ff61982ee18c9cbb519651b9b69ef6d2bd",
+      "candidate": "cf3020ff61982ee18c9cbb519651b9b69ef6d2bd",
+      "identical": true
+    },
+    "apps/ios/OrcaTests": {
+      "baseline": "53c8b85b9d4d0851c3b11b56a323935dfabf693e",
+      "candidate": "53c8b85b9d4d0851c3b11b56a323935dfabf693e",
+      "identical": true
+    },
+    "apps/ios/Tools": {
+      "baseline": "fd17a30eec284eb6328b931fe739f08a8d02f9f6",
+      "candidate": "fd17a30eec284eb6328b931fe739f08a8d02f9f6",
+      "identical": true
+    },
+    "apps/api": {
+      "baseline": "af92890b7bdc932c33ba2d418d5c12e658f41680",
+      "candidate": "af92890b7bdc932c33ba2d418d5c12e658f41680",
+      "identical": true
+    },
+    "packages/shared": {
+      "baseline": "91db71ae1fd117859141bdb85ac5fc2705aba4de",
+      "candidate": "91db71ae1fd117859141bdb85ac5fc2705aba4de",
+      "identical": true
+    },
+    "apps/ios/OrcaUITests": {
+      "baseline": "37e4e8bf5beaf611d9a43afb371da474b60356fa",
+      "candidate": "5b9a0edde4e91fc7467d032bd1cc08e958d5275e",
+      "identical": false
+    }
+  },
+  "diffFiles": [
+    "apps/ios/OrcaUITests/ReaderUITests.swift",
+    "docs/verification/bre-457/compact-reader-a4cf0372/api-evidence.json",
+    "docs/verification/bre-457/compact-reader-a4cf0372/execution.json",
+    "docs/verification/bre-457/compact-reader-a4cf0372/manifest.json",
+    "docs/verification/bre-457/compact-reader-a4cf0372/resources.json",
+    "docs/verification/bre-457/compact-reader-a4cf0372/results.log",
+    "docs/verification/bre-457/compact-reader-a4cf0372/scope.json",
+    "docs/verification/bre-457/compact-reader-a4cf0372/swift-parse.log",
+    "docs/verification/bre-457/compact-reader.md"
+  ],
+  "hostedUI": "not executed for candidate",
+  "readerUITestSHA256": "fb8d69cac60dbc0a28ab5d7695687d8c73fc1401dfd23a481c1f35a8efa0b9f6",
+  "grammar": {
+    "exit": 0,
+    "files": 36,
+    "elapsedSeconds": 0.4468221669958439,
+    "receipt": "execution.json"
+  }
+}

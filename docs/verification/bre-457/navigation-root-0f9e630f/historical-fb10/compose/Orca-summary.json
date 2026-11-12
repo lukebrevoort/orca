@@ -1,0 +1,90 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "10D22142-E32C-4B85-99C6-4A23DD0373CC",
+        "deviceName" : "Orca CI 43087654824-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 5,
+      "passedTests" : 178,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 5,
+  "finishTime" : 1794428156.363,
+  "passedTests" : 178,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1794426801.159,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "failed - Message body needs a visible 44pt writing area above the fixed actions",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 168,
+      "testIdentifierString" : "OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade",
+      "testName" : "test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade()"
+    },
+    {
+      "failureText" : "failed - Message body needs a visible 44pt writing area above the fixed actions",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 171,
+      "testIdentifierString" : "OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch",
+      "testName" : "test17ForegroundRefreshUnlocksSendingWithoutRelaunch()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 180,
+      "testIdentifierString" : "OrcaUITests/test35RichDraftConversionAtAccessibilitySize()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize",
+      "testName" : "test35RichDraftConversionAtAccessibilitySize()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 181,
+      "testIdentifierString" : "OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize",
+      "testName" : "test36SentRecoveryStatusAtAccessibilitySize()"
+    },
+    {
+      "failureText" : "failed - Message body needs a visible 44pt writing area above the fixed actions",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 182,
+      "testIdentifierString" : "OrcaUITests/test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes",
+      "testName" : "test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+    {
+      "category" : "Common Failures",
+      "impact" : "60% of failures",
+      "text" : "3 runs of 3 tests failed with failed - Message body needs a visible 44pt writing area above the fixed actions"
+    },
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "85% of duration",
+      "text" : "8 longest test runs with outlier durations exceeding 10.50s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 183
+}

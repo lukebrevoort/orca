@@ -1,0 +1,56 @@
+[
+  {
+    "time": 1794413180.272083,
+    "stage": "before",
+    "ownerPid": 42380,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  30.5 153792 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "28629  29.9 127344 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "28793  20.3 764736 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      " 1152  18.7  22928 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "28554  11.0 428368 /Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      "38373   9.6 345888 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 65%"
+  },
+  {
+    "time": 1794413195.349544,
+    "stage": "running",
+    "ownerPid": 42380,
+    "childPid": 42398,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "42495  99.2 820224 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend",
+      "28629  40.8 124832 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "  404  29.5 149536 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "38373  13.8 345344 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      " 1152  13.7  22912 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15232   6.5 614624 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 59%"
+  },
+  {
+    "time": 1794413200.513613,
+    "stage": "after",
+    "ownerPid": 42380,
+    "childPid": 42398,
+    "command": "python3",
+    "exitCode": 1,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "28629  45.3 119568 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "  404  35.8 147504 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "38373  15.5 345488 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      " 5369  11.5  19552 /usr/libexec/spotlightknowledged.updater",
+      " 1152  11.4  22896 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15232   6.5 613136 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 58%"
+  }
+]

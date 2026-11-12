@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794418267.766249,
+    "stage": "before",
+    "ownerPid": 93522,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "54277 160.4 535200 /Applications/Notion Calendar.app/Contents/Frameworks/Notion Calendar Helper (Renderer).app/Contents/MacOS/Notion Calendar Helper (Renderer)",
+      "  749  56.6  51792 /usr/libexec/duetexpertd",
+      "  404  32.3 116928 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "54271  26.8 161024 /Applications/Notion Calendar.app/Contents/MacOS/Notion Calendar",
+      " 1105  24.3 196912 /Applications/Zen.app/Contents/MacOS/gpu-helper.app/Contents/MacOS/Zen GPU Helper",
+      "15417  23.7 895920 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"
+    ],
+    "memory": "System-wide memory free percentage: 53%"
+  },
+  {
+    "time": 1794418268.275522,
+    "stage": "after",
+    "ownerPid": 93522,
+    "childPid": 93541,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "54277 126.1 545952 /Applications/Notion Calendar.app/Contents/Frameworks/Notion Calendar Helper (Renderer).app/Contents/MacOS/Notion Calendar Helper (Renderer)",
+      "  749  53.3  53760 /usr/libexec/duetexpertd",
+      "  404  43.7 117392 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "  769  42.2  66272 /System/Library/CoreServices/NotificationCenter.app/Contents/MacOS/NotificationCenter",
+      "54271  24.5 162656 /Applications/Notion Calendar.app/Contents/MacOS/Notion Calendar",
+      "54275  19.4  65808 /Applications/Notion Calendar.app/Contents/Frameworks/Notion Calendar Helper.app/Contents/MacOS/Notion Calendar Helper"
+    ],
+    "memory": "System-wide memory free percentage: 53%"
+  }
+]

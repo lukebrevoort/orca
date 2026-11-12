@@ -1,0 +1,89 @@
+{
+  "scope": "owned mobile fixture real routing PUT receipts + independent fixed synthetic SQL; not XCTest or provider delivery",
+  "expectedCases": [
+    "unauthenticated-witness",
+    "unknown-thread-rejected",
+    "original-inherit-precondition",
+    "first-command-real-200",
+    "first-receipt-binds-command",
+    "first-receipt-exact-inverse",
+    "independent-sql-moved",
+    "unauthenticated-put-no-receipt",
+    "exact-revision-restores-original",
+    "independent-sql-restored",
+    "stale-compensation-rejected",
+    "stale-rejection-no-fake-receipt",
+    "no-provider-delivery"
+  ],
+  "exit": 0,
+  "ownedFixtureTerminal": true,
+  "ownedTemporaryMailboxRemoved": true,
+  "results": [
+    {
+      "case": "unauthenticated-witness",
+      "pass": true,
+      "detail": "Bearer gate precedes diagnostic data/SQLite access"
+    },
+    {
+      "case": "unknown-thread-rejected",
+      "pass": true,
+      "detail": "No arbitrary SQL target"
+    },
+    {
+      "case": "original-inherit-precondition",
+      "pass": true,
+      "detail": "Actual default synthetic thread has inherited placement before mutation"
+    },
+    {
+      "case": "first-command-real-200",
+      "pass": true,
+      "detail": "Original production app handler and real Organization SQLite commit"
+    },
+    {
+      "case": "first-receipt-binds-command",
+      "pass": true,
+      "detail": "Clone of real response; no reconstructed/fabricated receipt"
+    },
+    {
+      "case": "first-receipt-exact-inverse",
+      "pass": true,
+      "detail": "Original explicit null and exact acknowledged revision preserved"
+    },
+    {
+      "case": "independent-sql-moved",
+      "pass": true,
+      "detail": "Independent fixed-thread SQL, not response-derived membership"
+    },
+    {
+      "case": "unauthenticated-put-no-receipt",
+      "pass": true,
+      "detail": "Authentication failure cannot manufacture an owned routing receipt"
+    },
+    {
+      "case": "exact-revision-restores-original",
+      "pass": true,
+      "detail": "Compensation at recorded ack revision; never GET-current overwrite"
+    },
+    {
+      "case": "independent-sql-restored",
+      "pass": true,
+      "detail": "Original inherited semantics verified independently; no provider rollback or row-deletion claim"
+    },
+    {
+      "case": "stale-compensation-rejected",
+      "pass": true,
+      "detail": "A repeated original ack revision cannot overwrite intervening state"
+    },
+    {
+      "case": "stale-rejection-no-fake-receipt",
+      "pass": true,
+      "detail": "Failed commands remain visible failures, never acknowledged cleanup"
+    },
+    {
+      "case": "no-provider-delivery",
+      "pass": true,
+      "detail": "Synthetic delivery/send ledger unchanged; not physical provider evidence"
+    }
+  ],
+  "coverageMatched": true
+}

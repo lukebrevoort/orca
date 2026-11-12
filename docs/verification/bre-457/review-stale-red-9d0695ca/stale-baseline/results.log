@@ -1,0 +1,55 @@
+{
+  "results" : [
+    {
+      "case" : "465-original-uncertain-lock",
+      "detail" : "A committed, acknowledgement lost and reconciliation offline",
+      "pass" : true
+    },
+    {
+      "case" : "465-no-A-receipt-under-B",
+      "detail" : "visible receipt target = A",
+      "pass" : false
+    },
+    {
+      "case" : "465-no-A-undo-under-B",
+      "detail" : "Undo must not operate on A under B",
+      "pass" : false
+    },
+    {
+      "case" : "465-stale-test-established-current-receipt",
+      "detail" : "must establish current revision1 receipt before checking revision2",
+      "pass" : true
+    },
+    {
+      "case" : "465-known-newer-revision-disables-Undo",
+      "detail" : "current conversation revision2 supersedes receipt revision1",
+      "pass" : false
+    },
+    {
+      "case" : "cached-query-provenance",
+      "detail" : "cached row B labeled B",
+      "pass" : true
+    },
+    {
+      "case" : "notification-route-keeps-unsaved-settings",
+      "detail" : "notification must use the shared Stay\/Leave guard",
+      "pass" : true
+    },
+    {
+      "case" : "473-stay-preserves-edits",
+      "detail" : "Stay cancels notification navigation",
+      "pass" : true
+    },
+    {
+      "case" : "473-leave-routes-original-thread",
+      "detail" : "explicit discard applies captured route",
+      "pass" : true
+    },
+    {
+      "case" : "473-stale-owner-cannot-route",
+      "detail" : "delayed Leave cannot route or discard another owner's choices",
+      "pass" : true
+    }
+  ],
+  "scope" : "production native controllers\/Foundation HTTP\/cache; not Apple UI"
+}

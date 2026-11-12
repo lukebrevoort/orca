@@ -30,6 +30,20 @@ final class SafeHTMLOverflowTests: XCTestCase {
         }
     }
 
+    func testOptionalWideFormattingKeepsSemanticTableAndLocalScrollReachable() async throws {
+        let html = "<p>Ordinary prose stays at the reader width.</p><table><caption>Wide checks</caption><tr><th>First column</th><th>Second column</th><th>Final column</th></tr><tr><td>" + String(repeating: "wide-", count: 40) + "</td><td>Middle</td><td>Last cell retained</td></tr></table><pre>    indentation and code</pre><p>End retained.</p>"
+        for (width, size, theme) in layouts {
+            let metrics = try await render(html, width: width, size: size, theme: theme, evidenceName: "bre457-wide", wideContent: true)
+            XCTAssertLessThanOrEqual(number(metrics, "documentWidth"), Double(width) + 1)
+            XCTAssertGreaterThan(number(metrics, "wideScrollWidth"), number(metrics, "wideClientWidth"))
+            XCTAssertGreaterThan(number(metrics, "wideScrolled"), 0, "Wide content must be reachable within the message")
+            XCTAssertEqual(metrics["tableDisplay"] as? String, "table")
+            XCTAssertEqual(metrics["headers"] as? [String], ["First column", "Second column", "Final column"])
+            XCTAssertTrue((metrics["bodyText"] as? String ?? "").contains("Last cell retained"))
+            XCTAssertTrue((metrics["bodyText"] as? String ?? "").contains("End retained."))
+        }
+    }
+
     func testLongPreformattedCodeRemainsReadableWithoutHorizontalScrolling() async throws {
         let code = "const artifact = \"" + String(repeating: "release_candidate_", count: 16) + "\";\n  return artifact;"
         for (width, size, theme) in layouts {
@@ -230,7 +244,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
         return value
     }
 
-    private func render(_ html: String, width: CGFloat, size: CGFloat, theme: ColorScheme, evidenceName: String = "overflow") async throws -> [String: Any] {
+    private func render(_ html: String, width: CGFloat, size: CGFloat, theme: ColorScheme, evidenceName: String = "overflow", wideContent: Bool = false) async throws -> [String: Any] {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
@@ -258,7 +272,7 @@ final class SafeHTMLOverflowTests: XCTestCase {
         let observer = NavigationObserver(loaded)
         view.navigationDelegate = observer
         let coordinator = SafeHTMLView.Coordinator()
-        coordinator.update(view, html: html, colorScheme: theme, size: size)
+        coordinator.update(view, html: html, colorScheme: theme, size: size, wideContent: wideContent)
         await fulfillment(of: [loaded], timeout: 15)
         // App-owned evaluation remains separate from disabled message scripts.
         // Wait for the actual bundled font before measuring any line boxes.
@@ -301,7 +315,11 @@ final class SafeHTMLOverflowTests: XCTestCase {
         const digestGutters = digestBodyCell ? Array.from(digestBodyCell.parentElement.cells).filter(cell => cell !== digestBodyCell) : [];
         const statRows = statsTable ? Array.from(statsTable.rows) : [];
         const statBounds = statRows.map(row => Array.from(row.cells).map(cell => cell.getBoundingClientRect()));
+        const wide = document.querySelector('.orca-wide-content');
+        let wideScrolled = 0;
+        if (wide) { wide.scrollLeft = wide.scrollWidth; wideScrolled = wide.scrollLeft; }
         return {
+          wideClientWidth: wide?.clientWidth ?? 0, wideScrollWidth: wide?.scrollWidth ?? 0, wideScrolled,
           digestBodyContentWidth: digestBodyCell ? digestBodyCell.clientWidth - parseFloat(digestBodyStyle.paddingLeft) - parseFloat(digestBodyStyle.paddingRight) : 0,
           digestBodyTableLayout: digestBodyTable ? getComputedStyle(digestBodyTable).tableLayout : '',
           digestGutterWidths: digestGutters.map(cell => cell.getBoundingClientRect().width),

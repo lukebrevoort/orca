@@ -1,0 +1,113 @@
+{
+  "proof": "real runner phase code with synthetic Apple commands, not native runtime",
+  "results": [
+    {
+      "scope": "all",
+      "pass": false,
+      "exit": 1,
+      "calls": [
+        {
+          "bundle": "Adoptionlight.xcresult",
+          "installation": 2,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "Adoptiondark.xcresult",
+          "installation": 3,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 7,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 7,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false
+        }
+      ],
+      "output": "phase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-p5m04zbg/Orca.xcresult\nTraceback (most recent call last):\n  File \"/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-p5m04zbg/mock.py\", line 6, in <module>\n    bundle = args[args.index('-resultBundlePath')+1]; pathlib.Path(bundle).mkdir()\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileExistsError: [Errno 17] File exists: '/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-p5m04zbg/Adoptionlight.xcresult'\nTraceback (most recent call last):\n  File \"/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-p5m04zbg/mock.py\", line 6, in <module>\n    bundle = args[args.index('-resultBundlePath')+1]; pathlib.Path(bundle).mkdir()\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileExistsError: [Errno 17] File exists: '/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-p5m04zbg/Adoptiondark.xcresult'\n"
+    },
+    {
+      "scope": "notifications",
+      "pass": false,
+      "exit": 1,
+      "calls": [
+        {
+          "bundle": "Adoptionlight.xcresult",
+          "installation": 2,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "Adoptiondark.xcresult",
+          "installation": 3,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 7,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 7,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false
+        }
+      ],
+      "output": "phase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-bc6xlimt/Orca.xcresult\nTraceback (most recent call last):\n  File \"/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-bc6xlimt/mock.py\", line 6, in <module>\n    bundle = args[args.index('-resultBundlePath')+1]; pathlib.Path(bundle).mkdir()\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileExistsError: [Errno 17] File exists: '/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-bc6xlimt/Adoptionlight.xcresult'\nTraceback (most recent call last):\n  File \"/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-bc6xlimt/mock.py\", line 6, in <module>\n    bundle = args[args.index('-resultBundlePath')+1]; pathlib.Path(bundle).mkdir()\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileExistsError: [Errno 17] File exists: '/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-bc6xlimt/Adoptiondark.xcresult'\n"
+    },
+    {
+      "scope": "mailbox",
+      "pass": false,
+      "exit": 1,
+      "calls": [
+        {
+          "bundle": "Adoptionlight.xcresult",
+          "installation": 2,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "Adoptiondark.xcresult",
+          "installation": 3,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 7,
+          "legacy": false,
+          "adoption": false,
+          "contaminated": false
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 7,
+          "legacy": false,
+          "adoption": false,
+          "contaminated": false
+        }
+      ],
+      "output": "phase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-rcepfxul/Orca.xcresult\nDark result bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-rcepfxul/OrcaDark.xcresult\nMailbox suite exit codes: light=0 dark=0\nTraceback (most recent call last):\n  File \"/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-rcepfxul/mock.py\", line 6, in <module>\n    bundle = args[args.index('-resultBundlePath')+1]; pathlib.Path(bundle).mkdir()\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileExistsError: [Errno 17] File exists: '/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-rcepfxul/Adoptionlight.xcresult'\nTraceback (most recent call last):\n  File \"/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-rcepfxul/mock.py\", line 6, in <module>\n    bundle = args[args.index('-resultBundlePath')+1]; pathlib.Path(bundle).mkdir()\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileExistsError: [Errno 17] File exists: '/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-rcepfxul/Adoptiondark.xcresult'\n"
+    }
+  ]
+}

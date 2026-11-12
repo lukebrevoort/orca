@@ -1,0 +1,158 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "C669E71A-753B-4BDA-8F3F-CD3CC62A815D",
+      "deviceName" : "Orca CI 42986600346-1",
+      "modelName" : "iPhone 17",
+      "osBuildNumber" : "23E254a",
+      "osVersion" : "26.4.1",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "1m 9s",
+                  "durationInSeconds" : 69.86805391311646,
+                  "name" : "test08VisibleViewsAreIndependentAndPersist()",
+                  "nodeIdentifier" : "OrcaUITests/test08VisibleViewsAreIndependentAndPersist()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test08VisibleViewsAreIndependentAndPersist",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "31s",
+                  "durationInSeconds" : 31.128050088882446,
+                  "name" : "test09EmptySavedViewKeepsMailboxMenuAvailable()",
+                  "nodeIdentifier" : "OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test09EmptySavedViewKeepsMailboxMenuAvailable",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "36s",
+                  "durationInSeconds" : 36.94589304924011,
+                  "name" : "test12InboxIntroductionScrollsWithMailAndRefreshSettles()",
+                  "nodeIdentifier" : "OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test12InboxIntroductionScrollsWithMailAndRefreshSettles",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "3m 23s",
+                  "durationInSeconds" : 203.26206600666046,
+                  "name" : "test13MailboxControlsRemainVisibleWhileRefreshing()",
+                  "nodeIdentifier" : "OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test13MailboxControlsRemainVisibleWhileRefreshing",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "1m 30s",
+                  "durationInSeconds" : 90.26836001873016,
+                  "name" : "test40MailboxSelectorCancelsAndSwitchesRepeatedly()",
+                  "nodeIdentifier" : "OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test40MailboxSelectorCancelsAndSwitchesRepeatedly",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "35s",
+                  "durationInSeconds" : 35.066227078437805,
+                  "name" : "test41MailboxSelectorLongNameAtLargestAccessibilitySize()",
+                  "nodeIdentifier" : "OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test41MailboxSelectorLongNameAtLargestAccessibilitySize",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "5m 30s",
+                  "durationInSeconds" : 330.41534399986267,
+                  "name" : "test42MailboxSwitchWhileInboxRefreshIsPending()",
+                  "nodeIdentifier" : "OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test42MailboxSwitchWhileInboxRefreshIsPending",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:25: Failed to get matching snapshot: No matches found for Elements matching predicate '\"Mail\" IN identifiers' from input {(\n    Button, label: 'Inbox', Selected,\n    Button, label: 'Drafts',\n    Button, label: 'Settings'\n)}\nPossibly caused by runtime issues:\nAutomation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {\n    \"XC_kAXXCAttributeAutomationType\" = 14;\n    \"XC_kAXXCAttributeElementBaseType\" = UIResponder;\n    \"XC_kAXXCAttributeElementType\" = \"SwiftUI.AccessibilityNode\";\n    \"XC_kAXXCAttributeTraits\" = 1108101562369;\n}\nSee test report attachments for more detail.",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "9s",
+                  "durationInSeconds" : 9.562283039093018,
+                  "name" : "test44MailStartsImportantAndKeepsAllMailReachable()",
+                  "nodeIdentifier" : "OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "OrcaUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "OrcaUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "Orca",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}

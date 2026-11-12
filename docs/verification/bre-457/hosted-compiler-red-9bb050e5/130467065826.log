@@ -1,0 +1,12 @@
+2026-11-11T10:38:02.1888560Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:38:17.3828200Z HEAD is now at 9bb050e docs(ios): retain final-parent recovery and held-owner header receipts
+2026-11-11T10:38:17.8669100Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:38:18.8130530Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:38:21.4995370Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:48:38.5824940Z [fixture failure] 949: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3359:92: error: cannot find 'SavedAccounts' in scope
+2026-11-11T10:48:38.5860850Z [fixture failure] 950:             if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+2026-11-11T10:48:38.5896310Z [fixture failure] 979: ** TEST BUILD FAILED **
+2026-11-11T10:48:49.8148670Z /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3359:92: error: cannot find 'SavedAccounts' in scope
+2026-11-11T10:48:49.8156120Z             if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+2026-11-11T10:48:49.8347350Z ** TEST BUILD FAILED **
+2026-11-11T10:48:50.0013670Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617

@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794410794.506659,
+    "stage": "before",
+    "ownerPid": 15908,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  50.1 161344 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "  673  39.4 290144 /System/Applications/Messages.app/Contents/MacOS/Messages",
+      "  691  20.7 105504 /System/Library/PrivateFrameworks/CoreSuggestions.framework/Versions/A/Support/suggestd",
+      " 5369  20.4  21072 /usr/libexec/spotlightknowledged.updater",
+      "15907  14.8   9296 /System/Library/PrivateFrameworks/IMDMessageServices.framework/XPCServices/IMDMessageServicesAgent.xpc/Contents/MacOS/IMDMessageServicesAgent",
+      " 1152  10.3  22112 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"
+    ],
+    "memory": "System-wide memory free percentage: 54%"
+  },
+  {
+    "time": 1794410795.186059,
+    "stage": "after",
+    "ownerPid": 15908,
+    "childPid": 15927,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  44.3 161312 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "  673  17.1 290528 /System/Applications/Messages.app/Contents/MacOS/Messages",
+      " 1152  16.5  22112 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "  416   5.2  25872 /usr/sbin/coreaudiod",
+      "15232   5.1 519792 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      "25406   4.5 522800 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"
+    ],
+    "memory": "System-wide memory free percentage: 54%"
+  }
+]

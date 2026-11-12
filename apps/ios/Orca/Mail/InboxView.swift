@@ -1,65 +1,18 @@
 import SwiftUI
 
-@MainActor final class InboxViewModel: ObservableObject {
-    @Published var messages = [InboxMessage](); @Published var nextCursor: String?; @Published var isLoading = false; @Published var error: String?; @Published var search = ""; @Published var view = "normal"
-    private var requestGeneration = UUID()
-    private var activeKey: String?
-    func load(state: AppState, reset: Bool = true) async {
-        guard let account = state.selectedAccount, reset || (!isLoading && nextCursor != nil) else { return }
-        let scope = state.ownerScope, requestedView = view, requestedSearch = search
-        let key = state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch)
-        if activeKey != key { messages = []; nextCursor = nil; error = nil; activeKey = key }
-        requestGeneration = UUID(); let generation = requestGeneration
-        if state.demoMode { messages = DemoData.inbox(view: requestedView); nextCursor = nil; return }
-        guard let client = state.client else { return }
-        isLoading = true
-        defer { if generation == requestGeneration { isLoading = false } }
-        do {
-            let destinationID: String?
-            if requestedView == "all" {
-                destinationID = nil
-            } else if requestedView.hasPrefix("destination:") {
-                destinationID = String(requestedView.dropFirst(12))
-            } else {
-                // Focus is a lens over Inbox membership, not a destination.
-                // Resolve the same current Inbox destination for both choices.
-                let catalog: MailActionJSON = try await client.request("v1/destinations")
-                destinationID = catalog["legacyDestinationIds"][requestedView == "focus" ? "normal" : requestedView].text
-            }
-            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
-            let apiView = requestedView.hasPrefix("destination:") || (requestedView == "normal" && destinationID != nil) ? "all" : requestedView
-            let cursor = reset ? nil : nextCursor
-            var replacesMessages = reset
-            let page: InboxPage
-            do {
-                page = try await client.inbox(accountId: account.id, view: apiView, query: requestedSearch.isEmpty ? nil : requestedSearch, cursor: cursor, destinationId: destinationID)
-            } catch APIClient.ClientError.http(400, let body) where !reset && cursor != nil && body?.code == "invalid_cursor" {
-                guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
-                // A changed mailbox invalidates this snapshot. Retire its cursor
-                // before the single restart, including when that restart fails.
-                nextCursor = nil
-                replacesMessages = true
-                page = try await client.inbox(accountId: account.id, view: apiView, query: requestedSearch.isEmpty ? nil : requestedSearch, destinationId: destinationID)
-            }
-            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
-            messages = replacesMessages ? page.messages : messages + page.messages; nextCursor = page.nextCursor; error = nil
-            if replacesMessages { try? await state.cache.save(page, key: key) }
-        } catch {
-            let cached: InboxPage? = reset ? await state.cache.load(InboxPage.self, key: key) : nil
-            guard !Task.isCancelled, generation == requestGeneration, scope == state.ownerScope, account.id == state.selectedAccount?.id, key == state.inboxCacheKey(accountID: account.id, view: requestedView, search: requestedSearch) else { return }
-            if let cached { messages = cached.messages; nextCursor = nil; self.error = "Offline — showing saved mail" }
-            else { self.error = error.localizedDescription }
-        }
-    }
-
-}
-
 struct InboxView: View {
     @EnvironmentObject private var mailboxes: MailboxViews
     @State private var savedThread: SavedViewThread?
+    @State private var choosingMailbox = false
+    @State private var readerSource: NativeMailBackContext?
     @State private var actionTarget: MailActionTarget?
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var importanceTarget: ImportanceSelection?
+    @State private var viewEditor: NativeViewSelection?
+    private enum MailFocus: Hashable { case row(String), filter(String) }
+    @AccessibilityFocusState private var mailFocus: MailFocus?
+    @State private var importanceOrigin: String?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; @StateObject private var model = InboxViewModel(); @State private var selected: InboxMessage?
     var body: some View {
         NavigationStack { VStack(spacing: 0) {
@@ -67,24 +20,46 @@ struct InboxView: View {
             // inset that the List's native refresh control can scroll underneath.
             mailboxControls.fixedSize(horizontal: false, vertical: true)
             ZStack {
-                if let view = mailboxes.selectedView {
+                if mailboxes.selectedIsHidden {
+                    VStack(spacing: 16) {
+                        Text(mailboxes.title).font(.title2).fixedSize(horizontal: false, vertical: true)
+                        Text("Hidden on this device. Restoring does not change the workspace or notifications.")
+                        Button("Restore and open") { mailboxes.restore(mailboxes.selectedID) }.frame(minHeight: 44)
+                            .accessibilityIdentifier("mailbox.hidden.restore-open")
+                        Button("Open All Mail") { model.clearPrimaryMailSearch(); mailboxes.selectedID = "all" }.frame(minHeight: 44)
+                    }.padding()
+                } else if let view = mailboxes.selectedView, model.showsSavedMailboxResults(hasSavedView: true) {
                     SavedMailboxResults(view: view) { item in
-                        guard state.selectSavedViewThread(item) else { return }
+                        guard let context = state.nativeMailContext(), state.accounts.contains(where: { $0.id == item.accountId }) else { return }
+                        readerSource = .init(context: context, selection: mailboxes.selectedID, readerAccount: item.accountId)
+                        guard state.selectSavedViewThread(item) else { readerSource = nil; return }
                         savedThread = item
                     }
+                } else if mailboxes.selectsSeparateMailbox && model.showsSavedMailboxResults(hasSavedView: true) {
+                    NativeCatalogResults(route: mailboxes.selectedRoute, onOpen: { selected = $0 }, onThread: { account, thread in
+                        selected = InboxMessage(id: thread, accountId: account, provider: state.selectedAccount?.provider ?? "gmail", providerMessageId: "", threadId: thread, from: .init(email: ""), subject: "Pinned conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal")
+                    }, onAllMail: { model.clearPrimaryMailSearch(); mailboxes.selectedID = "all"; Task { await loadCurrent() } })
+                        .id((state.nativeMailContext()?.key ?? "") + (mailboxes.selectedRoute?.fingerprint ?? "missing"))
                 } else {
                     // Keep one refreshable surface even when the mailbox is empty.
                     List {
+                        if model.search != model.resultSearch {
+                            Text(model.resultSearch.isEmpty ? "Press Search to search All Mail. Previous mail is shown below." : "Showing results for “\(model.resultSearch)”. Press Search to update.")
+                                .font(.subheadline).foregroundStyle(OrcaTheme.muted)
+                        }
                         if model.messages.isEmpty {
                             Group {
-                                if model.isLoading { ProgressView("Getting your inbox") }
+                                if model.isLoading { ProgressView(model.view == "important" ? "Getting important conversations" : "Getting mail").accessibilityIdentifier("mail.search.loading") }
                                 else if let error = model.error {
                                     VStack(spacing: 16) {
-                                        ContentUnavailableView("Inbox unavailable", systemImage: "wifi.exclamationmark", description: Text("Your mail is safe. \(error)"))
-                                        Button("Try again") { Task { await model.load(state: state) } }
+                                        ContentUnavailableView("Mail unavailable", systemImage: "wifi.exclamationmark", description: Text("Your mail is safe. \(error)"))
+                                        Button("Try again") { Task { await loadCurrent() } }.accessibilityIdentifier("mail.search.retry")
                                     }
                                 } else {
-                                    ContentUnavailableView("Nothing here", systemImage: "water.waves", description: Text(model.search.isEmpty ? "The current is quiet." : "No exact matches. Your search is still here."))
+                                    VStack(spacing: 12) {
+                                        ContentUnavailableView(model.view == "important" && model.resultSearch.isEmpty ? "No important conversations" : "No matching mail", systemImage: "tray", description: Text(model.resultSearch.isEmpty ? "All Mail keeps Unreviewed and Not important conversations available. Use Importance to make a choice." : "No matches in All Mail. Your query is still here."))
+                                        Button("Open All Mail") { model.clearPrimaryMailSearch(); mailboxes.selectedID = "all"; Task { await loadCurrent() } }
+                                    }
                                 }
                             }
                             .frame(maxWidth: .infinity, minHeight: 240)
@@ -93,32 +68,39 @@ struct InboxView: View {
                         } else {
                             // Keep the introduction in the scrolling content. Plain List section
                             // headers pin above rows and participate in refresh inset layout.
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
-                                    .font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1.2).foregroundStyle(OrcaTheme.accent)
-                                Text(dynamicTypeSize.isAccessibilitySize ? "Your mail" : (model.view == "focus" ? "A little more focus." : "What deserves you now"))
-                                    .font(OrcaTheme.reader(dynamicTypeSize.isAccessibilitySize ? 20 : 34)).fixedSize(horizontal: false, vertical: true).tracking(-0.8).foregroundStyle(OrcaTheme.ink).textCase(nil)
-                                    .accessibilityAddTraits(.isHeader)
-                                Text("\(model.messages.filter(\.unread).count) unread shown").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).textCase(nil)
-                            }.padding(.vertical, 18)
-                            .listRowBackground(OrcaTheme.paper)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(model.resultSearch.isEmpty ? mailboxes.title : "Search All Mail · " + model.resultSearch)
+                                    .font(.title2.weight(.semibold)).foregroundStyle(OrcaTheme.ink).accessibilityAddTraits(.isHeader).accessibilityIdentifier("mail.list-heading")
+                                Text("\(model.messages.count) conversations shown · \(model.messages.filter(\.unread).count) unread")
+                                    .font(.subheadline).foregroundStyle(OrcaTheme.muted)
+                            }.padding(.vertical, 12).listRowBackground(OrcaTheme.paper).listRowSeparator(.hidden)
                             ForEach(Array(model.messages.enumerated()), id: \.element.id) { index, message in
                                 if index == 0 || MailPreview.day(message.receivedAt) != MailPreview.day(model.messages[index - 1].receivedAt) {
                                     Text(MailPreview.day(message.receivedAt)?.formatted(date: .abbreviated, time: .omitted) ?? "Date unavailable").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted).listRowBackground(OrcaTheme.paper).listRowSeparator(.hidden)
                                 }
-                                NavigationLink(value: message) { MessageRow(message: message) }
+                                HStack(alignment: .top, spacing: 8) {
+                                    NavigationLink(value: message) { MessageRow(message: message) }
+                                        .accessibilityIdentifier("inbox.message.\(message.id)")
+                                        .accessibilityFocused($mailFocus, equals: .row(message.id))
+                                    Button { importanceOrigin = message.threadId; importanceTarget = .init(message) } label: {
+                                        Image(systemName: message.importance?.effective == .important ? "flag.fill" : "flag").frame(width: 44, height: 44)
+                                    }.buttonStyle(.plain).foregroundStyle(OrcaTheme.ink)
+                                        .accessibilityLabel("Importance for " + message.subject)
+                                        .accessibilityValue(message.importance?.effective.title ?? "Unavailable")
+                                        .accessibilityIdentifier("mail.importance." + message.threadId)
+                                }
                                     .listRowBackground(message.unread ? OrcaTheme.unread : OrcaTheme.surface)
                                     .listRowSeparatorTint(OrcaTheme.border)
                                     .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
-                                    .accessibilityIdentifier("inbox.message.\(message.id)")
-                                    .contextMenu { MailActionMenu(message: message) { actionTarget = $0 } }
-                                    .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.load(state: state, reset: false) } } }
+                                    .contextMenu {
+                                        Button("Importance…") { importanceOrigin = message.threadId; importanceTarget = .init(message) }
+                                        MailActionMenu(message: message, resolveMessage: message.providerMessageId.isEmpty) { actionTarget = $0 }
+                                    }
+                                    .onAppear { if message.id == model.messages.last?.id, model.nextCursor != nil { Task { await model.loadPrimaryMail(state: state, mailboxView: mailboxes.selectedID, event: .page) } } }
                             }
                         }
                     }.listStyle(.plain).scrollContentBackground(.hidden).accessibilityIdentifier("inbox.list")
-                        .refreshable { await model.load(state: state) }
+                        .refreshable { await loadCurrent() }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -128,12 +110,18 @@ struct InboxView: View {
             .clipped()
         }
         .background(OrcaTheme.paper)
-        .safeAreaInset(edge: .bottom) { if mailboxes.selectedView == nil, let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
+        .safeAreaInset(edge: .bottom) { if !mailboxes.selectedIsHidden && readerSource == nil && !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox), let error = model.error, !model.messages.isEmpty { Text(error).font(.caption).padding(8).frame(maxWidth: .infinity).background(.regularMaterial) } }
         .navigationTitle(mailboxes.title)
         .navigationBarTitleDisplayMode(.inline)
-        .modifier(MailboxSearch(enabled: mailboxes.selectedView == nil, text: $model.search))
-        .onChange(of: model.search) { if model.search.isEmpty { Task { await model.load(state: state) } } }
-        .onSubmit(of: .search) { Task { await model.load(state: state) } }
+        .searchable(text: $model.search, prompt: "Search All Mail")
+        .onChange(of: state.selectedAccountID) {
+            // A cross-account saved View reader leases its account only until
+            // Back. The source's accepted query A and unfinished B remain owned.
+            if readerSource == nil { model.invalidate() }
+            importanceOrigin = nil; importanceTarget = nil
+        }
+        .onChange(of: state.ownerScope) { model.invalidate(); choosingMailbox = false; readerSource = nil; savedThread = nil; selected = nil; importanceOrigin = nil; importanceTarget = nil }
+        .onSubmit(of: .search) { Task { await loadCurrent(event: .submit) } }
         .toolbar {
             ToolbarItem(placement: .principal) { OrcaWordmark().fixedSize() }
             ToolbarItem(placement: .topBarTrailing) {
@@ -148,59 +136,126 @@ struct InboxView: View {
             }
         }
         .navigationDestination(for: InboxMessage.self) { ThreadView(message: $0) }
+        .sheet(isPresented: $choosingMailbox) { NativeMailboxPicker { id in model.clearPrimaryMailSearch(); mailboxes.selectedID = id; Task { await loadCurrent() } } }
+        .sheet(item: $viewEditor) { selection in NativeViewEditor(selection: selection) }
+        .sheet(item: $importanceTarget, onDismiss: restoreImportanceFocus) { target in ImportanceView(selection: target) }
+        .onChange(of: model.isLoading) { if !model.isLoading && importanceTarget == nil { restoreImportanceFocus() } }
         .sheet(item: $actionTarget) { target in
-            MailActionsSheet(target: target) { await model.load(state: state) }
+            MailActionsSheet(target: target) { await loadCurrent() }
         }
-        .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(state.mailboxReadRevision)") {
-            if mailboxes.selectedView == nil { model.view = mailboxes.selectedID; await model.load(state: state) }
+        .task(id: "\(state.ownerScope)|\(state.selectedAccountID ?? "")|\(mailboxes.selectedID)|\(mailboxes.selectedIsHidden)|\(state.mailboxReadRevision)") {
+            if !mailboxes.selectedIsHidden && readerSource == nil && !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox) { await loadCurrent() }
         }
         .onChange(of: scenePhase) {
-            if scenePhase == .active, state.phase == .ready, mailboxes.selectedView == nil {
-                Task { await model.load(state: state) }
+            if scenePhase == .active, state.phase == .ready, !mailboxes.selectedIsHidden, readerSource == nil, !model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox) {
+                Task { await loadCurrent() }
             }
         }
         .navigationDestination(item: $savedThread) { ThreadView(accountId: $0.accountId, threadId: $0.threadId) }
-        .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread { selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
+        .onChange(of: savedThread) { old, next in
+            guard old != nil, next == nil, let source = readerSource else { return }
+            if source.mayRestore(current: state.nativeMailContext(), currentReaderAccount: state.selectedAccount?.id), mailboxes.selectedID == source.selection {
+                state.selectedAccountID = source.context.accountID
+            } else { model.invalidate() }
+            readerSource = nil
+        }
+        .onChange(of: state.routedMailbox?.identity.id) {
+            guard let intent = state.routedMailbox, let current = state.nativeMailContext(), current == intent.context else { return }
+            model.clearPrimaryMailSearch(); savedThread = nil; selected = nil; readerSource = nil
+            mailboxes.selectedID = intent.identity.selectionID; state.routedMailbox = nil; choosingMailbox = false
+            if let route = mailboxes.selectedRoute, case .thread(let id) = route.target, let account = state.selectedAccount {
+                selected = InboxMessage(id: id, accountId: account.id, provider: account.provider, providerMessageId: "", threadId: id, from: .init(email: ""), subject: "Pinned conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal")
+            }
+        }
+        .onChange(of: state.routedThread?.id, initial: true) { if let route = state.routedThread {
+            choosingMailbox = false
+            if let source = readerSource, source.context.accountID != route.accountId { model.invalidate() }
+            readerSource = nil; savedThread = nil
+            selected = InboxMessage(id: route.id, accountId: route.accountId, provider: "gmail", providerMessageId: route.id, threadId: route.id, from: .init(name: nil, email: ""), subject: "Conversation", snippet: "", receivedAt: "", unread: false, labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil); state.routedThread = nil } }
         .navigationDestination(item: $selected) { ThreadView(message: $0) }
         }
     }
 
     private var mailboxControls: some View {
-        HStack {
-            Menu {
-                Picker("Mailbox view", selection: $mailboxes.selectedID) {
-                    ForEach(mailboxes.options) { option in Text(option.name).tag(option.id) }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                filter("Important", id: "important")
+                filter("All Mail", id: "all")
+            }
+            if !model.resultSearch.isEmpty {
+                let layout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+                layout {
+                    Button { model.clearPrimaryMailSearch(); Task { await loadCurrent() } } label: {
+                        Text("Clear submitted search").fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: 44).contentShape(Rectangle())
+                    }.accessibilityIdentifier("mail.search.clear-submitted")
+                    if let account = state.selectedAccount {
+                        Button { viewEditor = .init(query: model.resultSearch, accountId: account.id) } label: {
+                            Text("Save search").fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        }
+                        .accessibilityHint("Save submitted search “\(model.resultSearch)”. Unsubmitted text is kept in Search.")
+                        .accessibilityIdentifier("search.save-view")
+                    }
                 }
-            } label: {
+            }
+            if let account = state.selectedAccount {
+                Menu {
+                    ForEach(state.accounts) { item in Button(item.email) { state.selectedAccountID = item.id } }
+                } label: { Label(account.email, systemImage: "person.crop.circle").font(.subheadline).frame(minHeight: 44) }
+                .accessibilityLabel("Account: " + account.email)
+            }
+            HStack {
+            Button { choosingMailbox = true } label: {
                 HStack(spacing: 8) {
                     Text(mailboxes.title)
                         .font(OrcaTheme.ui(14, weight: .semibold))
                         .lineLimit(2).truncationMode(.tail)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(OrcaTheme.muted)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(OrcaTheme.ink)
-                .padding(.vertical, 8)
-                // Put the interaction area inside the Menu label. An outer
-                // Picker frame reports 44pt but leaves its padded edge inert.
-                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
+                    Image(systemName: "chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(OrcaTheme.muted).accessibilityHidden(true)
+                }.foregroundStyle(OrcaTheme.ink).padding(.vertical, 8)
+                    .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Mailbox view")
+            .accessibilityLabel("Mailboxes")
             .accessibilityValue(mailboxes.title)
             .accessibilityHint("Choose which mail to show")
             .accessibilityIdentifier("inbox.view-picker")
-            Button { state.selectedTab = "settings" } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }
+            Button { state.navigate(to: "settings") } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }
                 .foregroundStyle(OrcaTheme.accent).accessibilityLabel("Choose visible views")
                 .accessibilityIdentifier("inbox.visible-views")
-        }.padding(.horizontal, 20).padding(.vertical, 8)
+            }
+            if model.showsSavedMailboxResults(hasSavedView: mailboxes.selectsSeparateMailbox) { Text("Saved-view results. Search searches All Mail in the selected account.").font(.caption).foregroundStyle(OrcaTheme.muted) }
+        }.padding(.horizontal, 20).padding(.vertical, 4)
             .background(OrcaTheme.paper, ignoresSafeAreaEdges: [])
     }
+    private func restoreImportanceFocus() {
+        guard !model.isLoading, let thread = importanceOrigin else { return }
+        importanceOrigin = nil
+        guard !model.messages.contains(where: { $0.threadId == thread }) else { return }
+        mailFocus = model.messages.first.map { .row($0.id) } ?? .filter("all")
+    }
+    private func loadCurrent(event: InboxViewModel.PrimaryMailEvent = .refresh) async {
+        await model.loadPrimaryMail(state: state, mailboxView: mailboxes.selectedID, event: event)
+    }
+    private func filter(_ title: String, id: String) -> some View {
+        Button { model.clearPrimaryMailSearch(); mailboxes.selectedID = id; Task { await loadCurrent() } } label: {
+            HStack(spacing: 6) {
+                if mailboxes.selectedID == id { Image(systemName: "checkmark").accessibilityHidden(true) }
+                Text(title).fixedSize(horizontal: false, vertical: true)
+            }.font(.subheadline.weight(.semibold)).foregroundStyle(OrcaTheme.ink)
+                .frame(maxWidth: .infinity, minHeight: 44).padding(.horizontal, 8)
+                .background(mailboxes.selectedID == id ? OrcaTheme.selected : OrcaTheme.surface, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(OrcaTheme.border))
+        }.buttonStyle(.plain).accessibilityAddTraits(mailboxes.selectedID == id ? [.isSelected] : [])
+            .accessibilityIdentifier("mail.filter." + id)
+            .accessibilityFocused($mailFocus, equals: .filter(id))
+
+    }
+
 }
 
 struct MessageRow: View {
@@ -210,21 +265,18 @@ struct MessageRow: View {
             ContactGlyph(contact: message.from)
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(message.from.name ?? message.from.email).font(OrcaTheme.ui(12, weight: message.unread ? .semibold : .regular)).foregroundStyle(OrcaTheme.ink).lineLimit(1)
+                    Text(message.from.name ?? message.from.email).font(.subheadline.weight(message.unread ? .semibold : .regular)).foregroundStyle(OrcaTheme.ink).lineLimit(2)
                     Spacer(minLength: 8)
                     Text(MailDate.compact(message.receivedAt)).font(.system(size: 10, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     if message.unread { Capsule().fill(OrcaTheme.accent).frame(width: 3, height: 14).accessibilityLabel("Unread") }
-                    Text(message.subject.isEmpty ? "(No subject)" : message.subject).font(OrcaTheme.ui(15, weight: message.unread ? .semibold : .regular)).foregroundStyle(OrcaTheme.ink).lineLimit(2)
+                    Text(message.subject.isEmpty ? "(No subject)" : message.subject).font(.body.weight(message.unread ? .semibold : .regular)).foregroundStyle(OrcaTheme.ink).lineLimit(2)
                 }
-                Text(message.attentionBehavior.capitalized)
-                    .font(OrcaTheme.ui(10, weight: .medium)).foregroundStyle(OrcaTheme.muted)
-                    .accessibilityLabel("Attention: " + message.attentionBehavior.capitalized)
-                Text(MailPreview.decode(message.snippet)).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted).lineSpacing(3).lineLimit(2)
-                if let score = message.humanSignal {
-                    Label("Human signal \(score)/10", systemImage: "person.wave.2").font(OrcaTheme.ui(10)).foregroundStyle(OrcaTheme.muted).padding(.top, 2)
-                }
+                Text(MailPreview.decode(message.snippet)).font(.subheadline).foregroundStyle(OrcaTheme.muted).lineSpacing(3).lineLimit(2)
+                Text(message.importance?.effective.title ?? "Importance unavailable")
+                    .font(.caption).foregroundStyle(OrcaTheme.muted)
+
             }
         }.accessibilityElement(children: .combine)
     }
@@ -248,16 +300,6 @@ struct ContactGlyph: View {
     }
 }
 
-private struct MailboxSearch: ViewModifier {
-    var enabled: Bool
-    @Binding var text: String
-    @ViewBuilder func body(content: Content) -> some View {
-        if enabled { content.searchable(text: $text, prompt: "Search mail") }
-        else { content }
-    }
-}
-
-
 enum MailPreview {
     static func day(_ value: String, calendar: Calendar = .current) -> Date? {
         MailDate.parse(value).map { calendar.startOfDay(for: $0) }
@@ -275,4 +317,3 @@ enum MailPreview {
         return result
     }
 }
-

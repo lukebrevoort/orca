@@ -1,0 +1,89 @@
+{
+  "originalCopyCount": 14,
+  "files": [
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/bash-syntax.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/bash-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/checkpoint-tests.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/checkpoint-tests.log",
+      "bytes": 1733,
+      "sha256": "31818e29064a4e5f6d816edee0203e9193c84175317fe187e4bbbde482a9d6a8"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/manifest.json",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/manifest.json",
+      "bytes": 1842090,
+      "sha256": "0250a426b136e706eccfc1f952a495e313826b8689f8a5574b68a8f5c79cc60e"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/phase-tests.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/phase-tests.log",
+      "bytes": 1779,
+      "sha256": "6bce7474dc3058e4913c6c5a924a0ec315619fa97db78d888dc8735e98048bce"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/runner-lifecycle.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/runner-lifecycle.log",
+      "bytes": 11391,
+      "sha256": "b113502fd5c60292ec3989788061bf29ff03337166569a7737b05a67c490b820"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/sanitizer-tests.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/sanitizer-tests.log",
+      "bytes": 4258,
+      "sha256": "694f1571995d3d1513dce9951f433fb83807cdc667503818b0c3d55fa68f4340"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/shard-tests.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/shard-tests.log",
+      "bytes": 1202,
+      "sha256": "b9b02c9d9d97b25d770d1b6fbb1aea89376e3d134ead6aad577898cf51f0df6a"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01/zsh-syntax.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/zsh-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-01.wrapper.log",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/wrapper.log",
+      "bytes": 4256,
+      "sha256": "14c822c45eb40d66d9be051f73bf7273706d7d65175680eab377df2f430ef65a"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-1be7086f-gate.py",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/gate/executed-driver.py",
+      "bytes": 6859,
+      "sha256": "a6f520155eb67b01f6e93cf8e0cbd5b4b4200a588bec4f13970d1e330e036115"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-review-1be.md",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/review.md",
+      "bytes": 12136,
+      "sha256": "f6abb5b8a7004e270ca2f2d96f9e3ae8b7e4bfbbfb5206389ac3361c1e4707a3"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-candidate-1be7086f.patch",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/preparation/source.patch",
+      "bytes": 45723,
+      "sha256": "48f7e096fc373ff918d8f3d14e56f49664923f66a53b5bfd787c2bd4b8de2a22"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-candidate-1be7086f-review-plan.md",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/preparation/review-plan.md",
+      "bytes": 4089,
+      "sha256": "3e83384eef007f0cf2f40b2d36b2a3a3e10242a203eda96c4ddccd9b62c12ec4"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-shard-candidate-1be7086f.json",
+      "retained": "docs/verification/bre-457/mailbox-shard-gate-1be7086f/preparation/source-inventory.json",
+      "bytes": 15191,
+      "sha256": "492ef67b395ffe3bb5b9b450bde85a042d08be08e0db7f7994f143e3644de5ed"
+    }
+  ]
+}

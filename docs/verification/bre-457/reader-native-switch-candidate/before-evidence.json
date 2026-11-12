@@ -1,0 +1,17 @@
+{
+  "scope": "exact prior724 external before-evidence only, no candidate execution",
+  "files": [
+    {
+      "source": "/tmp/bre457-reading-724-triage.md",
+      "retained": "docs/verification/bre-457/reader-native-switch-candidate/bre457-reading-724-triage.md",
+      "bytes": 10494,
+      "sha256": "f3d09ee8234f901e538794166eb274ec0b14a5faf6a4b44af8213c4c05b2fbd1"
+    },
+    {
+      "source": "/tmp/bre457-reading-724-hashes.json",
+      "retained": "docs/verification/bre-457/reader-native-switch-candidate/bre457-reading-724-hashes.json",
+      "bytes": 15808,
+      "sha256": "58caaa12f44db8424e8eeae1fff2028aaeea8449ef491fe84df1f6f7a59cb677"
+    }
+  ]
+}

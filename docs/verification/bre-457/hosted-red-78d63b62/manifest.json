@@ -1,0 +1,53 @@
+{
+  "testedSHA": "78d63b628b2694b946106c3bc30d415a3677e023",
+  "eventSHA": "33e312e43e00681a955b7af466316b3bd32dcf57",
+  "run": 43024332168,
+  "currentFailuresNotInherited": true,
+  "artifacts": {
+    "reading": {
+      "job": 130535079198,
+      "zipSHA256VerifiedByRoot": "c713a606717d23271f925bf7dcc99f275eb5666097cbe30002083182b740dce4",
+      "summaryCounts": {
+        "passedTests": 178,
+        "failedTests": 9,
+        "skippedTests": 5,
+        "totalTestCount": 192
+      },
+      "failureIDs": [
+        "NativeViewEditorRecoveryTests/testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView()",
+        "InboxRecoveryTests/testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails()",
+        "InboxRecoveryTests/testUnrelatedPaginationFailuresKeepCursorForManualRetry()",
+        "OrcaUITests/test04StyledHTMLUsesReadableCanvas()",
+        "OrcaUITests/test07ConversationOpensAtLatestMessage()",
+        "OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps()",
+        "ReaderUITests/testEarlierMessagesRemainReadableAtAccessibilitySize()",
+        "ReaderUITests/testHTMLAtAccessibilityTypeSize()",
+        "ReaderUITests/testLongHTMLScrollBackAndRepeatedOpen()"
+      ],
+      "checksLogSHA256": "25cbc769fa117696f1db568998f751473b3e14bf2eafd7e798fb4837dbdc2afd",
+      "fixtureLogSHA256": "9e87f969ead293ad1513e382893221aaa68c13d7c5f6758bff82c42d8c5767a6",
+      "rawXCResultUploaded": false
+    },
+    "images": {
+      "job": 130535079597,
+      "zipSHA256VerifiedByRoot": "cd97c643aa735ab1270819d8c14be4b55a16a571ae29cf1183c3f9e8584427f5",
+      "summaryCounts": {
+        "passedTests": 4,
+        "failedTests": 1,
+        "skippedTests": 0,
+        "totalTestCount": 5
+      },
+      "failureIDs": [
+        "ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading()"
+      ],
+      "checksLogSHA256": "15c4a0fa9f1ac29ec7e34252c618b93ce2603ef0a64e94339ce3ba1e3d7d784e",
+      "fixtureLogSHA256": "9bb62e6e04bb4f1d8de02b40a65397e19594dcf177ae5f3b473e15b26cc5695e",
+      "rawXCResultUploaded": false
+    }
+  },
+  "sourceFixesNotYetExecuted": true,
+  "inspectedPNG": {
+    "reader-inbox-before-open-inspected.png": "Visible1:11 Inbox/HTML row partly clipped at top after swipes; contextual association with LongHTML explicit before-open attachment, exporter discarded attachment-name mapping; not an HTML-body render failure",
+    "images": "All6 exported PNGs visually inspected; they show other image/overflow scenarios at1:08/1:10, none uniquely maps to1:09 missing-capability failure. No failed-state screenshot or hierarchy payload exported."
+  }
+}

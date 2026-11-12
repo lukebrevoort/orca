@@ -1,0 +1,18 @@
+{
+  "sha": "e5f06de92d1fa6a4338c05167ce7cae4cd458502",
+  "label": "status-candidate",
+  "swiftParseCount": 36,
+  "elapsed": 11.496624791994691,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 1,
+      "elapsed": 11.35497312498046
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 11.496610667003551
+    }
+  ]
+}

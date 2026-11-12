@@ -1,0 +1,100 @@
+{
+  "executedSHA": "461edfd9bd28469c157961c4dbb0ef6ae973694f",
+  "endSHA": "461edfd9bd28469c157961c4dbb0ef6ae973694f",
+  "identityUnchanged": true,
+  "compileExit": 0,
+  "runtimeExit": 1,
+  "grammarExit": 0,
+  "grammarFiles": 37,
+  "grammarLogBytes": 0,
+  "elapsedSeconds": 20.825580500008073,
+  "caseGroups": {
+    "all": {
+      "total": 267,
+      "pass": 264,
+      "fail": 3
+    },
+    "prior": {
+      "total": 223,
+      "pass": 223,
+      "fail": 0
+    },
+    "projection": {
+      "total": 23,
+      "pass": 21,
+      "fail": 2
+    },
+    "actualAPI": {
+      "total": 21,
+      "pass": 20,
+      "fail": 1
+    }
+  },
+  "failures": [
+    {
+      "case": "NAV-A-named-focus-preserved",
+      "pass": false,
+      "detail": "all active named Spaces must survive; old projection excludes this actual legacy Focus ID"
+    },
+    {
+      "case": "NAV-A-named-inbox-preserved",
+      "pass": false,
+      "detail": "user-owned fallback name must survive in named Spaces; fixed utility label is not a substitute"
+    },
+    {
+      "case": "NAV-API-sender-substring-scope",
+      "pass": false,
+      "detail": "explicit All Mail literal sender name/address substring scope; not importance identity"
+    }
+  ],
+  "APIReadRequests": 13,
+  "APIReadRequestStatuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    404
+  ],
+  "independentSQLite": {
+    "membershipCount": 2,
+    "queryCount": 2,
+    "pinCount": 10
+  },
+  "DML": {
+    "fixtureSeedIncludingTriggers": 156,
+    "phases": {
+      "prior-journeys": {
+        "connections": 402,
+        "firstAuthConnectionDML": 0,
+        "laterRouteConnectionDML": 838
+      },
+      "navigation-bootstrap": {
+        "connections": 6,
+        "firstAuthConnectionDML": 0,
+        "laterRouteConnectionDML": 0
+      },
+      "navigation-reads": {
+        "connections": 26,
+        "firstAuthConnectionDML": 0,
+        "laterRouteConnectionDML": 0
+      }
+    }
+  },
+  "providerClientCalls": 0,
+  "sealedBunFetchCalls": 0,
+  "CPUChildUserSeconds": 17.066474,
+  "CPUChildSystemSeconds": 3.334772,
+  "childMaxRSSRawDarwinBytes": 1156349952,
+  "ownedCleanupReceiptPresent": true,
+  "ownedProcessReadbackMatches": [],
+  "scope": "Foundation production projection/controller and real loopback HTTP/API/SQLite runtime; grammar only for Views/UItests; NOT AppleUI proof",
+  "senderControlDiagnosticLimit": "HTTP200 recorded, but returned sender rowIDs and decoded/raw sender query not retained; plus encoding is an unproven source hypothesis, no classification/fix/retry"
+}

@@ -1,0 +1,9 @@
+# ROOT diagnostic timing-fidelity correction
+
+Independent source review rejected d485 diagnostic placement: extra Show/Hide reads before the original jump wait, and snapshots before typing/form checks, could let a transient failure settle. ROOT corrected those three test-only observation boundaries itself. The original d485 grammar pass is retained as grammar-only evidence and does not clear that source finding.
+
+At b455ae183ae7073b3e2ceb1f63bf490ff0f2cfda, test37 starts the same5s wait immediately after the same tap, fixes its result, then reads Show/Hide and captures context. Attachment removal is asserted without full evidence before the next original form wait. The body helper returns immediately after its same tap; one loopback-gated teardown capture, registered before the tap and conditional on totalFailureCount>0, observes only after an original issue. No rescue delay, retry, coordinate change, second tap or weakened assertion is introduced. The first wide value remains fixed before its diagnostics.
+
+All36 Swift syntax parses passed at exact clean b455 with equal before/after hashes. This does not typecheck XCTest/SwiftUI or execute the failure teardown. Public snapshot/UI-focus/totalFailureCount declarations were inspected in the local iPhoneSimulator framework headers; public UI focus is not TextEditor keyboard focus. No Apple build/simulator,223controller or4runner repetition occurred. Product/API/Core/harness/runner trees remain bound to their existing f153/1748 proofs.
+
+Fresh independent [narrow timing recheck](recheck-approved-b455.md) is APPROVED: all three d485 timing blockers are closed. This remains source/evidence approval only. Actual new UI tests, failure diagnostics, From/P04 and Discard acceptance await a coherent pushed revision and hosted results. Current e061 failures remain uncorrected product observations, not declared fixed from diagnostic-only changes. No merge or release is authorized by these receipts.

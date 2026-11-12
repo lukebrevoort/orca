@@ -1,0 +1,18 @@
+{
+  "sha": "a4cf0372b5cb864be3cad4303bad118dba88db24",
+  "label": "compact-reader-final",
+  "swiftParseCount": 36,
+  "elapsed": 13.833720084017841,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 0,
+      "elapsed": 13.743361583998194
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 13.833708000020124
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "testedHead": "3c2ffe3f823896a42f4b0a8b8b43881bc3043f64",
+  "job": "https://github.com/lukebrevoort/orca/actions/runs/42986600346/job/130409145859",
+  "exitCode": 65,
+  "light": {
+    "passed": 165,
+    "failed": 1,
+    "skipped": 0
+  },
+  "dark": {
+    "passed": 7,
+    "failed": 1,
+    "skipped": 0
+  },
+  "failure": "Both test44 appearances fail at line25: missing Mail tab. Later assertions were not reached.",
+  "order": "XCTest executed test44 last despite the first selection argument.",
+  "screenshots": "Inspected selected Light Inbox and Dark Settings captures; exporter names are not uniquely mapped to test44. No candidate screenshot yet.",
+  "retainedRawArtifact": "/tmp/bre457-hosted-baseline-3c2ffe3f",
+  "files": {
+    "Orca-summary.json": "528e38a4db1c94fb76122db887b8869a67923122779683a21d0adfa2f8cd8f63",
+    "Orca-tests.json": "8cedf9e0dbaf3c9a97628a230ee6195d7489796a08dc67dad6761307d9a67fb7",
+    "OrcaDark-summary.json": "40663847c649a35f03d38f171214e8d385ff54841f4dee45ca46375d727abc19",
+    "OrcaDark-tests.json": "6ed9401801d437011a1ca361867049dcd5b893dc5afebe52d46d31204b43f38c",
+    "baseline-mail-light.png": "127c83300d7cc19c01bc3ac474bb0f8fe6354821206e8fe25a51b19d95d5cd26",
+    "baseline-settings-dark.png": "95603246154a59423887343b47c19a48c64bd3d76b78cfacb46c521fe1c31b93",
+    "failure-excerpt.log": "0ce0bafe5b0e3205096d2c5570ee3f0c28477b337b39a8d6e74a283b33c90854",
+    "identity.log": "20d4873d6433f73bdca65547552f4644fd8c9f8ab2bb969f6874dd8f1ecfec28",
+    "outcome.json": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107",
+    "root-manifest.json": "ca266199d0e87c0023317b1c15c977b0671b3f1d72f933ec2066c0fbb8f35719"
+  }
+}

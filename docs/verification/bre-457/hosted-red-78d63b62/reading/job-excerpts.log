@@ -1,0 +1,64 @@
+2026-11-11T13:12:19.8210110Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"e3f4a0ea-c509-4947-929a-668073aea71e","event":"response_ready","epoch_ms":1794402660836,"path":"/v1/destinations","status":200}
+2026-11-11T13:12:19.8212110Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"8cee3039-6144-471c-9937-5352cfedc2fa","event":"received","epoch_ms":1794402660856,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-11T13:12:19.8214160Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"8cee3039-6144-471c-9937-5352cfedc2fa","event":"response_ready","epoch_ms":1794402660940,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-11T13:12:19.8215810Z Sanitized failure context (bounded; full log remains in artifact):
+2026-11-11T13:12:19.8216690Z [fixture failure] 1463: Test Case '-[OrcaTests.InboxRecoveryTests testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails]' started.
+2026-11-11T13:12:19.8245070Z [fixture failure] 1464: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:2448: error: -[OrcaTests.InboxRecoveryTests testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails] : XCTAssertEqual failed: ("[]") is not equal to ("["saved"]")
+2026-11-11T13:12:19.8247450Z [fixture failure] 1465: Test Case '-[OrcaTests.InboxRecoveryTests testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails]' failed (0.666 seconds).
+2026-11-11T13:12:19.8252990Z [fixture failure] 1466: Test Case '-[OrcaTests.InboxRecoveryTests testInvalidMailboxCursorRestartsOnceAndReplacesStalePage]' started.
+2026-11-11T13:12:19.8254110Z [fixture failure] 1470: Test Case '-[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry]' started.
+2026-11-11T13:12:19.8259460Z [fixture failure] 1471: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:2464: error: -[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry] : XCTAssertEqual failed: ("3") is not equal to ("2")
+2026-11-11T13:12:19.8265070Z [fixture failure] 1472: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:2464: error: -[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry] : XCTAssertEqual failed: ("nil") is not equal to ("Optional("valid-cursor")")
+2026-11-11T13:12:19.8267930Z [fixture failure] 1473: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:2465: error: -[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry] : XCTAssertEqual failed: ("[]") is not equal to ("["saved"]")
+2026-11-11T13:12:19.8275360Z [fixture failure] 1474: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:2464: error: -[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry] : XCTAssertEqual failed: ("nil") is not equal to ("Optional("valid-cursor")")
+2026-11-11T13:12:19.8277240Z [fixture failure] 1475: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:2465: error: -[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry] : XCTAssertEqual failed: ("[]") is not equal to ("["saved"]")
+2026-11-11T13:12:19.8282320Z [fixture failure] 1476: Test Case '-[OrcaTests.InboxRecoveryTests testUnrelatedPaginationFailuresKeepCursorForManualRetry]' failed (0.069 seconds).
+2026-11-11T13:12:19.8285380Z [fixture failure] 1477: Test Suite 'InboxRecoveryTests' failed at 2026-11-11 13:04:57.304.
+2026-11-11T13:12:19.8286420Z [fixture failure] 1573: Test Case '-[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView]' started.
+2026-11-11T13:12:19.8295300Z [fixture failure] 1574: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3588: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("0") is not equal to ("1")
+2026-11-11T13:12:19.8302110Z [fixture failure] 1575: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3592: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("Original") is not equal to ("Newer preserved edit")
+2026-11-11T13:12:19.8304320Z [fixture failure] 1576: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3592: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertNotNil failed
+2026-11-11T13:12:19.8307550Z [fixture failure] 1577: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3596: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("0") is not equal to ("1")
+2026-11-11T13:12:19.8311980Z [fixture failure] 1578: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3596: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("0") is not equal to ("2")
+2026-11-11T13:12:19.8314370Z [fixture failure] 1579: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3596: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("0") is not equal to ("1")
+2026-11-11T13:12:19.8317490Z [fixture failure] 1580: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3597: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("Original") is not equal to ("Newer preserved edit")
+2026-11-11T13:12:19.8326690Z [fixture failure] 1581: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3597: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertTrue failed
+2026-11-11T13:12:19.8330710Z [fixture failure] 1582: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3599: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("nil") is not equal to ("Optional("created-view")")
+2026-11-11T13:12:19.8339010Z [fixture failure] 1583: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3599: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("0") is not equal to ("1")
+2026-11-11T13:12:19.8355600Z [fixture failure] 1584: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3599: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("Original") is not equal to ("Newer preserved edit")
+2026-11-11T13:12:19.8357950Z [fixture failure] 1585: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3600: error: -[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView] : XCTAssertEqual failed: ("0") is not equal to ("2") - Newer edits receive a separate update command only after the original Save resolves
+2026-11-11T13:12:19.8364160Z [fixture failure] 1586: Test Case '-[OrcaTests.NativeViewEditorRecoveryTests testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView]' failed (0.087 seconds).
+2026-11-11T13:12:19.8367750Z [fixture failure] Additional failure markers omitted: 485; inspect artifact.
+2026-11-11T13:12:19.8368660Z Synthetic checks exit code: 65; sanitized evidence: /Users/runner/work/_temp/orca-ci-evidence
+2026-11-11T13:12:19.8369320Z [fixture stage] phase=evidence_export_finished
+2026-11-11T13:12:27.0285890Z     t =    27.78s             Checking existence of `"inbox.message.ios-fixture-message-3" Any`
+2026-11-11T13:12:27.0288470Z     t =    27.99s             Find the "inbox.message.ios-fixture-message-3" Any
+2026-11-11T13:12:27.0290160Z     t =    28.11s             Swipe up "inbox.list" CollectionView
+2026-11-11T13:12:27.0330950Z     t =    34.32s                 Synthesize event
+2026-11-11T13:12:27.0332080Z     t =    34.85s                 Wait for com.orca.mail to idle
+2026-11-11T13:12:27.0333470Z     t =    35.67s Added attachment named 'reader-inbox-before-open'
+2026-11-11T13:12:27.0337330Z     t =    35.67s             Checking existence of `"inbox.message.ios-fixture-message-3" Any`
+2026-11-11T13:12:27.0338610Z     t =    35.76s             Find the "inbox.message.ios-fixture-message-3" Any
+2026-11-11T13:12:27.0339800Z /Users/runner/work/orca/orca/apps/ios/OrcaUITests/ReaderUITests.swift:516: error: -[OrcaUITests.ReaderUITests testLongHTMLScrollBackAndRepeatedOpen] : XCTAssertTrue failed
+2026-11-11T13:12:27.0340670Z     t =    35.89s Tear Down
+2026-11-11T13:12:27.0341400Z Test Case '-[OrcaUITests.ReaderUITests testLongHTMLScrollBackAndRepeatedOpen]' failed (36.190 seconds).
+2026-11-11T13:12:27.0342470Z Test Case '-[OrcaUITests.ReaderUITests testMissingImageCapabilityOffersRefreshWithoutLoading]' started.
+2026-11-11T13:12:27.0343320Z     t =     0.00s Start Test at 2026-11-11 13:11:24.105
+2026-11-11T13:12:27.0344260Z     t =     0.07s Set Up
+2026-11-11T13:12:27.0345660Z /Users/runner/work/orca/orca/apps/ios/OrcaUITests/ReaderUITests.swift:331: -[OrcaUITests.ReaderUITests testMissingImageCapabilityOffersRefreshWithoutLoading] : Test skipped - Requires the isolated image fixture
+2026-11-11T13:12:27.0346840Z     t =     0.08s Tear Down
+2026-11-11T13:12:27.0349280Z Test Case '-[OrcaUITests.ReaderUITests testMissingImageCapabilityOffersRefreshWithoutLoading]' skipped (0.183 seconds).
+2026-11-11T13:12:27.0350640Z Test Case '-[OrcaUITests.ReaderUITests testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages]' started.
+2026-11-11T13:12:27.0352690Z     t =     0.00s Start Test at 2026-11-11 13:11:24.289
+2026-11-11T13:12:27.0353430Z     t =     0.04s Set Up
+2026-11-11T13:12:27.0354550Z /Users/runner/work/orca/orca/apps/ios/OrcaUITests/ReaderUITests.swift:297: -[OrcaUITests.ReaderUITests testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages] : Test skipped - Requires the isolated image fixture
+2026-11-11T13:12:27.0418120Z 	/Users/runner/work/_temp/orca-ios-ci.zmJF0y/results/Orca.xcresult
+2026-11-11T13:12:27.0418650Z 
+2026-11-11T13:12:27.0419110Z ** TEST EXECUTE FAILED **
+2026-11-11T13:12:27.0419620Z 
+2026-11-11T13:12:27.0420260Z Testing started
+2026-11-11T13:12:27.1023980Z ##[error]Process completed with exit code 65.
+2026-11-11T13:12:27.2038770Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-11T13:12:27.2040030Z with:
+2026-11-11T13:12:27.2040490Z   name: native-reading-43024332168-1
+2026-11-11T13:12:27.2041420Z   path: /Users/runner/work/_temp/orca-ci-evidence/

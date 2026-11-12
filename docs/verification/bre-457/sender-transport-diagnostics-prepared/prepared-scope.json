@@ -1,0 +1,29 @@
+{
+  "status": "prepared-unexecuted",
+  "parentSHA": "266f569cd92e1045657980a7e96aa8b53f2b6858",
+  "expectedCompleteCaseCount": 275,
+  "priorBaselineCaseCount": 267,
+  "newDiagnosticAssertions": [
+    "NAV-DIAG-direct-encoded-plus-transport",
+    "NAV-DIAG-no-plus-transport-boundary",
+    "NAV-DIAG-space-transport-boundary",
+    "NAV-DIAG-literal-percent-transport-boundary",
+    "NAV-DIAG-independent-sender-sqlite-witness",
+    "NAV-DIAG-original-wire-evidence-complete",
+    "NAV-DIAG-direct-wire-preserves-plus",
+    "NAV-DIAG-final-read-boundaries"
+  ],
+  "plannedSealedGETCount": 17,
+  "originalReadWindowCountPreserved": 13,
+  "grammarCount": 37,
+  "sourceHashes": {
+    "apps/ios/Tools/ReviewRegressions/NavigationBaselineCases.swift": "83e4918ec83aa001e88c59692920deb2f86fd6dd2c74a31d18b491c3af4c64e9",
+    "apps/ios/Tools/ReviewRegressions/SenderTransportDiagnosticCases.swift": "5878d7e1693a9c5ba0a0b421226ad2caf5140c33ec1239e700d151b7579e2867",
+    "apps/ios/Tools/ReviewRegressions/navigation-fixture.ts": "1ade2723000f88867f2e8cbe7e1724b77bb255168328c6ea8bc69fc32391b0e4",
+    "apps/ios/Tools/ReviewRegressions/run.py": "b07fdf1bae4100d706cf5f534cc7af289d1ab3d6de85bad7f22a83cc51ea1716"
+  },
+  "productionDelta": [],
+  "priorNavigationCaseBytesAfterRemovingOnlyObserverAndSuffix": "ef781813d602bfe7f7c978df94c60f6733fd56c3ae684f6e8734b6fd5c09d6c8",
+  "priorAssertionsAndOriginalAliasStimulusPreserved": true,
+  "externalDriver": "ROOT-owned guard correction pending; untouched"
+}

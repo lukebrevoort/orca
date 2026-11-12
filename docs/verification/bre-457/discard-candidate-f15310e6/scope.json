@@ -1,0 +1,49 @@
+{
+  "testedSHA": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+  "expectedCases": 223,
+  "completed": 223,
+  "passed": 223,
+  "failed": 0,
+  "compileExit": 0,
+  "runtimeExit": 0,
+  "overallSeconds": 27.105836458998965,
+  "capSeconds": 50,
+  "swiftGrammarFiles": 36,
+  "providerCalls": 0,
+  "independentSQLiteDeletions": 2,
+  "independentSQLiteRetainedDrafts": 2,
+  "baseline": "c4265d7f11414ecfe3998e92d71c491495353f59",
+  "baselineDifference": "The same 164 non-discard cases retain assertions. Three historical unsafe generic integration controls now bind the same protection invariants to the new production discard-specific role. 56 new discard cases are added. c426 generic-control red is preserved, not relabeled.",
+  "proof": "Foundation production controller/store/APIClient with synthetic state/current-ownership callbacks; real local files; URLProtocol transport controls; actual loopback API/SQLite unmirrored draft create/delete; grammar/synthetic runner orchestration only for Apple UI.",
+  "notProven": [
+    "SwiftUI/XCTest compile or runtime",
+    "real Compose/AppState lifecycle/guard execution",
+    "new From/P04 geometry or metadata acceptance",
+    "standard/AX and light/dark UI/screenshots",
+    "mirrored provider deletion/rollback",
+    "cross-device revision CAS",
+    "full workspace gates or fresh source review approval"
+  ],
+  "ownedCleanup": {
+    "regressionProcessAbsent": true,
+    "fixtureProcessAbsent": true,
+    "gateProcessAbsent": true,
+    "runnerTemporaryDirectoryLifecycle": "run.py TemporaryDirectory; API fixture SIGTERM cleanup closes/removes owned SQLite scratch",
+    "processScanAfterTerminal": "No process command contained bre457-review-run-, ReviewRegressions/api-fixture.ts or /tmp/bre457-discard-candidate-gate.py"
+  },
+  "resourceOwnerPID": 80495,
+  "hashes": {
+    "allocated-driver.py": "c55e031413171c28dfa06f22912a3c01fd30c1b33fcb7f0ec3f893e204875cc7",
+    "controllers/api-evidence.json": "83242cef2ae4c560bfbb1d6ab89b62260853a4ac0265cf9a9afce02529bc0c70",
+    "controllers/api.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "controllers/compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "controllers/manifest.json": "2b1e66fbc1f143e80aa13762401072a63825ea13def62f6b580c2fdc6e111626",
+    "controllers/results.log": "f504542f414f851d6c9146f7134d81ac5b9b85f26c8b8edbb710a80e1989c3c2",
+    "controllers-api.log": "3e5c6b96d280e862fab875ea7621f4e0281bcec4e74a2f53e4f5472fb59bfc14",
+    "execution.json": "7368dc23148c6924695eff9e8a94191e66e5cf5d29a9a6649be29d7ef8c59838",
+    "resources.json": "da3043669b79770fae60bc7b2e77310db7a9093d623d31672e82b52e6811adf2",
+    "runner-lifecycle.log": "c76075da5ff39182377d998081decb316c13cacd349418b31506adf32562ed66",
+    "runner-syntax.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "swift-parse.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

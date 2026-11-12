@@ -1,0 +1,12 @@
+{
+  "sha": "30b5aabbb2a4acba1c77a7a98d2d401fa394de22",
+  "scope": "behavior-preserving production extraction and actual Foundation/API baseline, not Apple UI",
+  "swiftParseCount": 36,
+  "elapsed": 20.01069845899474,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "timeout": true
+    }
+  ]
+}

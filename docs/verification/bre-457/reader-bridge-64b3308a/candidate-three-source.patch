@@ -1,0 +1,230 @@
+diff --git a/apps/ios/Orca/Mail/ThreadView.swift b/apps/ios/Orca/Mail/ThreadView.swift
+index 3c2ebadb..57751b08 100644
+--- a/apps/ios/Orca/Mail/ThreadView.swift
++++ b/apps/ios/Orca/Mail/ThreadView.swift
+@@ -1,4 +1,5 @@
+ import SwiftUI
++import UIKit
+ 
+ struct ThreadView: View {
+     @Environment(\.dismiss) private var dismiss
+@@ -372,6 +373,64 @@ struct ThreadView: View {
+ struct ShareSheet: UIViewControllerRepresentable { let items: [Any]; func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }; func updateUIViewController(_ controller: UIActivityViewController, context: Context) {} }
+ 
+ 
++/// The native control, rather than a separate SwiftUI interaction proxy, owns
++/// the label, accessibility semantics and user valueChanged action.
++@MainActor
++struct NativeReaderWideSwitch: UIViewRepresentable {
++    @Binding var isOn: Bool
++    @Environment(\.isEnabled) private var isEnabled
++    static let label = "Keep tables and code wide"
++
++    init(isOn: Binding<Bool>) { _isOn = isOn }
++    func makeCoordinator() -> Coordinator { Coordinator(binding: $isOn) }
++    func makeUIView(context: Context) -> NativeReaderSwitchControl {
++        makeControl(coordinator: context.coordinator, enabled: isEnabled)
++    }
++    func updateUIView(_ control: NativeReaderSwitchControl, context: Context) {
++        updateControl(control, coordinator: context.coordinator, enabled: isEnabled)
++    }
++    func sizeThatFits(_ proposal: ProposedViewSize, uiView: NativeReaderSwitchControl, context: Context) -> CGSize? {
++        // SwiftUI owns the managed view's frame. The UISwitch subclass advertises
++        // its own minimum footprint; no outer AX proxy or frame mutation is used.
++        uiView.intrinsicContentSize
++    }
++
++    func makeControl(coordinator: Coordinator, enabled: Bool = true) -> NativeReaderSwitchControl {
++        let control = NativeReaderSwitchControl()
++        control.isAccessibilityElement = true
++        control.accessibilityLabel = Self.label
++        control.accessibilityIdentifier = Self.label
++        control.addTarget(coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
++        updateControl(control, coordinator: coordinator, enabled: enabled)
++        return control
++    }
++    func updateControl(_ control: NativeReaderSwitchControl, coordinator: Coordinator, enabled: Bool) {
++        coordinator.binding = $isOn
++        control.isEnabled = enabled
++        // UIKit programmatic reflection does not emit valueChanged. Avoid
++        // redundant reflection so a SwiftUI update cannot become a user action.
++        if control.isOn != isOn { control.setOn(isOn, animated: false) }
++    }
++
++    @MainActor
++    final class Coordinator: NSObject {
++        var binding: Binding<Bool>
++        init(binding: Binding<Bool>) { self.binding = binding }
++        @objc func valueChanged(_ control: UISwitch) {
++            guard control.isEnabled else { return }
++            binding.wrappedValue = control.isOn
++        }
++    }
++}
++
++@MainActor
++final class NativeReaderSwitchControl: UISwitch {
++    override var intrinsicContentSize: CGSize {
++        let native = super.intrinsicContentSize
++        return CGSize(width: max(64, native.width), height: max(44, native.height))
++    }
++}
++
+ private struct NativeReaderBody: View {
+     let html: String?
+     let text: String?
+@@ -406,15 +465,7 @@ private struct NativeReaderBody: View {
+                                 .fixedSize(horizontal: false, vertical: true)
+                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                 .accessibilityHidden(true)
+-                            // Keep the readable label separate from the native
+-                            // switch's own interaction frame.
+-                            Toggle("Keep tables and code wide", isOn: $wideContent)
+-                                .labelsHidden()
+-                                .toggleStyle(.switch)
+-                                .fixedSize()
+-                                .frame(minWidth: 64, minHeight: 44)
+-                                .contentShape(Rectangle())
+-                                .accessibilityLabel("Keep tables and code wide")
++                            NativeReaderWideSwitch(isOn: $wideContent)
+                         }.frame(minHeight: 44)
+                         if wideContent { Text("Scroll within this message to reach wide content. Ordinary prose keeps the reading width.").font(.caption) }
+                     } else if text != nil {
+diff --git a/apps/ios/OrcaTests/OrcaTests.swift b/apps/ios/OrcaTests/OrcaTests.swift
+index 6612cb7b..30dc70bc 100644
+--- a/apps/ios/OrcaTests/OrcaTests.swift
++++ b/apps/ios/OrcaTests/OrcaTests.swift
+@@ -1,4 +1,6 @@
+ import XCTest
++import SwiftUI
++import UIKit
+ import ImageIO
+ import UniformTypeIdentifiers
+ import AVFoundation
+@@ -3809,3 +3811,66 @@ extension NativeImportanceTests {
+         XCTAssertEqual(state.mailConnectionGeneration, original)
+     }
+ }
++
++/// Actual UIKit target/action and programmatic reflection; physical taps and
++/// SwiftUI-hosted accessibility geometry remain the hosted UI test contract.
++@MainActor
++final class NativeReaderWideSwitchTests: XCTestCase {
++    func testValueChangedDispatchWritesTheBindingOncePerNativeAction() {
++        var value = false
++        var writes = 0
++        let bridge = NativeReaderWideSwitch(isOn: Binding(get: { value }, set: { value = $0; writes += 1 }))
++        let coordinator = bridge.makeCoordinator()
++        let control = bridge.makeControl(coordinator: coordinator)
++        control.setOn(true, animated: false)
++        XCTAssertEqual(writes, 0, "Programmatic UISwitch state alone is not a user action")
++        control.sendActions(for: .valueChanged)
++        XCTAssertTrue(value)
++        XCTAssertEqual(writes, 1)
++        control.setOn(false, animated: false)
++        control.sendActions(for: .valueChanged)
++        XCTAssertFalse(value)
++        XCTAssertEqual(writes, 2)
++    }
++
++    func testProgrammaticReflectionAndRepeatedUpdatesDoNotPublishActions() {
++        var value = false
++        var writes = 0
++        let bridge = NativeReaderWideSwitch(isOn: Binding(get: { value }, set: { value = $0; writes += 1 }))
++        let coordinator = bridge.makeCoordinator()
++        let control = bridge.makeControl(coordinator: coordinator)
++        value = true
++        bridge.updateControl(control, coordinator: coordinator, enabled: true)
++        bridge.updateControl(control, coordinator: coordinator, enabled: true)
++        XCTAssertTrue(control.isOn)
++        XCTAssertEqual(writes, 0)
++        XCTAssertEqual(control.accessibilityLabel, "Keep tables and code wide")
++        XCTAssertEqual(control.accessibilityIdentifier, "Keep tables and code wide")
++        XCTAssertTrue(control.isAccessibilityElement)
++        XCTAssertGreaterThanOrEqual(control.intrinsicContentSize.height, 44)
++        XCTAssertGreaterThanOrEqual(control.intrinsicContentSize.width, 44)
++    }
++
++    func testUpdatedBindingOwnsTheActionAndDisabledReflectionCannotWrite() {
++        var original = false, current = true
++        var originalWrites = 0, currentWrites = 0
++        let first = NativeReaderWideSwitch(isOn: Binding(get: { original }, set: { original = $0; originalWrites += 1 }))
++        let coordinator = first.makeCoordinator()
++        let control = first.makeControl(coordinator: coordinator)
++        let replacement = NativeReaderWideSwitch(isOn: Binding(get: { current }, set: { current = $0; currentWrites += 1 }))
++        replacement.updateControl(control, coordinator: coordinator, enabled: true)
++        XCTAssertTrue(control.isOn)
++        control.setOn(false, animated: false)
++        control.sendActions(for: .valueChanged)
++        XCTAssertFalse(current)
++        XCTAssertEqual(currentWrites, 1)
++        XCTAssertEqual(originalWrites, 0)
++        replacement.updateControl(control, coordinator: coordinator, enabled: false)
++        XCTAssertFalse(control.isEnabled)
++        control.setOn(true, animated: false)
++        control.sendActions(for: .valueChanged)
++        XCTAssertEqual(currentWrites, 1)
++        XCTAssertFalse(current)
++        XCTAssertFalse(original)
++    }
++}
+diff --git a/apps/ios/OrcaUITests/OrcaUITests.swift b/apps/ios/OrcaUITests/OrcaUITests.swift
+index 734baa5c..85641a35 100644
+--- a/apps/ios/OrcaUITests/OrcaUITests.swift
++++ b/apps/ios/OrcaUITests/OrcaUITests.swift
+@@ -1984,7 +1984,7 @@ final class OrcaUITests: XCTestCase {
+         }
+         let app = try launchApp(htmlDiagnostics: true)
+         assertInboxLoaded(in: app)
+-        openConversation(subject: Fixture.htmlSubject, in: app)
++        openConversation(subject: Fixture.htmlSubject, in: app, boundedRowReveal: true)
+         let foreground = app.staticTexts["Explicit dark foreground stays readable."]
+         let background = app.staticTexts["Explicit pale background keeps readable inherited text."]
+         let foregroundExists = foreground.waitForExistence(timeout: 10)
+@@ -2610,7 +2610,35 @@ final class OrcaUITests: XCTestCase {
+         return true
+     }
+ 
+-    private func openConversation(subject: String, in app: XCUIApplication) {
++    /// Opt-in stimulus precondition for the HTML fixture. Native List can leave
++    /// an offscreen row unrealized even when its owned API result is present.
++    private func revealConversationRow(_ identifier: String, in app: XCUIApplication) -> Bool {
++        let list = app.descendants(matching: .any)["inbox.list"]
++        let matches = app.buttons.matching(identifier: identifier)
++        for attempt in 0...6 {
++            guard app.tabBars.buttons["Mail"].isSelected, app.navigationBars["Inbox"].exists, list.exists else {
++                XCTFail("HTML row reveal must remain in the owned Mail Inbox"); return false
++            }
++            var fixed = [CGRect]()
++            if app.tabBars.element.exists { fixed.append(app.tabBars.element.frame) }
++            if app.buttons["feedback.open"].exists { fixed.append(app.buttons["feedback.open"].frame) }
++            guard let viewport = ViewportGeometry.content(form: list.frame, application: app.frame,
++                navigation: app.navigationBars["Inbox"].frame, fixed: fixed) else {
++                XCTFail("HTML row reveal needs an unobscured content viewport"); return false
++            }
++            guard matches.count <= 1 else { XCTFail("HTML fixture must have one actual row Button"); return false }
++            let row = app.buttons[identifier]
++            if matches.count == 1, row.isHittable, row.frame.width >= 44, row.frame.height >= 44,
++               viewport.contains(row.frame) { return true }
++            guard attempt < 6 else { break }
++            let up = !row.exists || row.frame.maxY > viewport.maxY
++            guard revealInboxContent(in: app, up: up) else { break }
++        }
++        XCTFail("HTML fixture row must be unique and fully reachable after at most six content drags")
++        return false
++    }
++
++    private func openConversation(subject: String, in app: XCUIApplication, boundedRowReveal: Bool = false) {
+         let identifier: String
+         switch subject {
+         case Fixture.inboxSubject: identifier = "inbox.message.\(Fixture.inboxMessageID)"
+@@ -2618,7 +2646,8 @@ final class OrcaUITests: XCTestCase {
+         case Fixture.htmlSubject: identifier = "inbox.message.ios-fixture-message-3"
+         default: XCTFail("No fixture message identifier for \(subject)"); return
+         }
+-        let row = app.descendants(matching: .any)[identifier]
++        if boundedRowReveal, !revealConversationRow(identifier, in: app) { return }
++        let row = boundedRowReveal ? app.buttons[identifier] : app.descendants(matching: .any)[identifier]
+         XCTAssertTrue(row.waitForExistence(timeout: 10))
+         print("INBOX_NAVIGATION_TARGET row=\(identifier) type=\(row.elementType.rawValue) frame=\(row.frame) hittable=\(row.isHittable) enabled=\(row.isEnabled)")
+         let tapStarted = ProcessInfo.processInfo.systemUptime

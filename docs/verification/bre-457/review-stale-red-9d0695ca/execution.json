@@ -1,0 +1,21 @@
+{
+  "sha": "9d0695ca324e015a86e177ccddb64595c74ea02a",
+  "stages": [
+    {
+      "stage": "stale-baseline",
+      "exit": 1,
+      "elapsed": 5.659634124982404
+    },
+    {
+      "stage": "candidate",
+      "exit": 251,
+      "elapsed": 11.712822665984277
+    },
+    {
+      "stage": "lifecycle",
+      "exit": 1,
+      "elapsed": 15.009758500003954
+    }
+  ],
+  "elapsed": 15.02728962499532
+}

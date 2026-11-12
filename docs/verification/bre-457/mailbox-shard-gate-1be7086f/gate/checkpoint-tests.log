@@ -1,0 +1,16 @@
+test_actual_dark_only_phase_publishes_dark_checkpoint_and_selected_failure (__main__.CheckpointTests.test_actual_dark_only_phase_publishes_dark_checkpoint_and_selected_failure) ... ok
+test_checkpoint_is_incomplete_and_redacted (__main__.CheckpointTests.test_checkpoint_is_incomplete_and_redacted) ... ok
+test_dark_checkpoint_is_incomplete_redacted_and_has_no_light_bundle (__main__.CheckpointTests.test_dark_checkpoint_is_incomplete_redacted_and_has_no_light_bundle) ... ok
+test_dark_secret_attachment_is_never_published (__main__.CheckpointTests.test_dark_secret_attachment_is_never_published) ... ok
+test_failed_final_export_preserves_checkpoint_without_pass_outcome (__main__.CheckpointTests.test_failed_final_export_preserves_checkpoint_without_pass_outcome) ... ok
+test_failed_final_export_preserves_dark_checkpoint_without_pass_outcome (__main__.CheckpointTests.test_failed_final_export_preserves_dark_checkpoint_without_pass_outcome) ... ok
+test_final_export_keeps_legacy_layout_and_actual_status (__main__.CheckpointTests.test_final_export_keeps_legacy_layout_and_actual_status) ... ok
+test_final_preserves_browser_reader_layout_and_scans_all_bytes (__main__.CheckpointTests.test_final_preserves_browser_reader_layout_and_scans_all_bytes) ... ok
+test_outer_kill_during_dark_keeps_light_checkpoint (__main__.CheckpointTests.test_outer_kill_during_dark_keeps_light_checkpoint) ... ok
+test_secret_image_is_never_published (__main__.CheckpointTests.test_secret_image_is_never_published) ... ok
+test_unknown_phase_is_rejected_without_publication (__main__.CheckpointTests.test_unknown_phase_is_rejected_without_publication) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 5.380s
+
+OK

@@ -1,0 +1,7 @@
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Orca/Core/NativeMailCatalog.swift:333:9: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+331 |     }
+332 |     static func hidden(destinations: [MailboxOption], views: [SavedMailboxView], enabledIDs: Set<String>, hiddenIDs: Set<String>, catalog: NativeMailCatalog?) -> [MailboxOption] {
+333 |         (enabledIDs.contains("focus") ? [] : [MailboxOption(id: "focus", name: "Inbox focus")])
+    |         `- error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+334 |         + destinations.filter { hiddenIDs.contains($0.id) }
+335 |         + (catalog?.collections.filter { hiddenIDs.contains($0.identity.selectionID) }.map { .init(id: $0.identity.selectionID, name: $0.name) } ?? [])
