@@ -1,0 +1,14 @@
+{
+  "oldBase": "a6a8567e81dab98d7ee50b6ec263d94266ac3009",
+  "oldDelivery": "bfd47277a07b834740cd01547a5864f170395b7e",
+  "newMain": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+  "testedIntegration": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+  "selectors": [
+    "apps/api",
+    "packages/shared"
+  ],
+  "byteEqual": true,
+  "patchBytes": 73390,
+  "sha256": "3fce22cb391293cf8e1ec3d41abfa170f508f6a73ee5155e476a654dceab0560",
+  "scope": "Relative feature patch only. Whole integrated execution inputs changed through API319 and were reverified in the actual new six-stage gate."
+}

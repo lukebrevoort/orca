@@ -1,0 +1,125 @@
+{
+  "testedSource": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+  "rawCopiesUnmodified": true,
+  "derivedReadableLog": {
+    "source": "raw/test.log",
+    "retained": "test-readable.txt",
+    "transform": "NUL escaped as literal \\u0000 and invalid UTF-8 bytes backslash-escaped; original bytes unchanged"
+  },
+  "files": [
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/build.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/build.log",
+      "sha256": "21d5fef6a15854da57bc7c303828d9c311447f7e39db2bfe708e4854adc50d59",
+      "bytes": 1698
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/demo-receipts.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/demo-receipts.jsonl",
+      "sha256": "9c29aeea10db34241f2b77f79b02119368c2470dd16050b4936b8579cd377beb",
+      "bytes": 431
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/demo-work.json",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/demo-work.json",
+      "sha256": "2065cf9ca70484cc19c37e9a558d09a3cf08dd1a1286a22984be8408eaf3a6b1",
+      "bytes": 11924
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/focused-receipts.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/focused-receipts.jsonl",
+      "sha256": "bcfaf863897e597adfea87575a77f9f9c32ae822f6627b96cdc1ff804851f449",
+      "bytes": 19004
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/focused-replay.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/focused-replay.log",
+      "sha256": "c41b00b3ec0adeafd5b81d1bfea258e94e507c611005eb4880ddfe72d4db6d92",
+      "bytes": 31424
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/full-test-receipts.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/full-test-receipts.jsonl",
+      "sha256": "1269419b2d115e4e4c8445b3ead76e1aa47fb7100adb3ed66f3c7f3d733d5135",
+      "bytes": 19005
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/http-work-replay.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/http-work-replay.log",
+      "sha256": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca",
+      "bytes": 438
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/launch-status-note.json",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/launch-status-note.json",
+      "sha256": "cf1c8d82fc32c73eccd3b3414c455f2d86afc72d3f404ef40667f3ed55d6d97c",
+      "bytes": 714
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/lint.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/lint.log",
+      "sha256": "73d436a302053edaef173b64aea5fa499e39f767b12dd4a70b0403d33ef2697a",
+      "bytes": 103
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/manifest.json",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/manifest.json",
+      "sha256": "77f6ffa1abc66ee13acb4491860d0e10e191ed18baeb652bdf7ae540163fcc72",
+      "bytes": 52384
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/node-executions.jsonl",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/node-executions.jsonl",
+      "sha256": "27b9361df75ffa1b8deaaaa0270a5ef7d8aff5fe387386f2171f4b561f390cda",
+      "bytes": 13752
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/node-observer.cjs",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/node-observer.cjs",
+      "sha256": "75614d5b430515cef580a54b786532d9dc5a26d3c03fa6259237d223e57c2d59",
+      "bytes": 897
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/test.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/test.log",
+      "sha256": "7f29c15fad2155677d888bd80f00ae6e34ccef9f36de3687ec23e3043bbfef50",
+      "bytes": 881754
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/typecheck.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/typecheck.log",
+      "sha256": "11fe5d0a8b14ef4ed9bb24e555a72166b125886859adb9dfce9f60bfc6ecea26",
+      "bytes": 118
+    },
+    {
+      "source": "/private/tmp/bre457-pin-query-final-main97-2ef7-run1.wrapper.log",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/wrapper.log",
+      "sha256": "9612c6fa8123051836407857c06c9409483e75c5ca53b53e4e201729999c9cda",
+      "bytes": 21418
+    },
+    {
+      "source": "/private/tmp/bre457-final-main97-2ef7.py",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/driver-executed.py",
+      "sha256": "579ff8db307c355ff873f93145e605071beded1f5972d3ebe942bb0ac8f957a2",
+      "bytes": 16679
+    },
+    {
+      "source": "/private/tmp/bre457-final-main97-2ef7-prep.json",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/driver-preparation.json",
+      "sha256": "adc79258850a53e5e7d9b70a7d63df94b07ed2b26ba6c3509b12fb45877c287d",
+      "bytes": 977
+    },
+    {
+      "source": "/private/tmp/bre457-final-main97-2ef7-runner-controls.json",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/driver-summary-controls.json",
+      "sha256": "52afdec0c9eaf02d28e94861e1dcdb3acf2ba77fb6860eadddae9767ca23a17c",
+      "bytes": 998
+    },
+    {
+      "source": "/private/tmp/bre457-api320-main97-integration.json",
+      "retained": "docs/verification/bre-457-pin-query/final-main97-2ef7/integration-before-runtime.json",
+      "sha256": "06762ac05eb23d4777668716b1a81d371cee99bbd049313801f3a9d0586b2b54",
+      "bytes": 585
+    }
+  ]
+}

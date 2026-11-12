@@ -1,0 +1,38 @@
+{
+  "driver": "/tmp/bre457-final-main97-2ef7.py",
+  "sha256": "579ff8db307c355ff873f93145e605071beded1f5972d3ebe942bb0ac8f957a2",
+  "execution": "NOT RUN; prepared only, ROOT queue allocation required",
+  "changes": "Pinned new normal-main merge; accept both observed Bun workspace prefixes; reject zero-test workspaces. Compiler/source/owned cleanup/focus78/demo guards retained.",
+  "offlineHistoricalFullSummaryParserChecks": [
+    {
+      "workspace": "@orca/api",
+      "pass": [
+        "1300"
+      ],
+      "fail": [
+        "0"
+      ]
+    },
+    {
+      "workspace": "@orca/shared",
+      "pass": [
+        "191"
+      ],
+      "fail": [
+        "0"
+      ]
+    },
+    {
+      "workspace": "@orca/web",
+      "pass": [
+        "869"
+      ],
+      "fail": [
+        "0"
+      ]
+    }
+  ],
+  "hardWorkCapSeconds": 400,
+  "allocationRequestSeconds": 450,
+  "expectedSeconds": "180\u2013300, not a performance claim; includes actual re-verification after base change"
+}

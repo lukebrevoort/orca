@@ -1,0 +1,39 @@
+{
+  "driverSha256": "579ff8db307c355ff873f93145e605071beded1f5972d3ebe942bb0ac8f957a2",
+  "syntaxAstValid": true,
+  "summaryGuardControls": [
+    {
+      "input": "@orca/api:test | 1300 pass\n@orca/api:test | 0 fail",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "input": "@orca/api test: 1300 pass\n@orca/api test: 0 fail",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "input": "Usage: bun run",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "input": "@orca/api:test | 0 pass\n@orca/api:test | 0 fail",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "input": "@orca/api:test | 1300 pass\n@orca/api:test | 1 fail",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "input": "@orca/api:test | 1300 pass",
+      "expected": false,
+      "actual": false
+    }
+  ],
+  "usageOnlyZeroRejected": true,
+  "RealFailurePreserved": true,
+  "scope": "Offline runner controls only; no workspace/API/build execution"
+}

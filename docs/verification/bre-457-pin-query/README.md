@@ -2,7 +2,28 @@
 
 ## Current verification index
 
-**Current tested source: `f232399bec5a73ec7159e443ac7746a8ee8313a9`.** Actual
+**Current integrated tested source: `2ef7fb452d644a08afc1dac0ef154ac632310c55`,
+base main `97d0484d8358b8bf9207eca3b4ecf05012a0bac3`.** ROOT normally merged
+new main/API319 into published bfd, verified the relative API/shared feature patch
+unchanged, then executed one fresh actual six-stage gate: lint/actual types/
+**2376 tests /12162 expect calls /zero failures**/build, focused78 and current
+HTTP/SQLite/work demo. Every stage has actual raw/checked0, real compiler proof,
+clean exact start/end and owned cleanup. The shell launch lacked explicit
+pipefail, so `tee`/pipeline0 is not pass evidence; the actual wrapper AFTER direct
+exit0, manifest and complete stage proofs establish this result.
+
+[Current integrated demo and scope](final-main97-2ef7/demo.md)
+· [verified summary](final-main97-2ef7/summary.json)
+· [unmodified full manifest](final-main97-2ef7/raw/manifest.json)
+· [unmodified launch-status note](final-main97-2ef7/raw/launch-status-note.json).
+The evidence-retention delivery is docs-only and must preserve all798 selected
+execution inputs exactly equal to tested2ef7. PR320's remote remains bfd until
+ROOT explicitly clears publication of this integrated checkpoint. Native/client,
+hosted/formal and combined all33 acceptance remain separate.
+
+### Prior published bfd / tested f232 checkpoint (historical)
+
+**Earlier tested source: `f232399bec5a73ec7159e443ac7746a8ee8313a9`.** Actual
 workspace lint/typecheck/**2360 tests / 12111 expect calls / zero failures**/build,
 focused78 and the current HTTP/SQLite/work demo passed cumulatively over **two
 serialized invocations of the same clean source**. The original full invocation

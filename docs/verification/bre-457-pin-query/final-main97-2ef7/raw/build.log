@@ -1,0 +1,23 @@
+@orca/api:build    | Done in 1.91s
+@orca/shared:build | Done in 824ms
+@orca/web:build    | vite v7.3.6 building client environment for production...
+@orca/web:build    | transforming...
+@orca/web:build    | ✓ 218 modules transformed.
+@orca/web:build    | rendering chunks...
+@orca/web:build    | computing gzip size...
+@orca/web:build    | dist/index.html                                1.93 kB │ gzip:   0.84 kB
+@orca/web:build    | dist/assets/organization-views-HiJWHDLt.css    4.69 kB │ gzip:   1.19 kB
+@orca/web:build    | dist/assets/feedback-corner-BMdEOPF1.css       4.74 kB │ gzip:   1.19 kB
+@orca/web:build    | dist/assets/index-CzCjivow.css               418.79 kB │ gzip:  63.41 kB
+@orca/web:build    | dist/assets/feedback-corner-CCmQhmjS.js       16.02 kB │ gzip:   6.12 kB
+@orca/web:build    | dist/assets/organization-views-CwAyf47S.js   124.32 kB │ gzip:  36.00 kB
+@orca/web:build    | dist/assets/react-vendor-CQc3Zyh3.js         192.36 kB │ gzip:  60.30 kB
+@orca/web:build    | dist/assets/mail-contracts-DoNo5SmT.js       217.37 kB │ gzip:  54.52 kB
+@orca/web:build    | 
+@orca/web:build    | (!) Some chunks are larger than 500 kB after minification. Consider:
+@orca/web:build    | - Using dynamic import() to code-split the application
+@orca/web:build    | - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+@orca/web:build    | - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+@orca/web:build    | dist/assets/index-D504E7DE.js                516.69 kB │ gzip: 148.54 kB
+@orca/web:build    | ✓ built in 1.70s
+@orca/web:build    | Done in 19.59s

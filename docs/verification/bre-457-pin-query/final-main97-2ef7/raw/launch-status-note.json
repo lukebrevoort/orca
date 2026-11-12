@@ -1,0 +1,8 @@
+{
+  "scope": "ROOT launch wrapper interpretation, not a product result",
+  "launchPipeline": "python3 heavy-wrapper driver ... 2>&1 | tee wrapper.log",
+  "pipefailExplicitlyEnabled": false,
+  "toolShellPipelineExitUsedAsPassEvidence": false,
+  "requiredFinalReadback": "Manifest must exist and parse; overallExit0; all six stages actual raw and checked exit0; actual compiler and nonzero test evidence; exact clean start/end SHA; wrapper after-resource event records actual direct driver exit0. A tee exit0 alone is never a pass.",
+  "policy": "Preserve this run and inspect authoritative child evidence; no restart or duplicate execution to repair shell reporting. Future pipelines explicitly enable pipefail."
+}

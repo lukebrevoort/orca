@@ -1,0 +1,473 @@
+{
+  "testedSource": "2ef7fb452d644a08afc1dac0ef154ac632310c55",
+  "testedTree": "59ce77ceb4a781e31cd4f4fab1d8eea9a3504dc3",
+  "currentMainBase": "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+  "kind": "ONE NEW actual integrated six-stage run; prior f232/bfd evidence stays historical",
+  "overallExit": 0,
+  "sourceCleanBeforeAfter": true,
+  "workspaceTests": [
+    {
+      "workspace": "@orca/api",
+      "passed": 1316,
+      "failed": 0,
+      "expectCalls": 5774,
+      "ran": 1316
+    },
+    {
+      "workspace": "@orca/shared",
+      "passed": 191,
+      "failed": 0,
+      "expectCalls": 240,
+      "ran": 191
+    },
+    {
+      "workspace": "@orca/web",
+      "passed": 869,
+      "failed": 0,
+      "expectCalls": 6148,
+      "ran": 869
+    }
+  ],
+  "testsPassed": 2376,
+  "testsFailed": 0,
+  "expectCalls": 12162,
+  "focusedTestsPassed": 78,
+  "stages": [
+    {
+      "name": "lint",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "lint"
+      ],
+      "rawExit": 0,
+      "exitCode": 0,
+      "seconds": 22.61145166697679,
+      "logSha256": "73d436a302053edaef173b64aea5fa499e39f767b12dd4a70b0403d33ef2697a",
+      "proofProblems": []
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "typecheck"
+      ],
+      "rawExit": 0,
+      "exitCode": 0,
+      "seconds": 19.717872167006135,
+      "logSha256": "11fe5d0a8b14ef4ed9bb24e555a72166b125886859adb9dfce9f60bfc6ecea26",
+      "proofProblems": []
+    },
+    {
+      "name": "test",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "test"
+      ],
+      "rawExit": 0,
+      "exitCode": 0,
+      "seconds": 239.00458966603037,
+      "logSha256": "7f29c15fad2155677d888bd80f00ae6e34ccef9f36de3687ec23e3043bbfef50",
+      "proofProblems": []
+    },
+    {
+      "name": "build",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "build"
+      ],
+      "rawExit": 0,
+      "exitCode": 0,
+      "seconds": 22.37058137502754,
+      "logSha256": "21d5fef6a15854da57bc7c303828d9c311447f7e39db2bfe708e4854adc50d59",
+      "proofProblems": []
+    },
+    {
+      "name": "focused-replay",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "test",
+        "apps/api/src/organization/collections-pins/query-results.test.ts",
+        "apps/api/src/mailbox/read.test.ts",
+        "packages/shared/src/organization-saved-query-results.test.ts",
+        "packages/shared/src/organization-collections-pins.test.ts"
+      ],
+      "rawExit": 0,
+      "exitCode": 0,
+      "seconds": 5.532417875016108,
+      "logSha256": "c41b00b3ec0adeafd5b81d1bfea258e94e507c611005eb4880ddfe72d4db6d92",
+      "proofProblems": []
+    },
+    {
+      "name": "http-work-replay",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "docs/verification/bre-457-pin-query/candidate-demo.ts",
+        "/private/tmp/bre457-pin-query-final-main97-2ef7-run1/demo-work.json"
+      ],
+      "rawExit": 0,
+      "exitCode": 0,
+      "seconds": 1.5577935419860296,
+      "logSha256": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca",
+      "proofProblems": []
+    }
+  ],
+  "wallSeconds": 311.4878001213074,
+  "bun": "1.3.14",
+  "node": "v24.22.1",
+  "compiler": {
+    "version": "5.9.3",
+    "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+    "sha256": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0",
+    "implementationSha256": "e8f349eabd48486bdb2bf9dc1a00c89d58297270c54b745838879e2859194419"
+  },
+  "wrapperAfter": {
+    "time": 1794438483.588156,
+    "stage": "after",
+    "ownerPid": 88605,
+    "childPid": 88610,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  56.1  94496 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "15488  41.1  75328 /Users/lbrevoort/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService",
+      "15229  34.0  84496 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.51/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      " 1046  33.4 434592 /Applications/Zen.app/Contents/MacOS/zen",
+      "  435  31.2  29728 /usr/libexec/airportd",
+      " 1105  22.9  99408 /Applications/Zen.app/Contents/MacOS/gpu-helper.app/Contents/MacOS/Zen GPU Helper"
+    ],
+    "memory": "System-wide memory free percentage: 37%"
+  },
+  "launchCaveat": {
+    "scope": "ROOT launch wrapper interpretation, not a product result",
+    "launchPipeline": "python3 heavy-wrapper driver ... 2>&1 | tee wrapper.log",
+    "pipefailExplicitlyEnabled": false,
+    "toolShellPipelineExitUsedAsPassEvidence": false,
+    "requiredFinalReadback": "Manifest must exist and parse; overallExit0; all six stages actual raw and checked exit0; actual compiler and nonzero test evidence; exact clean start/end SHA; wrapper after-resource event records actual direct driver exit0. A tee exit0 alone is never a pass.",
+    "policy": "Preserve this run and inspect authoritative child evidence; no restart or duplicate execution to repair shell reporting. Future pipelines explicitly enable pipefail."
+  },
+  "authoritativePassEvidence": [
+    "manifest overallExit0",
+    "six actual rawExit0 and checked exitCode0",
+    "actual pinned compiler and Vite execution proof",
+    "complete nonzero zero-fail workspace summaries",
+    "exact clean tested start/end",
+    "wrapper AFTER direct exitCode0"
+  ],
+  "http": [
+    {
+      "name": "notify-only",
+      "status": 200,
+      "ids": [
+        "notify"
+      ]
+    },
+    {
+      "name": "Unicode-cross-field-person",
+      "status": 200,
+      "ids": [
+        "person"
+      ]
+    },
+    {
+      "name": "foreign-account",
+      "status": 404,
+      "ids": []
+    }
+  ],
+  "work": [
+    {
+      "name": "dense",
+      "round": 0,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 10.974083000000064,
+      "rssBefore": 293355520,
+      "rssAfter": 293715968,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.082333000000062,
+        "countDurationMs": 3.291541999999936,
+        "pageDurationMs": 5.4543749999998,
+        "enrichmentDurationMs": 0.1414999999999509,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 0,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 15.092333999999937,
+      "rssBefore": 293355520,
+      "rssAfter": 293814272,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 11.724333999999999,
+        "countDurationMs": 3.4352910000000065,
+        "pageDurationMs": 7.730374999999867,
+        "enrichmentDurationMs": 0.1984580000000733,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 1,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 13.36262499999998,
+      "rssBefore": 293421056,
+      "rssAfter": 293584896,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 12.58833299999992,
+        "countDurationMs": 4.157791999999972,
+        "pageDurationMs": 8.106041000000005,
+        "enrichmentDurationMs": 0.1821669999999358,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "round": 1,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 10.385749999999916,
+      "rssBefore": 293191680,
+      "rssAfter": 293814272,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.635791000000154,
+        "countDurationMs": 3.0886249999998654,
+        "pageDurationMs": 6.24550000000022,
+        "enrichmentDurationMs": 0.14837499999998727,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "dense",
+      "round": 2,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 9.415291000000025,
+      "rssBefore": 293486592,
+      "rssAfter": 293863424,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 8.631875000000036,
+        "countDurationMs": 2.8800410000001193,
+        "pageDurationMs": 5.429249999999911,
+        "enrichmentDurationMs": 0.15608300000008057,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 8,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    },
+    {
+      "name": "sparse",
+      "round": 2,
+      "limit": 3,
+      "fixtureWorkRows": 330,
+      "milliseconds": 9.959957999999915,
+      "rssBefore": 293502976,
+      "rssAfter": 293994496,
+      "selectPreparations": 15,
+      "metric": {
+        "durationMs": 9.280708999999888,
+        "countDurationMs": 2.8696659999998246,
+        "pageDurationMs": 6.181833999999981,
+        "enrichmentDurationMs": 0.09762500000010732,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 3,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:5af90b62ec8d53945ef5b24800c149b6952f7f0e40cca799c1971445d0250127",
+        "savedQuery": {
+          "candidateRowsScanned": 104,
+          "candidateSelects": 3,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      }
+    }
+  ],
+  "providerCalls": {
+    "network": 0,
+    "sync": 0,
+    "transport": 0
+  },
+  "requestConnectionChanges": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "actualTransactionAndRenewalProof": [
+    {
+      "stage": "candidate",
+      "name": "auth-renewal-exception",
+      "authChanges": 1,
+      "domainChanges": 0,
+      "connectionCloseOrder": [
+        "domain",
+        "auth"
+      ]
+    },
+    {
+      "stage": "candidate",
+      "name": "actual-read-only-transaction",
+      "queryOnly": 1,
+      "changes": 0,
+      "metric": {
+        "durationMs": 3.141082999999526,
+        "countDurationMs": 0.7399580000001151,
+        "pageDurationMs": 2.211207999999715,
+        "enrichmentDurationMs": 0.06275000000005093,
+        "accountCount": 1,
+        "limit": 1,
+        "returnedMessages": 1,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 1,
+        "lookaheadRowsProjected": 0,
+        "labelAssociationRowsLoaded": 1,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 2,
+        "maxPageRowsBound": 2,
+        "revision": "mailbox-v2:b9609ea759f714d5c2ad8a3b61c84b0ed726f6564bc5e7b7c72d5baa39cb3f58",
+        "savedQuery": {
+          "candidateRowsScanned": 1,
+          "candidateSelects": 2,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 1
+        }
+      }
+    }
+  ],
+  "ownedTmpRemoved": true,
+  "limitations": [
+    "Synthetic loopback HTTP, not live mail/native acceptance",
+    "Worst-case streaming work is O(candidates); no database-work bound follows from the page limit",
+    "SELECT preparation count is not VM-step count; timings/RSS are noisy finite-run observations"
+  ],
+  "publication": "Integrated source and this evidence checkpoint remain UNPUSHED pending ROOT clearance"
+}
