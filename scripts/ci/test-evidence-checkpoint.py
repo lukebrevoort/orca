@@ -50,9 +50,9 @@ elif a[:3] == ['xcresulttool', 'export', 'attachments']:
                         MOCK_WORK=str(self.work), MOCK_SECRET=SECRET)
         self.env.pop('GITHUB_ACTIONS', None); self.env.pop('RUNNER_ENVIRONMENT', None)
 
-    def export(self, checkpoint=False):
+    def export(self, checkpoint=False, status=65):
         args = [sys.executable, str(EXPORTER), str(self.work), str(self.evidence),
-                str(self.connection), '65', '']
+                str(self.connection), str(status), '']
         if checkpoint: args.append('suite_light_finished')
         return subprocess.run(args, env=self.env, capture_output=True, text=True, timeout=8)
 
@@ -82,11 +82,35 @@ elif a[:3] == ['xcresulttool', 'export', 'attachments']:
         before = {p.name:p.read_bytes() for p in checkpoint.iterdir() if p.is_file()}
         (self.results/'OrcaDark.xcresult').mkdir()
         (self.work/'fail-dark-export').touch()
-        result = self.export()
+        source = (ROOT/'scripts/ci/fixture-check.sh').read_text()
+        cleanup = source.split('cleanup() {', 1)[1].split('\n}\n', 1)[0]
+        harness = self.root/'cleanup.bash'
+        harness.write_text('''set +e
+work=$MOCK_WORK
+evidence=$MOCK_EVIDENCE
+connection=$MOCK_CONNECTION
+fixture_pid=
+simulator=
+progress() { printf 'phase=%s\\n' "$1"; }
+cleanup() {''' + cleanup + '\n}\nfalse\ncleanup\n')
+        result = subprocess.run(['bash', str(harness)], cwd=ROOT,
+                                env=dict(self.env, MOCK_EVIDENCE=str(self.evidence), MOCK_CONNECTION=str(self.connection)),
+                                capture_output=True, text=True, timeout=8)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(before, {p.name:p.read_bytes() for p in checkpoint.iterdir() if p.is_file()})
         self.assertFalse((self.evidence/'outcome.json').exists())
         self.assert_private_bytes_absent()
+
+    def test_final_export_keeps_legacy_layout_and_actual_status(self):
+        self.assertEqual(self.export(checkpoint=True).returncode, 0)
+        for status in (0, 65):
+            result = self.export(status=status)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads((self.evidence/'outcome.json').read_text())['exitCode'], status)
+            self.assertTrue((self.evidence/'identity.log').is_file())
+            self.assertTrue((self.evidence/'Orca-summary.json').is_file())
+            self.assertTrue((self.evidence/'checkpoints/suite_light_finished/outcome.json').is_file())
+            self.assert_private_bytes_absent()
 
     def test_secret_image_is_never_published(self):
         (self.work/'inject-secret-image').touch()
