@@ -121,6 +121,24 @@ cleanup() {''' + cleanup + '\n}\nfalse\ncleanup\n')
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual([p for p in self.evidence.rglob('*') if p.is_file()], [])
 
+    def test_final_preserves_browser_reader_layout_and_scans_all_bytes(self):
+        browser = self.work/'browser'; browser.mkdir()
+        reader = self.work/'reader'; reader.mkdir()
+        for directory in (browser, reader):
+            (directory/'results.json').write_text(json.dumps({'synthetic': True, 'redact': SECRET}))
+            (directory/'private-connection.json').write_text(SECRET)
+            (directory/'frame.png').write_bytes(b'synthetic-safe-image-bytes')
+        (reader/'head-results.json').write_text('{"synthetic":true}')
+        result = self.export(status=0)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in ('browser-results.json', 'reader-results.json', 'reader-catchup-results.json'):
+            self.assertTrue(json.loads((self.evidence/name).read_text())['synthetic'])
+        for name in ('frame.png', 'reader-frame.png'):
+            self.assertEqual((self.evidence/'screenshots'/name).read_bytes(), b'synthetic-safe-image-bytes')
+        self.assertFalse(any(p.name == 'private-connection.json' for p in self.evidence.rglob('*')))
+        self.assertEqual(json.loads((self.evidence/'outcome.json').read_text())['exitCode'], 0)
+        self.assert_private_bytes_absent()
+
     def test_unknown_phase_is_rejected_without_publication(self):
         args = [sys.executable, str(EXPORTER), str(self.work), str(self.evidence),
                 str(self.connection), '65', '', '../unowned']
