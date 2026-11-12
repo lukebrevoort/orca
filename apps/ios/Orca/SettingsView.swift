@@ -25,7 +25,7 @@ struct SettingsView: View {
                     sectionContent
                     if let error = preferences.error { Text(error).foregroundStyle(OrcaTheme.danger) }
                     if preferences.uncertain { Button("Check current account choices") { Task { await preferences.checkCurrent(state: state) } } }
-                }.padding(20).accessibilityIdentifier("settings.root")
+                }.padding(20)
             }
             .safeAreaInset(edge: .bottom) {
                 if preferences.dirty || preferences.saving || preferences.status != nil {

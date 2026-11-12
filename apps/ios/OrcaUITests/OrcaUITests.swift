@@ -1407,6 +1407,25 @@ final class OrcaUITests: XCTestCase {
         waitForExpectations(timeout: 10)
     }
 
+    /// The permission Label actually exposes an image and a static-text node.
+    /// Collect both rather than resolving a multi-match query as one element.
+    private func composePermissionFooter(in app: XCUIApplication) -> (targets: [(String, XCUIElement)], count: Int, valid: Bool) {
+        let matches = app.descendants(matching: .any).matching(identifier: "compose.send-permission")
+        let count = matches.count
+        guard count == 0 || count == 2 else { return ([], count, false) }
+        let elements = matches.allElementsBoundByIndex
+        guard elements.count == count,
+              elements.allSatisfy({ $0.identifier == "compose.send-permission" }),
+              count == 0 || (elements.filter { $0.elementType == .image }.count == 1 &&
+                             elements.filter { $0.elementType == .staticText }.count == 1) else {
+            return ([], count, false)
+        }
+        let targets = elements.map { element in
+            (element.elementType == .image ? "permission-icon" : "permission-text", element)
+        }
+        return (targets, count, true)
+    }
+
     private func focusComposeBody(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() && !boundaryFailureCaptureRegistered {
             boundaryFailureCaptureRegistered = true
@@ -1425,9 +1444,22 @@ final class OrcaUITests: XCTestCase {
         if !originalFormFound { captureComposeBoundary(in: app, stage: "original-form-wait-failed", observed: ["original_10s_result": "false"]) }
         XCTAssertTrue(originalFormFound, file: file, line: line)
         for _ in 0..<12 {
-            let fixed = [status, app.descendants(matching: .any)["compose.send-permission"], app.buttons["compose.refresh-permission"],
+            let permission = composePermissionFooter(in: app)
+            guard permission.valid else {
+                XCTFail("Permission footer must expose only its expected image and text (matches: \(permission.count))", file: file, line: line)
+                return
+            }
+            let permissionFrames = permission.targets.map { $0.1.frame }
+            guard permissionFrames.allSatisfy({ rect in
+                !rect.isNull && !rect.isInfinite && !rect.isEmpty &&
+                [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+            }) else {
+                XCTFail("Permission footer needs finite, nonempty component bounds", file: file, line: line)
+                return
+            }
+            let fixed = [status, app.buttons["compose.refresh-permission"],
                          app.staticTexts["Account defaults could not be loaded. Your writing is kept; add a signature if needed."]]
-                .filter(\.exists).map(\.frame)
+                .filter(\.exists).map(\.frame) + permissionFrames
             guard let viewport = ViewportGeometry.content(form: form.frame, application: app.frame, navigation: app.navigationBars.firstMatch.frame, fixed: fixed) else { break }
             let visible = body.exists ? body.frame.intersection(viewport) : .null
             if boundaryDiagnostics && feedbackFixtureDiagnosticsAllowed() { print("[native-writing-area] viewport=\(viewport) intersection=\(visible)") }
@@ -2498,17 +2530,21 @@ final class OrcaUITests: XCTestCase {
 
     private func captureComposeBoundary(in app: XCUIApplication, stage: String, observed: [String: String] = [:]) {
         guard boundaryDiagnostics else { return }
+        let permission = composePermissionFooter(in: app)
+        var boundedObserved = observed
+        boundedObserved["permission_footer_count"] = String(permission.count)
+        boundedObserved["permission_footer_shape_valid"] = String(permission.valid)
         captureSyntheticBoundary(in: app, stage: stage, targets: [
             ("form", app.scrollViews["compose.form"]), ("body", messageBody(in: app)),
             ("navigation", app.navigationBars.firstMatch), ("inbox-nav", app.navigationBars["Inbox"]),
             ("drafts-nav", app.navigationBars["Drafts"]), ("footer-status", app.descendants(matching: .any)["compose.save-status"]),
-            ("permission-footer", app.descendants(matching: .any)["compose.send-permission"]), ("refresh-footer", app.buttons["compose.refresh-permission"]),
+            ("refresh-footer", app.buttons["compose.refresh-permission"]),
             ("defaults-footer", app.staticTexts["Account defaults could not be loaded. Your writing is kept; add a signature if needed."]),
             ("send", app.buttons["compose.send"]), ("done", app.buttons["compose.keyboard-done"]),
             ("keyboard", app.keyboards.firstMatch), ("feedback", app.buttons["feedback.open"]),
             ("removed-attachment", app.buttons["compose.attachment.remove.remove"]),
             ("retained-attachment", app.buttons["compose.attachment.remove.keep"])
-        ], observed: observed)
+        ] + permission.targets, observed: boundedObserved)
     }
 
     /// Read-only evidence for the explicitly configured loopback fixture.
