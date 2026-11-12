@@ -14,10 +14,10 @@ struct DraftsView: View {
                     else { ContentUnavailableView("No drafts", systemImage: "doc.text", description: Text("Anything you start writing will be saved immediately.")) }
                 } else {
                     List {
-                        if !localDrafts.isEmpty { Section { ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: localStatus(draft.deliveryState), account: state.accounts.first(where: { $0.id == draft.accountId })?.email ?? "Account unavailable", preview: draft.content.body.text, savedAt: draft.modifiedAt, attachmentCount: draft.content.attachments.count) }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } header: { DraftSectionHeader(title: "On this device", scope: "Protected local writing") } }
+                        if !localDrafts.isEmpty { Section { DraftSectionHeader(title: "On this device", scope: "Protected local writing").listRowBackground(OrcaTheme.paper); ForEach(localDrafts) { draft in NavigationLink(destination: ComposeView(localDraft: draft)) { DraftRow(subject: draft.content.subject, recipients: draft.content.to.map(\.email), status: localStatus(draft.deliveryState), account: state.accounts.first(where: { $0.id == draft.accountId })?.email ?? "Account unavailable", preview: draft.content.body.text, savedAt: draft.modifiedAt, attachmentCount: draft.content.attachments.count) }.accessibilityIdentifier("draft.\(draft.id.uuidString)") } } }
                         let localServerIDs = Set(localDrafts.compactMap(\.serverID))
                         let cloud = serverDrafts.filter { !localServerIDs.contains($0.id) }
-                        if !cloud.isEmpty { Section { ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: serverStatus(draft), account: state.accounts.first(where: { $0.id == draft.accountId })?.email ?? "Account unavailable", preview: draft.body.text, savedAt: MailDate.parse(draft.updatedAt), attachmentCount: draft.attachments.count) }.accessibilityIdentifier("draft.\(draft.id)") } } header: { DraftSectionHeader(title: "On server", scope: "Stored in Orca") } }
+                        if !cloud.isEmpty { Section { DraftSectionHeader(title: "On server", scope: "Stored in Orca").listRowBackground(OrcaTheme.paper); ForEach(cloud) { draft in NavigationLink(destination: ComposeView(serverDraft: draft)) { DraftRow(subject: draft.subject, recipients: draft.to.map(\.email), status: serverStatus(draft), account: state.accounts.first(where: { $0.id == draft.accountId })?.email ?? "Account unavailable", preview: draft.body.text, savedAt: MailDate.parse(draft.updatedAt), attachmentCount: draft.attachments.count) }.accessibilityIdentifier("draft.\(draft.id)") } } }
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -128,5 +128,9 @@ private struct DraftSectionHeader: View {
         }
         .textCase(nil)
         .padding(.top, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OrcaTheme.paper)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }

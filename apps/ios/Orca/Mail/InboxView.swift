@@ -12,6 +12,7 @@ struct InboxView: View {
     @AccessibilityFocusState private var mailFocus: MailFocus?
     @State private var importanceOrigin: String?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject var state: AppState; @StateObject private var model = InboxViewModel(); @State private var selected: InboxMessage?
     var body: some View {
         NavigationStack { VStack(spacing: 0) {
@@ -123,13 +124,6 @@ struct InboxView: View {
         .onSubmit(of: .search) { Task { await loadCurrent(event: .submit) } }
         .toolbar {
             ToolbarItem(placement: .principal) { OrcaWordmark().fixedSize() }
-            ToolbarItem(placement: .topBarLeading) {
-                if !model.resultSearch.isEmpty, let account = state.selectedAccount {
-                    Button("Save search") { viewEditor = .init(query: model.resultSearch, accountId: account.id) }
-                        .accessibilityHint("Save submitted search “\(model.resultSearch)”. Unsubmitted text is kept in Search.")
-                        .accessibilityIdentifier("search.save-view")
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink(destination: ComposeView()) {
                     Image(systemName: "square.and.pencil")
@@ -189,9 +183,23 @@ struct InboxView: View {
                 filter("All Mail", id: "all")
             }
             if !model.resultSearch.isEmpty {
-                Button { model.clearPrimaryMailSearch(); Task { await loadCurrent() } } label: {
-                    Text("Clear submitted search").frame(minHeight: 44).contentShape(Rectangle())
-                }.accessibilityIdentifier("mail.search.clear-submitted")
+                let layout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+                layout {
+                    Button { model.clearPrimaryMailSearch(); Task { await loadCurrent() } } label: {
+                        Text("Clear submitted search").fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: 44).contentShape(Rectangle())
+                    }.accessibilityIdentifier("mail.search.clear-submitted")
+                    if let account = state.selectedAccount {
+                        Button { viewEditor = .init(query: model.resultSearch, accountId: account.id) } label: {
+                            Text("Save search").fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        }
+                        .accessibilityHint("Save submitted search “\(model.resultSearch)”. Unsubmitted text is kept in Search.")
+                        .accessibilityIdentifier("search.save-view")
+                    }
+                }
             }
             if let account = state.selectedAccount {
                 Menu {

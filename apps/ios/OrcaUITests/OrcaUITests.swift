@@ -21,11 +21,29 @@ final class OrcaUITests: XCTestCase {
         boundaryFailureCaptureRegistered = false
     }
 
+    func testDraftRowGeometryPreservesFullFitAndOversizedNativeTarget() {
+        let viewport = CGRect(x: 0, y: 124, width: 402, height: 570.3)
+        let measured = ViewportGeometry.draftViewport(list: CGRect(x: 0, y: 0, width: 402, height: 785.3), application: CGRect(x: 0, y: 0, width: 402, height: 874), navigation: CGRect(x: 0, y: 62, width: 402, height: 54), fixed: [CGRect(x: 0, y: 702.3, width: 402, height: 83)])
+        XCTAssertEqual(measured?.minY, 124)
+        if let measured { XCTAssertEqual(measured.height, 570.3, accuracy: 0.01) }
+        XCTAssertNil(ViewportGeometry.draftRowArea(row: CGRect(x: 0, y: 0, width: 402, height: 615), viewport: CGRect(x: 0, y: 280, width: 402, height: 43)))
+        XCTAssertNotNil(ViewportGeometry.draftRowArea(row: CGRect(x: 0, y: 124, width: 402, height: 568.7), viewport: viewport))
+        XCTAssertNil(ViewportGeometry.draftRowArea(row: CGRect(x: 0, y: 14.7, width: 402, height: 568.7), viewport: viewport))
+        XCTAssertNotNil(ViewportGeometry.draftRowArea(row: CGRect(x: 0, y: 109.3, width: 402, height: 615), viewport: viewport))
+        XCTAssertNil(ViewportGeometry.draftRowArea(row: CGRect(x: 0, y: 690, width: 402, height: 615), viewport: viewport))
+        XCTAssertNil(ViewportGeometry.draftRowArea(row: CGRect(x: 0, y: 124, width: 43, height: 700), viewport: viewport))
+        XCTAssertNil(ViewportGeometry.draftRowArea(row: CGRect(x: -1, y: 124, width: 402, height: 700), viewport: viewport))
+        XCTAssertNil(ViewportGeometry.draftRowArea(row: .null, viewport: viewport))
+        let pan = ViewportGeometry.draftAlignmentPan(row: CGRect(x: 0, y: 14.7, width: 402, height: 568.7), viewport: viewport)
+        XCTAssertNotNil(pan)
+        if let pan { XCTAssertTrue(viewport.contains(pan.start)); XCTAssertTrue(viewport.contains(pan.end)); XCTAssertEqual(pan.end.y - pan.start.y, 109.3, accuracy: 0.01) }
+    }
+
     func test54NamedSpacesCollectionsAndQueryPinsBrowseHideRestoreAndReturnToSource() throws {
         for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
             let fixture = try createNativeBrowseFixture()
             let providerBefore = try composeFixtureRequest("/__fixture/compose/state")
-            let app = try launchApp(contentSize: size); assertInboxLoaded(in: app)
+            let app = try launchApp(contentSize: size); assertInboxLoaded(in: app, boundedListReveal: size.contains("Accessibility"))
             chooseMailboxID(try fixtureMailboxSelection("Focus"), title: "Focus", in: app)
             XCTAssertTrue(app.buttons["mail.filter.all"].isHittable, "Permanent All Mail remains one action away from the actual named Focus Space")
             chooseMailboxID(fixture.collectionSelection, title: fixture.collectionName, in: app)
@@ -67,7 +85,16 @@ final class OrcaUITests: XCTestCase {
             XCTAssertTrue(app.collectionViews["catalog.results"].waitForExistence(timeout: 10))
             search(for: "Friday", in: app)
             let accepted = app.buttons["inbox.message.ios-fixture-message-2"]
-            XCTAssertTrue(accepted.waitForExistence(timeout: 10)); XCTAssertFalse(app.collectionViews["catalog.results"].exists)
+            var completed = false
+            var firstAccepted: Bool?
+            addTeardownBlock {
+                guard !completed, (self.testRun?.totalFailureCount ?? 0) > 0 else { return }
+                self.captureUnclassifiedBoundary(in: app, stage: "search-55-after-original-failure",
+                    rowID: "inbox.message.ios-fixture-message-2",
+                    observed: ["first_accepted": firstAccepted.map { String($0) } ?? "unobserved"])
+            }
+            let acceptedResult = accepted.waitForExistence(timeout: 10); firstAccepted = acceptedResult
+            XCTAssertTrue(acceptedResult); XCTAssertFalse(app.collectionViews["catalog.results"].exists)
             let field = app.searchFields["Search All Mail"]
             field.tap(); field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (field.value as? String ?? "").count)); field.typeText("Unsubmitted native B")
             XCTAssertEqual(field.value as? String, "Unsubmitted native B")
@@ -78,7 +105,7 @@ final class OrcaUITests: XCTestCase {
             attachScreenshot(named: "bre457-catalog-search-owned-A-B-" + selection.components(separatedBy: ":")[0])
             app.buttons["mail.search.clear-submitted"].tap()
             XCTAssertTrue(app.collectionViews["catalog.results"].waitForExistence(timeout: 10), "Explicit clear restores the real source, not an invented inbox lens")
-            app.terminate()
+            app.terminate(); completed = true
         }
     }
 
@@ -174,14 +201,23 @@ final class OrcaUITests: XCTestCase {
         let app = try launchApp(); assertInboxLoaded(in: app)
         search(for: "Jordan", in: app)
         let accepted = app.buttons["inbox.message.\(Fixture.searchResultMessageID)"]
-        XCTAssertTrue(accepted.waitForExistence(timeout: 10))
+        var firstAccepted: Bool?, firstRetained: Bool?
+        addTeardownBlock {
+            guard (self.testRun?.totalFailureCount ?? 0) > 0 else { return }
+            self.captureUnclassifiedBoundary(in: app, stage: "search-50-after-original-failure",
+                rowID: "inbox.message." + Fixture.searchResultMessageID,
+                observed: ["first_accepted": firstAccepted.map { String($0) } ?? "unobserved", "first_retained": firstRetained.map { String($0) } ?? "unobserved"])
+        }
+        let acceptedResult = accepted.waitForExistence(timeout: 10); firstAccepted = acceptedResult
+        XCTAssertTrue(acceptedResult)
         let field = app.searchFields["Search All Mail"]
         field.tap()
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (field.value as? String ?? "").count))
         let unfinished = "Unsubmitted native query"
         field.typeText(unfinished)
         XCTAssertEqual(field.value as? String, unfinished)
-        XCTAssertTrue(accepted.exists, "Editing B must retain accepted A before any Submit")
+        let retainedResult = accepted.exists; firstRetained = retainedResult
+        XCTAssertTrue(retainedResult, "Editing B must retain accepted A before any Submit")
         attachScreenshot(named: "bre457-primary-unsubmitted-before-reader")
         accepted.tap()
         XCTAssertTrue(app.navigationBars["Conversation"].waitForExistence(timeout: 10))
@@ -220,7 +256,14 @@ final class OrcaUITests: XCTestCase {
             let refine = app.switches["view-editor.refine-subject"]
             XCTAssertTrue(refine.waitForExistence(timeout: 10)); refine.tap()
             let subject = app.textFields["view-editor.subject"]
-            XCTAssertTrue(subject.exists); subject.tap(); subject.typeText("A quieter")
+            let firstSubjectExists = subject.exists
+            var completed = false
+            addTeardownBlock {
+                guard !completed, (self.testRun?.totalFailureCount ?? 0) > 0 else { return }
+                self.captureUnclassifiedBoundary(in: app, stage: "sender-51-after-original-failure",
+                    rowID: "view-editor.subject", observed: ["first_subject_exists": String(firstSubjectExists)])
+            }
+            XCTAssertTrue(firstSubjectExists); subject.tap(); subject.typeText("A quieter")
             let preview = app.buttons["view-editor.preview"]
             for _ in 0..<8 { if preview.isHittable { break }; app.swipeUp() }
             XCTAssertTrue(preview.isHittable); preview.tap()
@@ -244,7 +287,7 @@ final class OrcaUITests: XCTestCase {
             XCTAssertEqual(providerAfter["sendRequests"] as? Int, providerBefore["sendRequests"] as? Int)
             XCTAssertEqual(providerAfter["deliveries"] as? Int, providerBefore["deliveries"] as? Int)
             attachScreenshot(named: "bre457-native-sender-refined-result-\(size)")
-            app.terminate()
+            app.terminate(); completed = true
         }
     }
 
@@ -466,7 +509,7 @@ final class OrcaUITests: XCTestCase {
             let id = try XCTUnwrap(draft["id"] as? String)
             let before = try composeFixtureRequest("__fixture/compose/state")
             let app = try launchApp(contentSize: size, shortLayout: true)
-            assertInboxLoaded(in: app)
+            assertInboxLoaded(in: app, boundedListReveal: size.contains("Accessibility"))
             openConversation(subject: Fixture.inboxSubject, in: app)
             assertFeedbackClear(of: [app.buttons["Reply"], app.buttons["Reply all"], app.buttons["Forward"]],
                                 in: app, checkpoint: name + "-reader")
@@ -1502,28 +1545,48 @@ final class OrcaUITests: XCTestCase {
     private func revealDraftRow(_ row: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let list = app.descendants(matching: .any)["drafts.list"]
         XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
-        func isFullyVisible() -> Bool {
-            guard row.exists, row.isHittable else { return false }
-            let top = max(list.frame.minY, app.navigationBars.firstMatch.frame.maxY) + 8
-            let bottom = min(list.frame.maxY, app.tabBars.firstMatch.frame.minY) - 8
-            return row.frame.minY >= top && row.frame.maxY <= bottom
-        }
         _ = row.waitForExistence(timeout: 2)
+        // A lazy row may not be realized yet. Pin its real ID as soon as the
+        // existing caller's query finds it; never replace that target afterward.
+        var ownedID: String?
+        func viewport() -> CGRect? {
+            var fixed = [CGRect]()
+            if app.tabBars.element.exists { fixed.append(app.tabBars.element.frame) }
+            if app.buttons["feedback.open"].exists { fixed.append(app.buttons["feedback.open"].frame) }
+            return ViewportGeometry.draftViewport(list: list.frame, application: app.frame,
+                navigation: app.navigationBars.firstMatch.frame, fixed: fixed)
+        }
+        func reachable(_ viewport: CGRect) -> Bool {
+            guard let ownedID, app.descendants(matching: .any).matching(identifier: ownedID).count == 1,
+                  row.exists, row.identifier == ownedID,
+                  row.elementType == .button || row.elementType == .link,
+                  row.isHittable else { return false }
+            let label = row.label
+            guard label.contains(Fixture.account), !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  ["saved", "delivery", "sent", "provider"].contains(where: { label.localizedCaseInsensitiveContains($0) }) else { return false }
+            return ViewportGeometry.draftRowArea(row: row.frame, viewport: viewport) != nil
+        }
         for attempt in 0..<32 {
-            if isFullyVisible() { return }
-            var up = attempt < 16
-            if row.exists && !row.frame.isEmpty {
-                let bottom = min(list.frame.maxY, app.tabBars.firstMatch.frame.minY) - 8
-                up = row.frame.maxY > bottom
+            guard let visible = viewport() else { break }
+            if row.exists {
+                let currentID = row.identifier
+                guard currentID.hasPrefix("draft."), UUID(uuidString: String(currentID.dropFirst(6))) != nil,
+                      ownedID == nil || ownedID == currentID else {
+                    XCTFail("Draft row requires one stable owned identifier", file: file, line: line); return
+                }
+                ownedID = currentID
             }
-            // Smaller list drags avoid skipping a tall accessibility-sized row.
-            let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: up ? 0.65 : 0.35))
-            let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: up ? 0.35 : 0.65))
-            start.press(forDuration: 0.05, thenDragTo: end)
+            if reachable(visible) { return }
+            let pan: ViewportGeometry.Pan?
+            if row.exists { pan = ViewportGeometry.draftAlignmentPan(row: row.frame, viewport: visible) }
+            else { pan = ViewportGeometry.pan(in: visible, up: attempt < 16) }
+            guard let pan else { break }
+            panContent(pan, in: list)
         }
         attachScreenshot(named: "54-draft-row-not-fully-visible")
         print("DRAFT_ROW_LOOKUP expected=\(row.debugDescription)")
-        XCTAssertTrue(isFullyVisible(), "Expected full draft row above the tab bar before tapping", file: file, line: line)
+        XCTAssertTrue(viewport().map(reachable) ?? false,
+            "Draft must be fully contained when it fits, or expose a meaningful owned native target of at least44pt when oversized", file: file, line: line)
     }
 
     private func setFixtureSending(_ enabled: Bool, accountsUnavailable: Bool = false) throws {
@@ -1736,7 +1799,16 @@ final class OrcaUITests: XCTestCase {
         app.buttons["mail-action.preview"].tap()
         XCTAssertTrue(app.buttons["view-editor.preview"].waitForExistence(timeout: 10))
         app.buttons["view-editor.preview"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["view-editor.preview-row.ios-fixture-thread-1"].waitForExistence(timeout: 10))
+        var firstPreviewFound: Bool?
+        addTeardownBlock {
+            guard (self.testRun?.totalFailureCount ?? 0) > 0 else { return }
+            self.captureUnclassifiedBoundary(in: app, stage: "sender-10-after-original-failure",
+                rowID: "view-editor.preview-row.ios-fixture-thread-1",
+                observed: ["first_preview_found": firstPreviewFound.map { String($0) } ?? "unobserved"])
+        }
+        let previewFound = app.descendants(matching: .any)["view-editor.preview-row.ios-fixture-thread-1"].waitForExistence(timeout: 10)
+        firstPreviewFound = previewFound
+        XCTAssertTrue(previewFound)
         XCTAssertTrue(app.buttons["view-editor.save"].waitForExistence(timeout: 10))
         attachScreenshot(named: "14-native-sender-view-preview")
         app.buttons["view-editor.save"].tap()
@@ -2390,7 +2462,14 @@ final class OrcaUITests: XCTestCase {
         let name = "Research planning and weekly product follow-ups"
         let picker = app.buttons["inbox.view-picker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 10))
-        let option = app.buttons["mailbox.option." + (try fixtureMailboxSelection(name))]
+        let optionID = "mailbox.option." + (try fixtureMailboxSelection(name))
+        let option = app.buttons[optionID]
+        var firstFinalExists: Bool?
+        addTeardownBlock {
+            guard (self.testRun?.totalFailureCount ?? 0) > 0 else { return }
+            self.captureUnclassifiedBoundary(in: app, stage: "long-space-after-original-failure", rowID: optionID,
+                observed: ["first_final_exists": firstFinalExists.map { String($0) } ?? "unobserved"])
+        }
         // Catalog loading is independent of the navigation title. Native menus
         // may snapshot their options, so reopen within a bounded readiness wait.
         for attempt in 0..<4 {
@@ -2401,7 +2480,8 @@ final class OrcaUITests: XCTestCase {
                 XCTAssertTrue(app.buttons["mailbox.option.all"].waitForNonExistence(timeout: 5))
             }
         }
-        XCTAssertTrue(option.exists, "Run with the opt-in mailbox-control fixture; its catalog must load")
+        let finalExists = option.exists; firstFinalExists = finalExists
+        XCTAssertTrue(finalExists, "Run with the opt-in mailbox-control fixture; its catalog must load")
         attachScreenshot(named: "mailbox-selector-accessibility-menu")
         option.tap()
         assertMailboxControl(name, in: app)
@@ -2493,6 +2573,46 @@ final class OrcaUITests: XCTestCase {
             chooseMailbox("Inbox", in: app)
         }
         return app
+    }
+
+    /// Failure-only, loopback-gated observations for unresolved native boundaries.
+    /// No query text, mail labels, opaque IDs, credentials or model state are emitted.
+    private func captureUnclassifiedBoundary(in app: XCUIApplication, stage: String, rowID: String, observed: [String: String]) {
+        guard feedbackFixtureDiagnosticsAllowed() else { return }
+        var values = observed
+        var targets = [(String, XCUIElement)]()
+        // This is the first switch value observed AFTER the original failure,
+        // never a substitute for the original immediate subject/row assertion.
+        let switches = app.switches.matching(identifier: "view-editor.refine-subject")
+        let switchCount = switches.count
+        if switchCount == 1 {
+            let control = switches.element(boundBy: 0)
+            let value = control.value as? String
+            values["first_switch_value_after_failure"] = ["0", "1"].contains(value ?? "") ? value! : "unavailable"
+            targets.append(("refine-switch", control))
+        }
+        values["refine_switch_count"] = String(switchCount)
+        func unique(_ alias: String, _ query: XCUIElementQuery) {
+            let count = query.count; values[alias + "_count"] = String(count)
+            if count == 1 { targets.append((alias, query.element(boundBy: 0))) }
+        }
+        unique("row", app.descendants(matching: .any).matching(identifier: rowID))
+        unique("mail-list", app.collectionViews.matching(identifier: "inbox.list"))
+        unique("catalog-list", app.collectionViews.matching(identifier: "catalog.results"))
+        unique("choices", app.collectionViews.matching(identifier: "mailbox.choices"))
+        unique("search", app.searchFields.matching(identifier: "Search All Mail"))
+        unique("subject", app.textFields.matching(identifier: "view-editor.subject"))
+        unique("editor-status", app.descendants(matching: .any).matching(identifier: "view-editor.status"))
+        unique("preview", app.buttons.matching(identifier: "view-editor.preview"))
+        unique("mail-tab", app.tabBars.buttons.matching(NSPredicate(format: "label == %@", "Mail")))
+        for (alias, query) in [("navigation", app.navigationBars), ("keyboard", app.keyboards), ("collection", app.collectionViews)] {
+            let count = query.count; values[alias + "_count"] = String(count)
+            if count <= 3 { for index in 0..<count { targets.append((alias + "-" + String(index), query.element(boundBy: index))) } }
+        }
+        // Errors have no dedicated safe public identifier in this editor.
+        // Do not scrape arbitrary static text or invent an error-state witness.
+        values["editor_error_observation"] = "unavailable"
+        captureSyntheticBoundary(in: app, stage: stage, targets: targets, observed: values)
     }
 
     private func captureMailBoundary(in app: XCUIApplication, stage: String) {
