@@ -107,6 +107,8 @@ cleanup() {''' + cleanup + '\n}\nfalse\ncleanup\n')
         for status in (0, 65):
             result = self.export(status=status)
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('sanitized evidence: ' + str(self.evidence), result.stdout)
+            self.assertNotIn('validated-export-', result.stdout)
             self.assertEqual(json.loads((self.evidence/'outcome.json').read_text())['exitCode'], status)
             self.assertTrue((self.evidence/'identity.log').is_file())
             self.assertTrue((self.evidence/'Orca-summary.json').is_file())

@@ -353,7 +353,8 @@ def export_staged(work, evidence, connection, status, simulator="", checkpoint_p
                     os.replace(pending, destination)
                 finally:
                     pending.unlink(missing_ok=True)
-        print(output.getvalue(), end='')
+        print(output.getvalue().replace(f'sanitized evidence: {stage}\n',
+                                        f'sanitized evidence: {evidence}\n'), end='')
 
 
 if __name__ == '__main__':
