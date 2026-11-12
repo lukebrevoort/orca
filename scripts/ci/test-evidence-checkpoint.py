@@ -50,11 +50,12 @@ elif a[:3] == ['xcresulttool', 'export', 'attachments']:
         self.env = dict(os.environ, PATH=str(self.bin) + ':' + os.environ['PATH'],
                         MOCK_WORK=str(self.work), MOCK_SECRET=SECRET)
         self.env.pop('GITHUB_ACTIONS', None); self.env.pop('RUNNER_ENVIRONMENT', None)
+        self.env.pop('ORCA_UI_TEST_APPEARANCE', None)
 
     def export(self, checkpoint=False, status=65):
         args = [sys.executable, str(EXPORTER), str(self.work), str(self.evidence),
                 str(self.connection), str(status), '']
-        if checkpoint: args.append('suite_light_finished')
+        if checkpoint: args.append('suite_light_finished' if checkpoint is True else checkpoint)
         return subprocess.run(args, env=self.env, capture_output=True, text=True, timeout=8)
 
     def assert_private_bytes_absent(self):
@@ -137,6 +138,76 @@ cleanup() {''' + cleanup + '\n}\nfalse\ncleanup\n')
             self.assertEqual((self.evidence/'screenshots'/name).read_bytes(), b'synthetic-safe-image-bytes')
         self.assertFalse(any(p.name == 'private-connection.json' for p in self.evidence.rglob('*')))
         self.assertEqual(json.loads((self.evidence/'outcome.json').read_text())['exitCode'], 0)
+        self.assert_private_bytes_absent()
+
+    def test_dark_checkpoint_is_incomplete_redacted_and_has_no_light_bundle(self):
+        (self.results / 'Orca.xcresult').rmdir()
+        (self.results / 'OrcaDark.xcresult').mkdir()
+        result = self.export(checkpoint='suite_dark_finished')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        checkpoint = self.evidence / 'checkpoints/suite_dark_finished'
+        outcome = json.loads((checkpoint / 'outcome.json').read_text())
+        self.assertIsNone(outcome['exitCode']); self.assertFalse(outcome['complete'])
+        self.assertEqual(outcome['checkpointPhase'], 'suite_dark_finished')
+        self.assertEqual(json.loads((checkpoint / 'OrcaDark-summary.json').read_text())['failedTests'], 1)
+        self.assertFalse((checkpoint / 'Orca-summary.json').exists())
+        self.assertFalse((self.evidence / 'outcome.json').exists())
+        self.assertIn('phase=suite_dark_finished complete=false', result.stdout)
+        self.assert_private_bytes_absent()
+
+    def test_dark_secret_attachment_is_never_published(self):
+        (self.results / 'OrcaDark.xcresult').mkdir()
+        (self.work / 'inject-secret-image').touch()
+        result = self.export(checkpoint='suite_dark_finished')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual([p for p in self.evidence.rglob('*') if p.is_file()], [])
+
+    def test_failed_final_export_preserves_dark_checkpoint_without_pass_outcome(self):
+        (self.results / 'OrcaDark.xcresult').mkdir()
+        self.assertEqual(self.export(checkpoint='suite_dark_finished').returncode, 0)
+        checkpoint = self.evidence / 'checkpoints/suite_dark_finished'
+        before = {str(p.relative_to(checkpoint)): p.read_bytes() for p in checkpoint.rglob('*') if p.is_file()}
+        (self.work / 'fail-dark-export').touch()
+        result = self.export(status=65)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(before, {str(p.relative_to(checkpoint)): p.read_bytes() for p in checkpoint.rglob('*') if p.is_file()})
+        self.assertFalse((self.evidence / 'outcome.json').exists())
+        self.assert_private_bytes_absent()
+
+    @unittest.skipUnless(shutil.which('zsh'), 'real runner phase syntax requires zsh')
+    def test_actual_dark_only_phase_publishes_dark_checkpoint_and_selected_failure(self):
+        (self.results / 'Orca.xcresult').rmdir()
+        source = RUNNER.read_text()
+        progress = source.split('progress() {', 1)[1].split('\n}\n', 1)[0]
+        phases = source.split('light_exit=0\n', 1)[1]
+        mock = self.bin / 'xcodebuild'
+        mock.write_text(f'#!{sys.executable}\n' + """import pathlib, sys
+a = sys.argv[1:]; pathlib.Path(a[a.index('-resultBundlePath') + 1]).mkdir()
+raise SystemExit(65)
+""")
+        mock.chmod(0o755)
+        harness = self.work / 'dark.zsh'
+        harness.write_text("""set -euo pipefail
+ios_dir=$MOCK_REPO/apps/ios
+connection_file=$MOCK_CONNECTION
+simulator_udid=owned-synthetic-device
+result_dir=$MOCK_WORK/results
+result_bundle=$result_dir/Orca.xcresult
+injected_xctestrun=synthetic.xctestrun
+light_tests=(-only-testing:synthetic-light)
+dark_tests=(-only-testing:synthetic-dark)
+progress() {""" + progress + '\n}\nlight_exit=0\n' + phases)
+        env = dict(self.env, MOCK_REPO=str(ROOT), MOCK_CONNECTION=str(self.connection),
+                   ORCA_UI_TEST_SCOPE='mailbox', ORCA_UI_TEST_APPEARANCE='dark', ORCA_CI_PROGRESS='0',
+                   ORCA_CI_CHECKPOINT_WORK=str(self.work), ORCA_CI_CHECKPOINT_EVIDENCE=str(self.evidence))
+        result = subprocess.run(['zsh', str(harness)], env=env, capture_output=True, text=True, timeout=8)
+        self.assertEqual(result.returncode, 65, result.stdout + result.stderr)
+        self.assertFalse((self.results / 'Orca.xcresult').exists())
+        self.assertFalse((self.evidence / 'checkpoints/suite_light_finished').exists())
+        checkpoint = self.evidence / 'checkpoints/suite_dark_finished'
+        self.assertTrue((checkpoint / 'OrcaDark-summary.json').is_file())
+        outcome = json.loads((checkpoint / 'outcome.json').read_text())
+        self.assertIsNone(outcome['exitCode']); self.assertFalse(outcome['complete'])
         self.assert_private_bytes_absent()
 
     def test_unknown_phase_is_rejected_without_publication(self):

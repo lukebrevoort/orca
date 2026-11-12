@@ -304,8 +304,8 @@ def export(work, evidence, connection, status, simulator="", attachments_root=No
 
 
 def export_staged(work, evidence, connection, status, simulator="", checkpoint_phase=None):
-    """Never expose an unscanned export; retain completed Light on later failure."""
-    if checkpoint_phase not in (None, 'suite_light_finished'):
+    """Never expose an unscanned export; retain completed phases on later failure."""
+    if checkpoint_phase not in (None, 'suite_light_finished', 'suite_dark_finished'):
         raise ValueError('Unknown evidence checkpoint phase')
     if evidence.is_symlink() or not evidence.is_dir():
         raise ValueError('Evidence must be the owned run directory')
@@ -334,7 +334,7 @@ def export_staged(work, evidence, connection, status, simulator="", checkpoint_p
             if destination.exists() or destination.is_symlink():
                 raise ValueError('Checkpoint already published')
             os.replace(stage, destination)
-            print('[fixture checkpoint] phase=suite_light_finished complete=false')
+            print(f'[fixture checkpoint] phase={checkpoint_phase} complete=false')
             return
         # Every byte was already scanned privately. Publish the final outcome
         # last, so interruption during copying cannot advertise a complete gate.

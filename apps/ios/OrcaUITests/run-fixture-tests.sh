@@ -2,6 +2,17 @@
 
 set -euo pipefail
 
+# BEGIN appearance_validation
+case ${ORCA_UI_TEST_APPEARANCE-both} in
+  light|dark|both) ;;
+  *) print -u2 'Invalid native UI appearance; expected light, dark or both.'; exit 64 ;;
+esac
+if [[ ${ORCA_UI_TEST_APPEARANCE-both} != both && ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then
+  print -u2 'A single native UI appearance is supported only for mailbox scope.'
+  exit 64
+fi
+# END appearance_validation
+
 if (( $# < 2 || $# > 3 )); then
   print -u2 "usage: $0 <connection.json> <simulator-udid> [derived-data-path]"
   exit 64
@@ -20,9 +31,9 @@ progress() {
   if [[ ${ORCA_CI_PROGRESS:-0} == 1 ]]; then
     print -r -u3 -- "[fixture stage] phase=$1"
   fi
-  if [[ "$1" == suite_light_finished && -n ${ORCA_CI_CHECKPOINT_WORK:-} && -n ${ORCA_CI_CHECKPOINT_EVIDENCE:-} ]]; then
+  if [[ ( "$1" == suite_light_finished || "$1" == suite_dark_finished ) && -n ${ORCA_CI_CHECKPOINT_WORK:-} && -n ${ORCA_CI_CHECKPOINT_EVIDENCE:-} ]]; then
     /usr/bin/python3 "$ios_dir/../../scripts/ci/export-evidence.py" \
-      "$ORCA_CI_CHECKPOINT_WORK" "$ORCA_CI_CHECKPOINT_EVIDENCE" "$connection_file" 1 "$simulator_udid" suite_light_finished
+      "$ORCA_CI_CHECKPOINT_WORK" "$ORCA_CI_CHECKPOINT_EVIDENCE" "$connection_file" 1 "$simulator_udid" "$1"
   fi
 }
 
@@ -131,7 +142,11 @@ mkdir -p "$result_dir"
 result_bundle="$result_dir/Orca.xcresult"
 # AppleInterfaceStyle launch defaults do not reliably change simulator appearance.
 trap 'xcrun simctl ui "$simulator_udid" appearance light >/dev/null 2>&1 || true' EXIT
-xcrun simctl ui "$simulator_udid" appearance light
+if [[ ${ORCA_UI_TEST_APPEARANCE-both} == dark ]]; then
+  xcrun simctl ui "$simulator_udid" appearance dark
+else
+  xcrun simctl ui "$simulator_udid" appearance light
+fi
 
 read_only=$(/usr/bin/python3 -c 'import json,sys; print("1" if json.load(open(sys.argv[1])).get("readOnly",False) else "0")' "$connection_file")
 if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
@@ -176,6 +191,7 @@ fi
 adoption_exit=0
 if [[ $read_only != 1 && ( ${ORCA_UI_TEST_SCOPE:-all} == all || ${ORCA_UI_TEST_SCOPE:-all} == mailbox || ${ORCA_UI_TEST_SCOPE:-all} == notifications ) ]]; then
   for appearance in light dark; do
+    if [[ ${ORCA_UI_TEST_APPEARANCE-both} != both && ${ORCA_UI_TEST_APPEARANCE-both} != "$appearance" ]]; then continue; fi
     xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
     xcrun simctl ui "$simulator_udid" appearance "$appearance"
     progress "adoption_${appearance}_started"
@@ -191,7 +207,11 @@ if [[ $read_only != 1 && ( ${ORCA_UI_TEST_SCOPE:-all} == all || ${ORCA_UI_TEST_S
     progress "adoption_${appearance}_finished"
   done
   xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
-  xcrun simctl ui "$simulator_udid" appearance light
+  if [[ ${ORCA_UI_TEST_APPEARANCE-both} == dark ]]; then
+    xcrun simctl ui "$simulator_udid" appearance dark
+  else
+    xcrun simctl ui "$simulator_udid" appearance light
+  fi
 fi
 # END isolated_adoption_phases
 
@@ -244,10 +264,12 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
   light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
 fi
 
-# Mailbox evidence must include both appearances even when one suite fails.
+# Mailbox default evidence includes both appearances even when one fails.
+# CI shards request exactly one appearance, each on its own fixture/simulator.
 # Keep other scopes fail-fast and retain the original failing exit status.
 light_exit=0
 dark_exit=0
+if [[ ${ORCA_UI_TEST_APPEARANCE-both} != dark ]]; then
 progress suite_light_started
 xcodebuild test-without-building \
   -xctestrun "$injected_xctestrun" \
@@ -259,7 +281,9 @@ xcodebuild test-without-building \
     if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$light_exit"; fi
   }
 progress suite_light_finished
+fi
 
+if [[ ${ORCA_UI_TEST_APPEARANCE-both} != light ]]; then
 xcrun simctl ui "$simulator_udid" appearance dark
 progress suite_dark_started
 xcodebuild test-without-building \
@@ -272,11 +296,18 @@ xcodebuild test-without-building \
     if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$dark_exit"; fi
   }
 progress suite_dark_finished
+fi
 
-print "Result bundle: $result_bundle"
+if [[ ${ORCA_UI_TEST_APPEARANCE-both} != dark ]]; then print "Result bundle: $result_bundle"; fi
 if [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
-  print "Dark result bundle: $result_dir/OrcaDark.xcresult"
-  print "Mailbox suite exit codes: light=$light_exit dark=$dark_exit"
+  if [[ ${ORCA_UI_TEST_APPEARANCE-both} != light ]]; then print "Dark result bundle: $result_dir/OrcaDark.xcresult"; fi
+  if [[ ${ORCA_UI_TEST_APPEARANCE-both} == both ]]; then
+    print "Mailbox suite exit codes: light=$light_exit dark=$dark_exit"
+  elif [[ ${ORCA_UI_TEST_APPEARANCE-both} == light ]]; then
+    print "Mailbox selected suite exit code: appearance=light exit=$light_exit"
+  else
+    print "Mailbox selected suite exit code: appearance=dark exit=$dark_exit"
+  fi
   if (( light_exit != 0 )); then exit "$light_exit"; fi
   if (( dark_exit != 0 )); then exit "$dark_exit"; fi
 fi

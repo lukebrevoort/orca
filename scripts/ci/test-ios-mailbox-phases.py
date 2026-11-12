@@ -96,6 +96,10 @@ light_exit=0
     def test_explicit_dark_runs_only_dark_and_retains_selected_failure(self):
         self.run_phases('mailbox', 65, 66, appearance='dark')
 
+    def test_selected_success_does_not_run_or_inherit_unselected_failure(self):
+        self.run_phases('mailbox', 0, 66, appearance='light')
+        self.run_phases('mailbox', 65, 0, appearance='dark')
+
     def test_other_scopes_remain_fail_fast(self):
         for scope in ['all', 'images', 'compose', 'overscroll', 'actions', 'views', 'reading', 'notifications']:
             for light, dark in [(0, 0), (65, 0), (0, 66), (65, 66)]:
