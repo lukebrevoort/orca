@@ -1,0 +1,175 @@
+{
+  "excludes": "hashes.json itself",
+  "files": [
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-01/raw/baseline/controls.log",
+      "bytes": 458,
+      "sha256": "ad3d05fbc4acd8094f1d7e75333072d258ea0f75982ac0b3f1f944be9af99b02"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-01/raw/baseline/manifest.json",
+      "bytes": 1818,
+      "sha256": "fd32a60a71d51b13f6aa19b32c8efe03cedf6c336310aa1c84dd677886bac188"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-01/raw/driver-stdout.log",
+      "bytes": 328,
+      "sha256": "e5e710b482d33844659c09fc1c32331b620d06ce6276b1b37afaf682a3788d68"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-01/raw/root-guard.json",
+      "bytes": 1535058,
+      "sha256": "43b72638e208ec15a24455d1ca89884feb3d5e7ff4fed67ca22e02232e1d9c14"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-01/root-guard-executed.py",
+      "bytes": 5338,
+      "sha256": "bc075d76aeec3d64fa97397e9e16935fafb984ac028a3a4481b9780a0c8c05b1"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-01/wrapper.log",
+      "bytes": 2169,
+      "sha256": "46a2445d7cb37907231d75ed868cfb527ea5ede593c1bd61bde830ff249a124f"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/raw/baseline/controls.jsonl",
+      "bytes": 1503,
+      "sha256": "1158d546e457783d642c161d8cf9bde3058e5493160d4441742b70b95630ff1f"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/raw/baseline/controls.log",
+      "bytes": 2889,
+      "sha256": "82ffab4f5b00e9fdbe602a846fbaf39a78823092ef3624e111e902b3767d4bc5"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/raw/baseline/manifest.json",
+      "bytes": 2027,
+      "sha256": "2c9c05fb8d31c699d477bea4d51e3978c9b0fa2a7393bd185965e29adf5e9ef2"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/raw/baseline-stdout.log",
+      "bytes": 328,
+      "sha256": "207c56a072ebfcd99c9fce1df61430708fc6b51f874143f98297e278fba71bef"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/raw/frozen-install-stdout.log",
+      "bytes": 143,
+      "sha256": "d5063303448e65f8a8839c720e6abd8704f8e1a5c53d26b4e56141883afd6aa7"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/raw/root-guard.json",
+      "bytes": 1537734,
+      "sha256": "564dea9229050b03b726d0a9213b04377a5dfa4dd930ad74a23ef047809f9dbf"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/root-guard-executed.py",
+      "bytes": 6242,
+      "sha256": "95f5e596d8a1eeef5828357ffdf62168aa98704d2932fbb68a95f42a13615ff8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/2b7cf3b7-02/wrapper.log",
+      "bytes": 2615,
+      "sha256": "b7f986f161c7b01873c877e2969dada70716505c752469d76b82e4dca030ccb1"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/baseline/controls.jsonl",
+      "bytes": 4260,
+      "sha256": "fea237d2e59a8ac296700f530999b6eabc7a58bc448a88835323ce3a60bf8fb3"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/baseline/controls.log",
+      "bytes": 4808,
+      "sha256": "d85addbbb5755af2f9e36a820b0dd1221437a77333652108d10d8f5c8e358007"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/baseline/extension.jsonl",
+      "bytes": 11181,
+      "sha256": "360f755096a87066f31cfad2ec7ee04afd8fc6bd556c98e2591d75ce9de60261"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/baseline/extension.log",
+      "bytes": 18234,
+      "sha256": "aa38e98b3da73c306756c0fce9457d4bbcf2517b6ec89eff7a1d55da97654574"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/baseline/manifest.json",
+      "bytes": 2839,
+      "sha256": "ba07e613ad33cbb154613363636d815f202782e75a8691e98945135b809d418b"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/driver-stdout.log",
+      "bytes": 518,
+      "sha256": "6b8ea4fe837b79a97801ecc81f64018443d05d8d980967b268a6555fe3244df5"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/raw/root-guard.json",
+      "bytes": 1535266,
+      "sha256": "a71f29c0da605092f7663628c4f139ba82720ad0e766fc1559516c4078f5cf4c"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/root-guard-executed.py",
+      "bytes": 5338,
+      "sha256": "fece1799e9aa18ff7d6fb9b6a285099810ac6f675ec2db5be3f2ca37bf514853"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/a19a3bba-01/wrapper.log",
+      "bytes": 2289,
+      "sha256": "a658394b75673ffb09d2e727013cd43c53f6d1c7aa3e8dd82711a7de60637492"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/copy-provenance.json",
+      "bytes": 10610,
+      "sha256": "c5799afe6f1c009d661e0cf6111075a757939c3568cedf10a7c27e6487eae7bb"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/root-test-only-correction.patch",
+      "bytes": 2844,
+      "sha256": "4f417fc6436858eca369b8a37335be1e13572d4bd520e5d20f874a27b39a2f85"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/2b-original/preparation.json",
+      "bytes": 1859,
+      "sha256": "96de8b004ff80e15d4d2a897181722fed018e0e21508f23d7870e01476aca6d4"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/2b-original/query-importance-baseline.fixture.ts.txt",
+      "bytes": 16035,
+      "sha256": "72bd099e5cfd7dd41ae2fcbf861a705a9e66e5e6cbf0f5c20ec5e4f6aa3d9050"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/2b-original/query-importance-baseline.test.ts.txt",
+      "bytes": 4343,
+      "sha256": "13939f7771cf99e427650e1c8b59c555fec3a72c5c86709961982098a352bb1c"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/2b-original/run-baseline.py.txt",
+      "bytes": 13242,
+      "sha256": "b6078a7658c1d8e65650fc33bb3758d84842eb246e9a8db0e02de5e4b4541a90"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/a19-corrected/preparation.json",
+      "bytes": 1859,
+      "sha256": "96de8b004ff80e15d4d2a897181722fed018e0e21508f23d7870e01476aca6d4"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/a19-corrected/query-importance-baseline.fixture.ts.txt",
+      "bytes": 16160,
+      "sha256": "f8ac60eef414f44051a06dc45fb11b87c2c9dce0ec70fed1ba32219085dba6c9"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/a19-corrected/query-importance-baseline.test.ts.txt",
+      "bytes": 4343,
+      "sha256": "13939f7771cf99e427650e1c8b59c555fec3a72c5c86709961982098a352bb1c"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/source-snapshots/a19-corrected/run-baseline.py.txt",
+      "bytes": 13248,
+      "sha256": "79b177c89bd0b7e058c7157550e434748a6d564e60aa9750582ca2db2853ae95"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/baseline-a19a3bba/summary.json",
+      "bytes": 2413,
+      "sha256": "eade3e87b968b0e616748aafd419d50f45a80fa63f4febfb7ade2e05ddd82c4b"
+    }
+  ]
+}

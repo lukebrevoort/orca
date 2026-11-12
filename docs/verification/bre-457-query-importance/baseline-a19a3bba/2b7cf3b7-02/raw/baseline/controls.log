@@ -1,0 +1,35 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:
+BRE457_IMPORTANCE {"stage":"controls","name":"request-control","request":"anonymous catalog","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":0,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"controls","name":"request-control","request":"U real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"controls","name":"request-control","request":"cookie real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"controls","name":"request-control","request":"mobile real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"controls","name":"request-control","request":"U actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"controls","name":"request-control","request":"U own default query","status":422,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+185 |         assert.equal(selected.accountId, raw.account_id);
+186 |         assert.equal(selected.revision, raw.revision);
+187 |         const retained = { id: selected.id, accountId: selected.accountId, revision: selected.revision };
+188 |         if (kind === "U") queryU = retained; else queryB = retained;
+189 |         const result = await request(`${kind} own default query`, resultUrl(retained), credentials[kind]);
+190 |         assert.equal(result.response.status, 200);
+                     ^
+AssertionError: Expected values to be strictly equal:
+
+422 !== 200
+
+ generatedMessage: true,
+     actual: 422,
+   expected: 200,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at preconditions (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts:190:16)
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:9:23
+      at processTicksAndRejections (native:7:39)
+(fail) (unnamed) [162.81ms]
+BRE457_IMPORTANCE {"stage":"controls","name":"owned-fixture-cleanup","removed":true}
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [4.56s]

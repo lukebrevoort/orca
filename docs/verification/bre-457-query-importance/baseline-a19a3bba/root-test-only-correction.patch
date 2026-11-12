@@ -1,0 +1,38 @@
+diff --git a/apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts b/apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts
+index 434c7288..6f0ffd33 100644
+--- a/apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts
++++ b/apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts
+@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+ import {
+   authSessionSchema, expectedUserIdHeaderName, inboxResponseSchema,
+   organizationCollectionPinQueryResponseSchema, organizationSavedQueryResultResponseSchema,
++  organizationSavedQueryDefinitionSchema,
+ } from "@orca/shared";
+ import { createSession } from "../../auth/session-store.ts";
+ import { createMobileSession } from "../../auth/mobile/store.ts";
+@@ -88,7 +89,9 @@ export async function createQueryImportanceBaselineFixture() {
+       // The URL/expected object revision will come from the real catalog, not this seed name.
+       client.db.insert(organizationSavedQueries).values({
+         id: `importance-query-${accountId}`, accountId, name: "Canonical importance baseline", revision: 7,
+-        definitionJson: JSON.stringify({ revision: 1, filters: { dataSource: "stored_mail", mailbox: "inbox", classification: "all", accountId } }),
++        definitionJson: JSON.stringify(organizationSavedQueryDefinitionSchema.parse({
++          revision: 1, filters: { dataSource: "stored_mail", mailbox: "inbox", attention: "all", classification: "all", accountId },
++        })),
+       }).run();
+     }
+     client.db.insert(importanceChoices).values([
+diff --git a/docs/verification/bre-457-query-importance/run-baseline.py b/docs/verification/bre-457-query-importance/run-baseline.py
+index ec3cea07..5f0d1fbc 100644
+--- a/docs/verification/bre-457-query-importance/run-baseline.py
++++ b/docs/verification/bre-457-query-importance/run-baseline.py
+@@ -86,8 +86,8 @@ def main():
+         raise SystemExit("NOT STARTED: must run beneath /tmp/orca-ui-heavy-slot.py with inherited lock FD")
+     if git("rev-parse", "HEAD") != args.head or git("status", "--porcelain"):
+         raise SystemExit("NOT STARTED: exact frozen clean HEAD required")
+-    if git("branch", "--show-current") != BRANCH or git("rev-parse", "HEAD^") != BASE:
+-        raise SystemExit("NOT STARTED: this test-only branch must directly follow exact main7c")
++    if git("branch", "--show-current") != BRANCH or git("merge-base", BASE, args.head) != BASE:
++        raise SystemExit("NOT STARTED: this test-only branch must descend from exact main7c")
+     changed = git("diff", "--name-only", BASE, args.head).splitlines()
+     if not changed or any(path not in [TEST, FIXTURE] and not path.startswith(DOCS) for path in changed):
+         raise SystemExit("NOT STARTED: unexpected baseline patch path")

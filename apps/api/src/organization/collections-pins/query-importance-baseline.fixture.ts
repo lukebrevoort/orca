@@ -242,6 +242,7 @@ export async function createQueryImportanceBaselineFixture() {
     }
     return {
       preconditions, request, resultUrl, sourceStates, close,
+      app, client, databasePath, sessionU, sessionB, mobileB,
       get queryU() { assert.ok(queryU); return queryU; },
       get queryB() { assert.ok(queryB); return queryB; },
       headersU: credentials.U,

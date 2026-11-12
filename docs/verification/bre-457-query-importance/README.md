@@ -1,3 +1,17 @@
+# Candidate source prepared; validation pending allocation
+
+[Candidate behavior, exact planned106+1 counts, limits and gate](candidate-plan.md). Production edits are limited to canonical catalog/results routes and saved-query reader; existing mailbox final-page enrichment is reused without modification. Original5 red assertions/control test are unchanged. No candidate tests/types/demo have run; no publication or deployed support is claimed. Current hashes/inventory and exact frozen SHA will be in the external ROOT readback.
+
+# Current checkpoint: actual a19 extension red; candidate source work authorized
+
+ROOT executed exact clean `a19a3bba31805d56263851cc800f8267e95db7b3`: controls1/0 in0.697s, extension0/5 in0.545s, inner1.395s. The projection200 omitted importance on all3 independently Important/Not important/Unreviewed rows. Four cookie/mobile B-own catalog/results requests with expectedU returned200/Bscope/2connections instead of the approved409. This is actual additive extension red, not endpoint absence or an old UI bug.
+
+[Complete original raw runs/guards/wrappers and hashes](baseline-a19a3bba/hashes.json) · [summary](baseline-a19a3bba/summary.json) · [ROOT test-only correction](baseline-a19a3bba/root-test-only-correction.patch). Both2b attempts remain setup NONPASS/overall2, extension not started: missing dependencies first; invalid mailbox-without-attention seed second. ROOT then validated the seed with the real strict schema, supplied attention all, and changed the baseline runner from direct-parent to main7c ancestry/allowed paths. No production change made the red. The earlier preparation.json hashes and estimates below describe2b, remain immutable, and are not current fixture/driver hashes. Exact old and corrected source snapshots are retained. The old direct-parent instruction below is historical; corrected baseline permits test-only descendants of main7c.
+
+ROOT's separately allocated frozen install at2b completed0/3.031s/177packages without source/lock drift. New candidate work requires no install.12/17 actual GET controls observed no committed writes/selected state changes/provider-seam calls. Separate real query_only UPDATE rejection/total_changes0 is not an attempted-DML audit of closed request connections. Owned remaining processes were empty, exact start/end source hashes matched; wrapper observed48% memory. No cancellation injection or bounded VM work was tested. No new validation has run after this source authorization.
+
+## Historical initial preparation (retained verbatim below)
+
 # BRE-457 additive query importance / canonical owner-read fence
 
 **Prepared test-only baseline; NOT EXECUTED.** Base is exact merged main `7c97193688599e5996bb657c34227a63927c384c`. New local branch is `t3/bre-457-query-importance-read`, created directly from that commit in the existing checkout. The old PR320 branch/head is preserved; PR320 is merged/watch off and must not be amended or pushed for this extension.
