@@ -1,0 +1,155 @@
+{
+  "status": "EXTERNAL SOURCE PREPARATION ONLY; FULL WORKSPACE DRIVER UNEXECUTED",
+  "head": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+  "tree": "9d6d1a9ae49823adc5e23c4fc5540948582544e6",
+  "branch": "t3/bre-457-query-importance-read",
+  "localClean": true,
+  "sourceChanged": false,
+  "stageSourceScripts": [
+    {
+      "path": "apps/api",
+      "name": "@orca/api",
+      "scripts": {
+        "start": "bun src/db/migrate.ts && bun src/index.ts",
+        "dev": "bun run db:migrate && bun --env-file=../../.env --watch src/index.ts",
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "bun test",
+        "test:smoke": "bun test src/smoke.test.ts",
+        "benchmark:gmail-sync": "bun src/providers/gmail/sync-benchmark.ts",
+        "lint": "tsc -p tsconfig.json",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "bun --env-file=../../.env src/db/migrate.ts",
+        "db:verify": "bun --env-file=../../.env src/db/verify.ts"
+      },
+      "packageSha256": "2b212a0d4d6b1f95bd140a7759a4e813c7a559bf57434087abb95b1d33223efd"
+    },
+    {
+      "path": "apps/web",
+      "name": "@orca/web",
+      "scripts": {
+        "dev": "vite --host 0.0.0.0",
+        "build": "tsc -p tsconfig.json && vite build",
+        "check:inbox-layout": "bun scripts/check-inbox-layout.ts",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "bun test",
+        "lint": "tsc -p tsconfig.json"
+      },
+      "packageSha256": "123efcbdfbe3ff8d71a167822ae78f4cdb1183e91b5fd7910027c66968dfe313"
+    },
+    {
+      "path": "packages/feedback-kit-core",
+      "name": "@feedback-kit/core",
+      "scripts": {},
+      "packageSha256": "72fede642980447edbf22b417c5c82584797caf34cc991f0af9d5e956effcdee"
+    },
+    {
+      "path": "packages/feedback-kit-react",
+      "name": "@feedback-kit/react",
+      "scripts": {},
+      "packageSha256": "a424f9a925674c2ace41ef1439a5908bb05a4241c8847c8ed8091f77f176b64c"
+    },
+    {
+      "path": "packages/shared",
+      "name": "@orca/shared",
+      "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "bun test",
+        "lint": "tsc -p tsconfig.json"
+      },
+      "packageSha256": "5b6c2430bfc33cdd48709314b41acb8bc461d33e0f4398c0e5840cdbe8fcf339"
+    }
+  ],
+  "inputFiles": 5534,
+  "inputFilesVerifiedToGitAndWorkingBytes": true,
+  "artifacts": [
+    {
+      "path": "/tmp/bre457-query-importance-full-3de619ce.py",
+      "bytes": 23752,
+      "sha256": "3a623d5d0d661a02c0b0a6716b7aa8746d42222614f80043eeeb3b1a85edf85d"
+    },
+    {
+      "path": "/tmp/bre457-query-importance-full-3de619ce-plan.md",
+      "bytes": 10078,
+      "sha256": "5dc9ae24fc7f046d48cf27e88fa2251c48a12d15c3d279a96be4e67a1d80b2f8"
+    },
+    {
+      "path": "/tmp/bre457-query-importance-full-3de619ce-inputs.json",
+      "bytes": 1592166,
+      "sha256": "8f041696907ea71bce6e6eb556d73aa23a63131c274c612dee030b98225fdff8"
+    }
+  ],
+  "driverExecuted": false,
+  "parserSelfTestExecuted": false,
+  "syntaxCompilerExecuted": false,
+  "newTestsOrFocusedDemoRepeat": false,
+  "priorActualGate": {
+    "path": "/tmp/bre457-query-importance-candidate-3de619ce-01/manifest.json",
+    "sha256": "930d6edd14939671e5860f2936f7cf6319898410192f4c9ab09ee8af5dbbb329",
+    "overallExit": 0,
+    "stages": [
+      {
+        "name": "controls",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 0.9683427499840036
+      },
+      {
+        "name": "focused",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 4.82073329098057
+      },
+      {
+        "name": "shared-types",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 1.7267352089984342
+      },
+      {
+        "name": "api-types",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 7.579877666023094
+      },
+      {
+        "name": "metadata-demo",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 1.4866660420084372
+      }
+    ]
+  },
+  "independentReview": {
+    "path": "/tmp/bre457-query-importance-review-3de.md",
+    "sha256": "71f4df7143c56006bcaebbc33bff0c1f774e89564d380e25eda9b0a1e442c21f",
+    "verdict": "APPROVED WITH COMMENTS; no production blocker; independent source review is separate from actual runtime"
+  },
+  "preparedCommand": [
+    "python3",
+    "/tmp/orca-ui-heavy-slot.py",
+    "python3",
+    "/tmp/bre457-query-importance-full-3de619ce.py",
+    "--head",
+    "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+    "/tmp/bre457-query-importance-full-3de619ce-01"
+  ],
+  "stageCapsSeconds": {
+    "lint": 120,
+    "typecheck": 120,
+    "test": 300,
+    "build": 180
+  },
+  "globalWorkCapSeconds": 600,
+  "requestedOuterCapSeconds": 620,
+  "expectedWallSeconds": [
+    240,
+    360
+  ],
+  "testCountSourceEstimate": 2404,
+  "actualCountsAuthoritative": true,
+  "install": false,
+  "publicationAuthorized": false,
+  "request": "ROOT full driver/plan/hash readback and explicit allocation required; STOP without execution."
+}

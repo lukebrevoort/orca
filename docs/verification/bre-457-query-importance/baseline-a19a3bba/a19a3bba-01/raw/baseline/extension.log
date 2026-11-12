@@ -1,0 +1,138 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"anonymous catalog","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":0,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"Inbox supported importance header","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"query unknown importance version remains basic","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"actual-query-read-only-control","inTransaction":true,"queryOnly":1,"rejectedUpdate":true,"connectionTotalChanges":0}
+BRE457_IMPORTANCE {"stage":"extension","name":"preconditions-complete","complete":true,"queryU":{"id":"importance-query-bre457-importance-account-U","accountId":"bre457-importance-account-U","revision":7},"queryB":{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","revision":7},"sourceStates":[{"thread_id":"importance-thread-important","effective":"important","choice":"important","choice_revision":2,"account_revision":13},{"thread_id":"importance-thread-not-important","effective":"not_important","choice":"not_important","choice_revision":3,"account_revision":13},{"thread_id":"importance-thread-unreviewed","effective":"unreviewed","choice":null,"choice_revision":null,"account_revision":13}],"authenticatedUserIds":["bre457-importance-user-U","bre457-importance-user-B"],"cookieAndMobileBOwnScopePositive":true,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"measurement":"fresh-session data_version plus selected source table equality; not attempted-DML auditing on closed request connections"}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension importance projection","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-projection","expectedStatus":200,"actualStatus":200,"queryId":"importance-query-bre457-importance-account-U","actualRows":3,"missingImportanceThreads":["importance-thread-important","importance-thread-not-important","importance-thread-unreviewed"],"sourceEffectiveValues":["important","not_important","unreviewed"],"comparisonExecuted":true,"evidenceScope":"additive importance projection; existing endpoint200, not endpoint absence or old UI reproduction"}
+26 |     importanceReceipt({ name: "extension-projection", expectedStatus: 200, actualStatus: actual.response.status,
+27 |       queryId: body.query.id, actualRows: body.messages.length, missingImportanceThreads: missing,
+28 |       sourceEffectiveValues: states.map(row => row.effective).sort(), comparisonExecuted: true,
+29 |       evidenceScope: "additive importance projection; existing endpoint200, not endpoint absence or old UI reproduction" });
+30 |     assert.equal(body.messages.length, states.length);
+31 |     assert.deepEqual(missing, [], "Opted-in success must contain actual importance for every returned row");
+                ^
+AssertionError: Opted-in success must contain actual importance for every returned row
++ actual - expected
+
++ [
++   'importance-thread-important',
++   'importance-thread-not-important',
++   'importance-thread-unreviewed'
++ ]
+- []
+
+ generatedMessage: false,
+     actual: [ "importance-thread-important", "importance-thread-not-important", "importance-thread-unreviewed" ],
+   expected: [],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:31:12
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 extension: version1 query rows project actual retained importance [13.76ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension cookie catalog owner fence","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"cookie","surface":"catalog","expectedStatus":409,"actualStatus":200,"observedScope":{"workspaceId":"bre457-importance-user-B","accountIds":["bre457-importance-account-B"],"collections":[],"pins":[],"queries":[{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","name":"Canonical importance baseline","definition":{"revision":1,"filters":{"classification":"all","accountId":"bre457-importance-account-B","dataSource":"stored_mail"}},"revision":7}]},"openedConnections":2,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+50 |           : fixture.resultUrl(query);
+51 |         const actual = await fixture.request(`extension ${kind} ${surface} owner fence`, path, fixture.headersB(kind));
+52 |         importanceReceipt({ name: "extension-owner-fence", kind, surface, expectedStatus: 409, actualStatus: actual.response.status,
+53 |           observedScope: actual.value, openedConnections: actual.openedConnections, comparisonExecuted: true,
+54 |           evidenceScope: "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure" });
+55 |         assert.equal(actual.response.status, 409, "Original-owner mismatch must be rejected before domain/catalog access");
+                    ^
+AssertionError: Original-owner mismatch must be rejected before domain/catalog access
+
+200 !== 409
+
+ generatedMessage: false,
+     actual: 200,
+   expected: 409,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:55:16
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 extension: cookie B own catalog rejects original owner U [7.13ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension cookie results owner fence","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"cookie","surface":"results","expectedStatus":409,"actualStatus":200,"observedScope":{"query":{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","revision":7,"definitionDigest":"c97682094ba08280f035096173a8e492975961c25fb16793be3789909f225cf3","evaluationProfile":"stored-mail-v1"},"accounts":[{"id":"bre457-importance-account-B","provider":"gmail","email":"b@synthetic.example","displayName":"b","capabilities":{"read":true,"draft":false,"send":false}}],"messages":[{"id":"importance-message-current-owner","accountId":"bre457-importance-account-B","provider":"gmail","providerMessageId":"importance-message-current-owner","threadId":"importance-thread-current-owner","from":{"name":"current-owner","email":"current-owner@synthetic.example"},"subject":"retained importance witness","snippet":"current-owner","receivedAt":"2026-11-01T12:00:00.000Z","unread":true,"labels":["INBOX"],"attentionBehavior":"normal","destination":{"destinationId":"802e0065-de34-496a-a496-ad5db3e95e11","source":"fallback","locked":false,"reason":"Placement from fallback"},"humanSignal":null,"humanClassification":{"automatic":{"classification":"likely_human","score":null,"reasonCodes":[],"classifierVersion":null},"effective":{"classification":"likely_human","score":null,"reasonCodes":[],"classifierVersion":null,"source":"automatic_heuristic","userOverride":null},"userOverride":null}}],"nextCursor":null,"freshness":{"revision":"mailbox-v2:ceb0703145a1420d4e8cdbc9017a601fdc96e1c91ffc2e890a7c91dc1e735b6f","lastSyncedAt":null}},"openedConnections":2,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+50 |           : fixture.resultUrl(query);
+51 |         const actual = await fixture.request(`extension ${kind} ${surface} owner fence`, path, fixture.headersB(kind));
+52 |         importanceReceipt({ name: "extension-owner-fence", kind, surface, expectedStatus: 409, actualStatus: actual.response.status,
+53 |           observedScope: actual.value, openedConnections: actual.openedConnections, comparisonExecuted: true,
+54 |           evidenceScope: "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure" });
+55 |         assert.equal(actual.response.status, 409, "Original-owner mismatch must be rejected before domain/catalog access");
+                    ^
+AssertionError: Original-owner mismatch must be rejected before domain/catalog access
+
+200 !== 409
+
+ generatedMessage: false,
+     actual: 200,
+   expected: 409,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:55:16
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 extension: cookie B own results rejects original owner U [7.22ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension mobile catalog owner fence","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"mobile","surface":"catalog","expectedStatus":409,"actualStatus":200,"observedScope":{"workspaceId":"bre457-importance-user-B","accountIds":["bre457-importance-account-B"],"collections":[],"pins":[],"queries":[{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","name":"Canonical importance baseline","definition":{"revision":1,"filters":{"classification":"all","accountId":"bre457-importance-account-B","dataSource":"stored_mail"}},"revision":7}]},"openedConnections":2,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+50 |           : fixture.resultUrl(query);
+51 |         const actual = await fixture.request(`extension ${kind} ${surface} owner fence`, path, fixture.headersB(kind));
+52 |         importanceReceipt({ name: "extension-owner-fence", kind, surface, expectedStatus: 409, actualStatus: actual.response.status,
+53 |           observedScope: actual.value, openedConnections: actual.openedConnections, comparisonExecuted: true,
+54 |           evidenceScope: "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure" });
+55 |         assert.equal(actual.response.status, 409, "Original-owner mismatch must be rejected before domain/catalog access");
+                    ^
+AssertionError: Original-owner mismatch must be rejected before domain/catalog access
+
+200 !== 409
+
+ generatedMessage: false,
+     actual: 200,
+   expected: 409,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:55:16
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 extension: mobile B own catalog rejects original owner U [5.15ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension mobile results owner fence","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"mobile","surface":"results","expectedStatus":409,"actualStatus":200,"observedScope":{"query":{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","revision":7,"definitionDigest":"c97682094ba08280f035096173a8e492975961c25fb16793be3789909f225cf3","evaluationProfile":"stored-mail-v1"},"accounts":[{"id":"bre457-importance-account-B","provider":"gmail","email":"b@synthetic.example","displayName":"b","capabilities":{"read":true,"draft":false,"send":false}}],"messages":[{"id":"importance-message-current-owner","accountId":"bre457-importance-account-B","provider":"gmail","providerMessageId":"importance-message-current-owner","threadId":"importance-thread-current-owner","from":{"name":"current-owner","email":"current-owner@synthetic.example"},"subject":"retained importance witness","snippet":"current-owner","receivedAt":"2026-11-01T12:00:00.000Z","unread":true,"labels":["INBOX"],"attentionBehavior":"normal","destination":{"destinationId":"802e0065-de34-496a-a496-ad5db3e95e11","source":"fallback","locked":false,"reason":"Placement from fallback"},"humanSignal":null,"humanClassification":{"automatic":{"classification":"likely_human","score":null,"reasonCodes":[],"classifierVersion":null},"effective":{"classification":"likely_human","score":null,"reasonCodes":[],"classifierVersion":null,"source":"automatic_heuristic","userOverride":null},"userOverride":null}}],"nextCursor":null,"freshness":{"revision":"mailbox-v2:ceb0703145a1420d4e8cdbc9017a601fdc96e1c91ffc2e890a7c91dc1e735b6f","lastSyncedAt":null}},"openedConnections":2,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+50 |           : fixture.resultUrl(query);
+51 |         const actual = await fixture.request(`extension ${kind} ${surface} owner fence`, path, fixture.headersB(kind));
+52 |         importanceReceipt({ name: "extension-owner-fence", kind, surface, expectedStatus: 409, actualStatus: actual.response.status,
+53 |           observedScope: actual.value, openedConnections: actual.openedConnections, comparisonExecuted: true,
+54 |           evidenceScope: "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure" });
+55 |         assert.equal(actual.response.status, 409, "Original-owner mismatch must be rejected before domain/catalog access");
+                    ^
+AssertionError: Original-owner mismatch must be rejected before domain/catalog access
+
+200 !== 409
+
+ generatedMessage: false,
+     actual: 200,
+   expected: 409,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:55:16
+      at processTicksAndRejections (native:7:39)
+(fail) BRE-457 extension: mobile B own results rejects original owner U [8.47ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"owned-fixture-cleanup","removed":true}
+
+ 0 pass
+ 5 fail
+Ran 5 tests across 1 file. [478.00ms]

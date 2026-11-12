@@ -1,0 +1,409 @@
+bun test v1.3.14 (d1632b29)
+
+packages/shared/src/organization-saved-query-results.test.ts:
+(pass) saved-query result additive wire contract > requires selected account, bounds pages, and rejects definitions/actors/dates [3.07ms]
+(pass) saved-query result additive wire contract > strict response carries object provenance and loaded rows, never aggregate counts [0.90ms]
+
+packages/shared/src/organization-collections-pins.test.ts:
+(pass) Organization Collections/Pins contract > provides a clean-reset fixture with explicit membership and stable shortcut identity [0.04ms]
+(pass) Organization Collections/Pins contract > keeps Collection membership distinct from live query shortcuts [0.08ms]
+(pass) Organization Collections/Pins contract > requires Pins to use stable resource or query identity [0.35ms]
+(pass) Organization Collections/Pins contract > round-trips every compatibility-representable saved-query selection [2.75ms]
+(pass) Organization Collections/Pins contract > preserves exact stored-mail account and custom-space scope [0.12ms]
+(pass) Organization Collections/Pins contract > expresses auditable membership and shortcut changes without mail authority [1.51ms]
+
+apps/api/src/mailbox/read.test.ts:
+(pass) bounded mailbox reader > projects one keyset page while SQL aggregates the complete mailbox counts [114.14ms]
+(pass) bounded mailbox reader > rejects stale cursors after attention, classification, label, and concurrent email mutations [87.11ms]
+(pass) bounded mailbox reader > owns mutable account metadata and revision in one snapshot [76.08ms]
+(pass) bounded mailbox reader > merges two index-backed account pages without duplicates or omissions [131.87ms]
+(pass) bounded mailbox reader > reports high-association enrichment separately and projects one effective override per message row [68.52ms]
+(pass) empty attention page pruning > uses zero snapshot aggregates to skip scans across two authorized accounts [111.98ms]
+(pass) empty attention page pruning > keeps notify rows, including combined notify/focus counts [60.34ms]
+(pass) empty attention page pruning > keeps focus rows, including combined notify/focus counts [59.35ms]
+(pass) empty attention page pruning > keeps normal rows, including combined notify/focus counts [58.63ms]
+(pass) empty attention page pruning > keeps quiet rows, including combined notify/focus counts [57.74ms]
+(pass) empty attention page pruning > keeps hidden rows, including combined notify/focus counts [59.95ms]
+(pass) empty attention page pruning > keeps a nonempty group in either account and honors effective attention precedence [64.99ms]
+(pass) empty attention page pruning > preserves timestamp and ID ties across accounts and empty ranks on later pages [84.24ms]
+(pass) empty attention page pruning > retains collection, destination, and account scope checks even for empty filters [69.61ms]
+(pass) empty attention page pruning > applies Inbox skip rules to both the aggregate proof and page predicates [64.21ms]
+(pass) empty attention page pruning > holds the zero-count proof and rows in the same snapshot across a concurrent attention change [70.37ms]
+(pass) empty attention page pruning > validates malformed, stale, and scope-mismatched cursors before pruning an empty result [66.01ms]
+(pass) Inbox unread Focus timeline > read Focus returns to chronological Inbox; unread Notify and Focus share one newest-first promotion [62.26ms]
+(pass) Inbox unread Focus timeline > latest representative uses any-message unread and repromotes after mark unread; stale cursors rejected [70.16ms]
+(pass) Inbox unread Focus timeline > cursor pages equal complete ordering across accounts and read/promotion boundaries [112.03ms]
+(pass) Gmail archive excludes the whole thread from Inbox and Focus without deleting All Mail [68.03ms]
+(pass) a newly synced unread reply repromotes a read Focus conversation once, at latest date [62.45ms]
+(pass) Inbox search matches earlier thread content but returns its latest representative [62.78ms]
+(pass) Focus pages traverse combined unread and read ranks across accounts and reject old cursor format [162.28ms]
+
+apps/api/src/organization/collections-pins/query-results.test.ts:
+BRE457 {"stage":"candidate","name":"real-auth-catalog-query-mailbox-preconditions","unauthenticatedStatus":401,"catalogStatus":200,"inboxStatus":200,"allMailStatus":200,"observedBehaviors":{"notify":"notify","focus":"focus","normal":"normal","quiet-new":"quiet","hidden-new":"hidden"},"queryId":"bre457-query-1","objectRevision":7,"schemaRevision":1,"connectionChanges":[0,0,0,0,0,0],"providerCalls":{"network":0,"sync":0,"transport":0}}
+BRE457 {"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","semanticsExecuted":true,"matchedIds":["notify"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > notify-only distinguishes sender-routed threads sharing content/classification [9.68ms]
+BRE457 {"stage":"candidate","name":"normal-only is independent from Inbox attention union","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"normal-only is independent from Inbox attention union","semanticsExecuted":true,"matchedIds":["normal"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > normal-only is independent from Inbox attention union [9.66ms]
+BRE457 {"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","semanticsExecuted":true,"matchedIds":["notify","focus","bulk-focus"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > focus execution union deliberately differs from old strict-focus preview [7.49ms]
+BRE457 {"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored attention on quiet is conjunctive and contradictory [6.24ms]
+BRE457 {"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","semanticsExecuted":true,"matchedIds":["notify"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored legacy collection limits All Mail [9.83ms]
+BRE457 {"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","semanticsExecuted":true,"matchedIds":["notify","focus","normal"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > formerly ignored explicit All Mail classification is honored [8.85ms]
+BRE457 {"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","semanticsExecuted":true,"matchedIds":["bulk-focus"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy Focus explicit evidence never inherits mutable browser state [7.41ms]
+BRE457 {"stage":"candidate","name":"legacy Inbox absent classification defaults human","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy Inbox absent classification defaults human","semanticsExecuted":true,"matchedIds":["notify","focus","normal"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy Inbox absent classification defaults human [11.01ms]
+BRE457 {"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","semanticsExecuted":true,"matchedIds":["notify","focus","bulk-focus"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy Focus absent classification deterministically defaults all [8.76ms]
+BRE457 {"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person retains non-ASCII and cross-name-address boundary plus independent text [9.57ms]
+BRE457 {"stage":"candidate","name":"person matches subject/snippet rather than author identity","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person matches subject/snippet rather than author identity","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person matches subject/snippet rather than author identity [12.37ms]
+BRE457 {"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","semanticsExecuted":true,"matchedIds":["unicode"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person uses JS Unicode expanding lowercase not SQLite ASCII lower [9.01ms]
+BRE457 {"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","semanticsExecuted":true,"matchedIds":["sigma"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > person retains JS context-sensitive Greek lowercase [9.51ms]
+BRE457 {"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy field text uses JS non-ASCII lowercase [10.87ms]
+BRE457 {"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy text cannot cross subject/snippet newline boundary [9.23ms]
+BRE457 {"stage":"candidate","name":"legacy latest representative excludes historical-only content","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"legacy latest representative excludes historical-only content","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > legacy latest representative excludes historical-only content [7.68ms]
+BRE457 {"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > quiet latest-before-person deliberately replaces old person-before-dedup [9.72ms]
+BRE457 {"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > quiet explicit classification is applied after global latest selection [7.40ms]
+BRE457 {"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > hidden latest-before-person deliberately replaces old person-before-dedup [6.35ms]
+BRE457 {"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","semanticsExecuted":true,"matchedIds":["tie-a"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > equal-time SQL tie chooses ascending ID instead of old JS descending ID [8.41ms]
+BRE457 {"stage":"candidate","name":"equal-time winner chosen before person predicate","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"equal-time winner chosen before person predicate","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > equal-time winner chosen before person predicate [11.12ms]
+BRE457 {"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > archived notify conversation is excluded from legacy Inbox [8.01ms]
+BRE457 {"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","semanticsExecuted":true,"matchedIds":[]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > moved normal conversation is excluded from legacy Inbox [8.22ms]
+BRE457 {"stage":"candidate","name":"All Mail still retains archived conversation","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"All Mail still retains archived conversation","semanticsExecuted":true,"matchedIds":["archived"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > All Mail still retains archived conversation [10.63ms]
+BRE457 {"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","semanticsExecuted":true,"matchedIds":["notify"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail retained notify extension is conjunctive [8.73ms]
+BRE457 {"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","semanticsExecuted":true,"matchedIds":["person"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail retained sender extension preserves broad migrated-person meaning [9.28ms]
+BRE457 {"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","semanticsExecuted":true,"matchedIds":["boundary"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail text preserves existing newline-concatenated search [9.58ms]
+BRE457 {"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","semanticsExecuted":true,"matchedIds":["history-new"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > stored-mail Inbox retains historical witness/latest representative [7.43ms]
+BRE457 {"stage":"candidate","name":"generated-stored-mail-inbox","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-focus","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-quiet","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-hidden","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"generated-stored-mail-all","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > generated stored-mail profiles delegate to existing public mailbox behavior and order [90.09ms]
+BRE457 {"stage":"candidate","name":"strict-legacy-raw","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > strict legacy raw definition remains readable without changing its bytes [10.99ms]
+BRE457 {"stage":"candidate","name":"digest-first","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"digest-second","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > canonical definition digest is independent from JSON formatting/key order [17.14ms]
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"null"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":2,\"filters\":{}}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"receivedAfter\":\"2026-01-01\"}}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"mailbox\":\"all\"}}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"mailbox\":\"all\",\"attention\":\"all\",\"person\":null,\"query\":\"\",\"date\":\"2026-01-01\"}"}
+BRE457 {"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"accountId\":\"bre457-account-b\"}}"}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > corrupt/unknown/date/conflicting-account definitions fail closed without catalog normalization [44.47ms]
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+BRE457 {"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > foreign/missing account, query and collection have indistinguishable 404 [45.97ms]
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+BRE457 {"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > request account is mandatory; arbitrary definitions, actors and dates are rejected [24.55ms]
+BRE457 {"stage":"candidate","name":"paging-complete","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > repeatable keyset paging equals complete deterministic order including tied keys [449.93ms]
+BRE457 {"stage":"candidate","name":"cursor-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > cursor rejects changed query, account, limit, original session and public inbox cursor [48.60ms]
+BRE457 {"stage":"candidate","name":"tamper-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > valid-shaped keyset tampering retains original signature and fails integrity [15.74ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > unauthenticated, expired and revoked sessions cannot read saved results [13.55ms]
+BRE457 {"stage":"candidate","name":"stale-object-first","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stale-mailbox-first","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"stale-digest-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > object revision and mailbox changes invalidate outstanding cursors [41.84ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > snapshot rechecks revocation after successful middleware authentication [5.17ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > mobile bearer uses the same owner projection and revocation guard [12.70ms]
+BRE457 {"stage":"candidate","name":"auth-renewal-exception","authChanges":1,"domainChanges":0,"connectionCloseOrder":["domain","auth"]}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > near-expiry browser renewal is separately scoped auth DML, never domain DML [13.08ms]
+BRE457 {"stage":"candidate","name":"actual-read-only-transaction","queryOnly":1,"changes":0,"metric":{"durationMs":2.398624999999811,"countDurationMs":0.5173330000002352,"pageDurationMs":1.6996249999997417,"enrichmentDurationMs":0.09625000000005457,"accountCount":1,"limit":1,"returnedMessages":1,"aggregateRowsReturned":1,"pageRowsProjected":1,"lookaheadRowsProjected":0,"labelAssociationRowsLoaded":1,"effectiveOverridesProjected":0,"accountPageQueries":2,"maxPageRowsBound":2,"revision":"mailbox-v2:b9609ea759f714d5c2ad8a3b61c84b0ed726f6564bc5e7b7c72d5baa39cb3f58","savedQuery":{"candidateRowsScanned":1,"candidateSelects":2,"candidateBatchSize":1,"maxRetainedRows":1}}}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > actual read transaction rejects attempted DML while serving a bounded page [5.71ms]
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > missing derived mailbox state is unavailable without lazy repair [13.78ms]
+BRE457 {"stage":"candidate","name":"sparse-complete","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+BRE457 {"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > sparse Unicode and tied-key pages scan beyond an arbitrary first batch without skipping matches [298.14ms]
+BRE457 {"stage":"candidate","name":"delete-query-first","expectedStatus":200,"actualStatus":200}
+(pass) BRE-457 approved deterministic counterexamples (candidate only) > deleted saved query and disconnected account cannot continue or expose old results [28.51ms]
+
+apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"anonymous catalog","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":0,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"Inbox supported importance header","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"query unknown importance version remains basic","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"actual-query-read-only-control","inTransaction":true,"queryOnly":1,"rejectedUpdate":true,"connectionTotalChanges":0}
+BRE457_IMPORTANCE {"stage":"extension","name":"preconditions-complete","complete":true,"queryU":{"id":"importance-query-bre457-importance-account-U","accountId":"bre457-importance-account-U","revision":7},"queryB":{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","revision":7},"sourceStates":[{"thread_id":"importance-thread-important","effective":"important","choice":"important","choice_revision":2,"account_revision":13},{"thread_id":"importance-thread-not-important","effective":"not_important","choice":"not_important","choice_revision":3,"account_revision":13},{"thread_id":"importance-thread-unreviewed","effective":"unreviewed","choice":null,"choice_revision":null,"account_revision":13}],"authenticatedUserIds":["bre457-importance-user-U","bre457-importance-user-B"],"cookieAndMobileBOwnScopePositive":true,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"measurement":"fresh-session data_version plus selected source table equality; not attempted-DML auditing on closed request connections"}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension importance projection","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-projection","expectedStatus":200,"actualStatus":200,"queryId":"importance-query-bre457-importance-account-U","actualRows":3,"missingImportanceThreads":[],"sourceEffectiveValues":["important","not_important","unreviewed"],"comparisonExecuted":true,"evidenceScope":"additive importance projection; existing endpoint200, not endpoint absence or old UI reproduction"}
+(pass) BRE-457 extension: version1 query rows project actual retained importance [7.51ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension cookie catalog owner fence","status":409,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"cookie","surface":"catalog","expectedStatus":409,"actualStatus":409,"observedScope":{"error":{"code":"session_owner_changed","message":"The signed-in account changed. Reload before continuing."}},"openedConnections":1,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+(pass) BRE-457 extension: cookie B own catalog rejects original owner U [5.13ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension cookie results owner fence","status":409,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"cookie","surface":"results","expectedStatus":409,"actualStatus":409,"observedScope":{"error":{"code":"session_owner_changed","message":"The signed-in account changed. Reload before continuing."}},"openedConnections":1,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+(pass) BRE-457 extension: cookie B own results rejects original owner U [3.38ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension mobile catalog owner fence","status":409,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"mobile","surface":"catalog","expectedStatus":409,"actualStatus":409,"observedScope":{"error":{"code":"session_owner_changed","message":"The signed-in account changed. Reload before continuing."}},"openedConnections":1,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+(pass) BRE-457 extension: mobile B own catalog rejects original owner U [3.07ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"extension mobile results owner fence","status":409,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"extension-owner-fence","kind":"mobile","surface":"results","expectedStatus":409,"actualStatus":409,"observedScope":{"error":{"code":"session_owner_changed","message":"The signed-in account changed. Reload before continuing."}},"openedConnections":1,"comparisonExecuted":true,"evidenceScope":"B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"}
+(pass) BRE-457 extension: mobile B own results rejects original owner U [3.04ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"owned-fixture-cleanup","removed":true}
+
+apps/api/src/organization/collections-pins/query-importance-candidate.test.ts:
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"anonymous catalog","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":0,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"U own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile own default query","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"Inbox supported importance header","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"query unknown importance version remains basic","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"actual-query-read-only-control","inTransaction":true,"queryOnly":1,"rejectedUpdate":true,"connectionTotalChanges":0}
+BRE457_IMPORTANCE {"stage":"extension","name":"preconditions-complete","complete":true,"queryU":{"id":"importance-query-bre457-importance-account-U","accountId":"bre457-importance-account-U","revision":7},"queryB":{"id":"importance-query-bre457-importance-account-B","accountId":"bre457-importance-account-B","revision":7},"sourceStates":[{"thread_id":"importance-thread-important","effective":"important","choice":"important","choice_revision":2,"account_revision":13},{"thread_id":"importance-thread-not-important","effective":"not_important","choice":"not_important","choice_revision":3,"account_revision":13},{"thread_id":"importance-thread-unreviewed","effective":"unreviewed","choice":null,"choice_revision":null,"account_revision":13}],"authenticatedUserIds":["bre457-importance-user-U","bre457-importance-user-B"],"cookieAndMobileBOwnScopePositive":true,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"measurement":"fresh-session data_version plus selected source table equality; not attempted-DML auditing on closed request connections"}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"basic compatibility","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"unknown importance 0","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"unknown importance 2","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"unknown importance 01","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"unknown importance 1,2","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"enhanced compatibility","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: exact header1 only, basic JSON and Vary are compatible [50.09ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"empty enhanced","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: empty enhanced result has no fabricated metadata or totals [7.02ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"first target","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"unreturned missing state","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: only final accepted page requires importance state [17.57ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"missing importance state","status":503,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"missing importance basic","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: returned missing state is503, basic succeeds, no lazy repair [17.13ms]
+ZodError: [
+  {
+    "origin": "number",
+    "code": "too_small",
+    "minimum": 0,
+    "inclusive": true,
+    "path": [
+      "participantCounts",
+      "total"
+    ],
+    "message": "Too small: expected number to be >=0"
+  }
+]
+
+BRE457_IMPORTANCE {"stage":"extension","name":"corrupt-importance-non-success","status":500,"body":"Internal Server Error"}
+(pass) BRE-457 importance candidate: corrupt materialized metadata is non-success, never Unreviewed [8.26ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"enhanced-real-readonly","metric":{"durationMs":1.591417000000547,"countDurationMs":0.528374999999869,"pageDurationMs":0.7501250000004802,"enrichmentDurationMs":0.20720799999980954,"accountCount":1,"limit":30,"returnedMessages":3,"aggregateRowsReturned":1,"pageRowsProjected":3,"lookaheadRowsProjected":0,"labelAssociationRowsLoaded":3,"effectiveOverridesProjected":0,"accountPageQueries":1,"maxPageRowsBound":31,"revision":"mailbox-v2:e02dd8538eca16a3192aba2b0dd3aa31beded725f9e5b1be5f5edace462d6c0b"},"queryOnly":1,"rejectedUpdate":true}
+(pass) BRE-457 importance candidate: enhanced projection stays in real query-only transaction [4.82ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"basic first","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"full first","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"basic to enhanced","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"enhanced to basic","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"repeat same cursor","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: tied pages repeat and cross projection mode both directions [43.05ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"before choice change","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"importance changed cursor","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"after choice change","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: importance advances freshness and invalidates cursor, not saved query [23.85ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie foreign query","status":404,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie own enhanced","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile foreign query","status":404,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile own enhanced","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: cookie/mobile own enhanced rows and foreign404 stay isolated [25.10ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"conflicting retained account","status":422,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: retained conflicting account is422 before projection [8.18ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"foreign retained collection","status":404,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: foreign retained collection is404 without projection broadening [6.01ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"session-bound first","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"other session cursor","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: same-user different session cannot reuse enhanced cursor [14.20ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"revoked cookie enhanced","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"revoked mobile enhanced","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: cookie and mobile revocation remains401 with opt-in [9.19ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"missing revision root enhanced","status":503,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: missing mailbox revision stays503 and is not lazily rebuilt [5.67ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie catalog compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie catalog compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie catalog malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie catalog malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie catalog malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: cookie catalog absent/matching/malformed owner headers [22.68ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie results compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie results compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie results malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie results malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"cookie results malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: cookie results absent/matching/malformed owner headers [26.16ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile catalog compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile catalog compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile catalog malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile catalog malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile catalog malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: mobile catalog absent/matching/malformed owner headers [17.68ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile results compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile results compatible owner","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile results malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile results malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"mobile results malformed owner","status":400,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":1,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: mobile results absent/matching/malformed owner headers [22.16ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"actual-cors-preflight","surface":"catalog","status":204,"allowed":["x-orca-expected-user-id","x-orca-importance-version"],"browserExecuted":false}
+(pass) BRE-457 importance candidate: actual catalog CORS preflight permits existing headers [0.48ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"actual-cors-preflight","surface":"results","status":204,"allowed":["x-orca-expected-user-id","x-orca-importance-version"],"browserExecuted":false}
+(pass) BRE-457 importance candidate: actual results CORS preflight permits existing headers [0.12ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"generated all importance","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"legacy Unicode importance","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: All Mail generated and legacy Unicode rows share importance projection [20.18ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"second owned catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"second owned enhanced","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"original account enhanced","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: same-user accounts sharing exact sender retain opposite choices [23.87ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"request-control","request":"many contributing preferences","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+(pass) BRE-457 importance candidate: batched full provenance remains truthful beyond20 preferences [43.19ms]
+BRE457_IMPORTANCE {"stage":"extension","name":"owned-fixture-cleanup","removed":true}
+
+ 106 pass
+ 0 fail
+ 199 expect() calls
+Ran 106 tests across 6 files. [4.49s]

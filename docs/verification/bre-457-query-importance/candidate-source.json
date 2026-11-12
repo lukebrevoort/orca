@@ -1,0 +1,111 @@
+{
+  "status": "CANDIDATE SOURCE ONLY; NOT TESTED/TYPED/DEMOED",
+  "baselineActualRed": "a19a3bba31805d56263851cc800f8267e95db7b3",
+  "mainBase": "7c97193688599e5996bb657c34227a63927c384c",
+  "productFiles": [
+    "apps/api/src/organization/collections-pins/routes.ts",
+    "apps/api/src/organization/collections-pins/query-results-reader.ts"
+  ],
+  "unchangedSafetySources": [
+    "apps/api/src/mailbox/read.ts",
+    "apps/api/src/importance/store.ts",
+    "apps/api/src/auth/session-owner.ts",
+    "apps/api/src/auth/middleware.ts",
+    "apps/api/src/index.ts",
+    "apps/api/src/organization/collections-pins/query-result-cursor.ts",
+    "packages/shared/src/organization-saved-query-results.ts",
+    "packages/shared/src/importance.ts"
+  ],
+  "evaluatorAndFingerprintSegmentSha256": "aa9e09970f15e9ffbd2fed77844c6c5b0f127b877432c7dde6149739eb1de964",
+  "original5AndControlsTestByteUnchanged": true,
+  "plannedCounts": {
+    "controls": 1,
+    "originalFocused": 78,
+    "sameActualRedAssertions": 5,
+    "newCandidate": 23,
+    "focusedTotal": 106
+  },
+  "plannedGate": {
+    "stageCapsSeconds": {
+      "controls": 30,
+      "focused": 90,
+      "shared-types": 30,
+      "api-types": 60,
+      "metadata-demo": 30
+    },
+    "workCapSeconds": 210,
+    "outerCleanupAllowanceSeconds": 225,
+    "warmEstimateSeconds": [
+      30,
+      50
+    ],
+    "install": false
+  },
+  "sourceFiles": [
+    {
+      "path": "apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts",
+      "bytes": 16222,
+      "sha256": "24787d8546f888c0c7d152db3277023bfeb487c0b00fe9c7d46326e317eef1fa"
+    },
+    {
+      "path": "apps/api/src/organization/collections-pins/query-importance-baseline.test.ts",
+      "bytes": 4343,
+      "sha256": "13939f7771cf99e427650e1c8b59c555fec3a72c5c86709961982098a352bb1c"
+    },
+    {
+      "path": "apps/api/src/organization/collections-pins/query-importance-candidate.test.ts",
+      "bytes": 21743,
+      "sha256": "16df383a3c1ea5003a9709b5cc8f47ca5fefc3d703683f04ac91c14dd34943c9"
+    },
+    {
+      "path": "apps/api/src/organization/collections-pins/query-results-reader.ts",
+      "bytes": 7728,
+      "sha256": "2feda38d29c4c1577c1c497c38815829ae0d2f5035a17c72367367717ef1d2c9"
+    },
+    {
+      "path": "apps/api/src/organization/collections-pins/routes.ts",
+      "bytes": 5996,
+      "sha256": "d2df7b8f4fd9cb68f64eef3e2435143076fc6bb2c1c1cc53ff1530314f3877eb"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/README.md",
+      "bytes": 12867,
+      "sha256": "cf71bcf4f0b1ea5bf801ae9ade211284d9064dfcab4edc48aa72dff3a74e265b"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/candidate-demo.ts",
+      "bytes": 7202,
+      "sha256": "5fb3dae3b1ceafdf6a078c474ce686ba178622e85fce4761342cb95d5557b10e"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/candidate-plan.md",
+      "bytes": 8788,
+      "sha256": "9578529ce3eee3d422f41cbfa37cd7a5d9b1c05c1384c74a0b13f8d7baaaa1f5"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/metadata-work.py",
+      "bytes": 2133,
+      "sha256": "f14248a8521bc7ed0e4d480bd119fce97a828c8b15465c36359fd55782b466a4"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/preparation.json",
+      "bytes": 1859,
+      "sha256": "96de8b004ff80e15d4d2a897181722fed018e0e21508f23d7870e01476aca6d4"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/run-baseline.py",
+      "bytes": 13248,
+      "sha256": "79b177c89bd0b7e058c7157550e434748a6d564e60aa9750582ca2db2853ae95"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/run-candidate.py",
+      "bytes": 14072,
+      "sha256": "86092989127320dc3172b2e58441b3dd82a7dec2531b6e3234274a902ff1a6ee"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/source-inventory.json",
+      "bytes": 83760,
+      "sha256": "2bd2f50b138578a631d157b0af7652a090261e9a7e133f769ddda9a1453a74da"
+    }
+  ]
+}
