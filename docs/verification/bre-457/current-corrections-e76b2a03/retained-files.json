@@ -1,0 +1,234 @@
+{
+  "scope": "byte-for-byte docs retention; no execution by retention",
+  "sourceHead": "e76b2a0391b131a63f2863e0546fb7a67e32ea50",
+  "files": [
+    {
+      "source": "/tmp/bre457-grammar-8383bdd5/driver.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-8383bdd5/driver.py",
+      "bytes": 2273,
+      "sha256": "35343983a593c8390757223d154e8b198862f8ea0d44327fc2b4b86c3ca51894"
+    },
+    {
+      "source": "/tmp/bre457-grammar-8383bdd5/grammar.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-8383bdd5/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-grammar-8383bdd5/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-8383bdd5/manifest.json",
+      "bytes": 13115,
+      "sha256": "0b7de67cff5ec44c418320f6f3f5b7bcf472a1712e9a0f194192c5c0228cd8c8"
+    },
+    {
+      "source": "/tmp/bre457-grammar-8383bdd5/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-8383bdd5/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/controllers/api-evidence.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/controllers/api-evidence.json",
+      "bytes": 299530,
+      "sha256": "76484b188f732594dea28bb4f607b98bf6de406fc999235ad3e15919da126feb"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/controllers/api.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/controllers/api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/controllers/compile.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/controllers/compile.log",
+      "bytes": 1616,
+      "sha256": "402d6aab5250f3ee887329b6b1758e4e0393156967e2cc8cdeb15956f902ad0b"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/controllers/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/controllers/manifest.json",
+      "bytes": 3949,
+      "sha256": "83aaf256c85226fbb733526111a3de1e85c0b5a877e8fea4abd9bfc1cc00a871"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/controllers/results.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/controllers/results.log",
+      "bytes": 142099,
+      "sha256": "0c236dc129a54f0466620e1902937c7c8ba59e769a1aff2cedf02d0d4b7144d3"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/controllers-api.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/controllers-api.log",
+      "bytes": 3795,
+      "sha256": "fc518ad0404a11ca5aab22a85d8695150b579264531c40602b0fa25bfcc500ea"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/driver.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/driver.py",
+      "bytes": 8386,
+      "sha256": "f3b4eea9ce87798f3f57c1c87ed2207e02009427eacd81314f447ca6a805180d"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/grammar.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-policy-red-8afaf06a/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-policy-red-8afaf06a/manifest.json",
+      "bytes": 20771,
+      "sha256": "9b199d7f0661fb16f5df1d21aa62f8a35d45fe43912718118ccf680da5a1811f"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/controllers/api-evidence.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/controllers/api-evidence.json",
+      "bytes": 299530,
+      "sha256": "241fb72b877811a8fdb72510b63f1a98809d2a2b0d7595cfa12e0feb78e4a831"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/controllers/api.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/controllers/api.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/controllers/compile.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/controllers/compile.log",
+      "bytes": 1616,
+      "sha256": "402d6aab5250f3ee887329b6b1758e4e0393156967e2cc8cdeb15956f902ad0b"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/controllers/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/controllers/manifest.json",
+      "bytes": 3949,
+      "sha256": "de110e99c42428ef5a36c15fbacf39a298e05214de6e4d2dd0c83d9d7a729d71"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/controllers/results.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/controllers/results.log",
+      "bytes": 142098,
+      "sha256": "e29bf90bc6085d2188bab336cc0d43e29f8cb0f593b5cb4a2053ab93aae8850a"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/controllers-api.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/controllers-api.log",
+      "bytes": 3795,
+      "sha256": "94e309a4e95ecdf2479b06a6c1ecbd9ad8e16b44135be66de0057eeddd9823bf"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/driver.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/driver.py",
+      "bytes": 8386,
+      "sha256": "f3b4eea9ce87798f3f57c1c87ed2207e02009427eacd81314f447ca6a805180d"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/fixture-types.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/fixture-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/grammar.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/manifest.json",
+      "bytes": 22254,
+      "sha256": "c54ca3c5e866b92cd8ddfcddfb9d069b9cb40ebad0be1628cd07f2954b2e35cd"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/project-syntax.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/project-syntax.log",
+      "bytes": 44,
+      "sha256": "26ea96ccf98b840157d0b9477bd9b940dafa55dc891bf76d7445c68811dffac1"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/routing-witness/fixture.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/routing-witness/fixture.log",
+      "bytes": 530,
+      "sha256": "c882da1a6f47fce97f47adff5cf43b3a2302de91738f69dd19d58048697866bf"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/routing-witness/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/routing-witness/manifest.json",
+      "bytes": 2801,
+      "sha256": "253e01c9bcfbfaff9fd48042173da98c4eeaf1e91c551f0a4caefd7b11a8cad2"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/routing-witness/witness.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/routing-witness/witness.json",
+      "bytes": 5579,
+      "sha256": "6e44b91fcf717ce9f8b41b09f13e2e0b2dbc7045173ae75c05a5a2586c638e18"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/routing-witness.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/routing-witness.log",
+      "bytes": 75,
+      "sha256": "304626a1dd8bff45a2b1677f9f5b147a86a84ead2c68965ad957aafa5d2547e4"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/runner-lifecycle.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/runner-lifecycle.log",
+      "bytes": 11211,
+      "sha256": "a283e266e00d0f61a02402d9f10e571f2d4b31333e6121375ac70cac1e2e2fc8"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725/runner-syntax.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-view-removal-candidate-f0e38725/runner-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-grammar-e76b2a03/driver.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-e76b2a03/driver.py",
+      "bytes": 2273,
+      "sha256": "9b6362d45b7295461b7e976d2b0b4b6d20f6bc91bbd04a15a1915f23b30ad1cf"
+    },
+    {
+      "source": "/tmp/bre457-grammar-e76b2a03/grammar.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-e76b2a03/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-grammar-e76b2a03/manifest.json",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-e76b2a03/manifest.json",
+      "bytes": 13116,
+      "sha256": "f28dfad52f5bfa68e28f87065bb6d9d3edcfcc0c36997119fcda9de14b562fce"
+    },
+    {
+      "source": "/tmp/bre457-grammar-e76b2a03/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/raw/bre457-grammar-e76b2a03/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-current-corrections-review-f0e3.md",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/reports/bre457-current-corrections-review-f0e3.md",
+      "bytes": 4557,
+      "sha256": "fa4dc59acba98ec2ffe9d4e53421c015cae82e8d521c46d957f1890411c93107"
+    },
+    {
+      "source": "/tmp/bre457-view-removal-candidate-f0e38725.wrapper.log",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/reports/bre457-view-removal-candidate-f0e38725.wrapper.log",
+      "bytes": 4132,
+      "sha256": "fdfaa3fdd7444e9aaf97dd550500240d8e82cc059bc641f6079a5c90705372d7"
+    },
+    {
+      "source": "/tmp/bre457-grammar-8383bdd5.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/reports/bre457-grammar-8383bdd5.py",
+      "bytes": 2273,
+      "sha256": "35343983a593c8390757223d154e8b198862f8ea0d44327fc2b4b86c3ca51894"
+    },
+    {
+      "source": "/tmp/bre457-grammar-e76b2a03.py",
+      "retained": "docs/verification/bre-457/current-corrections-e76b2a03/reports/bre457-grammar-e76b2a03.py",
+      "bytes": 2273,
+      "sha256": "9b6362d45b7295461b7e976d2b0b4b6d20f6bc91bbd04a15a1915f23b30ad1cf"
+    }
+  ]
+}
