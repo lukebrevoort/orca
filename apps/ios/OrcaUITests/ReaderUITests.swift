@@ -638,7 +638,11 @@ final class ReaderUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["inbox.view-picker"].waitForExistence(timeout: 20))
         app.buttons["inbox.view-picker"].tap()
-        XCTAssertTrue(app.buttons["Inbox"].waitForExistence(timeout: 5)); app.buttons["Inbox"].tap()
+        let inbox = app.buttons["mailbox.option.normal"]
+        XCTAssertTrue(inbox.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(identifier: "mailbox.option.normal").count, 1)
+        XCTAssertEqual(inbox.label, "Inbox")
+        inbox.tap()
         XCTAssertTrue(app.navigationBars["Inbox"].waitForExistence(timeout: 20))
         return app
     }
