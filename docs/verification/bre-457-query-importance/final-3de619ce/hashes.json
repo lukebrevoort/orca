@@ -1,0 +1,281 @@
+{
+  "testedSource": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+  "excludes": "hashes.json itself; final external readback records its hash",
+  "files": [
+    {
+      "path": "docs/verification/bre-457-query-importance/README.md",
+      "bytes": 14214,
+      "sha256": "0a472a9972120d7ea35d3981aa7ebbfec21d8dce85338a18c582a51381bbaa83"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/ancestry.json",
+      "bytes": 6147,
+      "sha256": "c5c1c9bdf356a529546d29e51fed2ea5d50f18223b588e32752fbf31084d14b0"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/copy-provenance.json",
+      "bytes": 16131,
+      "sha256": "0534940200b45bc35cf99715d00a00700c990dde01ed4d9a38d5e0f5f7213df8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/demo.md",
+      "bytes": 9180,
+      "sha256": "2da2cd24884e2c7ec68015b32d789d54ae4624396944f671edf2900e95d801d1"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/execution-inputs-tested.json",
+      "bytes": 89754,
+      "sha256": "e55578d66abe272ca127f4424075242fee0f0788788d2cee47d8d366f0f135b9"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/api-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/candidate.jsonl",
+      "bytes": 26858,
+      "sha256": "8a5403cab44aa3197d68140f4d3664222b5cfd0c73a558f07e273ee7e7599c14"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/compiler-events.jsonl",
+      "bytes": 1934,
+      "sha256": "823c27567fbe03394b9b68d7aace3040ec38d0a318bda49fcd673e895b9e2dcc"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/compiler-observer.cjs",
+      "bytes": 568,
+      "sha256": "61c6877fa3fd06cac4e2dad43ce9d4d8c72b880bf49cba20d251e3b1c67397d5"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/controls.jsonl",
+      "bytes": 4260,
+      "sha256": "fea237d2e59a8ac296700f530999b6eabc7a58bc448a88835323ce3a60bf8fb3"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/controls.log",
+      "bytes": 4808,
+      "sha256": "938f9875b9efc49bd68cc18f6febe155d135287e636d99f93d8ab98c25cb3fa2"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/demo.json",
+      "bytes": 17701,
+      "sha256": "c822d82cce305993ce04737ce2b1d112806e67c81196d8a6b5fffc17870f64f6"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/demo.jsonl",
+      "bytes": 7331,
+      "sha256": "c4091a9131e4cb97e6277d34f804ff84a059e96a7cc5c458bc772555f419b4d5"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/dense-metadata-input.json",
+      "bytes": 1350,
+      "sha256": "b35aee5fd43f839ccd6a8d12089b8d54a16a2b7ba71bd1621177d9848b9b852a"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/dense-metadata-work.json",
+      "bytes": 871,
+      "sha256": "717e4a619d35c0fcca9428410525d5970920cb96c97ca8fd212712b0199bb7f1"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/focused.log",
+      "bytes": 63286,
+      "sha256": "4f812246dade875c28e622ecaf682d3667b67defd013bb994071241e182c04d8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/manifest.json",
+      "bytes": 1558536,
+      "sha256": "930d6edd14939671e5860f2936f7cf6319898410192f4c9ab09ee8af5dbbb329"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/metadata-demo.log",
+      "bytes": 7835,
+      "sha256": "328e253944a347e1d352bd8a6e853604ddc71f80c2486c319c5420529db6614a"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/original78.jsonl",
+      "bytes": 19005,
+      "sha256": "d2a6de41a51b2236524d00fd8073193b8637ade58e0573bb40317cd2eb0258a1"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/shared-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/sparse-metadata-input.json",
+      "bytes": 1350,
+      "sha256": "3d28a8d8b0f4ac9976507ba00fa271cd2348a9074ee11cd5dbf3ab9d0243f72a"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/sparse-metadata-work.json",
+      "bytes": 870,
+      "sha256": "c4820957b7523a377a31a1cbc35c1fad219c634bcb26ff8693a4d14c73519469"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/wrapper-resources.jsonl",
+      "bytes": 2958,
+      "sha256": "805bde1ccfbceb8bb6c7816fcd1295a4da4e584470f777a3ac23d92da61b0ebd"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/focused/wrapper.log",
+      "bytes": 3756,
+      "sha256": "66ac2e58670c239e2835528a8db7f706741de9b7fae6f978367925ade851b71e"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/candidate-prepared-readback.json",
+      "bytes": 13160,
+      "sha256": "07a05094ceb83e0346876285174bc72bb270573a62923fe2a054acdf4b627d50"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/focused-source-candidate-demo.ts.txt",
+      "bytes": 7202,
+      "sha256": "5fb3dae3b1ceafdf6a078c474ce686ba178622e85fce4761342cb95d5557b10e"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/focused-source-metadata-work.py.txt",
+      "bytes": 2133,
+      "sha256": "f14248a8521bc7ed0e4d480bd119fce97a828c8b15465c36359fd55782b466a4"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/focused-source-run-candidate.py.txt",
+      "bytes": 14072,
+      "sha256": "86092989127320dc3172b2e58441b3dd82a7dec2531b6e3234274a902ff1a6ee"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/full-driver-executed.py",
+      "bytes": 23752,
+      "sha256": "3a623d5d0d661a02c0b0a6716b7aa8746d42222614f80043eeeb3b1a85edf85d"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/full-driver-prepared-plan.md",
+      "bytes": 10078,
+      "sha256": "5dc9ae24fc7f046d48cf27e88fa2251c48a12d15c3d279a96be4e67a1d80b2f8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/full-driver-prepared-readback.json",
+      "bytes": 5017,
+      "sha256": "ad3dd05cd24899df0f672d1744a6199656e4c0c6a54f6f7ccf7cf965f94a0aee"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/full-inputs-prepared.json",
+      "bytes": 1592166,
+      "sha256": "8f041696907ea71bce6e6eb556d73aa23a63131c274c612dee030b98225fdff8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/preparation/shared-wrapper-executed.py",
+      "bytes": 1890,
+      "sha256": "e29f82749105f0fee6535fc4c510b7a3b529c3be7f51f9d6f5930e58ba3f15a8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/proof-map.json",
+      "bytes": 1170,
+      "sha256": "49c650b227de8a411947bf66c4d584d8dc6f38aa87d85e1ccdd2bb7d4896b459"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/review/disposition.md",
+      "bytes": 1796,
+      "sha256": "b79cf86cbc8c163573bc0751d6e32a7a846077e3ba7cdd628779ed0bb9299f14"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/review/source-review.md",
+      "bytes": 11445,
+      "sha256": "71f4df7143c56006bcaebbc33bff0c1f774e89564d380e25eda9b0a1e442c21f"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/summary.json",
+      "bytes": 8247,
+      "sha256": "6b68875ed5937b2f81e5018c0046db86fa257a6a321a0df00aaf02f767315c76"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/tool-inputs-tested.json",
+      "bytes": 1353,
+      "sha256": "a31f1a51b7ea77fc2a6a4f1a15861443115a12db04a275f78d9b2e838311f2c7"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/build.log",
+      "bytes": 1698,
+      "sha256": "df459d128af10172f24eb9d4a4e8d622a04b649cee853e7c98d0a7be2d7eeba2"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/bun-version.log",
+      "bytes": 7,
+      "sha256": "56b0485099b6c5427d3b68c042fd05b632d5e52e924c5064473389812227164c"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/compiler-events.jsonl",
+      "bytes": 9342,
+      "sha256": "62c9761cd0e17ca67831906437d1f95599246660e0979d3ec78882dcb0abded5"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/compiler-observer.cjs",
+      "bytes": 717,
+      "sha256": "a89af0e32ede4a985660ea8d2f7f21dc62cbdf19cb18fa95d8b142f10e26cb52"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/full-importance-receipts.jsonl",
+      "bytes": 26860,
+      "sha256": "f2cf93d10b3b6759457c1515e6beb676739b03348e142bc1c393603452b68e8e"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/full-saved-query-receipts.jsonl",
+      "bytes": 19004,
+      "sha256": "9346fe7782bb1da69b60368f76260a53537248b8037bac942669ab4b88c05498"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/full.log",
+      "bytes": 916716,
+      "sha256": "89b876e0c74cc114e9314dc7c8913e49c9b30e68bf134eb89b85ec57c07e769b"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/inputs-approved.json",
+      "bytes": 1592166,
+      "sha256": "8f041696907ea71bce6e6eb556d73aa23a63131c274c612dee030b98225fdff8"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/inputs-end.json",
+      "bytes": 2099180,
+      "sha256": "2bf5ca0fc7584fa28879ac0be217a6c500516613cb587d98c4eff36e6a893434"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/inputs-start.json",
+      "bytes": 2099179,
+      "sha256": "2b860f6cda8b3a50cece002d56dce67ab3152d471c2c438937750c57e6edea0a"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/lint.log",
+      "bytes": 103,
+      "sha256": "075e7fcc90d3a29aa23bab3c2e9b7b497ab46d7e6fb54ea5fa60e9a3c5b3e949"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/manifest.json",
+      "bytes": 57307,
+      "sha256": "636e6e1afe271dca85c45e459c65298b024d80f6e40321597fc9f063093c446b"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/node-version.log",
+      "bytes": 9,
+      "sha256": "249baf635bb43877fcb9422efa1a4904b702d0ddf14d3949b7cd0950d5229c81"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/test.log",
+      "bytes": 916716,
+      "sha256": "89b876e0c74cc114e9314dc7c8913e49c9b30e68bf134eb89b85ec57c07e769b"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/typecheck.log",
+      "bytes": 118,
+      "sha256": "571065d145309953348c0d40208a51c7ff8f89d787ab4fddf426aaf5042ac43e"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/wrapper-resources.jsonl",
+      "bytes": 16992,
+      "sha256": "3e4d9e0e868fc94eb76870d4650fc21a30efb1faf53f37b74e3145edafcecf53"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/final-3de619ce/workspace/wrapper.log",
+      "bytes": 18594,
+      "sha256": "7d4e23621fc225351d63a1f9e05ed290babc6cdc36e8cb7c439e4123fa450461"
+    }
+  ]
+}

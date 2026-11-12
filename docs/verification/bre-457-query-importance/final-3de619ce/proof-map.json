@@ -1,0 +1,42 @@
+{
+  "baselineRed": {
+    "head": "a19a3bba31805d56263851cc800f8267e95db7b3",
+    "relativeIndex": "../baseline-a19a3bba/summary.json",
+    "controlsPass": 1,
+    "extensionFail": 5,
+    "scope": "existing200 additive contract red"
+  },
+  "sameRegressionGreen": {
+    "head": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+    "receipts": "focused/candidate.jsonl",
+    "originalAssertionFileUnchanged": true,
+    "originalRegressionsPass": 5
+  },
+  "newCandidateChecks": {
+    "firstExecutedHead": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+    "count": 23,
+    "notEarlierRedToGreen": true
+  },
+  "focusedGate": {
+    "manifest": "focused/manifest.json",
+    "counts": {
+      "controls": 1,
+      "focused": 106
+    },
+    "actualTypesAndDemo": true
+  },
+  "fullWorkspaceGate": {
+    "manifest": "workspace/manifest.json",
+    "counts": {
+      "passed": 2404,
+      "failed": 0,
+      "expectCalls": 12162
+    },
+    "overlapNotUniqueSum": true
+  },
+  "sourceReview": "review/source-review.md",
+  "reviewDisposition": "review/disposition.md",
+  "copiedRawBytes": "copy-provenance.json",
+  "sourceIdentity": "execution-inputs-tested.json",
+  "newOwnPR": "NOT CREATED"
+}

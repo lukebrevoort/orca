@@ -1,3 +1,11 @@
+# Verified source3de; docs-only delivery pending publication clearance
+
+[Current demo/proof/limits](final-3de619ce/demo.md) · [proof map](final-3de619ce/proof-map.json) · [summary](final-3de619ce/summary.json) · [independent review](final-3de619ce/review/source-review.md). ROOT completed actual clean3de controls1/focused106/types/demo and a separate four-stage full workspace gate:2404/0/12162 expects, actual compilers/Vite, clean source/owned cleanup. Counts overlap; no standalone focused/demo repeat in the full gate. Execution remains3de619ce8a92dc52182638fe5ba94de5ac63f380; new delivery adds evidence/docs only. No current/deployed/client acceptance or publication is implied. Merged320 remains untouched; any next PR is new.
+
+Read-only retention clarified callbackMs/RSS labels and preserved provenance/work coverage gaps without changing tested source. All raw logs/drivers/observers/events/inventories/wrappers and historical nonpasses remain exact bytes. Full5534 execution-time inventory is historical; selected851 product/runtime/config/lock inputs must exactly match the subsequent docs head. [Hashes](final-3de619ce/hashes.json), including this current index, are delivery-relative; older README checksums remain valid against their original Git heads.
+
+## Historical preparation and source checkpoint notes (unchanged below)
+
 # Candidate source prepared; validation pending allocation
 
 [Candidate behavior, exact planned106+1 counts, limits and gate](candidate-plan.md). Production edits are limited to canonical catalog/results routes and saved-query reader; existing mailbox final-page enrichment is reused without modification. Original5 red assertions/control test are unchanged. No candidate tests/types/demo have run; no publication or deployed support is claimed. Current hashes/inventory and exact frozen SHA will be in the external ROOT readback.

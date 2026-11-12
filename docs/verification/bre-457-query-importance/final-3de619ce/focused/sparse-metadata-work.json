@@ -1,0 +1,24 @@
+{
+  "engine": "Python sqlite3 SQL replay, not Bun VM observations",
+  "sqliteVersion": "3.53.4",
+  "productionSourceSha256": "43715a62bf23bb37f620bb1cbafc633b9aaf59ccf33a2a17a322da6b13dfcf24",
+  "targetCount": 3,
+  "actualBatchSelects": 2,
+  "statements": [
+    {
+      "sqlSha256": "a00f5bd92e16abdef9ef87bee0908bdee863c4ca2dd946ecb3d6c1fb422e8ab8",
+      "rows": 3,
+      "progressCallbacksInterval1": 3184,
+      "seconds": 0.00304883299395442
+    },
+    {
+      "sqlSha256": "7683cdb91a1280a1dbd423e81e1431e2b84ba80888bdfeb0b4d9e1b94475356b",
+      "rows": 20,
+      "progressCallbacksInterval1": 4603,
+      "seconds": 0.0006089579546824098
+    }
+  ],
+  "connectionTotalChanges": 0,
+  "queryOnly": 1,
+  "limits": "Finite source-pinned metadata statements only; preference window visits may exceed output20/thread; no whole-request SQL/VM/memory or speedup claim"
+}
