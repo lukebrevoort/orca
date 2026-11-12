@@ -39,6 +39,11 @@ enum NativeMailboxProjection {
         }
     }
 
+    /// Extracted current post-refresh policy for a failing compatibility baseline.
+    static func selectionAfterCatalogRefresh(_ selectedID: String, options: [MailboxOption]) -> String {
+        selectedID
+    }
+
     static func unavailableIDs(enabledIDs: Set<String>, views: [SavedMailboxView]) -> [String] {
         enabledIDs.filter { id in id.hasPrefix("view:") && !views.contains(where: { $0.selectionID == id }) }.sorted()
     }

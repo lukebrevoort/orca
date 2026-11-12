@@ -633,18 +633,37 @@ extension OrcaTests {
         XCTAssertFalse(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
     }
 
+    @MainActor private func verifyCatalogTestConnection(_ state: AppState) async throws {
+        state.baseURLText = "https://orca.example"
+        StubURLProtocol.handler = { request in
+            switch request.url!.path {
+            case "/v1/auth/session":
+                return (200, try JSONSerialization.data(withJSONObject: ["isAuthenticated": true, "user": ["id": "catalog-owner", "email": "catalog@example.com", "name": NSNull()], "expiresAt": NSNull()]))
+            case "/v1/accounts": return (200, try JSONEncoder().encode(["items": DemoData.accounts]))
+            default: throw URLError(.unsupportedURL)
+            }
+        }
+        await state.loadAccounts()
+        _ = try XCTUnwrap(state.nativeMailContext(), "Catalog tests must establish the actual verified connection before testing its lifetime")
+        XCTAssertEqual(state.userID, "catalog-owner")
+    }
+
     @MainActor func testViewCatalogRemovalFallsBackWithoutErasingSavedVisibility() async throws {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
         let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let state = AppState(client: client, cache: CacheStore(directory: folder)); state.phase = .ready
+        let state = AppState(client: client, cache: CacheStore(directory: folder))
+        let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
+        defer { UserDefaults.standard.set(previousUser, forKey: "lastUser|https://orca.example"); UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID") }
+        try await verifyCatalogTestConnection(state)
         let suite = "OrcaTests.catalog.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
         let model = MailboxViews(preferences: .init(defaults: defaults))
         var available = true
-        StubURLProtocol.handler = { _ in
-            (200, (available ? #"{"items":[{"id":"hub","name":"Hub notifications","description":"","revision":1}]}"# : #"{"items":[]}"#).data(using: .utf8)!)
+        StubURLProtocol.handler = { request in
+            guard request.url!.path == "/v1/organization/views" else { return (503, Data(#"{"error":{"code":"synthetic_optional_unavailable","message":"Optional catalog unavailable"}}"#.utf8)) }
+            return (200, (available ? #"{"items":[{"id":"hub","name":"Hub notifications","description":"","revision":1}]}"# : #"{"items":[]}"#).data(using: .utf8)!)
         }
         defer { StubURLProtocol.handler = nil }
         await model.load(state: state); model.setEnabled("view:hub", true); model.selectedID = "view:hub"
@@ -721,9 +740,15 @@ extension OrcaTests {
     @MainActor func testLateViewCatalogResponseCannotCrossIdentityScope() async throws {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
         let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
-        let state = AppState(client: client); state.phase = .ready
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder))
+        let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
+        defer { UserDefaults.standard.set(previousUser, forKey: "lastUser|https://orca.example"); UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID") }
+        try await verifyCatalogTestConnection(state)
         let started = expectation(description: "Catalog request started")
-        StubURLProtocol.handler = { _ in
+        StubURLProtocol.handler = { request in
+            guard request.url!.path == "/v1/organization/views" else { return (503, Data(#"{"error":{"code":"synthetic_optional_unavailable","message":"Optional catalog unavailable"}}"#.utf8)) }
             started.fulfill()
             Thread.sleep(forTimeInterval: 0.15)
             return (200, #"{"items":[{"id":"private","name":"Previous identity","description":"","revision":1}]}"#.data(using: .utf8)!)

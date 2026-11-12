@@ -112,8 +112,7 @@ import Combine
         await browser.load(context: context, client: client, cache: state.cache, isCurrent: { current() })
         guard current() else { return }
         destinations = browser.spaces?.options ?? []
-        // Keep an unavailable selection visible as an error surface, rather than
-        // silently changing the meaning of the user's current mailbox.
+        selectedID = NativeMailboxProjection.selectionAfterCatalogRefresh(selectedID, options: options)
     }
     func reorder(_ view: SavedMailboxView, offset: Int, state: AppState) async {
         guard !changing, !loading, let revision = workspaceRevision, let index = views.firstIndex(where: { $0.id == view.id }),

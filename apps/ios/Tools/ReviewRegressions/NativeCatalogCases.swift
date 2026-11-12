@@ -32,6 +32,10 @@ private func nativePage(query: NativeSavedQuery? = nil, row: String = "row", cur
     let views = [SavedMailboxView(id: "same", name: "Keep view", description: "", revision: 2)]
     let groups = NativeMailboxProjection.groups(destinations: spaces.options, views: views, enabledIDs: ["focus", "view:same"], hiddenIDs: [], catalog: catalog)
     check("NAV-B-group-order", groups.map(\.id) == ["fixed", "inbox", "spaces", "collections", "views", "pins"], "real UI uses this group projection")
+    check("NAV-B-removed-saved-view-fallback", NativeMailboxProjection.selectionAfterCatalogRefresh("view:removed", options: groups.flatMap(\.options)) == "important", "legacy saved-View removal retains its existing Important fallback contract")
+    check("NAV-B-current-saved-view-selection", NativeMailboxProjection.selectionAfterCatalogRefresh("view:same", options: groups.flatMap(\.options)) == "view:same", "a still-visible saved View never changes selection during refresh")
+    check("NAV-B-missing-pin-selection-retained", NativeMailboxProjection.selectionAfterCatalogRefresh("pin:missing", options: groups.flatMap(\.options)) == "pin:missing", "new missing pin routes retain their explicit unavailable recovery surface")
+    check("NAV-B-missing-collection-selection-retained", NativeMailboxProjection.selectionAfterCatalogRefresh("collection:missing", options: groups.flatMap(\.options)) == "collection:missing", "new missing collection routes are not silently reinterpreted as Important")
     check("NAV-B-focus-utility-distinct", groups[1].options.last?.id == "focus" && groups[1].options.last?.name == "Inbox focus" && groups[2].options.first?.id == "destination:opaque-focus", "attention-in-Inbox utility does not route as actual named Focus")
     let identity = catalog.collections[0].identity
     check("NAV-B-kinds-do-not-collide", identity.selectionID != NativeMailIdentity(kind: .savedView, opaqueID: "same").selectionID && identity.selectionID != NativeMailIdentity(kind: .pin, opaqueID: "same", accountID: "account").selectionID, "opaque IDs remain distinct across kinds")
