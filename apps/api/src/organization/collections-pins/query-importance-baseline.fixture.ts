@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   authSessionSchema, expectedUserIdHeaderName, inboxResponseSchema,
   organizationCollectionPinQueryResponseSchema, organizationSavedQueryResultResponseSchema,
+  organizationSavedQueryDefinitionSchema,
 } from "@orca/shared";
 import { createSession } from "../../auth/session-store.ts";
 import { createMobileSession } from "../../auth/mobile/store.ts";
@@ -88,7 +89,9 @@ export async function createQueryImportanceBaselineFixture() {
       // The URL/expected object revision will come from the real catalog, not this seed name.
       client.db.insert(organizationSavedQueries).values({
         id: `importance-query-${accountId}`, accountId, name: "Canonical importance baseline", revision: 7,
-        definitionJson: JSON.stringify({ revision: 1, filters: { dataSource: "stored_mail", mailbox: "inbox", classification: "all", accountId } }),
+        definitionJson: JSON.stringify(organizationSavedQueryDefinitionSchema.parse({
+          revision: 1, filters: { dataSource: "stored_mail", mailbox: "inbox", attention: "all", classification: "all", accountId },
+        })),
       }).run();
     }
     client.db.insert(importanceChoices).values([

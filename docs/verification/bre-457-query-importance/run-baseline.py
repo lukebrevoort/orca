@@ -86,8 +86,8 @@ def main():
         raise SystemExit("NOT STARTED: must run beneath /tmp/orca-ui-heavy-slot.py with inherited lock FD")
     if git("rev-parse", "HEAD") != args.head or git("status", "--porcelain"):
         raise SystemExit("NOT STARTED: exact frozen clean HEAD required")
-    if git("branch", "--show-current") != BRANCH or git("rev-parse", "HEAD^") != BASE:
-        raise SystemExit("NOT STARTED: this test-only branch must directly follow exact main7c")
+    if git("branch", "--show-current") != BRANCH or git("merge-base", BASE, args.head) != BASE:
+        raise SystemExit("NOT STARTED: this test-only branch must descend from exact main7c")
     changed = git("diff", "--name-only", BASE, args.head).splitlines()
     if not changed or any(path not in [TEST, FIXTURE] and not path.startswith(DOCS) for path in changed):
         raise SystemExit("NOT STARTED: unexpected baseline patch path")
