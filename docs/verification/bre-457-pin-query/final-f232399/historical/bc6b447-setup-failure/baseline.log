@@ -1,0 +1,24 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/organization/collections-pins/query-results.test.ts:
+93 |         receivedAt: new Date(input.at ?? epoch), createdAt: new Date(input.at ?? epoch),
+94 |         humanClassification: input.classification ?? "likely_human", isRead: false,
+95 |       }).run();
+96 |       client.db.insert(threadAttentionOverrides).values({
+97 |         accountId, threadId, behavior: input.behavior ?? "normal",
+98 |       }).onConflictDoNothing().run();
+                                    ^
+SQLiteError: CHECK constraint failed: behavior IN ('normal','quiet')
+      errno: 275,
+ byteOffset: -1,
+       code: "SQLITE_CONSTRAINT_CHECK"
+
+      at #run (bun:sqlite:185:20)
+      at message (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.fixture.ts:98:32)
+      at createQueryResultsFixture (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.fixture.ts:101:5)
+      at <anonymous> (/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-results.test.ts:32:19)
+(fail) (unnamed) [121.00ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [1206.00ms]

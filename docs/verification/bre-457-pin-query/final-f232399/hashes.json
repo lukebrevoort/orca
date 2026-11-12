@@ -1,0 +1,221 @@
+{
+  "testedSource": "f232399bec5a73ec7159e443ac7746a8ee8313a9",
+  "excludes": "hashes.json itself; its digest belongs in the delivery readback",
+  "files": [
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/ancestry.json",
+      "bytes": 4815,
+      "sha256": "e3864b68fc6b8eee8a9e9bc4bdc415850c42c3faecab4c295c9cbce97b37c828"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/combined.json",
+      "bytes": 10976,
+      "sha256": "110740563cd7fe2e07899d9529a4669d2ea5099c209a5416351dbeefd2066ff2"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/demo.md",
+      "bytes": 9468,
+      "sha256": "e1fa05d97ef345e871148febb75dcecac9b3e536309e7b6a82ea0f7a3800d61c"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/drivers/full-executed-original.py",
+      "bytes": 16190,
+      "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/drivers/full-prepared-current.py",
+      "bytes": 16190,
+      "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/drivers/remaining-stage-corrected.py",
+      "bytes": 19082,
+      "sha256": "885f8fdb722f78f58211c45e240b63e745ef4f526ddb5b26228149ef9be36d82"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/execution-inputs.json",
+      "bytes": 83443,
+      "sha256": "db6d84a9aadebf9b7b278f99747f01213e596e4f802cde86d61d039f2a12f0a7"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/driver-original.py",
+      "bytes": 16190,
+      "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/full-test-receipts.jsonl",
+      "bytes": 19005,
+      "sha256": "cd778adcac9550c3d35d6e7280027f223d9bc9ca0f5a6588996c519ae210cc43"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/lint.log",
+      "bytes": 103,
+      "sha256": "ba26b0cb0d8615b73f844fbff8e890f6b5239449a502d8e4b229d9641b3f70e8"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/manifest.json",
+      "bytes": 20855,
+      "sha256": "dbbda72362f265f82ae08d54f05bac96cc333d49a2eda1b538b25dd505c84ede"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/node-executions.jsonl",
+      "bytes": 8402,
+      "sha256": "1f0a19c682ff242e21efe055d9d998bdd47afee49f6b93ddc0ab404681624fa5"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/node-observer.cjs",
+      "bytes": 897,
+      "sha256": "75614d5b430515cef580a54b786532d9dc5a26d3c03fa6259237d223e57c2d59"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/test-readable.txt",
+      "bytes": 879396,
+      "sha256": "3731cac2fdc0237366955235f43db93005f8b6504101b1985755e601c0148f51"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/test.log",
+      "bytes": 879386,
+      "sha256": "962cfbfb190b5c9e9ad7e4d49fc7a09d04a564c7b8e040f215b278db37b88908"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/typecheck.log",
+      "bytes": 118,
+      "sha256": "43dec2398449b8c6f2a43e200929f97135dbdba7e8fb97585e43a273eeff09af"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/first-invocation/wrapper-resources.jsonl",
+      "bytes": 12586,
+      "sha256": "e724f3f61ca9d84fda2dabfc81ec39fd67d6948c2d019d37dc06b4b7e7c8d6e7"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/github-pr-metadata.json",
+      "bytes": 4342,
+      "sha256": "d9523e396253c62eafbfa5fdc12d3b559b9381ad5905e49f6d32128e38d1bbe9"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/baseline.jsonl",
+      "bytes": 657,
+      "sha256": "f5457cac2fc370fae7abe5238f4246cdb9dc4b2bc17c93f292c61d2253f30b4a"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/baseline.log",
+      "bytes": 920,
+      "sha256": "f648b43afed4310d7b099d69af48479c7dec94c00aafc518834777c36a3925a9"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/candidate-red.jsonl",
+      "bytes": 5070,
+      "sha256": "19a880486ab84de5c01d340b35eb90818df4eafa0a4adfb897ecfd770741199b"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/candidate-red.log",
+      "bytes": 51485,
+      "sha256": "0f2b6b7f37d1653edef97d55870154cb2ccd5cf4088750d51a0a705f3b526e3d"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/frozen-install.log",
+      "bytes": 97,
+      "sha256": "9c783e5ea0eab8ff9522b3aa88387574ab3586c32d3e8bf2b6c5780a393cdce2"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/1f9bbc97-missing-endpoint/manifest.json",
+      "bytes": 1352,
+      "sha256": "0f9434ddcc0db74e69424c77fc98938f4e3ec632def46e3a267ba63683e6138b"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/bc6b447-setup-failure/baseline.log",
+      "bytes": 1269,
+      "sha256": "d7a607c962dd00c41ac081cf70d3c5816521f81652ced3c19ee8288d19647982"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/bc6b447-setup-failure/frozen-install.log",
+      "bytes": 143,
+      "sha256": "beec155a9a3aad0ae5aabaafed9d1869e9c6c6e94f46617da13ed0fa0e881782"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/historical/bc6b447-setup-failure/manifest.json",
+      "bytes": 831,
+      "sha256": "50efb620f581c8547c1324a2246ed8e53aede66491f8974cf827c8cebe8ebc0a"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/build.log",
+      "bytes": 1698,
+      "sha256": "34043ed97d2f9433a55300cdf3abf57319040d714413d013b476f362b35328c8"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/demo-receipts.jsonl",
+      "bytes": 431,
+      "sha256": "9c29aeea10db34241f2b77f79b02119368c2470dd16050b4936b8579cd377beb"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/demo-work.json",
+      "bytes": 11927,
+      "sha256": "9e29f5cdbb66a93d7ee7ec1289f4b2a436b2ebb30c76688b73b25776844f9fb8"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/focused-receipts.jsonl",
+      "bytes": 19006,
+      "sha256": "9ecd4d8ba3fa773ab384e794b4af340c76ae5b06383a2738c5c36947fcab7909"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/focused-replay.log",
+      "bytes": 31404,
+      "sha256": "0c5a72011f92b4140c69560c8660badc939bf7b4576d7cede68ba0ceac8576b0"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/http-work-replay.log",
+      "bytes": 438,
+      "sha256": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/manifest.json",
+      "bytes": 54017,
+      "sha256": "a2336d63dabfe11459f11b5e5f6e5cc2ec3fe8d785f7aa6cf64fdcf04bac6657"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/node-executions.jsonl",
+      "bytes": 5350,
+      "sha256": "ded319e51fe6a34b0bea509cc250678d4edf572e004b4894daf3f7a372e61691"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/node-observer.cjs",
+      "bytes": 897,
+      "sha256": "75614d5b430515cef580a54b786532d9dc5a26d3c03fa6259237d223e57c2d59"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/remaining-invocation/wrapper-resources.jsonl",
+      "bytes": 2515,
+      "sha256": "de1dbb1222827c0d1dd0b1dbda7eb71974eee30dd6313787e7837925f5962250"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/final-f232399/retention-provenance.json",
+      "bytes": 12102,
+      "sha256": "f293d1d1630fa7c719b49711a5c3cb935cb584f16975022962edb01372f51b66"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/focused-869ce35f/api-types.log",
+      "bytes": 9019,
+      "sha256": "3f00fbce74b90ba90fdef893af103bc541099deabb24d40d9b0f28d509f395d5"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/focused-869ce35f/focused-tests.log",
+      "bytes": 31425,
+      "sha256": "28b5f4e257e77caafb76fb3682975f0174a8c1048be29b91bda14cad4d6c2e4c"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/focused-869ce35f/http-sqlite-demo.log",
+      "bytes": 438,
+      "sha256": "2eabd2fc274def0444f7eca40d637779c59cec7bd68b547d600ec44e878cdaca"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/focused-869ce35f/shared-types.log",
+      "bytes": 8536,
+      "sha256": "4d67dc91488abcafa8b89cf2d84fb60a8e38288d0f6fa5fade10ab1af06b1a61"
+    },
+    {
+      "path": "docs/verification/bre-457-pin-query/README.md",
+      "bytes": 15649,
+      "sha256": "cc8b57055ee069b702e648fd2577f293699ff4d7fbaf88849e7a3c1ba9a7e270"
+    }
+  ]
+}

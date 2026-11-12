@@ -1,0 +1,10 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/organization/collections-pins/query-results.test.ts:
+BRE457 {"stage":"baseline","name":"real-auth-catalog-query-mailbox-preconditions","unauthenticatedStatus":401,"catalogStatus":200,"inboxStatus":200,"allMailStatus":200,"observedBehaviors":{"notify":"notify","focus":"focus","normal":"normal","quiet-new":"quiet","hidden-new":"hidden"},"queryId":"bre457-query-1","objectRevision":7,"schemaRevision":1,"connectionChanges":[0,0,0,0,0,0],"providerCalls":{"network":0,"sync":0,"transport":0}}
+BRE457 {"stage":"baseline","name":"authenticated-existing-query-missing-route","expectedStatus":404,"actualStatus":404,"semanticsExecuted":false,"evidenceScope":"missing endpoint only; not a historical web semantic bug reproduction"}
+(pass) baseline: real authorized catalog/query exists but proposed results route is absent [4.61ms]
+
+ 1 pass
+ 0 fail
+Ran 1 test across 1 file. [798.00ms]

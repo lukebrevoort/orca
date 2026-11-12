@@ -1,0 +1,39 @@
+{"stage":"candidate","name":"real-auth-catalog-query-mailbox-preconditions","unauthenticatedStatus":401,"catalogStatus":200,"inboxStatus":200,"allMailStatus":200,"observedBehaviors":{"notify":"notify","focus":"focus","normal":"normal","quiet-new":"quiet","hidden-new":"hidden"},"queryId":"bre457-query-1","objectRevision":7,"schemaRevision":1,"connectionChanges":[0,0,0,0,0,0],"providerCalls":{"network":0,"sync":0,"transport":0}}
+{"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"normal-only is independent from Inbox attention union","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"legacy Inbox absent classification defaults human","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"person matches subject/snippet rather than author identity","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"legacy latest representative excludes historical-only content","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"equal-time winner chosen before person predicate","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"All Mail still retains archived conversation","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"generated-stored-mail-inbox","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"strict-legacy-raw","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"digest-first","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":404,"raw":"{"}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":404}
+{"stage":"candidate","name":"paging-complete","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"cursor-first","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"tamper-first","expectedStatus":200,"actualStatus":404}
+{"stage":"candidate","name":"stale-object-first","expectedStatus":200,"actualStatus":404}

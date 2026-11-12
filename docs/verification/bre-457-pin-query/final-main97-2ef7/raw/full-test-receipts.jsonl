@@ -1,0 +1,171 @@
+{"stage":"candidate","name":"real-auth-catalog-query-mailbox-preconditions","unauthenticatedStatus":401,"catalogStatus":200,"inboxStatus":200,"allMailStatus":200,"observedBehaviors":{"notify":"notify","focus":"focus","normal":"normal","quiet-new":"quiet","hidden-new":"hidden"},"queryId":"bre457-query-1","objectRevision":7,"schemaRevision":1,"connectionChanges":[0,0,0,0,0,0],"providerCalls":{"network":0,"sync":0,"transport":0}}
+{"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"notify-only distinguishes sender-routed threads sharing content/classification","semanticsExecuted":true,"matchedIds":["notify"]}
+{"stage":"candidate","name":"normal-only is independent from Inbox attention union","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"normal-only is independent from Inbox attention union","semanticsExecuted":true,"matchedIds":["normal"]}
+{"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"focus execution union deliberately differs from old strict-focus preview","semanticsExecuted":true,"matchedIds":["notify","focus","bulk-focus"]}
+{"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"formerly ignored attention on quiet is conjunctive and contradictory","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"formerly ignored legacy collection limits All Mail","semanticsExecuted":true,"matchedIds":["notify"]}
+{"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"formerly ignored explicit All Mail classification is honored","semanticsExecuted":true,"matchedIds":["notify","focus","normal"]}
+{"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"legacy Focus explicit evidence never inherits mutable browser state","semanticsExecuted":true,"matchedIds":["bulk-focus"]}
+{"stage":"candidate","name":"legacy Inbox absent classification defaults human","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"legacy Inbox absent classification defaults human","semanticsExecuted":true,"matchedIds":["notify","focus","normal"]}
+{"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"legacy Focus absent classification deterministically defaults all","semanticsExecuted":true,"matchedIds":["notify","focus","bulk-focus"]}
+{"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"person retains non-ASCII and cross-name-address boundary plus independent text","semanticsExecuted":true,"matchedIds":["person"]}
+{"stage":"candidate","name":"person matches subject/snippet rather than author identity","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"person matches subject/snippet rather than author identity","semanticsExecuted":true,"matchedIds":["person"]}
+{"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"person uses JS Unicode expanding lowercase not SQLite ASCII lower","semanticsExecuted":true,"matchedIds":["unicode"]}
+{"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"person retains JS context-sensitive Greek lowercase","semanticsExecuted":true,"matchedIds":["sigma"]}
+{"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"legacy field text uses JS non-ASCII lowercase","semanticsExecuted":true,"matchedIds":["person"]}
+{"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"legacy text cannot cross subject/snippet newline boundary","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"legacy latest representative excludes historical-only content","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"legacy latest representative excludes historical-only content","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"quiet latest-before-person deliberately replaces old person-before-dedup","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"quiet explicit classification is applied after global latest selection","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"hidden latest-before-person deliberately replaces old person-before-dedup","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"equal-time SQL tie chooses ascending ID instead of old JS descending ID","semanticsExecuted":true,"matchedIds":["tie-a"]}
+{"stage":"candidate","name":"equal-time winner chosen before person predicate","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"equal-time winner chosen before person predicate","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"archived notify conversation is excluded from legacy Inbox","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"moved normal conversation is excluded from legacy Inbox","semanticsExecuted":true,"matchedIds":[]}
+{"stage":"candidate","name":"All Mail still retains archived conversation","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"All Mail still retains archived conversation","semanticsExecuted":true,"matchedIds":["archived"]}
+{"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stored-mail retained notify extension is conjunctive","semanticsExecuted":true,"matchedIds":["notify"]}
+{"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stored-mail retained sender extension preserves broad migrated-person meaning","semanticsExecuted":true,"matchedIds":["person"]}
+{"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stored-mail text preserves existing newline-concatenated search","semanticsExecuted":true,"matchedIds":["boundary"]}
+{"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stored-mail Inbox retains historical witness/latest representative","semanticsExecuted":true,"matchedIds":["history-new"]}
+{"stage":"candidate","name":"generated-stored-mail-inbox","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"generated-stored-mail-focus","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"generated-stored-mail-quiet","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"generated-stored-mail-hidden","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"generated-stored-mail-all","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"strict-legacy-raw","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"digest-first","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"digest-second","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{"}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"null"}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":2,\"filters\":{}}"}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"receivedAfter\":\"2026-01-01\"}}"}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"mailbox\":\"all\"}}"}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"mailbox\":\"all\",\"attention\":\"all\",\"person\":null,\"query\":\"\",\"date\":\"2026-01-01\"}"}
+{"stage":"candidate","name":"invalid-raw-definition","expectedStatus":422,"actualStatus":422,"raw":"{\"revision\":1,\"filters\":{\"accountId\":\"bre457-account-b\"}}"}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"foreign-or-missing","expectedStatus":404,"actualStatus":404}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"strict-request","expectedStatus":400,"actualStatus":400}
+{"stage":"candidate","name":"paging-complete","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"paging-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"cursor-first","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"tamper-first","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stale-object-first","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stale-mailbox-first","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"stale-digest-first","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"auth-renewal-exception","authChanges":1,"domainChanges":0,"connectionCloseOrder":["domain","auth"]}
+{"stage":"candidate","name":"actual-read-only-transaction","queryOnly":1,"changes":0,"metric":{"durationMs":2.999041999995825,"countDurationMs":0.6967080000031274,"pageDurationMs":2.1173330000019632,"enrichmentDurationMs":0.06375000000116415,"accountCount":1,"limit":1,"returnedMessages":1,"aggregateRowsReturned":1,"pageRowsProjected":1,"lookaheadRowsProjected":0,"labelAssociationRowsLoaded":1,"effectiveOverridesProjected":0,"accountPageQueries":2,"maxPageRowsBound":2,"revision":"mailbox-v2:b9609ea759f714d5c2ad8a3b61c84b0ed726f6564bc5e7b7c72d5baa39cb3f58","savedQuery":{"candidateRowsScanned":1,"candidateSelects":2,"candidateBatchSize":1,"maxRetainedRows":1}}}
+{"stage":"candidate","name":"sparse-complete","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-next","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"sparse-repeat","expectedStatus":200,"actualStatus":200}
+{"stage":"candidate","name":"delete-query-first","expectedStatus":200,"actualStatus":200}

@@ -2,6 +2,10 @@ import type { Hono } from "hono";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
+import { getAuthConfig } from "../../auth/config.ts";
+import { organizationSavedQueryResultQuerySchema } from "@orca/shared";
+import { MailboxCursorError } from "../../mailbox/read.ts";
+import { readSavedQueryResults, SavedQueryReadError } from "./query-results-reader.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   OrganizationCollectionsPinsAccessError,
@@ -34,6 +38,28 @@ export function registerOrganizationCollectionsPinsRoutes(
   options: { dbFactory?: typeof createDatabaseClient } = {},
 ) {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
+
+  app.get("/v1/organization/collections-pins/queries/:queryId/results", (c, next) => {
+    c.header("Cache-Control", "private, no-store");
+    return next();
+  }, requireAuth({ dbFactory }), (c) => {
+    const values = c.req.queries();
+    const parsed = organizationSavedQueryResultQuerySchema.safeParse(c.req.query());
+    if (!parsed.success || Object.values(values).some(value => value.length !== 1)) {
+      return c.json({ error: { code: "validation_error", message: "Invalid saved-query result request" } }, 400);
+    }
+    const { sqlite } = dbFactory();
+    try {
+      return c.json(readSavedQueryResults(sqlite, {
+        auth: c.get("auth"), authSource: c.get("authSource") ?? "cookie",
+        queryId: c.req.param("queryId"), query: parsed.data, cursorSecret: getAuthConfig().sessionSecret,
+      }));
+    } catch (error) {
+      if (error instanceof SavedQueryReadError) return c.json({ error: { code: error.code, message: error.message } }, error.status);
+      if (error instanceof MailboxCursorError) return c.json({ error: { code: "invalid_cursor", message: error.message } }, 400);
+      throw error;
+    } finally { sqlite.close(); }
+  });
 
   function open(workspaceId: string) {
     const client = dbFactory();

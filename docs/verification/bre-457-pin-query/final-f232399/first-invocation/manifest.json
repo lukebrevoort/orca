@@ -1,0 +1,492 @@
+{
+  "kind": "ROOT-allocated final sequential workspace gate",
+  "startSHA": "f232399bec5a73ec7159e443ac7746a8ee8313a9",
+  "startStatus": "",
+  "startedAt": 1794427045.498365,
+  "driver": {
+    "path": "/private/tmp/bre457-final-gates.py",
+    "sha256": "ec53e724262a1c8a9f86de5e6bd4a6cf787ba2edc04ca02903312fb66d743d27"
+  },
+  "workspaces": [
+    {
+      "path": "apps/api",
+      "name": "@orca/api",
+      "scripts": {
+        "start": "bun src/db/migrate.ts && bun src/index.ts",
+        "dev": "bun run db:migrate && bun --env-file=../../.env --watch src/index.ts",
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "bun test",
+        "test:smoke": "bun test src/smoke.test.ts",
+        "benchmark:gmail-sync": "bun src/providers/gmail/sync-benchmark.ts",
+        "lint": "tsc -p tsconfig.json",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "bun --env-file=../../.env src/db/migrate.ts",
+        "db:verify": "bun --env-file=../../.env src/db/verify.ts"
+      },
+      "packageSha256": "2b212a0d4d6b1f95bd140a7759a4e813c7a559bf57434087abb95b1d33223efd"
+    },
+    {
+      "path": "apps/web",
+      "name": "@orca/web",
+      "scripts": {
+        "dev": "vite --host 0.0.0.0",
+        "build": "tsc -p tsconfig.json && vite build",
+        "check:inbox-layout": "bun scripts/check-inbox-layout.ts",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "bun test",
+        "lint": "tsc -p tsconfig.json"
+      },
+      "packageSha256": "123efcbdfbe3ff8d71a167822ae78f4cdb1183e91b5fd7910027c66968dfe313"
+    },
+    {
+      "path": "packages/feedback-kit-core",
+      "name": "@feedback-kit/core",
+      "scripts": {},
+      "packageSha256": "72fede642980447edbf22b417c5c82584797caf34cc991f0af9d5e956effcdee"
+    },
+    {
+      "path": "packages/feedback-kit-react",
+      "name": "@feedback-kit/react",
+      "scripts": {},
+      "packageSha256": "a424f9a925674c2ace41ef1439a5908bb05a4241c8847c8ed8091f77f176b64c"
+    },
+    {
+      "path": "packages/shared",
+      "name": "@orca/shared",
+      "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "bun test",
+        "lint": "tsc -p tsconfig.json"
+      },
+      "packageSha256": "5b6c2430bfc33cdd48709314b41acb8bc461d33e0f4398c0e5840cdbe8fcf339"
+    }
+  ],
+  "stages": [
+    {
+      "name": "lint",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "lint"
+      ],
+      "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829",
+      "hardCapSeconds": 120,
+      "startedAt": 1794427045.6193159,
+      "rawExit": 0,
+      "exitCode": 0,
+      "ownedPidAndPgid": 21139,
+      "ownedProcessCleanup": "already-terminal",
+      "seconds": 16.678812833997654,
+      "logSha256": "ba26b0cb0d8615b73f844fbff8e890f6b5239449a502d8e4b229d9641b3f70e8",
+      "executionProof": [
+        {
+          "workspace": "@orca/api",
+          "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/tsconfig.json",
+          "sourceScript": "tsc -p tsconfig.json",
+          "compilerStarts": [
+            {
+              "pid": 21140,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/tsconfig.json",
+              "stage": "lint",
+              "event": "start"
+            }
+          ],
+          "successfulExits": [
+            {
+              "pid": 21140,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/tsconfig.json",
+              "stage": "lint",
+              "event": "exit",
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "workspace": "@orca/web",
+          "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web/tsconfig.json",
+          "sourceScript": "tsc -p tsconfig.json",
+          "compilerStarts": [
+            {
+              "pid": 21206,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web/tsconfig.json",
+              "stage": "lint",
+              "event": "start"
+            }
+          ],
+          "successfulExits": [
+            {
+              "pid": 21206,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web/tsconfig.json",
+              "stage": "lint",
+              "event": "exit",
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "workspace": "@orca/shared",
+          "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared/tsconfig.json",
+          "sourceScript": "tsc -p tsconfig.json",
+          "compilerStarts": [
+            {
+              "pid": 21194,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared/tsconfig.json",
+              "stage": "lint",
+              "event": "start"
+            }
+          ],
+          "successfulExits": [
+            {
+              "pid": 21194,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared/tsconfig.json",
+              "stage": "lint",
+              "event": "exit",
+              "exitCode": 0
+            }
+          ]
+        }
+      ],
+      "proofProblems": [],
+      "usageDetected": false
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "typecheck"
+      ],
+      "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829",
+      "hardCapSeconds": 120,
+      "startedAt": 1794427062.353537,
+      "rawExit": 0,
+      "exitCode": 0,
+      "ownedPidAndPgid": 21261,
+      "ownedProcessCleanup": "already-terminal",
+      "seconds": 12.749598583002808,
+      "logSha256": "43dec2398449b8c6f2a43e200929f97135dbdba7e8fb97585e43a273eeff09af",
+      "executionProof": [
+        {
+          "workspace": "@orca/api",
+          "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/tsconfig.json",
+          "sourceScript": "tsc -p tsconfig.json",
+          "compilerStarts": [
+            {
+              "pid": 21262,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/tsconfig.json",
+              "stage": "typecheck",
+              "event": "start"
+            }
+          ],
+          "successfulExits": [
+            {
+              "pid": 21262,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/tsconfig.json",
+              "stage": "typecheck",
+              "event": "exit",
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "workspace": "@orca/web",
+          "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web/tsconfig.json",
+          "sourceScript": "tsc -p tsconfig.json",
+          "compilerStarts": [
+            {
+              "pid": 21277,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web/tsconfig.json",
+              "stage": "typecheck",
+              "event": "start"
+            }
+          ],
+          "successfulExits": [
+            {
+              "pid": 21277,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/web/tsconfig.json",
+              "stage": "typecheck",
+              "event": "exit",
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "workspace": "@orca/shared",
+          "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared/tsconfig.json",
+          "sourceScript": "tsc -p tsconfig.json",
+          "compilerStarts": [
+            {
+              "pid": 21275,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared/tsconfig.json",
+              "stage": "typecheck",
+              "event": "start"
+            }
+          ],
+          "successfulExits": [
+            {
+              "pid": 21275,
+              "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+              "execPath": "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "command": [
+                "/Users/lbrevoort/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.json"
+              ],
+              "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared",
+              "args": [
+                "-p",
+                "tsconfig.json"
+              ],
+              "project": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/packages/shared/tsconfig.json",
+              "stage": "typecheck",
+              "event": "exit",
+              "exitCode": 0
+            }
+          ]
+        }
+      ],
+      "proofProblems": [],
+      "usageDetected": false
+    },
+    {
+      "name": "test",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "run",
+        "--sequential",
+        "--elide-lines=0",
+        "--filter",
+        "*",
+        "--no-install",
+        "--no-env-file",
+        "test"
+      ],
+      "cwd": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829",
+      "hardCapSeconds": 300,
+      "startedAt": 1794427075.1619358,
+      "rawExit": 0,
+      "exitCode": 2,
+      "ownedPidAndPgid": 21331,
+      "ownedProcessCleanup": "already-terminal",
+      "seconds": 193.54209029200138,
+      "logSha256": "962cfbfb190b5c9e9ad7e4d49fc7a09d04a564c7b8e040f215b278db37b88908",
+      "executionProof": [
+        {
+          "workspace": "@orca/api",
+          "passCounts": [],
+          "failCounts": [],
+          "skipCounts": []
+        },
+        {
+          "workspace": "@orca/web",
+          "passCounts": [],
+          "failCounts": [],
+          "skipCounts": []
+        },
+        {
+          "workspace": "@orca/shared",
+          "passCounts": [],
+          "failCounts": [],
+          "skipCounts": []
+        }
+      ],
+      "proofProblems": [
+        "Missing successful actual test summary for @orca/api",
+        "Missing successful actual test summary for @orca/web",
+        "Missing successful actual test summary for @orca/shared"
+      ],
+      "usageDetected": false
+    }
+  ],
+  "ownedTmp": "/private/tmp/bre457-final-lw6ijma4",
+  "overallExit": 2,
+  "bun": "1.3.14",
+  "node": "v24.22.1",
+  "compiler": {
+    "version": "5.9.3",
+    "entry": "/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/node_modules/typescript/bin/tsc",
+    "sha256": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0",
+    "implementationSha256": "e8f349eabd48486bdb2bf9dc1a00c89d58297270c54b745838879e2859194419"
+  },
+  "configs": {
+    "apps/api": "c68a2691eb0435a3aae11165e0c7bd513f628d6fceea39ed471290fcc50b17e7",
+    "apps/web": "6ac2e26d4ce824b853d171db900114ef887820028fd8acb73790cf49d1cfd8b8",
+    "packages/shared": "ee2be4bbe74e9b1fdc441a1702ba73d0cef3ca88a7a820cb8686c56b86be6c8b"
+  },
+  "usageOnlyRegression": {
+    "source": "/private/tmp/bre457-pin-query-candidate-869ce35f-01/api-types.log",
+    "sha256": "3f00fbce74b90ba90fdef893af103bc541099deabb24d40d9b0f28d509f395d5",
+    "rawExit": 0,
+    "checkedExit": 2
+  },
+  "demoSourceEquivalence": {
+    "previousHead": "869ce35f8f0d0eb71902ad5433b27fbb00e7be05",
+    "sameBlobEntries": false,
+    "finalInputTreeSha256": "c457a9f384b51aaaa93327062b8eef6aefc7d0d39758553f82bdccbd835fbd18"
+  },
+  "focusedAndDemoPolicy": "ROOT requested explicit current-final-source replays after full workspace gates; earlier receipts remain historical",
+  "ownedTmpRemoved": true,
+  "endSHA": "f232399bec5a73ec7159e443ac7746a8ee8313a9",
+  "endStatus": "",
+  "finishedAt": 1794427268.78985,
+  "observerSha256": "75614d5b430515cef580a54b786532d9dc5a26d3c03fa6259237d223e57c2d59",
+  "nodeExecutionEventsSha256": "1f0a19c682ff242e21efe055d9d998bdd47afee49f6b93ddc0ab404681624fa5"
+}

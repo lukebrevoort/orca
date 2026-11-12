@@ -1,0 +1,15 @@
+{
+  "startSHA": "f6d0e168fe89b86af99ba06ea5ff55bf8eed2241",
+  "endSHA": "f6d0e168fe89b86af99ba06ea5ff55bf8eed2241",
+  "status": "",
+  "exit": 0,
+  "elapsed": 10.773489249986596,
+  "scope": "actual direct pinnedNode/TypeScript shared+API types only; focused78/demo remain at source-identical869",
+  "usageOnlyRegression": {
+    "legacyReportedExit": 0,
+    "exactLegacyOutputSha256": "3f00fbce74b90ba90fdef893af103bc541099deabb24d40d9b0f28d509f395d5",
+    "newGuardExit": 2,
+    "interpretation": "retained actual usage-only0 rejected; not a compiler execution",
+    "realCompilerFailurePreserved": true
+  }
+}
