@@ -586,11 +586,13 @@ final class OrcaUITests: XCTestCase {
         }
         attachScreenshot(named: "feedback-system-picker-banner-dismissed")
         guard tapFeedbackPickerAsset(photoQuery.firstMatch, in: app) else { return }
-        let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label MATCHES %@",
-                                                        "PXGGridLayout-Info", "Video, .*, \(escapedDay), [0-9]{1,2}:.*"))
+        // The committed recording can predate the generated photo across midnight.
+        // Require the owned simulator's unique video, then verify its exact SHA below.
+        let videoQuery = app.images.matching(NSPredicate(format: "identifier == %@ AND label BEGINSWITH %@",
+                                                        "PXGGridLayout-Info", "Video, "))
         guard videoQuery.firstMatch.waitForExistence(timeout: 10), videoQuery.count == 1 else {
             logFeedbackPicker(in: app)
-            XCTFail("System picker must expose exactly one recording imported for this fixture day")
+            XCTFail("System picker must expose exactly one fixture recording")
             return
         }
         guard tapFeedbackPickerAsset(videoQuery.firstMatch, in: app) else { return }
