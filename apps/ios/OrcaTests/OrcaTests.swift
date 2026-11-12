@@ -1,4 +1,6 @@
 import XCTest
+import SwiftUI
+import UIKit
 import ImageIO
 import UniformTypeIdentifiers
 import AVFoundation
@@ -3807,5 +3809,68 @@ extension NativeImportanceTests {
         state.baseURLText = "https://other.invalid"
         XCTAssertNil(state.nativeMailContext(), "Editing an unsaved server field does not establish that origin's verified owner")
         XCTAssertEqual(state.mailConnectionGeneration, original)
+    }
+}
+
+/// Actual UIKit target/action and programmatic reflection; physical taps and
+/// SwiftUI-hosted accessibility geometry remain the hosted UI test contract.
+@MainActor
+final class NativeReaderWideSwitchTests: XCTestCase {
+    func testValueChangedDispatchWritesTheBindingOncePerNativeAction() {
+        var value = false
+        var writes = 0
+        let bridge = NativeReaderWideSwitch(isOn: Binding(get: { value }, set: { value = $0; writes += 1 }))
+        let coordinator = bridge.makeCoordinator()
+        let control = bridge.makeControl(coordinator: coordinator)
+        control.setOn(true, animated: false)
+        XCTAssertEqual(writes, 0, "Programmatic UISwitch state alone is not a user action")
+        control.sendActions(for: .valueChanged)
+        XCTAssertTrue(value)
+        XCTAssertEqual(writes, 1)
+        control.setOn(false, animated: false)
+        control.sendActions(for: .valueChanged)
+        XCTAssertFalse(value)
+        XCTAssertEqual(writes, 2)
+    }
+
+    func testProgrammaticReflectionAndRepeatedUpdatesDoNotPublishActions() {
+        var value = false
+        var writes = 0
+        let bridge = NativeReaderWideSwitch(isOn: Binding(get: { value }, set: { value = $0; writes += 1 }))
+        let coordinator = bridge.makeCoordinator()
+        let control = bridge.makeControl(coordinator: coordinator)
+        value = true
+        bridge.updateControl(control, coordinator: coordinator, enabled: true)
+        bridge.updateControl(control, coordinator: coordinator, enabled: true)
+        XCTAssertTrue(control.isOn)
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(control.accessibilityLabel, "Keep tables and code wide")
+        XCTAssertEqual(control.accessibilityIdentifier, "Keep tables and code wide")
+        XCTAssertTrue(control.isAccessibilityElement)
+        XCTAssertGreaterThanOrEqual(control.intrinsicContentSize.height, 44)
+        XCTAssertGreaterThanOrEqual(control.intrinsicContentSize.width, 44)
+    }
+
+    func testUpdatedBindingOwnsTheActionAndDisabledReflectionCannotWrite() {
+        var original = false, current = true
+        var originalWrites = 0, currentWrites = 0
+        let first = NativeReaderWideSwitch(isOn: Binding(get: { original }, set: { original = $0; originalWrites += 1 }))
+        let coordinator = first.makeCoordinator()
+        let control = first.makeControl(coordinator: coordinator)
+        let replacement = NativeReaderWideSwitch(isOn: Binding(get: { current }, set: { current = $0; currentWrites += 1 }))
+        replacement.updateControl(control, coordinator: coordinator, enabled: true)
+        XCTAssertTrue(control.isOn)
+        control.setOn(false, animated: false)
+        control.sendActions(for: .valueChanged)
+        XCTAssertFalse(current)
+        XCTAssertEqual(currentWrites, 1)
+        XCTAssertEqual(originalWrites, 0)
+        replacement.updateControl(control, coordinator: coordinator, enabled: false)
+        XCTAssertFalse(control.isEnabled)
+        control.setOn(true, animated: false)
+        control.sendActions(for: .valueChanged)
+        XCTAssertEqual(currentWrites, 1)
+        XCTAssertFalse(current)
+        XCTAssertFalse(original)
     }
 }

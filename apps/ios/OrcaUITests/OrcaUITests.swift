@@ -1984,7 +1984,7 @@ final class OrcaUITests: XCTestCase {
         }
         let app = try launchApp(htmlDiagnostics: true)
         assertInboxLoaded(in: app)
-        openConversation(subject: Fixture.htmlSubject, in: app)
+        openConversation(subject: Fixture.htmlSubject, in: app, boundedRowReveal: true)
         let foreground = app.staticTexts["Explicit dark foreground stays readable."]
         let background = app.staticTexts["Explicit pale background keeps readable inherited text."]
         let foregroundExists = foreground.waitForExistence(timeout: 10)
@@ -2610,7 +2610,35 @@ final class OrcaUITests: XCTestCase {
         return true
     }
 
-    private func openConversation(subject: String, in app: XCUIApplication) {
+    /// Opt-in stimulus precondition for the HTML fixture. Native List can leave
+    /// an offscreen row unrealized even when its owned API result is present.
+    private func revealConversationRow(_ identifier: String, in app: XCUIApplication) -> Bool {
+        let list = app.descendants(matching: .any)["inbox.list"]
+        let matches = app.buttons.matching(identifier: identifier)
+        for attempt in 0...6 {
+            guard app.tabBars.buttons["Mail"].isSelected, app.navigationBars["Inbox"].exists, list.exists else {
+                XCTFail("HTML row reveal must remain in the owned Mail Inbox"); return false
+            }
+            var fixed = [CGRect]()
+            if app.tabBars.element.exists { fixed.append(app.tabBars.element.frame) }
+            if app.buttons["feedback.open"].exists { fixed.append(app.buttons["feedback.open"].frame) }
+            guard let viewport = ViewportGeometry.content(form: list.frame, application: app.frame,
+                navigation: app.navigationBars["Inbox"].frame, fixed: fixed) else {
+                XCTFail("HTML row reveal needs an unobscured content viewport"); return false
+            }
+            guard matches.count <= 1 else { XCTFail("HTML fixture must have one actual row Button"); return false }
+            let row = app.buttons[identifier]
+            if matches.count == 1, row.isHittable, row.frame.width >= 44, row.frame.height >= 44,
+               viewport.contains(row.frame) { return true }
+            guard attempt < 6 else { break }
+            let up = !row.exists || row.frame.maxY > viewport.maxY
+            guard revealInboxContent(in: app, up: up) else { break }
+        }
+        XCTFail("HTML fixture row must be unique and fully reachable after at most six content drags")
+        return false
+    }
+
+    private func openConversation(subject: String, in app: XCUIApplication, boundedRowReveal: Bool = false) {
         let identifier: String
         switch subject {
         case Fixture.inboxSubject: identifier = "inbox.message.\(Fixture.inboxMessageID)"
@@ -2618,7 +2646,8 @@ final class OrcaUITests: XCTestCase {
         case Fixture.htmlSubject: identifier = "inbox.message.ios-fixture-message-3"
         default: XCTFail("No fixture message identifier for \(subject)"); return
         }
-        let row = app.descendants(matching: .any)[identifier]
+        if boundedRowReveal, !revealConversationRow(identifier, in: app) { return }
+        let row = boundedRowReveal ? app.buttons[identifier] : app.descendants(matching: .any)[identifier]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         print("INBOX_NAVIGATION_TARGET row=\(identifier) type=\(row.elementType.rawValue) frame=\(row.frame) hittable=\(row.isHittable) enabled=\(row.isEnabled)")
         let tapStarted = ProcessInfo.processInfo.systemUptime

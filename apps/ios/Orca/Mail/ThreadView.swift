@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ThreadView: View {
     @Environment(\.dismiss) private var dismiss
@@ -372,6 +373,64 @@ struct ThreadView: View {
 struct ShareSheet: UIViewControllerRepresentable { let items: [Any]; func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }; func updateUIViewController(_ controller: UIActivityViewController, context: Context) {} }
 
 
+/// The native control, rather than a separate SwiftUI interaction proxy, owns
+/// the label, accessibility semantics and user valueChanged action.
+@MainActor
+struct NativeReaderWideSwitch: UIViewRepresentable {
+    @Binding var isOn: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    static let label = "Keep tables and code wide"
+
+    init(isOn: Binding<Bool>) { _isOn = isOn }
+    func makeCoordinator() -> Coordinator { Coordinator(binding: $isOn) }
+    func makeUIView(context: Context) -> NativeReaderSwitchControl {
+        makeControl(coordinator: context.coordinator, enabled: isEnabled)
+    }
+    func updateUIView(_ control: NativeReaderSwitchControl, context: Context) {
+        updateControl(control, coordinator: context.coordinator, enabled: isEnabled)
+    }
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: NativeReaderSwitchControl, context: Context) -> CGSize? {
+        // SwiftUI owns the managed view's frame. The UISwitch subclass advertises
+        // its own minimum footprint; no outer AX proxy or frame mutation is used.
+        uiView.intrinsicContentSize
+    }
+
+    func makeControl(coordinator: Coordinator, enabled: Bool = true) -> NativeReaderSwitchControl {
+        let control = NativeReaderSwitchControl()
+        control.isAccessibilityElement = true
+        control.accessibilityLabel = Self.label
+        control.accessibilityIdentifier = Self.label
+        control.addTarget(coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+        updateControl(control, coordinator: coordinator, enabled: enabled)
+        return control
+    }
+    func updateControl(_ control: NativeReaderSwitchControl, coordinator: Coordinator, enabled: Bool) {
+        coordinator.binding = $isOn
+        control.isEnabled = enabled
+        // UIKit programmatic reflection does not emit valueChanged. Avoid
+        // redundant reflection so a SwiftUI update cannot become a user action.
+        if control.isOn != isOn { control.setOn(isOn, animated: false) }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var binding: Binding<Bool>
+        init(binding: Binding<Bool>) { self.binding = binding }
+        @objc func valueChanged(_ control: UISwitch) {
+            guard control.isEnabled else { return }
+            binding.wrappedValue = control.isOn
+        }
+    }
+}
+
+@MainActor
+final class NativeReaderSwitchControl: UISwitch {
+    override var intrinsicContentSize: CGSize {
+        let native = super.intrinsicContentSize
+        return CGSize(width: max(64, native.width), height: max(44, native.height))
+    }
+}
+
 private struct NativeReaderBody: View {
     let html: String?
     let text: String?
@@ -406,15 +465,7 @@ private struct NativeReaderBody: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .accessibilityHidden(true)
-                            // Keep the readable label separate from the native
-                            // switch's own interaction frame.
-                            Toggle("Keep tables and code wide", isOn: $wideContent)
-                                .labelsHidden()
-                                .toggleStyle(.switch)
-                                .fixedSize()
-                                .frame(minWidth: 64, minHeight: 44)
-                                .contentShape(Rectangle())
-                                .accessibilityLabel("Keep tables and code wide")
+                            NativeReaderWideSwitch(isOn: $wideContent)
                         }.frame(minHeight: 44)
                         if wideContent { Text("Scroll within this message to reach wide content. Ordinary prose keeps the reading width.").font(.caption) }
                     } else if text != nil {
