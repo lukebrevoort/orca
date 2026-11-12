@@ -656,6 +656,7 @@ extension OrcaTests {
         let state = AppState(client: client, cache: CacheStore(directory: folder))
         let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
         defer { UserDefaults.standard.set(previousUser, forKey: "lastUser|https://orca.example"); UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID") }
+        defer { StubURLProtocol.handler = nil }
         try await verifyCatalogTestConnection(state)
         let suite = "OrcaTests.catalog.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
@@ -665,7 +666,6 @@ extension OrcaTests {
             guard request.url!.path == "/v1/organization/views" else { return (503, Data(#"{"error":{"code":"synthetic_optional_unavailable","message":"Optional catalog unavailable"}}"#.utf8)) }
             return (200, (available ? #"{"items":[{"id":"hub","name":"Hub notifications","description":"","revision":1}]}"# : #"{"items":[]}"#).data(using: .utf8)!)
         }
-        defer { StubURLProtocol.handler = nil }
         await model.load(state: state); model.setEnabled("view:hub", true); model.selectedID = "view:hub"
         XCTAssertEqual(model.title, "Hub notifications")
         available = false; await model.load(state: state)
@@ -745,6 +745,7 @@ extension OrcaTests {
         let state = AppState(client: client, cache: CacheStore(directory: folder))
         let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
         defer { UserDefaults.standard.set(previousUser, forKey: "lastUser|https://orca.example"); UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID") }
+        defer { StubURLProtocol.handler = nil }
         try await verifyCatalogTestConnection(state)
         let started = expectation(description: "Catalog request started")
         StubURLProtocol.handler = { request in
@@ -753,7 +754,6 @@ extension OrcaTests {
             Thread.sleep(forTimeInterval: 0.15)
             return (200, #"{"items":[{"id":"private","name":"Previous identity","description":"","revision":1}]}"#.data(using: .utf8)!)
         }
-        defer { StubURLProtocol.handler = nil }
         let model = MailboxViews()
         let pending = Task { await model.load(state: state) }
         await fulfillment(of: [started], timeout: 3)
