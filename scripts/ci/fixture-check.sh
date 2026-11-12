@@ -35,9 +35,9 @@ cleanup() {
   fi
   rm -rf "$work"
   if [[ "$export_status" != 0 ]]; then
-    # Fail closed: do not leave partially sanitized evidence to upload.
-    rm -rf "$evidence"
-    echo 'Evidence export failed; no artifacts will be uploaded.' >&2
+    # The exporter stages and scans privately. Earlier validated checkpoints
+    # survive a corrupt/incomplete later bundle; no final pass marker is written.
+    echo 'Final evidence export failed; only validated partial evidence may remain.' >&2
     exit 1
   fi
   if [[ "$status" != 0 ]]; then tail -n 80 "$evidence/checks.log" 2>/dev/null; fi
@@ -117,7 +117,8 @@ else
   bash apps/ios/Tools/check-api.sh "$connection" >> "$work/checks.log" 2>&1
   progress swift_contract_finished
   progress ios_suite_started
-  ORCA_CI_PROGRESS=1 ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
+  ORCA_CI_PROGRESS=1 ORCA_CI_CHECKPOINT_WORK="$work" ORCA_CI_CHECKPOINT_EVIDENCE="$evidence" \
+    ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
     zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" 3>&1 >> "$work/checks.log" 2>&1
   progress ios_suite_finished
 fi

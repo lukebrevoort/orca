@@ -20,6 +20,10 @@ progress() {
   if [[ ${ORCA_CI_PROGRESS:-0} == 1 ]]; then
     print -r -u3 -- "[fixture stage] phase=$1"
   fi
+  if [[ "$1" == suite_light_finished && -n ${ORCA_CI_CHECKPOINT_WORK:-} && -n ${ORCA_CI_CHECKPOINT_EVIDENCE:-} ]]; then
+    /usr/bin/python3 "$ios_dir/../../scripts/ci/export-evidence.py" \
+      "$ORCA_CI_CHECKPOINT_WORK" "$ORCA_CI_CHECKPOINT_EVIDENCE" "$connection_file" 1 "$simulator_udid" suite_light_finished
+  fi
 }
 
 if [[ ! -f $connection_file ]]; then
