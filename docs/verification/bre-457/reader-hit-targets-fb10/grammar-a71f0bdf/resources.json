@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794428224.631891,
+    "stage": "before",
+    "ownerPid": 32065,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "45771  23.4  67552 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+      "  404  23.2 135088 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      " 1152  15.3  22464 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "32065  12.7  17552 /opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+      "15232  12.6 607840 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      "45776   8.4 326656 /Applications/Slack.app/Contents/Frameworks/Slack Helper (Renderer).app/Contents/MacOS/Slack Helper (Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 64%"
+  },
+  {
+    "time": 1794428225.0246341,
+    "stage": "after",
+    "ownerPid": 32065,
+    "childPid": 32084,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "45771  21.5  67552 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+      "  404  18.9 135152 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      " 1152  10.5  22464 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15382   8.3 1238080 codex",
+      "45776   7.5 326656 /Applications/Slack.app/Contents/Frameworks/Slack Helper (Renderer).app/Contents/MacOS/Slack Helper (Renderer)",
+      "15232   6.3 607840 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 64%"
+  }
+]

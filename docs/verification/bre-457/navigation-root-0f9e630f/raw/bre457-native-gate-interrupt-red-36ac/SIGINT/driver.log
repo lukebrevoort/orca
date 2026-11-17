@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "/tmp/bre457-native-gate-interrupt-red-36ac/SIGINT/harness.py", line 19, in <module>
+    runpy.run_path(GATE,run_name='__main__')
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen runpy>", line 294, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Tools/ReviewRegressions/phase-b-gate.py", line 35, in <module>
+    code = run('controllers-api', ['python3','apps/ios/Tools/ReviewRegressions/run.py',str(out/'controllers'),'--api'], 40)
+  File "/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Tools/ReviewRegressions/phase-b-gate.py", line 26, in run
+    try: code = process.wait(timeout=min(stage_cap,remaining))
+                ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 1279, in wait
+    return self._wait(timeout=timeout)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 2078, in _wait
+    time.sleep(delay)
+    ~~~~~~~~~~^^^^^^^
+KeyboardInterrupt

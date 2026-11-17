@@ -1,0 +1,185 @@
+{
+  "proof": "real runner phase code with synthetic Apple commands, not native runtime",
+  "results": [
+    {
+      "scope": "all",
+      "pass": true,
+      "exit": 0,
+      "calls": [
+        {
+          "bundle": "Adoptionlight.xcresult",
+          "installation": 2,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false,
+          "selectedCases": [
+            "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof"
+          ]
+        },
+        {
+          "bundle": "Adoptiondark.xcresult",
+          "installation": 3,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false,
+          "selectedCases": [
+            "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof"
+          ]
+        },
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 4,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false,
+          "selectedCases": []
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 4,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false,
+          "selectedCases": [
+            "test08VisibleViewsAreIndependentAndPersist",
+            "test09EmptySavedViewKeepsMailboxMenuAvailable",
+            "test07ConversationOpensAtLatestMessage",
+            "test02SettingsRenderInDarkMode",
+            "test03VisualControlStates",
+            "test04StyledHTMLUsesReadableCanvas",
+            "test06NotificationDestinationsPersist"
+          ]
+        }
+      ],
+      "output": "phase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-deo2_iv0/Orca.xcresult\n"
+    },
+    {
+      "scope": "notifications",
+      "pass": true,
+      "exit": 0,
+      "calls": [
+        {
+          "bundle": "Adoptionlight.xcresult",
+          "installation": 2,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false,
+          "selectedCases": [
+            "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof"
+          ]
+        },
+        {
+          "bundle": "Adoptiondark.xcresult",
+          "installation": 3,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false,
+          "selectedCases": [
+            "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof"
+          ]
+        },
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 4,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false,
+          "selectedCases": [
+            "-only-testing:OrcaTests",
+            "test03VisualControlStates",
+            "test06NotificationDestinationsPersist"
+          ]
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 4,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false,
+          "selectedCases": [
+            "test03VisualControlStates",
+            "test06NotificationDestinationsPersist"
+          ]
+        }
+      ],
+      "output": "phase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-1fuy2r0j/Orca.xcresult\n"
+    },
+    {
+      "scope": "mailbox",
+      "pass": true,
+      "exit": 0,
+      "calls": [
+        {
+          "bundle": "Adoptionlight.xcresult",
+          "installation": 2,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false,
+          "selectedCases": [
+            "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof"
+          ]
+        },
+        {
+          "bundle": "Adoptiondark.xcresult",
+          "installation": 3,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false,
+          "selectedCases": [
+            "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof"
+          ]
+        },
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 4,
+          "legacy": false,
+          "adoption": false,
+          "contaminated": false,
+          "selectedCases": [
+            "test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity",
+            "test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText",
+            "test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement",
+            "test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows",
+            "test10NativeLongPressMovesConversationAndBuildsSenderView",
+            "test44MailStartsImportantAndKeepsAllMailReachable",
+            "test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen",
+            "test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving",
+            "-only-testing:OrcaTests",
+            "test08VisibleViewsAreIndependentAndPersist",
+            "test09EmptySavedViewKeepsMailboxMenuAvailable",
+            "test12InboxIntroductionScrollsWithMailAndRefreshSettles",
+            "test13MailboxControlsRemainVisibleWhileRefreshing",
+            "test40MailboxSelectorCancelsAndSwitchesRepeatedly",
+            "test41MailboxSelectorLongNameAtLargestAccessibilitySize",
+            "test42MailboxSwitchWhileInboxRefreshIsPending"
+          ]
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 4,
+          "legacy": false,
+          "adoption": false,
+          "contaminated": false,
+          "selectedCases": [
+            "test49NativeSearchViewEditorPreviewsWithoutWritingAndReopensCreatedIdentity",
+            "test50PrimaryMailKeepsSubmittedQueryAcrossReaderRefreshWithUnsubmittedText",
+            "test51SenderViewShowsActualMatchingRowsAndExplicitSubjectRefinement",
+            "test52FirstSearchFromSavedViewShowsPendingSearchInsteadOfSavedRows",
+            "test10NativeLongPressMovesConversationAndBuildsSenderView",
+            "test44MailStartsImportantAndKeepsAllMailReachable",
+            "test45ImportancePersistsWithoutReadingOrMovingAndDirectCorrectionSurvivesReopen",
+            "test46SettingsKeepsEditsAcrossSectionsAndGuardsLeaving",
+            "test08VisibleViewsAreIndependentAndPersist",
+            "test09EmptySavedViewKeepsMailboxMenuAvailable",
+            "test12InboxIntroductionScrollsWithMailAndRefreshSettles",
+            "test13MailboxControlsRemainVisibleWhileRefreshing",
+            "test40MailboxSelectorCancelsAndSwitchesRepeatedly",
+            "test41MailboxSelectorLongNameAtLargestAccessibilitySize",
+            "test42MailboxSwitchWhileInboxRefreshIsPending"
+          ]
+        }
+      ],
+      "output": "phase=adoption_light_started\nphase=adoption_light_finished\nphase=adoption_dark_started\nphase=adoption_dark_finished\nphase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-0v0uaptf/Orca.xcresult\nDark result bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-0v0uaptf/OrcaDark.xcresult\nMailbox suite exit codes: light=0 dark=0\n"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "sha": "0a2dc46b726d382cd274fa48567ae8895eea3690",
+  "swiftParseCount": 35,
+  "stages": [
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 0.07415129098808393
+    },
+    {
+      "stage": "controllers-api",
+      "exit": 0,
+      "elapsed": 6.022411499987356
+    },
+    {
+      "stage": "lifecycle",
+      "exit": 0,
+      "elapsed": 8.723225416004425
+    }
+  ],
+  "elapsed": 8.723235957993893
+}

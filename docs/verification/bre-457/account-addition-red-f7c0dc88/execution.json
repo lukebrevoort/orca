@@ -1,0 +1,18 @@
+{
+  "sha": "f7c0dc88b2293be686aba2172a528fc3132b4ccf",
+  "label": "account-addition-baseline",
+  "swiftParseCount": 36,
+  "elapsed": 11.68913304101443,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 1,
+      "elapsed": 11.608281958004227
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 11.689123874995857
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "head": "41a0998b14428f62280027f504678b1c243e5a77",
+  "testedEvent": "24e231a6253dc8f51db7e1d51f501c56f01e6374",
+  "trees": {
+    "41a0998b14428f62280027f504678b1c243e5a77": "abec51f7274d9bc8802c765d5dfa3ff4053c13a0",
+    "24e231a6253dc8f51db7e1d51f501c56f01e6374": "abec51f7274d9bc8802c765d5dfa3ff4053c13a0"
+  },
+  "parents": [
+    "97d0484d8358b8bf9207eca3b4ecf05012a0bac3",
+    "41a0998b14428f62280027f504678b1c243e5a77"
+  ],
+  "treeEqual": true,
+  "zipSHA256": "8c083d1930352645789b33960e41cafa295f72520af0c4728475101108714106",
+  "recordingFixtureSHA256": "0a901c954fd7f21eeab6c48c2ac77e74368df72f9d2a061e88a1a462b1b376d4",
+  "rawHashes": {
+    "FeedbackLight-summary.json": "204f634665d3329091887bc722ca0ec0f286665836ac768b4495495d44d73d75",
+    "outcome.json": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107",
+    "DirectCaptureLight-tests.json": "8017d17d228aa04b1850d05f0f7e6cab4932b6da20fa4a5c2d7e3830d2ae6b21",
+    "FeedbackLayoutdark-summary.json": "d1a28d971821fa4448b47812f5127251fa37629e594d159caad06c6c0962cee4",
+    "FeedbackLayoutlight-summary.json": "0b6446b292fa983745fd514cc68ffb7af04d7ab5c023d7fdf7a5b698412e242f",
+    "checks.log": "0a346013cfc282af0bd98a3456c53a39199f1d5e2c866174b816499bf8777097",
+    "FeedbackLight-tests.json": "c58dcfae9c0cbfba96e909b84d148257853bdbba88f9037829015d4102a2d711",
+    "fixture.log": "506530cc0237707ecb62b7c8968d3aec8c39eb6f73eb0c3b7b5f6286b51c1102",
+    "FeedbackLayoutdark-tests.json": "61fa7af3b39cbc2d664f8b96a9b3725c3a9a9822595e2f6c01d0a5ea9a9d8438",
+    "identity.log": "a7a660e3c9ba79c5a86592567385806a3fdaee85e3f44ec60170847d8fc99d81",
+    "DirectCaptureLight-summary.json": "14d4c0220193cc7fe9eb8fe014cd59e60ad6acca707798333917d767607d0b59",
+    "FeedbackLayoutlight-tests.json": "017f59ea050aae1e6b0d1bcf531a2adbc9f850c464b78a60c0d85829fa117401",
+    "screenshots/FeedbackLight-11.png": "c1eda79603a02823f188dfa32cb72ae2c485a55a50dab9bf6208b9d802edd724",
+    "screenshots/DirectCaptureLight-2.png": "82dc9dddf2b8716a27511901270cc46201cf7e71d3227209424f03976825a984",
+    "screenshots/FeedbackLayoutdark-4.png": "021ea6992e7950d44284baef52369e6629aeb498a863e98a6c179ad6ed653cd1",
+    "screenshots/FeedbackLayoutlight-2.png": "688395c80f51699ed1e98975a5709150d24b4e9ada84aa3f72f2d1a4c0b2cdd8",
+    "screenshots/FeedbackLayoutlight-3.png": "e432041be6897194703c45ec4a2453c6f2e853b2fc8321a2ebe25e4a3215fdba",
+    "screenshots/DirectCaptureLight-1.png": "dc49d0f17612bddf32db1b17397f8e2a80afe0a86380d314a27e1161da67e80c",
+    "screenshots/FeedbackLayoutlight-1.png": "33c3150dc347706d58840f6d9ccc6b5a3b7d8469e53975551316d4b57bbd853a",
+    "screenshots/FeedbackLayoutlight-0.png": "688395c80f51699ed1e98975a5709150d24b4e9ada84aa3f72f2d1a4c0b2cdd8",
+    "screenshots/DirectCaptureLight-0.png": "12ffb08af246e709ce6f03dedfb9cf1dee490612fb09feecdad7b8c7f73e0947",
+    "screenshots/FeedbackLayoutdark-2.png": "eb0cd1d3256908f50d62101965a04f11b0f0bb39438242c1508280a007e271ec",
+    "screenshots/FeedbackLayoutlight-4.png": "0170c452fbe1f167c8bd860028d4598e364ace6c61044efeb60ec1160f7385d4",
+    "screenshots/FeedbackLayoutdark-3.png": "77d43ce629cc0cc0546cafc0c2739483617c9df911845fbf607108008aac7a66",
+    "screenshots/FeedbackLayoutdark-1.png": "51f4a6bbf8235cc22439858927748f23d05b7798d3ef004169e95135b790cb00",
+    "screenshots/FeedbackLayoutdark-0.png": "a51be9ea6f38786a1340c1927d86d91fefb3aa61aaa9937dc1ffb8854a94846c",
+    "screenshots/FeedbackLight-4.png": "31d079c5c744792f6ca6b38a0134bb68855a643283606ee4c35e6b8a15c0b65f",
+    "screenshots/FeedbackLight-2.png": "15639fc55525aa583ad17c3a97af80514d63273a2484ebdd84fa2ec0a1372386",
+    "screenshots/FeedbackLight-26.png": "deae1db483aab7a81c820cc052f1c2777c740aca97103592096afbc6a1f0be0c",
+    "screenshots/FeedbackLight-20.png": "64a312eb7ffb249fe99437029d6676cedca990f415b5f7d4e30ccf070a68c81b"
+  },
+  "inspectedPNGs": [
+    "FeedbackLight-2.png",
+    "FeedbackLight-4.png",
+    "FeedbackLight-11.png",
+    "FeedbackLight-20.png",
+    "FeedbackLight-26.png"
+  ],
+  "notInspected": "Other13PNGfiles: no new layout/design claim"
+}

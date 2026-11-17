@@ -1,0 +1,36 @@
+{
+  "sourceHead": "e2a4ce5071c66bc2fbb4f38318457f63821c4b98",
+  "scope": "exact review/grammar retention only; no new execution",
+  "files": [
+    {
+      "source": "/tmp/bre457-two-boundaries-grammar-e2a4ce50/manifest.json",
+      "retained": "docs/verification/bre-457/two-boundaries-e2a4ce50/grammar/manifest.json",
+      "bytes": 12909,
+      "sha256": "5e98e244ef26d4271cedd47ccf7b382585939d4be4a98ab974be9f8bd54fd54b"
+    },
+    {
+      "source": "/tmp/bre457-two-boundaries-grammar-e2a4ce50/grammar.log",
+      "retained": "docs/verification/bre-457/two-boundaries-e2a4ce50/grammar/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-two-boundaries-grammar-e2a4ce50.py",
+      "retained": "docs/verification/bre-457/two-boundaries-e2a4ce50/grammar/driver.py",
+      "bytes": 2662,
+      "sha256": "0125c854f0227cdb44fa06fd42116c507e9acdf27f5aae38b07c7e6300873b34"
+    },
+    {
+      "source": "/tmp/bre457-two-boundaries-grammar-e2a4ce50.wrapper.log",
+      "retained": "docs/verification/bre-457/two-boundaries-e2a4ce50/grammar/wrapper.log",
+      "bytes": 2590,
+      "sha256": "9a9a8b5421b47d75347501d1161a2a25787621bbd5e9697e22a3a1583bf31d08"
+    },
+    {
+      "source": "/tmp/bre457-native-boundaries-review-e2a.md",
+      "retained": "docs/verification/bre-457/two-boundaries-e2a4ce50/review.md",
+      "bytes": 9582,
+      "sha256": "642b86dd236362c2dff7ce808c071f0a5550bdbc720526c647481ced4ebbabd5"
+    }
+  ]
+}

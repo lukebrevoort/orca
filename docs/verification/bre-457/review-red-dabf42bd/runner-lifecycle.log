@@ -1,0 +1,71 @@
+{
+  "proof": "real runner phase code with synthetic Apple commands, not native runtime",
+  "results": [
+    {
+      "scope": "all",
+      "pass": false,
+      "exit": 65,
+      "calls": [
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 1,
+          "legacy": true,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 1,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": true
+        }
+      ],
+      "output": "phase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\n"
+    },
+    {
+      "scope": "notifications",
+      "pass": false,
+      "exit": 0,
+      "calls": [
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 1,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 1,
+          "legacy": true,
+          "adoption": false,
+          "contaminated": false
+        }
+      ],
+      "output": "phase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-0q_8xm_0/Orca.xcresult\n"
+    },
+    {
+      "scope": "mailbox",
+      "pass": false,
+      "exit": 0,
+      "calls": [
+        {
+          "bundle": "Orca.xcresult",
+          "installation": 1,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        },
+        {
+          "bundle": "OrcaDark.xcresult",
+          "installation": 1,
+          "legacy": false,
+          "adoption": true,
+          "contaminated": false
+        }
+      ],
+      "output": "phase=suite_light_started\nphase=suite_light_finished\nphase=suite_dark_started\nphase=suite_dark_finished\nResult bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-jj6e0jus/Orca.xcresult\nDark result bundle: /var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-runner-lifecycle-jj6e0jus/OrcaDark.xcresult\nMailbox suite exit codes: light=0 dark=0\n"
+    }
+  ]
+}

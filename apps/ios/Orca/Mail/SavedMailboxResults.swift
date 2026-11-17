@@ -5,6 +5,8 @@ struct SavedMailboxResults: View {
     @EnvironmentObject private var mailboxes: MailboxViews
     @StateObject private var reader = SavedViewReader()
     @State private var actionTarget: MailActionTarget?
+    @State private var importanceTarget: ImportanceSelection?
+    @State private var viewEditor: NativeViewSelection?
     let view: SavedMailboxView
     let onOpen: (SavedViewThread) -> Void
 
@@ -32,6 +34,10 @@ struct SavedMailboxResults: View {
                                 .listRowInsets(EdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 16))
                                 .accessibilityIdentifier("view.thread.\(item.threadId)")
                                 .contextMenu {
+                                    Button("Importance…") {
+                                        guard state.selectSavedViewThread(item) else { return }
+                                        importanceTarget = .init(accountId: item.accountId, threadId: item.threadId, subject: item.subject)
+                                    }
                                     MailActionMenu(message: InboxMessage(id: item.threadId, accountId: item.accountId, provider: item.provider, providerMessageId: "", threadId: item.threadId, from: item.sender, subject: item.subject, snippet: "", receivedAt: item.latestReceivedAt, unread: item.readState != "read", labels: [], attentionBehavior: "normal", humanSignal: nil, humanClassification: nil), resolveMessage: true) { actionTarget = $0 }
                                 }
                         }
@@ -48,6 +54,9 @@ struct SavedMailboxResults: View {
                         }
                     } header: {
                         VStack(alignment: .leading, spacing: 8) {
+                            if let account = state.selectedAccount {
+                                Button("Edit View") { viewEditor = .init(viewId: view.id, accountId: account.id) }.accessibilityIdentifier("view.edit")
+                            }
                             Text(view.name).font(OrcaTheme.reader(28)).foregroundStyle(OrcaTheme.ink)
                             if !view.description.isEmpty { Text(view.description).font(OrcaTheme.ui(12)).foregroundStyle(OrcaTheme.muted) }
                             Text("Matching mail across this view’s accounts").font(OrcaTheme.ui(11)).foregroundStyle(OrcaTheme.muted)
@@ -59,6 +68,8 @@ struct SavedMailboxResults: View {
             }
         }
         .task(id: "\(state.ownerScope)|\(view.id)|\(view.revision)") { await reader.load(view: view, state: state) }
+        .sheet(item: $viewEditor) { selection in NativeViewEditor(selection: selection) }
+        .sheet(item: $importanceTarget) { target in ImportanceView(selection: target) }
         .sheet(item: $actionTarget) { target in MailActionsSheet(target: target) { await reload() } }
     }
     private func reload() async {

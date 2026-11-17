@@ -1,0 +1,726 @@
+﻿2026-11-12T01:04:18.0791970Z Current runner version: '2.338.2'
+2026-11-12T01:04:18.0810030Z ##[group]Runner Image Provisioner
+2026-11-12T01:04:18.0810800Z Hosted Compute Agent
+2026-11-12T01:04:18.0811350Z Version: 20261028.624
+2026-11-12T01:04:18.0811770Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+2026-11-12T01:04:18.0812310Z Build Date: 2026-10-28T21:51:42Z
+2026-11-12T01:04:18.0812840Z Worker ID: {27c01e90-674c-4e8d-812e-15bd7d698b5e}
+2026-11-12T01:04:18.0813500Z Region: westus
+2026-11-12T01:04:18.0813960Z Cloud: MacCloud
+2026-11-12T01:04:18.0814380Z ##[endgroup]
+2026-11-12T01:04:18.0815460Z ##[group]Operating System
+2026-11-12T01:04:18.0815960Z macOS
+2026-11-12T01:04:18.0816460Z 26.7.2
+2026-11-12T01:04:18.0816860Z 25G332
+2026-11-12T01:04:18.0817360Z ##[endgroup]
+2026-11-12T01:04:18.0817780Z ##[group]Runner Image
+2026-11-12T01:04:18.0818290Z Image: macos-26-arm64
+2026-11-12T01:04:18.0818750Z Version: 20261102.0473.1
+2026-11-12T01:04:18.0819750Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20261102.0473/images/macos/macos-26-arm64-Readme.md
+2026-11-12T01:04:18.0821000Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20261102.0473
+2026-11-12T01:04:18.0821800Z ##[endgroup]
+2026-11-12T01:04:18.0822620Z ##[group]GITHUB_TOKEN Permissions
+2026-11-12T01:04:18.0823920Z Contents: read
+2026-11-12T01:04:18.0824360Z Metadata: read
+2026-11-12T01:04:18.0824800Z ##[endgroup]
+2026-11-12T01:04:18.0826520Z Secret source: Actions
+2026-11-12T01:04:18.0827360Z Cache mode: write
+2026-11-12T01:04:18.0827890Z Prepare workflow directory
+2026-11-12T01:04:18.1206800Z Prepare all required actions
+2026-11-12T01:04:18.1242220Z Getting action download info
+2026-11-12T01:04:18.5326410Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-12T01:04:18.7763660Z Download action repository 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+2026-11-12T01:04:19.3691430Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-12T01:04:19.7215410Z Complete job name: Unsigned iOS unit and compose UI
+2026-11-12T01:04:19.8022040Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-12T01:04:19.8023240Z with:
+2026-11-12T01:04:19.8023600Z   persist-credentials: false
+2026-11-12T01:04:19.8024100Z   repository: lukebrevoort/orca
+2026-11-12T01:04:19.8029940Z   token: ***
+2026-11-12T01:04:19.8030260Z   ssh-strict: true
+2026-11-12T01:04:19.8030610Z   ssh-user: git
+2026-11-12T01:04:19.8030930Z   clean: true
+2026-11-12T01:04:19.8031280Z   sparse-checkout-cone-mode: true
+2026-11-12T01:04:19.8031730Z   fetch-depth: 1
+2026-11-12T01:04:19.8032150Z   fetch-tags: false
+2026-11-12T01:04:19.8032520Z   show-progress: true
+2026-11-12T01:04:19.8032870Z   lfs: false
+2026-11-12T01:04:19.8033280Z   submodules: false
+2026-11-12T01:04:19.8033660Z   set-safe-directory: true
+2026-11-12T01:04:19.8034300Z   allow-unsafe-pr-checkout: false
+2026-11-12T01:04:19.8035070Z env:
+2026-11-12T01:04:19.8035500Z   ORCA_CI_HEAD_SHA: 72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e
+2026-11-12T01:04:19.8036310Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T01:04:19.8036940Z ##[endgroup]
+2026-11-12T01:04:20.2797760Z Syncing repository: lukebrevoort/orca
+2026-11-12T01:04:20.2799560Z ##[group]Getting Git version info
+2026-11-12T01:04:20.2800320Z Working directory is '/Users/runner/work/orca/orca'
+2026-11-12T01:04:20.2826450Z [command]/opt/homebrew/bin/git version
+2026-11-12T01:04:20.3330310Z git version 2.56.0
+2026-11-12T01:04:20.3347570Z ##[endgroup]
+2026-11-12T01:04:20.3359440Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/99dea7f4-b6c9-45f1-966e-e0462a98e7ed/.gitconfig'
+2026-11-12T01:04:20.3378800Z Temporarily overriding HOME='/Users/runner/work/_temp/99dea7f4-b6c9-45f1-966e-e0462a98e7ed' before making global git config changes
+2026-11-12T01:04:20.3381620Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-12T01:04:20.3383770Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/orca/orca
+2026-11-12T01:04:20.3487070Z Deleting the contents of '/Users/runner/work/orca/orca'
+2026-11-12T01:04:20.3490270Z ##[group]Initializing the repository
+2026-11-12T01:04:20.3494900Z [command]/opt/homebrew/bin/git init /Users/runner/work/orca/orca
+2026-11-12T01:04:20.3696540Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-12T01:04:20.3697760Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-12T01:04:20.3698930Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-12T01:04:20.3699680Z hint: call:
+2026-11-12T01:04:20.3700050Z hint:
+2026-11-12T01:04:20.3700620Z hint: 	git config --global init.defaultBranch <name>
+2026-11-12T01:04:20.3701270Z hint:
+2026-11-12T01:04:20.3701860Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-12T01:04:20.3703340Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-12T01:04:20.3704170Z hint:
+2026-11-12T01:04:20.3704510Z hint: 	git branch -m <name>
+2026-11-12T01:04:20.3704920Z hint:
+2026-11-12T01:04:20.3705570Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-12T01:04:20.3706620Z Initialized empty Git repository in /Users/runner/work/orca/orca/.git/
+2026-11-12T01:04:20.3711690Z [command]/opt/homebrew/bin/git remote add origin https://github.com/lukebrevoort/orca
+2026-11-12T01:04:20.3787180Z ##[endgroup]
+2026-11-12T01:04:20.3787900Z ##[group]Disabling automatic garbage collection
+2026-11-12T01:04:20.3790730Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-11-12T01:04:20.3865850Z ##[endgroup]
+2026-11-12T01:04:20.3867100Z ##[group]Setting up auth
+2026-11-12T01:04:20.3870350Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-12T01:04:20.3953180Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-12T01:04:20.4935540Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-12T01:04:20.4995080Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-12T01:04:20.6148480Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-12T01:04:20.6178290Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-12T01:04:20.7499980Z [command]/opt/homebrew/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-12T01:04:20.7741290Z ##[endgroup]
+2026-11-12T01:04:20.7743160Z ##[group]Fetching the repository
+2026-11-12T01:04:20.7745900Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +1f171a0ff2af3381e798841eacf9246376d0efe2:refs/remotes/pull/313/merge
+2026-11-12T01:04:26.8755470Z From https://github.com/lukebrevoort/orca
+2026-11-12T01:04:26.8757700Z  * [new ref]         1f171a0ff2af3381e798841eacf9246376d0efe2 -> pull/313/merge
+2026-11-12T01:04:26.8762900Z ##[endgroup]
+2026-11-12T01:04:26.8764640Z ##[group]Determining the checkout info
+2026-11-12T01:04:26.8769440Z ##[endgroup]
+2026-11-12T01:04:26.8770470Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-11-12T01:04:26.8964180Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-12T01:04:26.9069170Z ##[group]Checking out the ref
+2026-11-12T01:04:26.9073750Z [command]/opt/homebrew/bin/git checkout --progress --force refs/remotes/pull/313/merge
+2026-11-12T01:04:27.9809830Z Updating files:  52% (3270/6246)
+2026-11-12T01:04:28.0139900Z Updating files:  53% (3311/6246)
+2026-11-12T01:04:28.0472610Z Updating files:  54% (3373/6246)
+2026-11-12T01:04:28.0821560Z Updating files:  55% (3436/6246)
+2026-11-12T01:04:28.1149240Z Updating files:  56% (3498/6246)
+2026-11-12T01:04:28.1471260Z Updating files:  57% (3561/6246)
+2026-11-12T01:04:28.2212000Z Updating files:  58% (3623/6246)
+2026-11-12T01:04:28.3233990Z Updating files:  59% (3686/6246)
+2026-11-12T01:04:28.3336920Z Updating files:  60% (3748/6246)
+2026-11-12T01:04:28.3450550Z Updating files:  61% (3811/6246)
+2026-11-12T01:04:28.3552540Z Updating files:  62% (3873/6246)
+2026-11-12T01:04:28.3653080Z Updating files:  63% (3935/6246)
+2026-11-12T01:04:28.3856460Z Updating files:  64% (3998/6246)
+2026-11-12T01:04:28.4049710Z Updating files:  65% (4060/6246)
+2026-11-12T01:04:28.4214840Z Updating files:  66% (4123/6246)
+2026-11-12T01:04:28.4371140Z Updating files:  67% (4185/6246)
+2026-11-12T01:04:28.4450440Z Updating files:  68% (4248/6246)
+2026-11-12T01:04:28.4666380Z Updating files:  69% (4310/6246)
+2026-11-12T01:04:28.4729960Z Updating files:  70% (4373/6246)
+2026-11-12T01:04:28.4800210Z Updating files:  71% (4435/6246)
+2026-11-12T01:04:28.5026170Z Updating files:  72% (4498/6246)
+2026-11-12T01:04:28.5388210Z Updating files:  73% (4560/6246)
+2026-11-12T01:04:28.5974250Z Updating files:  74% (4623/6246)
+2026-11-12T01:04:28.6211690Z Updating files:  75% (4685/6246)
+2026-11-12T01:04:28.6469660Z Updating files:  76% (4747/6246)
+2026-11-12T01:04:28.6645940Z Updating files:  77% (4810/6246)
+2026-11-12T01:04:28.6818470Z Updating files:  78% (4872/6246)
+2026-11-12T01:04:28.6929460Z Updating files:  79% (4935/6246)
+2026-11-12T01:04:28.7225690Z Updating files:  80% (4997/6246)
+2026-11-12T01:04:28.7551240Z Updating files:  81% (5060/6246)
+2026-11-12T01:04:28.7957930Z Updating files:  82% (5122/6246)
+2026-11-12T01:04:28.8198630Z Updating files:  83% (5185/6246)
+2026-11-12T01:04:28.8403590Z Updating files:  84% (5247/6246)
+2026-11-12T01:04:28.8612660Z Updating files:  85% (5310/6246)
+2026-11-12T01:04:28.8825520Z Updating files:  86% (5372/6246)
+2026-11-12T01:04:28.9025530Z Updating files:  87% (5435/6246)
+2026-11-12T01:04:28.9128400Z Updating files:  88% (5497/6246)
+2026-11-12T01:04:28.9296970Z Updating files:  89% (5559/6246)
+2026-11-12T01:04:28.9423280Z Updating files:  89% (5598/6246)
+2026-11-12T01:04:28.9906170Z Updating files:  90% (5622/6246)
+2026-11-12T01:04:29.0218330Z Updating files:  91% (5684/6246)
+2026-11-12T01:04:29.0704040Z Updating files:  92% (5747/6246)
+2026-11-12T01:04:29.0879700Z Updating files:  93% (5809/6246)
+2026-11-12T01:04:29.0944440Z Updating files:  94% (5872/6246)
+2026-11-12T01:04:29.1235260Z Updating files:  95% (5934/6246)
+2026-11-12T01:04:29.1525670Z Updating files:  96% (5997/6246)
+2026-11-12T01:04:29.1777720Z Updating files:  97% (6059/6246)
+2026-11-12T01:04:29.1867290Z Updating files:  98% (6122/6246)
+2026-11-12T01:04:29.1938690Z Updating files:  99% (6184/6246)
+2026-11-12T01:04:29.1939120Z Updating files: 100% (6246/6246)
+2026-11-12T01:04:29.1939680Z Updating files: 100% (6246/6246), done.
+2026-11-12T01:04:29.2027560Z HEAD is now at 1f171a0 Merge 72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e into 7c97193688599e5996bb657c34227a63927c384c
+2026-11-12T01:04:29.2073200Z ##[endgroup]
+2026-11-12T01:04:29.2223680Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-11-12T01:04:29.2325860Z 1f171a0ff2af3381e798841eacf9246376d0efe2
+2026-11-12T01:04:29.2338710Z ##[group]Removing auth
+2026-11-12T01:04:29.2342760Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-12T01:04:29.2411050Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-12T01:04:29.3578870Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-12T01:04:29.3611020Z http.https://github.com/.extraheader
+2026-11-12T01:04:29.3618680Z [command]/opt/homebrew/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-12T01:04:29.3688940Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-12T01:04:29.4561990Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-12T01:04:29.4628210Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-12T01:04:29.6184500Z ##[endgroup]
+2026-11-12T01:04:29.6490800Z ##[group]Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+2026-11-12T01:04:29.6491110Z with:
+2026-11-12T01:04:29.6491250Z   bun-version: 1.3.14
+2026-11-12T01:04:29.6491470Z   no-cache: false
+2026-11-12T01:04:29.6493440Z   token: ***
+2026-11-12T01:04:29.6493580Z env:
+2026-11-12T01:04:29.6493770Z   ORCA_CI_HEAD_SHA: 72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e
+2026-11-12T01:04:29.6494150Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T01:04:29.6494500Z ##[endgroup]
+2026-11-12T01:04:30.2524210Z Cache hit for: bun-kSmiCOujAb+jFWQqTDn70+CxniQ=
+2026-11-12T01:04:31.5171160Z Received 318198 of 21289718 (1.5%), 0.3 MBs/sec
+2026-11-12T01:04:32.1115020Z Received 21289718 of 21289718 (100.0%), 12.7 MBs/sec
+2026-11-12T01:04:32.1217560Z Cache Size: ~20 MB (21289718 B)
+2026-11-12T01:04:32.1322120Z [command]/opt/homebrew/bin/gtar -xf /Users/runner/work/_temp/9475eb56-e76b-4a99-be4f-d202ed854be3/cache.tzst -P -C /Users/runner/work/orca/orca --delay-directory-restore --use-compress-program unzstd
+2026-11-12T01:04:32.2462110Z Cache restored successfully
+2026-11-12T01:04:32.2482320Z [command]/Users/runner/.bun/bin/bun --revision
+2026-11-12T01:04:32.2688250Z 1.3.14+0d9b296af
+2026-11-12T01:04:32.2694940Z Using a cached version of Bun: 1.3.14+0d9b296af
+2026-11-12T01:04:32.3001170Z ##[group]Run bun install --frozen-lockfile
+2026-11-12T01:04:32.3001570Z [36;1mbun install --frozen-lockfile[0m
+2026-11-12T01:04:32.3054630Z shell: /bin/bash -e {0}
+2026-11-12T01:04:32.3054880Z env:
+2026-11-12T01:04:32.3055130Z   ORCA_CI_HEAD_SHA: 72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e
+2026-11-12T01:04:32.3055530Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T01:04:32.3055900Z ##[endgroup]
+2026-11-12T01:04:32.3477640Z bun install v1.3.14 (0d9b296a)
+2026-11-12T01:04:35.1566100Z 
+2026-11-12T01:04:35.1566890Z + @types/node@24.13.2
+2026-11-12T01:04:35.1567200Z + axe-core@4.13.0
+2026-11-12T01:04:35.1567430Z + playwright@1.62.1
+2026-11-12T01:04:35.1567700Z + typescript@5.9.3
+2026-11-12T01:04:35.1567800Z 
+2026-11-12T01:04:35.1567970Z 177 packages installed [2.81s]
+2026-11-12T01:04:35.1664580Z ##[group]Run bash scripts/ci/fixture-check.sh ios
+2026-11-12T01:04:35.1664980Z [36;1mbash scripts/ci/fixture-check.sh ios[0m
+2026-11-12T01:04:35.1705460Z shell: /bin/bash -e {0}
+2026-11-12T01:04:35.1705670Z env:
+2026-11-12T01:04:35.1705970Z   ORCA_CI_HEAD_SHA: 72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e
+2026-11-12T01:04:35.1706450Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T01:04:35.1706760Z ##[endgroup]
+2026-11-12T01:04:38.1754770Z [fixture stage] phase=xcode_preflight_started
+2026-11-12T01:04:40.5305450Z [fixture stage] phase=xcode_preflight_finished
+2026-11-12T01:04:48.1848320Z [fixture stage] phase=simulator_boot_started
+2026-11-12T01:06:05.8964540Z Monitoring boot status for Orca CI 43131878509-1 (8220BE9D-A186-44EE-AC32-7B93687E9E80).
+2026-11-12T01:06:05.9762810Z [2026-11-12 01:06:05 +0000] Status=2, isTerminal=NO, Elapsed=01:15.
+2026-11-12T01:06:05.9763750Z 	Waiting on Data Migration
+2026-11-12T01:06:05.9769470Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:05.9770610Z 		Migration Elapsed:01:08 seconds
+2026-11-12T01:06:06.3017730Z 
+2026-11-12T01:06:06.7981420Z [2026-11-12 01:06:06 +0000] Status=2, isTerminal=NO, Elapsed=01:16.
+2026-11-12T01:06:06.8807520Z 	Waiting on Data Migration
+2026-11-12T01:06:06.8919480Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:06.9271400Z 		Migration Elapsed:01:09 seconds
+2026-11-12T01:06:06.9665570Z 
+2026-11-12T01:06:07.7091620Z [2026-11-12 01:06:07 +0000] Status=2, isTerminal=NO, Elapsed=01:17.
+2026-11-12T01:06:08.6529050Z 	Waiting on Data Migration
+2026-11-12T01:06:08.6530270Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:08.8352300Z 		Migration Elapsed:01:10 seconds
+2026-11-12T01:06:08.8353050Z 
+2026-11-12T01:06:08.8353460Z [2026-11-12 01:06:08 +0000] Status=2, isTerminal=NO, Elapsed=01:18.
+2026-11-12T01:06:08.8457650Z 	Waiting on Data Migration
+2026-11-12T01:06:08.8459560Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:08.8508190Z 		Migration Elapsed:01:11 seconds
+2026-11-12T01:06:08.8508630Z 
+2026-11-12T01:06:09.6196950Z [2026-11-12 01:06:09 +0000] Status=2, isTerminal=NO, Elapsed=01:19.
+2026-11-12T01:06:09.6301970Z 	Waiting on Data Migration
+2026-11-12T01:06:09.6410770Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:09.6542160Z 		Migration Elapsed:01:12 seconds
+2026-11-12T01:06:09.6705270Z 
+2026-11-12T01:06:10.6367010Z [2026-11-12 01:06:10 +0000] Status=2, isTerminal=NO, Elapsed=01:20.
+2026-11-12T01:06:10.6470160Z 	Waiting on Data Migration
+2026-11-12T01:06:10.6585140Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:10.6702310Z 		Migration Elapsed:01:13 seconds
+2026-11-12T01:06:10.6803700Z 
+2026-11-12T01:06:11.6484070Z [2026-11-12 01:06:11 +0000] Status=2, isTerminal=NO, Elapsed=01:21.
+2026-11-12T01:06:11.6500410Z 	Waiting on Data Migration
+2026-11-12T01:06:11.6501370Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-12T01:06:11.6502090Z 		Migration Elapsed:01:14 seconds
+2026-11-12T01:06:11.6502570Z 
+2026-11-12T01:06:17.3254610Z [2026-11-12 01:06:17 +0000] Status=2, isTerminal=NO, Elapsed=01:27.
+2026-11-12T01:06:17.4117200Z 	Waiting on Data Migration
+2026-11-12T01:06:17.5755450Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-12T01:06:17.6567800Z 		Migration Elapsed:01:15 seconds
+2026-11-12T01:06:17.7393330Z 
+2026-11-12T01:06:17.8224520Z [2026-11-12 01:06:17 +0000] Status=2, isTerminal=NO, Elapsed=01:27.
+2026-11-12T01:06:17.8227930Z 	Waiting on Data Migration
+2026-11-12T01:06:17.9890670Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-12T01:06:18.0716170Z 		Migration Elapsed:01:19 seconds
+2026-11-12T01:06:18.1560250Z 
+2026-11-12T01:06:20.2143460Z [2026-11-12 01:06:19 +0000] Status=2, isTerminal=NO, Elapsed=01:29.
+2026-11-12T01:06:20.2969160Z 	Waiting on Data Migration
+2026-11-12T01:06:20.2969750Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-12T01:06:20.4604330Z 		Migration Elapsed:01:20 seconds
+2026-11-12T01:06:20.4628760Z 
+2026-11-12T01:06:21.5760360Z [2026-11-12 01:06:20 +0000] Status=2, isTerminal=NO, Elapsed=01:30.
+2026-11-12T01:06:21.5767870Z 	Waiting on Data Migration
+2026-11-12T01:06:21.7399270Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-12T01:06:21.9853610Z 		Migration Elapsed:01:22 seconds
+2026-11-12T01:06:22.3946550Z 
+2026-11-12T01:06:22.3969860Z [2026-11-12 01:06:21 +0000] Status=2, isTerminal=NO, Elapsed=01:31.
+2026-11-12T01:06:22.4796000Z 	Waiting on Data Migration
+2026-11-12T01:06:22.7250330Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-12T01:06:23.3905250Z 		Migration Elapsed:01:23 seconds
+2026-11-12T01:06:23.3906830Z 
+2026-11-12T01:06:23.4700560Z [2026-11-12 01:06:22 +0000] Status=2, isTerminal=NO, Elapsed=01:32.
+2026-11-12T01:06:23.5561550Z 	Waiting on Data Migration
+2026-11-12T01:06:23.6409320Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-12T01:06:23.8078050Z 		Migration Elapsed:01:24 seconds
+2026-11-12T01:06:23.9711470Z 
+2026-11-12T01:06:24.9577680Z [2026-11-12 01:06:23 +0000] Status=2, isTerminal=NO, Elapsed=01:33.
+2026-11-12T01:06:25.0380270Z 	Waiting on Data Migration
+2026-11-12T01:06:25.1252350Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-12T01:06:25.2060310Z 		Migration Elapsed:01:25 seconds
+2026-11-12T01:06:25.2881380Z 
+2026-11-12T01:06:25.3727820Z [2026-11-12 01:06:24 +0000] Status=2, isTerminal=NO, Elapsed=01:34.
+2026-11-12T01:06:25.4554010Z 	Waiting on Data Migration
+2026-11-12T01:06:25.5354120Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:25.6161980Z 		Migration Elapsed:01:26 seconds
+2026-11-12T01:06:25.6980970Z 
+2026-11-12T01:06:25.7812430Z [2026-11-12 01:06:25 +0000] Status=2, isTerminal=NO, Elapsed=01:35.
+2026-11-12T01:06:25.8619140Z 	Waiting on Data Migration
+2026-11-12T01:06:25.9472150Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:26.0278800Z 		Migration Elapsed:01:27 seconds
+2026-11-12T01:06:26.1105460Z 
+2026-11-12T01:06:26.1923500Z [2026-11-12 01:06:25 +0000] Status=2, isTerminal=NO, Elapsed=01:35.
+2026-11-12T01:06:26.2754740Z 	Waiting on Data Migration
+2026-11-12T01:06:26.3568530Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:26.4376190Z 		Migration Elapsed:01:28 seconds
+2026-11-12T01:06:26.8788610Z 
+2026-11-12T01:06:27.5363540Z [2026-11-12 01:06:27 +0000] Status=2, isTerminal=NO, Elapsed=01:37.
+2026-11-12T01:06:27.6246920Z 	Waiting on Data Migration
+2026-11-12T01:06:27.8780150Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:27.8791540Z 		Migration Elapsed:01:29 seconds
+2026-11-12T01:06:28.1235330Z 
+2026-11-12T01:06:28.2083920Z [2026-11-12 01:06:27 +0000] Status=2, isTerminal=NO, Elapsed=01:37.
+2026-11-12T01:06:28.2876150Z 	Waiting on Data Migration
+2026-11-12T01:06:28.3686350Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:28.4501960Z 		Migration Elapsed:01:30 seconds
+2026-11-12T01:06:28.5318860Z 
+2026-11-12T01:06:29.0219170Z [2026-11-12 01:06:28 +0000] Status=2, isTerminal=NO, Elapsed=01:38.
+2026-11-12T01:06:29.1053650Z 	Waiting on Data Migration
+2026-11-12T01:06:29.3485500Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:29.3502700Z 		Migration Elapsed:01:31 seconds
+2026-11-12T01:06:29.4297530Z 
+2026-11-12T01:06:30.0108580Z [2026-11-12 01:06:29 +0000] Status=2, isTerminal=NO, Elapsed=01:39.
+2026-11-12T01:06:30.0899470Z 	Waiting on Data Migration
+2026-11-12T01:06:30.2559250Z 		Reason:Running plugin com.apple.addressbook.migrator (AddressBookLegacy.migrator)
+2026-11-12T01:06:30.3347270Z 		Migration Elapsed:01:32 seconds
+2026-11-12T01:06:30.7116240Z 
+2026-11-12T01:06:31.8530930Z [2026-11-12 01:06:31 +0000] Status=2, isTerminal=NO, Elapsed=01:41.
+2026-11-12T01:06:31.9333800Z 	Waiting on Data Migration
+2026-11-12T01:06:32.0160740Z 		Reason:Running plugin com.apple.MobileSafari.migrator (MobileSafari.migrator)
+2026-11-12T01:06:32.0969380Z 		Migration Elapsed:01:33 seconds
+2026-11-12T01:06:32.1807050Z 
+2026-11-12T01:06:33.0442680Z [2026-11-12 01:06:32 +0000] Status=2, isTerminal=NO, Elapsed=01:42.
+2026-11-12T01:06:33.1265690Z 	Waiting on Data Migration
+2026-11-12T01:06:33.4516100Z 		Reason:Running plugin com.apple.MobileSafari.migrator (MobileSafari.migrator)
+2026-11-12T01:06:33.5695660Z 		Migration Elapsed:01:34 seconds
+2026-11-12T01:06:34.2114040Z 
+2026-11-12T01:06:35.3069280Z [2026-11-12 01:06:33 +0000] Status=2, isTerminal=NO, Elapsed=01:43.
+2026-11-12T01:06:35.3070460Z 	Waiting on Data Migration
+2026-11-12T01:06:35.3070890Z 		Reason:Running plugin com.apple.PreferencesMigrator (PreferencesMigrator.migrator)
+2026-11-12T01:06:35.3072140Z 		Migration Elapsed:01:35 seconds
+2026-11-12T01:06:35.3072360Z 
+2026-11-12T01:06:35.3072700Z [2026-11-12 01:06:33 +0000] Status=2, isTerminal=NO, Elapsed=01:43.
+2026-11-12T01:06:35.3073070Z 	Waiting on Data Migration
+2026-11-12T01:06:35.3073560Z 		Reason:Running plugin com.apple.managedconfiguration.cleanup.migrator (MCCleanup.migrator)
+2026-11-12T01:06:35.3074230Z 		Migration Elapsed:01:36 seconds
+2026-11-12T01:06:35.3074440Z 
+2026-11-12T01:06:41.0166940Z [2026-11-12 01:06:40 +0000] Status=4, isTerminal=NO, Elapsed=01:49.
+2026-11-12T01:06:41.3743050Z 	Waiting on System App
+2026-11-12T01:06:41.4941460Z 
+2026-11-12T01:06:42.2991240Z [2026-11-12 01:06:41 +0000] Status=4, isTerminal=NO, Elapsed=01:51.
+2026-11-12T01:06:42.2992230Z 	Waiting on System App
+2026-11-12T01:06:42.4698720Z 
+2026-11-12T01:06:44.1803060Z [2026-11-12 01:06:44 +0000] Status=4, isTerminal=NO, Elapsed=01:53.
+2026-11-12T01:06:44.3749560Z 	Waiting on System App
+2026-11-12T01:06:44.4555450Z 
+2026-11-12T01:06:45.1134800Z [2026-11-12 01:06:45 +0000] Status=4, isTerminal=NO, Elapsed=01:54.
+2026-11-12T01:06:45.4615760Z 	Waiting on System App
+2026-11-12T01:06:45.5426190Z 
+2026-11-12T01:06:45.9510210Z [2026-11-12 01:06:45 +0000] Status=4, isTerminal=NO, Elapsed=01:55.
+2026-11-12T01:06:46.1134820Z 	Waiting on System App
+2026-11-12T01:06:46.1149330Z 
+2026-11-12T01:06:46.6107070Z [2026-11-12 01:06:46 +0000] Status=4, isTerminal=NO, Elapsed=01:56.
+2026-11-12T01:06:46.7659750Z 	Waiting on System App
+2026-11-12T01:06:46.8481240Z 
+2026-11-12T01:06:48.9307550Z [2026-11-12 01:06:48 +0000] Status=4, isTerminal=NO, Elapsed=01:58.
+2026-11-12T01:06:50.9611750Z 	Waiting on System App
+2026-11-12T01:06:52.3891000Z 
+2026-11-12T01:06:52.9831530Z [2026-11-12 01:06:49 +0000] Status=4, isTerminal=NO, Elapsed=01:59.
+2026-11-12T01:06:53.5871930Z 	Waiting on System App
+2026-11-12T01:06:53.8556790Z 
+2026-11-12T01:06:53.9774390Z [2026-11-12 01:06:51 +0000] Status=4, isTerminal=NO, Elapsed=02:01.
+2026-11-12T01:06:54.7311730Z 	Waiting on System App
+2026-11-12T01:06:55.0557040Z 
+2026-11-12T01:07:02.1344950Z [2026-11-12 01:07:01 +0000] Status=4294967295, isTerminal=YES, Elapsed=02:11.
+2026-11-12T01:07:02.2988710Z 	Finished
+2026-11-12T01:07:02.3805420Z 
+2026-11-12T01:07:04.7594940Z [fixture stage] phase=simulator_boot_finished
+2026-11-12T01:07:04.7698690Z [fixture stage] phase=fixture_starting
+2026-11-12T01:08:08.8242140Z [fixture stage] phase=fixture_ready
+2026-11-12T01:08:08.8348960Z [fixture stage] phase=swift_contract_started
+2026-11-12T01:09:54.6805640Z [fixture stage] phase=swift_contract_finished
+2026-11-12T01:09:54.7117780Z [fixture stage] phase=ios_suite_started
+2026-11-12T01:09:54.7672150Z [fixture stage] phase=owned_simulator_recheck_started
+2026-11-12T01:10:20.8806540Z [fixture stage] phase=owned_simulator_recheck_finished
+2026-11-12T01:10:28.9190310Z [fixture stage] phase=xcode_destination_started
+2026-11-12T01:10:36.5111410Z [fixture stage] phase=xcode_destination_finished
+2026-11-12T01:10:36.5113460Z [fixture stage] phase=build_for_testing_started
+2026-11-12T01:14:37.7965050Z [fixture stage] phase=build_for_testing_finished
+2026-11-12T01:16:49.6131850Z [fixture stage] phase=feedback_layout_light_started
+2026-11-12T01:19:28.9154740Z [fixture stage] phase=feedback_layout_light_finished
+2026-11-12T01:19:35.8638660Z [fixture stage] phase=feedback_layout_dark_started
+2026-11-12T01:21:36.1559270Z [fixture stage] phase=feedback_layout_dark_finished
+2026-11-12T01:21:40.8634120Z [fixture stage] phase=capture_light_started
+2026-11-12T01:24:04.8545830Z [fixture stage] phase=capture_light_finished
+2026-11-12T01:24:04.8632760Z [fixture stage] phase=feedback_light_started
+2026-11-12T01:27:26.9932680Z [fixture stage] phase=feedback_light_finished
+2026-11-12T01:27:26.9934440Z [fixture stage] phase=suite_light_started
+2026-11-12T01:54:31.1451170Z [fixture stage] phase=evidence_export_started
+2026-11-12T01:54:47.0720370Z [feedback test] OrcaTests.FeedbackTicketTests.testAvailabilityFailsClosedAndBlocksOtherAccounts passed (0.024 seconds)
+2026-11-12T01:54:47.0739040Z [feedback test] OrcaTests.FeedbackTicketTests.testChangingOwnerClearsDraftAndRejectsOldScopeActions passed (0.075 seconds)
+2026-11-12T01:54:47.0779700Z [feedback test] OrcaTests.FeedbackTicketTests.testFeedbackValidationUsesWireLengthAndRequiresText passed (0.003 seconds)
+2026-11-12T01:54:47.0787950Z [feedback test] OrcaTests.FeedbackTicketTests.testImagePreparationStripsMetadataAndBoundsDecodedDimensions passed (0.105 seconds)
+2026-11-12T01:54:47.0855470Z [feedback test] OrcaTests.FeedbackTicketTests.testLostResponseRetainsExactSubmissionUntilConfirmedTicket passed (0.068 seconds)
+2026-11-12T01:54:47.1694630Z [feedback test] OrcaTests.FeedbackTicketTests.testMalformedReceiptNeverReportsSuccessOrDropsDraft passed (0.003 seconds)
+2026-11-12T01:54:47.1810570Z [feedback test] OrcaTests.FeedbackTicketTests.testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft passed (0.116 seconds)
+2026-11-12T01:54:47.1923890Z [feedback test] OrcaTests.FeedbackTicketTests.testMediaRequiresReviewAndCleansUpOnOwnerChange passed (0.026 seconds)
+2026-11-12T01:54:47.2116380Z [feedback test] OrcaTests.FeedbackTicketTests.testMediaRetryFreezesBytesAndSuccessRemovesPreview passed (0.015 seconds)
+2026-11-12T01:54:47.2315090Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenCaptureRequiresForegroundOriginatingScene passed (0.004 seconds)
+2026-11-12T01:54:47.2422120Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingCancellationFencesLatePermissionAndAccountChange passed (0.005 seconds)
+2026-11-12T01:54:47.2840330Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit passed (0.003 seconds)
+2026-11-12T01:54:47.2944870Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingUnavailableAndOversizedResultsNeverAttach passed (0.008 seconds)
+2026-11-12T01:54:47.3050860Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingWriterProducesSilentBoundedVideo passed (0.497 seconds)
+2026-11-12T01:54:47.3162840Z [feedback test] OrcaTests.FeedbackTicketTests.testTicketLinkAcceptsOnlyHTTPSLinearURLs passed (0.002 seconds)
+2026-11-12T01:54:47.4293750Z [feedback test] OrcaUITests.OrcaUITests.test39FeedbackCapturesCurrentOrcaScreen passed (44.246 seconds)
+2026-11-12T01:54:47.4430200Z [feedback test] OrcaUITests.OrcaUITests.test38FeedbackCornerCreatesLinearTicket passed (132.377 seconds)
+2026-11-12T01:54:47.5189440Z [feedback picker] snapshot_nodes=98 truncated=false app_state=4
+2026-11-12T01:54:47.5292950Z [feedback picker] kind=Button count=7
+2026-11-12T01:54:47.5491490Z [feedback picker] kind=Button label=Cancel identifier=Cancel
+2026-11-12T01:54:47.6567630Z [feedback picker] kind=Button label=Photos identifier=
+2026-11-12T01:54:47.7125940Z [feedback picker] kind=Button label=Collections identifier=
+2026-11-12T01:54:47.7135190Z [feedback picker] kind=Button label=Done identifier=Add
+2026-11-12T01:54:47.7135880Z [feedback picker] kind=Button label=Sort and Filter identifier=Sort and Filter
+2026-11-12T01:54:47.7159620Z [feedback picker] kind=Button label=2 Items, Locations Included identifier=
+2026-11-12T01:54:47.7161170Z [feedback picker] kind=Button label=Search identifier=
+2026-11-12T01:54:47.7161610Z [feedback picker] kind=StaticText count=3
+2026-11-12T01:54:47.7162400Z [feedback picker] kind=StaticText label=Select up to 3 items. identifier=
+2026-11-12T01:54:47.7163230Z [feedback picker] kind=StaticText label=2 Items identifier=
+2026-11-12T01:54:47.7164360Z [feedback picker] kind=StaticText label=Locations Included identifier=
+2026-11-12T01:54:47.7165020Z [feedback picker] kind=Image count=9
+2026-11-12T01:54:47.7509040Z [feedback picker] kind=Image label=Photo, November 12, 1:14 AM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.7510400Z [feedback picker] kind=Image label=Video, one second, November 12, 1:04 AM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9083630Z [feedback picker] kind=Image label=Photo, March 30, 2018, 7:14 PM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9086590Z [feedback picker] kind=Image label=Photo, August 08, 2012, 9:55 PM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9089090Z [feedback picker] kind=Image label=Photo, August 08, 2012, 9:29 PM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9090930Z [feedback picker] kind=Image label=Photo, August 08, 2012, 6:52 PM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9093650Z [feedback picker] kind=Image label=Photo, March 13, 2011, 12:17 AM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9096470Z [feedback picker] kind=Image label=Photo, October 09, 2009, 9:09 PM identifier=PXGGridLayout-Info
+2026-11-12T01:54:47.9097330Z [feedback picker] kind=Image label= identifier=
+2026-11-12T01:54:47.9098210Z [feedback picker] kind=Cell count=0
+2026-11-12T01:54:47.9974090Z [feedback picker] kind=CollectionView count=0
+2026-11-12T01:54:47.9974930Z [feedback picker] kind=ScrollView count=1
+2026-11-12T01:54:47.9976240Z [feedback picker] kind=ScrollView label= identifier=photosView_content_scroll_view
+2026-11-12T01:54:47.9976830Z [feedback picker] kind=Sheet count=0
+2026-11-12T01:54:47.9977290Z [feedback picker] kind=Other count=72
+2026-11-12T01:54:47.9977750Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9978090Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9978860Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9979280Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9979880Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9980610Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9981030Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9982570Z [feedback picker] kind=Other label= identifier=
+2026-11-12T01:54:47.9983410Z [simulator readiness] first_launch_status=0
+2026-11-12T01:54:47.9984770Z [simulator readiness] attempt=1 exit=0 owned_destination=True
+2026-11-12T01:54:47.9985540Z [simulator readiness] attempt=1 exit=0 owned_destination=True
+2026-11-12T01:54:47.9986190Z [feedback capture] phase=sheet_dismissed
+2026-11-12T01:54:47.9986820Z [feedback capture] phase=render_begin
+2026-11-12T01:54:47.9987310Z [feedback capture] phase=render_end
+2026-11-12T01:54:47.9988170Z [feedback capture] phase=png_ready
+2026-11-12T01:54:47.9988690Z [feedback capture] phase=attachment_begin
+2026-11-12T01:54:47.9989210Z [feedback capture] phase=attachment_end
+2026-11-12T01:54:47.9989730Z [feedback capture] phase=composer_reopen
+2026-11-12T01:54:47.9990520Z [fixture telemetry] checks.log: [search-fixture] submitted-value=Optional(Jordan)
+2026-11-12T01:54:47.9992510Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b1059a2b-3b8c-4e13-9029-e6cb378cee97","event":"received","epoch_ms":1794447442088,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:47.9996680Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b1059a2b-3b8c-4e13-9029-e6cb378cee97","event":"response_ready","epoch_ms":1794447442181,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:47.9999130Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"84a12ab5-bc39-4eb3-a533-0b56c060f985","event":"received","epoch_ms":1794447462934,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0000660Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"84a12ab5-bc39-4eb3-a533-0b56c060f985","event":"response_ready","epoch_ms":1794447463175,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0002970Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"4b555ae1-b216-43fe-87b2-4a0fe67f8dca","event":"received","epoch_ms":1794447467132,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0004260Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"4b555ae1-b216-43fe-87b2-4a0fe67f8dca","event":"response_ready","epoch_ms":1794447467525,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0007420Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"587385ae-1c4f-40c1-8c77-d8da5072d35e","event":"received","epoch_ms":1794447467530,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0016290Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"587385ae-1c4f-40c1-8c77-d8da5072d35e","event":"response_ready","epoch_ms":1794447467645,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0063250Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f107185e-7ca2-450e-8259-28ab7c995f1d","event":"received","epoch_ms":1794447498370,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0064750Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f107185e-7ca2-450e-8259-28ab7c995f1d","event":"response_ready","epoch_ms":1794447498560,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0068390Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"c36ce952-08b1-42b6-8914-c485bcde4f34","event":"received","epoch_ms":1794447498813,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0100190Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"c36ce952-08b1-42b6-8914-c485bcde4f34","event":"response_ready","epoch_ms":1794447498936,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0104920Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"25ae9757-dde9-4e12-bd45-89a009fd740e","event":"received","epoch_ms":1794447529105,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0107060Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"25ae9757-dde9-4e12-bd45-89a009fd740e","event":"response_ready","epoch_ms":1794447529443,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0111090Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"32a92fd4-cea5-4273-a832-3e6cddd7a3f7","event":"received","epoch_ms":1794447534456,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0112360Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"32a92fd4-cea5-4273-a832-3e6cddd7a3f7","event":"response_ready","epoch_ms":1794447534898,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0114030Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"0b5d8084-3167-43b4-84e0-d437971664d0","event":"received","epoch_ms":1794447534901,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0117730Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"0b5d8084-3167-43b4-84e0-d437971664d0","event":"response_ready","epoch_ms":1794447535330,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0120780Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"e835ea86-29ef-462d-870c-4ef962eccc17","event":"received","epoch_ms":1794447568384,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0122830Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"e835ea86-29ef-462d-870c-4ef962eccc17","event":"response_ready","epoch_ms":1794447568461,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0124070Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"59161739-3803-4e91-9f13-810e9dc6643a","event":"received","epoch_ms":1794447596314,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0142450Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"59161739-3803-4e91-9f13-810e9dc6643a","event":"response_ready","epoch_ms":1794447596352,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0144580Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"09ac6e4d-92d4-4b76-84ae-2275cf818a15","event":"received","epoch_ms":1794447601889,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0145730Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"09ac6e4d-92d4-4b76-84ae-2275cf818a15","event":"response_ready","epoch_ms":1794447602141,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0146930Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"afa0ccd3-70f2-4acb-b141-1332e3e80dea","event":"received","epoch_ms":1794447602190,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0148760Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"afa0ccd3-70f2-4acb-b141-1332e3e80dea","event":"response_ready","epoch_ms":1794447602234,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0150400Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3dab6d39-72d8-4fc8-89af-fbebfa89f4ac","event":"received","epoch_ms":1794447641082,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0151880Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3dab6d39-72d8-4fc8-89af-fbebfa89f4ac","event":"response_ready","epoch_ms":1794447641149,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0153090Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f399b2dc-10ba-4205-b442-03dcfc6ced3e","event":"received","epoch_ms":1794447645084,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0154530Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f399b2dc-10ba-4205-b442-03dcfc6ced3e","event":"response_ready","epoch_ms":1794447645109,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0155910Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"5f3df365-ed0e-4ce9-8c80-a26b4b9e9e1d","event":"received","epoch_ms":1794447645232,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0157430Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"5f3df365-ed0e-4ce9-8c80-a26b4b9e9e1d","event":"response_ready","epoch_ms":1794447645299,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0159170Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"5b2dbbcc-62c7-4714-a705-4ea01dade5f6","event":"received","epoch_ms":1794447684820,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0161040Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"5b2dbbcc-62c7-4714-a705-4ea01dade5f6","event":"response_ready","epoch_ms":1794447685024,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0162240Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"0bbde2a3-eae6-4500-9a4a-3d981540143f","event":"received","epoch_ms":1794447711235,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0163590Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"0bbde2a3-eae6-4500-9a4a-3d981540143f","event":"response_ready","epoch_ms":1794447711249,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0165830Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"44244605-e1a0-4f96-80ab-9a32e95789f8","event":"received","epoch_ms":1794447715942,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0167260Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"44244605-e1a0-4f96-80ab-9a32e95789f8","event":"response_ready","epoch_ms":1794447716075,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0168670Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"5b171cc8-115a-45f3-9194-3b697da9276f","event":"received","epoch_ms":1794447716127,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0171030Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"5b171cc8-115a-45f3-9194-3b697da9276f","event":"response_ready","epoch_ms":1794447716307,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0172580Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"fe512578-1a30-4871-a86b-a83b51edadd3","event":"received","epoch_ms":1794447749993,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0173930Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"fe512578-1a30-4871-a86b-a83b51edadd3","event":"response_ready","epoch_ms":1794447750014,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0175760Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"2302d519-e7a1-411e-bfce-73c316fd5329","event":"received","epoch_ms":1794447754280,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0177240Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"2302d519-e7a1-411e-bfce-73c316fd5329","event":"response_ready","epoch_ms":1794447754289,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0178400Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"67f53ae7-8a97-4396-86ea-a434cc2a2fff","event":"received","epoch_ms":1794447754486,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.0180220Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"67f53ae7-8a97-4396-86ea-a434cc2a2fff","event":"response_ready","epoch_ms":1794447754562,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.0202260Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"54771065-a21a-4fd0-ae51-9f940494ee35","event":"received","epoch_ms":1794447935852,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0203800Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"54771065-a21a-4fd0-ae51-9f940494ee35","event":"response_ready","epoch_ms":1794447936187,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.0284830Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"e9b564c2-273a-4629-b969-c88c9e76115e","event":"received","epoch_ms":1794447939147,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.0290090Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"e9b564c2-273a-4629-b969-c88c9e76115e","event":"response_ready","epoch_ms":1794447939156,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.1274290Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"af356958-25fa-4b50-8dad-454cb7bea417","event":"received","epoch_ms":1794447939286,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.1823280Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"af356958-25fa-4b50-8dad-454cb7bea417","event":"response_ready","epoch_ms":1794447939407,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.1825110Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b212117f-4d39-4dfa-92b6-f63689a73948","event":"received","epoch_ms":1794448095537,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.1826330Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b212117f-4d39-4dfa-92b6-f63689a73948","event":"response_ready","epoch_ms":1794448095586,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.1827650Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"9dba0a7b-6344-49e9-bb58-96672b568de4","event":"received","epoch_ms":1794448098927,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2243020Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"9dba0a7b-6344-49e9-bb58-96672b568de4","event":"response_ready","epoch_ms":1794448098938,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2245280Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"792accc3-1987-4b20-b6c2-7e9608bbc0fa","event":"received","epoch_ms":1794448099065,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.2246890Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"792accc3-1987-4b20-b6c2-7e9608bbc0fa","event":"response_ready","epoch_ms":1794448099286,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.2248680Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f5345773-c60d-48e9-afcc-159223f52963","event":"received","epoch_ms":1794448116023,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2250030Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f5345773-c60d-48e9-afcc-159223f52963","event":"response_ready","epoch_ms":1794448116067,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2251190Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3f85967e-54e7-43fc-a42a-1dd3f669e7e6","event":"received","epoch_ms":1794448116139,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.2252980Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3f85967e-54e7-43fc-a42a-1dd3f669e7e6","event":"response_ready","epoch_ms":1794448116179,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.2254570Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"10fe5ea6-f72d-414b-bcee-3ae0ef653de0","event":"received","epoch_ms":1794448161861,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2255620Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"10fe5ea6-f72d-414b-bcee-3ae0ef653de0","event":"response_ready","epoch_ms":1794448161892,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2256690Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"2ca44c89-e9f0-4984-bf14-f4b929d61581","event":"received","epoch_ms":1794448181922,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2257990Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"2ca44c89-e9f0-4984-bf14-f4b929d61581","event":"response_ready","epoch_ms":1794448181998,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2259540Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"019ffd4f-f6bb-4c78-bdbf-5188ff988b67","event":"received","epoch_ms":1794448186260,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2260840Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"019ffd4f-f6bb-4c78-bdbf-5188ff988b67","event":"response_ready","epoch_ms":1794448186269,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2360300Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"2d8a6a2d-06d6-48ba-9260-921c3b066ecc","event":"received","epoch_ms":1794448186391,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.2362040Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"2d8a6a2d-06d6-48ba-9260-921c3b066ecc","event":"response_ready","epoch_ms":1794448186476,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.2363850Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b3b860bc-842b-4562-9d94-ecd852c7f0e8","event":"received","epoch_ms":1794448221498,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2364960Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b3b860bc-842b-4562-9d94-ecd852c7f0e8","event":"response_ready","epoch_ms":1794448221590,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2366920Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"ea3f9130-fccd-4d83-9f8c-8b4f57780eb8","event":"received","epoch_ms":1794448224929,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2368310Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"ea3f9130-fccd-4d83-9f8c-8b4f57780eb8","event":"response_ready","epoch_ms":1794448224941,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2369400Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"89704d81-426b-4201-8e7d-31c861c2aef6","event":"received","epoch_ms":1794448225063,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.2371150Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"89704d81-426b-4201-8e7d-31c861c2aef6","event":"response_ready","epoch_ms":1794448225157,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.2372710Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"13ecd24d-2e00-42ad-8332-6e5912ee7cc6","event":"received","epoch_ms":1794448264846,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T01:54:48.2373950Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"13ecd24d-2e00-42ad-8332-6e5912ee7cc6","event":"response_ready","epoch_ms":1794448265624,"path":"/v1/destinations","status":200}
+2026-11-12T01:54:48.2375150Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"1a39355b-43dd-423d-92a8-af777338b1d4","event":"received","epoch_ms":1794448265642,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T01:54:48.2376760Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"1a39355b-43dd-423d-92a8-af777338b1d4","event":"response_ready","epoch_ms":1794448265991,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T01:54:48.2377840Z Sanitized failure context (bounded; full log remains in artifact):
+2026-11-12T01:54:48.2378710Z [fixture failure] 878: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1810:106: warning: expression implicitly coerced from 'Any?' to 'Any'
+2026-11-12T01:54:48.2380010Z [fixture failure] 879:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T01:54:48.2380910Z [fixture failure] 880:                                                                                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T01:54:48.2382110Z [fixture failure] 881: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1810:117: note: provide a default value to avoid this warning
+2026-11-12T01:54:48.2383350Z [fixture failure] 882:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T01:54:48.2384200Z [fixture failure] 883:                                                                                                          ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T01:54:48.2385270Z [fixture failure] 885: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1810:117: note: force-unwrap the value to avoid this warning
+2026-11-12T01:54:48.2386420Z [fixture failure] 886:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T01:54:48.2387370Z [fixture failure] 887:                                                                                                          ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T01:54:48.2388470Z [fixture failure] 889: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1810:117: note: explicitly cast to 'Any' with 'as Any' to silence this warning
+2026-11-12T01:54:48.2389570Z [fixture failure] 890:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T01:54:48.2390480Z [fixture failure] 891:                                                                                                          ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T01:54:48.2391250Z [fixture failure] 1206: 2026-11-12 01:17:32.513128+0000 OrcaUITests-Runner[22947:68623] [Default] Running tests...
+2026-11-12T01:54:48.2392470Z [fixture failure] 1207: 2026-11-12 01:17:32.651773+0000 OrcaUITests-Runner[22947:70224] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-11-12T01:54:48.2393780Z [fixture failure] 1208: 2026-11-12 01:17:32.695347+0000 OrcaUITests-Runner[22947:70224] [General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
+2026-11-12T01:54:48.2396510Z [fixture failure] 1209: objc[22947]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108638310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1098e8398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+2026-11-12T01:54:48.2473970Z [fixture failure] 1365:     t =    54.70s     Checking existence of `StaticText (First Match)`
+2026-11-12T01:54:48.2474930Z [fixture failure] 1366:     t =    54.98s Collecting debug information to assist test failure triage
+2026-11-12T01:54:48.2475850Z [fixture failure] 1367:     t =    54.99s     Requesting snapshot of accessibility hierarchy for app with pid 23956
+2026-11-12T01:54:48.2476800Z [fixture failure] 1384:     t =    60.08s     Checking existence of `StaticText (First Match)`
+2026-11-12T01:54:48.2477950Z [fixture failure] 1385:     t =    60.23s Collecting debug information to assist test failure triage
+2026-11-12T01:54:48.2478740Z [fixture failure] 1386:     t =    60.23s     Requesting snapshot of accessibility hierarchy for app with pid 23956
+2026-11-12T01:54:48.2480220Z [fixture failure] 1584: 2026-11-12 01:19:54.894186+0000 OrcaUITests-Runner[28369:82805] [Default] Running tests...
+2026-11-12T01:54:48.2553930Z [fixture failure] 1585: 2026-11-12 01:19:55.058631+0000 OrcaUITests-Runner[28369:84139] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-11-12T01:54:48.2555340Z [fixture failure] 1586:     t =      nans Interface orientation changed to Portrait
+2026-11-12T01:54:48.2556520Z [fixture failure] 7178:     t =    22.77s     Requesting snapshot of accessibility hierarchy for app with pid 53990
+2026-11-12T01:54:48.2607460Z [fixture failure] 7179: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1430: error: -[OrcaUITests.OrcaUITests test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade] : Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x107db72f0>.
+2026-11-12T01:54:48.2609130Z [fixture failure] 7180: Sparse tree of matches:
+2026-11-12T01:54:48.2609760Z [fixture failure] 7246: [compose-fixture-transport] event=end method=POST path=/__fixture/compose/capabilities epoch_ms=1794447125052 elapsed_ms=11 status=204 error_code=0
+2026-11-12T01:54:48.2994760Z [fixture failure] 7247: Test Case '-[OrcaUITests.OrcaUITests test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade]' failed (27.755 seconds).
+2026-11-12T01:54:48.2995690Z [fixture failure] 7248: Test Case '-[OrcaUITests.OrcaUITests test15ServerDraftDeliveryCanBeCheckedWithoutSendingAgain]' started.
+2026-11-12T01:54:48.2997010Z [fixture failure] 7673:     t =    36.26s             Requesting snapshot of accessibility hierarchy for app with pid 58884
+2026-11-12T01:54:48.3009010Z [fixture failure] 7674: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1430: error: -[OrcaUITests.OrcaUITests test17ForegroundRefreshUnlocksSendingWithoutRelaunch] : Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x1154d83c0>.
+2026-11-12T01:54:48.3010470Z [fixture failure] 7675: Sparse tree of matches:
+2026-11-12T01:54:48.3011480Z [fixture failure] 7741: [compose-fixture-transport] event=end method=POST path=/__fixture/compose/capabilities epoch_ms=1794447244496 elapsed_ms=24 status=204 error_code=0
+2026-11-12T01:54:48.3012870Z [fixture failure] 7742: Test Case '-[OrcaUITests.OrcaUITests test17ForegroundRefreshUnlocksSendingWithoutRelaunch]' failed (45.427 seconds).
+2026-11-12T01:54:48.3060640Z [fixture failure] 7743: Test Case '-[OrcaUITests.OrcaUITests test20EmptyInboxCanRefreshIntoMail]' started.
+2026-11-12T01:54:48.3061390Z [fixture failure] 10552:     t =   181.67s                 Find the "draft.746273a0-a6ad-4756-97c4-e8dcbd356a43" Button
+2026-11-12T01:54:48.3062920Z [fixture failure] 10553: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1281: error: -[OrcaUITests.OrcaUITests test35RichDraftConversionAtAccessibilitySize] : XCTAssertTrue failed - Expected full draft row above the tab bar before tapping
+2026-11-12T01:54:48.3063890Z [fixture failure] 10554:     t =   181.83s Tear Down
+2026-11-12T01:54:48.3064790Z [fixture failure] 10556: [compose-fixture-transport] event=end method=POST path=/__fixture/compose/capabilities epoch_ms=1794447925295 elapsed_ms=223 status=204 error_code=0
+2026-11-12T01:54:48.3065940Z [fixture failure] 10557: Test Case '-[OrcaUITests.OrcaUITests test35RichDraftConversionAtAccessibilitySize]' failed (182.606 seconds).
+2026-11-12T01:54:48.3066790Z [fixture failure] 10558: Test Case '-[OrcaUITests.OrcaUITests test36SentRecoveryStatusAtAccessibilitySize]' started.
+2026-11-12T01:54:48.3067510Z [fixture failure] 11606:     t =   160.25s                 Find the "draft.109696de-962a-4a56-a4bc-911553ee8f66" Button
+2026-11-12T01:54:48.3068690Z [fixture failure] 11607: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1205: error: -[OrcaUITests.OrcaUITests test36SentRecoveryStatusAtAccessibilitySize] : XCTAssertTrue failed - Expected full draft row above the tab bar before tapping
+2026-11-12T01:54:48.3069990Z [fixture failure] 11608:     t =   160.37s Tear Down
+2026-11-12T01:54:48.3071120Z [fixture failure] 11610: [compose-fixture-transport] event=end method=POST path=/__fixture/compose/capabilities epoch_ms=1794448086272 elapsed_ms=54 status=204 error_code=0
+2026-11-12T01:54:48.3072120Z [fixture failure] 11611: Test Case '-[OrcaUITests.OrcaUITests test36SentRecoveryStatusAtAccessibilitySize]' failed (160.931 seconds).
+2026-11-12T01:54:48.3111460Z [fixture failure] 11612: Test Case '-[OrcaUITests.OrcaUITests test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes]' started.
+2026-11-12T01:54:48.3355200Z [fixture failure] 12343:     t =   125.23s Added attachment named 'native-boundary-initial-ax-inbox-row-missing'
+2026-11-12T01:54:48.5114050Z [fixture failure] 12344: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:469: error: -[OrcaUITests.OrcaUITests test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes] : XCTAssertTrue failed
+2026-11-12T01:54:48.5116660Z [fixture failure] 12345:     t =   125.25s Tear Down
+2026-11-12T01:54:48.5117440Z [fixture failure] 12462: [compose-fixture-transport] event=end method=POST path=/__fixture/compose/capabilities epoch_ms=1794448214136 elapsed_ms=34 status=204 error_code=0
+2026-11-12T01:54:48.5118950Z [fixture failure] 12463: Test Case '-[OrcaUITests.OrcaUITests test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes]' failed (127.747 seconds).
+2026-11-12T01:54:48.5119920Z [fixture failure] 12464: Test Case '-[OrcaUITests.OrcaUITests test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy]' started.
+2026-11-12T01:54:48.5120740Z [fixture failure] 12678: 
+2026-11-12T01:54:48.5120980Z [fixture failure] 12679: ** TEST EXECUTE FAILED **
+2026-11-12T01:54:48.5121220Z [fixture failure] 12680: 
+2026-11-12T01:54:48.5121510Z [fixture failure] Additional failure markers omitted: 448; inspect artifact.
+2026-11-12T01:54:48.5121970Z Synthetic checks exit code: 65; sanitized evidence: /Users/runner/work/_temp/orca-ci-evidence
+2026-11-12T01:54:48.5122360Z [fixture stage] phase=evidence_export_finished
+2026-11-12T01:54:57.3964900Z     t =    39.99s                     Check for interrupting elements affecting "compose.body" TextView
+2026-11-12T01:54:57.3966940Z     t =    40.13s                     Synthesize event
+2026-11-12T01:54:57.3967530Z     t =    41.17s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3968200Z     t =    41.69s                 Tap "compose.keyboard-done" Button
+2026-11-12T01:54:57.3968750Z     t =    41.69s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3969280Z     t =    41.71s                     Find the "compose.keyboard-done" Button
+2026-11-12T01:54:57.3969870Z     t =    41.92s                     Check for interrupting elements affecting "compose.keyboard-done" Button
+2026-11-12T01:54:57.3970490Z     t =    42.09s                     Synthesize event
+2026-11-12T01:54:57.3971010Z     t =    42.45s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3971940Z     t =    42.77s                 Find the "compose.discard" Button
+2026-11-12T01:54:57.3972920Z     t =    43.12s                 Tap "compose.discard" Button
+2026-11-12T01:54:57.3973410Z     t =    43.12s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3973790Z     t =    43.13s                     Find the "compose.discard" Button
+2026-11-12T01:54:57.3974320Z     t =    43.27s                     Check for interrupting elements affecting "compose.discard" Button
+2026-11-12T01:54:57.3974820Z     t =    43.39s                     Synthesize event
+2026-11-12T01:54:57.3975110Z     t =    43.73s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3975470Z     t =    44.50s                 Waiting 5.0s for "Discard this draft?" Alert to exist
+2026-11-12T01:54:57.3978270Z     t =    45.52s                     Checking `Expect predicate `existsNoRetry == 1` for object "Discard this draft?" Alert`
+2026-11-12T01:54:57.3978910Z     t =    45.52s                         Checking existence of `"Discard this draft?" Alert`
+2026-11-12T01:54:57.3979580Z     t =    46.07s Added attachment named 'bre457-discard-local-confirmation'
+2026-11-12T01:54:57.3981040Z     t =    46.07s                 Tap "Keep writing" Button
+2026-11-12T01:54:57.3981460Z     t =    46.07s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3981840Z     t =    46.07s                     Find the "Keep writing" Button
+2026-11-12T01:54:57.3982400Z     t =    46.26s                     Check for interrupting elements affecting "Keep writing" Button
+2026-11-12T01:54:57.3982850Z     t =    46.40s                     Synthesize event
+2026-11-12T01:54:57.3983330Z     t =    46.74s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.3983710Z     t =    47.20s                 Find the "compose.subject" TextField
+2026-11-12T01:54:57.3984150Z     t =    47.33s                 Find the "compose.to" TextField
+2026-11-12T01:54:57.3984680Z     t =    47.42s                 Find the "compose.body" TextView
+2026-11-12T01:54:57.3985090Z     t =    47.54s                 Tap "compose.discard" Button
+2026-11-12T01:54:57.3985910Z     t =    47.54s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.4003220Z     t =    47.54s                     Find the "compose.discard" Button
+2026-11-12T01:54:57.4003690Z     t =    47.78s                     Check for interrupting elements affecting "compose.discard" Button
+2026-11-12T01:54:57.4004170Z     t =    47.94s                     Synthesize event
+2026-11-12T01:54:57.4004510Z     t =    48.33s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.4004890Z     t =    49.06s                 Tap "Discard draft" Button
+2026-11-12T01:54:57.4005300Z     t =    49.06s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.4005690Z     t =    49.07s                     Find the "Discard draft" Button
+2026-11-12T01:54:57.4006160Z     t =    49.19s                     Check for interrupting elements affecting "Discard draft" Button
+2026-11-12T01:54:57.4006650Z     t =    49.35s                     Synthesize event
+2026-11-12T01:54:57.4007490Z     t =    49.66s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.4008410Z     t =    50.09s                 Waiting 10.0s for "compose.open" Button to exist
+2026-11-12T01:54:57.4009580Z     t =    51.12s                     Checking `Expect predicate `existsNoRetry == 1` for object "compose.open" Button`
+2026-11-12T01:54:57.4010080Z     t =    51.13s                         Checking existence of `"compose.open" Button`
+2026-11-12T01:54:57.4010410Z     t =    51.39s                 Tap "Drafts" Button
+2026-11-12T01:54:57.4010830Z     t =    51.39s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.4011190Z     t =    51.39s                     Find the "Drafts" Button
+2026-11-12T01:54:57.4011550Z     t =    51.54s                     Check for interrupting elements affecting "doc.text" Button
+2026-11-12T01:54:57.4011980Z     t =    51.65s                     Synthesize event
+2026-11-12T01:54:57.4012270Z     t =    51.96s                     Wait for com.orca.mail to idle
+2026-11-12T01:54:57.4012900Z     t =    54.00s                 Checking existence of `"Device discard 09B393B5" StaticText`
+2026-11-12T01:54:57.4013990Z [compose-fixture-transport] event=start method=GET path=/__fixture/compose/state epoch_ms=1794448268871
+2026-11-12T01:54:57.4014770Z [compose-fixture-transport] event=end method=GET path=/__fixture/compose/state epoch_ms=1794448268877 elapsed_ms=5 status=200 error_code=0
+2026-11-12T01:54:57.4017400Z     t =    54.51s Added attachment named 'bre457-discard-local-acknowledged'
+2026-11-12T01:54:57.4017780Z     t =    54.52s Tear Down
+2026-11-12T01:54:57.4018350Z Test Case '-[OrcaUITests.OrcaUITests test53ExplicitLocalDiscardKeepsUnfinishedWritingOnCancelThenRemovesOnlyConfirmedCopy]' passed (55.025 seconds).
+2026-11-12T01:54:57.4019810Z Test Suite 'OrcaUITests' failed at 2026-11-12 01:51:09.552.
+2026-11-12T01:54:57.4020200Z 	 Executed 17 tests, with 5 failures (0 unexpected) in 1245.509 (1245.535) seconds
+2026-11-12T01:54:57.4020690Z Test Suite 'OrcaUITests.xctest' failed at 2026-11-12 01:51:09.553.
+2026-11-12T01:54:57.4021070Z 	 Executed 17 tests, with 5 failures (0 unexpected) in 1245.509 (1245.537) seconds
+2026-11-12T01:54:57.4021570Z Test Suite 'Selected tests' failed at 2026-11-12 01:51:09.554.
+2026-11-12T01:54:57.4022250Z 	 Executed 17 tests, with 5 failures (0 unexpected) in 1245.509 (1245.539) seconds
+2026-11-12T01:54:57.4023660Z 2026-11-12 01:54:11.532 xcodebuild[44755:126577] [MT] IDETestOperationsObserverDebug: 1595.786 elapsed -- Testing started completed.
+2026-11-12T01:54:57.4024450Z 2026-11-12 01:54:11.533 xcodebuild[44755:126577] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-12T01:54:57.4026040Z 2026-11-12 01:54:11.534 xcodebuild[44755:126577] [MT] IDETestOperationsObserverDebug: 1595.786 sec, +1595.786 sec -- end
+2026-11-12T01:54:57.4026500Z 
+2026-11-12T01:54:57.4026630Z Test session results, code coverage, and logs:
+2026-11-12T01:54:57.4027030Z 	/Users/runner/work/_temp/orca-ios-ci.4HHVJV/results/Orca.xcresult
+2026-11-12T01:54:57.4027590Z 
+2026-11-12T01:54:57.4027680Z ** TEST EXECUTE FAILED **
+2026-11-12T01:54:57.4027830Z 
+2026-11-12T01:54:57.4027900Z Testing started
+2026-11-12T01:54:57.4028020Z 
+2026-11-12T01:54:57.4028130Z [feedback capture] phase=sheet_dismissed
+2026-11-12T01:54:57.4028390Z [feedback capture] phase=render_begin
+2026-11-12T01:54:57.4028670Z [feedback capture] phase=render_end
+2026-11-12T01:54:57.4028920Z [feedback capture] phase=png_ready
+2026-11-12T01:54:57.4029280Z [feedback capture] phase=attachment_begin
+2026-11-12T01:54:57.4029570Z [feedback capture] phase=attachment_end
+2026-11-12T01:54:57.4029850Z [feedback capture] phase=composer_reopen
+2026-11-12T01:54:57.4122230Z ##[error]Process completed with exit code 65.
+2026-11-12T01:54:57.4520790Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-12T01:54:57.4521170Z with:
+2026-11-12T01:54:57.4521440Z   name: ios-simulator-43131878509-1
+2026-11-12T01:54:57.4521760Z   path: /Users/runner/work/_temp/orca-ci-evidence/
+2026-11-12T01:54:57.4522020Z   if-no-files-found: ignore
+2026-11-12T01:54:57.4522250Z   retention-days: 7
+2026-11-12T01:54:57.4522420Z   compression-level: 6
+2026-11-12T01:54:57.4522590Z   overwrite: false
+2026-11-12T01:54:57.4522780Z   include-hidden-files: false
+2026-11-12T01:54:57.4523010Z env:
+2026-11-12T01:54:57.4523260Z   ORCA_CI_HEAD_SHA: 72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e
+2026-11-12T01:54:57.4523710Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T01:54:57.4524090Z ##[endgroup]
+2026-11-12T01:54:58.1898660Z (node:9018) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-12T01:54:58.1899560Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-12T01:54:58.2166740Z With the provided path, there will be 146 files uploaded
+2026-11-12T01:54:58.2167410Z Artifact name is valid!
+2026-11-12T01:54:58.2167650Z Root directory input is valid!
+2026-11-12T01:54:58.6327520Z Beginning upload of artifact content to blob storage
+2026-11-12T01:54:58.9056250Z (node:9018) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-12T01:54:59.8414580Z Uploaded bytes 8388608
+2026-11-12T01:55:00.1496770Z Uploaded bytes 16777216
+2026-11-12T01:55:00.6362370Z Uploaded bytes 25165824
+2026-11-12T01:55:00.7632110Z Uploaded bytes 27988217
+2026-11-12T01:55:00.8399580Z Finished uploading artifact content to blob storage!
+2026-11-12T01:55:00.8401660Z SHA256 digest of uploaded artifact zip is 249b3b6d60bd0d22db752d6055b84760133e096beaef2257b13a7184096ef235
+2026-11-12T01:55:00.8403110Z Finalizing artifact upload
+2026-11-12T01:55:01.2559410Z Artifact ios-simulator-43131878509-1.zip successfully finalized. Artifact ID 13908167183
+2026-11-12T01:55:01.2566780Z Artifact ios-simulator-43131878509-1 has been successfully uploaded! Final size is 27988217 bytes. Artifact ID is 13908167183
+2026-11-12T01:55:01.2619360Z Artifact download URL: https://github.com/lukebrevoort/orca/actions/runs/43131878509/artifacts/13908167183
+2026-11-12T01:55:01.2853190Z Post job cleanup.
+2026-11-12T01:55:01.4521890Z [command]/opt/homebrew/bin/git version
+2026-11-12T01:55:01.5129000Z git version 2.56.0
+2026-11-12T01:55:01.5155830Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/66b450f7-ecfc-4c73-b429-56babd6267dd/.gitconfig'
+2026-11-12T01:55:01.5169330Z Temporarily overriding HOME='/Users/runner/work/_temp/66b450f7-ecfc-4c73-b429-56babd6267dd' before making global git config changes
+2026-11-12T01:55:01.5172450Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-12T01:55:01.5174490Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/orca/orca
+2026-11-12T01:55:01.5331570Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-12T01:55:01.5415110Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-12T01:55:01.6776260Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-12T01:55:01.6877510Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-12T01:55:01.9034250Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-12T01:55:01.9399600Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-12T01:55:02.1125980Z Cleaning up orphan processes
+2026-11-12T01:55:05.9155470Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+

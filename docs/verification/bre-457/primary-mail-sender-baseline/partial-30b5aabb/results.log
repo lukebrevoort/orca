@@ -1,0 +1,136 @@
+CASE CORE02-primary-refresh-submitted-precondition: PASS — real primary Mail Submit accepts A with a second page before editing B
+CASE CORE02-primary-refresh-request-keeps-submitted-query: FAIL — routine primary Mail refresh/page must request submitted A, not unfinished B; observed=[(query: "A", cursor: nil), (query: "B", cursor: nil)]
+CASE CORE02-primary-refresh-rows-and-editable-provenance: FAIL — typed B remains editable while accepted A rows/provenance and page append stay A
+CASE CORE02-primary-page-submitted-precondition: PASS — real primary Mail Submit accepts A with a second page before editing B
+CASE CORE02-primary-page-request-keeps-submitted-query: FAIL — routine primary Mail refresh/page must request submitted A, not unfinished B; observed=[(query: "A", cursor: nil), (query: "B", cursor: nil)]
+CASE CORE02-primary-page-rows-and-editable-provenance: FAIL — typed B remains editable while accepted A rows/provenance and page append stay A
+CASE CORE02-primary-cache-two-query-precondition: PASS — both owned caches contain distinguishable accepted data
+CASE CORE02-primary-offline-refresh-keeps-A-cache: FAIL — refresh must read A's owned cache, not typed B's valid but unsubmitted cached rows
+CASE CORE02-primary-held-typing-request: FAIL — the in-flight routine request must capture submitted A before any await
+CASE CORE02-primary-held-typing-ownership: FAIL — late other-account response cannot install; editing again must not clear the accepted submitted conversation set
+CASE CORE02-primary-held-account-request: FAIL — the in-flight routine request must capture submitted A before any await
+CASE CORE02-primary-held-account-ownership: PASS — late other-account response cannot install; editing again must not clear the accepted submitted conversation set
+CASE CORE02-pagination-400-invalid_request-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-400-invalid_request-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-400-invalid_request-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-400-other_error-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-400-other_error-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-400-other_error-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-503-unavailable-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-503-unavailable-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-503-unavailable-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-401-unauthorized-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-401-unauthorized-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-401-unauthorized-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-403-forbidden-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-403-forbidden-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-403-forbidden-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-404-account_not_found-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-404-account_not_found-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-404-account_not_found-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-foreign-page-established-owned-page: PASS — nonempty authorized page precedes the wrong-account pagination response
+CASE CORE02-foreign-200-page-rejected: PASS — a well-formed200 page containing another account's row fails ownership validation and clears this request's visible page
+CASE CORE02-current-auth-rejection-clears-visible-page: PASS — current authentication rejection is not treated as an offline response
+CASE CORE02-later-same-owner-offline-reset-keeps-cache-policy: PASS — later distinct network failure can load the existing cache for the unchanged owner/account/query; no new cache purge policy
+CASE CORE02-typed-cursor-restart-true: PASS — only typed invalid_cursor restarts once against a fresh snapshot
+CASE CORE02-typed-cursor-result-true: PASS — failed fresh restart retains accepted owned rows but retires stale cursor; successful restart replaces rows
+CASE CORE02-typed-cursor-restart-false: PASS — only typed invalid_cursor restarts once against a fresh snapshot
+CASE CORE02-typed-cursor-result-false: PASS — failed fresh restart retains accepted owned rows but retires stale cursor; successful restart replaces rows
+CASE CORE02-late-pagination-owner-invalidated: PASS — late old identity response cannot restore cleared rows after native invalidation
+CASE CORE02-late-pagination-account-invalidated: PASS — late old identity response cannot restore cleared rows after native invalidation
+CASE CORE02-late-pagination-logout-invalidated: PASS — late old identity response cannot restore cleared rows after native invalidation
+CASE 465-original-uncertain-lock: PASS — A committed, acknowledgement lost and reconciliation offline
+CASE 465-no-A-receipt-under-B: PASS — visible receipt target = none
+CASE 465-no-A-undo-under-B: PASS — Undo must not operate on A under B
+CASE 465-stale-test-established-current-receipt: PASS — must establish current revision1 receipt before checking revision2
+CASE 465-known-newer-revision-disables-Undo: PASS — current conversation revision2 supersedes receipt revision1
+CASE cached-query-provenance: PASS — cached row B labeled B
+CASE 480-correction-actually-acknowledged: PASS — production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback
+CASE 480-acknowledged-correction-refreshes-submitted-search: PASS — actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime
+CASE 480-late-old-account-search-cannot-overwrite: PASS — production controller account/request generation rejects held older account response
+CASE notification-route-keeps-unsaved-settings: PASS — notification must use the shared Stay/Leave guard
+CASE 473-stay-preserves-edits: PASS — Stay cancels notification navigation
+CASE 473-leave-routes-original-thread: PASS — explicit discard applies captured route
+CASE 473-stale-owner-cannot-route: PASS — delayed Leave cannot route or discard another owner's choices
+CASE 469-native-header-retains-original-owner-after-held-token: PASS — actual APIClient dispatch retains captured draft owner even after token/observable owner change; server enforcement separate
+CASE 469-native-stale-ack-keeps-original-edits: PASS — late different-owner response cannot replace the original draft
+CASE 469-real-server-held-token-zero-preference-writes: PASS — actual independent SQLite preference rows for A and B remain byte-equivalent
+CASE 469-real-server-rejects-patch-and-recovery: PASS — actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409
+CASE 469-real-server-preference-write-probe-zero: PASS — fixture-owned SQLite INSERT/UPDATE/DELETE triggers observe no preference writes on rejected held PATCH/recovery
+CASE 469-write-probe-positive-control: PASS — same-owner real PATCH succeeds and independently records one A write; B remains untouched
+CASE 466-first-commit-actually-recorded: PASS — actual API/SQLite commit exists; response replaced by HTTP503
+CASE 466-edit-retry-exactly-one-creation: PASS — actual view count after commit/retry = 1, first count = 1
+CASE 466-dismiss-reopen-no-duplicate: PASS — actual view count after reopen = 1
+CASE 466-repeated-retry-preserves-exact-command: PASS — first three committed/replayed requests retain identical UUID, expected revisions and reviewed definition
+CASE 466-advanced-definition-preserved: PASS — actual API saved ID and complete sender/thread/readState definition retained
+CASE 466-advanced-update-no-extra-creation: PASS — one recovered View plus one intentional advanced fixture, updates retain both IDs
+CASE 466-provider-boundary: PASS — synthetic provider calls = 0
+CASE 478-noop-actual-terminal-400: PASS — actual API no-op rejection writes no View
+CASE 478-noop-reopen-unlocks-preview: PASS — definitive rejection must recover current authorized saved identity without dropping newer edits
+CASE 478-noop-recovery-updates-same-id: PASS — fresh explicit preview/update retains original ID and creation count
+CASE 478-stale-create-actual-terminal-409: PASS — actual stale workspace rejection creates nothing
+CASE 478-stale-reopen-preserves-ready-edits: PASS — recovery must retain explicitly chosen predicate and editable draft
+CASE 478-stale-recovery-creates-exactly-once: PASS — one creation only after fresh preview/explicit Save
+CASE 478-lost-noop-actual-rejection-hidden: PASS — actual server rejected without write, but client received503 and must preserve uncertainty
+CASE 478-lost-noop-reopen-retains-command: PASS — reopening retains original immutable pending command and newer edits
+CASE 478-lost-noop-recovery-completes-once: PASS — typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation
+CASE 478-lost-stale-actual-rejection-hidden: PASS — actual server rejected without write, but client received503 and must preserve uncertainty
+CASE 478-lost-stale-reopen-retains-command: PASS — reopening retains original immutable pending command and newer edits
+CASE 478-lost-stale-recovery-completes-once: PASS — typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation
+CASE 478-strict-valid-variant-0: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-valid-variant-1: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-valid-variant-2: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-invalid-variant-0: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-1: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-2: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-3: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-4: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-5: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-6: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-7: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-8: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-9: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-10: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-11: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-eligible-unknown-keeps-exact-command: PASS — actual eligible/unresolved status never releases the original command
+CASE 478-invalid-proof-keeps-command-0: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-1: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-2: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-3: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-4: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-status-failure-keeps-command-401: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-status-failure-keeps-command-404: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-status-failure-keeps-command-503: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-real-unauthenticated-cannot-unlock: PASS — real API auth/ownership rejection retains the exact original command
+CASE 478-real-foreign-owner-cannot-unlock: PASS — real API auth/ownership rejection retains the exact original command
+CASE 478-offline-keeps-command: PASS — actual URLSession transport failure retains uncertainty
+CASE 478-held-other-account-cannot-accept-proof: PASS — account change during held proof rejects publication and retirement
+CASE 478-late-original-replays-only-once: PASS — safe retry and delayed original share one real API receipt/creation
+CASE 478-real-command-mismatch-stays-locked: PASS — actual owned key collision is unknown, never a no-write fence for this command
+CASE 478-fence-prepares-before-retiring: PASS — actual server fence plus fresh authorized prepare permits a replacement preview
+CASE 478-fence-blocks-delayed-original: PASS — delayed original cannot race the replacement into a duplicate
+CASE 478-applied-deleted-never-recreates: PASS — applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID view_b326e86b-c556-4e4e-b8fa-620734207326, pending true, counts 10/10, error Original Save applied as view_b326e86b-c556-4e4e-b8fa-620734207326. Reload its current View before previewing; no replacement will be created.
+CASE 478-status-provider-boundary: PASS — all status, fence and recovery cases use zero external provider calls
+CASE 478-added-account-status-stays-conservative: PASS — historical account-set receipt proof stays unknown
+CASE 478-added-account-exact-retry-recovers: PASS — independent exact-command200ack permits original View recovery despite conservative unknown status; no duplicate
+CASE 478-added-account-current-revisions-and-edits: PASS — current object may have later revisions; local unsaved edits remain while fresh advanced predicates are retained
+CASE 478-added-account-update-preserves-fresh-definition: PASS — fresh explicit update preserves externally added advanced definition and original identity
+CASE 478-unresolved-commit-ack-reachable-check-action: PASS — View binds this public action title/handler while outcome is still unresolved; hosted tap proof remains pending
+CASE 478-applied-commit-ack-read-failure-established: PASS — validated applied ID persists before actual saved prepare200 acknowledgement is replaced503
+CASE 478-applied-commit-ack-reachable-reload-action: PASS — same actual View button is labeled Reload and invokes the tested public handler for a known applied ID
+CASE 478-applied-commit-ack-status-conservative: PASS — real status stays unknown after account addition; existing original ID remains authoritative
+CASE 478-applied-commit-ack-public-reload-retries-read: PASS — user-reachable Check/Reload must retry original-ID prepare; repeated failures retain immutable command and newer edits
+CASE 478-applied-reload-unauthenticated-protected: PASS — real original-ID read remains auth/owner guarded, never interpreted as absence
+CASE 478-applied-reload-foreign-protected: PASS — real original-ID read remains auth/owner guarded, never interpreted as absence
+CASE 478-applied-reload-held-account-protected: PASS — late owned read cannot retire the journal or replace edits after identity/generation changes
+CASE 478-applied-reload-held-owner-protected: PASS — late owned read cannot retire the journal or replace edits after identity/generation changes
+CASE 478-applied-reload-held-origin-protected: PASS — late owned read cannot retire the journal or replace edits after identity/generation changes
+CASE 478-applied-commit-ack-public-reload-recovers: PASS — network recovery uses persisted validated ID even while status remains unknown; no new creation or stale-edit overwrite
+CASE 478-applied-commit-ack-same-id-update: PASS — fresh preview/Save updates the original ID once and preserves current advanced predicates
+CASE 478-unresolved-typed-proof-reachable-check-action: PASS — View binds this public action title/handler while outcome is still unresolved; hosted tap proof remains pending
+CASE 478-applied-typed-proof-read-failure-established: PASS — validated applied ID persists before actual saved prepare200 acknowledgement is replaced503
+CASE 478-applied-typed-proof-reachable-reload-action: PASS — same actual View button is labeled Reload and invokes the tested public handler for a known applied ID
+CASE 478-applied-typed-proof-status-conservative: PASS — real status stays unknown after account addition; existing original ID remains authoritative
+CASE 478-applied-typed-proof-public-reload-retries-read: PASS — user-reachable Check/Reload must retry original-ID prepare; repeated failures retain immutable command and newer edits
+CASE 478-applied-typed-proof-public-reload-recovers: PASS — network recovery uses persisted validated ID even while status remains unknown; no new creation or stale-edit overwrite
+CASE 478-applied-typed-proof-same-id-update: PASS — fresh preview/Save updates the original ID once and preserves current advanced predicates

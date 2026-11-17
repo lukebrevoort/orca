@@ -1,0 +1,74 @@
+[
+  {
+    "time": 1794415351.181226,
+    "stage": "before",
+    "ownerPid": 64457,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "28793 110.8 846464 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      "  404  36.8 132112 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "28554  33.0 419776 /Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      " 5369  31.5  15056 /usr/libexec/spotlightknowledged.updater",
+      "28629  29.3 132400 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "15382  18.2 820928 codex"
+    ],
+    "memory": "System-wide memory free percentage: 53%"
+  },
+  {
+    "time": 1794415366.249129,
+    "stage": "running",
+    "ownerPid": 64457,
+    "childPid": 64477,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "64592  96.3 263728 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend",
+      "  404  35.4 126304 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "28629  24.7 129952 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      " 5369  23.5  15280 /usr/libexec/spotlightknowledged.updater",
+      "45776  22.2 298384 /Applications/Slack.app/Contents/Frameworks/Slack Helper (Renderer).app/Contents/MacOS/Slack Helper (Renderer)",
+      "15232  16.3 582720 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)"
+    ],
+    "memory": "System-wide memory free percentage: 56%"
+  },
+  {
+    "time": 1794415382.9551091,
+    "stage": "running",
+    "ownerPid": 64457,
+    "childPid": 64477,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "64775 107.3 441760 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/CoreServices/SpringBoard.app/SpringBoard",
+      "22764  46.7  53248 /usr/libexec/diskimagesiod",
+      "  404  43.8  95120 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      " 3233  39.6  36112 /System/Applications/Messages.app/Contents/PlugIns/Messages Assistant Extension.appex/Contents/MacOS/Messages Assistant Extension",
+      "64673  36.4  21456 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/PrivateFrameworks/AssistantServices.framework/assistantd",
+      "63094  36.1  46656 /System/Library/PrivateFrameworks/XprotectFramework.framework/Versions/A/XPCServices/XprotectService.xpc/Contents/MacOS/XprotectService"
+    ],
+    "memory": "System-wide memory free percentage: 48%"
+  },
+  {
+    "time": 1794415389.501863,
+    "stage": "after",
+    "ownerPid": 64457,
+    "childPid": 64477,
+    "command": "python3",
+    "exitCode": 1,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "64952 111.6 317392 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/Applications/Spotlight.app/Spotlight",
+      "64851 102.3 250688 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/Applications/PosterBoard.app/PosterBoard",
+      "64775  94.7 530848 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/CoreServices/SpringBoard.app/SpringBoard",
+      " 1226  78.4   5552 /usr/libexec/diagnosticd",
+      "64921  43.3 298720 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/Applications/WidgetRenderer_Default.app/WidgetRenderer_Default",
+      "64927  41.9 341312 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+    ],
+    "memory": "System-wide memory free percentage: 42%"
+  }
+]

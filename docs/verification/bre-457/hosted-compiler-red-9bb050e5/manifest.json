@@ -1,0 +1,34 @@
+[
+  {
+    "job": "130467064219",
+    "declaredHead": "9bb050e5800e4750fe8e8c5d0fcf38d8f430e617",
+    "rawSha256": "58a64aea18b0c721e4e19ec5cbf50f2980948a98f259b1b6cfd7d30b85d36c00",
+    "excerptSha256": "666a2d7391d82ee180ddf8500d8b204fb973a856738aeccca74d704fbe3c210e",
+    "scope": "actual XCTest test-build compiler failure; no test/UI execution",
+    "checkoutNote": "unit/compose used GitHub merge85c1fa33da0dacf0a589dae9446922e79f758f73; reader/mailbox/images checked declared head"
+  },
+  {
+    "job": "130467665541",
+    "declaredHead": "9bb050e5800e4750fe8e8c5d0fcf38d8f430e617",
+    "rawSha256": "b54d428d1c7764981596b10dd23703415d0a71a94f36bd02cc6e45a481608a5b",
+    "excerptSha256": "51563fd0e78b45cc06ee1425a8156cc909d13f323a78d03f6c8588002031fd63",
+    "scope": "actual XCTest test-build compiler failure; no test/UI execution",
+    "checkoutNote": "unit/compose used GitHub merge85c1fa33da0dacf0a589dae9446922e79f758f73; reader/mailbox/images checked declared head"
+  },
+  {
+    "job": "130467060410",
+    "declaredHead": "9bb050e5800e4750fe8e8c5d0fcf38d8f430e617",
+    "rawSha256": "fc63ab922cd2ccde954f6ed16dcfa4cacf215df9dd937cd2e5e213c64a5abe0c",
+    "excerptSha256": "11c6cb42fd49534cb1b95f582f3df9b3aa876106d6fc6da99cfdce0ef38be3b4",
+    "scope": "actual XCTest test-build compiler failure; no test/UI execution",
+    "checkoutNote": "unit/compose used GitHub merge85c1fa33da0dacf0a589dae9446922e79f758f73; reader/mailbox/images checked declared head"
+  },
+  {
+    "job": "130467065826",
+    "declaredHead": "9bb050e5800e4750fe8e8c5d0fcf38d8f430e617",
+    "rawSha256": "e68412e26d836366e3552e0f86da7eb3b974f757dee95faf2affcfe50e6566c0",
+    "excerptSha256": "4496d85ddc4588fef4c36b2c0bfd00548602431ecbbafbb2a3d6c7ba3a64b93b",
+    "scope": "actual XCTest test-build compiler failure; no test/UI execution",
+    "checkoutNote": "unit/compose used GitHub merge85c1fa33da0dacf0a589dae9446922e79f758f73; reader/mailbox/images checked declared head"
+  }
+]

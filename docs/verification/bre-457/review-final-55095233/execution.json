@@ -1,0 +1,22 @@
+{
+  "sha": "550952334ae1ba48ef98dc96dfcaab7cab82b387",
+  "swiftParseCount": 35,
+  "elapsed": 12.291629374987679,
+  "stages": [
+    {
+      "stage": "original-preferences",
+      "exit": 1,
+      "elapsed": 5.888342749996809
+    },
+    {
+      "stage": "final-parent-candidate",
+      "exit": 0,
+      "elapsed": 12.155998417001683
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 12.291615458001615
+    }
+  ]
+}

@@ -3,6 +3,15 @@
 set -euo pipefail
 mode=${1:?usage: fixture-check.sh browser|ios}
 case "$mode" in browser|ios) ;; *) exit 64 ;; esac
+# Validate before any Xcode command, owned fixture or evidence directory starts.
+case ${ORCA_CI_UI_TEST_APPEARANCE-both} in
+  light|dark|both) ;;
+  *) echo 'Invalid native UI appearance; expected light, dark or both.' >&2; exit 64 ;;
+esac
+if [[ ${ORCA_CI_UI_TEST_APPEARANCE-both} != both && ( "$mode" != ios || ${ORCA_CI_UI_TEST_SCOPE:-compose} != mailbox ) ]]; then
+  echo 'A single native UI appearance is supported only for iOS mailbox scope.' >&2
+  exit 64
+fi
 cd "$(dirname "$0")/../.."
 # Do not allow Bun to discover a developer's credentials in this checkout.
 if find . -name node_modules -prune -o -name '.env*' ! -name '.env.example' -type f -print | grep -q .; then
@@ -35,9 +44,9 @@ cleanup() {
   fi
   rm -rf "$work"
   if [[ "$export_status" != 0 ]]; then
-    # Fail closed: do not leave partially sanitized evidence to upload.
-    rm -rf "$evidence"
-    echo 'Evidence export failed; no artifacts will be uploaded.' >&2
+    # The exporter stages and scans privately. Earlier validated checkpoints
+    # survive a corrupt/incomplete later bundle; no final pass marker is written.
+    echo 'Final evidence export failed; only validated partial evidence may remain.' >&2
     exit 1
   fi
   if [[ "$status" != 0 ]]; then tail -n 80 "$evidence/checks.log" 2>/dev/null; fi
@@ -48,6 +57,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 {
   echo "mode=$mode"
+  if [[ "$mode" == ios ]]; then echo "ui_test_appearance=${ORCA_CI_UI_TEST_APPEARANCE-both}"; fi
   echo "tested_sha=$(git rev-parse HEAD)"
   echo "event_sha=${GITHUB_SHA:-local}"
   echo "head_sha=${ORCA_CI_HEAD_SHA:-not-provided}"
@@ -117,7 +127,8 @@ else
   bash apps/ios/Tools/check-api.sh "$connection" >> "$work/checks.log" 2>&1
   progress swift_contract_finished
   progress ios_suite_started
-  ORCA_CI_PROGRESS=1 ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
+  ORCA_CI_PROGRESS=1 ORCA_CI_CHECKPOINT_WORK="$work" ORCA_CI_CHECKPOINT_EVIDENCE="$evidence" \
+    ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_TEST_APPEARANCE=${ORCA_CI_UI_TEST_APPEARANCE-both} ORCA_UI_RESULT_DIRECTORY="$work/results" \
     zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" 3>&1 >> "$work/checks.log" 2>&1
   progress ios_suite_finished
 fi

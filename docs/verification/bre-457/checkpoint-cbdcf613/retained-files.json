@@ -1,0 +1,283 @@
+{
+  "sourceHead": "cbdcf6132c765f4e59aafcdb98c008437ba4871f",
+  "copiedOriginals": [
+    {
+      "source": "/tmp/bre457-checkpoint-red-62b940dd/checkpoint-red.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-red-62b940dd/checkpoint-red.log",
+      "bytes": 953,
+      "sha256": "6bfc5fe86c88765808d98d77c6306614e08cf7c8ab24fe4319bc0b6300c818ef"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-red-62b940dd/driver.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-red-62b940dd/driver.py",
+      "bytes": 2389,
+      "sha256": "40194decb85104c8300938e21f88d55c6e8d9bf971e6d26a31c9b8d5c7b44e05"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-red-62b940dd/manifest.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-red-62b940dd/manifest.json",
+      "bytes": 11001,
+      "sha256": "ef2b0378cf3b8dafe148303380af5a571a791bcac59fbf571c202975355d6c77"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-red-62b940dd/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-red-62b940dd/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-red-62b940dd.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-red-62b940dd.py",
+      "bytes": 2389,
+      "sha256": "40194decb85104c8300938e21f88d55c6e8d9bf971e6d26a31c9b8d5c7b44e05"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-red-62b940dd.wrapper.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-red-62b940dd.wrapper.log",
+      "bytes": 2076,
+      "sha256": "4800cdd7915941184fcf4d4bbb8a75664531bd68f97bb85bf4ddedd6d9bb23f7"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355/checkpoint-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-green-ee513355/checkpoint-controls.log",
+      "bytes": 104,
+      "sha256": "40fe726dea8a4058f3aeeff5035548394faa6a2337f2c179e18d9da61e23fe7b"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355/driver.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-green-ee513355/driver.py",
+      "bytes": 3300,
+      "sha256": "ae5a51e4d9335bbd589f2e024cc22aa70f11731a15ffa1c34fa46c1ed40afabe"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355/existing-appearance-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-green-ee513355/existing-appearance-controls.log",
+      "bytes": 3600,
+      "sha256": "3bbf40293285a375c9ebd847b28cc4e82617b52407cab1f8a95c260a858be8c9"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355/existing-export-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-green-ee513355/existing-export-controls.log",
+      "bytes": 513,
+      "sha256": "2335adcf8f8c6a3eb95244463c5139332d0b4a361300524191cb5a4eede0e543"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355/manifest.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-green-ee513355/manifest.json",
+      "bytes": 3388,
+      "sha256": "91f560bcb1af2addb4f366c0047af0dc686c23b8feeeaf3d7e40d69a1825e27f"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-green-ee513355/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-green-ee513355.py",
+      "bytes": 3300,
+      "sha256": "ae5a51e4d9335bbd589f2e024cc22aa70f11731a15ffa1c34fa46c1ed40afabe"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-green-ee513355.wrapper.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-green-ee513355.wrapper.log",
+      "bytes": 2146,
+      "sha256": "6c9117dfe376a829c9f2a41509a1427e193fe65642d4f17a9ed909ae7ef00aaa"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/driver.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/driver.py",
+      "bytes": 3205,
+      "sha256": "795b6a809d5a483d138029d4c099d79155b2a1ca02fbf5c66a65bf4046687d41"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/existing-appearance-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/existing-appearance-controls.log",
+      "bytes": 101,
+      "sha256": "c1a73d58f0f9120ffa54e859e1a04fe099cdab914c102b52a329aef7bfd94b6e"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/existing-runner-lifecycle.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/existing-runner-lifecycle.log",
+      "bytes": 11391,
+      "sha256": "e0b28147769786cebed9d6a779c3008ca3f06b542b2c19196399d479a765b780"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/manifest.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/manifest.json",
+      "bytes": 3660,
+      "sha256": "2da7e907a075f8ac28bbde11db8ede4023564beab5bc44e994f9021b66eaea2e"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/runner-syntax.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/runner-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355/wrapper-syntax.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-remaining-ee513355/wrapper-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-remaining-ee513355.py",
+      "bytes": 3205,
+      "sha256": "795b6a809d5a483d138029d4c099d79155b2a1ca02fbf5c66a65bf4046687d41"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-remaining-ee513355.wrapper.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-remaining-ee513355.wrapper.log",
+      "bytes": 3225,
+      "sha256": "2231344bd109390954dcafd26234c9db4a2257d86aa8576a84cd9fd8062932bd"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211/checkpoint-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-fc3ba211/checkpoint-controls.log",
+      "bytes": 104,
+      "sha256": "b86fc3a627a8641193ae34435d7e41dd035eab06c62e33baf8d503295f6622bd"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211/driver.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-fc3ba211/driver.py",
+      "bytes": 3017,
+      "sha256": "cf8274c96ca0a23adff0a4da387648865938c660792a47e1373a8d9b5409534b"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211/existing-export-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-fc3ba211/existing-export-controls.log",
+      "bytes": 513,
+      "sha256": "353c319e8092e7163c5c359507b346cb4b4eb8b0da72d9dce5350ba542e01d17"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211/manifest.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-fc3ba211/manifest.json",
+      "bytes": 3072,
+      "sha256": "d5380be477e443fe0e3a21d62cdb0afae134ff556d89f1dfbb75e8e94bc25539"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-fc3ba211/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-final-fc3ba211.py",
+      "bytes": 3017,
+      "sha256": "cf8274c96ca0a23adff0a4da387648865938c660792a47e1373a8d9b5409534b"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-fc3ba211.wrapper.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-final-fc3ba211.wrapper.log",
+      "bytes": 2049,
+      "sha256": "e9282b8196b6f472cb67550eddb2580a088596c8bc4c755ed91e7107318829ff"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-08ee0efc/checkpoint-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-08ee0efc/checkpoint-controls.log",
+      "bytes": 104,
+      "sha256": "59f24f7107ecf1265aa4ec3a5ce1f495a0328434b9cad18246f36f65029ace66"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-08ee0efc/driver.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-08ee0efc/driver.py",
+      "bytes": 2930,
+      "sha256": "d1260531cfc676675887a21334f3db7e52307ae611e5c93a37a358c395865656"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-08ee0efc/manifest.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-08ee0efc/manifest.json",
+      "bytes": 2730,
+      "sha256": "0109ca29f06045a20b5191084128fb1173aa454b23a7c467f6ad9a6ec4fa4af7"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-08ee0efc/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-08ee0efc/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-08ee0efc.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-final-08ee0efc.py",
+      "bytes": 2930,
+      "sha256": "d1260531cfc676675887a21334f3db7e52307ae611e5c93a37a358c395865656"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-08ee0efc.wrapper.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-final-08ee0efc.wrapper.log",
+      "bytes": 2603,
+      "sha256": "b3498fa505bb62c5cd0a89d78981274beac493342cc90e0fbfdf08fc5d39eb2d"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-cbdcf613/checkpoint-controls.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-cbdcf613/checkpoint-controls.log",
+      "bytes": 105,
+      "sha256": "f1d9df4f6e928e5ff105b90f20cb48c748c32fe0ab64ccbb82f1c56a5cd3f84d"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-cbdcf613/driver.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-cbdcf613/driver.py",
+      "bytes": 2878,
+      "sha256": "3a50cdca6f7a6fcb3c07f2fcce79ef611b0c0780b0288bab60c00876a936bdd9"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-cbdcf613/manifest.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-cbdcf613/manifest.json",
+      "bytes": 2679,
+      "sha256": "85c4279d04526a58f68f5ce360071d576b1ac6765e8421555cad0616c63dc1ae"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-cbdcf613/owned-stage-runner.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/raw/bre457-checkpoint-final-cbdcf613/owned-stage-runner.py",
+      "bytes": 2962,
+      "sha256": "4b4ef3532a6027ee81c3775450dd1055857c9f237ebc8a71b3b8dd5b8c41b4c3"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-cbdcf613.py",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-final-cbdcf613.py",
+      "bytes": 2878,
+      "sha256": "3a50cdca6f7a6fcb3c07f2fcce79ef611b0c0780b0288bab60c00876a936bdd9"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-final-cbdcf613.wrapper.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/drivers-and-wrappers/bre457-checkpoint-final-cbdcf613.wrapper.log",
+      "bytes": 2155,
+      "sha256": "5a3459724308b3547fd1f324c7187c10501bff9e73d5d7ed2e9fe9f9844f56a9"
+    },
+    {
+      "source": "/tmp/bre457-native-checkpoint-review-ee513.md",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/reports/bre457-native-checkpoint-review-ee513.md",
+      "bytes": 8873,
+      "sha256": "347c1a1db9282491de47f71038d883b342c666cd7d3f92b2b80645927380863a"
+    },
+    {
+      "source": "/tmp/bre457-native-checkpoint-final-closure-cbdcf613.json",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/reports/bre457-native-checkpoint-final-closure-cbdcf613.json",
+      "bytes": 9935,
+      "sha256": "04b40bd81aedb3f5ac32b9f4c44b0d96c19bd0dc1938dc558eee483de2c067db"
+    },
+    {
+      "source": "/tmp/bre313-41a-mailbox-job-130867673422.log",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/reports/bre313-41a-mailbox-job-130867673422.log",
+      "bytes": 23218,
+      "sha256": "8efd0a441fa5f097cf2a03f369aa11b522590d17f550de6ee996e8471637e8e4"
+    },
+    {
+      "source": "/tmp/bre457-checkpoint-design.md",
+      "retained": "docs/verification/bre-457/checkpoint-cbdcf613/reports/bre457-checkpoint-design.md",
+      "bytes": 675,
+      "sha256": "f9f1465d023580621df3b72f19efc318fa0ed606c4d04f85874aa05d6428b394"
+    }
+  ],
+  "allCopiesByteExact": true,
+  "scope": "Full original raw files, not excerpts. No new run/CI query. artifacts[] is ROOT-provided in original closure, not a new API snapshot."
+}

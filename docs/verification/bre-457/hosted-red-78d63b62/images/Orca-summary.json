@@ -1,0 +1,49 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "5B82265D-6381-4C9B-815F-9EF1B05261D1",
+        "deviceName" : "Orca CI 43024332168-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 1,
+      "passedTests" : 4,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 1,
+  "finishTime" : 1794402705.834,
+  "passedTests" : 4,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1794402331.401,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 3,
+      "testIdentifierString" : "ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading",
+      "testName" : "testMissingImageCapabilityOffersRefreshWithoutLoading()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 5
+}

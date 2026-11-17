@@ -1,0 +1,665 @@
+diff --git a/.github/workflows/native-mailbox.yml b/.github/workflows/native-mailbox.yml
+index 5a706cec..caec5ff2 100644
+--- a/.github/workflows/native-mailbox.yml
++++ b/.github/workflows/native-mailbox.yml
+@@ -22,13 +22,18 @@ concurrency:
+ 
+ jobs:
+   mailbox:
+-    name: Native mailbox light/dark UI
++    name: Native mailbox ${{ matrix.appearance }} UI
++    strategy:
++      fail-fast: false
++      matrix:
++        appearance: [light, dark]
+     runs-on: macos-26
+     timeout-minutes: 50
+     env:
+       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+       ORCA_CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+       ORCA_CI_UI_TEST_SCOPE: mailbox
++      ORCA_CI_UI_TEST_APPEARANCE: ${{ matrix.appearance }}
+       ORCA_FIXTURE_MAILBOX_CONTROLS: '1'
+     steps:
+       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+@@ -42,6 +47,7 @@ jobs:
+       - name: Verify appearance results and interrupted evidence
+         run: |
+           python3 scripts/ci/test-ios-mailbox-phases.py
++          python3 scripts/ci/test-ios-mailbox-shards.py
+           python3 scripts/ci/test-evidence-checkpoint.py
+       - name: Test exact source on a fresh CI-owned simulator
+         # Leave job time for the existing signal/EXIT cleanup and artifact upload.
+@@ -52,7 +58,19 @@ jobs:
+         if: always()
+         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+         with:
+-          name: native-mailbox-${{ github.run_id }}-${{ github.run_attempt }}
++          name: native-mailbox-${{ matrix.appearance }}-${{ github.run_id }}-${{ github.run_attempt }}
+           path: ${{ runner.temp }}/orca-ci-evidence/
+           if-no-files-found: ignore
+           retention-days: 7
++
++  mailbox-required:
++    name: Native mailbox light/dark UI
++    runs-on: ubuntu-latest
++    needs: mailbox
++    if: ${{ always() }}
++    steps:
++      - name: Require both actual appearance jobs to succeed
++        env:
++          MATRIX_RESULT: ${{ needs.mailbox.result }}
++        run: |
++          test "$MATRIX_RESULT" = success
+diff --git a/apps/ios/OrcaUITests/run-fixture-tests.sh b/apps/ios/OrcaUITests/run-fixture-tests.sh
+index 0f0dd7fd..294e1130 100755
+--- a/apps/ios/OrcaUITests/run-fixture-tests.sh
++++ b/apps/ios/OrcaUITests/run-fixture-tests.sh
+@@ -2,6 +2,17 @@
+ 
+ set -euo pipefail
+ 
++# BEGIN appearance_validation
++case ${ORCA_UI_TEST_APPEARANCE-both} in
++  light|dark|both) ;;
++  *) print -u2 'Invalid native UI appearance; expected light, dark or both.'; exit 64 ;;
++esac
++if [[ ${ORCA_UI_TEST_APPEARANCE-both} != both && ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then
++  print -u2 'A single native UI appearance is supported only for mailbox scope.'
++  exit 64
++fi
++# END appearance_validation
++
+ if (( $# < 2 || $# > 3 )); then
+   print -u2 "usage: $0 <connection.json> <simulator-udid> [derived-data-path]"
+   exit 64
+@@ -20,9 +31,9 @@ progress() {
+   if [[ ${ORCA_CI_PROGRESS:-0} == 1 ]]; then
+     print -r -u3 -- "[fixture stage] phase=$1"
+   fi
+-  if [[ "$1" == suite_light_finished && -n ${ORCA_CI_CHECKPOINT_WORK:-} && -n ${ORCA_CI_CHECKPOINT_EVIDENCE:-} ]]; then
++  if [[ ( "$1" == suite_light_finished || "$1" == suite_dark_finished ) && -n ${ORCA_CI_CHECKPOINT_WORK:-} && -n ${ORCA_CI_CHECKPOINT_EVIDENCE:-} ]]; then
+     /usr/bin/python3 "$ios_dir/../../scripts/ci/export-evidence.py" \
+-      "$ORCA_CI_CHECKPOINT_WORK" "$ORCA_CI_CHECKPOINT_EVIDENCE" "$connection_file" 1 "$simulator_udid" suite_light_finished
++      "$ORCA_CI_CHECKPOINT_WORK" "$ORCA_CI_CHECKPOINT_EVIDENCE" "$connection_file" 1 "$simulator_udid" "$1"
+   fi
+ }
+ 
+@@ -131,7 +142,11 @@ mkdir -p "$result_dir"
+ result_bundle="$result_dir/Orca.xcresult"
+ # AppleInterfaceStyle launch defaults do not reliably change simulator appearance.
+ trap 'xcrun simctl ui "$simulator_udid" appearance light >/dev/null 2>&1 || true' EXIT
+-xcrun simctl ui "$simulator_udid" appearance light
++if [[ ${ORCA_UI_TEST_APPEARANCE-both} == dark ]]; then
++  xcrun simctl ui "$simulator_udid" appearance dark
++else
++  xcrun simctl ui "$simulator_udid" appearance light
++fi
+ 
+ read_only=$(/usr/bin/python3 -c 'import json,sys; print("1" if json.load(open(sys.argv[1])).get("readOnly",False) else "0")' "$connection_file")
+ if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then
+@@ -176,6 +191,7 @@ fi
+ adoption_exit=0
+ if [[ $read_only != 1 && ( ${ORCA_UI_TEST_SCOPE:-all} == all || ${ORCA_UI_TEST_SCOPE:-all} == mailbox || ${ORCA_UI_TEST_SCOPE:-all} == notifications ) ]]; then
+   for appearance in light dark; do
++    if [[ ${ORCA_UI_TEST_APPEARANCE-both} != both && ${ORCA_UI_TEST_APPEARANCE-both} != "$appearance" ]]; then continue; fi
+     xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
+     xcrun simctl ui "$simulator_udid" appearance "$appearance"
+     progress "adoption_${appearance}_started"
+@@ -191,7 +207,11 @@ if [[ $read_only != 1 && ( ${ORCA_UI_TEST_SCOPE:-all} == all || ${ORCA_UI_TEST_S
+     progress "adoption_${appearance}_finished"
+   done
+   xcrun simctl uninstall "$simulator_udid" com.orca.mail >/dev/null 2>&1 || true
+-  xcrun simctl ui "$simulator_udid" appearance light
++  if [[ ${ORCA_UI_TEST_APPEARANCE-both} == dark ]]; then
++    xcrun simctl ui "$simulator_udid" appearance dark
++  else
++    xcrun simctl ui "$simulator_udid" appearance light
++  fi
+ fi
+ # END isolated_adoption_phases
+ 
+@@ -244,10 +264,12 @@ if [[ ${ORCA_UI_TEST_SCOPE:-all} == compose ]]; then
+   light_tests+=(-skip-testing:OrcaTests/FeedbackTicketTests)
+ fi
+ 
+-# Mailbox evidence must include both appearances even when one suite fails.
++# Mailbox default evidence includes both appearances even when one fails.
++# CI shards request exactly one appearance, each on its own fixture/simulator.
+ # Keep other scopes fail-fast and retain the original failing exit status.
+ light_exit=0
+ dark_exit=0
++if [[ ${ORCA_UI_TEST_APPEARANCE-both} != dark ]]; then
+ progress suite_light_started
+ xcodebuild test-without-building \
+   -xctestrun "$injected_xctestrun" \
+@@ -259,7 +281,9 @@ xcodebuild test-without-building \
+     if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$light_exit"; fi
+   }
+ progress suite_light_finished
++fi
+ 
++if [[ ${ORCA_UI_TEST_APPEARANCE-both} != light ]]; then
+ xcrun simctl ui "$simulator_udid" appearance dark
+ progress suite_dark_started
+ xcodebuild test-without-building \
+@@ -272,11 +296,18 @@ xcodebuild test-without-building \
+     if [[ ${ORCA_UI_TEST_SCOPE:-all} != mailbox ]]; then exit "$dark_exit"; fi
+   }
+ progress suite_dark_finished
++fi
+ 
+-print "Result bundle: $result_bundle"
++if [[ ${ORCA_UI_TEST_APPEARANCE-both} != dark ]]; then print "Result bundle: $result_bundle"; fi
+ if [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then
+-  print "Dark result bundle: $result_dir/OrcaDark.xcresult"
+-  print "Mailbox suite exit codes: light=$light_exit dark=$dark_exit"
++  if [[ ${ORCA_UI_TEST_APPEARANCE-both} != light ]]; then print "Dark result bundle: $result_dir/OrcaDark.xcresult"; fi
++  if [[ ${ORCA_UI_TEST_APPEARANCE-both} == both ]]; then
++    print "Mailbox suite exit codes: light=$light_exit dark=$dark_exit"
++  elif [[ ${ORCA_UI_TEST_APPEARANCE-both} == light ]]; then
++    print "Mailbox selected suite exit code: appearance=light exit=$light_exit"
++  else
++    print "Mailbox selected suite exit code: appearance=dark exit=$dark_exit"
++  fi
+   if (( light_exit != 0 )); then exit "$light_exit"; fi
+   if (( dark_exit != 0 )); then exit "$dark_exit"; fi
+ fi
+diff --git a/docs/verification/bre-457/mailbox-appearance-shard-candidate/README.md b/docs/verification/bre-457/mailbox-appearance-shard-candidate/README.md
+new file mode 100644
+index 00000000..b76aecb1
+--- /dev/null
++++ b/docs/verification/bre-457/mailbox-appearance-shard-candidate/README.md
+@@ -0,0 +1,13 @@
++# Mailbox appearance shards: CI-only source candidate, execution pending
++
++Parent is separate actual-red retention6cbf4fa5. That receipt is NONPASS124 after12.009s work: two explicit wrong-phase failures observed, old mailbox4cases PASS, other-scope method interrupted. No complete4method/38case claim is made. The exact three raw files and original partial final line remain immutable. Generic whitespace checking intentionally excludes that retained raw trailing-space partial line; source diff checks are separate.
++
++This candidate changes only native-mailbox.yml, runner shell, fixture-check.sh/export-evidence.py and associated Python tests, plus these docs. App product/44Swift/33Foundation inputs/API/shared/Tools/nativeUI assertions remain unchanged. No Apple/compiler/grammar/423/API/fullBun/CI/remote/child reviewer or new test execution occurred while authoring. Original11 test method BODIES (7checkpoint and4phase) and all literal selection arrays are statically compared byte-exact; default/failfast expectations and original singleton assertions remain. The exact inventory, rather than prose, lists11 old methods.
++
++The fixed light/dark matrix has fail-fast:false, separate50m macOS jobs/45m steps and fresh existing owned fixture/simulator per job. Safe requested appearance enters identity/artifact name. The old required Native mailbox light/dark UI context is a Linux always/needs aggregate that fails for failure/cancel/skipped/no-success results. No appearance or unit suite is removed; OrcaTests remains light-only. Both default keeps old ordering/failure behavior; explicit shards only run their own adoption/main phases and report only actual selected exits/bundles. Input validation rejects malformed and nonmailbox single appearances before Xcode/fixture startup at both entry boundaries. Existing privacy/owned cleanup/per-case deadlines/appearance reset remain.
++
++Dark checkpoint is only a second fixed allowlisted phase. Same private full staging/redaction/token scan, fresh scratch and atomic publication, null/false incomplete marker, final outcome last and preservation on corrupt later export remain. An extra export consumes the same45m budget; neither synthetic work nor split design proves each real shard fits or UI passes. Known kill-before-atomic-publication gap remains. Cleanup restoration to Light is still actual simulator cleanup, not a claim that a dark-only suite executed Light tests.
++
++Planned execution after ROOT immutable review/allocation:5 actual mainphase harness methods/40 parameter invocations (36old+2originalfailure+2selectedzero),6 source-backed shard-contract methods (invalid direct/wrapper ingress5+6; real fixtureforward+identity4; actualadoption6; all selector bytes/lightunits; real aggregate statuses5 plus fixedmatrix contract),11 actual checkpoint methods (7old unchanged incl outerkill+4new dark controls),25 unchanged sanitizer methods,4 existing runner-lifecycle scopes, bash/zsh syntax. Total47 unittest METHODS, with parameter observations separately enumerated; no invented single aggregate scenario total. Original singleton assertions were not replaced. Actual phase blocks/adoption/progress/fixture-forward/identity/aggregate are extracted from production code with mock executable boundaries, not parallel implementations. Workflow structural assertions cannot by themselves prove GitHub scheduling; hosted both-appearance results remain decisive.
++
++Request one bounded~40s ROOT slot as a source estimate, not a measured speed claim. Each existing/request deadline remains unchanged. Capture compile/setup/raw stage exits, zero skips/full exactmethod completion, actual call/bundle/selected exit, source hashes and owned cleanup; preserve any partial/cap/setup failure as NONPASS. No automatic retry or publication permission. Publication remains HOLD and all724native failure/after-shot/all33 gates stay open.
+diff --git a/docs/verification/bre-457/mailbox-appearance-shard-candidate/planned-inputs.json b/docs/verification/bre-457/mailbox-appearance-shard-candidate/planned-inputs.json
+new file mode 100644
+index 00000000..3808d9a0
+--- /dev/null
++++ b/docs/verification/bre-457/mailbox-appearance-shard-candidate/planned-inputs.json
+@@ -0,0 +1,146 @@
++{
++  "parentDocs": "6cbf4fa5b325c18226b5a057b3fe4aec4b2e6e3e",
++  "sourcePaths": [
++    ".github/workflows/native-mailbox.yml",
++    "apps/ios/OrcaUITests/run-fixture-tests.sh",
++    "scripts/ci/export-evidence.py",
++    "scripts/ci/fixture-check.sh",
++    "scripts/ci/test-evidence-checkpoint.py",
++    "scripts/ci/test-ios-mailbox-phases.py",
++    "scripts/ci/test-ios-mailbox-shards.py"
++  ],
++  "sourceHashes": {
++    ".github/workflows/native-mailbox.yml": "fa2ca0d3d23730d568ceb28dd36e2e8b27753c035b04466816953e9238d8e56b",
++    "apps/ios/OrcaUITests/run-fixture-tests.sh": "34f835750f1d323a7b81defe081dd4427792bb4fd216e51ad4d8754aaf59bf54",
++    "scripts/ci/export-evidence.py": "80cfa9f229dce34e4f46dceeafabb698987e33971d0f830214707b4dc554b083",
++    "scripts/ci/fixture-check.sh": "88d960233ce38147fc93d8437a8db9f6a7a032a01a289dbf1345fb73d40feec8",
++    "scripts/ci/test-evidence-checkpoint.py": "2fa1606747f078c54512de77ab66652191c339951d5a73a6b5ddeb544c1871d2",
++    "scripts/ci/test-ios-mailbox-phases.py": "e51c4e5d8092527e433813bfbfa7591d471ea4b1f5ebb1f987f5fe7c005d08e3",
++    "scripts/ci/test-ios-mailbox-shards.py": "3a9b5e576453d9c7ad71381a4fbc86254e01bee9201dd0094672cb109f168401"
++  },
++  "Swift44HashesPreserved": {
++    "apps/ios/Orca/Compose/ComposeView.swift": "48322d88e62f201031e3b560cd4e1113fd99586c7e7f8d924c86b4e6285dfe6e",
++    "apps/ios/Orca/Compose/DraftStore.swift": "981bbeda93204d8a050884221296bbe5ee3b95eb567804f5830d144f60348713",
++    "apps/ios/Orca/Compose/DraftsView.swift": "9369657a0514d64c1cffb2352e653dcbc74b0c996386cd4d64b64cb273e9a846",
++    "apps/ios/Orca/Core/APIClient.swift": "cef255a12d4b0de13ccc948d8410b2112c0175081934f36c34821a8053786116",
++    "apps/ios/Orca/Core/AccountPreferences.swift": "ca12209151c03abaa30a92e6ccaca01a26cd79a3fcaa235f5c9993950da08bfc",
++    "apps/ios/Orca/Core/AppState.swift": "c71339e64b63698cf88067e160f5451955e6af83d5bf03ed03452acfcf04951b",
++    "apps/ios/Orca/Core/CacheStore.swift": "3ba61106879acdf5ee8ddc6183160b656f89788843e4ca3728b83b0cbfa344b6",
++    "apps/ios/Orca/Core/FeedbackCapture.swift": "15484f407c0239896dbd235ae9663a978ed359935923188e7237ec64cb6895f3",
++    "apps/ios/Orca/Core/Importance.swift": "068dd0e150e6d2c832df3572e15a8b6b80df2104eda255dfb309783156d61dbf",
++    "apps/ios/Orca/Core/InboxViewModel.swift": "b3d18ae542127d843df8cf70a50608b31a8179e030b67f482faf31e0e1eec2bb",
++    "apps/ios/Orca/Core/MailActionJSON.swift": "29821025192bbe9e45253e01ba5c0bfaa261ee5ac4658508793f4adc6f958fac",
++    "apps/ios/Orca/Core/Models.swift": "c0332c3c0a01f190af1ded1a90aa9ba581b300f416f741cc1412b6c76d74836d",
++    "apps/ios/Orca/Core/NativeMailBrowser.swift": "5b06942f7f9ec36185f00882243c0758fcf635ed5c7b63d143eed3d65cd71171",
++    "apps/ios/Orca/Core/NativeMailCatalog.swift": "224c13f4f7a49ca8360824d24c535209d813ae9cd8afd1e7ad87e201477a493c",
++    "apps/ios/Orca/Core/NativeMailWire.swift": "bf51abed00cf9d7d72e5f7dd14f52ebe1d6e8d82ab3e241e9ab85fa283a8febd",
++    "apps/ios/Orca/Core/NativeMailboxProjection.swift": "d04d52b96ce59fe3f5878eb6e67d5c8c703b5020b745d1d3745ebea62ed8214b",
++    "apps/ios/Orca/Core/NativeViewEditorController.swift": "3c4c6c79bb63eec9d43f5235466ca701c12cf4a1b4e129ee5a9dc10f88abbd75",
++    "apps/ios/Orca/Core/NotificationIdentity.swift": "8319a75a4feb4cf35c951d126aa276a44bce97ce015265306529aee6520ad2dd",
++    "apps/ios/Orca/Core/NotificationNavigation.swift": "273c43a6f3352ec488e5c4ab168740abe27070541a460548a9a0fdfc0ab0e8ab",
++    "apps/ios/Orca/Core/OrcaTheme.swift": "a28a0e7a76d2e0ada8549740867e1c8763051998fdb62c460ac2d8e486216a64",
++    "apps/ios/Orca/Core/Security.swift": "6b4b9ec2e8749fa0bb5ad5dcde37f001478df831fb7593abc163e20669991727",
++    "apps/ios/Orca/Core/ViewCommitStatus.swift": "12f1bd9bfdb96560d6c63329fa99a522991bfb465bb1bcccbe5305030f6984f3",
++    "apps/ios/Orca/Mail/ImportanceView.swift": "cbb53495e251087064bb85c3713985a04324a780fb22bb4d37d8d285cd3b2839",
++    "apps/ios/Orca/Mail/InboxView.swift": "5b660297a2b32113209c5c2b98fc8f5f84c77f8bca4d814571f2403c811eeb10",
++    "apps/ios/Orca/Mail/MailActions.swift": "9601b837a9fc3c6ae876922042e738e7273027a7464439ff1b6208e8e6da1afb",
++    "apps/ios/Orca/Mail/MailSearchView.swift": "c4e712eb06c6ff2526fd38b371b92437258bc2c5cdfdb85a10198fd39dff159a",
++    "apps/ios/Orca/Mail/MailboxViews.swift": "bf1710cb19816dc27d3134aec842efc7249fefad2a8c429d5445cd4723a15b67",
++    "apps/ios/Orca/Mail/NativeCatalogResults.swift": "1028e15508490f6a180a696e8643c3adb9be31c4c3409eab27f329b2795fdd24",
++    "apps/ios/Orca/Mail/NativeMailboxPicker.swift": "18baa0508252e5bb1ce319c5dccd2aa24a8946a99ea610b3dcb30e8c2379a8d3",
++    "apps/ios/Orca/Mail/NativeViewEditor.swift": "0d2a112fa99d367d51c691189e7117b70b6a5064b6763cdddaa596dd2706ad66",
++    "apps/ios/Orca/Mail/SafeHTMLView.swift": "efc889593db3e2213f69eda6925974c426cbbc8ceeba7694044236a31b9515bc",
++    "apps/ios/Orca/Mail/SavedMailboxResults.swift": "c11475fa597cfe7bfeb3ed97028537f0d8e056e4c6abdcd033537fe9026f3814",
++    "apps/ios/Orca/Mail/ThreadView.swift": "e66e909093369abd97b359edaa9d046294f5229c7fdc09cb985413a6d6a47a8a",
++    "apps/ios/Orca/Mail/VerificationCode.swift": "8fe1b69cda8beed346dc068a89770640fdaf35d821d990ee7bfd9f797c3bf893",
++    "apps/ios/Orca/Notifications/NotificationManager.swift": "0cf7726bf0c540e148292be719a3458f5ee9941da64245566187642349353afe",
++    "apps/ios/Orca/OrcaApp.swift": "fa356d003f34c413dec79836c8727dcff39c4f7e4054a0e83c608e06bdeb2a27",
++    "apps/ios/Orca/SettingsView.swift": "fb68a93f5feb0cd194135153f8fd300dd715dadd7bb5b12483867707f05cae86",
++    "apps/ios/OrcaTests/OrcaTests.swift": "2c9734d7342dd7b6fa079536cd5e05f37e23d1483b2fc99cd80910ac68dc06f3",
++    "apps/ios/OrcaTests/SafeHTMLOverflowTests.swift": "ed7f573503ad70422897398f90cf68bdaef2fcd40f4a65901957acc9142fbb79",
++    "apps/ios/OrcaTests/SafeHTMLViewTests.swift": "2ceff6903f0b5e87ca895856c2fea707998f6c398073753b37494db84c83dee6",
++    "apps/ios/OrcaUITests/OrcaUITests.swift": "6bc7b5cab302d5d5eb5bd1c7384c99113bb61fafe9bdb800cbb8bde606c763e5",
++    "apps/ios/OrcaUITests/ReaderUITests.swift": "e8aa8ade40ba5afbef0d49a141e747fe841c32ce36c28f0941f665a3030cbc92",
++    "apps/ios/OrcaUITests/RoutingCompensation.swift": "ec8ec57d59e8ccd7dac4b970b7ff9429d1313ae424c2ab82f2874805a7788835",
++    "apps/ios/OrcaUITests/ViewportGeometry.swift": "3d88a450cfc37efc52cfee9f363ed2c4605f9c62de33bcd6d7b426843e2b3818"
++  },
++  "Foundation33HashesPreserved": {
++    "apps/ios/Orca/Core/Models.swift": "c0332c3c0a01f190af1ded1a90aa9ba581b300f416f741cc1412b6c76d74836d",
++    "apps/ios/Orca/Core/APIClient.swift": "cef255a12d4b0de13ccc948d8410b2112c0175081934f36c34821a8053786116",
++    "apps/ios/Orca/Core/CacheStore.swift": "3ba61106879acdf5ee8ddc6183160b656f89788843e4ca3728b83b0cbfa344b6",
++    "apps/ios/Orca/Compose/DraftStore.swift": "981bbeda93204d8a050884221296bbe5ee3b95eb567804f5830d144f60348713",
++    "apps/ios/Orca/Core/MailActionJSON.swift": "29821025192bbe9e45253e01ba5c0bfaa261ee5ac4658508793f4adc6f958fac",
++    "apps/ios/Orca/Core/NativeMailboxProjection.swift": "d04d52b96ce59fe3f5878eb6e67d5c8c703b5020b745d1d3745ebea62ed8214b",
++    "apps/ios/Orca/Core/NativeMailCatalog.swift": "224c13f4f7a49ca8360824d24c535209d813ae9cd8afd1e7ad87e201477a493c",
++    "apps/ios/Orca/Core/NativeMailWire.swift": "bf51abed00cf9d7d72e5f7dd14f52ebe1d6e8d82ab3e241e9ab85fa283a8febd",
++    "apps/ios/Orca/Core/NativeMailBrowser.swift": "5b06942f7f9ec36185f00882243c0758fcf635ed5c7b63d143eed3d65cd71171",
++    "apps/ios/Orca/Core/Importance.swift": "068dd0e150e6d2c832df3572e15a8b6b80df2104eda255dfb309783156d61dbf",
++    "apps/ios/Orca/Core/InboxViewModel.swift": "b3d18ae542127d843df8cf70a50608b31a8179e030b67f482faf31e0e1eec2bb",
++    "apps/ios/Orca/Core/AccountPreferences.swift": "ca12209151c03abaa30a92e6ccaca01a26cd79a3fcaa235f5c9993950da08bfc",
++    "apps/ios/Orca/Core/NotificationNavigation.swift": "273c43a6f3352ec488e5c4ab168740abe27070541a460548a9a0fdfc0ab0e8ab",
++    "apps/ios/Orca/Core/ViewCommitStatus.swift": "12f1bd9bfdb96560d6c63329fa99a522991bfb465bb1bcccbe5305030f6984f3",
++    "apps/ios/Orca/Core/NativeViewEditorController.swift": "3c4c6c79bb63eec9d43f5235466ca701c12cf4a1b4e129ee5a9dc10f88abbd75",
++    "apps/ios/Tools/ReviewRegressions/Support.swift": "e9d707beefbe5f0624cef5a0b4a78c627b922727056d6be88a533a368d7d6e49",
++    "apps/ios/Tools/ReviewRegressions/PaginationCases.swift": "452d2704fe0b2e982636e0ffe3da7ec7b6da15e73405ec0746f4ca0cef3df7a5",
++    "apps/ios/Tools/ReviewRegressions/PrimaryMailSenderCases.swift": "1665f5e6685137c8fcbda1138994e78dc7f9cb2ab785d32abd86d045a401f0d5",
++    "apps/ios/Tools/ReviewRegressions/DiscardStoreCases.swift": "fd2076820f09d48ba7388cc757214c104b7bab3e953f1419d6e8e1f2f9121f15",
++    "apps/ios/Tools/ReviewRegressions/SavedSearchSurfaceCases.swift": "0436de46e1038a81cfbbf50f663bbef1b21e49332536e691f79019388a715fb4",
++    "apps/ios/Tools/ReviewRegressions/AppliedReloadCases.swift": "ace2c510d01482c0eb76829543dd4ffc8b05ad7f59484fe40f5a249b8fbd63be",
++    "apps/ios/Tools/ReviewRegressions/CommitStatusCases.swift": "db9393984b5f132e6eac3bcdc9cb40050e90235ad8b27690ebdede2de008c608",
++    "apps/ios/Tools/ReviewRegressions/NavigationBaselineCases.swift": "83e4918ec83aa001e88c59692920deb2f86fd6dd2c74a31d18b491c3af4c64e9",
++    "apps/ios/Tools/ReviewRegressions/NativeCatalogCases.swift": "3da8c601c75d637083f25c5cd3d1e149393034822cb3e1f152ad1d842fb57c90",
++    "apps/ios/OrcaUITests/RoutingCompensation.swift": "ec8ec57d59e8ccd7dac4b970b7ff9429d1313ae424c2ab82f2874805a7788835",
++    "apps/ios/Tools/ReviewRegressions/RoutingCompensationCases.swift": "12847a5dd06e290681dd9552d94faf243fc494c5bace23bb7b2e6d4f192c313c",
++    "apps/ios/Tools/ReviewRegressions/SenderTransportDiagnosticCases.swift": "96b89e5cf8eebb87f43b8810e76da1dc973ef770e7ff26e6de2376f78e406828",
++    "apps/ios/Tools/ReviewRegressions/Run.swift": "1f799193351e8299a35dad97e6c51b9f250f916a0065e01b70f64a68161e38f3",
++    "apps/ios/Tools/ReviewRegressions/run.py": "18c9f5b0df9095c19380e35d72d821c52faf12961bb05290aefc5b11214bb8fd",
++    "apps/ios/Tools/ReviewRegressions/api-fixture.ts": "87dcc196495392d6d08138e96c5c71b6634ecd30ca0ae071078a032309cab56b",
++    "apps/ios/Tools/ReviewRegressions/navigation-fixture.ts": "3dce421ae791f556c81795669dbd23119b9e03ae9520a44c5d7f3c2b1b3614e4",
++    "apps/ios/Tools/ReviewRegressions/query-golden.ts": "64ef63b48ce28797d8b2f6332a4ae11dcfc140ee6f15e7082edc579c3c9d3ba9",
++    "apps/ios/Tools/ReviewRegressions/runner-lifecycle.py": "00647ddfd152f9a191d0d032d6ab64fbac5a2b52a0efcf4af59fb7fe0c7d22f0"
++  },
++  "oldSelectionArraysByteExact": true,
++  "oldSelectionArraysSHA256": "eb23fbd7f067fcd0e7abf297fc59867d0a7756faa179e120f9c14dcef9a87d74",
++  "allExistingTestMethodBodiesPreserved": {
++    "scripts/ci/test-evidence-checkpoint.py": [
++      "test_checkpoint_is_incomplete_and_redacted",
++      "test_failed_final_export_preserves_checkpoint_without_pass_outcome",
++      "test_final_export_keeps_legacy_layout_and_actual_status",
++      "test_secret_image_is_never_published",
++      "test_final_preserves_browser_reader_layout_and_scans_all_bytes",
++      "test_unknown_phase_is_rejected_without_publication",
++      "test_outer_kill_during_dark_keeps_light_checkpoint"
++    ],
++    "scripts/ci/test-ios-mailbox-phases.py": [
++      "test_mailbox_preserves_both_bundles_and_any_failure",
++      "test_explicit_light_runs_only_light_and_retains_selected_failure",
++      "test_explicit_dark_runs_only_dark_and_retains_selected_failure",
++      "test_other_scopes_remain_fail_fast"
++    ]
++  },
++  "plannedUnittestMethodCounts": {
++    "scripts/ci/test-ios-mailbox-phases.py": 5,
++    "scripts/ci/test-ios-mailbox-shards.py": 6,
++    "scripts/ci/test-evidence-checkpoint.py": 11,
++    "scripts/ci/test-export-evidence.py": 25
++  },
++  "plannedTotalUnittestMethods": 47,
++  "mainPhaseInvocationsPlanned": 40,
++  "phaseBreakdown": "36 old/default invocations+2 original singleton failure+2 selected-success/unselected-failure controls",
++  "runnerLifecycleScopesPlanned": 4,
++  "expectedSyntax": "bash fixture-check.sh and zsh run-fixture-tests.sh; Python syntax via actual requested tests, not executed during preparation",
++  "actualExecuted": false,
++  "protectedScopeTrees": {
++    "apps/ios/Orca": "971f933842401aac356899f886c3c781546f41e4",
++    "apps/ios/OrcaTests": "ec3ee3b02d72a312e5a037e39d871d88f4930c2a",
++    "apps/ios/Tools": "445f0c80543b4642fdc15da500a0feb09f3f5ef1",
++    "apps/ios/Orca.xcodeproj": "5e8e900d9a6e1c933cb2dc7a4732e25cc00b5cf9",
++    "apps/api": "f9eb55b7b04791749bb0ecad1c4d3dea1ca58852",
++    "apps/web": "53a124a2b65f29cbb96a82abc01f2196b2e156c6",
++    "packages": "7c48e2df9703ac11c26891b2b321f8ee86fbf36a",
++    ".agents": "3e8ce7e56f18872e808c5905e70cefd904927589",
++    "package.json": "20cd0187506f2ee075c996f2c92cb90bb95d108e",
++    "bun.lock": "c81c8fcf7d4b5e17ec62d9d14d5d0b134b941f28",
++    "tsconfig.base.json": "fd0f337b33f15ede2c6335c93dfa4c7eacc0c12e"
++  }
++}
+diff --git a/scripts/ci/export-evidence.py b/scripts/ci/export-evidence.py
+index 0bfd9e8f..575093f5 100644
+--- a/scripts/ci/export-evidence.py
++++ b/scripts/ci/export-evidence.py
+@@ -304,8 +304,8 @@ def export(work, evidence, connection, status, simulator="", attachments_root=No
+ 
+ 
+ def export_staged(work, evidence, connection, status, simulator="", checkpoint_phase=None):
+-    """Never expose an unscanned export; retain completed Light on later failure."""
+-    if checkpoint_phase not in (None, 'suite_light_finished'):
++    """Never expose an unscanned export; retain completed phases on later failure."""
++    if checkpoint_phase not in (None, 'suite_light_finished', 'suite_dark_finished'):
+         raise ValueError('Unknown evidence checkpoint phase')
+     if evidence.is_symlink() or not evidence.is_dir():
+         raise ValueError('Evidence must be the owned run directory')
+@@ -334,7 +334,7 @@ def export_staged(work, evidence, connection, status, simulator="", checkpoint_p
+             if destination.exists() or destination.is_symlink():
+                 raise ValueError('Checkpoint already published')
+             os.replace(stage, destination)
+-            print('[fixture checkpoint] phase=suite_light_finished complete=false')
++            print(f'[fixture checkpoint] phase={checkpoint_phase} complete=false')
+             return
+         # Every byte was already scanned privately. Publish the final outcome
+         # last, so interruption during copying cannot advertise a complete gate.
+diff --git a/scripts/ci/fixture-check.sh b/scripts/ci/fixture-check.sh
+index f507c6bc..a4dd856d 100644
+--- a/scripts/ci/fixture-check.sh
++++ b/scripts/ci/fixture-check.sh
+@@ -3,6 +3,15 @@
+ set -euo pipefail
+ mode=${1:?usage: fixture-check.sh browser|ios}
+ case "$mode" in browser|ios) ;; *) exit 64 ;; esac
++# Validate before any Xcode command, owned fixture or evidence directory starts.
++case ${ORCA_CI_UI_TEST_APPEARANCE-both} in
++  light|dark|both) ;;
++  *) echo 'Invalid native UI appearance; expected light, dark or both.' >&2; exit 64 ;;
++esac
++if [[ ${ORCA_CI_UI_TEST_APPEARANCE-both} != both && ( "$mode" != ios || ${ORCA_CI_UI_TEST_SCOPE:-compose} != mailbox ) ]]; then
++  echo 'A single native UI appearance is supported only for iOS mailbox scope.' >&2
++  exit 64
++fi
+ cd "$(dirname "$0")/../.."
+ # Do not allow Bun to discover a developer's credentials in this checkout.
+ if find . -name node_modules -prune -o -name '.env*' ! -name '.env.example' -type f -print | grep -q .; then
+@@ -48,6 +57,7 @@ trap 'exit 130' INT
+ trap 'exit 143' TERM
+ {
+   echo "mode=$mode"
++  if [[ "$mode" == ios ]]; then echo "ui_test_appearance=${ORCA_CI_UI_TEST_APPEARANCE-both}"; fi
+   echo "tested_sha=$(git rev-parse HEAD)"
+   echo "event_sha=${GITHUB_SHA:-local}"
+   echo "head_sha=${ORCA_CI_HEAD_SHA:-not-provided}"
+@@ -118,7 +128,7 @@ else
+   progress swift_contract_finished
+   progress ios_suite_started
+   ORCA_CI_PROGRESS=1 ORCA_CI_CHECKPOINT_WORK="$work" ORCA_CI_CHECKPOINT_EVIDENCE="$evidence" \
+-    ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_RESULT_DIRECTORY="$work/results" \
++    ORCA_UI_TEST_SCOPE=${ORCA_CI_UI_TEST_SCOPE:-compose} ORCA_UI_TEST_APPEARANCE=${ORCA_CI_UI_TEST_APPEARANCE-both} ORCA_UI_RESULT_DIRECTORY="$work/results" \
+     zsh apps/ios/OrcaUITests/run-fixture-tests.sh "$connection" "$simulator" "$work/DerivedData" 3>&1 >> "$work/checks.log" 2>&1
+   progress ios_suite_finished
+ fi
+diff --git a/scripts/ci/test-evidence-checkpoint.py b/scripts/ci/test-evidence-checkpoint.py
+index 3ee277b1..ee184c6d 100644
+--- a/scripts/ci/test-evidence-checkpoint.py
++++ b/scripts/ci/test-evidence-checkpoint.py
+@@ -50,11 +50,12 @@ elif a[:3] == ['xcresulttool', 'export', 'attachments']:
+         self.env = dict(os.environ, PATH=str(self.bin) + ':' + os.environ['PATH'],
+                         MOCK_WORK=str(self.work), MOCK_SECRET=SECRET)
+         self.env.pop('GITHUB_ACTIONS', None); self.env.pop('RUNNER_ENVIRONMENT', None)
++        self.env.pop('ORCA_UI_TEST_APPEARANCE', None)
+ 
+     def export(self, checkpoint=False, status=65):
+         args = [sys.executable, str(EXPORTER), str(self.work), str(self.evidence),
+                 str(self.connection), str(status), '']
+-        if checkpoint: args.append('suite_light_finished')
++        if checkpoint: args.append('suite_light_finished' if checkpoint is True else checkpoint)
+         return subprocess.run(args, env=self.env, capture_output=True, text=True, timeout=8)
+ 
+     def assert_private_bytes_absent(self):
+@@ -139,6 +140,76 @@ cleanup() {''' + cleanup + '\n}\nfalse\ncleanup\n')
+         self.assertEqual(json.loads((self.evidence/'outcome.json').read_text())['exitCode'], 0)
+         self.assert_private_bytes_absent()
+ 
++    def test_dark_checkpoint_is_incomplete_redacted_and_has_no_light_bundle(self):
++        (self.results / 'Orca.xcresult').rmdir()
++        (self.results / 'OrcaDark.xcresult').mkdir()
++        result = self.export(checkpoint='suite_dark_finished')
++        self.assertEqual(result.returncode, 0, result.stderr)
++        checkpoint = self.evidence / 'checkpoints/suite_dark_finished'
++        outcome = json.loads((checkpoint / 'outcome.json').read_text())
++        self.assertIsNone(outcome['exitCode']); self.assertFalse(outcome['complete'])
++        self.assertEqual(outcome['checkpointPhase'], 'suite_dark_finished')
++        self.assertEqual(json.loads((checkpoint / 'OrcaDark-summary.json').read_text())['failedTests'], 1)
++        self.assertFalse((checkpoint / 'Orca-summary.json').exists())
++        self.assertFalse((self.evidence / 'outcome.json').exists())
++        self.assertIn('phase=suite_dark_finished complete=false', result.stdout)
++        self.assert_private_bytes_absent()
++
++    def test_dark_secret_attachment_is_never_published(self):
++        (self.results / 'OrcaDark.xcresult').mkdir()
++        (self.work / 'inject-secret-image').touch()
++        result = self.export(checkpoint='suite_dark_finished')
++        self.assertNotEqual(result.returncode, 0)
++        self.assertEqual([p for p in self.evidence.rglob('*') if p.is_file()], [])
++
++    def test_failed_final_export_preserves_dark_checkpoint_without_pass_outcome(self):
++        (self.results / 'OrcaDark.xcresult').mkdir()
++        self.assertEqual(self.export(checkpoint='suite_dark_finished').returncode, 0)
++        checkpoint = self.evidence / 'checkpoints/suite_dark_finished'
++        before = {str(p.relative_to(checkpoint)): p.read_bytes() for p in checkpoint.rglob('*') if p.is_file()}
++        (self.work / 'fail-dark-export').touch()
++        result = self.export(status=65)
++        self.assertNotEqual(result.returncode, 0)
++        self.assertEqual(before, {str(p.relative_to(checkpoint)): p.read_bytes() for p in checkpoint.rglob('*') if p.is_file()})
++        self.assertFalse((self.evidence / 'outcome.json').exists())
++        self.assert_private_bytes_absent()
++
++    @unittest.skipUnless(shutil.which('zsh'), 'real runner phase syntax requires zsh')
++    def test_actual_dark_only_phase_publishes_dark_checkpoint_and_selected_failure(self):
++        (self.results / 'Orca.xcresult').rmdir()
++        source = RUNNER.read_text()
++        progress = source.split('progress() {', 1)[1].split('\n}\n', 1)[0]
++        phases = source.split('light_exit=0\n', 1)[1]
++        mock = self.bin / 'xcodebuild'
++        mock.write_text(f'#!{sys.executable}\n' + """import pathlib, sys
++a = sys.argv[1:]; pathlib.Path(a[a.index('-resultBundlePath') + 1]).mkdir()
++raise SystemExit(65)
++""")
++        mock.chmod(0o755)
++        harness = self.work / 'dark.zsh'
++        harness.write_text("""set -euo pipefail
++ios_dir=$MOCK_REPO/apps/ios
++connection_file=$MOCK_CONNECTION
++simulator_udid=owned-synthetic-device
++result_dir=$MOCK_WORK/results
++result_bundle=$result_dir/Orca.xcresult
++injected_xctestrun=synthetic.xctestrun
++light_tests=(-only-testing:synthetic-light)
++dark_tests=(-only-testing:synthetic-dark)
++progress() {""" + progress + '\n}\nlight_exit=0\n' + phases)
++        env = dict(self.env, MOCK_REPO=str(ROOT), MOCK_CONNECTION=str(self.connection),
++                   ORCA_UI_TEST_SCOPE='mailbox', ORCA_UI_TEST_APPEARANCE='dark', ORCA_CI_PROGRESS='0',
++                   ORCA_CI_CHECKPOINT_WORK=str(self.work), ORCA_CI_CHECKPOINT_EVIDENCE=str(self.evidence))
++        result = subprocess.run(['zsh', str(harness)], env=env, capture_output=True, text=True, timeout=8)
++        self.assertEqual(result.returncode, 65, result.stdout + result.stderr)
++        self.assertFalse((self.results / 'Orca.xcresult').exists())
++        self.assertFalse((self.evidence / 'checkpoints/suite_light_finished').exists())
++        checkpoint = self.evidence / 'checkpoints/suite_dark_finished'
++        self.assertTrue((checkpoint / 'OrcaDark-summary.json').is_file())
++        outcome = json.loads((checkpoint / 'outcome.json').read_text())
++        self.assertIsNone(outcome['exitCode']); self.assertFalse(outcome['complete'])
++        self.assert_private_bytes_absent()
++
+     def test_unknown_phase_is_rejected_without_publication(self):
+         args = [sys.executable, str(EXPORTER), str(self.work), str(self.evidence),
+                 str(self.connection), '65', '', '../unowned']
+diff --git a/scripts/ci/test-ios-mailbox-phases.py b/scripts/ci/test-ios-mailbox-phases.py
+index 7253e25a..2cf76d26 100644
+--- a/scripts/ci/test-ios-mailbox-phases.py
++++ b/scripts/ci/test-ios-mailbox-phases.py
+@@ -96,6 +96,10 @@ light_exit=0
+     def test_explicit_dark_runs_only_dark_and_retains_selected_failure(self):
+         self.run_phases('mailbox', 65, 66, appearance='dark')
+ 
++    def test_selected_success_does_not_run_or_inherit_unselected_failure(self):
++        self.run_phases('mailbox', 0, 66, appearance='light')
++        self.run_phases('mailbox', 65, 0, appearance='dark')
++
+     def test_other_scopes_remain_fail_fast(self):
+         for scope in ['all', 'images', 'compose', 'overscroll', 'actions', 'views', 'reading', 'notifications']:
+             for light, dark in [(0, 0), (65, 0), (0, 66), (65, 66)]:
+diff --git a/scripts/ci/test-ios-mailbox-shards.py b/scripts/ci/test-ios-mailbox-shards.py
+new file mode 100644
+index 00000000..9afcb742
+--- /dev/null
++++ b/scripts/ci/test-ios-mailbox-shards.py
+@@ -0,0 +1,150 @@
++#!/usr/bin/env python3
++"""Actual preflight/adoption/forwarding/aggregate code with synthetic tools only."""
++import hashlib
++import json
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import sys
++import tempfile
++import textwrap
++import unittest
++
++ROOT = Path(__file__).resolve().parents[2]
++RUNNER = ROOT / 'apps/ios/OrcaUITests/run-fixture-tests.sh'
++FIXTURE = ROOT / 'scripts/ci/fixture-check.sh'
++WORKFLOW = ROOT / '.github/workflows/native-mailbox.yml'
++
++
++@unittest.skipUnless(shutil.which('zsh'), 'zsh required for actual native phase syntax')
++class MailboxShardContractTests(unittest.TestCase):
++    def setUp(self):
++        self.temp = tempfile.TemporaryDirectory(prefix='orca-mailbox-shard-control-')
++        self.addCleanup(self.temp.cleanup)
++        self.root = Path(self.temp.name)
++        self.bin = self.root / 'bin'; self.bin.mkdir()
++        self.env = dict(os.environ, PATH=str(self.bin) + ':' + os.environ['PATH'],
++                        MOCK_ROOT=str(self.root), RUNNER_TEMP=str(self.root),
++                        ORCA_CI_EVIDENCE_DIR=str(self.root / 'public'))
++        self.env.pop('ORCA_UI_TEST_APPEARANCE', None)
++        self.env.pop('ORCA_CI_UI_TEST_APPEARANCE', None)
++
++    def reject_before_ingress(self, script, args, changes):
++        marker = self.root / 'unexpected-ingress'
++        for name in ('xcodebuild', 'xcrun', 'bun', 'node'):
++            p = self.bin / name
++            p.write_text('#!/bin/sh\ntouch "$MOCK_ROOT/unexpected-ingress"\nexit 93\n')
++            p.chmod(0o755)
++        result = subprocess.run([script, *args], cwd=ROOT, env=dict(self.env, **changes),
++                                capture_output=True, text=True, timeout=3)
++        self.assertEqual(result.returncode, 64, result.stdout + result.stderr)
++        self.assertFalse(marker.exists(), 'Validation must precede Apple/fixture commands')
++        self.assertFalse((self.root / 'public').exists())
++
++    def test_direct_runner_rejects_invalid_or_nonmailbox_before_apple(self):
++        for appearance in ('', 'blue', 'light dark', '../light'):
++            with self.subTest(appearance=appearance):
++                self.reject_before_ingress('zsh', [str(RUNNER), '/missing-connection', 'owned'],
++                                           {'ORCA_UI_TEST_SCOPE': 'mailbox', 'ORCA_UI_TEST_APPEARANCE': appearance})
++        self.reject_before_ingress('zsh', [str(RUNNER), '/missing-connection', 'owned'],
++                                   {'ORCA_UI_TEST_SCOPE': 'reading', 'ORCA_UI_TEST_APPEARANCE': 'light'})
++
++    def test_fixture_wrapper_rejects_invalid_or_wrong_mode_before_startup(self):
++        for appearance in ('', 'blue', 'light dark', '../dark'):
++            with self.subTest(appearance=appearance):
++                self.reject_before_ingress('bash', [str(FIXTURE), 'ios'],
++                                           {'ORCA_CI_UI_TEST_SCOPE': 'mailbox', 'ORCA_CI_UI_TEST_APPEARANCE': appearance})
++        for mode, scope in (('ios', 'compose'), ('browser', 'mailbox')):
++            self.reject_before_ingress('bash', [str(FIXTURE), mode],
++                                       {'ORCA_CI_UI_TEST_SCOPE': scope, 'ORCA_CI_UI_TEST_APPEARANCE': 'dark'})
++
++    def test_actual_fixture_forwarding_and_identity_keep_requested_appearance(self):
++        source = FIXTURE.read_text()
++        forwarding = source.split('  progress ios_suite_started\n', 1)[1].split('\n  progress ios_suite_finished', 1)[0]
++        identity = '{\n  echo "mode=$mode"' + source.split('{\n  echo "mode=$mode"', 1)[1].split('} > "$work/identity.log"', 1)[0] + '} > "$work/identity.log"\n'
++        mock = self.bin / 'zsh'
++        mock.write_text(f'#!{sys.executable}\n' + '''import json, os, pathlib
++pathlib.Path(os.environ['MOCK_ROOT'], 'forwarded.json').write_text(json.dumps({
++    'scope': os.environ.get('ORCA_UI_TEST_SCOPE'),
++    'appearance': os.environ.get('ORCA_UI_TEST_APPEARANCE')}))
++'''); mock.chmod(0o755)
++        for name in ('bun', 'node'):
++            p = self.bin / name; p.write_text('#!/bin/sh\nprintf "synthetic-version\\n"\n'); p.chmod(0o755)
++        harness = self.root / 'forward.bash'
++        harness.write_text('set -euo pipefail\nmode=ios\nwork=$MOCK_ROOT\nevidence=$MOCK_ROOT/public\nconnection=synthetic-connection\nsimulator=owned-synthetic\n' + identity + forwarding)
++        for appearance in ('both', 'light', 'dark', None):
++            env = dict(self.env, ORCA_CI_UI_TEST_SCOPE='mailbox')
++            if appearance is not None: env['ORCA_CI_UI_TEST_APPEARANCE'] = appearance
++            expected = appearance or 'both'
++            result = subprocess.run(['bash', str(harness)], cwd=ROOT,
++                                    env=env,
++                                    capture_output=True, text=True, timeout=3)
++            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
++            self.assertEqual(json.loads((self.root / 'forwarded.json').read_text()), {'scope': 'mailbox', 'appearance': expected})
++            self.assertIn('ui_test_appearance=' + expected, (self.root / 'identity.log').read_text().splitlines())
++
++    def test_actual_adoption_block_runs_only_requested_installation_and_retains_failure(self):
++        source = RUNNER.read_text().split('# BEGIN isolated_adoption_phases\n', 1)[1].split('# END isolated_adoption_phases', 1)[0]
++        mock = self.bin / 'xcodebuild'
++        mock.write_text(f'#!{sys.executable}\n' + '''import json, os, pathlib, sys
++a = sys.argv[1:]; bundle = pathlib.Path(a[a.index('-resultBundlePath') + 1]); bundle.mkdir()
++with open(pathlib.Path(os.environ['MOCK_ROOT'], 'calls'), 'a') as f:
++    f.write(json.dumps({'bundle': bundle.name, 'selection': [x for x in a if x.startswith('-only-testing:')]}) + '\\n')
++raise SystemExit(int(os.environ['MOCK_EXIT']))
++'''); mock.chmod(0o755)
++        xcrun = self.bin / 'xcrun'; xcrun.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$MOCK_ROOT/apple-calls"\n'); xcrun.chmod(0o755)
++        harness = self.root / 'adoption.zsh'
++        harness.write_text('set -euo pipefail\nread_only=${MOCK_READ_ONLY:-0}\nsimulator_udid=owned-synthetic\nresult_dir=$MOCK_RESULTS\ninjected_xctestrun=synthetic.xctestrun\nprogress() { print -r -- "phase=$1"; }\n' + source + '\nexit "$adoption_exit"\n')
++        for index, (appearance, status, read_only) in enumerate([('both', 65, '0'), ('light', 65, '0'), ('dark', 65, '0'), ('light', 0, '0'), ('dark', 0, '0'), ('dark', 0, '1')]):
++            calls = self.root / 'calls'; calls.unlink(missing_ok=True)
++            apple = self.root / 'apple-calls'; apple.unlink(missing_ok=True)
++            results = self.root / str(index); results.mkdir()
++            result = subprocess.run(['zsh', str(harness)], cwd=ROOT,
++                                    env=dict(self.env, ORCA_UI_TEST_SCOPE='mailbox', ORCA_UI_TEST_APPEARANCE=appearance,
++                                             MOCK_EXIT=str(status), MOCK_READ_ONLY=read_only, MOCK_RESULTS=str(results)),
++                                    capture_output=True, text=True, timeout=3)
++            self.assertEqual(result.returncode, status, result.stdout + result.stderr)
++            observed = [json.loads(x) for x in calls.read_text().splitlines()] if calls.exists() else []
++            expected = [] if read_only == '1' else (['light', 'dark'] if appearance == 'both' else [appearance])
++            self.assertEqual([x['bundle'] for x in observed], ['Adoption' + x + '.xcresult' for x in expected])
++            self.assertEqual(sorted(p.name for p in results.iterdir()), sorted('Adoption' + x + '.xcresult' for x in expected))
++            for call in observed:
++                self.assertEqual(call['selection'], ['-only-testing:OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof'])
++            commands = apple.read_text().splitlines() if apple.exists() else []
++            self.assertEqual(sum(' uninstall ' in x for x in commands), len(expected) + (1 if expected else 0))
++            for actual in ('light', 'dark'):
++                self.assertEqual(any(x.endswith('appearance ' + actual) for x in commands), actual in expected)
++
++    def test_all_existing_selection_arrays_are_byte_preserved_with_units_only_light(self):
++        source = RUNNER.read_text()
++        arrays = source.split('if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then', 1)[1].split('# BRE-468 adoption', 1)[0]
++        complete = 'if [[ ${ORCA_UI_TEST_SCOPE:-all} == images ]]; then' + arrays
++        self.assertEqual(hashlib.sha256(complete.encode()).hexdigest(), 'eb23fbd7f067fcd0e7abf297fc59867d0a7756faa179e120f9c14dcef9a87d74')
++        mailbox = source.split('elif [[ ${ORCA_UI_TEST_SCOPE:-all} == mailbox ]]; then', 1)[1].split('elif [[', 1)[0]
++        light = next(x for x in mailbox.splitlines() if x.strip().startswith('light_tests='))
++        dark = next(x for x in mailbox.splitlines() if x.strip().startswith('dark_tests='))
++        self.assertIn('-only-testing:OrcaTests ', light)
++        self.assertNotIn('-only-testing:OrcaTests', dark)
++
++    def test_fixed_matrix_artifact_identity_and_actual_required_aggregate(self):
++        source = WORKFLOW.read_text()
++        self.assertIn('fail-fast: false\n      matrix:\n        appearance: [light, dark]', source)
++        self.assertIn('timeout-minutes: 50', source)
++        self.assertIn('timeout-minutes: 45', source)
++        self.assertIn('ORCA_CI_UI_TEST_APPEARANCE: ${{ matrix.appearance }}', source)
++        self.assertIn('name: native-mailbox-${{ matrix.appearance }}-${{ github.run_id }}-${{ github.run_attempt }}', source)
++        self.assertEqual(source.count('name: Native mailbox light/dark UI\n'), 1)
++        aggregate = source.split('  mailbox-required:\n', 1)[1]
++        self.assertIn('runs-on: ubuntu-latest', aggregate)
++        self.assertIn('needs: mailbox', aggregate)
++        self.assertIn('if: ${{ always() }}', aggregate)
++        self.assertIn('MATRIX_RESULT: ${{ needs.mailbox.result }}', aggregate)
++        command = textwrap.dedent(aggregate.split('        run: |\n', 1)[1])
++        for status in ('success', 'failure', 'cancelled', 'skipped', ''):
++            result = subprocess.run(['bash', '-e', '-c', command], env=dict(self.env, MATRIX_RESULT=status),
++                                    capture_output=True, text=True, timeout=3)
++            self.assertEqual(result.returncode == 0, status == 'success')
++
++
++if __name__ == '__main__': unittest.main()

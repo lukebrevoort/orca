@@ -1,0 +1,18 @@
+{
+  "sha": "a01174d6407f21c9dfb4d85882db98c516f84e97",
+  "label": "applied-reload-baseline",
+  "swiftParseCount": 36,
+  "elapsed": 13.721401708986377,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 1,
+      "elapsed": 13.633128334011417
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 13.721392250008648
+    }
+  ]
+}

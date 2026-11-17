@@ -1,0 +1,23 @@
+# Two-item reader candidate after actual724 red
+
+This source-only candidate follows the [exact724 before-triage](bre457-reading-724-triage.md) and [hash/inspection inventory](bre457-reading-724-hashes.json), retained byte-for-byte. **No candidate parse, build, Foundation/API, XCTest, Apple UI or gesture verification has run.** Publication remains on hold for ROOT source review and separately allocated grammar/hosted gates.
+
+Actual724 reading Light193PASS/2FAIL/5image-scopeSKIP(total200), all188 native units PASS and test37 PASS; Dark NOT RUN. Current separate images5+5 PASS is independent ROOT-provided scope. The two actual failures were row3 existence before canvas, and Wide's immediate0 after the same single tap. The detailed native event/reset cause is still a hypothesis, not an established product root cause.
+
+## Candidate source scope
+
+Only ThreadView.swift, OrcaUITests.swift and optional native bridge unit cases in OrcaTests.swift change. ReaderUITests.swift is byte-identical to724, including its same wide.tap(), immediately captured expected1 and all downstream off/on/Find/query/collapse/reopen assertions. No Core/API/shared/Tools/runner/fixture/mailbox/notification/Compose source changes.
+
+1. **test04-only row precondition.** That call explicitly opts into a bounded reveal before the original10s target-existence wait, same single row tap,10s navigation wait and all original canvas checks. At most six existing ViewportGeometry/revealInboxContent drags; Mail-selected/Inbox/list ownership, unique actual Button ID, >=44pt full target containment are required. Missing/unreachable/ambiguous targets fail the precondition. Other openConversation callers retain the original default path. This corrects setup for lazy native List realization, not HTML rendering; no extra wait, forced route, title/firstMatch fallback or corrective post-tap action.
+
+2. **Only the wide switch bridge.** NativeReaderWideSwitch uses a public UISwitch UIViewRepresentable/coordinator with the SAME wideContent binding. One native control owns the exact readable accessibility label/identifier; the separate visible wrapping Text remains AX-hidden. Its real valueChanged target synchronously writes the current binding once. updateUIView refreshes coordinator binding and enabled state, reflecting only different programmatic values via setOn(animated:false), which emits no user action. Native UIKit colors/traits remain uncustomized. No invented accessibilityValue, row gesture, double-toggle, KVC/private APIs, coordinate action, managed-view frame/bounds/center/transform assignment or extra test tap/poll/wait.
+
+The UISwitch subclass advertises min64x44 through public intrinsicContentSize; representable sizeThatFits returns that size and SwiftUI owns layout. This is a requested native footprint, **not proof of actual SwiftUI allocation, accessibility bounds, track hit delivery or a one-tap fix**. The native track may retain its normal visual height inside those bounds. Actual one exposed Switch/44pt hit geometry and both theme/Std/AX interactions require unchanged hosted tests and inspected screenshots. If UIKit/SwiftUI does not honor those bounds, that is a failed runtime requirement, not permission to manufacture an AX frame/value.
+
+Three added, currently UNEXECUTED native unit cases exercise the used bridge with actual UISwitch sendActions(.valueChanged), rather than directly invoking a coordinator callback: exactly one binding write per dispatch; programmatic/repeated reflection with zero user writes; replaced binding ownership and disabled-action protection. They are UIKit target/action controls, not physical user taps or a SwiftUI-hosted lifecycle/AX test. No fabricated callback is substituted for UIKit dispatch. Native UI tests remain decisive.
+
+## Source proof and proposed gate
+
+[Planned grammar inventory](planned-grammar-inputs.json) lists the exact44 existing Swift files/hashes; three differ from724. ReaderUITests remains identical. All28 Foundation source/five harness inputs remain exact f0e; no423 repeat is requested for unchanged inputs. The44-file grammar-only gate is merely proposed, not allocated or executed. Source review must cover UIKit sizing/event ownership, disabled/binding replacement behavior and test04's opt-in bounded stimulus. UIKit tests await hosted execution; grammar cannot prove their typechecking or behavior.
+
+Before-image limits remain exact:127 exported PNGs/111 unique thumbnail survey/four originals inspected in detail, with explicit duplicate-representative groups and no unique assertion-to-ordinal mapping. No new candidate after-shot exists. e061/fb10 history, privacy/consent and all33/full-native acceptance remain unchanged ROOT gates.

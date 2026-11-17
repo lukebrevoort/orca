@@ -1,0 +1,39 @@
+{
+  "testedSHA": "a4cf0372b5cb864be3cad4303bad118dba88db24",
+  "cases": 125,
+  "passed": 125,
+  "failed": 0,
+  "swiftGrammarFiles": 36,
+  "providerCalls": 0,
+  "scope": "Foundation production controller/API/cache runtime and actual synthetic HTTP/SQLite; Swift syntax only for SwiftUI/XCTest files. No native Apple runtime/SwiftUI typecheck/layout proof.",
+  "integratedParents": [
+    "048f9ac2f4ebebec23a9005ee28214c03d3b1996",
+    "a6a8567e81dab98d7ee50b6ec263d94266ac3009"
+  ],
+  "files": [
+    {
+      "path": "api-evidence.json",
+      "sha256": "04ee18b1c4834a879462f85270053df0539aa1acdac5189d601adf6656604c7b"
+    },
+    {
+      "path": "resources.json",
+      "sha256": "0a53a434eb4cdc10a4dbc551707d0eb4553c1cd27f0b0ce0ece98058f920dc18"
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "bbcd5dbd59ebe54341281960cfc4eb7370bd3207ddebfff357b1291510ac16b0"
+    },
+    {
+      "path": "swift-parse.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "execution.json",
+      "sha256": "e7b03b9b99f0afdeac20d4625e3666ba117b25452dffe7f68b34beae37546284"
+    },
+    {
+      "path": "results.log",
+      "sha256": "54cde1b7e9238757dd8dd562b8c0f49515d8286674f5bbc7e929f221005a7eb4"
+    }
+  ]
+}

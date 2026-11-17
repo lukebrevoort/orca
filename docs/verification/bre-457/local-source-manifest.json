@@ -1,0 +1,42 @@
+{
+  "baseHead": "3c2ffe3f823896a42f4b0a8b8b43881bc3043f64",
+  "sourceWasUncommitted": true,
+  "checks": {
+    "swiftGrammar": "pass",
+    "foundationModelsAndAPIClientTypecheck": "pass",
+    "iOSBuild": "unrun",
+    "XCTestRuntime": "unrun",
+    "nativeScreenshots": "pending hosted"
+  },
+  "files": {
+    "apps/ios/Orca/Compose/ComposeView.swift": "68007cb90fc63d73713905b44d119fd6b5cb4aaeb06d1ad89d317202d290dbc9",
+    "apps/ios/Orca/Compose/DraftStore.swift": "d4c262ecf1f9ba748c7637142c96a3c2eefac17b827b2b046d656b25e5a2d477",
+    "apps/ios/Orca/Compose/DraftsView.swift": "c76e051d1d5dda1ad02c58abf3f935a39d316a962f69d744aeb25a1f0a3b6c34",
+    "apps/ios/Orca/Core/APIClient.swift": "0fa9f272442a63fcd540577440a2837d7bab003c83e40655e1843db9daf0af47",
+    "apps/ios/Orca/Core/AccountPreferences.swift": "45caadcfd5159fc336cc4f8ca00f557f375126fcf97ae873f88134bf6417880d",
+    "apps/ios/Orca/Core/AppState.swift": "210c7ad6dbdd397b9f9018d85189aca00acac8f8b4031591206193b89c4b3965",
+    "apps/ios/Orca/Core/CacheStore.swift": "3ba61106879acdf5ee8ddc6183160b656f89788843e4ca3728b83b0cbfa344b6",
+    "apps/ios/Orca/Core/FeedbackCapture.swift": "15484f407c0239896dbd235ae9663a978ed359935923188e7237ec64cb6895f3",
+    "apps/ios/Orca/Core/Importance.swift": "735c58e7e4beb9597e8304137496897818c0c55e7e0c038fe66dcaee78069500",
+    "apps/ios/Orca/Core/Models.swift": "c0332c3c0a01f190af1ded1a90aa9ba581b300f416f741cc1412b6c76d74836d",
+    "apps/ios/Orca/Core/OrcaTheme.swift": "a28a0e7a76d2e0ada8549740867e1c8763051998fdb62c460ac2d8e486216a64",
+    "apps/ios/Orca/Core/Security.swift": "6b4b9ec2e8749fa0bb5ad5dcde37f001478df831fb7593abc163e20669991727",
+    "apps/ios/Orca/Mail/ImportanceView.swift": "9a824082d336ec2390b50d2bd09e7f21ba80fa8398ff76b4928032cfb66d5079",
+    "apps/ios/Orca/Mail/InboxView.swift": "31adba095a7c035bb8b93e3b866f0756d9c2d299ee82ab98cb90ebb59f3615ab",
+    "apps/ios/Orca/Mail/MailActions.swift": "402d70d35e52d25b5908a14cc219b87e41dc57050b6739e2d6ee7fa77d0fb81e",
+    "apps/ios/Orca/Mail/MailboxViews.swift": "599a7bb15cb9b29845709a1e8b70f6e99b1858bccead3e8d2f44df74e54eda3e",
+    "apps/ios/Orca/Mail/NativeViewEditor.swift": "bf0ac3691e376257bef204c4af5ea1515d3b84393e3be0786680910f956674c5",
+    "apps/ios/Orca/Mail/SafeHTMLView.swift": "efc889593db3e2213f69eda6925974c426cbbc8ceeba7694044236a31b9515bc",
+    "apps/ios/Orca/Mail/SavedMailboxResults.swift": "c11475fa597cfe7bfeb3ed97028537f0d8e056e4c6abdcd033537fe9026f3814",
+    "apps/ios/Orca/Mail/ThreadView.swift": "eca443b32f06a72125cafd0286f0c95dd27c1aae7df56cce49249bf7831d1599",
+    "apps/ios/Orca/Mail/VerificationCode.swift": "8fe1b69cda8beed346dc068a89770640fdaf35d821d990ee7bfd9f797c3bf893",
+    "apps/ios/Orca/Notifications/NotificationManager.swift": "a48332fed24bad3451017cf260e46ef009e4b80f7a3a0dd4e6f0b1e8c5300290",
+    "apps/ios/Orca/OrcaApp.swift": "64b4a79016650412e8c20c273c10b0031e1d403eb3299251a7fb2dd9a649012b",
+    "apps/ios/Orca/SettingsView.swift": "6d9ce5981dbb2734499c366506e06cbcf35bc9f493f7dc607c6c8fdbc6788a32",
+    "apps/ios/OrcaTests/OrcaTests.swift": "509ba02c34009b918d8d0059bf997edbc59a52a1763548f87f37f780fcbfb721",
+    "apps/ios/OrcaTests/SafeHTMLOverflowTests.swift": "ed7f573503ad70422897398f90cf68bdaef2fcd40f4a65901957acc9142fbb79",
+    "apps/ios/OrcaTests/SafeHTMLViewTests.swift": "2ceff6903f0b5e87ca895856c2fea707998f6c398073753b37494db84c83dee6",
+    "apps/ios/OrcaUITests/OrcaUITests.swift": "a50b72640228f7848fde5dea09835c890dffb967377e1c6834f698d9f5fb77da",
+    "apps/ios/OrcaUITests/ReaderUITests.swift": "560ed89ceeb5c70857b5332cf54c20bc54600d51288cbed51a659d0520ffb37d"
+  }
+}

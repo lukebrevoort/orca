@@ -1,0 +1,19 @@
+{
+  "testedSHA": "c4265d7f11414ecfe3998e92d71c491495353f59",
+  "compileExit": 0,
+  "runtimeExit": 1,
+  "cases": 167,
+  "passed": 158,
+  "failed": 9,
+  "priorCases": 152,
+  "priorPassed": 152,
+  "P2SurfaceFailures": 6,
+  "unsafeDiscardIntegrationFailures": 3,
+  "providerCalls": 0,
+  "grammarFiles": 36,
+  "runnerSyntaxExit": 0,
+  "runnerLifecyclePassed": 3,
+  "elapsedSeconds": 38.0525152090122,
+  "DraftStoreSHA256": "d4c262ecf1f9ba748c7637142c96a3c2eefac17b827b2b046d656b25e5a2d477",
+  "scope": "actual production Foundation/controller/API and surface-policy helper, not SwiftUI runtime; discard failures are unsafe integration controls for a new feature, not exposed current UI bugs; b04 never executed."
+}

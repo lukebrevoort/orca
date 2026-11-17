@@ -1,0 +1,5 @@
+iOS fixture API: http://127.0.0.1:58797
+Synthetic connection details: /private/tmp/orca-ios-fixture-vZzjwY/connection.json
+Only fixture data is used. Provider send and draft operations are simulated.
+[search-fixture-server] {"trace":"0b445280-d698-45aa-97ed-c3899f9c9b37","event":"received","epoch_ms":1794440067643,"path":"/v1/destinations","query":null,"view":null}
+[search-fixture-server] {"trace":"0b445280-d698-45aa-97ed-c3899f9c9b37","event":"response_ready","epoch_ms":1794440067651,"path":"/v1/destinations","status":200}

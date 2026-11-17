@@ -1,0 +1,73 @@
+{
+  "sourceSHA": "a71f0bdf405850dd2e4da1dc5a158a2eee1cc538",
+  "sourceReview": {
+    "verdict": "APPROVED WITH COMMENTS, no blocking correctness/security finding",
+    "reviewedSHA": "feee9ee7672962a3682e541f62940b5f1ba7a0da",
+    "retainedReport": "review-feee-approved.md",
+    "optionalComment": "Root applied only guard historyReachableBeforeTap else{return} after the retained assertion. Failed precondition remains a failure; no secondary tap; original success single-tap/immediate5s path unchanged."
+  },
+  "proofs": {
+    "feee": "36grammar,exit0,0.4505938329966739s,equalcleanSHA/all36hashes",
+    "rootA71": "36grammar,exit0,0.185s,manifest exact elapsed retained,equalcleanSHA/all36hashes",
+    "notRepeated": "223case Foundation/API and4runner scopes not repeated; no new UI execution"
+  },
+  "identityObjects": [
+    {
+      "path": "apps/ios/Orca/Core",
+      "sameAs": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+      "object": "928d08be555c38917694ee96076e60edd2bfa941"
+    },
+    {
+      "path": "apps/ios/Orca/Compose",
+      "sameAs": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+      "object": "973610a772aa2f520c3130335363b5211385f68d"
+    },
+    {
+      "path": "apps/ios/OrcaTests",
+      "sameAs": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+      "object": "53c8b85b9d4d0851c3b11b56a323935dfabf693e"
+    },
+    {
+      "path": "apps/api",
+      "sameAs": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+      "object": "af92890b7bdc932c33ba2d418d5c12e658f41680"
+    },
+    {
+      "path": "packages/shared",
+      "sameAs": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+      "object": "91db71ae1fd117859141bdb85ac5fc2705aba4de"
+    },
+    {
+      "path": "apps/ios/Tools",
+      "sameAs": "1748efb952763968ff8fe121d82911e29486764a",
+      "object": "f4879f8db4675658db3e6f60dc8ebcadba63f2d6"
+    },
+    {
+      "path": "apps/ios/OrcaUITests/run-fixture-tests.sh",
+      "sameAs": "1748efb952763968ff8fe121d82911e29486764a",
+      "object": "270f94ac8984818422723509579b563cad6c3dd3"
+    },
+    {
+      "path": "apps/ios/Orca/Mail/ThreadView.swift",
+      "sameAs": "feee9ee7672962a3682e541f62940b5f1ba7a0da",
+      "object": "3c2ebadb79ed2aed13b2a559851d6664f4598a48"
+    },
+    {
+      "path": "apps/ios/OrcaUITests/ReaderUITests.swift",
+      "sameAs": "b455ae183ae7073b3e2ceb1f63bf490ff0f2cfda",
+      "object": "533da60726822cb8ff0ac17cd5f0f79cd5f4a124"
+    }
+  ],
+  "sourceHashes": {
+    "apps/ios/Orca/Mail/ThreadView.swift": "1566776109cb54c8b8183849d4322b7c3258fbba8e7b2825a0f8e76da0511e40",
+    "apps/ios/OrcaUITests/OrcaUITests.swift": "07f54f3a469a64623e54f3a91dc235232a9054f650fe51c525056c9682c82674",
+    "apps/ios/OrcaUITests/ReaderUITests.swift": "a0b299eb7006da067f7e1c41718d20c772ae33d5a4cf1e00a11499dbbf229f0a"
+  },
+  "scopeLimits": [
+    "No native SwiftUI/XCTest typecheck/runtime or actual switch activation/one AX element/44pt hit-area proof",
+    "No current Std/AX light/dark screenshot or history-jump acceptance",
+    "No additional Core/API/shared/runner/source changes or unpublished wire integration",
+    "Publishedfb10 remainsactualreadingred; compose/mailbox root-owned, not polled",
+    "Publication held pending root current-runtime audit and explicit clearance"
+  ]
+}

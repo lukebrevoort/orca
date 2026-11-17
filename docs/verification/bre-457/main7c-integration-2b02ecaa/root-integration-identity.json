@@ -1,0 +1,88 @@
+{
+  "head": "2b02ecaaa82c510f8328fd76afc53f53e8b8e326",
+  "parents": [
+    "0a4293772c8aebba05b980df74a6e7bc88c5c417",
+    "7c97193688599e5996bb657c34227a63927c384c"
+  ],
+  "before": "0a4293772c8aebba05b980df74a6e7bc88c5c417",
+  "mainIntegrated": "7c97193688599e5996bb657c34227a63927c384c",
+  "clean": true,
+  "conflicts": false,
+  "changedFiles": [
+    "docs/verification/bre-457-pin-query/README.md",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/ancestry.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/demo.md",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/driver-executed.py",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/driver-preparation.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/driver-summary-controls.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/execution-inputs.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/hashes.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/integration-before-runtime.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/build.log",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/demo-receipts.jsonl",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/demo-work.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/focused-receipts.jsonl",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/focused-replay.log",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/full-test-receipts.jsonl",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/http-work-replay.log",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/launch-status-note.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/lint.log",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/manifest.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/node-executions.jsonl",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/node-observer.cjs",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/test.log",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/raw/typecheck.log",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/relative-feature-proof.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/retention-provenance.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/summary.json",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/test-readable.txt",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/wrapper-resources.jsonl",
+    "docs/verification/bre-457-pin-query/final-main97-2ef7/wrapper.log"
+  ],
+  "changedFileCount": 29,
+  "allChangesAssignedAPIEvidenceDocs": true,
+  "executionSourceScopes": {
+    "apps/ios": {
+      "before": "4efe9620ed8dec082c41d37f12cb617a40d9b3fa",
+      "after": "4efe9620ed8dec082c41d37f12cb617a40d9b3fa"
+    },
+    "apps/api": {
+      "before": "f9eb55b7b04791749bb0ecad1c4d3dea1ca58852",
+      "after": "f9eb55b7b04791749bb0ecad1c4d3dea1ca58852"
+    },
+    "apps/web": {
+      "before": "53a124a2b65f29cbb96a82abc01f2196b2e156c6",
+      "after": "53a124a2b65f29cbb96a82abc01f2196b2e156c6"
+    },
+    "packages": {
+      "before": "7c48e2df9703ac11c26891b2b321f8ee86fbf36a",
+      "after": "7c48e2df9703ac11c26891b2b321f8ee86fbf36a"
+    },
+    "scripts": {
+      "before": "81e62aa442e346c39d902d2d4e0c20748642fc16",
+      "after": "81e62aa442e346c39d902d2d4e0c20748642fc16"
+    },
+    ".github": {
+      "before": "b272a7ca69c4c51b3685c743127d2ac704408d42",
+      "after": "b272a7ca69c4c51b3685c743127d2ac704408d42"
+    },
+    ".agents": {
+      "before": "3e8ce7e56f18872e808c5905e70cefd904927589",
+      "after": "3e8ce7e56f18872e808c5905e70cefd904927589"
+    },
+    "package.json": {
+      "before": "20cd0187506f2ee075c996f2c92cb90bb95d108e",
+      "after": "20cd0187506f2ee075c996f2c92cb90bb95d108e"
+    },
+    "bun.lock": {
+      "before": "c81c8fcf7d4b5e17ec62d9d14d5d0b134b941f28",
+      "after": "c81c8fcf7d4b5e17ec62d9d14d5d0b134b941f28"
+    },
+    "tsconfig.base.json": {
+      "before": "fd0f337b33f15ede2c6335c93dfa4c7eacc0c12e",
+      "after": "fd0f337b33f15ede2c6335c93dfa4c7eacc0c12e"
+    }
+  },
+  "allExecutionSourceScopesIdentical": true,
+  "verification": "Exact input/tree revalidation only after docs-only normal base merge; no duplicate Foundation/API/grammar/Apple run. Native423 result remains exactf0e; currenttestonlygrammar exactb795 and reviewscope retained. Hosted and currentwholeclient/all33 pending."
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "time": 1794417118.824481,
+    "stage": "before",
+    "ownerPid": 80495,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  28.0 129472 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "59373  18.2 272560 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      "15232  15.4 572608 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      " 1152  11.0  22288 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "45771  10.8  59712 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+      "28857   9.9  87536 /Users/lbrevoort/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+    ],
+    "memory": "System-wide memory free percentage: 55%"
+  },
+  {
+    "time": 1794417133.891427,
+    "stage": "running",
+    "ownerPid": 80495,
+    "childPid": 80514,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "80611  99.8 647456 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend",
+      "  404  41.8 128832 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "59373  12.8 272384 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      " 1152  11.7  22288 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "28857   7.4  84880 /Users/lbrevoort/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService",
+      "45771   7.1  59696 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper"
+    ],
+    "memory": "System-wide memory free percentage: 55%"
+  },
+  {
+    "time": 1794417146.134196,
+    "stage": "after",
+    "ownerPid": 80495,
+    "childPid": 80514,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  46.0 127008 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "63094  18.5  37216 /System/Library/PrivateFrameworks/XprotectFramework.framework/Versions/A/XPCServices/XprotectService.xpc/Contents/MacOS/XprotectService",
+      "15232  15.7 563920 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      "59373  10.3 272736 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      " 1152   9.7  22288 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15214   7.8  76912 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper"
+    ],
+    "memory": "System-wide memory free percentage: 54%"
+  }
+]

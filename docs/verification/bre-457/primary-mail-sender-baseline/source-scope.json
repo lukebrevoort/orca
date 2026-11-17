@@ -1,0 +1,36 @@
+{
+  "base": "e061c30bde583acb93cefcef63970741e688f562",
+  "scope": "unexecuted behavior-preserving production extraction plus regressions; no logic fixes",
+  "files": {
+    "apps/ios/Orca/Core/InboxViewModel.swift": {
+      "beforeSHA256": "35980667a92d9cd7a5d26cc5cc4ef02540a84b29f0e16656ad905e11d0534a8d",
+      "candidateSHA256": "9108c9b8acd86a1e87792f6b23b721e08bb4be52dba31ee7acc7511cf3312fc8"
+    },
+    "apps/ios/Orca/Core/NativeViewEditorController.swift": {
+      "beforeSHA256": "ec2e3a5faee45051b76fadd5663e746a41612c56312287cd12cc5731a9c3bb5e",
+      "candidateSHA256": "db9851c19f4975cc4de8eb75902dbd21204cae26aff8f949c93dd28fc9c486bb"
+    },
+    "apps/ios/Orca/Mail/InboxView.swift": {
+      "beforeSHA256": "617287d9abe10c5545bdc6ab607c56e326b5bd3d81b8c3ebd4f50c22356ac0d5",
+      "candidateSHA256": "8104f05e549b75834b0e5f3b3e0065b4c7b7936cbf876ceb39b06318edecbd00"
+    },
+    "apps/ios/Orca/Mail/MailActions.swift": {
+      "beforeSHA256": "0f983376b0d1ba70786c2ad07db3fa1c4ce956f87022206562a7b712576044a3",
+      "candidateSHA256": "18526b16db56e6152a712bc6ab6f753a70128c5957fd73cca3a045bec0f75fa0"
+    },
+    "apps/ios/Tools/ReviewRegressions/Run.swift": {
+      "beforeSHA256": "0fdba4ddfa8c02174c6d7df3a7c5abfcbd46f3a457acbe87e615b039f6c78014",
+      "candidateSHA256": "d306d6389450fb77f93bf35c12538548014e4d284c6dc0e71dbf202b80257f73"
+    },
+    "apps/ios/Tools/ReviewRegressions/api-fixture.ts": {
+      "beforeSHA256": "1459f4c4e1c6e9a3561a72ff8feb51cc65d50b9d9ac853d8f98a3614680b4981",
+      "candidateSHA256": "63a5ea2c0bebaa6f427b549e0311a8d86b8b941f8e1de4a57bf0d9f58ffe5e34"
+    },
+    "apps/ios/Tools/ReviewRegressions/run.py": {
+      "beforeSHA256": "9bce8eb02a5c5f6731767e548de229f7652205a79e5fe62fa523462ae7eff1f4",
+      "candidateSHA256": "c1b1482a751a9ed7acd08eb0a3f4e8826de75ce5a2b843fdc46944474ef1da03"
+    }
+  },
+  "durableNativeViewEditorTailByteIdentical": true,
+  "existingInboxControllerTailByteIdentical": true
+}

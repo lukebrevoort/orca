@@ -1,0 +1,461 @@
+CASE 465-original-uncertain-lock: PASS — A committed, acknowledgement lost and reconciliation offline
+CASE 465-no-A-receipt-under-B: PASS — visible receipt target = none
+CASE 465-no-A-undo-under-B: PASS — Undo must not operate on A under B
+CASE 465-stale-test-established-current-receipt: PASS — must establish current revision1 receipt before checking revision2
+CASE 465-known-newer-revision-disables-Undo: PASS — current conversation revision2 supersedes receipt revision1
+CASE cached-query-provenance: PASS — cached row B labeled B
+CASE 480-correction-actually-acknowledged: PASS — production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback
+CASE 480-acknowledged-correction-refreshes-submitted-search: PASS — actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime
+CASE 480-late-old-account-search-cannot-overwrite: PASS — production controller account/request generation rejects held older account response
+CASE notification-route-keeps-unsaved-settings: PASS — notification must use the shared Stay/Leave guard
+CASE 473-stay-preserves-edits: PASS — Stay cancels notification navigation
+CASE 473-leave-routes-original-thread: PASS — explicit discard applies captured route
+CASE 473-stale-owner-cannot-route: PASS — delayed Leave cannot route or discard another owner's choices
+CASE 469-native-header-retains-original-owner-after-held-token: PASS — actual APIClient dispatch retains captured draft owner even after token/observable owner change; server enforcement separate
+CASE 469-native-stale-ack-keeps-original-edits: PASS — late different-owner response cannot replace the original draft
+CASE 469-real-server-held-token-zero-preference-writes: PASS — actual independent SQLite preference rows for A and B remain byte-equivalent
+CASE 469-real-server-rejects-patch-and-recovery: PASS — actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409
+CASE 469-real-server-preference-write-probe-zero: PASS — fixture-owned SQLite INSERT/UPDATE/DELETE triggers observe no preference writes on rejected held PATCH/recovery
+CASE 469-write-probe-positive-control: PASS — same-owner real PATCH succeeds and independently records one A write; B remains untouched
+CASE 466-first-commit-actually-recorded: PASS — actual API/SQLite commit exists; response replaced by HTTP503
+CASE 466-edit-retry-exactly-one-creation: PASS — actual view count after commit/retry = 1, first count = 1
+CASE 466-dismiss-reopen-no-duplicate: PASS — actual view count after reopen = 1
+CASE 466-repeated-retry-preserves-exact-command: PASS — first three committed/replayed requests retain identical UUID, expected revisions and reviewed definition
+CASE 466-advanced-definition-preserved: PASS — actual API saved ID and complete sender/thread/readState definition retained
+CASE 466-advanced-update-no-extra-creation: PASS — one recovered View plus one intentional advanced fixture, updates retain both IDs
+CASE 466-provider-boundary: PASS — synthetic provider calls = 0
+CASE 478-noop-actual-terminal-400: PASS — actual API no-op rejection writes no View
+CASE 478-noop-reopen-unlocks-preview: PASS — definitive rejection must recover current authorized saved identity without dropping newer edits
+CASE 478-noop-recovery-updates-same-id: PASS — fresh explicit preview/update retains original ID and creation count
+CASE 478-stale-create-actual-terminal-409: PASS — actual stale workspace rejection creates nothing
+CASE 478-stale-reopen-preserves-ready-edits: PASS — recovery must retain explicitly chosen predicate and editable draft
+CASE 478-stale-recovery-creates-exactly-once: PASS — one creation only after fresh preview/explicit Save
+CASE 478-lost-noop-actual-rejection-hidden: PASS — actual server rejected without write, but client received503 and must preserve uncertainty
+CASE 478-lost-noop-reopen-retains-command: PASS — reopening retains original immutable pending command and newer edits
+CASE 478-lost-noop-recovery-completes-once: PASS — typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation
+CASE 478-lost-stale-actual-rejection-hidden: PASS — actual server rejected without write, but client received503 and must preserve uncertainty
+CASE 478-lost-stale-reopen-retains-command: PASS — reopening retains original immutable pending command and newer edits
+CASE 478-lost-stale-recovery-completes-once: PASS — typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation
+CASE 478-strict-valid-variant-0: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-valid-variant-1: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-valid-variant-2: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-invalid-variant-0: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-1: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-2: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-3: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-4: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-5: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-6: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-7: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-8: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-9: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-10: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-11: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-eligible-unknown-keeps-exact-command: PASS — actual eligible/unresolved status never releases the original command
+CASE 478-invalid-proof-keeps-command-0: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-1: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-2: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-3: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-4: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-status-failure-keeps-command-401: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-status-failure-keeps-command-404: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-status-failure-keeps-command-503: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-real-unauthenticated-cannot-unlock: PASS — real API auth/ownership rejection retains the exact original command
+CASE 478-real-foreign-owner-cannot-unlock: PASS — real API auth/ownership rejection retains the exact original command
+CASE 478-offline-keeps-command: PASS — actual URLSession transport failure retains uncertainty
+CASE 478-held-other-account-cannot-accept-proof: PASS — account change during held proof rejects publication and retirement
+CASE 478-late-original-replays-only-once: PASS — safe retry and delayed original share one real API receipt/creation
+CASE 478-real-command-mismatch-stays-locked: PASS — actual owned key collision is unknown, never a no-write fence for this command
+CASE 478-fence-prepares-before-retiring: PASS — actual server fence plus fresh authorized prepare permits a replacement preview
+CASE 478-fence-blocks-delayed-original: PASS — delayed original cannot race the replacement into a duplicate
+CASE 478-applied-deleted-never-recreates: PASS — applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID view_29caddb4-8f50-4581-adba-d52a93111aff, pending true, counts 10/10, error Original Save applied as view_29caddb4-8f50-4581-adba-d52a93111aff. Reload its current View before previewing; no replacement will be created.
+CASE 478-status-provider-boundary: PASS — all status, fence and recovery cases use zero external provider calls
+CASE 478-added-account-status-stays-conservative: PASS — historical account-set receipt proof stays unknown
+CASE 478-added-account-exact-retry-recovers: PASS — independent exact-command200ack permits original View recovery despite conservative unknown status; no duplicate
+CASE 478-added-account-current-revisions-and-edits: PASS — current object may have later revisions; local unsaved edits remain while fresh advanced predicates are retained
+CASE 478-added-account-update-preserves-fresh-definition: PASS — fresh explicit update preserves externally added advanced definition and original identity
+{
+  "results" : [
+    {
+      "case" : "465-original-uncertain-lock",
+      "detail" : "A committed, acknowledgement lost and reconciliation offline",
+      "pass" : true
+    },
+    {
+      "case" : "465-no-A-receipt-under-B",
+      "detail" : "visible receipt target = none",
+      "pass" : true
+    },
+    {
+      "case" : "465-no-A-undo-under-B",
+      "detail" : "Undo must not operate on A under B",
+      "pass" : true
+    },
+    {
+      "case" : "465-stale-test-established-current-receipt",
+      "detail" : "must establish current revision1 receipt before checking revision2",
+      "pass" : true
+    },
+    {
+      "case" : "465-known-newer-revision-disables-Undo",
+      "detail" : "current conversation revision2 supersedes receipt revision1",
+      "pass" : true
+    },
+    {
+      "case" : "cached-query-provenance",
+      "detail" : "cached row B labeled B",
+      "pass" : true
+    },
+    {
+      "case" : "480-correction-actually-acknowledged",
+      "detail" : "production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback",
+      "pass" : true
+    },
+    {
+      "case" : "480-acknowledged-correction-refreshes-submitted-search",
+      "detail" : "actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime",
+      "pass" : true
+    },
+    {
+      "case" : "480-late-old-account-search-cannot-overwrite",
+      "detail" : "production controller account\/request generation rejects held older account response",
+      "pass" : true
+    },
+    {
+      "case" : "notification-route-keeps-unsaved-settings",
+      "detail" : "notification must use the shared Stay\/Leave guard",
+      "pass" : true
+    },
+    {
+      "case" : "473-stay-preserves-edits",
+      "detail" : "Stay cancels notification navigation",
+      "pass" : true
+    },
+    {
+      "case" : "473-leave-routes-original-thread",
+      "detail" : "explicit discard applies captured route",
+      "pass" : true
+    },
+    {
+      "case" : "473-stale-owner-cannot-route",
+      "detail" : "delayed Leave cannot route or discard another owner's choices",
+      "pass" : true
+    },
+    {
+      "case" : "469-native-header-retains-original-owner-after-held-token",
+      "detail" : "actual APIClient dispatch retains captured draft owner even after token\/observable owner change; server enforcement separate",
+      "pass" : true
+    },
+    {
+      "case" : "469-native-stale-ack-keeps-original-edits",
+      "detail" : "late different-owner response cannot replace the original draft",
+      "pass" : true
+    },
+    {
+      "case" : "469-real-server-held-token-zero-preference-writes",
+      "detail" : "actual independent SQLite preference rows for A and B remain byte-equivalent",
+      "pass" : true
+    },
+    {
+      "case" : "469-real-server-rejects-patch-and-recovery",
+      "detail" : "actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409",
+      "pass" : true
+    },
+    {
+      "case" : "469-real-server-preference-write-probe-zero",
+      "detail" : "fixture-owned SQLite INSERT\/UPDATE\/DELETE triggers observe no preference writes on rejected held PATCH\/recovery",
+      "pass" : true
+    },
+    {
+      "case" : "469-write-probe-positive-control",
+      "detail" : "same-owner real PATCH succeeds and independently records one A write; B remains untouched",
+      "pass" : true
+    },
+    {
+      "case" : "466-first-commit-actually-recorded",
+      "detail" : "actual API\/SQLite commit exists; response replaced by HTTP503",
+      "pass" : true
+    },
+    {
+      "case" : "466-edit-retry-exactly-one-creation",
+      "detail" : "actual view count after commit\/retry = 1, first count = 1",
+      "pass" : true
+    },
+    {
+      "case" : "466-dismiss-reopen-no-duplicate",
+      "detail" : "actual view count after reopen = 1",
+      "pass" : true
+    },
+    {
+      "case" : "466-repeated-retry-preserves-exact-command",
+      "detail" : "first three committed\/replayed requests retain identical UUID, expected revisions and reviewed definition",
+      "pass" : true
+    },
+    {
+      "case" : "466-advanced-definition-preserved",
+      "detail" : "actual API saved ID and complete sender\/thread\/readState definition retained",
+      "pass" : true
+    },
+    {
+      "case" : "466-advanced-update-no-extra-creation",
+      "detail" : "one recovered View plus one intentional advanced fixture, updates retain both IDs",
+      "pass" : true
+    },
+    {
+      "case" : "466-provider-boundary",
+      "detail" : "synthetic provider calls = 0",
+      "pass" : true
+    },
+    {
+      "case" : "478-noop-actual-terminal-400",
+      "detail" : "actual API no-op rejection writes no View",
+      "pass" : true
+    },
+    {
+      "case" : "478-noop-reopen-unlocks-preview",
+      "detail" : "definitive rejection must recover current authorized saved identity without dropping newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-noop-recovery-updates-same-id",
+      "detail" : "fresh explicit preview\/update retains original ID and creation count",
+      "pass" : true
+    },
+    {
+      "case" : "478-stale-create-actual-terminal-409",
+      "detail" : "actual stale workspace rejection creates nothing",
+      "pass" : true
+    },
+    {
+      "case" : "478-stale-reopen-preserves-ready-edits",
+      "detail" : "recovery must retain explicitly chosen predicate and editable draft",
+      "pass" : true
+    },
+    {
+      "case" : "478-stale-recovery-creates-exactly-once",
+      "detail" : "one creation only after fresh preview\/explicit Save",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-noop-actual-rejection-hidden",
+      "detail" : "actual server rejected without write, but client received503 and must preserve uncertainty",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-noop-reopen-retains-command",
+      "detail" : "reopening retains original immutable pending command and newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-noop-recovery-completes-once",
+      "detail" : "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity\/exactly-one creation",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-stale-actual-rejection-hidden",
+      "detail" : "actual server rejected without write, but client received503 and must preserve uncertainty",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-stale-reopen-retains-command",
+      "detail" : "reopening retains original immutable pending command and newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-stale-recovery-completes-once",
+      "detail" : "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity\/exactly-one creation",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-valid-variant-0",
+      "detail" : "strict shared discriminated shape accepts valid variant",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-valid-variant-1",
+      "detail" : "strict shared discriminated shape accepts valid variant",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-valid-variant-2",
+      "detail" : "strict shared discriminated shape accepts valid variant",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-0",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-1",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-2",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-3",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-4",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-5",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-6",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-7",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-8",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-9",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-10",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-11",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-eligible-unknown-keeps-exact-command",
+      "detail" : "actual eligible\/unresolved status never releases the original command",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-0",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-1",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-2",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-3",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-4",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-failure-keeps-command-401",
+      "detail" : "auth\/foreign404\/unavailable status never becomes a no-write proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-failure-keeps-command-404",
+      "detail" : "auth\/foreign404\/unavailable status never becomes a no-write proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-failure-keeps-command-503",
+      "detail" : "auth\/foreign404\/unavailable status never becomes a no-write proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-real-unauthenticated-cannot-unlock",
+      "detail" : "real API auth\/ownership rejection retains the exact original command",
+      "pass" : true
+    },
+    {
+      "case" : "478-real-foreign-owner-cannot-unlock",
+      "detail" : "real API auth\/ownership rejection retains the exact original command",
+      "pass" : true
+    },
+    {
+      "case" : "478-offline-keeps-command",
+      "detail" : "actual URLSession transport failure retains uncertainty",
+      "pass" : true
+    },
+    {
+      "case" : "478-held-other-account-cannot-accept-proof",
+      "detail" : "account change during held proof rejects publication and retirement",
+      "pass" : true
+    },
+    {
+      "case" : "478-late-original-replays-only-once",
+      "detail" : "safe retry and delayed original share one real API receipt\/creation",
+      "pass" : true
+    },
+    {
+      "case" : "478-real-command-mismatch-stays-locked",
+      "detail" : "actual owned key collision is unknown, never a no-write fence for this command",
+      "pass" : true
+    },
+    {
+      "case" : "478-fence-prepares-before-retiring",
+      "detail" : "actual server fence plus fresh authorized prepare permits a replacement preview",
+      "pass" : true
+    },
+    {
+      "case" : "478-fence-blocks-delayed-original",
+      "detail" : "delayed original cannot race the replacement into a duplicate",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-deleted-never-recreates",
+      "detail" : "applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID view_29caddb4-8f50-4581-adba-d52a93111aff, pending true, counts 10\/10, error Original Save applied as view_29caddb4-8f50-4581-adba-d52a93111aff. Reload its current View before previewing; no replacement will be created.",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-provider-boundary",
+      "detail" : "all status, fence and recovery cases use zero external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-status-stays-conservative",
+      "detail" : "historical account-set receipt proof stays unknown",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-exact-retry-recovers",
+      "detail" : "independent exact-command200ack permits original View recovery despite conservative unknown status; no duplicate",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-current-revisions-and-edits",
+      "detail" : "current object may have later revisions; local unsaved edits remain while fresh advanced predicates are retained",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-update-preserves-fresh-definition",
+      "detail" : "fresh explicit update preserves externally added advanced definition and original identity",
+      "pass" : true
+    }
+  ],
+  "scope" : "production native controllers\/Foundation HTTP\/cache; not Apple UI"
+}

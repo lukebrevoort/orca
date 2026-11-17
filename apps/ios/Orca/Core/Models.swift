@@ -5,9 +5,10 @@ struct SavedMailboxView: Codable, Identifiable, Hashable {
     var name: String
     var description: String
     var revision: Int
+    var position: Int? = nil
     var selectionID: String { "view:\(id)" }
 }
-struct SavedMailboxViewCatalog: Codable { var items: [SavedMailboxView] }
+struct SavedMailboxViewCatalog: Codable { var items: [SavedMailboxView]; var workspaceRevision: Int? = nil }
 struct SavedViewThread: Codable, Identifiable, Hashable {
     var accountId: String; var accountEmail: String; var provider: String; var threadId: String
     var subject: String; var latestReceivedAt: String; var messageCount: Int; var readState: String; var sender: MailContact
@@ -30,7 +31,8 @@ struct HumanClassification: Codable, Hashable { var automatic: HumanAssessment?;
 struct InboxMessage: Codable, Identifiable, Hashable {
     var id: String; var accountId: String; var provider: String; var providerMessageId: String
     var threadId: String; var from: MailContact; var subject: String; var snippet: String; var receivedAt: String
-    var unread: Bool; var labels: [String]; var attentionBehavior: String; var humanSignal: Int?; var humanClassification: HumanClassification?
+    var unread: Bool; var labels: [String]; var attentionBehavior: String; var humanSignal: Int? = nil; var humanClassification: HumanClassification? = nil
+    var importance: ImportanceResolution? = nil
 }
 struct Freshness: Codable, Hashable { var revision: String; var lastSyncedAt: String? }
 struct InboxCounts: Codable, Hashable { var focus: Int; var normal: Int; var quiet: Int; var hidden: Int; var all: Int }
@@ -44,16 +46,16 @@ struct ThreadMessage: Codable, Identifiable, Hashable {
     var internetMessageId: String?; var references: [String]; var humanSignal: Int?; var humanClassification: HumanClassification?
     var attachments: [MailAttachment]
 }
-struct NormalizedThread: Codable, Hashable { var id: String; var provider: String; var providerThreadId: String; var subject: String; var latestReceivedAt: String; var messageCount: Int; var labels: [String]; var participants: [MailContact]; var readState: String; var attention: ThreadAttention }
+struct NormalizedThread: Codable, Hashable { var id: String; var provider: String; var providerThreadId: String; var subject: String; var latestReceivedAt: String; var messageCount: Int; var labels: [String]; var participants: [MailContact]; var readState: String; var attention: ThreadAttention; var importance: ImportanceResolution? = nil }
 struct ThreadAttention: Codable, Hashable { var attentionBehavior: String?; var hasUnread: Bool; var hasStarred: Bool; var hasDraft: Bool; var humanSignal: Int? }
-struct ThreadDetail: Codable { var account: MailAccount; var thread: NormalizedThread; var messages: [ThreadMessage] }
+struct ThreadDetail: Codable { var account: MailAccount; var thread: NormalizedThread; var messages: [ThreadMessage]; var importance: ImportanceResolution? = nil }
 struct ThreadReadPage: Decodable {
     struct Entry: Decodable, Identifiable {
         enum Kind: String, Decodable { case message, unavailable }
         var kind: Kind; var id: String; var from: String?; var subject: String?; var receivedAt: String?
         var bodyText: String?; var bodyHtml: String?
     }
-    var entries: [Entry]; var earlier: String?; var newer: String?
+    var entries: [Entry]; var earlier: String?; var newer: String?; var importance: ImportanceResolution?
 }
 
 struct Recipient: Codable, Hashable {
@@ -170,5 +172,134 @@ struct FeedbackTicketReceipt: Codable, Equatable {
         guard let parsed = URL(string: url), parsed.scheme == "https",
               parsed.host == "linear.app", parsed.user == nil, parsed.password == nil else { return nil }
         return parsed
+    }
+}
+
+// Mirrors packages/shared/src/importance.ts. No classifier, placement or sender heuristic.
+enum ImportanceChoice: String, Codable, Hashable, CaseIterable {
+    case important, notImportant = "not_important"
+    var title: String { self == .important ? "Important" : "Not important" }
+}
+enum ImportanceEffective: String, Codable, Hashable {
+    case important, notImportant = "not_important", unreviewed
+    var title: String { switch self { case .important: "Important"; case .notImportant: "Not important"; case .unreviewed: "Unreviewed" } }
+}
+struct ImportanceStoredChoice: Codable, Hashable { var choice: ImportanceChoice?; var revision: Int }
+struct ImportanceResolution: Codable, Hashable {
+    struct Counts: Codable, Hashable { var important: Int; var notImportant: Int; var unreviewed: Int; var total: Int }
+    struct Preference: Codable, Hashable { var address: String; var choice: ImportanceChoice; var revision: Int }
+    var effective: ImportanceEffective; var source: String; var conversation: ImportanceStoredChoice
+    var inherited: ImportanceEffective; var participantCounts: Counts; var preferences: [Preference]
+    var preferencesTruncated: Bool; var accountRevision: Int
+}
+struct ImportanceTarget: Codable, Hashable {
+    var kind: String; var threadId: String?; var address: String?
+    static func conversation(_ id: String) -> Self { .init(kind: "conversation", threadId: id) }
+    static func sender(_ address: String) -> Self { .init(kind: "sender", address: address) }
+}
+struct ImportanceCommand: Codable, Hashable {
+    var accountId: String; var target: ImportanceTarget; var choice: ImportanceChoice?
+    var expectedRevision: Int; var operationId = UUID().uuidString.lowercased(); var confirmation: String?
+    enum CodingKeys: String, CodingKey { case accountId, target, choice, expectedRevision, operationId, confirmation }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(accountId, forKey: .accountId); try c.encode(target, forKey: .target)
+        // Null resets the explicit choice. An omitted key is not the same command.
+        try c.encode(choice, forKey: .choice); try c.encode(expectedRevision, forKey: .expectedRevision)
+        try c.encode(operationId, forKey: .operationId); try c.encodeIfPresent(confirmation, forKey: .confirmation)
+    }
+}
+struct ImportanceReceipt: Codable, Hashable {
+    var operationId: String; var accountId: String; var target: ImportanceTarget
+    var choice: ImportanceChoice?; var previousChoice: ImportanceChoice?; var revision: Int; var undoUntil: String
+}
+struct ImportanceOperation: Codable {
+    var status: String; var receipt: ImportanceReceipt; var current: ImportanceStoredChoice; var importance: ImportanceResolution?
+}
+struct ImportancePreview: Decodable {
+    struct Distribution: Decodable { var important: Int; var not_important: Int; var unreviewed: Int }
+    struct Existing: Decodable {
+        var matching: Int; var overridden: Int; var changed: Int; var keptImportantByOtherParticipants: Int
+        var before: Distribution; var after: Distribution
+    }
+    struct Future: Decodable { var accountId: String; var address: String; var preservesConversationOverrides: Bool; var otherImportantParticipantsMayKeepImportant: Bool; var exactAddressOnly: Bool }
+    var accountId: String; var address: String; var choice: ImportanceChoice?; var current: ImportanceStoredChoice
+    var accountRevision: Int; var confirmation: String; var expiresAt: String; var existing: Existing; var future: Future
+}
+struct ImportantPage: Codable {
+    struct Item: Codable {
+        var accountId: String; var threadId: String; var subject: String; var snippet: String; var from: String?
+        var receivedAt: String; var unread: Bool; var importance: ImportanceResolution
+        func row(provider: String) -> InboxMessage {
+            .init(id: threadId, accountId: accountId, provider: provider, providerMessageId: "", threadId: threadId,
+                  from: .init(email: from ?? "Unknown sender"), subject: subject, snippet: snippet, receivedAt: receivedAt,
+                  unread: unread, labels: [], attentionBehavior: "normal", importance: importance)
+        }
+    }
+    var accountId: String; var revision: Int; var items: [Item]; var nextCursor: String?
+}
+extension APIClient {
+    func important(accountId: String, cursor: String? = nil) async throws -> ImportantPage {
+        var query = [URLQueryItem(name: "accountId", value: accountId), .init(name: "limit", value: "30")]
+        if let cursor { query.append(.init(name: "cursor", value: cursor)) }
+        return try await request("v1/important", query: query)
+    }
+    func importance(accountId: String, threadId: String) async throws -> ImportanceResolution {
+        struct Envelope: Decodable { var accountId: String; var threadId: String; var importance: ImportanceResolution }
+        let result: Envelope = try await request("v1/importance/conversations", pathSuffix: [threadId], query: [.init(name: "accountId", value: accountId)])
+        guard result.accountId == accountId, result.threadId == threadId else { throw ClientError.invalidResponse }
+        return result.importance
+    }
+    func chooseImportance(_ command: ImportanceCommand) async throws -> ImportanceOperation {
+        try await request("v1/importance/choices", method: "POST", body: command)
+    }
+    func importanceOperation(accountId: String, operationId: String) async throws -> ImportanceOperation {
+        try await request("v1/importance/operations", pathSuffix: [operationId], query: [.init(name: "accountId", value: accountId)])
+    }
+    func previewImportance(accountId: String, address: String, choice: ImportanceChoice?) async throws -> ImportancePreview {
+        // Reuse the command encoder's explicit null semantics, without command-only fields.
+        struct Body: Encodable {
+            var accountId: String; var address: String; var choice: ImportanceChoice?
+            enum CodingKeys: String, CodingKey { case accountId, address, choice }
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(accountId, forKey: .accountId); try c.encode(address, forKey: .address); try c.encode(choice, forKey: .choice)
+            }
+        }
+        let body = Body(accountId: accountId, address: address, choice: choice)
+        return try await request("v1/importance/preview", method: "POST", body: body)
+    }
+    func undoImportance(_ receipt: ImportanceReceipt, operationId: String) async throws -> ImportanceOperation {
+        struct Body: Encodable { var accountId: String; var operationId: String; var expectedRevision: Int }
+        return try await request("v1/importance/operations", pathSuffix: [receipt.operationId, "undo"], method: "POST", body: Body(accountId: receipt.accountId, operationId: operationId, expectedRevision: receipt.revision))
+    }
+}
+
+// BRE-455 contract source: 29e345e3; transport registration remains separate.
+struct ImportantNotificationInstallation: Codable, Equatable {
+    struct Policy: Codable, Equatable { var version: Int; var kind: String; var enabled: Bool; var accountIds: [String] }
+    struct Delivery: Codable, Equatable { var available: Bool; var scope: String; var reason: String? }
+    var installationId: String; var channel: String; var revision: Int; var policy: Policy?
+    var permission: String; var previousSelection: NotificationSelection?; var delivery: Delivery; var cooldownSeconds: Int
+}
+struct ImportantNotificationCommand: Codable, Equatable {
+    var channel = "apns"; var policyVersion = 1; var enabled: Bool; var accountIds: [String]
+    var permission: String; var expectedRevision: Int; var operationId = UUID().uuidString.lowercased()
+}
+struct ImportantNotificationOperation: Decodable {
+    var operationId: String; var status: String; var appliedRevision: Int; var current: ImportantNotificationInstallation
+}
+extension APIClient {
+    func importantNotificationStatus(installationId: String) async throws -> ImportantNotificationInstallation {
+        let value: ImportantNotificationInstallation = try await request("v1/notifications/installations", pathSuffix: [installationId], query: [.init(name: "channel", value: "apns")])
+        guard value.installationId == installationId, value.channel == "apns", value.delivery.scope == "apns", value.cooldownSeconds == 900,
+              value.policy == nil || (value.policy?.version == 1 && value.policy?.kind == "important_only") else { throw ClientError.invalidResponse }
+        return value
+    }
+    func setImportantNotifications(installationId: String, command: ImportantNotificationCommand) async throws -> ImportantNotificationOperation {
+        try await request("v1/notifications/installations", pathSuffix: [installationId], method: "PUT", body: command)
+    }
+    func importantNotificationOperation(_ id: String) async throws -> ImportantNotificationOperation {
+        try await request("v1/notifications/operations", pathSuffix: [id])
     }
 }

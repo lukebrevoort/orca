@@ -1,0 +1,34 @@
+{
+  "sha": "f15310e69f509356c56a95b7b56d84f2e47ede4d",
+  "scope": "production Foundation/API/controller and synthetic runner lifecycle; grammar only for Apple UI, not SwiftUI runtime",
+  "expectedControllerCases": 223,
+  "overallCapSeconds": 50,
+  "swiftParseCount": 36,
+  "runtimes": {
+    "node": "v24.22.1",
+    "bun": "1.3.14"
+  },
+  "elapsed": 27.105836458998965,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 0,
+      "elapsed": 24.088940666988492
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 24.220440666977083
+    },
+    {
+      "stage": "runner-syntax",
+      "exit": 0,
+      "elapsed": 24.261685208999552
+    },
+    {
+      "stage": "runner-lifecycle",
+      "exit": 0,
+      "elapsed": 27.0736404589843
+    }
+  ]
+}

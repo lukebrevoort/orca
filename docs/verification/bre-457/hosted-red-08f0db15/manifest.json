@@ -1,0 +1,58 @@
+{
+  "head": "08f0db15fde1ab992eedcd46a49d70af348594dd",
+  "scope": "historical hosted red and contextual screenshots; no candidate runtime",
+  "files": [
+    {
+      "path": "reading-identity.log",
+      "sha256": "13bfc3126ad9ddf0d27a935c8322e4c1797c79894db3c4bd95e53d42066d0df7",
+      "source": "/tmp/bre457-hosted-reading-08f0db15/identity.log"
+    },
+    {
+      "path": "reading-Orca-summary.json",
+      "sha256": "064d28feddf47bf5b824f2a486f39645e7397a1e03e4654d851af96d7bc5b251",
+      "source": "/tmp/bre457-hosted-reading-08f0db15/Orca-summary.json"
+    },
+    {
+      "path": "reading-Orca-tests.json",
+      "sha256": "1d0057a38ba50b721b8def5f43f91c8d5caf5383c6ae30337ec71cb5017a614f",
+      "source": "/tmp/bre457-hosted-reading-08f0db15/Orca-tests.json"
+    },
+    {
+      "path": "compose-identity.log",
+      "sha256": "a90c47567781b3305c12a2a1afe4ee2ed10c08375ea5f82410bcdb0daa4e0917",
+      "source": "/tmp/bre457-hosted-compose-08f0db15/identity.log"
+    },
+    {
+      "path": "compose-FeedbackLayoutlight-summary.json",
+      "sha256": "facbeebe317f19bc6541e5e35ed095d917a3e069dfc7f4116c7ebf680261f2b6",
+      "source": "/tmp/bre457-hosted-compose-08f0db15/FeedbackLayoutlight-summary.json"
+    },
+    {
+      "path": "compose-FeedbackLayoutdark-summary.json",
+      "sha256": "b6eaacbf944611532911802307eac8c7c2f8ad135fd0f6a08776202c17463285",
+      "source": "/tmp/bre457-hosted-compose-08f0db15/FeedbackLayoutdark-summary.json"
+    },
+    {
+      "path": "compose-FeedbackLayoutlight-tests.json",
+      "sha256": "61efcb07d328a6f1f3a508d2c511ab32f724cf0deb72a2f1b532e7e1a8554470",
+      "source": "/tmp/bre457-hosted-compose-08f0db15/FeedbackLayoutlight-tests.json"
+    },
+    {
+      "path": "compose-FeedbackLayoutdark-tests.json",
+      "sha256": "c442d36968e1cb38eb0cc80c3bda339e18028e05078bdaa02a4f2da67a7cef37",
+      "source": "/tmp/bre457-hosted-compose-08f0db15/FeedbackLayoutdark-tests.json"
+    },
+    {
+      "path": "reading-Orca-103.png",
+      "sha256": "43f4c81d06d0eeed8096ba0e0d32e31417e4c3bbc92c718b892e012bd999db91",
+      "source": "/tmp/bre457-hosted-reading-08f0db15/screenshots/Orca-103.png",
+      "scope": "contextual standard HTML reader, not uniquely mapped failure"
+    },
+    {
+      "path": "compose-FeedbackLayoutdark-2.png",
+      "sha256": "23d9bc2ecb1a69cf64d5bc42397b9140dcc953e87e7c25c46a362c11b4974a40",
+      "source": "/tmp/bre457-hosted-compose-08f0db15/screenshots/FeedbackLayoutdark-2.png",
+      "scope": "actual dark test18 recovered writer checkpoint; not test43"
+    }
+  ]
+}

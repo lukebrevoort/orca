@@ -1,0 +1,20 @@
+{
+  "testedSourceSHA": "05e0d76605b5b78bf057cf1c1c7d9019d1a73446",
+  "compileExit": 0,
+  "regressionExit": 0,
+  "assertions": 121,
+  "passed": 121,
+  "failed": 0,
+  "prior96Preserved": true,
+  "newPaginationAssertions": 25,
+  "swiftGrammarFiles": 36,
+  "externalProviderCalls": 0,
+  "elapsedSeconds": 13.081614583003102,
+  "nativeRuntime": "pending hosted SwiftUI/XCTest",
+  "trees": {
+    "apps/ios/Orca": "a3d27268b79f1ec3e8fe09d516b06dee376ad767",
+    "apps/ios/OrcaTests": "53c8b85b9d4d0851c3b11b56a323935dfabf693e",
+    "apps/ios/OrcaUITests": "3f8bbdda2cbe7321a924da20596de76a36ca8eac",
+    "apps/ios/Tools": "a8dd4b410132a5a14aa9c39f8a93af43564c71f0"
+  }
+}

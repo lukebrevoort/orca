@@ -1,8 +1,11 @@
 import XCTest
+import SwiftUI
+import UIKit
 import ImageIO
 import UniformTypeIdentifiers
 import AVFoundation
 import Combine
+import UserNotifications
 @testable import Orca
 
 private final class StubURLProtocol: URLProtocol {
@@ -550,17 +553,17 @@ extension OrcaTests {
         let store = MailboxPreferenceStore(defaults: defaults)
         let model = MailboxViews(preferences: store)
         model.activate(scope: "origin|user")
-        XCTAssertEqual(model.options.map(\.id), ["normal", "focus", "all"])
+        XCTAssertEqual(model.options.map(\.id), ["important", "all", "normal", "focus"])
         model.selectedID = "focus"
         model.setEnabled("focus", false)
-        XCTAssertEqual(model.selectedID, "normal")
+        XCTAssertEqual(model.selectedID, "important")
         model.setEnabled("all", false)
         model.setEnabled("view:hub", true)
-        XCTAssertEqual(model.options.map(\.id), ["normal"], "Inbox remains a reachable fallback before the catalog loads")
+        XCTAssertEqual(model.options.map(\.id), ["important", "all", "normal"], "Important and All Mail remain reachable even before catalogs load")
         XCTAssertEqual(notifications.load(scope: "origin|user"), .off)
         let reopened = MailboxViews(preferences: store)
         reopened.activate(scope: "origin|user")
-        XCTAssertEqual(reopened.enabledIDs, ["view:hub"])
+        XCTAssertEqual(reopened.enabledIDs, ["all", "view:hub"])
         reopened.activate(scope: "origin|other-user")
         XCTAssertEqual(reopened.enabledIDs, ["focus", "all"])
         reopened.activate(scope: "other-origin|user")
@@ -632,24 +635,43 @@ extension OrcaTests {
         XCTAssertFalse(SavedViewReader.isValid(page, view: view, accounts: DemoData.accounts))
     }
 
+    @MainActor private func verifyCatalogTestConnection(_ state: AppState) async throws {
+        state.baseURLText = "https://orca.example"
+        StubURLProtocol.handler = { request in
+            switch request.url!.path {
+            case "/v1/auth/session":
+                return (200, try JSONSerialization.data(withJSONObject: ["isAuthenticated": true, "user": ["id": "catalog-owner", "email": "catalog@example.com", "name": NSNull()], "expiresAt": NSNull()]))
+            case "/v1/accounts": return (200, try JSONEncoder().encode(["items": DemoData.accounts]))
+            default: throw URLError(.unsupportedURL)
+            }
+        }
+        await state.loadAccounts()
+        _ = try XCTUnwrap(state.nativeMailContext(), "Catalog tests must establish the actual verified connection before testing its lifetime")
+        XCTAssertEqual(state.userID, "catalog-owner")
+    }
+
     @MainActor func testViewCatalogRemovalFallsBackWithoutErasingSavedVisibility() async throws {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
         let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let state = AppState(client: client, cache: CacheStore(directory: folder)); state.phase = .ready
+        let state = AppState(client: client, cache: CacheStore(directory: folder))
+        let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
+        defer { UserDefaults.standard.set(previousUser, forKey: "lastUser|https://orca.example"); UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID") }
+        defer { StubURLProtocol.handler = nil }
+        try await verifyCatalogTestConnection(state)
         let suite = "OrcaTests.catalog.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
         let model = MailboxViews(preferences: .init(defaults: defaults))
         var available = true
-        StubURLProtocol.handler = { _ in
-            (200, (available ? #"{"items":[{"id":"hub","name":"Hub notifications","description":"","revision":1}]}"# : #"{"items":[]}"#).data(using: .utf8)!)
+        StubURLProtocol.handler = { request in
+            guard request.url!.path == "/v1/organization/views" else { return (503, Data(#"{"error":{"code":"synthetic_optional_unavailable","message":"Optional catalog unavailable"}}"#.utf8)) }
+            return (200, (available ? #"{"items":[{"id":"hub","name":"Hub notifications","description":"","revision":1}]}"# : #"{"items":[]}"#).data(using: .utf8)!)
         }
-        defer { StubURLProtocol.handler = nil }
         await model.load(state: state); model.setEnabled("view:hub", true); model.selectedID = "view:hub"
         XCTAssertEqual(model.title, "Hub notifications")
         available = false; await model.load(state: state)
-        XCTAssertEqual(model.selectedID, "normal")
+        XCTAssertEqual(model.selectedID, "important")
         XCTAssertTrue(model.enabledIDs.contains("view:hub"))
         XCTAssertEqual(model.unavailableIDs, ["view:hub"])
     }
@@ -720,14 +742,20 @@ extension OrcaTests {
     @MainActor func testLateViewCatalogResponseCannotCrossIdentityScope() async throws {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
         let client = APIClient(baseURL: URL(string: "https://orca.example")!, session: URLSession(configuration: config)) { nil }
-        let state = AppState(client: client); state.phase = .ready
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let state = AppState(client: client, cache: CacheStore(directory: folder))
+        let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
+        defer { UserDefaults.standard.set(previousUser, forKey: "lastUser|https://orca.example"); UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID") }
+        defer { StubURLProtocol.handler = nil }
+        try await verifyCatalogTestConnection(state)
         let started = expectation(description: "Catalog request started")
-        StubURLProtocol.handler = { _ in
+        StubURLProtocol.handler = { request in
+            guard request.url!.path == "/v1/organization/views" else { return (503, Data(#"{"error":{"code":"synthetic_optional_unavailable","message":"Optional catalog unavailable"}}"#.utf8)) }
             started.fulfill()
             Thread.sleep(forTimeInterval: 0.15)
             return (200, #"{"items":[{"id":"private","name":"Previous identity","description":"","revision":1}]}"#.data(using: .utf8)!)
         }
-        defer { StubURLProtocol.handler = nil }
         let model = MailboxViews()
         let pending = Task { await model.load(state: state) }
         await fulfillment(of: [started], timeout: 3)
@@ -735,7 +763,7 @@ extension OrcaTests {
         model.activate(scope: state.ownerScope)
         await pending.value
         XCTAssertTrue(model.views.isEmpty)
-        XCTAssertEqual(model.selectedID, "normal")
+        XCTAssertEqual(model.selectedID, "important")
     }
 
     @MainActor func testViewCacheIsNeverUsedForAuthorizationOrDeletedViewErrors() {
@@ -1099,7 +1127,7 @@ final class InboxLoadingTests: XCTestCase {
         }
         await model.load(state: fixture.state)
         XCTAssertEqual(model.messages.map(\.id), ["page"]); XCTAssertNil(model.nextCursor)
-        XCTAssertEqual(model.error, "Offline — showing saved mail")
+        XCTAssertEqual(model.error, "Offline — showing saved mail; importance may have changed.")
         fixture.state.baseURLText = "https://other.example"
         StubURLProtocol.handler = { request in
             if request.url?.path == "/v1/destinations" { return (200, InboxLoadingTestSupport.catalog) }
@@ -2460,8 +2488,13 @@ final class InboxRecoveryTests: XCTestCase {
             let model = InboxViewModel(); model.view = "all"
             await model.load(state: fixture.state)
             await model.load(state: fixture.state, reset: false)
-            XCTAssertEqual(requests, 2); XCTAssertEqual(model.nextCursor, "valid-cursor")
-            XCTAssertEqual(model.messages.map(\.id), ["saved"]); XCTAssertEqual(model.error, "Try again")
+            XCTAssertEqual(requests, 2)
+            if status == 401 {
+                XCTAssertNil(model.nextCursor); XCTAssertTrue(model.messages.isEmpty, "Authentication loss must invalidate previously accepted mail")
+            } else {
+                XCTAssertEqual(model.nextCursor, "valid-cursor"); XCTAssertEqual(model.messages.map(\.id), ["saved"])
+            }
+            XCTAssertEqual(model.error, "Try again")
         }
     }
 
@@ -3083,5 +3116,761 @@ final class FeedbackTicketTests: XCTestCase {
         for url in ["javascript:alert(1)", "https://example.com/issue", "http://linear.app/issue", "https://secret@linear.app/issue"] {
             receipt.url = url; XCTAssertNil(receipt.issueURL)
         }
+    }
+}
+
+/// HTTP-boundary native controller tests. No provider, APNs or simulator-delivery claim.
+final class NativeImportanceTests: XCTestCase {
+    private static func resolution(_ choice: String = "unreviewed", revision: Int = 0, inherited: String = "unreviewed") -> [String: Any] {
+        ["effective": choice, "source": revision == 0 ? "unreviewed" : "conversation",
+         "conversation": ["choice": choice == "unreviewed" ? NSNull() : (choice as Any), "revision": revision],
+         "inherited": inherited, "participantCounts": ["important": 0, "notImportant": 0, "unreviewed": 1, "total": 1],
+         "preferences": [], "preferencesTruncated": false, "accountRevision": revision]
+    }
+    private static func data(_ value: [String: Any]) throws -> Data { try JSONSerialization.data(withJSONObject: value) }
+    private static func operation(_ command: ImportanceCommand, status: String = "current", currentRevision: Int? = nil) -> [String: Any] {
+        let revision = command.expectedRevision + 1
+        return ["status": status,
+                "receipt": ["operationId": command.operationId, "accountId": command.accountId,
+                            "target": command.target.kind == "sender" ? ["kind": "sender", "address": command.target.address!] : ["kind": "conversation", "threadId": command.target.threadId!],
+                            "choice": command.choice.map { $0.rawValue as Any } ?? NSNull(), "previousChoice": NSNull(), "revision": revision,
+                            "undoUntil": ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))],
+                "current": ["choice": status == "superseded" ? "not_important" : command.choice.map { $0.rawValue as Any } ?? NSNull(), "revision": currentRevision ?? revision]]
+    }
+    @MainActor func testCommandEncodesResetAsNullWithStableUUIDAndNoBroaderScope() throws {
+        let command = ImportanceCommand(accountId: "one", target: .conversation("thread /?"), choice: nil, expectedRevision: 7)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(command)) as? [String: Any])
+        XCTAssertTrue(body["choice"] is NSNull); XCTAssertNotNil(UUID(uuidString: try XCTUnwrap(body["operationId"] as? String)))
+        XCTAssertNil(body["confirmation"]); XCTAssertEqual(body["expectedRevision"] as? Int, 7)
+        let target = try XCTUnwrap(body["target"] as? [String: Any]); XCTAssertEqual(target["threadId"] as? String, "thread /?"); XCTAssertNil(target["address"])
+    }
+    @MainActor func testRealOptInHeadersAndEnvelopeOwnershipAreRequired() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var paths = [String]()
+        StubURLProtocol.handler = { request in
+            paths.append(request.url!.path)
+            if request.url!.path.contains("importance/conversations") {
+                return (200, try Self.data(["accountId": "wrong-account", "threadId": "thread /?", "importance": Self.resolution()]))
+            }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "x-orca-importance-version"), "1")
+            if request.url!.path == "/v1/inbox" { return (200, try InboxLoadingTestSupport.page()) }
+            return (200, Data("{}".utf8))
+        }
+        _ = try await fixture.state.client!.inbox(accountId: "demo-account", view: "all", query: nil)
+        do { _ = try await fixture.state.client!.importance(accountId: "demo-account", threadId: "thread /?"); XCTFail("Reject another account's envelope") }
+        catch { XCTAssertNotNil(error as? APIClient.ClientError) }
+        XCTAssertEqual(paths.count, 2)
+    }
+    @MainActor func testDroppedWriteReconcilesWithoutAnotherWriteAndSupersededReceiptIsNotCurrent() async throws {
+        for superseded in [false, true] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let suite = "importance-test-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let controller = ImportanceController(defaults: defaults)
+            var command: ImportanceCommand?, writes = 0, reconciles = 0
+            StubURLProtocol.handler = { request in
+                let path = request.url!.path
+                if path == "/v1/importance/choices" {
+                    writes += 1; command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request))
+                    throw URLError(.networkConnectionLost) // Server committed, response was dropped.
+                }
+                if path.contains("/operations/") {
+                    reconciles += 1
+                    return (200, try Self.data(Self.operation(command!, status: superseded ? "superseded" : "current", currentRevision: superseded ? 2 : nil)))
+                }
+                return (200, try Self.data(["accountId": "demo-account", "threadId": "thread", "importance": Self.resolution(command == nil ? "unreviewed" : superseded ? "not_important" : "important", revision: command == nil ? 0 : superseded ? 2 : 1)]))
+            }
+            await controller.open(state: fixture.state, accountId: "demo-account", threadId: "thread")
+            await controller.choose(.important, state: fixture.state)
+            XCTAssertEqual(writes, 1); XCTAssertEqual(reconciles, 1); XCTAssertFalse(controller.uncertain)
+            XCTAssertEqual(controller.snapshot?.effective, superseded ? .notImportant : .important)
+            XCTAssertEqual(controller.receipt == nil, superseded)
+            XCTAssertEqual(controller.canUndo, !superseded)
+        }
+    }
+    @MainActor func testOfflineReopenRetainsOriginalCommandAndFresh404AllowsExplicitCurrentReview() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "importance-test-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var offline = false, writes = 0, recordedIDs = [String]()
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" { writes += 1; offline = true; throw URLError(.networkConnectionLost) }
+            if request.url!.path.contains("/operations/") {
+                recordedIDs.append(request.url!.lastPathComponent)
+                if offline { throw URLError(.notConnectedToInternet) }
+                return (404, Data("{}".utf8))
+            }
+            return (200, try Self.data(["accountId": "demo-account", "threadId": "thread", "importance": Self.resolution()]))
+        }
+        let first = ImportanceController(defaults: defaults)
+        await first.open(state: fixture.state, accountId: "demo-account", threadId: "thread")
+        await first.choose(.important, state: fixture.state)
+        XCTAssertTrue(first.uncertain); XCTAssertNil(first.receipt)
+        let reopened = ImportanceController(defaults: defaults)
+        await reopened.open(state: fixture.state, accountId: "demo-account", threadId: "thread")
+        await reopened.choose(.notImportant, state: fixture.state)
+        XCTAssertEqual(writes, 1); XCTAssertTrue(reopened.uncertain)
+        XCTAssertEqual(Set(recordedIDs).count, 1, "Reopening reconciles the original UUID")
+        offline = false
+        await reopened.reviewCurrent(state: fixture.state)
+        XCTAssertFalse(reopened.uncertain); XCTAssertEqual(reopened.snapshot?.effective, .unreviewed); XCTAssertEqual(writes, 1)
+    }
+    @MainActor func testImportantUsesRetainedPageWithoutDestinationCallsAndRestartsStaleCursorOnce() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let model = InboxViewModel(); model.view = "important"
+        var queries = [[String: String]]()
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.url!.path, "/v1/important")
+            let q = InboxLoadingTestSupport.query(request); queries.append(q)
+            if q["cursor"] != nil { return (400, Data(#"{"error":{"code":"invalid_cursor","message":"Mailbox changed"}}"#.utf8)) }
+            return (200, try Self.data(["accountId": "demo-account", "revision": queries.count,
+                "items": [["accountId": "demo-account", "threadId": "archived-robot", "subject": "Retained automated receipt", "snippet": "Still Important", "from": "robot@example.com", "receivedAt": "2026-11-11T00:00:00Z", "unread": false, "importance": Self.resolution("important", revision: 1)]], "nextCursor": "revision-bound"]))
+        }
+        await model.load(state: fixture.state)
+        await model.load(state: fixture.state, reset: false)
+        XCTAssertEqual(queries.count, 3); XCTAssertNil(queries[0]["cursor"]); XCTAssertEqual(queries[1]["cursor"], "revision-bound"); XCTAssertNil(queries[2]["cursor"])
+        XCTAssertEqual(model.messages.map(\.threadId), ["archived-robot"])
+        XCTAssertEqual(model.messages.first?.importance?.effective, .important); XCTAssertNil(model.messages.first?.humanSignal)
+    }
+    @MainActor func testDelayedOldAccountCannotInstallImportanceOrReceipt() async throws {
+        let gate = InboxLoadingTestSupport.FirstRequestGate(started: expectation(description: "old account request suspended"))
+        let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.wait(); return "fixture-token" }); defer { fixture.cleanup() }
+        let controller = ImportanceController()
+        StubURLProtocol.handler = { _ in (200, try Self.data(["accountId": "demo-account", "threadId": "thread", "importance": Self.resolution("important", revision: 1)])) }
+        let task = Task { await controller.open(state: fixture.state, accountId: "demo-account", threadId: "thread") }
+        await fulfillment(of: [gate.started], timeout: 3)
+        var other = DemoData.accounts[0]; other.id = "second-account"; fixture.state.accounts.append(other); fixture.state.selectedAccountID = other.id
+        controller.invalidate()
+        await gate.release(); await task.value
+        XCTAssertNil(controller.snapshot); XCTAssertNil(controller.receipt); XCTAssertFalse(controller.busy)
+    }
+    @MainActor func testPermanentAllMailDoesNotEraseOldVisibilityChoice() throws {
+        let suite = "importance-test-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MailboxPreferenceStore(defaults: defaults); store.save(["view:custom"], scope: "one")
+        let model = MailboxViews(preferences: store); model.activate(scope: "one")
+        XCTAssertEqual(model.selectedID, "important"); XCTAssertTrue(model.options.contains { $0.id == "all" })
+        model.setEnabled("all", false)
+        XCTAssertTrue(model.options.contains { $0.id == "all" }); XCTAssertEqual(store.load(scope: "one"), ["view:custom"])
+    }
+    func testFindUsesCompleteCaseInsensitiveUnicodeMessageAndEmptyDoesNotLoop() {
+        XCTAssertEqual(ReaderFind.count("cafe", in: "Café\n> café\nCAFE"), 3)
+        XCTAssertEqual(ReaderFind.count("", in: "whole message"), 0)
+        XCTAssertEqual(ReaderFind.count("abc", in: "abcabc"), 2)
+    }
+}
+
+extension NativeImportanceTests {
+    func testImportantNotificationPermissionMappingKeepsOSAuthority() {
+        XCTAssertEqual(NotificationManager.permission(for: .authorized), "granted")
+        XCTAssertEqual(NotificationManager.permission(for: .provisional), "granted")
+        XCTAssertEqual(NotificationManager.permission(for: .ephemeral), "granted")
+        XCTAssertEqual(NotificationManager.permission(for: .denied), "denied")
+        XCTAssertEqual(NotificationManager.permission(for: .notDetermined), "default")
+    }
+    @MainActor func testNotificationWireKeepsPolicyRegistrationAndDeliverySeparate() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        var writes = 0
+        let installation: [String: Any] = ["installationId": "native-test", "channel": "apns", "revision": 2,
+            "policy": ["version": 1, "kind": "important_only", "enabled": true, "accountIds": ["demo-account"]],
+            "permission": "granted", "previousSelection": ["inbox": true, "spaceIds": []],
+            "delivery": ["available": false, "scope": "apns", "reason": "registration_required"], "cooldownSeconds": 900]
+        let command = ImportantNotificationCommand(enabled: true, accountIds: ["demo-account"], permission: "granted", expectedRevision: 1)
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer fixture-token")
+            if request.httpMethod == "PUT" {
+                writes += 1
+                let body = try JSONDecoder().decode(ImportantNotificationCommand.self, from: requestBodyData(request))
+                XCTAssertEqual(body, command)
+                return (200, try Self.data(["operationId": command.operationId, "status": "superseded", "appliedRevision": 1, "current": installation]))
+            }
+            XCTAssertEqual(InboxLoadingTestSupport.query(request)["channel"], "apns")
+            return (200, try Self.data(installation))
+        }
+        let current = try await fixture.state.client!.importantNotificationStatus(installationId: "native-test")
+        XCTAssertFalse(current.delivery.available); XCTAssertEqual(current.policy?.enabled, true)
+        XCTAssertEqual(current.delivery.reason, "registration_required"); XCTAssertEqual(writes, 0, "Inspecting settings never adopts a policy")
+        let result = try await fixture.state.client!.setImportantNotifications(installationId: "native-test", command: command)
+        XCTAssertEqual(result.current.revision, 2); XCTAssertEqual(result.status, "superseded"); XCTAssertEqual(writes, 1)
+    }
+}
+
+extension NativeImportanceTests {
+    @MainActor func testExactSenderPreviewNeverWritesUntilFreshExplicitConfirmation() async throws {
+        for expired in [true, false] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let suite = "importance-preview-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let controller = ImportanceController(defaults: defaults)
+            var writes = 0, previews = 0
+            StubURLProtocol.handler = { request in
+                if request.url!.path == "/v1/importance/preview" {
+                    previews += 1
+                    return (200, try Self.data(["accountId": "demo-account", "address": "robot@example.com", "choice": "important",
+                        "current": ["choice": NSNull(), "revision": 8], "accountRevision": 11, "confirmation": "opaque-server-confirmation",
+                        "expiresAt": ISO8601DateFormatter().string(from: Date().addingTimeInterval(expired ? -1 : 300)),
+                        "existing": ["matching": 5, "overridden": 1, "changed": 3, "keptImportantByOtherParticipants": 1,
+                            "before": ["important": 2, "not_important": 1, "unreviewed": 2], "after": ["important": 5, "not_important": 0, "unreviewed": 0]],
+                        "future": ["accountId": "demo-account", "address": "robot@example.com", "preservesConversationOverrides": true, "otherImportantParticipantsMayKeepImportant": true, "exactAddressOnly": true]]))
+                }
+                if request.url!.path == "/v1/importance/choices" {
+                    writes += 1
+                    let command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request))
+                    XCTAssertEqual(command.target, .sender("robot@example.com")); XCTAssertEqual(command.expectedRevision, 8)
+                    XCTAssertEqual(command.confirmation, "opaque-server-confirmation")
+                    return (200, try Self.data(Self.operation(command)))
+                }
+                return (200, try Self.data(["accountId": "demo-account", "threadId": "thread", "importance": Self.resolution(writes == 0 ? "unreviewed" : "important")]))
+            }
+            await controller.open(state: fixture.state, accountId: "demo-account", threadId: "thread")
+            await controller.prepareSender("robot@example.com", choice: .important, state: fixture.state)
+            XCTAssertEqual(writes, 0); XCTAssertEqual(previews, 1)
+            XCTAssertEqual(controller.preview?.existing.changed, 3); XCTAssertEqual(controller.preview?.existing.overridden, 1)
+            await controller.confirmSender(state: fixture.state)
+            XCTAssertEqual(writes, expired ? 0 : 1)
+            if expired { XCTAssertNotNil(controller.error); XCTAssertNil(controller.receipt) }
+        }
+    }
+    @MainActor func testUndoUsesOwnedRevisionAndNullRestorationStillInheritsCurrentImportant() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "importance-undo-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = ImportanceController(defaults: defaults)
+        var writes = 0, undoID: String?, originalID: String?
+        StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/importance/choices" {
+                writes += 1; let command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); originalID = command.operationId
+                return (200, try Self.data(Self.operation(command)))
+            }
+            if request.url!.path.hasSuffix("/undo") {
+                let body = try XCTUnwrap(JSONSerialization.jsonObject(with: requestBodyData(request)) as? [String: Any])
+                XCTAssertEqual(body["expectedRevision"] as? Int, 1); XCTAssertEqual(body["accountId"] as? String, "demo-account")
+                XCTAssertTrue(request.url!.path.contains(originalID!))
+                undoID = body["operationId"] as? String; XCTAssertNotEqual(undoID, originalID)
+                let command = ImportanceCommand(accountId: "demo-account", target: .conversation("thread"), choice: nil, expectedRevision: 1, operationId: undoID!)
+                return (200, try Self.data(Self.operation(command)))
+            }
+            var snapshot = Self.resolution("important", revision: undoID == nil ? writes : 2, inherited: "important")
+            snapshot["participantCounts"] = ["important": 1, "notImportant": 0, "unreviewed": 0, "total": 1]
+            if writes == 0 { snapshot["source"] = "participants" }
+            if undoID != nil { snapshot["conversation"] = ["choice": NSNull(), "revision": 2]; snapshot["source"] = "participants" }
+            return (200, try Self.data(["accountId": "demo-account", "threadId": "thread", "importance": snapshot]))
+        }
+        await controller.open(state: fixture.state, accountId: "demo-account", threadId: "thread")
+        await controller.choose(.important, state: fixture.state)
+        XCTAssertTrue(controller.canUndo)
+        await controller.undo(state: fixture.state)
+        XCTAssertEqual(writes, 1); XCTAssertNotNil(undoID)
+        XCTAssertEqual(controller.snapshot?.effective, .important, "Undo restores an explicit null, not a historical effective value")
+        XCTAssertNil(controller.snapshot?.conversation.choice); XCTAssertEqual(controller.snapshot?.conversation.revision, 2)
+    }
+}
+
+private actor NativePreferenceSaveGate {
+    let started: XCTestExpectation
+    private var count = 0
+    private var continuation: CheckedContinuation<Void, Never>?
+    init(started: XCTestExpectation) { self.started = started }
+    func token() async -> String {
+        count += 1
+        if count == 4 { await withCheckedContinuation { continuation = $0; started.fulfill() } }
+        return "fixture-token"
+    }
+    func release() { continuation?.resume(); continuation = nil }
+}
+final class NativePreferenceTests: XCTestCase {
+    private struct SavedAccounts: Encodable { let items: [MailAccount] }
+    private var priorLastUser: Any?
+    override func setUp() { super.setUp(); priorLastUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example") }
+    override func tearDown() { UserDefaults.standard.set(priorLastUser, forKey: "lastUser|https://orca.example"); super.tearDown() }
+    @MainActor func testNewerAccountEditsSurviveOlderSaveAcknowledgementAcrossSections() async throws {
+        let gate = NativePreferenceSaveGate(started: expectation(description: "save request suspended"))
+        let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.token() }); defer { fixture.cleanup() }
+        let preferences = AccountPreferencesController()
+        StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/auth/session" { return (200, Data(#"{"isAuthenticated":true,"user":{"id":"preference-owner","email":"owner@example.com"}}"#.utf8)) }
+            if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "x-orca-expected-user-id"), "preference-owner")
+            if request.httpMethod == "PATCH" { return (200, try requestBodyData(request)) }
+            return (200, Data(#"{"signature":"original","composeFormat":"plain","replyBehavior":"reply","notifyByDefault":false}"#.utf8))
+        }
+        await fixture.state.loadAccounts()
+        await preferences.load(state: fixture.state)
+        preferences.edits?.signature = "submitted first"
+        let save = Task { await preferences.save(state: fixture.state) }
+        await fulfillment(of: [gate.started], timeout: 3)
+        preferences.edits?.signature = "newest still unsaved"
+        await gate.release(); await save.value
+        XCTAssertEqual(preferences.saved?.signature, "submitted first")
+        XCTAssertEqual(preferences.edits?.signature, "newest still unsaved"); XCTAssertTrue(preferences.dirty)
+        XCTAssertTrue(preferences.status?.contains("Newer edits") == true)
+    }
+}
+
+private actor NativeIdentityTokenGate {
+    let started: XCTestExpectation
+    private var count = 0
+    private var continuation: CheckedContinuation<Void, Never>?
+    init(started: XCTestExpectation) { self.started = started }
+    func token() async -> String? {
+        count += 1
+        // AppState session/accounts, resolver session, then legacy status.
+        if count == 4 { await withCheckedContinuation { continuation = $0; started.fulfill() } }
+        return "fixture-token"
+    }
+    func release() { continuation?.resume(); continuation = nil }
+}
+final class NativeNotificationIdentityTests: XCTestCase {
+    private var priorLastUsers = [String: Any]()
+    override func setUp() {
+        super.setUp()
+        for key in ["lastUser|https://orca.example", "lastUser|https://other.example"] { priorLastUsers[key] = UserDefaults.standard.object(forKey: key) ?? NSNull() }
+    }
+    override func tearDown() {
+        for (key, value) in priorLastUsers { if value is NSNull { UserDefaults.standard.removeObject(forKey: key) } else { UserDefaults.standard.set(value, forKey: key) } }
+        priorLastUsers = [:]; super.tearDown()
+    }
+    private static func data(_ value: [String: Any]) throws -> Data { try JSONSerialization.data(withJSONObject: value) }
+    private static func session(_ user: String) throws -> Data {
+        try data(["isAuthenticated": true, "user": ["id": user, "email": "same-provider@example.com", "name": "Same display name"]])
+    }
+    private static func pushStatus(_ id: String?) throws -> Data {
+        let device: [String: Any] = ["installationId": id ?? "", "environment": "sandbox", "notificationSelection": ["inbox": true, "spaceIds": []],
+            "generation": 4, "registeredAt": "2026-11-11T00:00:00Z", "lastSeenAt": "2026-11-11T00:00:00Z", "updatedAt": "2026-11-11T00:00:00Z", "disabledAt": NSNull(), "disabledReason": NSNull()]
+        return try data(["configured": true, "deliveryEnabled": id != nil, "disabledReason": NSNull(), "devices": id == nil ? [] : [device]])
+    }
+    @MainActor func testAuthenticatedOwnerAndCanonicalServerRetainIdentityAcrossReloginButSeparateOtherOwners() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "notification-identity-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = NotificationInstallationStore(defaults: defaults), identity = NotificationInstallationIdentity(store: .init(defaults: defaults))
+        var user = "owner-a", writes = 0
+        StubURLProtocol.handler = { request in
+            if request.httpMethod != "GET" { writes += 1 }
+            if request.url!.path == "/v1/auth/session" { return (200, try Self.session(user)) }
+            return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts)))
+        }
+        await fixture.state.loadAccounts()
+        let firstValue = await identity.resolve(state: fixture.state)
+        let first = try XCTUnwrap(firstValue); XCTAssertNotNil(UUID(uuidString: first))
+        identity.invalidate(); await fixture.state.loadAccounts()
+        let reloginValue = await identity.resolve(state: fixture.state)
+        XCTAssertEqual(reloginValue, first, "Relogin/session rotation keeps the same owner identity")
+        var otherMailbox = DemoData.accounts[0]; otherMailbox.id = "other-mailbox"; fixture.state.accounts.append(otherMailbox); fixture.state.selectedAccountID = otherMailbox.id
+        let mailboxValue = await identity.resolve(state: fixture.state)
+        XCTAssertEqual(mailboxValue, first, "Mailbox selection is not device ownership")
+        user = "owner-b"; await fixture.state.loadAccounts()
+        let secondValue = await identity.resolve(state: fixture.state)
+        let second = try XCTUnwrap(secondValue); XCTAssertNotEqual(second, first)
+        user = "owner-a"
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://other.example")!, session: URLSession(configuration: config)) { "fixture-token" }
+        let otherServer = AppState(client: client, cache: CacheStore(directory: fixture.folder.appending(path: "other-server")))
+        otherServer.baseURLText = "https://other.example"; otherServer.phase = .ready; await otherServer.loadAccounts()
+        let thirdValue = await identity.resolve(state: otherServer)
+        let third = try XCTUnwrap(thirdValue); XCTAssertNotEqual(third, first); XCTAssertNotEqual(third, second)
+        let canonicalClient = APIClient(baseURL: URL(string: "https://ORCA.EXAMPLE:443")!, session: URLSession(configuration: config)) { "fixture-token" }
+        let canonicalState = AppState(client: canonicalClient, cache: CacheStore(directory: fixture.folder.appending(path: "canonical")))
+        canonicalState.baseURLText = "https://ORCA.EXAMPLE:443"; canonicalState.phase = .ready; await canonicalState.loadAccounts()
+        XCTAssertEqual(canonicalState.ownerScope, "https://orca.example|owner-a")
+        let canonicalValue = await identity.resolve(state: canonicalState)
+        XCTAssertEqual(canonicalValue, first, "Host case/default port do not create a new owner")
+        XCTAssertEqual(store.saved(scope: "https://orca.example|owner-a"), first); XCTAssertEqual(writes, 0)
+    }
+    private struct SavedAccounts: Codable { var items: [MailAccount] }
+    @MainActor func testLegacyIDMigratesOnlyAfterAuthenticatedOwnedRegistrationWithoutDeletingOtherData() async throws {
+        for owned in [true, false] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let suite = "notification-identity-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            defaults.set("legacy-global", forKey: "installationID")
+            let store = NotificationInstallationStore(defaults: defaults), identity = NotificationInstallationIdentity(store: .init(defaults: defaults))
+            var paths = [String]()
+            StubURLProtocol.handler = { request in
+                XCTAssertEqual(request.httpMethod, "GET", "Identity resolution never registers, adopts, replays or deletes")
+                paths.append(request.url!.path)
+                switch request.url!.path {
+                case "/v1/auth/session": return (200, try Self.session("owner-a"))
+                case "/v1/accounts": return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts)))
+                default:
+                    XCTAssertEqual(InboxLoadingTestSupport.query(request)["installationId"], "legacy-global")
+                    return (200, try Self.pushStatus(owned ? "legacy-global" : nil))
+                }
+            }
+            await fixture.state.loadAccounts()
+            let pendingKey = "important-notifications.pending|\(fixture.state.ownerScope)|legacy-global"
+            defaults.set("original-operation-uuid", forKey: pendingKey)
+            let resultValue = await identity.resolve(state: fixture.state)
+            let result = try XCTUnwrap(resultValue)
+            XCTAssertEqual(result == "legacy-global", owned)
+            XCTAssertEqual(store.saved(scope: fixture.state.ownerScope), result)
+            XCTAssertEqual(store.legacyID, "legacy-global"); XCTAssertEqual(defaults.string(forKey: pendingKey), "original-operation-uuid")
+            XCTAssertEqual(Array(paths.suffix(2)), ["/v1/auth/session", "/v1/mobile/push/status"])
+        }
+    }
+    @MainActor func testUnauthorizedOfflineAndMismatchedSessionNeverClaimLegacyIdentity() async throws {
+        for failure in ["unauthorized", "offline", "mismatched-session"] {
+            let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+            let suite = "notification-identity-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            defaults.set("legacy-global", forKey: "installationID")
+            let identity = NotificationInstallationIdentity(store: .init(defaults: defaults)), store = NotificationInstallationStore(defaults: defaults)
+            var resolving = false, statusReads = 0
+            StubURLProtocol.handler = { request in
+                XCTAssertEqual(request.httpMethod, "GET")
+                if request.url!.path == "/v1/auth/session" { return (200, try Self.session(resolving && failure == "mismatched-session" ? "another-owner" : "owner-a")) }
+                if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+                statusReads += 1
+                if failure == "offline" { throw URLError(.notConnectedToInternet) }
+                return (401, Data("{}".utf8))
+            }
+            await fixture.state.loadAccounts(); resolving = true
+            let resultValue = await identity.resolve(state: fixture.state)
+            XCTAssertNil(resultValue); XCTAssertNil(store.saved(scope: fixture.state.ownerScope))
+            XCTAssertEqual(store.legacyID, "legacy-global"); XCTAssertEqual(statusReads, failure == "mismatched-session" ? 0 : 1)
+        }
+    }
+    @MainActor func testDelayedTokenAndLegacyStatusCannotInstallPreviousOwnerIdentity() async throws {
+        let gate = NativeIdentityTokenGate(started: expectation(description: "legacy token lookup suspended"))
+        let fixture = InboxLoadingTestSupport.Fixture(token: { await gate.token() }); defer { fixture.cleanup() }
+        let suite = "notification-identity-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("legacy-global", forKey: "installationID")
+        let identity = NotificationInstallationIdentity(store: .init(defaults: defaults)), store = NotificationInstallationStore(defaults: defaults)
+        var user = "owner-a", writes = 0
+        StubURLProtocol.handler = { request in
+            if request.httpMethod != "GET" { writes += 1 }
+            if request.url!.path == "/v1/auth/session" { return (200, try Self.session(user)) }
+            if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+            return (200, try Self.pushStatus("legacy-global"))
+        }
+        await fixture.state.loadAccounts(); let formerScope = fixture.state.ownerScope
+        let task = Task { await identity.resolve(state: fixture.state) }
+        await fulfillment(of: [gate.started], timeout: 3)
+        user = "owner-b"; await fixture.state.loadAccounts(); identity.invalidate()
+        await gate.release()
+        let oldResult = await task.value
+        XCTAssertNil(oldResult); XCTAssertNil(identity.installationID)
+        XCTAssertNil(store.saved(scope: formerScope)); XCTAssertNil(store.saved(scope: fixture.state.ownerScope)); XCTAssertEqual(writes, 0)
+    }
+}
+
+extension NativePreferenceTests {
+    @MainActor func testNotificationRouteCannotLeaveUnsavedAccountChoices() {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let preferences = AccountPreferencesController()
+        fixture.state.accountPreferences = preferences
+        preferences.edits = .init(signature: "Unsaved notification navigation", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false)
+        fixture.state.selectedTab = "settings"
+        fixture.state.routeNotification(["threadId": "notification-thread", "accountId": "demo-account"])
+        XCTAssertEqual(fixture.state.selectedTab, "settings")
+        XCTAssertNil(fixture.state.routedThread)
+        XCTAssertTrue(preferences.dirty)
+    }
+}
+
+final class NativeViewEditorRecoveryTests: XCTestCase {
+    @MainActor func testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "native-editor-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let definition: [String: Any] = ["revision": 1, "accountIds": ["demo-account"], "sender": ["addresses": ["maya@example.com"]], "thread": ["subjectContains": "fixture", "readState": "unread"]]
+        var creates = 0, commits = 0, replayBodies = [String: Data](), serverName = "Original", drop = true, workspaceRevision = 2, viewRevision = 0
+        let oldLastUser = UserDefaults.standard.object(forKey: "lastUser|https://orca.example")
+        defer { UserDefaults.standard.set(oldLastUser, forKey: "lastUser|https://orca.example") }
+        StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/auth/session" { return (200, Data(#"{"isAuthenticated":true,"user":{"id":"view-owner","email":"owner@example.com"}}"#.utf8)) }
+            if request.url!.path == "/v1/accounts" { struct Accounts: Encodable { let items: [MailAccount] }; return (200, try JSONEncoder().encode(Accounts(items: DemoData.accounts))) }
+            let input = try JSONSerialization.jsonObject(with: requestBodyData(request)) as! [String: Any]
+            var draft: [String: Any] = ["mode": "create", "viewId": NSNull(), "viewRevision": NSNull(), "effectiveAccountIds": ["demo-account"], "source": ["kind": "search", "label": "fixture"], "identity": ["name": serverName, "description": ""], "definition": definition, "unsupportedClauses": [], "saveEligibility": ["allowed": true], "definitionDigest": "fixture-digest"]
+            let path = request.url!.path
+            if path.hasSuffix("/prepare") {
+                if input["viewId"] != nil { draft["mode"] = "update"; draft["viewId"] = "created-view"; draft["viewRevision"] = viewRevision }
+                return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "workspaceRevision": workspaceRevision, "draft": draft]))
+            }
+            if path.hasSuffix("/preview") {
+                draft = input["draft"] as! [String: Any]
+                // Preview recomputes derived scope; it is not part of the strict input draft.
+                draft["effectiveAccountIds"] = definition["accountIds"]
+                draft["saveEligibility"] = ["allowed": true]; draft["definitionDigest"] = "fixture-digest"
+                return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "draft": draft, "workspaceRevision": workspaceRevision, "results": ["state": "matches", "count": ["value": 1, "kind": "exact"]]]))
+            }
+            if path.hasSuffix("/commit-status") {
+                let revisions = input["expectedRevisions"] as! [String: Any], key = input["retryKey"] as! String
+                let canonical = try JSONSerialization.data(withJSONObject: input, options: .sortedKeys)
+                XCTAssertEqual(replayBodies[key], canonical)
+                return (200, try JSONSerialization.data(withJSONObject: ["operation": "view_commit", "workspaceId": "view-owner", "retryKey": key, "expectedRevisions": revisions, "outcome": "applied", "viewId": "created-view", "committedWorkspaceRevision": (revisions["workspace"] as! Int) + 1, "committedViewRevision": (revisions["view"] as? Int ?? 0) + 1]))
+            }
+            XCTAssertTrue(path.hasSuffix("/commit"))
+            commits += 1
+            let key = input["retryKey"] as! String, canonical = try JSONSerialization.data(withJSONObject: input, options: .sortedKeys)
+            if let original = replayBodies[key] { XCTAssertEqual(canonical, original, "Recovery must replay the exact original command, not replacement edits") }
+            else {
+                replayBodies[key] = canonical; workspaceRevision += 1; viewRevision += 1
+                let submitted = input["draft"] as! [String: Any]
+                if submitted["mode"] as? String == "create" { creates += 1 }
+                XCTAssertTrue(NSDictionary(dictionary: submitted["definition"] as! [String: Any]).isEqual(to: definition), "Simple edits preserve every advanced predicate")
+                serverName = (submitted["identity"] as! [String: Any])["name"] as! String
+            }
+            if drop { drop = false; throw URLError(.networkConnectionLost) }
+            return (200, try JSONSerialization.data(withJSONObject: ["workspaceId": "view-owner", "workspaceRevision": workspaceRevision, "view": ["id": "created-view", "workspaceId": "view-owner", "revision": viewRevision], "navigation": ["destination": "view:created-view"]]))
+        }
+        await fixture.state.loadAccounts()
+        let selection = NativeViewSelection(query: "fixture", accountId: "demo-account")
+        let first = NativeViewEditorController(defaults: defaults)
+        await first.open(selection: selection, state: fixture.state)
+        first.name = "Submitted"; first.edited(); await first.review()
+        let validPreview = try XCTUnwrap(first.preview, "The real preview contract must recompute effective account scope before Save")
+        if case .array(let ids) = validPreview["draft"]["effectiveAccountIds"] { XCTAssertEqual(ids.compactMap(\.text), ["demo-account"]) } else { XCTFail("Preview must include derived account IDs") }
+        let lost = await first.save(); XCTAssertNil(lost); XCTAssertEqual(creates, 1)
+        first.name = "Newer preserved edit"; first.edited(); first.close()
+        let reopened = NativeViewEditorController(defaults: defaults)
+        await reopened.open(selection: selection, state: fixture.state)
+        XCTAssertEqual(reopened.name, "Newer preserved edit"); XCTAssertNotNil(reopened.pendingTarget)
+        await reopened.review(); XCTAssertNil(reopened.preview, "Preview remains read-only and cannot bypass reconciliation")
+        let recovered = await reopened.save()
+        XCTAssertNil(recovered, "Acknowledging the earlier Save must keep newer edits open")
+        XCTAssertEqual(creates, 1); XCTAssertEqual(commits, 2); XCTAssertEqual(replayBodies.count, 1)
+        XCTAssertEqual(reopened.name, "Newer preserved edit"); XCTAssertTrue(reopened.changed)
+        await reopened.review(); let saved = await reopened.save()
+        XCTAssertEqual(saved, "created-view"); XCTAssertEqual(creates, 1); XCTAssertEqual(serverName, "Newer preserved edit")
+        XCTAssertEqual(replayBodies.count, 2, "Newer edits receive a separate update command only after the original Save resolves")
+    }
+}
+
+extension NativeImportanceTests {
+    @MainActor func testDroppedConversationAcknowledgementRemainsOwnedByOriginalTarget() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "importance-context-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var command: ImportanceCommand?, offline = false, writes = 0, operationIDs = [String]()
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                writes += 1; command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); offline = true
+                throw URLError(.networkConnectionLost)
+            }
+            if request.url!.path.contains("/operations/") {
+                operationIDs.append(request.url!.lastPathComponent)
+                if offline { throw URLError(.notConnectedToInternet) }
+                return (200, try Self.data(Self.operation(command!)))
+            }
+            let id = request.url!.lastPathComponent
+            return (200, try Self.data(["accountId": "demo-account", "threadId": id, "importance": Self.resolution(id == "A" && command != nil ? "important" : "unreviewed", revision: id == "A" && command != nil ? 1 : 0)]))
+        }
+        let first = ImportanceController(defaults: defaults)
+        await first.open(state: fixture.state, accountId: "demo-account", threadId: "A", subject: "Original A")
+        await first.choose(.important, state: fixture.state)
+        let reopened = ImportanceController(defaults: defaults)
+        await reopened.open(state: fixture.state, accountId: "demo-account", threadId: "B", subject: "Different B")
+        XCTAssertTrue(reopened.uncertain); XCTAssertTrue(reopened.originalTarget?.contains("Original A") == true)
+        await reopened.choose(.notImportant, state: fixture.state); XCTAssertEqual(writes, 1)
+        offline = false; await reopened.reconcile(state: fixture.state)
+        XCTAssertNil(reopened.receipt); XCTAssertFalse(reopened.canUndo)
+        XCTAssertTrue(reopened.status?.contains("Original A") == true)
+        XCTAssertEqual(reopened.snapshot?.effective, .unreviewed)
+        XCTAssertEqual(Set(operationIDs), [command!.operationId], "Every reconciliation retains A’s original UUID")
+    }
+    @MainActor func testKnownNewerConversationRevisionRetiresReceiptAndUndo() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "importance-stale-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var revision = 0
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                let command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); revision = 1
+                return (200, try Self.data(Self.operation(command)))
+            }
+            return (200, try Self.data(["accountId": "demo-account", "threadId": "A", "importance": Self.resolution(revision == 0 ? "unreviewed" : "important", revision: revision)]))
+        }
+        let controller = ImportanceController(defaults: defaults)
+        await controller.open(state: fixture.state, accountId: "demo-account", threadId: "A")
+        await controller.choose(.important, state: fixture.state)
+        XCTAssertNotNil(controller.receipt); XCTAssertTrue(controller.canUndo, "Establish the current receipt first")
+        revision = 2; await controller.refresh(state: fixture.state)
+        XCTAssertFalse(controller.canUndo); XCTAssertNil(controller.receipt)
+    }
+}
+
+extension NativeImportanceTests {
+    @MainActor func testAcknowledgedCorrectionRefreshesSubmittedGlobalSearchWithoutSubmittingNewTyping() async throws {
+        let fixture = InboxLoadingTestSupport.Fixture(); defer { fixture.cleanup() }
+        let suite = "search-correction-review-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var corrected = false, searched = [String]()
+        StubURLProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                let command = try JSONDecoder().decode(ImportanceCommand.self, from: requestBodyData(request)); corrected = true
+                return (200, try Self.data(Self.operation(command)))
+            }
+            if request.url!.path.contains("/importance/conversations/") {
+                return (200, try Self.data(["accountId": "demo-account", "threadId": "submitted", "importance": Self.resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)]))
+            }
+            let query = InboxLoadingTestSupport.query(request)["query"]!; searched.append(query)
+            var message = InboxMessage(id: "submitted", accountId: "demo-account", provider: "gmail", providerMessageId: "submitted", threadId: "submitted", from: .init(email: "person@example.com"), subject: query, snippet: "Synthetic", receivedAt: "2026-11-11T00:00:00Z", unread: false, labels: [], attentionBehavior: "normal")
+            message.importance = try JSONDecoder().decode(ImportanceResolution.self, from: Self.data(Self.resolution(corrected ? "important" : "unreviewed", revision: corrected ? 1 : 0)))
+            return (200, try JSONEncoder().encode(InboxPage(accounts: [], messages: [message], nextCursor: nil, counts: .init(focus: 0, normal: 0, quiet: 0, hidden: 0, all: 1))))
+        }
+        let search = InboxViewModel(); search.search = "Submitted A"
+        _ = await search.openGlobalSearch(state: fixture.state)
+        search.search = "Unsubmitted B"
+        let identity = InboxViewModel.globalSearchRefreshIdentity(state: fixture.state)
+        let importance = ImportanceController(defaults: defaults)
+        await importance.open(state: fixture.state, accountId: "demo-account", threadId: "submitted")
+        await importance.choose(.important, state: fixture.state)
+        XCTAssertNotNil(importance.receipt, "Establish an acknowledged correction before checking search")
+        XCTAssertNotEqual(identity, InboxViewModel.globalSearchRefreshIdentity(state: fixture.state))
+        let shouldFocusQuery = await search.openGlobalSearch(state: fixture.state)
+        XCTAssertFalse(shouldFocusQuery, "A background revision refresh must not steal keyboard focus")
+        XCTAssertEqual(search.messages.first?.importance?.effective, .important)
+        XCTAssertEqual(search.resultSearch, "Submitted A"); XCTAssertEqual(search.search, "Unsubmitted B")
+        XCTAssertEqual(searched, ["Submitted A", "Submitted A"], "Revision refresh must not submit unfinished query text")
+    }
+}
+
+/// Hosted XCTest compilation/execution is required in addition to the local
+/// Foundation harness. These exercise native production read-only adapters.
+@MainActor final class NativeMailCatalogTests: XCTestCase {
+    private func json(_ value: [String: Any]) throws -> MailActionJSON {
+        try JSONDecoder().decode(MailActionJSON.self, from: JSONSerialization.data(withJSONObject: value))
+    }
+    private func query() throws -> NativeSavedQuery {
+        try NativeSavedQuery(json(["id": "owned-query", "accountId": "owned", "name": "Keep this query", "revision": 9,
+                                  "definition": ["revision": 1, "filters": ["dataSource": "stored_mail", "text": "Friday"]]]))
+    }
+    private func page(_ query: NativeSavedQuery) -> [String: Any] {
+        ["query": ["id": query.id, "accountId": "owned", "revision": 9, "definitionDigest": query.definition.digest, "evaluationProfile": "stored-mail-v1"],
+         "accounts": [["id": "owned", "provider": "gmail", "email": "synthetic@example.com", "displayName": "Owned synthetic", "capabilities": ["read": true, "draft": true, "send": true]]],
+         "messages": [], "nextCursor": "opaque-next", "freshness": ["revision": "mailbox-v2:" + String(repeating: "a", count: 64), "lastSyncedAt": NSNull()]]
+    }
+    func testDefaultNormalizationPreservesUnicodeAndStoredProfile() throws {
+        let value = try NativeSavedQueryDefinition(json(["revision": 1, "filters": ["mailbox": "inbox", "attention": "all", "text": "\u{FEFF}Équipe / e\u{0301} 😀\n", "dataSource": "stored_mail"]]))
+        XCTAssertEqual(value.canonical, "{\"filters\":{\"dataSource\":\"stored_mail\",\"text\":\"Équipe / e\u{0301} 😀\"},\"revision\":1}")
+        XCTAssertEqual(value.profile, "stored-mail-v1")
+        XCTAssertThrowsError(try NativeSavedQueryDefinition(json(["revision": 1, "filters": ["text": String(repeating: "😀", count: 101)]])))
+    }
+    func testRealNamedFocusAndInboxRemainSeparateFromUtility() throws {
+        let raw = try json(["legacyDestinationIds": ["normal": "inbox-id", "focus": "focus-id"], "destinations": [
+            ["id": "focus-id", "name": "Renamed Focus", "retiredAt": NSNull()], ["id": "inbox-id", "name": "Renamed Inbox", "retiredAt": NSNull()]]])
+        let destinations = try XCTUnwrap(NativeMailboxProjection.destinations(routing: raw))
+        XCTAssertEqual(destinations.map(\.name), ["Renamed Focus", "Renamed Inbox"])
+        XCTAssertEqual(NativeMailboxRequestScope.destinationID(view: "focus", routing: raw), "inbox-id")
+        XCTAssertEqual(NativeMailboxRequestScope.destinationID(view: "destination:focus-id", routing: raw), "focus-id")
+    }
+    func testPinLegacyViewIsNotSavedViewIdentity() throws {
+        guard case .mailbox(.focus) = try NativePinTarget(json(["type": "resource", "resource": ["family": "view", "id": "focus"]])) else { return XCTFail("Expected actual legacy Focus target") }
+        XCTAssertThrowsError(try NativePinTarget(json(["type": "resource", "resource": ["family": "view", "id": "view:focus"]])))
+        XCTAssertThrowsError(try NativePinTarget(json(["type": "resource", "resource": ["family": "url", "id": "https://example.com"]])))
+    }
+    func testQueryPageBindsObjectRevisionDigestAndProfile() throws {
+        let query = try query(); let raw = page(query)
+        XCTAssertEqual(try NativeSavedQueryPage(json(raw), query: query, account: "owned", limit: 30).cursor, "opaque-next")
+        for (key, wrong) in [("id", "other"), ("definitionDigest", String(repeating: "b", count: 64)), ("evaluationProfile", "legacy-pin-v1")] {
+            var changed = raw, metadata = raw["query"] as! [String: Any]; metadata[key] = wrong; changed["query"] = metadata
+            XCTAssertThrowsError(try NativeSavedQueryPage(json(changed), query: query, account: "owned", limit: 30))
+        }
+    }
+    func testForeignOrUnknownQueryResponseCannotPublish() throws {
+        let query = try query(); var raw = page(query)
+        raw["accounts"] = [["id": "foreign", "provider": "gmail", "email": "foreign@example.com", "displayName": "Foreign", "capabilities": ["read": true, "draft": true, "send": true]]]
+        XCTAssertThrowsError(try NativeSavedQueryPage(json(raw), query: query, account: "owned", limit: 30))
+        raw = page(query); raw["invented"] = true
+        XCTAssertThrowsError(try NativeSavedQueryPage(json(raw), query: query, account: "owned", limit: 30))
+    }
+    func testVisibilityPersistsWithoutChangingLegacyKeysOrOtherOwners() {
+        let suite = "NativeMailCatalogTests-" + UUID().uuidString, defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let prefs = MailboxPreferenceStore(defaults: defaults)
+        prefs.save(["focus", "view:unknown"], scope: "origin|owner")
+        prefs.saveHidden(["destination:opaque"], scope: "origin|owner")
+        XCTAssertEqual(MailboxPreferenceStore(defaults: defaults).load(scope: "origin|owner"), ["focus", "view:unknown"])
+        XCTAssertEqual(MailboxPreferenceStore(defaults: defaults).loadHidden(scope: "origin|owner"), ["destination:opaque"])
+        XCTAssertTrue(prefs.loadHidden(scope: "other-origin|owner").isEmpty)
+    }
+    func testVerifiedMailContextRejectsUnsavedServerDraft() async throws {
+        let configuration = URLSessionConfiguration.ephemeral; configuration.protocolClasses = [StubURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel(); StubURLProtocol.handler = nil }
+        let client = APIClient(baseURL: URL(string: "https://example.invalid")!, session: session) { "synthetic" }
+        StubURLProtocol.handler = { request in
+            if request.url!.path == "/v1/auth/session" { return (200, try JSONSerialization.data(withJSONObject: ["isAuthenticated": true, "user": ["id": "owned-user", "email": "synthetic@example.com", "name": NSNull()], "expiresAt": NSNull()])) }
+            return (200, try JSONSerialization.data(withJSONObject: ["items": [["id": "owned", "provider": "gmail", "email": "synthetic@example.com", "displayName": "Owned", "capabilities": ["read": true, "draft": true, "send": true]]]]))
+        }
+        let root = FileManager.default.temporaryDirectory.appending(path: "native-catalog-auth-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let previousUser = UserDefaults.standard.object(forKey: "lastUser|https://example.invalid"), previousSelection = UserDefaults.standard.object(forKey: "selectedAccountID")
+        defer {
+            UserDefaults.standard.set(previousUser, forKey: "lastUser|https://example.invalid")
+            UserDefaults.standard.set(previousSelection, forKey: "selectedAccountID")
+        }
+        let state = AppState(client: client, cache: CacheStore(directory: root)); state.baseURLText = "https://example.invalid"
+        await state.loadAccounts()
+        XCTAssertNotNil(state.nativeMailContext())
+        let original = state.mailConnectionGeneration
+        state.baseURLText = "https://other.invalid"
+        XCTAssertNil(state.nativeMailContext(), "Editing an unsaved server field does not establish that origin's verified owner")
+        XCTAssertEqual(state.mailConnectionGeneration, original)
+    }
+}
+
+/// Actual UIKit target/action and programmatic reflection; physical taps and
+/// SwiftUI-hosted accessibility geometry remain the hosted UI test contract.
+@MainActor
+final class NativeReaderWideSwitchTests: XCTestCase {
+    func testValueChangedDispatchWritesTheBindingOncePerNativeAction() {
+        var value = false
+        var writes = 0
+        let bridge = NativeReaderWideSwitch(isOn: Binding(get: { value }, set: { value = $0; writes += 1 }))
+        let coordinator = bridge.makeCoordinator()
+        let control = bridge.makeControl(coordinator: coordinator)
+        control.setOn(true, animated: false)
+        XCTAssertEqual(writes, 0, "Programmatic UISwitch state alone is not a user action")
+        control.sendActions(for: .valueChanged)
+        XCTAssertTrue(value)
+        XCTAssertEqual(writes, 1)
+        control.setOn(false, animated: false)
+        control.sendActions(for: .valueChanged)
+        XCTAssertFalse(value)
+        XCTAssertEqual(writes, 2)
+    }
+
+    func testProgrammaticReflectionAndRepeatedUpdatesDoNotPublishActions() {
+        var value = false
+        var writes = 0
+        let bridge = NativeReaderWideSwitch(isOn: Binding(get: { value }, set: { value = $0; writes += 1 }))
+        let coordinator = bridge.makeCoordinator()
+        let control = bridge.makeControl(coordinator: coordinator)
+        value = true
+        bridge.updateControl(control, coordinator: coordinator, enabled: true)
+        bridge.updateControl(control, coordinator: coordinator, enabled: true)
+        XCTAssertTrue(control.isOn)
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(control.accessibilityLabel, "Keep tables and code wide")
+        XCTAssertEqual(control.accessibilityIdentifier, "Keep tables and code wide")
+        XCTAssertTrue(control.isAccessibilityElement)
+        XCTAssertGreaterThanOrEqual(control.intrinsicContentSize.height, 44)
+        XCTAssertGreaterThanOrEqual(control.intrinsicContentSize.width, 44)
+    }
+
+    func testUpdatedBindingOwnsTheActionAndDisabledReflectionCannotWrite() {
+        var original = false, current = true
+        var originalWrites = 0, currentWrites = 0
+        let first = NativeReaderWideSwitch(isOn: Binding(get: { original }, set: { original = $0; originalWrites += 1 }))
+        let coordinator = first.makeCoordinator()
+        let control = first.makeControl(coordinator: coordinator)
+        let replacement = NativeReaderWideSwitch(isOn: Binding(get: { current }, set: { current = $0; currentWrites += 1 }))
+        replacement.updateControl(control, coordinator: coordinator, enabled: true)
+        XCTAssertTrue(control.isOn)
+        control.setOn(false, animated: false)
+        control.sendActions(for: .valueChanged)
+        XCTAssertFalse(current)
+        XCTAssertEqual(currentWrites, 1)
+        XCTAssertEqual(originalWrites, 0)
+        replacement.updateControl(control, coordinator: coordinator, enabled: false)
+        XCTAssertFalse(control.isEnabled)
+        control.setOn(true, animated: false)
+        control.sendActions(for: .valueChanged)
+        XCTAssertEqual(currentWrites, 1)
+        XCTAssertFalse(current)
+        XCTAssertFalse(original)
     }
 }

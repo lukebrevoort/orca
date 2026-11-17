@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Publish an allowlist of synthetic evidence, never raw fixture/xcresult data."""
 import json
+import io
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 from urllib.parse import quote
 
@@ -197,7 +200,7 @@ def hosted_crash_summaries(work, simulator=""):
     return output[:72]
 
 
-def export(work, evidence, connection, status, simulator=""):
+def export(work, evidence, connection, status, simulator="", attachments_root=None):
     tokens = []
     if connection:
         connection_path = Path(connection).resolve()
@@ -236,7 +239,7 @@ def export(work, evidence, connection, status, simulator=""):
                                      '--path', str(bundle)], capture_output=True, text=True, check=True)
             json.loads(result.stdout)  # fail closed on a malformed export
             write(f'{bundle.stem}-{kind}.json', result.stdout)
-        attachments = work / f'{bundle.stem}-attachments'
+        attachments = (attachments_root or work) / f'{bundle.stem}-attachments'
         subprocess.run(['xcrun', 'xcresulttool', 'export', 'attachments', '--path', str(bundle),
                         '--output-path', str(attachments)], capture_output=True, check=True)
         for index, source in enumerate(sorted(attachments.rglob('*'))):
@@ -300,5 +303,61 @@ def export(work, evidence, connection, status, simulator=""):
     print(f'Synthetic checks exit code: {status}; sanitized evidence: {evidence}')
 
 
+def export_staged(work, evidence, connection, status, simulator="", checkpoint_phase=None):
+    """Never expose an unscanned export; retain completed phases on later failure."""
+    if checkpoint_phase not in (None, 'suite_light_finished', 'suite_dark_finished'):
+        raise ValueError('Unknown evidence checkpoint phase')
+    if evidence.is_symlink() or not evidence.is_dir():
+        raise ValueError('Evidence must be the owned run directory')
+    if checkpoint_phase is None:
+        # Revoke any earlier final marker before attempting a replacement.
+        (evidence / 'outcome.json').unlink(missing_ok=True)
+    with tempfile.TemporaryDirectory(prefix='validated-export-', dir=work) as directory:
+        stage = Path(directory) / 'content'; stage.mkdir()
+        attachments = Path(directory) / 'attachments'; attachments.mkdir()
+        output = io.StringIO()
+        with redirect_stdout(output):
+            # A checkpoint has no final exit or crash collection. Its null
+            # outcome below, not this internal export argument, is published.
+            export(work, stage, connection, 0 if checkpoint_phase else status,
+                   '' if checkpoint_phase else simulator, attachments_root=attachments)
+        if checkpoint_phase:
+            (stage / 'outcome.json').write_text(json.dumps({
+                'exitCode': None, 'complete': False, 'checkpointPhase': checkpoint_phase,
+                'syntheticOnly': True, 'rawXcresultUploaded': False,
+            }, indent=2) + '\n')
+            checkpoints = evidence / 'checkpoints'
+            if checkpoints.is_symlink():
+                raise ValueError('Checkpoint symlinks are not allowed')
+            checkpoints.mkdir(exist_ok=True)
+            destination = checkpoints / checkpoint_phase
+            if destination.exists() or destination.is_symlink():
+                raise ValueError('Checkpoint already published')
+            os.replace(stage, destination)
+            print(f'[fixture checkpoint] phase={checkpoint_phase} complete=false')
+            return
+        # Every byte was already scanned privately. Publish the final outcome
+        # last, so interruption during copying cannot advertise a complete gate.
+        files = sorted(p for p in stage.rglob('*') if p.is_file())
+        files.sort(key=lambda p: p.name == 'outcome.json')
+        for source in files:
+            destination = evidence / source.relative_to(stage)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if not destination.parent.resolve().is_relative_to(evidence.resolve()):
+                raise ValueError('Evidence destination escapes the owned directory')
+            with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as handle:
+                pending = Path(handle.name)
+                try:
+                    handle.write(source.read_bytes())
+                    handle.close()
+                    os.replace(pending, destination)
+                finally:
+                    pending.unlink(missing_ok=True)
+        print(output.getvalue().replace(f'sanitized evidence: {stage}\n',
+                                        f'sanitized evidence: {evidence}\n'), end='')
+
+
 if __name__ == '__main__':
-    export(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else '')
+    export_staged(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4],
+                  sys.argv[5] if len(sys.argv) > 5 else '',
+                  sys.argv[6] if len(sys.argv) > 6 else None)

@@ -1,0 +1,12 @@
+{
+  "status": "PREPARED ONLY, NO COMPILE/RUNTIME",
+  "head": "b185c7465648c62704b049f78db419de23a66599",
+  "sourceMethodSHA256": "c10399617fdff464ae53ef6ce28b4a5360a97dda60cece80eb5a01e62b702a55",
+  "sourceFileSHA256": "6bc7b5cab302d5d5eb5bd1c7384c99113bb61fafe9bdb800cbb8bde606c763e5",
+  "sourceHelperSHA256": "3d88a450cfc37efc52cfee9f363ed2c4605f9c62de33bcd6d7b426843e2b3818",
+  "replay": "/tmp/bre457-native-b185-geometry-main.swift",
+  "replaySHA256": "4d494265c7e89fb1d68b5353fa25da22dcffd4c2966bda095bb622c4a8b8db14",
+  "originalAssertions": 14,
+  "scenarioInventory": 10,
+  "scope": "Exactmethod body copied unchanged into external Foundation/CoreGraphics CLI with assertion shims. NotXCTest/UIKit/AX tap/runtime; originalCIcase unselected."
+}

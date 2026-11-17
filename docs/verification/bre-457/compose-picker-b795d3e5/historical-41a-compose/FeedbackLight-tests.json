@@ -1,0 +1,63 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "338BF4B8-064D-4455-BD80-117FE9E6C3D2",
+      "deviceName" : "Orca CI 43122924544-1",
+      "modelName" : "iPhone 17",
+      "osBuildNumber" : "23E254a",
+      "osVersion" : "26.4.1",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:593: failed - System picker must expose exactly one recording imported for this fixture day",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Invalid frame dimension (negative or non-finite).",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "1m 55s",
+                  "durationInSeconds" : 115.57814192771912,
+                  "name" : "test38FeedbackCornerCreatesLinearTicket()",
+                  "nodeIdentifier" : "OrcaUITests/test38FeedbackCornerCreatesLinearTicket()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "OrcaUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "OrcaUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "Orca",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "head": "3c2ffe3f823896a42f4b0a8b8b43881bc3043f64",
+  "testedHead": "3c2ffe3f823896a42f4b0a8b8b43881bc3043f64",
+  "job": "https://github.com/lukebrevoort/orca/actions/runs/42986600346/job/130409145859",
+  "exitCode": 65,
+  "summaries": [
+    {
+      "file": "Orca-summary.json",
+      "passedTests": 165,
+      "failedTests": 1,
+      "failure": {
+        "failureText": "Failed to get matching snapshot: No matches found for Elements matching predicate '\"Mail\" IN identifiers' from input {(\n    Button, label: 'Inbox', Selected,\n    Button, label: 'Drafts',\n    Button, label: 'Settings'\n)}\nPossibly caused by runtime issues:\nAutomation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {\n    \"XC_kAXXCAttributeAutomationType\" = 14;\n    \"XC_kAXXCAttributeElementBaseType\" = UIResponder;\n    \"XC_kAXXCAttributeElementType\" = \"SwiftUI.AccessibilityNode\";\n    \"XC_kAXXCAttributeTraits\" = 1108101562369;\n}\nSee test report attachments for more detail.",
+        "targetName": "OrcaUITests",
+        "testIdentifier": 166,
+        "testIdentifierString": "OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable()",
+        "testIdentifierURL": "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable",
+        "testName": "test44MailStartsImportantAndKeepsAllMailReachable()"
+      },
+      "sha256": "528e38a4db1c94fb76122db887b8869a67923122779683a21d0adfa2f8cd8f63"
+    },
+    {
+      "file": "OrcaDark-summary.json",
+      "passedTests": 7,
+      "failedTests": 1,
+      "failure": {
+        "failureText": "Failed to get matching snapshot: No matches found for Elements matching predicate '\"Mail\" IN identifiers' from input {(\n    Button, label: 'Inbox', Selected,\n    Button, label: 'Drafts',\n    Button, label: 'Settings'\n)}\nPossibly caused by runtime issues:\nAutomation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {\n    \"XC_kAXXCAttributeAutomationType\" = 14;\n    \"XC_kAXXCAttributeElementBaseType\" = UIResponder;\n    \"XC_kAXXCAttributeElementType\" = \"SwiftUI.AccessibilityNode\";\n    \"XC_kAXXCAttributeTraits\" = 1108101562369;\n}\nSee test report attachments for more detail.",
+        "targetName": "OrcaUITests",
+        "testIdentifier": 8,
+        "testIdentifierString": "OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable()",
+        "testIdentifierURL": "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test44MailStartsImportantAndKeepsAllMailReachable",
+        "testName": "test44MailStartsImportantAndKeepsAllMailReachable()"
+      },
+      "sha256": "40663847c649a35f03d38f171214e8d385ff54841f4dee45ca46375d727abc19"
+    }
+  ],
+  "actualRegression": "Two appearances each reach native Mail-tab assertion; actual snapshot lists selected Inbox, Drafts, Settings with no Mail. Later Important/default/AllMail/context-action assertions were not reached.",
+  "screenshotScope": "Selected baseline mailbox UI captures inspected; numeric exporter names do not uniquely identify test44 attachment. Rawtrace confirms bre457-mail-entry-before-choice capture beforefailure.",
+  "rawArtifact": "/tmp/bre457-hosted-baseline-3c2ffe3f",
+  "identitySha256": "20d4873d6433f73bdca65547552f4644fd8c9f8ab2bb969f6874dd8f1ecfec28",
+  "rawLogSha256": "81c80a23529c707080fd2d2b057e950f5ef570d60ae8d11222c67f0648fec42f",
+  "candidatePushClearance": "baseline receipt retained; development candidate may push, all candidate runtime/root gates remain required"
+}

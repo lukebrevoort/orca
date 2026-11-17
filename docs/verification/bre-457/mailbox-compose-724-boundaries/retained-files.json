@@ -1,0 +1,263 @@
+{
+  "scope": "42 original raw text/JSON/report/hash files and12 specifically inspected PNG copies; no full PNG dump or new run",
+  "retentionParent": "0aa117aa329fe4d4a550a18a878cf5e64b62fea7",
+  "files": [
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/Adoptiondark-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/Adoptiondark-summary.json",
+      "bytes": 1477,
+      "sha256": "40832ebbca39ce853d93f2f102f339a299921e96ffca816a3befaee2d2660d57"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/Adoptiondark-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/Adoptiondark-tests.json",
+      "bytes": 1956,
+      "sha256": "a9b2defc1850edc5f97f9ce12b212f1579b46ee0c0e636beadfcb48a766da503"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/Adoptionlight-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/Adoptionlight-summary.json",
+      "bytes": 1477,
+      "sha256": "d6f768ef0cb47b80d4ac1e85e8a344116557a1829e9248640777dd1c3d4a0356"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/Adoptionlight-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/Adoptionlight-tests.json",
+      "bytes": 1960,
+      "sha256": "46f1048f392627ff06c2bb2d7d29de67fcc458ac64dda38e9ec72719cb725928"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/Orca-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/Orca-summary.json",
+      "bytes": 11621,
+      "sha256": "f6ae2fcb101ad867ad40ce7169dc4c731cc224a78923a9bde4f2df79da9819c0"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/Orca-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/Orca-tests.json",
+      "bytes": 135256,
+      "sha256": "f33c4e9342a583bc1f45f49b25e9204a5d7d794c513592b77c9e4d28c93547cc"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/checks.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/checks.log",
+      "bytes": 803042,
+      "sha256": "030ab044de2d1f7884f34086116962781632d72d31958d7e215d9018b922be35"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/fixture.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/fixture.log",
+      "bytes": 43812,
+      "sha256": "2fe971e1b7fd49bebc9ac1cf8d0809c4538ab5107495f5c53bcbc29ce38df304"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/identity.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/identity.log",
+      "bytes": 491,
+      "sha256": "8288fbdb42be1ac8a532d16438a1192e50c80bd7084692c64a324cbad3354f6d"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/outcome.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/outcome.json",
+      "bytes": 146,
+      "sha256": "fb11aa725831cd9762dcc00eaca1bada8fffecdbf5b674b81b3b552efab0de4b"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-124.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-124.png",
+      "bytes": 238064,
+      "sha256": "6931c26df1f25ec6e6a55ccbf0fd6ce20c6d1fe777564c0fb87fe6b719d20d78"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-39.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-39.png",
+      "bytes": 265029,
+      "sha256": "5974a912af6d07b74ce57849bae575d5f7f2addff0665e4908a3bc59bb8dcc2b"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-299.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-299.png",
+      "bytes": 319070,
+      "sha256": "63a5edd0dc6d78edee5e14cbaccf0136184a2e8a34632f41407429f647c83507"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-177.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-177.png",
+      "bytes": 232786,
+      "sha256": "c88c5ce4ef91135ad9be1373b650d6ebb469d19830af6a4d95c4ad9b15e795fa"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-166.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-166.png",
+      "bytes": 320997,
+      "sha256": "2fcfe2a34c101db045fd0d2d603d21162199e7df9321a7d6cc2b8deeec64d9c7"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-20.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-20.png",
+      "bytes": 149375,
+      "sha256": "28e61beaaac3cfb7b9ef52f09f632ddedfaf24af1ddbbcd1220ec66d6821f591"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox/checkpoints/suite_light_finished/screenshots/Orca-201.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/screenshots/Orca-201.png",
+      "bytes": 146213,
+      "sha256": "fa94c311ba8c307cf5d8691fdbc0aa1aa9627b5cfc2a8769d7924785d1c34309"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-724-triage.md",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/reports/bre457-mailbox-724-triage.md",
+      "bytes": 14998,
+      "sha256": "45187e9d948ea718aac1938124ab21c4fa650d36cbc4f939d9843b2d0bd2bb43"
+    },
+    {
+      "source": "/tmp/bre457-mailbox-724-hashes.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/reports/bre457-mailbox-724-hashes.json",
+      "bytes": 16619,
+      "sha256": "c8a4f7d9c2b4bd87c33d755443cb52ce32a4aa0e2e1a5289a7dbe50d4636d3c9"
+    },
+    {
+      "source": "/tmp/bre313-724-mailbox-job.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/mailbox/full-mailbox-job.log",
+      "bytes": 25302,
+      "sha256": "58230d92e2a53414a5dccc74c8c8750fa4d96fc0200856aaf1640417ff83c98f"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/DirectCaptureLight-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/DirectCaptureLight-summary.json",
+      "bytes": 1160,
+      "sha256": "7dc0bf1c82607983a0b239ec33a11babeb231f5094d0e2a5770ee5cfd94ec616"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/DirectCaptureLight-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/DirectCaptureLight-tests.json",
+      "bytes": 11064,
+      "sha256": "189f8eb906454b54f54d4b101c17b6fee51dc0c7f262f365c95b91be13b6bc1b"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/FeedbackLayoutdark-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/FeedbackLayoutdark-summary.json",
+      "bytes": 968,
+      "sha256": "9ca7c33ea8b4c8c347181e21e58864986b1a654dd1fc6a53a9af44c1fe2cb4b7"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/FeedbackLayoutdark-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/FeedbackLayoutdark-tests.json",
+      "bytes": 1714,
+      "sha256": "02398cf5e58d009da9e5ea45a32de53ad58a02ead4801d8751c99fc6afaa1028"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/FeedbackLayoutlight-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/FeedbackLayoutlight-summary.json",
+      "bytes": 968,
+      "sha256": "9f10e6e632794189574ad99fd06eddf229d9ab15d40175294d2beb545f4a3bf9"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/FeedbackLayoutlight-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/FeedbackLayoutlight-tests.json",
+      "bytes": 1715,
+      "sha256": "765bb166c4dd1d90abf65c8e8de7e993c27a8d02edd7296bd34cc0c3b414bfc1"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/FeedbackLight-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/FeedbackLight-summary.json",
+      "bytes": 968,
+      "sha256": "fc7e22c1cc03caf50077ee7f2931498eb02dce9f56edf38facd926f2eecc9416"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/FeedbackLight-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/FeedbackLight-tests.json",
+      "bytes": 1851,
+      "sha256": "2ab26d0314477d2d6a393c1bdf1da151afbbd5b7745f7a6f8ff0a760ba5dd086"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/Orca-summary.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/Orca-summary.json",
+      "bytes": 5742,
+      "sha256": "89197f8f613f8f394bf3caa3498b66e34e152b535dc005dd0056872acb62d685"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/Orca-tests.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/Orca-tests.json",
+      "bytes": 121993,
+      "sha256": "0e3822cd997c7bbe41e4ace6b49feb381546778cddde9409380d51a4d30ac7c8"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/checks.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/checks.log",
+      "bytes": 1162630,
+      "sha256": "132f3210a12baa692245255a1956d9019e2c53a7f4c96b9926f6b36e80fe854e"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/fixture.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/fixture.log",
+      "bytes": 51787,
+      "sha256": "bbe5246b7a16b2ed683aa128579afe89fa65da42120770eb2e9730dda46906d5"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/identity.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/identity.log",
+      "bytes": 491,
+      "sha256": "90df5898b144ed0f5845559af713652b32a236654cac44632167de0b594894c6"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/outcome.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/outcome.json",
+      "bytes": 78,
+      "sha256": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/screenshots/FeedbackLight-4.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/screenshots/FeedbackLight-4.png",
+      "bytes": 277289,
+      "sha256": "4fdcc3dfe92cb9feac1f086b725a934f8c973eadaa985fc07e356a795d7cc3dd"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/screenshots/Orca-148.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/screenshots/Orca-148.png",
+      "bytes": 724540,
+      "sha256": "ed164a65d696958ea81c4a6e4d070c58c27063168d2f43710bfd46144a5404b5"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/screenshots/Orca-81.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/screenshots/Orca-81.png",
+      "bytes": 658633,
+      "sha256": "39dc4be31d564c2d18db7c54432966862ed53e21c41b792eacf524c6d157f988"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/screenshots/Orca-245.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/screenshots/Orca-245.png",
+      "bytes": 288122,
+      "sha256": "6fa304437c934c735f8ae8e64fed69869522ead625a205a7179c03bb6b2fd49f"
+    },
+    {
+      "source": "/tmp/bre313-724-compose/screenshots/FeedbackLayoutdark-2.png",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/screenshots/FeedbackLayoutdark-2.png",
+      "bytes": 227613,
+      "sha256": "4b6d6cd24c0a3c9453b8e4b514256447227cd2173eef9012874be439e48bd988"
+    },
+    {
+      "source": "/tmp/bre457-compose-724-triage.md",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/reports/bre457-compose-724-triage.md",
+      "bytes": 10831,
+      "sha256": "c4894616525173e0c9daaf4576a93ceda86a9fd3a1943aa89097a1240f86b437"
+    },
+    {
+      "source": "/tmp/bre457-compose-724-hashes.json",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/reports/bre457-compose-724-hashes.json",
+      "bytes": 17273,
+      "sha256": "2fa5badf3f1680d9dbb7aebbe20d1b0edb73f0b06eec96efa4418aeb285ca595"
+    },
+    {
+      "source": "/tmp/bre313-724-compose-job.log",
+      "retained": "docs/verification/bre-457/mailbox-compose-724-boundaries/raw/compose/full-compose-job.log",
+      "bytes": 79239,
+      "sha256": "d7fb32687752de6d4bd1e1ed875d20227e435074ced9d72fcac467f83da7b0dd"
+    }
+  ],
+  "inspectionLimits": {
+    "mailbox": "97PNGs/94unique thumbnails/seven detailed originals including irrelevant201 digest; no ordinal map",
+    "compose": "132PNGs/127unique thumbnails/five detailed originals; no ordinal map"
+  },
+  "runtimeIdentity": "mailboxtested=head724; composetested=event1f171 vshead724, wholeGit trees equal94563e0"
+}

@@ -1,0 +1,32 @@
+2026-11-11T13:12:03.0390340Z [fixture telemetry] fixture.log: [counter-heartbeat] epoch_ms=1794402649425
+2026-11-11T13:12:03.0390750Z Sanitized failure context (bounded; full log remains in artifact):
+2026-11-11T13:12:03.0391250Z [fixture failure] 1591:     t =    33.79s     Checking existence of `"message.refresh-images-source" Button`
+2026-11-11T13:12:03.0391830Z [fixture failure] 1592:     t =    34.42s Collecting debug information to assist test failure triage
+2026-11-11T13:12:03.0392740Z [fixture failure] 1593:     t =    34.42s     Requesting snapshot of accessibility hierarchy for app with pid 22734
+2026-11-11T13:12:03.0394980Z [fixture failure] 1594: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/ReaderUITests.swift:346: error: -[OrcaUITests.ReaderUITests testMissingImageCapabilityOffersRefreshWithoutLoading] : XCTAssertTrue failed
+2026-11-11T13:12:03.0395770Z [fixture failure] 1595:     t =    35.46s Tear Down
+2026-11-11T13:12:03.0396450Z [fixture failure] 1596: Test Case '-[OrcaUITests.ReaderUITests testMissingImageCapabilityOffersRefreshWithoutLoading]' failed (35.720 seconds).
+2026-11-11T13:12:03.0397470Z [fixture failure] 1597: Test Case '-[OrcaUITests.ReaderUITests testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages]' started.
+2026-11-11T13:12:03.0398420Z [fixture failure] 1779: Test Case '-[OrcaUITests.ReaderUITests testOversizedImageSnapshotRefreshOffersReadOnlyRecovery]' passed (24.588 seconds).
+2026-11-11T13:12:03.0399110Z [fixture failure] 1780: Test Suite 'ReaderUITests' failed at 2026-11-11 13:10:40.453.
+2026-11-11T13:12:03.0399730Z [fixture failure] 1781: 	 Executed 5 tests, with 1 failure (0 unexpected) in 217.035 (217.043) seconds
+2026-11-11T13:12:03.0401920Z [fixture failure] 1785: 	 Executed 5 tests, with 1 failure (0 unexpected) in 217.035 (217.052) seconds
+2026-11-11T13:12:03.0402610Z [fixture failure] 1786: 2026-11-11 13:11:45.699 xcodebuild[16522:51565] [MT] IDETestOperationsObserverDebug: 361.985 elapsed -- Testing started completed.
+2026-11-11T13:12:03.0403140Z [fixture failure] 1792: 
+2026-11-11T13:12:03.0403350Z [fixture failure] 1793: ** TEST EXECUTE FAILED **
+2026-11-11T13:12:03.0403590Z [fixture failure] 1794: 
+2026-11-11T13:12:03.0403930Z Synthetic checks exit code: 65; sanitized evidence: /Users/runner/work/_temp/orca-ci-evidence
+2026-11-11T13:12:03.0404320Z [fixture stage] phase=evidence_export_finished
+2026-11-11T13:12:09.7209230Z     t =     8.72s Tap "Inbox" Button
+2026-11-11T13:12:09.7210960Z     t =     8.72s     Wait for com.orca.mail to idle
+2026-11-11T13:12:09.7211750Z     t =     8.73s     Find the "Inbox" Button
+2026-11-11T13:12:09.7268280Z 	/Users/runner/work/_temp/orca-ios-ci.3w106F/results/Orca.xcresult
+2026-11-11T13:12:09.7268580Z 
+2026-11-11T13:12:09.7268690Z ** TEST EXECUTE FAILED **
+2026-11-11T13:12:09.7268860Z 
+2026-11-11T13:12:09.7268970Z Testing started
+2026-11-11T13:12:09.7573120Z ##[error]Process completed with exit code 65.
+2026-11-11T13:12:09.8045880Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-11T13:12:09.8046310Z with:
+2026-11-11T13:12:09.8046580Z   name: native-images-43024332168-1
+2026-11-11T13:12:09.8046940Z   path: /Users/runner/work/_temp/orca-ci-evidence/

@@ -24,26 +24,72 @@ actor APIClient {
         self.baseURL = baseURL; self.session = session ?? URLSession(configuration: .ephemeral, delegate: CredentialSafeRedirectDelegate(), delegateQueue: nil); self.token = token
     }
     func updateBaseURL(_ url: URL) { baseURL = url }
-    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> T {
-        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body, headers: headers)
+    func serverOrigin() -> String { Self.origin(baseURL) }
+    nonisolated private static func origin(_ url: URL) -> String {
+        var parts = URLComponents(); parts.scheme = url.scheme?.lowercased(); parts.host = url.host?.lowercased()
+        parts.port = url.port == (parts.scheme == "https" ? 443 : 80) ? nil : url.port
+        return parts.string ?? url.absoluteString
+    }
+    func request<T: Decodable>(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:], authorize: (@Sendable () async -> Bool)? = nil) async throws -> T {
+        let (data, _) = try await raw(path, pathSuffix: pathSuffix, method: method, query: query, body: body, headers: headers, authorize: authorize)
         guard !data.isEmpty else { if T.self == EmptyResponse.self { return EmptyResponse() as! T }; throw ClientError.invalidResponse }
         do { return try decoder.decode(T.self, from: data) } catch { throw ClientError.decoding(error) }
     }
-    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:]) async throws -> (Data, HTTPURLResponse) {
+    func raw(_ path: String, pathSuffix: [String] = [], method: String = "GET", query: [URLQueryItem] = [], body: (any Encodable)? = nil, headers: [String: String] = [:], authorize: (@Sendable () async -> Bool)? = nil) async throws -> (Data, HTTPURLResponse) {
+        let capturedOrigin = serverOrigin()
+        // Bind the URL before the first suspension as well as the credential.
+        // A temporary base-URL change during authorization cannot be captured
+        // and later survive an origin ABA check after token lookup.
         let endpoint = pathSuffix.reduce(baseURL.appending(path: path)) { $0.appending(component: $1) }
+        if let authorize, !(await authorize()) { throw CancellationError() }
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
         components.queryItems = query.isEmpty ? nil : query
+        // The API decodes form queries, where an unescaped plus means space.
+        // Preserve literal plus values without re-encoding existing escapes.
+        components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         guard let url = components.url else { throw ClientError.invalidBaseURL }
         var request = URLRequest(url: url); request.httpMethod = method; request.timeoutInterval = path == "v1/feedback/ticket" && (body as? FeedbackTicketInput)?.attachments?.isEmpty == false ? 300 : 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
+        if let authorize {
+            guard serverOrigin() == capturedOrigin, await authorize(), !Task.isCancelled else { throw CancellationError() }
+        }
         if let body { request.httpBody = try encoder.encode(AnyEncodable(body)); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        if let authorize {
+            guard let responseURL = http.url, Self.origin(responseURL) == capturedOrigin else { throw ClientError.invalidResponse }
+            guard serverOrigin() == capturedOrigin, await authorize(), !Task.isCancelled else { throw CancellationError() }
+        }
         guard 200..<300 ~= http.statusCode else { throw ClientError.http(http.statusCode, try? decoder.decode(ErrorEnvelope.self, from: data).error) }
         return (data, http)
     }
+    /// Discard has no revision CAS on the server. This only binds this native
+    /// request to its original origin/session and requires an actual 204 receipt.
+    func deleteDraftForDiscard(_ id: String, accountId: String, expectedOrigin: String,
+        authorize: @escaping @Sendable () async -> Bool) async throws {
+        guard serverOrigin() == expectedOrigin else { throw CancellationError() }
+        // Capture the destination before the first suspension. A temporary
+        // base-URL change cannot leave a foreign URL in a later authorized call.
+        let endpoint = baseURL.appending(path: "v1/drafts").appending(component: id)
+        guard await authorize() else { throw CancellationError() }
+        guard var parts = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { throw ClientError.invalidBaseURL }
+        parts.queryItems = [.init(name: "accountId", value: accountId)]
+        guard let url = parts.url else { throw ClientError.invalidBaseURL }
+        var request = URLRequest(url: url); request.httpMethod = "DELETE"; request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let accessToken = await token() { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
+        // Keychain lookup may suspend while logout/login replaces the owner.
+        // Check the captured operation after lookup, before any request leaves.
+        guard serverOrigin() == expectedOrigin, await authorize(), !Task.isCancelled else { throw CancellationError() }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        guard http.statusCode == 204 else {
+            throw ClientError.http(http.statusCode, try? decoder.decode(ErrorEnvelope.self, from: data).error)
+        }
+    }
+
 }
 private final class CredentialSafeRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
@@ -62,13 +108,13 @@ extension APIClient {
         var q = [URLQueryItem(name: "accountId", value: accountId), .init(name: "view", value: view), .init(name: "limit", value: "30")]
         if let text, !text.isEmpty { q.append(.init(name: "query", value: text)) }; if let cursor { q.append(.init(name: "cursor", value: cursor)) }
         if let destinationId { q.append(.init(name: "destinationId", value: destinationId)) }
-        return try await request("v1/inbox", query: q)
+        return try await request("v1/inbox", query: q, headers: ["x-orca-importance-version": "1"])
     }
-    func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)], headers: ["x-orca-image-version": "2"]) }
+    func thread(_ id: String, accountId: String) async throws -> ThreadDetail { try await request("v1/threads/\(id)", query: [.init(name: "accountId", value: accountId)], headers: ["x-orca-image-version": "2", "x-orca-importance-version": "1"]) }
     func threadPage(_ id: String, accountId: String, cursor: String?) async throws -> ThreadReadPage {
         var query = [URLQueryItem(name: "accountId", value: accountId)]
         if let cursor { query.append(.init(name: "cursor", value: cursor)) }
-        return try await request("v1/threads/\(id)/messages", query: query)
+        return try await request("v1/threads/\(id)/messages", query: query, headers: ["x-orca-importance-version": "1"])
     }
     func markRead(_ id: String, accountId: String, isRead: Bool = true) async throws { struct Ack: Decodable { var ok: Bool }; let _: Ack = try await request("v1/threads/\(id)/read", method: "PATCH", query: [.init(name: "accountId", value: accountId)], body: ["isRead": isRead]) }
     // Sent rows supply delivery reconciliation metadata only; use draft(_:accountId:)

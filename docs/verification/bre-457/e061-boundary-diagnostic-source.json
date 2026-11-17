@@ -1,0 +1,26 @@
+{
+  "baseSHA": "3bb1f6209d40da63c0aad11e19890de8a8ad608a",
+  "scope": "source/test-only first-broken-boundary diagnostics; no execution yet",
+  "changedTestHashes": {
+    "apps/ios/OrcaUITests/OrcaUITests.swift": "d607aeb5a28daeed8b6fbda3a08470181f02e5582de78e8f1c44549f8c3a6053",
+    "apps/ios/OrcaUITests/ReaderUITests.swift": "a0b299eb7006da067f7e1c41718d20c772ae33d5a4cf1e00a11499dbbf229f0a"
+  },
+  "immutableComparedPaths": [
+    "apps/ios/Orca",
+    "apps/ios/OrcaTests",
+    "apps/ios/Tools",
+    "apps/ios/OrcaUITests/run-fixture-tests.sh",
+    "apps/api",
+    "packages/shared",
+    "apps/web"
+  ],
+  "immutablePathsChanged": [],
+  "retainedProof": {
+    "controllers": "f15310e69f509356c56a95b7b56d84f2e47ede4d 223/223 Foundation/API",
+    "runner": "1748efb952763968ff8fe121d82911e29486764a 4/4 synthetic lifecycle +zsh"
+  },
+  "plannedCheck": "Completed one allocated grammar-only gate at exact d485fae8138ce0ecdb49f5508c6ab360be7487c2:36files,exit0,0.200s,start/endSHA+clean+hashes equal; XCTest typecheck/runtime still pending",
+  "appleHostedPending": true,
+  "originalAssertions": "same predicates/deadlines; captured first wide value and original wait results remain the assertion inputs; all downstream assertions/stimuli retained",
+  "grammarReceipt": "diagnostic-grammar-d485fae8/manifest.json"
+}

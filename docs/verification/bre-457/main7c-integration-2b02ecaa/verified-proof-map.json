@@ -1,0 +1,72 @@
+{
+  "scope": "static Git/blob identity only; no verification rerun",
+  "integrationHead": "2b02ecaaa82c510f8328fd76afc53f53e8b8e326",
+  "rootIdentitySHA256": "7cab904fe49b96cb007e77dfe3d57dd23a2264482918f1eaa2fa5b53a75d6612",
+  "executionSourceScopes": {
+    "apps/ios": {
+      "before": "4efe9620ed8dec082c41d37f12cb617a40d9b3fa",
+      "after": "4efe9620ed8dec082c41d37f12cb617a40d9b3fa"
+    },
+    "apps/api": {
+      "before": "f9eb55b7b04791749bb0ecad1c4d3dea1ca58852",
+      "after": "f9eb55b7b04791749bb0ecad1c4d3dea1ca58852"
+    },
+    "apps/web": {
+      "before": "53a124a2b65f29cbb96a82abc01f2196b2e156c6",
+      "after": "53a124a2b65f29cbb96a82abc01f2196b2e156c6"
+    },
+    "packages": {
+      "before": "7c48e2df9703ac11c26891b2b321f8ee86fbf36a",
+      "after": "7c48e2df9703ac11c26891b2b321f8ee86fbf36a"
+    },
+    "scripts": {
+      "before": "81e62aa442e346c39d902d2d4e0c20748642fc16",
+      "after": "81e62aa442e346c39d902d2d4e0c20748642fc16"
+    },
+    ".github": {
+      "before": "b272a7ca69c4c51b3685c743127d2ac704408d42",
+      "after": "b272a7ca69c4c51b3685c743127d2ac704408d42"
+    },
+    ".agents": {
+      "before": "3e8ce7e56f18872e808c5905e70cefd904927589",
+      "after": "3e8ce7e56f18872e808c5905e70cefd904927589"
+    },
+    "package.json": {
+      "before": "20cd0187506f2ee075c996f2c92cb90bb95d108e",
+      "after": "20cd0187506f2ee075c996f2c92cb90bb95d108e"
+    },
+    "bun.lock": {
+      "before": "c81c8fcf7d4b5e17ec62d9d14d5d0b134b941f28",
+      "after": "c81c8fcf7d4b5e17ec62d9d14d5d0b134b941f28"
+    },
+    "tsconfig.base.json": {
+      "before": "fd0f337b33f15ede2c6335c93dfa4c7eacc0c12e",
+      "after": "fd0f337b33f15ede2c6335c93dfa4c7eacc0c12e"
+    }
+  },
+  "sourceScopesVerified": 10,
+  "changedDocsVerified": 29,
+  "grammar": {
+    "executedHead": "b795d3e57e30dc211dc816e18a2ffe452982b19f",
+    "inputsVerifiedCurrent": 44,
+    "proof": "grammar only, not SwiftUI/XCTest build/runtime"
+  },
+  "FoundationAPI": {
+    "executedHead": "f0e38725b0b18f82bb9a71d397cfa235473cbc77",
+    "actualCases": 423,
+    "actualPassed": 423,
+    "executedStages": 7,
+    "FoundationAndHarnessInputsVerifiedCurrent": 33,
+    "broader69InputDifferences": [
+      "apps/ios/OrcaTests/OrcaTests.swift",
+      "apps/ios/OrcaUITests/OrcaUITests.swift"
+    ],
+    "noRerun": true
+  },
+  "ancestorsVerified": [
+    "7c97193688599e5996bb657c34227a63927c384c",
+    "cef8ee7daeb629a0aeea446e17f654dd1f2a0d24",
+    "bfd47277a07b834740cd01547a5864f170395b7e"
+  ],
+  "limits": "Current41a hosted outcomes/root acceptance pending. No deployment/all33/Apple/physical-provider claims. No metadata/push/CI query."
+}

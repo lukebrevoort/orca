@@ -1,0 +1,36 @@
+{
+  "status": "prepared-unexecuted",
+  "parentSHA": "8a047dc7309cb713e097078159f1c3ad519f1872",
+  "geometryCheckCount": 12,
+  "geometryChecks": [
+    "viewport-actual14-17-30pt-witness",
+    "viewport-actual43-still-rejects43pt",
+    "viewport-earliest-permission-before-status",
+    "viewport-permission-pan-inside-content",
+    "viewport-old-normalized-start-is-footer",
+    "viewport-exact44-admitted",
+    "viewport-short43-pan-above-actions",
+    "viewport-clips-application",
+    "viewport-invalid-stops",
+    "viewport-covering-footer-stops",
+    "viewport-external-keyboard-not-extra-inset",
+    "viewport-ax-list-avoids-tabbar"
+  ],
+  "grammarCount": 38,
+  "unchangedCombinedControllerAPICount": 275,
+  "rootDriver37NotReusedFor38WithoutExplicitUpdate": true,
+  "sourceHashes": {
+    "apps/ios/OrcaUITests/ViewportGeometry.swift": "a5781c96d3df349bea46e71e42f8c573d9cdf59d297d731758542df587afccea",
+    "apps/ios/OrcaUITests/OrcaUITests.swift": "99f11957d1b7b1456b21841214a21fef9f5cd83b2b1545cb602c2b1b237b5996",
+    "apps/ios/Tools/ViewportGeometryChecks.swift": "0faf71e353aafea38ab15f785c295b4fa5c412fc2b6cb53cbcbf179355bafcfb",
+    "apps/ios/Orca.xcodeproj/project.pbxproj": "845caf830af0ff3bf75574a1eba293d6ecbbafe02ede6d63de32ed7ad3824329"
+  },
+  "productionDelta": [],
+  "AXOptInCases": [
+    "test35RichDraftConversionAtAccessibilitySize",
+    "test36SentRecoveryStatusAtAccessibilitySize"
+  ],
+  "bodyMaxDragAttempts": 12,
+  "initialRowMaxNewContentGestures": 6,
+  "originalRowWaitSeconds": 20
+}

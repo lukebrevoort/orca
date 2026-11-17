@@ -1,0 +1,33 @@
+{
+  "sha": "1748efb952763968ff8fe121d82911e29486764a",
+  "scope": "real production runner phase code with mock Apple commands; selection wiring only, not native UI",
+  "actualTestExit": 0,
+  "syntaxExit": 0,
+  "elapsed": 3.1914461250125896,
+  "results": [
+    {
+      "scope": "all",
+      "pass": true,
+      "exit": 0
+    },
+    {
+      "scope": "notifications",
+      "pass": true,
+      "exit": 0
+    },
+    {
+      "scope": "mailbox",
+      "pass": true,
+      "exit": 0
+    },
+    {
+      "scope": "compose",
+      "pass": true,
+      "exit": 0
+    }
+  ],
+  "runnerSha256": "c44a0b43934705c35922f230dace39c41636c6ad85980e6e87b8da7aecfa042f",
+  "guardSha256": "8b0cde94a55413b36c30b77470ae05bf62c8f3f963e8ae33568086b509cc6bbc",
+  "sourceIdentity": "AppCore/API/shared/UItestcase trees identical to223-case-tested f153; runner plus lifecycle guard changed only",
+  "oldSelectorsPreserved": true
+}

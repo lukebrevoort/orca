@@ -1,0 +1,15 @@
+2026-11-11T10:43:41.0515060Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:43:41.9633060Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +85c1fa33da0dacf0a589dae9446922e79f758f73:refs/remotes/pull/313/merge
+2026-11-11T10:43:50.4687250Z  * [new ref]         85c1fa33da0dacf0a589dae9446922e79f758f73 -> pull/313/merge
+2026-11-11T10:43:54.3484260Z HEAD is now at 85c1fa3 Merge 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617 into 5795909927d8aa77c5e777e37a3e85eaf14aeb99
+2026-11-11T10:43:54.4206060Z 85c1fa33da0dacf0a589dae9446922e79f758f73
+2026-11-11T10:43:55.2671930Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:43:57.5913080Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:44:00.9600820Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617
+2026-11-11T10:50:22.9360500Z [fixture failure] 921: /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3359:92: error: cannot find 'SavedAccounts' in scope
+2026-11-11T10:50:22.9363340Z [fixture failure] 922:             if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+2026-11-11T10:50:22.9385230Z [fixture failure] 944: ** TEST BUILD FAILED **
+2026-11-11T10:51:02.0203560Z /Users/runner/work/orca/orca/apps/ios/OrcaTests/OrcaTests.swift:3359:92: error: cannot find 'SavedAccounts' in scope
+2026-11-11T10:51:02.0207270Z             if request.url!.path == "/v1/accounts" { return (200, try JSONEncoder().encode(SavedAccounts(items: DemoData.accounts))) }
+2026-11-11T10:51:02.0316170Z ** TEST BUILD FAILED **
+2026-11-11T10:51:02.1526970Z   ORCA_CI_HEAD_SHA: 9bb050e5800e4750fe8e8c5d0fcf38d8f430e617

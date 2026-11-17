@@ -1,0 +1,14 @@
+test_explicit_dark_runs_only_dark_and_retains_selected_failure (__main__.AppearancePhasesTests.test_explicit_dark_runs_only_dark_and_retains_selected_failure) ... APPEARANCE_PHASE_OBSERVATION {"requested": "dark", "calls": [{"phase": "dark", "bundle": "OrcaDark.xcresult", "selection": ["-only-testing:synthetic-dark"]}], "returncode": 66, "lightBundleExists": false, "darkBundleExists": true}
+ok
+test_explicit_light_runs_only_light_and_retains_selected_failure (__main__.AppearancePhasesTests.test_explicit_light_runs_only_light_and_retains_selected_failure) ... APPEARANCE_PHASE_OBSERVATION {"requested": "light", "calls": [{"phase": "light", "bundle": "Orca.xcresult", "selection": ["-only-testing:synthetic-light"]}], "returncode": 65, "lightBundleExists": true, "darkBundleExists": false}
+ok
+test_mailbox_preserves_both_bundles_and_any_failure (__main__.AppearancePhasesTests.test_mailbox_preserves_both_bundles_and_any_failure) ... ok
+test_other_scopes_remain_fail_fast (__main__.AppearancePhasesTests.test_other_scopes_remain_fail_fast) ... ok
+test_selected_success_does_not_run_or_inherit_unselected_failure (__main__.AppearancePhasesTests.test_selected_success_does_not_run_or_inherit_unselected_failure) ... APPEARANCE_PHASE_OBSERVATION {"requested": "light", "calls": [{"phase": "light", "bundle": "Orca.xcresult", "selection": ["-only-testing:synthetic-light"]}], "returncode": 0, "lightBundleExists": true, "darkBundleExists": false}
+APPEARANCE_PHASE_OBSERVATION {"requested": "dark", "calls": [{"phase": "dark", "bundle": "OrcaDark.xcresult", "selection": ["-only-testing:synthetic-dark"]}], "returncode": 0, "lightBundleExists": false, "darkBundleExists": true}
+ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 14.828s
+
+OK

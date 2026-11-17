@@ -1,0 +1,30 @@
+{
+  "sha": "40cba1d61e490f8cfc6bcddf70cecd9cc70b011f",
+  "scope": "real production runner phase code with mock Apple commands; selection wiring only, not native UI",
+  "actualTestExit": 1,
+  "elapsed": 6.110217084002215,
+  "results": [
+    {
+      "scope": "all",
+      "pass": true,
+      "exit": 0
+    },
+    {
+      "scope": "notifications",
+      "pass": true,
+      "exit": 0
+    },
+    {
+      "scope": "mailbox",
+      "pass": true,
+      "exit": 0
+    },
+    {
+      "scope": "compose",
+      "pass": false,
+      "exit": 0
+    }
+  ],
+  "runnerSha256": "0abe9ac857df778e1856ca0bd98055bb2bcd9e626bff64734ad984ed5853832a",
+  "guardSha256": "8b0cde94a55413b36c30b77470ae05bf62c8f3f963e8ae33568086b509cc6bbc"
+}

@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_outer_kill_during_dark_keeps_light_checkpoint (__main__.CheckpointTests.test_outer_kill_during_dark_keeps_light_checkpoint)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/scripts/ci/test-evidence-checkpoint.py", line 145, in test_outer_kill_during_dark_keeps_light_checkpoint
+    self.assertTrue((checkpoint/'Orca-summary.json').is_file(), 'Completed Light evidence must survive without EXIT cleanup')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Completed Light evidence must survive without EXIT cleanup
+
+----------------------------------------------------------------------
+Ran 1 test in 0.745s
+
+FAILED (failures=1)

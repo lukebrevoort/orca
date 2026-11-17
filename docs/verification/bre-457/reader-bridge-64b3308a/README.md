@@ -1,0 +1,26 @@
+# Reader bridge64b: exact prior runtime and current source/syntax scope
+
+Source `64b3308a2fb79a149f08f23a06f7578e85a35b3a` is a two-item candidate, not a verified Wide fix. This descendant retains evidence docs only. No source/test/runner/fixture edits or new verification/CI/API query occurred during retention.
+
+## Actual prior724 reading evidence
+
+[Raw artifact identity](historical-724-reading/identity.log), [full ordered checks](historical-724-reading/checks.log), [fixture trace](historical-724-reading/fixture.log), [summary](historical-724-reading/Orca-summary.json), [test nodes](historical-724-reading/Orca-tests.json), [outcome](historical-724-reading/outcome.json) and [full decoded job](reports/bre313-724-reading-job.log) are copied unchanged. ZIP SHA256 `d69e9104ee55706f8fe6c90d739bbcdafce0f4f6306ad59e8c3e2af504440fce` was independently checked during prior triage. Actual tested=head72448b3fd5c5dbe2d2b9046f30e9185a2bffd44e; event1f171a0ff2af3381e798841eacf9246376d0efe2 remains distinct.
+
+Light193PASS/2FAIL/5isolated-image scopeSKIP(total200); all188 native units PASS and test37 long-conversation PASS. Dark NOT RUN. Separate current image5+5PASS is ROOT-provided different-job scope. No candidate191-unit pass follows from adding three cases.
+
+- test04 fails row3 existence in openConversation before any row tap/canvas assertion. The actual API trace contains allfive rows; another same-run helper materializes row3 through one bounded content drag. The source candidate adds a test04-only bounded precondition, retaining the original10s existence wait/single tap/10s navigation and canvas assertions. This is setup correction, not a verified renderer fix.
+- Wide's same single tap returns immediate0; later diagnostic current0/ToolsExpanded. Native frame geometry does not establish the missing event/binding cause. The candidate replaces only the SwiftUI switch boundary with a public UISwitch bridge; actual one exposed native44pt control, tap delivery and subsequent interactions remain unverified.
+
+[Full original triage](reports/bre457-reading-724-triage.md) and [compact hashes](reports/bre457-reading-724-hashes.json) preserve those classifications and mapping gaps. Only four original PNGs are retained: [20](historical-724-reading/screenshots/Orca-20.png), [21](historical-724-reading/screenshots/Orca-21.png), [52](historical-724-reading/screenshots/Orca-52.png), [128](historical-724-reading/screenshots/Orca-128.png). The worker inspected these four in detail; ROOT reports three detail inspections, not an additive seven distinct images.111 unique thumbnails were surveyed from127 exported PNGs; this is not full-detail inspection of127. Hash-duplicate representatives and absence of unique attachment/assertion ordinal mapping stay explicit. These are before-context images, not candidate after-shots.
+
+## Source approval and exact grammar result
+
+The [full independent report](reports/bre457-reader-bridge-review-64b.md), SHA256 `14ba7063e7e129f2df1cdca32930bc5648affd885ebee83bb02cc7e4648c087d`, is APPROVED WITH COMMENTS at immutable64b, no source blocker. C1 is the still-required actual one-tap/native geometry/Std+AX/both-themes completion gate, not a source change request or all-app approval.
+
+[ROOT's grammar manifest](grammar-64b3308a/manifest.json) records44 start/end hashes equal, clean exact64b, exit0,0.421056334s, empty parse log, parser68093 terminal. The [allocated driver](grammar-64b3308a/bre457-reader-grammar-64b3308a.py) is SHA256 `3022de94f92a99cf689fb72a8a9d3967d5e8c07f4499d909f36d638752ce7a3f`; [full wrapper/resources](grammar-64b3308a/bre457-reader-grammar-64b3308a.wrapper.log) records wrapper68086 terminal0/~0.595s and44% memory-free before/after. ROOT reports independent ps absence of the owned parser; this retention performs no runtime/process recheck. No cancellation injection, UIKit/SwiftUI typecheck, native build, XCTest, gesture or speedup claim follows.
+
+[Three-source patch](candidate-three-source.patch) and [proof map](verified-proof-map.json) bind the narrow source. ReaderUITests is byte-identical to724: same wide.tap, captured first value expected1 and all downstream off/on/collapse/reopen/Find/query assertions. The added three real UIKit sendActions/valueChanged tests, corrected test04 and unchanged Wide UI are **UNEXECUTED at64b**. Native sizing uses public intrinsicContentSize and representable sizeThatFits without managed-frame mutation or fabricated AX value; actual layout/hit-area remains a hosted requirement.
+
+All28 Foundation source/five harness inputs remain exact f0e423/423; no423 or runner repeat. All44 current Swift hashes equal executed64b. The broader f0e69-input map now differs in four paths: ThreadView, OrcaTests, OrcaUITests and the previously verified checkpoint runner hook. Existing checkpoint source review/controls and main7c/API320cef8 ancestry retain their own scopes. [Every retained original file/hash](retained-files.json) is byte-exact, including empty logs and full raw stdout.
+
+Other current724 compose/mailbox outcomes remain ROOT-owned; none are queried or invented here. Publication stays HOLD until ROOT's combined audit and explicit ONE-push grant. Actual after-screenshots, complete native/light/dark/AX journeys, all33, formal merge and physical OS/provider/deployment evidence remain separate gates.

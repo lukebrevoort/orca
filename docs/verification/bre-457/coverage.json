@@ -1,0 +1,275 @@
+{
+  "status": "running; no native runtime pass claimed",
+  "baselineSHA": "3c2ffe3f823896a42f4b0a8b8b43881bc3043f64",
+  "surfaces": [
+    {
+      "id": "P01",
+      "nativeScope": "Mail default/filter/actions/recovery",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P02",
+      "nativeScope": "Mailboxes and real saved results",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P03",
+      "nativeScope": "Full reader/privacy/Find/width options",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P04",
+      "nativeScope": "Existing durable Drafts preserved",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P05",
+      "nativeScope": "Existing compose/reply/forward/recovery; signature defaults",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P06",
+      "nativeScope": "Canonical web-only Zen; native durable Compose preserved",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P07",
+      "nativeScope": "Selected-account global All Mail search",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P08",
+      "nativeScope": "Sender/search preparation, explicit conversion, real preview/save, advanced preservation",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P09",
+      "nativeScope": "Native visibility/edit/order/remove; advanced web tools explained",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P10",
+      "nativeScope": "Canonical web-only advanced Organization; native availability guidance",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P11",
+      "nativeScope": "Eight sections, shared account Save, safe leave",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P12",
+      "nativeScope": "Canonical web provider editor; native actual capabilities/access refresh preserved",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P13",
+      "nativeScope": "Existing Keychain/native auth/handoff preserved; no held OAuth298",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P14",
+      "nativeScope": "Canonical native parity not established; truthful web reminder guidance",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P15",
+      "nativeScope": "Canonical web-only Summary; read-not-reply honesty",
+      "verification": "pending exact-head hosted Apple evidence"
+    },
+    {
+      "id": "P16",
+      "nativeScope": "Permanent recovery, owner visibility, device appearance/iOS text behavior",
+      "verification": "pending exact-head hosted Apple evidence"
+    }
+  ],
+  "journeys": [
+    {
+      "id": "F01",
+      "verification": "pending; F04 depends on root committed backend/ledger"
+    },
+    {
+      "id": "F02",
+      "verification": "pending; F04 depends on root committed backend/ledger"
+    },
+    {
+      "id": "F03",
+      "verification": "pending; F04 depends on root committed backend/ledger"
+    },
+    {
+      "id": "F04",
+      "verification": "pending; F04 depends on root committed backend/ledger"
+    },
+    {
+      "id": "F05",
+      "verification": "pending; F04 depends on root committed backend/ledger"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "READ-01",
+      "requirement": "Legible subject, sender, body and recognizable actions on web and iOS",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "READ-02",
+      "requirement": "Preserve complete message content, quote/link order, semantic tables and attachments",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "READ-03",
+      "requirement": "Preserve sanitization and remote-content privacy",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "READ-04",
+      "requirement": "Truthful loading, empty, offline, error and oversized-content recovery states",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "TRIAGE-01",
+      "requirement": "Important mail is easy to find and full mail remains recoverable",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "TRIAGE-02",
+      "requirement": "Direct Important/Not important actions in list and reader",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "TRIAGE-03",
+      "requirement": "Correction scope is explicit, durable and account-aware",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "TRIAGE-04",
+      "requirement": "Importance does not silently move/archive/delete mail, change read state or create sender rules",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "TRIAGE-05",
+      "requirement": "Correction and recovery behavior is clear, including exact undo limitations",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "TRIAGE-06",
+      "requirement": "Human authorship remains distinct from importance; uncertain ranking is honest",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NAV-01",
+      "requirement": "Smaller calm primary surface with discoverable advanced organization",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NAV-02",
+      "requirement": "All mail, search, drafts, account information and recovery stay reachable",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NAV-03",
+      "requirement": "Useful user-owned names, order, visibility and saved work survive simplification",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "VIEW-01",
+      "requirement": "Search or selected senders lead to deterministic real matching-mail preview, refinement and explicit save",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "VIEW-02",
+      "requirement": "Preserve advanced filters on unchanged edits and durable names/order/navigation",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "VIEW-03",
+      "requirement": "Saving/removing views changes neither provider placement nor notifications; preview creates nothing",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "VIEW-04",
+      "requirement": "Counts state their computed scope; sender restrictions and exclusions have truthful labels",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NOTIFY-01",
+      "requirement": "Important-only interruption eligibility is specified and implemented",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NOTIFY-02",
+      "requirement": "Uncertainty, accounts, batching, repeat bounds, quiet behavior and corrections have explicit consequences",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NOTIFY-03",
+      "requirement": "False positives are correctable and false negatives remain discoverable",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "NOTIFY-04",
+      "requirement": "Permission, delivery availability and reminder distinctions are truthful",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "CORE-01",
+      "requirement": "Compose/reply/forward, recipients, attachments and recovery remain dependable",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "CORE-02",
+      "requirement": "Search/sync/pagination/offline recovery remain dependable",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "CORE-03",
+      "requirement": "Account isolation, authorization, sanitization and secure defaults survive changes",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "CORE-04",
+      "requirement": "Performance and resource use are measured honestly",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "FOLLOWUP-01",
+      "requirement": "Reply-review suggestions distinguish read state from reply evidence and remain honest about availability",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "CLEAN-01",
+      "requirement": "Repository simplification is verified and reviewable",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "CLEAN-02",
+      "requirement": "Historical evidence is retained until an explicit reviewed archival decision",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "GATE-01",
+      "requirement": "Concrete tickets precede delegated implementation and concurrent work is preserved",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "GATE-02",
+      "requirement": "Every PR includes a demo and concrete measured numbers",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "GATE-03",
+      "requirement": "Failures are reproduced before fixes and final revisions are independently reviewed and verified",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "GATE-04",
+      "requirement": "Merge, deployment, signed build, processing and tester availability are distinct claims",
+      "status": "unverified; root combined-product gate"
+    },
+    {
+      "id": "ACCEPT-01",
+      "requirement": "Representative real-mail and physical-device acceptance are addressed without unsupported readiness claims",
+      "status": "unverified; root combined-product gate"
+    }
+  ]
+}

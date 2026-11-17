@@ -1,0 +1,90 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "8220BE9D-A186-44EE-AC32-7B93687E9E80",
+        "deviceName" : "Orca CI 43131878509-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 5,
+      "passedTests" : 185,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 5,
+  "finishTime" : 1794448451.711,
+  "passedTests" : 185,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1794446850.966,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x107db72f0>.\nSparse tree of matches:\n→Application, pid: 53990, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳Image, identifier: 'compose.send-permission', label: 'Lock'\n                                  ↳StaticText, identifier: 'compose.send-permission', label: 'This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then return here and refresh sending access. Your draft remains editable.'",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 175,
+      "testIdentifierString" : "OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade",
+      "testName" : "test14SendingAccessRefreshPreservesWritingThroughFailureAndUpgrade()"
+    },
+    {
+      "failureText" : "Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x1154d83c0>.\nSparse tree of matches:\n→Application, pid: 58884, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳Image, identifier: 'compose.send-permission', label: 'Lock'\n                                  ↳StaticText, identifier: 'compose.send-permission', label: 'This Gmail connection is read-only. In Orca on the web, open Settings → Gmail → Enable drafts and sending, then return here and refresh sending access. Your draft remains editable.'",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 178,
+      "testIdentifierString" : "OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test17ForegroundRefreshUnlocksSendingWithoutRelaunch",
+      "testName" : "test17ForegroundRefreshUnlocksSendingWithoutRelaunch()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed - Expected full draft row above the tab bar before tapping",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 187,
+      "testIdentifierString" : "OrcaUITests/test35RichDraftConversionAtAccessibilitySize()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test35RichDraftConversionAtAccessibilitySize",
+      "testName" : "test35RichDraftConversionAtAccessibilitySize()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed - Expected full draft row above the tab bar before tapping",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 188,
+      "testIdentifierString" : "OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test36SentRecoveryStatusAtAccessibilitySize",
+      "testName" : "test36SentRecoveryStatusAtAccessibilitySize()"
+    },
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 189,
+      "testIdentifierString" : "OrcaUITests/test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes",
+      "testName" : "test43FeedbackReservesShortReaderAndWriterAtStandardAndAccessibilitySizes()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+    {
+      "category" : "Common Failures",
+      "impact" : "40% of failures",
+      "text" : "2 runs of 2 tests failed with XCTAssertTrue failed - Expected full draft row above the tab bar before tapping"
+    },
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "69% of duration",
+      "text" : "6 longest test runs with outlier durations exceeding 11.02s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 190
+}

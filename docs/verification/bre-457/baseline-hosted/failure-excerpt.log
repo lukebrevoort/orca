@@ -1,0 +1,80 @@
+Test Case '-[OrcaUITests.OrcaUITests test44MailStartsImportantAndKeepsAllMailReachable]' started.
+    t =     0.00s Start Test at 2026-11-11 08:50:05.051
+    t =     0.09s Set Up
+    t =     0.09s Open com.orca.mail
+    t =     0.09s     Launch com.orca.mail
+    t =     0.09s         Terminate com.orca.mail:44207
+2026-11-11 08:50:06.929 xcodebuild[11184:37662] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-11 08:50:06.929 xcodebuild[11184:37662] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.89s         Setting up automation session
+    t =     6.93s         Wait for com.orca.mail to idle
+    t =    10.01s Waiting 20.0s for "inbox.view-picker" Button to exist
+    t =    11.01s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.view-picker" Button`
+    t =    11.02s         Checking existence of `"inbox.view-picker" Button`
+    t =    12.56s Added attachment named 'bre457-mail-entry-before-choice'
+    t =    12.56s Find the "Mail" Button
+    t =    13.75s     Find the "Mail" Button (retry 1)
+    t =    14.94s     Find the "Mail" Button (retry 2)
+    t =    15.04s     Collecting debug information to assist test failure triage
+    t =    15.04s         Requesting snapshot of accessibility hierarchy for app with pid 61317
+    t =    15.25s     Requesting snapshot of accessibility hierarchy for app with pid 61317
+    t =    15.40s     Find: Descendants matching type TabBar
+    t =    15.41s     Find: Descendants matching type Button
+    t =    15.41s     Find: Elements matching predicate '"Mail" IN identifiers'
+    t =    15.42s     Requesting snapshot of accessibility hierarchy for app with pid 61317
+/Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:25: error: -[OrcaUITests.OrcaUITests test44MailStartsImportantAndKeepsAllMailReachable] : Failed to get matching snapshot: No matches found for Elements matching predicate '"Mail" IN identifiers' from input {(
+    Button, label: 'Inbox', Selected,
+    Button, label: 'Drafts',
+    Button, label: 'Settings'
+)}
+Possibly caused by runtime issues:
+Automation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 14;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 1108101562369;
+}
+See test report attachments for more detail.
+    t =    16.78s Tear Down
+Test Case '-[OrcaUITests.OrcaUITests test44MailStartsImportantAndKeepsAllMailReachable]' failed (17.025 seconds).
+Test Suite 'OrcaUITests' failed at 2026-11-11 08:50:22.075.
+Test Case '-[OrcaUITests.OrcaUITests test44MailStartsImportantAndKeepsAllMailReachable]' started.
+    t =     0.00s Start Test at 2026-11-11 09:04:57.820
+    t =     0.04s Set Up
+    t =     0.04s Open com.orca.mail
+    t =     0.04s     Launch com.orca.mail
+    t =     0.04s         Terminate com.orca.mail:88589
+2026-11-11 09:04:58.885 xcodebuild[64489:171653] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-11 09:04:58.885 xcodebuild[64489:171653] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     1.54s         Setting up automation session
+    t =     3.27s         Wait for com.orca.mail to idle
+    t =     4.89s Waiting 20.0s for "inbox.view-picker" Button to exist
+    t =     5.94s     Checking `Expect predicate `existsNoRetry == 1` for object "inbox.view-picker" Button`
+    t =     5.94s         Checking existence of `"inbox.view-picker" Button`
+    t =     6.31s Added attachment named 'bre457-mail-entry-before-choice'
+    t =     6.31s Find the "Mail" Button
+    t =     7.43s     Find the "Mail" Button (retry 1)
+    t =     8.60s     Find the "Mail" Button (retry 2)
+    t =     8.74s     Collecting debug information to assist test failure triage
+    t =     8.74s         Requesting snapshot of accessibility hierarchy for app with pid 8667
+    t =     8.93s     Requesting snapshot of accessibility hierarchy for app with pid 8667
+    t =     9.05s     Find: Descendants matching type TabBar
+    t =     9.05s     Find: Descendants matching type Button
+    t =     9.05s     Find: Elements matching predicate '"Mail" IN identifiers'
+    t =     9.07s     Requesting snapshot of accessibility hierarchy for app with pid 8667
+/Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:25: error: -[OrcaUITests.OrcaUITests test44MailStartsImportantAndKeepsAllMailReachable] : Failed to get matching snapshot: No matches found for Elements matching predicate '"Mail" IN identifiers' from input {(
+    Button, label: 'Inbox', Selected,
+    Button, label: 'Drafts',
+    Button, label: 'Settings'
+)}
+Possibly caused by runtime issues:
+Automation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 14;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 1108101562369;
+}
+See test report attachments for more detail.
+    t =     9.34s Tear Down
+Test Case '-[OrcaUITests.OrcaUITests test44MailStartsImportantAndKeepsAllMailReachable]' failed (9.562 seconds).
+Test Suite 'OrcaUITests' failed at 2026-11-11 09:05:07.383.

@@ -1,0 +1,11 @@
+test_actual_adoption_block_runs_only_requested_installation_and_retains_failure (__main__.MailboxShardContractTests.test_actual_adoption_block_runs_only_requested_installation_and_retains_failure) ... ok
+test_actual_fixture_forwarding_and_identity_keep_requested_appearance (__main__.MailboxShardContractTests.test_actual_fixture_forwarding_and_identity_keep_requested_appearance) ... ok
+test_all_existing_selection_arrays_are_byte_preserved_with_units_only_light (__main__.MailboxShardContractTests.test_all_existing_selection_arrays_are_byte_preserved_with_units_only_light) ... ok
+test_direct_runner_rejects_invalid_or_nonmailbox_before_apple (__main__.MailboxShardContractTests.test_direct_runner_rejects_invalid_or_nonmailbox_before_apple) ... ok
+test_fixed_matrix_artifact_identity_and_actual_required_aggregate (__main__.MailboxShardContractTests.test_fixed_matrix_artifact_identity_and_actual_required_aggregate) ... ok
+test_fixture_wrapper_rejects_invalid_or_wrong_mode_before_startup (__main__.MailboxShardContractTests.test_fixture_wrapper_rejects_invalid_or_wrong_mode_before_startup) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.980s
+
+OK

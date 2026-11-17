@@ -1,0 +1,18 @@
+{
+  "sha": "05e0d76605b5b78bf057cf1c1c7d9019d1a73446",
+  "label": "pagination-candidate-green",
+  "swiftParseCount": 36,
+  "elapsed": 13.081614583003102,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 0,
+      "elapsed": 12.991182083002059
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 13.081605749990558
+    }
+  ]
+}

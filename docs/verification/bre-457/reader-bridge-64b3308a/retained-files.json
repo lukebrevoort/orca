@@ -1,0 +1,115 @@
+{
+  "scope": "18 exact original files; only four selected original PNGs, not full PNG dump",
+  "sourceHead": "64b3308a2fb79a149f08f23a06f7578e85a35b3a",
+  "files": [
+    {
+      "source": "/tmp/bre313-724-reading/Orca-summary.json",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/Orca-summary.json",
+      "bytes": 2073,
+      "sha256": "bd5790bc8cd44f4bc9b5c60bb39cf2734812ad5881ba19935de5376eba22d0a3"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/Orca-tests.json",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/Orca-tests.json",
+      "bytes": 126718,
+      "sha256": "1e7131c5d13f204c1214b577036131a43e8045d24156940e8e9cb5abfeccd4e7"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/checks.log",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/checks.log",
+      "bytes": 946344,
+      "sha256": "967cf3d8b65eeb1f3b310c873f5edf33e158c13b4e2e0e511ece5cbc51fac8d6"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/fixture.log",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/fixture.log",
+      "bytes": 11598,
+      "sha256": "9691b13110be248ad6af7aeef7ab016a450889d3e162838f520797109ca72295"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/identity.log",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/identity.log",
+      "bytes": 491,
+      "sha256": "2e6a29cba876d840492b3eae90fd9d51cba499272fb90c58b386385b3fd57afe"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/outcome.json",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/outcome.json",
+      "bytes": 78,
+      "sha256": "2c9317f46b38e5fbbbcb755ea77dfe1299f9aa0d36a4e051bee956865aad1107"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/screenshots/Orca-20.png",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/screenshots/Orca-20.png",
+      "bytes": 304081,
+      "sha256": "95546bd3fb354e2a097826bee4835401369491dec9e4b20f0a37b7eac654df19"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/screenshots/Orca-21.png",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/screenshots/Orca-21.png",
+      "bytes": 310135,
+      "sha256": "a10625cd8c78d3028c62b02b12014f8d946129e66b00de1312f22db281516489"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/screenshots/Orca-52.png",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/screenshots/Orca-52.png",
+      "bytes": 243956,
+      "sha256": "90c1dc66f305e0fbcd00927b8eaa529e45a5387cd73dba236eb03d55ce6dae30"
+    },
+    {
+      "source": "/tmp/bre313-724-reading/screenshots/Orca-128.png",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/historical-724-reading/screenshots/Orca-128.png",
+      "bytes": 304113,
+      "sha256": "a65b9a39fecc74ba2fc1017f972f7eb361c4be8ae436d066ee03a35f985060d7"
+    },
+    {
+      "source": "/tmp/bre313-724-reading-job.log",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/reports/bre313-724-reading-job.log",
+      "bytes": 63389,
+      "sha256": "0925cc71e234337d2da3bbebc0dc715b9142faaaa20606d6e66803584f543ae6"
+    },
+    {
+      "source": "/tmp/bre457-reading-724-triage.md",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/reports/bre457-reading-724-triage.md",
+      "bytes": 10494,
+      "sha256": "f3d09ee8234f901e538794166eb274ec0b14a5faf6a4b44af8213c4c05b2fbd1"
+    },
+    {
+      "source": "/tmp/bre457-reading-724-hashes.json",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/reports/bre457-reading-724-hashes.json",
+      "bytes": 15808,
+      "sha256": "58caaa12f44db8424e8eeae1fff2028aaeea8449ef491fe84df1f6f7a59cb677"
+    },
+    {
+      "source": "/tmp/bre457-reader-bridge-review-64b.md",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/reports/bre457-reader-bridge-review-64b.md",
+      "bytes": 7268,
+      "sha256": "14ba7063e7e129f2df1cdca32930bc5648affd885ebee83bb02cc7e4648c087d"
+    },
+    {
+      "source": "/tmp/bre457-reader-grammar-64b3308a/grammar.log",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/grammar-64b3308a/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-reader-grammar-64b3308a/manifest.json",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/grammar-64b3308a/manifest.json",
+      "bytes": 12910,
+      "sha256": "9fa07d8350d933a0fadaca81a21037858bb3e3f75469a528d2f1cafaad74d2e9"
+    },
+    {
+      "source": "/tmp/bre457-reader-grammar-64b3308a.py",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/grammar-64b3308a/bre457-reader-grammar-64b3308a.py",
+      "bytes": 2690,
+      "sha256": "3022de94f92a99cf689fb72a8a9d3967d5e8c07f4499d909f36d638752ce7a3f"
+    },
+    {
+      "source": "/tmp/bre457-reader-grammar-64b3308a.wrapper.log",
+      "retained": "docs/verification/bre-457/reader-bridge-64b3308a/grammar-64b3308a/bre457-reader-grammar-64b3308a.wrapper.log",
+      "bytes": 2406,
+      "sha256": "237538af20e8becc5cda72ade5c6effb04ae361d0f786994cb1a207bf00603fe"
+    }
+  ],
+  "visualInspection": "Worker four original detail inspections; ROOT reports three; not seven distinct images.111 unique thumbnail survey of127 exported. No unique test ordinal mapping."
+}

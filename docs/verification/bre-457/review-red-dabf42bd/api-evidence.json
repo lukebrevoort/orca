@@ -1,0 +1,127 @@
+{
+  "ledger": [
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 2,
+        "view": {
+          "skipInbox": false,
+          "id": "view_232f3fb8-e58d-42f8-b37f-5744e83e2e2a",
+          "workspaceId": "owner",
+          "name": "Exactly one view",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T10:01:57.546Z",
+          "updatedAt": "2026-11-11T10:01:57.546Z"
+        },
+        "navigation": {
+          "destination": "view:view_232f3fb8-e58d-42f8-b37f-5744e83e2e2a",
+          "href": "/?destination=view%3Aview_232f3fb8-e58d-42f8-b37f-5744e83e2e2a"
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 3,
+        "view": {
+          "skipInbox": false,
+          "id": "view_e5c5d9d7-173c-40d0-9dfb-75a73e2e4b54",
+          "workspaceId": "owner",
+          "name": "Edited after lost acknowledgement",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T10:01:57.567Z",
+          "updatedAt": "2026-11-11T10:01:57.567Z"
+        },
+        "navigation": {
+          "destination": "view:view_e5c5d9d7-173c-40d0-9dfb-75a73e2e4b54",
+          "href": "/?destination=view%3Aview_e5c5d9d7-173c-40d0-9dfb-75a73e2e4b54"
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 4,
+        "view": {
+          "skipInbox": false,
+          "id": "view_ed7e32f3-77e4-4ae0-bb6c-9299a803b72e",
+          "workspaceId": "owner",
+          "name": "Reopened edit",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T10:01:57.591Z",
+          "updatedAt": "2026-11-11T10:01:57.591Z"
+        },
+        "navigation": {
+          "destination": "view:view_ed7e32f3-77e4-4ae0-bb6c-9299a803b72e",
+          "href": "/?destination=view%3Aview_ed7e32f3-77e4-4ae0-bb6c-9299a803b72e"
+        }
+      }
+    }
+  ],
+  "providerCalls": 0,
+  "views": [
+    {
+      "id": "view_232f3fb8-e58d-42f8-b37f-5744e83e2e2a",
+      "name": "Exactly one view",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 3
+    },
+    {
+      "id": "view_e5c5d9d7-173c-40d0-9dfb-75a73e2e4b54",
+      "name": "Edited after lost acknowledgement",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 2
+    },
+    {
+      "id": "view_ed7e32f3-77e4-4ae0-bb6c-9299a803b72e",
+      "name": "Reopened edit",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 1
+    }
+  ]
+}

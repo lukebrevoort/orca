@@ -1,0 +1,174 @@
+apps/ios/OrcaUITests/ViewportGeometry.swift:8:26: error: value of type 'CGRect' has no member 'intersection'
+ 6 |     static func content(form: CGRect, application: CGRect, navigation: CGRect, fixed: [CGRect]) -> CGRect? {
+ 7 |         guard valid(form), valid(application), valid(navigation) else { return nil }
+ 8 |         let frame = form.intersection(application)
+   |                          `- error: value of type 'CGRect' has no member 'intersection'
+ 9 |         guard valid(frame), frame.width > 20 else { return nil }
+10 |         let top = max(frame.minY, navigation.maxY) + 2
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:10:46: error: value of type 'CGRect' has no member 'maxY'
+ 8 |         let frame = form.intersection(application)
+ 9 |         guard valid(frame), frame.width > 20 else { return nil }
+10 |         let top = max(frame.minY, navigation.maxY) + 2
+   |                                              `- error: value of type 'CGRect' has no member 'maxY'
+11 |         let boundaries = fixed.filter { valid($0) && $0.intersects(frame) && $0.maxY > top }
+12 |         let bottom = min(frame.maxY, boundaries.map(\.minY).min() ?? frame.maxY) - 2
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:11:39: error: trailing closure passed to parameter of type 'Predicate<CGRect>' that does not accept a closure
+ 9 |         guard valid(frame), frame.width > 20 else { return nil }
+10 |         let top = max(frame.minY, navigation.maxY) + 2
+11 |         let boundaries = fixed.filter { valid($0) && $0.intersects(frame) && $0.maxY > top }
+   |                                       `- error: trailing closure passed to parameter of type 'Predicate<CGRect>' that does not accept a closure
+12 |         let bottom = min(frame.maxY, boundaries.map(\.minY).min() ?? frame.maxY) - 2
+13 |         guard bottom > top else { return nil }
+
+Foundation.Sequence.filter:2:13: note: 'filter' declared here
+1 | protocol Sequence {
+2 | public func filter(_ predicate: Predicate<Self.Element>) throws -> [Self.Element]}
+  |             `- note: 'filter' declared here
+3 | 
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:12:53: error: cannot infer key path type from context; consider explicitly specifying a root type
+10 |         let top = max(frame.minY, navigation.maxY) + 2
+11 |         let boundaries = fixed.filter { valid($0) && $0.intersects(frame) && $0.maxY > top }
+12 |         let bottom = min(frame.maxY, boundaries.map(\.minY).min() ?? frame.maxY) - 2
+   |                                                     `- error: cannot infer key path type from context; consider explicitly specifying a root type
+13 |         guard bottom > top else { return nil }
+14 |         return CGRect(x: frame.minX + 6, y: top, width: frame.width - 12, height: bottom - top)
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:14:22: error: argument passed to call that takes no arguments
+12 |         let bottom = min(frame.maxY, boundaries.map(\.minY).min() ?? frame.maxY) - 2
+13 |         guard bottom > top else { return nil }
+14 |         return CGRect(x: frame.minX + 6, y: top, width: frame.width - 12, height: bottom - top)
+   |                      `- error: argument passed to call that takes no arguments
+15 |     }
+16 |     static func writingArea(body: CGRect, viewport: CGRect) -> CGRect? {
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:18:28: error: value of type 'CGRect' has no member 'intersection'
+16 |     static func writingArea(body: CGRect, viewport: CGRect) -> CGRect? {
+17 |         guard valid(body), valid(viewport) else { return nil }
+18 |         let visible = body.intersection(viewport)
+   |                            `- error: value of type 'CGRect' has no member 'intersection'
+19 |         return valid(visible) && visible.width >= 44 && visible.height >= 44 ? visible : nil
+20 |     }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:22:41: error: value of type 'CGRect' has no member 'width'
+20 |     }
+21 |     static func pan(in viewport: CGRect, up: Bool) -> Pan? {
+22 |         guard valid(viewport), viewport.width > 8, viewport.height >= 20 else { return nil }
+   |                                         `- error: value of type 'CGRect' has no member 'width'
+23 |         // Use the form/list padding beside its text editor/rows, not an inner
+24 |         // TextEditor pan or fixed-footer background within an outer frame.
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:22:61: error: value of type 'CGRect' has no member 'height'
+20 |     }
+21 |     static func pan(in viewport: CGRect, up: Bool) -> Pan? {
+22 |         guard valid(viewport), viewport.width > 8, viewport.height >= 20 else { return nil }
+   |                                                             `- error: value of type 'CGRect' has no member 'height'
+23 |         // Use the form/list padding beside its text editor/rows, not an inner
+24 |         // TextEditor pan or fixed-footer background within an outer frame.
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:25:26: error: value of type 'CGRect' has no member 'maxX'
+23 |         // Use the form/list padding beside its text editor/rows, not an inner
+24 |         // TextEditor pan or fixed-footer background within an outer frame.
+25 |         let x = viewport.maxX - 4
+   |                          `- error: value of type 'CGRect' has no member 'maxX'
+26 |         let high = viewport.minY + viewport.height * 0.2
+27 |         let low = viewport.maxY - viewport.height * 0.2
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:26:29: error: value of type 'CGRect' has no member 'minY'
+24 |         // TextEditor pan or fixed-footer background within an outer frame.
+25 |         let x = viewport.maxX - 4
+26 |         let high = viewport.minY + viewport.height * 0.2
+   |                             `- error: value of type 'CGRect' has no member 'minY'
+27 |         let low = viewport.maxY - viewport.height * 0.2
+28 |         return Pan(start: CGPoint(x: x, y: up ? low : high), end: CGPoint(x: x, y: up ? high : low))
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:26:45: error: value of type 'CGRect' has no member 'height'
+24 |         // TextEditor pan or fixed-footer background within an outer frame.
+25 |         let x = viewport.maxX - 4
+26 |         let high = viewport.minY + viewport.height * 0.2
+   |                                             `- error: value of type 'CGRect' has no member 'height'
+27 |         let low = viewport.maxY - viewport.height * 0.2
+28 |         return Pan(start: CGPoint(x: x, y: up ? low : high), end: CGPoint(x: x, y: up ? high : low))
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:27:28: error: value of type 'CGRect' has no member 'maxY'
+25 |         let x = viewport.maxX - 4
+26 |         let high = viewport.minY + viewport.height * 0.2
+27 |         let low = viewport.maxY - viewport.height * 0.2
+   |                            `- error: value of type 'CGRect' has no member 'maxY'
+28 |         return Pan(start: CGPoint(x: x, y: up ? low : high), end: CGPoint(x: x, y: up ? high : low))
+29 |     }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:27:44: error: value of type 'CGRect' has no member 'height'
+25 |         let x = viewport.maxX - 4
+26 |         let high = viewport.minY + viewport.height * 0.2
+27 |         let low = viewport.maxY - viewport.height * 0.2
+   |                                            `- error: value of type 'CGRect' has no member 'height'
+28 |         return Pan(start: CGPoint(x: x, y: up ? low : high), end: CGPoint(x: x, y: up ? high : low))
+29 |     }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:15: error: value of type 'CGRect' has no member 'isNull'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |               `- error: value of type 'CGRect' has no member 'isNull'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:31: error: value of type 'CGRect' has no member 'isInfinite'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                               `- error: value of type 'CGRect' has no member 'isInfinite'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:51: error: value of type 'CGRect' has no member 'isEmpty'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                                                   `- error: value of type 'CGRect' has no member 'isEmpty'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:68: error: value of type 'CGRect' has no member 'minX'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                                                                    `- error: value of type 'CGRect' has no member 'minX'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:79: error: value of type 'CGRect' has no member 'minY'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                                                                               `- error: value of type 'CGRect' has no member 'minY'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:90: error: value of type 'CGRect' has no member 'width'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                                                                                          `- error: value of type 'CGRect' has no member 'width'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:102: error: value of type 'CGRect' has no member 'height'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                                                                                                      `- error: value of type 'CGRect' has no member 'height'
+32 |     }
+33 | }
+
+apps/ios/OrcaUITests/ViewportGeometry.swift:31:121: error: value of type 'Any' has no member 'isFinite'
+29 |     }
+30 |     private static func valid(_ rect: CGRect) -> Bool {
+31 |         !rect.isNull && !rect.isInfinite && !rect.isEmpty && [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite)
+   |                                                                                                                         |- error: value of type 'Any' has no member 'isFinite'
+   |                                                                                                                         `- note: cast 'Any' to 'AnyObject' or use 'as!' to force downcast to a more specific type to access members
+32 |     }
+33 | }

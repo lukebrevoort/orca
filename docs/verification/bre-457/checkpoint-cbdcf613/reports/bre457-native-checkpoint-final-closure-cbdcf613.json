@@ -1,0 +1,310 @@
+{
+  "sourceHead": "cbdcf6132c765f4e59aafcdb98c008437ba4871f",
+  "scope": "CI evidence boundary only; native/product/API/schema/test assertions and45min limit unchanged",
+  "actualObservedJob": {
+    "head": "41a0998b14428f62280027f504678b1c243e5a77",
+    "job": 130867673422,
+    "run": 43122924479,
+    "timeoutMinutes": 45,
+    "lightFinished": "2026-11-12T00:32:04.938912Z",
+    "darkStarted": "2026-11-12T00:32:07.908715Z",
+    "timeout": "2026-11-12T00:36:47.690438Z",
+    "artifacts": [],
+    "outcomes": "No Lightpass/fail/countorDarkoutcome can be established"
+  },
+  "actualRuns": {
+    "baseline62": {
+      "head": "62b940ddafb9147b5d891e913d70d4cc7b7ea2d1",
+      "exit": 1,
+      "identityUnchanged": true,
+      "seconds": 0.9458047079970129,
+      "stages": [
+        {
+          "stage": "checkpoint-red",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-evidence-checkpoint.py",
+            "CheckpointTests.test_outer_kill_during_dark_keeps_light_checkpoint"
+          ],
+          "exit": 1,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 92379,
+          "elapsedSeconds": 0.8785646660253406
+        }
+      ],
+      "notStarted": []
+    },
+    "initialEE": {
+      "head": "ee513355e49f51d129867bc8dc1335c1185ef079",
+      "exit": 124,
+      "identityUnchanged": true,
+      "seconds": 14.669682250008918,
+      "stages": [
+        {
+          "stage": "checkpoint-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-evidence-checkpoint.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 95039,
+          "elapsedSeconds": 4.068130875006318
+        },
+        {
+          "stage": "existing-export-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-export-evidence.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 95159,
+          "elapsedSeconds": 4.517819374974351
+        },
+        {
+          "stage": "existing-appearance-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-ios-mailbox-phases.py"
+          ],
+          "exit": 124,
+          "timeout": true,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 95171,
+          "elapsedSeconds": 14.543711916019674
+        }
+      ],
+      "notStarted": [
+        "existing-runner-lifecycle",
+        "wrapper-syntax",
+        "runner-syntax"
+      ]
+    },
+    "remainingEE": {
+      "head": "ee513355e49f51d129867bc8dc1335c1185ef079",
+      "exit": 0,
+      "identityUnchanged": true,
+      "seconds": 16.577816166973207,
+      "stages": [
+        {
+          "stage": "existing-appearance-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-ios-mailbox-phases.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 96357,
+          "elapsedSeconds": 12.773073250020389
+        },
+        {
+          "stage": "existing-runner-lifecycle",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "apps/ios/Tools/ReviewRegressions/runner-lifecycle.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 96541,
+          "elapsedSeconds": 16.45073154201964
+        },
+        {
+          "stage": "wrapper-syntax",
+          "command": [
+            "/bin/bash",
+            "-n",
+            "scripts/ci/fixture-check.sh"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 96637,
+          "elapsedSeconds": 16.456877332995646
+        },
+        {
+          "stage": "runner-syntax",
+          "command": [
+            "/bin/zsh",
+            "-n",
+            "apps/ios/OrcaUITests/run-fixture-tests.sh"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 96638,
+          "elapsedSeconds": 16.49458295799559
+        }
+      ],
+      "notStarted": []
+    },
+    "scratchFC3": {
+      "head": "fc3ba2113a469adad99125402ce1a5f030c1313a",
+      "exit": 0,
+      "identityUnchanged": true,
+      "seconds": 3.809066375019029,
+      "stages": [
+        {
+          "stage": "checkpoint-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-evidence-checkpoint.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 99022,
+          "elapsedSeconds": 3.3472427910310216
+        },
+        {
+          "stage": "existing-export-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-export-evidence.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 99083,
+          "elapsedSeconds": 3.742861583014019
+        }
+      ],
+      "notStarted": []
+    },
+    "final08": {
+      "head": "08ee0efc9c02f8ac08b7869c0a0cfd8482fd0aee",
+      "exit": 0,
+      "identityUnchanged": true,
+      "seconds": 3.188880541943945,
+      "stages": [
+        {
+          "stage": "checkpoint-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-evidence-checkpoint.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 468,
+          "elapsedSeconds": 3.120480249985121
+        }
+      ],
+      "notStarted": []
+    },
+    "finalCBD": {
+      "head": "cbdcf6132c765f4e59aafcdb98c008437ba4871f",
+      "exit": 0,
+      "identityUnchanged": true,
+      "seconds": 3.507955792010762,
+      "stages": [
+        {
+          "stage": "checkpoint-controls",
+          "command": [
+            "/opt/homebrew/opt/python@3.14/bin/python3.14",
+            "-B",
+            "scripts/ci/test-evidence-checkpoint.py"
+          ],
+          "exit": 0,
+          "timeout": false,
+          "cleanup": "terminal",
+          "ownedPidAndPgid": 4412,
+          "elapsedSeconds": 3.444772874994669
+        }
+      ],
+      "notStarted": []
+    }
+  },
+  "counts": {
+    "baseline62": {
+      "executed": 1,
+      "failures": 1,
+      "meaning": "heldDarkprecondition+SIGKILL reached; missingLightcheckpoint exactfailure"
+    },
+    "initialEE": {
+      "newControls": 6,
+      "newFailures": 0,
+      "existingSanitizer": 25,
+      "sanitizerFailures": 0,
+      "appearance": "10s externaldrivercap124; keepNONPASS"
+    },
+    "remainingEE": {
+      "appearanceTests": 2,
+      "appearanceFailures": 0,
+      "lifecycleScopes": 4,
+      "lifecycleFailures": 0,
+      "bashSyntax": 0,
+      "zshSyntax": 0
+    },
+    "scratchFC3": {
+      "newControls": 6,
+      "newFailures": 0,
+      "existingSanitizer": 25,
+      "sanitizerFailures": 0
+    },
+    "final08": {
+      "newControls": 6,
+      "newFailures": 0
+    },
+    "finalCBD": {
+      "newSyntheticPythonControls": 7,
+      "failures": 0,
+      "note": "Six originals unchanged plus browser/reader allowlist/nestedimage/finalstatus compatibility control; realphasehook+SIGKILL andrealcleanup areused."
+    }
+  },
+  "identityReuse": {
+    "rawExportFunctionASTExactFC3": true,
+    "eeUnchangedPhaseLifecycleAndShellInputs": [
+      "scripts/ci/fixture-check.sh",
+      "apps/ios/OrcaUITests/run-fixture-tests.sh",
+      "scripts/ci/test-ios-mailbox-phases.py",
+      "apps/ios/Tools/ReviewRegressions/runner-lifecycle.py",
+      ".github/workflows/native-mailbox.yml"
+    ],
+    "all44SwiftGrammarHashesExactB795": true,
+    "all33FoundationAndHarnessHashesExactF0e": true,
+    "broader69F0eDelta": [
+      "apps/ios/OrcaTests/OrcaTests.swift",
+      "apps/ios/OrcaUITests/OrcaUITests.swift",
+      "apps/ios/OrcaUITests/run-fixture-tests.sh"
+    ],
+    "allExporterBytesExact08": true,
+    "runnerAfterProgressFunctionExact0b22": true
+  },
+  "review": {
+    "report": "/tmp/bre457-native-checkpoint-review-ee513.md",
+    "verdict": "ScopedAPPROVEDWITHCOMMENTS/no blockingfinding atimmutableee",
+    "C1": "ROOTfc3freshper-exportprivateattachmentsroot andstrictmockdirectoryrejection;6+25pass; productionexporteridenticalfinalCBD7pass",
+    "C2": "ROOT08publicdestinationdiagnostic/assertion6pass; productionexporterbytes identicalfinalCBD, all7controls pass atCBD",
+    "C3": "NarrowkillafterDarkstarts only; no45minfit/timing/hostedinterruptionguarantee"
+  },
+  "caveats": [
+    "Cumulative multi-invocation proof, not asinglecleanfullgate. InitialappearancecapNONPASS remains.",
+    "Historicalfinal08driver scope textmentions25controls, actualstageexecutedONLY6. FinalCBDdriver scope explicitly7 andactual7.25priorfc3 rawexportfunctionbyteidentitychecked.",
+    "No actual Apple commands in these syntheticcontrols. UnrelatedMac Apple/Fitnessprocessesuntouched.",
+    "Checkpointcanstill beabsent ifkilledbeforeatomicpublication; synchronousrealxcresultexport consumesunchangedjobbudget.",
+    "AllcurrentnativeUI/fullclient/all33/OS/deploymentgatesremainopen. No pushyet."
+  ],
+  "changedSourcePaths": [
+    ".github/workflows/native-mailbox.yml",
+    "apps/ios/OrcaUITests/run-fixture-tests.sh",
+    "scripts/ci/export-evidence.py",
+    "scripts/ci/fixture-check.sh",
+    "scripts/ci/test-evidence-checkpoint.py"
+  ],
+  "finalOwnedStageGroupsRemaining": []
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "../../../api/tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false,
+    "noEmit": true,
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../../api/scripts/mobile-fixture.ts",
+    "api-fixture.ts",
+    "navigation-fixture.ts",
+    "query-golden.ts"
+  ]
+}

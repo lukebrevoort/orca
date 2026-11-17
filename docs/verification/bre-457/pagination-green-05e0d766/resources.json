@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794404283.522441,
+    "stage": "before",
+    "ownerPid": 77709,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      " 1152  16.4  22320 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15382  14.8 1072624 codex",
+      "77709  12.4  17328 /opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+      "  413   9.6  22048 /usr/libexec/runningboardd",
+      "15249   8.1 388624 /Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)",
+      "  416   5.5  21984 /usr/sbin/coreaudiod"
+    ],
+    "memory": "System-wide memory free percentage: 75%"
+  },
+  {
+    "time": 1794404296.757674,
+    "stage": "after",
+    "ownerPid": 77709,
+    "childPid": 77747,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      " 1152  14.4  21008 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "  379   4.5  29040 /usr/libexec/locationd",
+      "  335   4.3   9760 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd",
+      "25406   4.2 572304 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "  416   4.1  22272 /usr/sbin/coreaudiod",
+      " 1046   3.2 759968 /Applications/Zen.app/Contents/MacOS/zen"
+    ],
+    "memory": "System-wide memory free percentage: 72%"
+  }
+]

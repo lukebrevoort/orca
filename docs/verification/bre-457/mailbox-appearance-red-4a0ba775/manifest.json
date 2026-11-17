@@ -1,0 +1,13 @@
+{
+  "head": "4a0ba775babb8f85988491c6f0ba82933895169f",
+  "scope": "Actual runner tail with mock executables only; no Apple commands",
+  "stages": [],
+  "ownedPGID": 5601,
+  "rawExit": 124,
+  "elapsedSeconds": 12.008743249985855,
+  "endHead": "4a0ba775babb8f85988491c6f0ba82933895169f",
+  "endingDirty": "",
+  "inputsEqual": true,
+  "remainingOwnedGroup": [],
+  "logSha256": "f59dcb3d6d5b62ac970dd8ff9e544679b7b99791e3e1b2ab5d39c6d41879b816"
+}

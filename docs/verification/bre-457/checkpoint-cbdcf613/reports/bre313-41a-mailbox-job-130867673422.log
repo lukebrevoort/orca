@@ -1,0 +1,302 @@
+﻿2026-11-11T23:51:04.2282390Z Current runner version: '2.338.2'
+2026-11-11T23:51:04.2334170Z ##[group]Runner Image Provisioner
+2026-11-11T23:51:04.2336680Z Hosted Compute Agent
+2026-11-11T23:51:04.2337470Z Version: 20261028.624
+2026-11-11T23:51:04.2337980Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+2026-11-11T23:51:04.2338910Z Build Date: 2026-10-28T21:51:42Z
+2026-11-11T23:51:04.2339620Z Worker ID: {a0e2180d-69b3-4470-9bc9-b98457d4ee3c}
+2026-11-11T23:51:04.2340390Z Region: westus
+2026-11-11T23:51:04.2340960Z Cloud: MacCloud
+2026-11-11T23:51:04.2341430Z ##[endgroup]
+2026-11-11T23:51:04.2342740Z ##[group]Operating System
+2026-11-11T23:51:04.2343260Z macOS
+2026-11-11T23:51:04.2343800Z 26.7.2
+2026-11-11T23:51:04.2345890Z 25G332
+2026-11-11T23:51:04.2347600Z ##[endgroup]
+2026-11-11T23:51:04.2351410Z ##[group]Runner Image
+2026-11-11T23:51:04.2353370Z Image: macos-26-arm64
+2026-11-11T23:51:04.2354780Z Version: 20261102.0473.1
+2026-11-11T23:51:04.2360090Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20261102.0473/images/macos/macos-26-arm64-Readme.md
+2026-11-11T23:51:04.2363200Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20261102.0473
+2026-11-11T23:51:04.2364650Z ##[endgroup]
+2026-11-11T23:51:04.2366110Z ##[group]GITHUB_TOKEN Permissions
+2026-11-11T23:51:04.2369560Z Contents: read
+2026-11-11T23:51:04.2370230Z Metadata: read
+2026-11-11T23:51:04.2372110Z ##[endgroup]
+2026-11-11T23:51:04.2378110Z Secret source: Actions
+2026-11-11T23:51:04.2380420Z Cache mode: write
+2026-11-11T23:51:04.2382700Z Prepare workflow directory
+2026-11-11T23:51:04.3109760Z Prepare all required actions
+2026-11-11T23:51:04.3180410Z Getting action download info
+2026-11-11T23:51:04.4918140Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-11T23:51:04.9361300Z Download action repository 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+2026-11-11T23:51:05.7250850Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-11T23:51:06.0137610Z Complete job name: Native mailbox light/dark UI
+2026-11-11T23:51:06.0878810Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-11T23:51:06.0879650Z with:
+2026-11-11T23:51:06.0880010Z   ref: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:06.0880430Z   persist-credentials: false
+2026-11-11T23:51:06.0880810Z   repository: lukebrevoort/orca
+2026-11-11T23:51:06.0883650Z   token: ***
+2026-11-11T23:51:06.0883960Z   ssh-strict: true
+2026-11-11T23:51:06.0884290Z   ssh-user: git
+2026-11-11T23:51:06.0884590Z   clean: true
+2026-11-11T23:51:06.0885020Z   sparse-checkout-cone-mode: true
+2026-11-11T23:51:06.0885400Z   fetch-depth: 1
+2026-11-11T23:51:06.0885720Z   fetch-tags: false
+2026-11-11T23:51:06.0886060Z   show-progress: true
+2026-11-11T23:51:06.0886390Z   lfs: false
+2026-11-11T23:51:06.0886690Z   submodules: false
+2026-11-11T23:51:06.0887150Z   set-safe-directory: true
+2026-11-11T23:51:06.0887850Z   allow-unsafe-pr-checkout: false
+2026-11-11T23:51:06.0888580Z env:
+2026-11-11T23:51:06.0889070Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:06.0889630Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:06.0890090Z   ORCA_CI_UI_TEST_SCOPE: mailbox
+2026-11-11T23:51:06.0890780Z   ORCA_FIXTURE_MAILBOX_CONTROLS: 1
+2026-11-11T23:51:06.0891160Z ##[endgroup]
+2026-11-11T23:51:06.6335000Z Syncing repository: lukebrevoort/orca
+2026-11-11T23:51:06.6336550Z ##[group]Getting Git version info
+2026-11-11T23:51:06.6337170Z Working directory is '/Users/runner/work/orca/orca'
+2026-11-11T23:51:06.6337930Z [command]/opt/homebrew/bin/git version
+2026-11-11T23:51:06.6897470Z git version 2.56.0
+2026-11-11T23:51:06.6909360Z ##[endgroup]
+2026-11-11T23:51:06.6919200Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/ba4ee06f-fad6-488f-93ec-76ad727f772b/.gitconfig'
+2026-11-11T23:51:06.6933440Z Temporarily overriding HOME='/Users/runner/work/_temp/ba4ee06f-fad6-488f-93ec-76ad727f772b' before making global git config changes
+2026-11-11T23:51:06.6934830Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-11T23:51:06.6939370Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/orca/orca
+2026-11-11T23:51:06.7377960Z Deleting the contents of '/Users/runner/work/orca/orca'
+2026-11-11T23:51:06.7399590Z ##[group]Initializing the repository
+2026-11-11T23:51:06.7403670Z [command]/opt/homebrew/bin/git init /Users/runner/work/orca/orca
+2026-11-11T23:51:06.7656810Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-11T23:51:06.7657950Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-11T23:51:06.7658720Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-11T23:51:06.7659330Z hint: call:
+2026-11-11T23:51:06.7659720Z hint:
+2026-11-11T23:51:06.7660370Z hint: 	git config --global init.defaultBranch <name>
+2026-11-11T23:51:06.7661110Z hint:
+2026-11-11T23:51:06.7662440Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-11T23:51:06.7663420Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-11T23:51:06.7664150Z hint:
+2026-11-11T23:51:06.7664580Z hint: 	git branch -m <name>
+2026-11-11T23:51:06.7665090Z hint:
+2026-11-11T23:51:06.7665870Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-11T23:51:06.7682510Z Initialized empty Git repository in /Users/runner/work/orca/orca/.git/
+2026-11-11T23:51:06.7703120Z [command]/opt/homebrew/bin/git remote add origin https://github.com/lukebrevoort/orca
+2026-11-11T23:51:06.7832420Z ##[endgroup]
+2026-11-11T23:51:06.7834730Z ##[group]Disabling automatic garbage collection
+2026-11-11T23:51:06.7838210Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-11-11T23:51:06.7902200Z ##[endgroup]
+2026-11-11T23:51:06.7963100Z ##[group]Setting up auth
+2026-11-11T23:51:06.7964790Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-11T23:51:06.8025880Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-11T23:51:06.9585370Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-11T23:51:06.9667670Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-11T23:51:07.1138430Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-11T23:51:07.1429590Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-11T23:51:07.2519660Z [command]/opt/homebrew/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-11T23:51:07.2833450Z ##[endgroup]
+2026-11-11T23:51:07.2869250Z ##[group]Fetching the repository
+2026-11-11T23:51:07.2871550Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:21.9563000Z From https://github.com/lukebrevoort/orca
+2026-11-11T23:51:21.9565350Z  * branch            41a0998b14428f62280027f504678b1c243e5a77 -> FETCH_HEAD
+2026-11-11T23:51:21.9582460Z ##[endgroup]
+2026-11-11T23:51:21.9583450Z ##[group]Determining the checkout info
+2026-11-11T23:51:21.9587910Z ##[endgroup]
+2026-11-11T23:51:21.9602560Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-11-11T23:51:21.9736260Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-11T23:51:21.9845830Z ##[group]Checking out the ref
+2026-11-11T23:51:21.9848040Z [command]/opt/homebrew/bin/git checkout --progress --force 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:23.1431690Z Updating files:  48% (2925/6093)
+2026-11-11T23:51:23.1966250Z Updating files:  49% (2986/6093)
+2026-11-11T23:51:23.2643870Z Updating files:  50% (3047/6093)
+2026-11-11T23:51:23.3240130Z Updating files:  51% (3108/6093)
+2026-11-11T23:51:23.3942220Z Updating files:  52% (3169/6093)
+2026-11-11T23:51:23.4611150Z Updating files:  53% (3230/6093)
+2026-11-11T23:51:23.5195190Z Updating files:  54% (3291/6093)
+2026-11-11T23:51:23.5885570Z Updating files:  55% (3352/6093)
+2026-11-11T23:51:23.6559100Z Updating files:  56% (3413/6093)
+2026-11-11T23:51:23.7302250Z Updating files:  57% (3474/6093)
+2026-11-11T23:51:23.8021260Z Updating files:  58% (3534/6093)
+2026-11-11T23:51:23.8478920Z Updating files:  59% (3595/6093)
+2026-11-11T23:51:23.9592720Z Updating files:  60% (3656/6093)
+2026-11-11T23:51:24.0113100Z Updating files:  61% (3717/6093)
+2026-11-11T23:51:24.0677100Z Updating files:  61% (3732/6093)
+2026-11-11T23:51:24.1146450Z Updating files:  62% (3778/6093)
+2026-11-11T23:51:24.2116480Z Updating files:  63% (3839/6093)
+2026-11-11T23:51:24.2295760Z Updating files:  64% (3900/6093)
+2026-11-11T23:51:24.2476540Z Updating files:  65% (3961/6093)
+2026-11-11T23:51:24.2791570Z Updating files:  66% (4022/6093)
+2026-11-11T23:51:24.2975630Z Updating files:  67% (4083/6093)
+2026-11-11T23:51:24.3338360Z Updating files:  68% (4144/6093)
+2026-11-11T23:51:24.4281570Z Updating files:  69% (4205/6093)
+2026-11-11T23:51:24.4430940Z Updating files:  70% (4266/6093)
+2026-11-11T23:51:24.5766520Z Updating files:  71% (4327/6093)
+2026-11-11T23:51:24.6814200Z Updating files:  72% (4387/6093)
+2026-11-11T23:51:24.7408860Z Updating files:  73% (4448/6093)
+2026-11-11T23:51:24.7645750Z Updating files:  74% (4509/6093)
+2026-11-11T23:51:24.7959670Z Updating files:  75% (4570/6093)
+2026-11-11T23:51:24.8909660Z Updating files:  76% (4631/6093)
+2026-11-11T23:51:24.9273240Z Updating files:  77% (4692/6093)
+2026-11-11T23:51:24.9619670Z Updating files:  78% (4753/6093)
+2026-11-11T23:51:24.9991060Z Updating files:  79% (4814/6093)
+2026-11-11T23:51:25.0115330Z Updating files:  80% (4875/6093)
+2026-11-11T23:51:25.0301900Z Updating files:  80% (4895/6093)
+2026-11-11T23:51:25.1034600Z Updating files:  81% (4936/6093)
+2026-11-11T23:51:25.1674690Z Updating files:  82% (4997/6093)
+2026-11-11T23:51:25.1858430Z Updating files:  83% (5058/6093)
+2026-11-11T23:51:25.2218500Z Updating files:  84% (5119/6093)
+2026-11-11T23:51:25.2505250Z Updating files:  85% (5180/6093)
+2026-11-11T23:51:25.2849720Z Updating files:  86% (5240/6093)
+2026-11-11T23:51:25.3130150Z Updating files:  87% (5301/6093)
+2026-11-11T23:51:25.3488910Z Updating files:  88% (5362/6093)
+2026-11-11T23:51:25.3726300Z Updating files:  89% (5423/6093)
+2026-11-11T23:51:25.4239840Z Updating files:  90% (5484/6093)
+2026-11-11T23:51:25.5064520Z Updating files:  91% (5545/6093)
+2026-11-11T23:51:25.5751800Z Updating files:  92% (5606/6093)
+2026-11-11T23:51:25.5969990Z Updating files:  93% (5667/6093)
+2026-11-11T23:51:25.6029620Z Updating files:  94% (5728/6093)
+2026-11-11T23:51:25.6456560Z Updating files:  95% (5789/6093)
+2026-11-11T23:51:25.7418340Z Updating files:  96% (5850/6093)
+2026-11-11T23:51:25.7766060Z Updating files:  97% (5911/6093)
+2026-11-11T23:51:25.7953480Z Updating files:  98% (5972/6093)
+2026-11-11T23:51:25.8086410Z Updating files:  99% (6033/6093)
+2026-11-11T23:51:25.8087360Z Updating files: 100% (6093/6093)
+2026-11-11T23:51:25.8089370Z Updating files: 100% (6093/6093), done.
+2026-11-11T23:51:25.8196440Z HEAD is now at 41a0998 docs(BRE-457): retain exact native 419 gate and correction evidence
+2026-11-11T23:51:25.8251780Z ##[endgroup]
+2026-11-11T23:51:25.8440550Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-11-11T23:51:25.8539620Z 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:25.8552790Z ##[group]Removing auth
+2026-11-11T23:51:25.8558230Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-11T23:51:25.8643220Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-11T23:51:26.0312170Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-11T23:51:26.0393840Z http.https://github.com/.extraheader
+2026-11-11T23:51:26.0400170Z [command]/opt/homebrew/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-11T23:51:26.0512210Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-11T23:51:26.1729660Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-11T23:51:26.1810230Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-11T23:51:26.2867980Z ##[endgroup]
+2026-11-11T23:51:26.3417350Z ##[group]Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+2026-11-11T23:51:26.3417800Z with:
+2026-11-11T23:51:26.3418040Z   bun-version: 1.3.14
+2026-11-11T23:51:26.3418360Z   no-cache: false
+2026-11-11T23:51:26.3420550Z   token: ***
+2026-11-11T23:51:26.3420770Z env:
+2026-11-11T23:51:26.3421100Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:26.3421590Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:26.3421920Z   ORCA_CI_UI_TEST_SCOPE: mailbox
+2026-11-11T23:51:26.3422240Z   ORCA_FIXTURE_MAILBOX_CONTROLS: 1
+2026-11-11T23:51:26.3422570Z ##[endgroup]
+2026-11-11T23:51:26.7448740Z Cache hit for: bun-kSmiCOujAb+jFWQqTDn70+CxniQ=
+2026-11-11T23:51:26.9986520Z Received 21289718 of 21289718 (100.0%), 104.1 MBs/sec
+2026-11-11T23:51:27.0001390Z Cache Size: ~20 MB (21289718 B)
+2026-11-11T23:51:27.0099210Z [command]/opt/homebrew/bin/gtar -xf /Users/runner/work/_temp/751f7cd3-ba07-4f52-a6b6-108df4b99107/cache.tzst -P -C /Users/runner/work/orca/orca --delay-directory-restore --use-compress-program unzstd
+2026-11-11T23:51:27.1854970Z Cache restored successfully
+2026-11-11T23:51:27.1881270Z [command]/Users/runner/.bun/bin/bun --revision
+2026-11-11T23:51:27.2127780Z 1.3.14+0d9b296af
+2026-11-11T23:51:27.2130940Z Using a cached version of Bun: 1.3.14+0d9b296af
+2026-11-11T23:51:27.2289350Z ##[group]Run bun install --frozen-lockfile
+2026-11-11T23:51:27.2289740Z [36;1mbun install --frozen-lockfile[0m
+2026-11-11T23:51:27.2345800Z shell: /bin/bash -e {0}
+2026-11-11T23:51:27.2346040Z env:
+2026-11-11T23:51:27.2346450Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:27.2347000Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:27.2347340Z   ORCA_CI_UI_TEST_SCOPE: mailbox
+2026-11-11T23:51:27.2347590Z   ORCA_FIXTURE_MAILBOX_CONTROLS: 1
+2026-11-11T23:51:27.2347820Z ##[endgroup]
+2026-11-11T23:51:27.2900410Z bun install v1.3.14 (0d9b296a)
+2026-11-11T23:51:30.1339200Z 
+2026-11-11T23:51:30.1340230Z + @types/node@24.13.2
+2026-11-11T23:51:30.1341020Z + axe-core@4.13.0
+2026-11-11T23:51:30.1341710Z + playwright@1.62.1
+2026-11-11T23:51:30.1342430Z + typescript@5.9.3
+2026-11-11T23:51:30.1342800Z 
+2026-11-11T23:51:30.1343220Z 177 packages installed [2.85s]
+2026-11-11T23:51:30.1544910Z ##[group]Run python3 scripts/ci/test-ios-mailbox-phases.py
+2026-11-11T23:51:30.1545430Z [36;1mpython3 scripts/ci/test-ios-mailbox-phases.py[0m
+2026-11-11T23:51:30.1586420Z shell: /bin/bash -e {0}
+2026-11-11T23:51:30.1586800Z env:
+2026-11-11T23:51:30.1587230Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:30.1587770Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:30.1588230Z   ORCA_CI_UI_TEST_SCOPE: mailbox
+2026-11-11T23:51:30.1588520Z   ORCA_FIXTURE_MAILBOX_CONTROLS: 1
+2026-11-11T23:51:30.1594760Z ##[endgroup]
+2026-11-11T23:51:33.1762030Z ..
+2026-11-11T23:51:33.1762770Z ----------------------------------------------------------------------
+2026-11-11T23:51:33.1763420Z Ran 2 tests in 2.590s
+2026-11-11T23:51:33.1763620Z 
+2026-11-11T23:51:33.1763810Z OK
+2026-11-11T23:51:33.2009770Z ##[group]Run bash scripts/ci/fixture-check.sh ios
+2026-11-11T23:51:33.2010250Z [36;1mbash scripts/ci/fixture-check.sh ios[0m
+2026-11-11T23:51:33.2063850Z shell: /bin/bash -e {0}
+2026-11-11T23:51:33.2064490Z env:
+2026-11-11T23:51:33.2065290Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:33.2066270Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:33.2067160Z   ORCA_CI_UI_TEST_SCOPE: mailbox
+2026-11-11T23:51:33.2067920Z   ORCA_FIXTURE_MAILBOX_CONTROLS: 1
+2026-11-11T23:51:33.2068530Z ##[endgroup]
+2026-11-11T23:51:36.3946920Z [fixture stage] phase=xcode_preflight_started
+2026-11-11T23:51:38.2503820Z [fixture stage] phase=xcode_preflight_finished
+2026-11-11T23:51:44.6853550Z [fixture stage] phase=simulator_boot_started
+2026-11-11T23:53:56.4422560Z Monitoring boot status for Orca CI 43122924479-1 (B2A3478A-7E44-4789-97F8-3AE7322874ED).
+2026-11-11T23:53:56.9007970Z [2026-11-11 23:53:55 +0000] Status=4294967295, isTerminal=YES, Elapsed=02:09.
+2026-11-11T23:53:56.9009220Z 	Finished
+2026-11-11T23:53:56.9790450Z 
+2026-11-11T23:53:59.9592490Z [fixture stage] phase=simulator_boot_finished
+2026-11-11T23:54:00.2160490Z [fixture stage] phase=fixture_starting
+2026-11-11T23:55:26.1441650Z [fixture stage] phase=fixture_ready
+2026-11-11T23:55:26.1446740Z [fixture stage] phase=swift_contract_started
+2026-11-11T23:56:51.6254130Z [fixture stage] phase=swift_contract_finished
+2026-11-11T23:56:51.6256050Z [fixture stage] phase=ios_suite_started
+2026-11-11T23:56:51.6573620Z [fixture stage] phase=owned_simulator_recheck_started
+2026-11-11T23:56:56.7374510Z [fixture stage] phase=owned_simulator_recheck_finished
+2026-11-11T23:57:06.7772210Z [fixture stage] phase=xcode_destination_started
+2026-11-11T23:58:07.2759960Z [fixture stage] phase=xcode_destination_finished
+2026-11-11T23:58:07.2760620Z [fixture stage] phase=build_for_testing_started
+2026-11-12T00:00:53.6404510Z [fixture stage] phase=build_for_testing_finished
+2026-11-12T00:01:15.1167490Z [fixture stage] phase=adoption_light_started
+2026-11-12T00:04:28.3208780Z [fixture stage] phase=adoption_light_finished
+2026-11-12T00:04:37.6830450Z [fixture stage] phase=adoption_dark_started
+2026-11-12T00:07:28.3134230Z [fixture stage] phase=adoption_dark_finished
+2026-11-12T00:07:32.3155900Z [fixture stage] phase=suite_light_started
+2026-11-12T00:32:04.9389120Z [fixture stage] phase=suite_light_finished
+2026-11-12T00:32:07.9087150Z [fixture stage] phase=suite_dark_started
+2026-11-12T00:36:47.6904380Z ##[error]The action 'Test exact source on a fresh CI-owned simulator' has timed out after 45 minutes.
+2026-11-12T00:36:48.8022750Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-12T00:36:48.8031390Z with:
+2026-11-12T00:36:48.8035360Z   name: native-mailbox-43122924479-1
+2026-11-12T00:36:48.8041080Z   path: /Users/runner/work/_temp/orca-ci-evidence/
+2026-11-12T00:36:48.8042190Z   if-no-files-found: ignore
+2026-11-12T00:36:48.8266780Z   retention-days: 7
+2026-11-12T00:36:48.8268570Z   compression-level: 6
+2026-11-12T00:36:48.8269300Z   overwrite: false
+2026-11-12T00:36:48.8270370Z   include-hidden-files: false
+2026-11-12T00:36:48.8271230Z env:
+2026-11-12T00:36:48.8272000Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T00:36:48.8273720Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-12T00:36:48.8274980Z   ORCA_CI_UI_TEST_SCOPE: mailbox
+2026-11-12T00:36:48.8276460Z   ORCA_FIXTURE_MAILBOX_CONTROLS: 1
+2026-11-12T00:36:48.8281700Z ##[endgroup]
+2026-11-12T00:36:56.4300520Z (node:20801) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-12T00:36:56.4417780Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-12T00:36:56.6456710Z No files were found with the provided path: /Users/runner/work/_temp/orca-ci-evidence/. No artifacts will be uploaded.
+2026-11-12T00:36:56.7097450Z Post job cleanup.
+2026-11-12T00:37:01.5097110Z [command]/opt/homebrew/bin/git version
+2026-11-12T00:37:01.6845500Z git version 2.56.0
+2026-11-12T00:37:01.7085140Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/0db409f9-705b-47fd-8635-8d63ffb441ea/.gitconfig'
+2026-11-12T00:37:01.7104600Z Temporarily overriding HOME='/Users/runner/work/_temp/0db409f9-705b-47fd-8635-8d63ffb441ea' before making global git config changes
+2026-11-12T00:37:01.7107560Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-12T00:37:01.7108370Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/orca/orca
+2026-11-12T00:37:01.7567930Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-12T00:37:01.7646420Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-12T00:37:02.0207840Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-12T00:37:02.0312750Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-12T00:37:08.4727610Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-12T00:37:09.6193540Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-12T00:37:42.7004150Z Cleaning up orphan processes
+2026-11-12T00:37:43.8194680Z Terminate orphan process: pid (9392) (DTServiceHub)
+2026-11-12T00:37:44.0115190Z Terminate orphan process: pid (8278) (xcodebuild)
+2026-11-12T00:38:19.8369660Z Terminate orphan process: pid (2908) (bun)
+2026-11-12T00:38:36.2382240Z Terminate orphan process: pid (1697) (bash)
+2026-11-12T00:38:36.3448120Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

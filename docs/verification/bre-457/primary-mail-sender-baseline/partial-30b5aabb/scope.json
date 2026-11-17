@@ -1,0 +1,20 @@
+{
+  "baselineSHA": "30b5aabbb2a4acba1c77a7a98d2d401fa394de22",
+  "compile": "actual executable reached runtime; no compiler diagnostic; parent manifest interrupted",
+  "completedCases": 136,
+  "pass": 128,
+  "fail": 8,
+  "oldCasesCompleted": 124,
+  "oldCasesPassed": 124,
+  "newCasesCompleted": 12,
+  "newCasesPassed": 4,
+  "newCasesFailed": 8,
+  "fullJSON": "not emitted before 20s cap",
+  "grammar": "not started",
+  "senderAPI": "not reached",
+  "compiledExecutable": "/var/folders/rn/kq92glk92t592l94yxfvg9gc0000gn/T/bre457-review-run-8j9f3o_9/regressions",
+  "compiledExecutableSHA256": "71a19c9c910c26a370532d86b93f1c33bb7c34f0fbc782a12648a54b042967f2",
+  "retainedPartialAPI": "partial-api-evidence.json; owned fixture cleanup wrote this during SIGTERM",
+  "ownedProcesses": "ps exact driver/API paths found only the read-only diagnostic shell/rg, no owned process remained",
+  "scope": "partial actual Foundation/API baseline, not a full run or Apple UI"
+}

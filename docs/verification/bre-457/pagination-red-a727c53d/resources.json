@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794404073.494713,
+    "stage": "before",
+    "ownerPid": 75675,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  514  62.4 1996592 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores",
+      " 1152  18.2  22272 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15382   9.5 1088048 codex",
+      "  416   6.0  21936 /usr/sbin/coreaudiod",
+      "25406   4.9 570048 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "17667   4.5  67072 /Users/lbrevoort/.codex/packages/standalone/releases/0.167.0-aarch64-apple-darwin/bin/codex-code-mode-host"
+    ],
+    "memory": "System-wide memory free percentage: 75%"
+  },
+  {
+    "time": 1794404086.654995,
+    "stage": "after",
+    "ownerPid": 75675,
+    "childPid": 75694,
+    "command": "python3",
+    "exitCode": 0,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  514  79.1 1999600 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores",
+      " 1152  14.8  22288 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15232   4.8 568608 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      "25406   4.5 570192 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "  416   4.3  21936 /usr/sbin/coreaudiod",
+      " 1046   3.7 758064 /Applications/Zen.app/Contents/MacOS/zen"
+    ],
+    "memory": "System-wide memory free percentage: 74%"
+  }
+]

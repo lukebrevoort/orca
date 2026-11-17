@@ -1,0 +1,4980 @@
+{
+  "ledger": [
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 2,
+        "view": {
+          "skipInbox": false,
+          "id": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "workspaceId": "owner",
+          "name": "Exactly one view",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.009Z",
+          "updatedAt": "2026-11-11T13:34:45.009Z"
+        },
+        "navigation": {
+          "destination": "view:view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "href": "/?destination=view%3Aview_654a8058-6482-439b-9056-ad2fd942ec7e"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 1,
+          "view": null
+        },
+        "retryKey": "9D4274C9-5703-499E-9E6F-D680175CA1FF",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "search",
+            "label": "Native All Mail search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "name": "Exactly one view",
+            "color": "#0b9b84",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 2,
+        "view": {
+          "skipInbox": false,
+          "id": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "workspaceId": "owner",
+          "name": "Exactly one view",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.009Z",
+          "updatedAt": "2026-11-11T13:34:45.009Z"
+        },
+        "navigation": {
+          "destination": "view:view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "href": "/?destination=view%3Aview_654a8058-6482-439b-9056-ad2fd942ec7e"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 1,
+          "view": null
+        },
+        "retryKey": "9D4274C9-5703-499E-9E6F-D680175CA1FF",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "search",
+            "label": "Native All Mail search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "name": "Exactly one view",
+            "color": "#0b9b84",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 2,
+        "view": {
+          "skipInbox": false,
+          "id": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "workspaceId": "owner",
+          "name": "Exactly one view",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.009Z",
+          "updatedAt": "2026-11-11T13:34:45.009Z"
+        },
+        "navigation": {
+          "destination": "view:view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "href": "/?destination=view%3Aview_654a8058-6482-439b-9056-ad2fd942ec7e"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 1,
+          "view": null
+        },
+        "retryKey": "9D4274C9-5703-499E-9E6F-D680175CA1FF",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Exactly one view",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 3,
+        "view": {
+          "skipInbox": false,
+          "id": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "workspaceId": "owner",
+          "name": "Reopened edit",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:45.009Z",
+          "updatedAt": "2026-11-11T13:34:45.056Z"
+        },
+        "navigation": {
+          "destination": "view:view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "href": "/?destination=view%3Aview_654a8058-6482-439b-9056-ad2fd942ec7e"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "1F9A7654-F599-4AD0-9EBB-2AC5E1AB0F68",
+        "draft": {
+          "viewRevision": 1,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Exactly one view",
+            "kind": "saved_view"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Reopened edit",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 2,
+          "view": 1
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 4,
+        "view": {
+          "skipInbox": false,
+          "id": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "workspaceId": "owner",
+          "name": "Advanced original",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.088Z",
+          "updatedAt": "2026-11-11T13:34:45.088Z"
+        },
+        "navigation": {
+          "destination": "view:view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "href": "/?destination=view%3Aview_c9ef0082-c3d1-464a-b44c-1f11f5df0edd"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 3,
+          "view": null
+        },
+        "retryKey": "8AB097CA-121D-4A92-8E92-C92F61D02788",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "code": null,
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "manual",
+            "label": "Synthetic advanced View"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Advanced original",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "confirmedZeroMatchDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 5,
+        "view": {
+          "skipInbox": false,
+          "id": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "workspaceId": "owner",
+          "name": "Advanced renamed",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:45.088Z",
+          "updatedAt": "2026-11-11T13:34:45.112Z"
+        },
+        "navigation": {
+          "destination": "view:view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "href": "/?destination=view%3Aview_c9ef0082-c3d1-464a-b44c-1f11f5df0edd"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "030FF180-BE0C-4324-A8AA-916996680C55",
+        "draft": {
+          "viewRevision": 1,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com."
+          },
+          "preparationNotices": [],
+          "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "saved_view",
+            "label": "Advanced original"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "description": "",
+            "position": 0,
+            "name": "Advanced renamed"
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "expectedRevisions": {
+          "workspace": 4,
+          "view": 1
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 400,
+      "deliveredStatus": 400,
+      "response": {
+        "error": {
+          "code": "validation_error",
+          "message": "Change at least one View field before saving"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 5,
+          "view": 2
+        },
+        "retryKey": "75A7F4EF-A09B-457D-B2FA-050CC548BF67",
+        "draft": {
+          "viewRevision": 2,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com."
+          },
+          "preparationNotices": [],
+          "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "saveEligibility": {
+            "code": null,
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Advanced renamed",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Advanced renamed",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 6,
+        "view": {
+          "skipInbox": false,
+          "id": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "workspaceId": "owner",
+          "name": "Noop recovery preserves latest edit",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 3,
+          "createdAt": "2026-11-11T13:34:45.088Z",
+          "updatedAt": "2026-11-11T13:34:45.193Z"
+        },
+        "navigation": {
+          "destination": "view:view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "href": "/?destination=view%3Aview_c9ef0082-c3d1-464a-b44c-1f11f5df0edd"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 5,
+          "view": 2
+        },
+        "retryKey": "1272846C-1A9C-4C04-9C97-FE1E862A5384",
+        "draft": {
+          "viewRevision": 2,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com."
+          },
+          "preparationNotices": [],
+          "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "saveEligibility": {
+            "code": null,
+            "detail": "This reviewed definition is ready to save.",
+            "allowed": true
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Advanced renamed",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Noop recovery preserves latest edit",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 7,
+        "view": {
+          "skipInbox": false,
+          "id": "view_638b872c-9be4-4fb2-adc6-bcc99c03fb12",
+          "workspaceId": "owner",
+          "name": "Independent workspace revision advance",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.242Z",
+          "updatedAt": "2026-11-11T13:34:45.242Z"
+        },
+        "navigation": {
+          "destination": "view:view_638b872c-9be4-4fb2-adc6-bcc99c03fb12",
+          "href": "/?destination=view%3Aview_638b872c-9be4-4fb2-adc6-bcc99c03fb12"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 6,
+          "view": null
+        },
+        "retryKey": "1F4C5A65-2DA0-44EF-94D4-154CDF899087",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Rejected-commit fixture",
+            "kind": "manual"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            },
+            "revision": 1
+          },
+          "identity": {
+            "name": "Independent workspace revision advance",
+            "color": "#0b9b84",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "confirmedZeroMatchDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 409,
+      "deliveredStatus": 409,
+      "response": {
+        "error": {
+          "code": "revision_conflict",
+          "message": "The expected Workspace revision is stale"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 6,
+          "view": null
+        },
+        "retryKey": "179C5B2D-2C8F-4277-AD2B-5BBAFFCE39DD",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "code": null,
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Stale original",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 8,
+        "view": {
+          "skipInbox": false,
+          "id": "view_a19fc06c-b1cd-4186-9f2c-e89f2db378bc",
+          "workspaceId": "owner",
+          "name": "Stale recovery preserves latest edit",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.293Z",
+          "updatedAt": "2026-11-11T13:34:45.293Z"
+        },
+        "navigation": {
+          "destination": "view:view_a19fc06c-b1cd-4186-9f2c-e89f2db378bc",
+          "href": "/?destination=view%3Aview_a19fc06c-b1cd-4186-9f2c-e89f2db378bc"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 7,
+          "view": null
+        },
+        "retryKey": "9C460458-B0A3-41B7-8662-3FAB94E81613",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "code": null,
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Stale recovery preserves latest edit",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 400,
+      "deliveredStatus": 503,
+      "response": {
+        "error": {
+          "code": "validation_error",
+          "message": "Change at least one View field before saving"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "426A27A4-8457-4C24-A2F3-E1CD5AAFD8A9",
+        "draft": {
+          "viewRevision": 5,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com."
+          },
+          "preparationNotices": [],
+          "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Noop recovery preserves latest edit",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "description": "",
+            "name": "Noop recovery preserves latest edit",
+            "position": 2
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "expectedRevisions": {
+          "workspace": 8,
+          "view": 5
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 400,
+      "deliveredStatus": 400,
+      "response": {
+        "error": {
+          "code": "validation_error",
+          "message": "Change at least one View field before saving"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 8,
+          "view": 5
+        },
+        "retryKey": "426A27A4-8457-4C24-A2F3-E1CD5AAFD8A9",
+        "draft": {
+          "viewRevision": 5,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com."
+          },
+          "preparationNotices": [],
+          "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Noop recovery preserves latest edit",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "position": 2,
+            "name": "Noop recovery preserves latest edit"
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 9,
+        "view": {
+          "skipInbox": false,
+          "id": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "workspaceId": "owner",
+          "name": "Recovered lost noop",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 2,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 6,
+          "createdAt": "2026-11-11T13:34:45.088Z",
+          "updatedAt": "2026-11-11T13:34:45.376Z"
+        },
+        "navigation": {
+          "destination": "view:view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "href": "/?destination=view%3Aview_c9ef0082-c3d1-464a-b44c-1f11f5df0edd"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "55370804-B27C-487A-83EE-44B76C519283",
+        "draft": {
+          "viewRevision": 5,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Noop recovery preserves latest edit",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "revision": 1,
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "position": 2,
+            "name": "Recovered lost noop"
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "expectedRevisions": {
+          "workspace": 8,
+          "view": 5
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 10,
+        "view": {
+          "skipInbox": false,
+          "id": "view_7a849364-4345-4151-aaea-5a47741c5925",
+          "workspaceId": "owner",
+          "name": "Advance before lost rejection",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.427Z",
+          "updatedAt": "2026-11-11T13:34:45.427Z"
+        },
+        "navigation": {
+          "destination": "view:view_7a849364-4345-4151-aaea-5a47741c5925",
+          "href": "/?destination=view%3Aview_7a849364-4345-4151-aaea-5a47741c5925"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 9,
+          "view": null
+        },
+        "retryKey": "7187B3CA-6F23-405E-8D39-01846643D5F4",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "detail": "This reviewed definition is ready to save.",
+            "allowed": true,
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Rejected-commit fixture",
+            "kind": "manual"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            },
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "name": "Advance before lost rejection",
+            "color": "#0b9b84",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "confirmedZeroMatchDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 409,
+      "deliveredStatus": 503,
+      "response": {
+        "error": {
+          "code": "revision_conflict",
+          "message": "The expected Workspace revision is stale"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "7E4D818A-AF66-4D47-9B49-D8B8C18ABD24",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Lost stale original",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 9,
+          "view": null
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 409,
+      "deliveredStatus": 409,
+      "response": {
+        "error": {
+          "code": "revision_conflict",
+          "message": "The expected Workspace revision is stale"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "7E4D818A-AF66-4D47-9B49-D8B8C18ABD24",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "search",
+            "label": "Native All Mail search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Lost stale original",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 9,
+          "view": null
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 11,
+        "view": {
+          "skipInbox": false,
+          "id": "view_5d8bf4fd-98d0-47d3-8e97-0efcd262b9ac",
+          "workspaceId": "owner",
+          "name": "Recovered lost stale",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.483Z",
+          "updatedAt": "2026-11-11T13:34:45.483Z"
+        },
+        "navigation": {
+          "destination": "view:view_5d8bf4fd-98d0-47d3-8e97-0efcd262b9ac",
+          "href": "/?destination=view%3Aview_5d8bf4fd-98d0-47d3-8e97-0efcd262b9ac"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "3CF9C888-2187-4247-8CF9-D5F4DCC53E1F",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "search",
+            "label": "Native All Mail search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "name": "Recovered lost stale",
+            "position": 0,
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 10,
+          "view": null
+        }
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": null,
+      "deliveredStatus": 503,
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "14259858-D007-4ADD-A3A4-231C0603CACB",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "description": "",
+            "name": "Unknown original",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 11,
+          "view": null
+        }
+      },
+      "held": true
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 12,
+        "view": {
+          "skipInbox": false,
+          "id": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "workspaceId": "owner",
+          "name": "Unknown original",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.626Z",
+          "updatedAt": "2026-11-11T13:34:45.626Z"
+        },
+        "navigation": {
+          "destination": "view:view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "href": "/?destination=view%3Aview_53bf137d-e684-4f95-8f19-cb1808627da5"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "name": "Unknown original",
+            "color": "#0b9b84",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 11,
+          "view": null
+        },
+        "retryKey": "14259858-D007-4ADD-A3A4-231C0603CACB",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": null,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 12,
+        "view": {
+          "skipInbox": false,
+          "id": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "workspaceId": "owner",
+          "name": "Unknown original",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.626Z",
+          "updatedAt": "2026-11-11T13:34:45.626Z"
+        },
+        "navigation": {
+          "destination": "view:view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "href": "/?destination=view%3Aview_53bf137d-e684-4f95-8f19-cb1808627da5"
+        }
+      },
+      "command": {
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "14259858-D007-4ADD-A3A4-231C0603CACB",
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save.",
+            "code": null
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "color": "#0b9b84",
+            "description": "",
+            "name": "Unknown original",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 11,
+          "view": null
+        }
+      },
+      "lateOriginal": true
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 13,
+        "view": {
+          "skipInbox": false,
+          "id": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "workspaceId": "owner",
+          "name": "Newer unknown edits",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:45.626Z",
+          "updatedAt": "2026-11-11T13:34:45.668Z"
+        },
+        "navigation": {
+          "destination": "view:view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "href": "/?destination=view%3Aview_53bf137d-e684-4f95-8f19-cb1808627da5"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": 1,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Unknown original",
+            "kind": "saved_view"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Newer unknown edits",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "view": 1,
+          "workspace": 12
+        },
+        "retryKey": "DC6D4B89-20F7-479E-874D-AEEBE221A277",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": null,
+      "deliveredStatus": 503,
+      "command": {
+        "expectedRevisions": {
+          "workspace": 13,
+          "view": null
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "name": "Bound command original",
+            "position": 0,
+            "description": "",
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "retryKey": "9395231F-129A-4891-AE4A-FC38409670BC",
+        "confirmedZeroMatchDigest": null
+      },
+      "held": true
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 14,
+        "view": {
+          "skipInbox": false,
+          "id": "view_465b8fc9-2dea-4e2a-9bb1-f6a75cbfeec1",
+          "workspaceId": "owner",
+          "name": "Different command same key",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.703Z",
+          "updatedAt": "2026-11-11T13:34:45.703Z"
+        },
+        "navigation": {
+          "destination": "view:view_465b8fc9-2dea-4e2a-9bb1-f6a75cbfeec1",
+          "href": "/?destination=view%3Aview_465b8fc9-2dea-4e2a-9bb1-f6a75cbfeec1"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "position": 0,
+            "name": "Different command same key",
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 13,
+          "view": null
+        },
+        "retryKey": "9395231F-129A-4891-AE4A-FC38409670BC",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 409,
+      "deliveredStatus": 409,
+      "response": {
+        "error": {
+          "code": "revision_conflict",
+          "message": "The idempotency key was already used for a different View command"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 13,
+          "view": null
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "name": "Bound command original",
+            "position": 0,
+            "description": "",
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "retryKey": "9395231F-129A-4891-AE4A-FC38409670BC",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 409,
+      "deliveredStatus": null,
+      "response": {
+        "error": {
+          "code": "revision_conflict",
+          "message": "The idempotency key was already used for a different View command"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 13,
+          "view": null
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "name": "Bound command original",
+            "position": 0,
+            "description": "",
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "retryKey": "9395231F-129A-4891-AE4A-FC38409670BC",
+        "confirmedZeroMatchDigest": null
+      },
+      "lateOriginal": true
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": null,
+      "deliveredStatus": 503,
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "code": null,
+            "detail": "This reviewed definition is ready to save.",
+            "allowed": true
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "kind": "search",
+            "label": "Native All Mail search"
+          },
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Fenced original",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 14,
+          "view": null
+        },
+        "retryKey": "5A1D44D3-B00B-4EB5-923A-B488662B6186",
+        "confirmedZeroMatchDigest": null
+      },
+      "held": true
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 15,
+        "view": {
+          "skipInbox": false,
+          "id": "view_e6116ae5-1ca6-46b7-b400-5b381062d556",
+          "workspaceId": "owner",
+          "name": "Independent fence advance",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            },
+            "thread": {
+              "subjectContains": "Subject",
+              "readState": "unread"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.781Z",
+          "updatedAt": "2026-11-11T13:34:45.781Z"
+        },
+        "navigation": {
+          "destination": "view:view_e6116ae5-1ca6-46b7-b400-5b381062d556",
+          "href": "/?destination=view%3Aview_e6116ae5-1ca6-46b7-b400-5b381062d556"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "workspace": 14,
+          "view": null
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "at least one unread message",
+              "from person@example.com"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; at least one unread message; from person@example.com."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "code": null,
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "kind": "manual",
+            "label": "Rejected-commit fixture"
+          },
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "readState": "unread",
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "sender": {
+              "addresses": [
+                "person@example.com"
+              ]
+            }
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Independent fence advance",
+            "position": 0
+          },
+          "definitionDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+        },
+        "retryKey": "780F59E0-B8B0-49A6-B32E-66B7DCFE8D5E",
+        "confirmedZeroMatchDigest": "sha256:cb34a9c8ad3934707fe81f87f9279b1eefe3b30ebe87da7094cee81fd3257db8"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 409,
+      "deliveredStatus": null,
+      "response": {
+        "error": {
+          "code": "revision_conflict",
+          "message": "The expected Workspace revision is stale"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "code": null,
+            "detail": "This reviewed definition is ready to save.",
+            "allowed": true
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "kind": "search",
+            "label": "Native All Mail search"
+          },
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Fenced original",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 14,
+          "view": null
+        },
+        "retryKey": "5A1D44D3-B00B-4EB5-923A-B488662B6186",
+        "confirmedZeroMatchDigest": null
+      },
+      "lateOriginal": true
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 16,
+        "view": {
+          "skipInbox": false,
+          "id": "view_62f1142c-dea0-4123-a011-b5db00b9b02a",
+          "workspaceId": "owner",
+          "name": "Kept after durable fence",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.825Z",
+          "updatedAt": "2026-11-11T13:34:45.825Z"
+        },
+        "navigation": {
+          "destination": "view:view_62f1142c-dea0-4123-a011-b5db00b9b02a",
+          "href": "/?destination=view%3Aview_62f1142c-dea0-4123-a011-b5db00b9b02a"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”."
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Kept after durable fence",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 15,
+          "view": null
+        },
+        "retryKey": "40824754-4404-4FA1-B864-EBB028D53EA8",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 17,
+        "view": {
+          "skipInbox": false,
+          "id": "view_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47",
+          "workspaceId": "owner",
+          "name": "Applied then removed",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.869Z",
+          "updatedAt": "2026-11-11T13:34:45.869Z"
+        },
+        "navigation": {
+          "destination": "view:view_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47",
+          "href": "/?destination=view%3Aview_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Applied then removed",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 16,
+          "view": null
+        },
+        "retryKey": "DB727442-35F6-42A1-AB32-99BFCEEAEB06",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 404,
+      "deliveredStatus": 404,
+      "response": {
+        "error": {
+          "code": "not_found",
+          "message": "The committed View could not be reloaded"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Applied then removed",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 16,
+          "view": null
+        },
+        "retryKey": "DB727442-35F6-42A1-AB32-99BFCEEAEB06",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 19,
+        "view": {
+          "skipInbox": false,
+          "id": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "workspaceId": "owner",
+          "name": "Saved before account addition",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:45.972Z",
+          "updatedAt": "2026-11-11T13:34:45.972Z"
+        },
+        "navigation": {
+          "destination": "view:view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "href": "/?destination=view%3Aview_1a21c456-f760-4520-bb6c-c3114a94a15f"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "view": null,
+          "workspace": 18
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "position": 0,
+            "name": "Saved before account addition",
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "retryKey": "C9F211B1-22FE-4394-B6CE-F1D0A7F23F7A",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 20,
+        "view": {
+          "skipInbox": false,
+          "id": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "workspaceId": "owner",
+          "name": "Externally advanced current View",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:45.972Z",
+          "updatedAt": "2026-11-11T13:34:46.019Z"
+        },
+        "navigation": {
+          "destination": "view:view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "href": "/?destination=view%3Aview_1a21c456-f760-4520-bb6c-c3114a94a15f"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": 1,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "received at or after 1970-01-01T00:00:00.000Z"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; received at or after 1970-01-01T00:00:00.000Z."
+          },
+          "preparationNotices": [],
+          "viewId": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "update",
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Saved before account addition",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            }
+          },
+          "identity": {
+            "description": "",
+            "name": "Externally advanced current View",
+            "color": "#0b9b84",
+            "position": 0
+          },
+          "definitionDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+        },
+        "expectedRevisions": {
+          "view": 1,
+          "workspace": 19
+        },
+        "retryKey": "5A1B6733-0B38-4E76-B1CB-B074448D0454",
+        "confirmedZeroMatchDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 20,
+        "view": {
+          "skipInbox": false,
+          "id": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "workspaceId": "owner",
+          "name": "Externally advanced current View",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:45.972Z",
+          "updatedAt": "2026-11-11T13:34:46.019Z"
+        },
+        "navigation": {
+          "destination": "view:view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "href": "/?destination=view%3Aview_1a21c456-f760-4520-bb6c-c3114a94a15f"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "view": null,
+          "workspace": 18
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "position": 0,
+            "name": "Saved before account addition",
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "retryKey": "C9F211B1-22FE-4394-B6CE-F1D0A7F23F7A",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 21,
+        "view": {
+          "skipInbox": false,
+          "id": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "workspaceId": "owner",
+          "name": "Local newer edits survive exact acknowledgement",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 3,
+          "createdAt": "2026-11-11T13:34:45.972Z",
+          "updatedAt": "2026-11-11T13:34:46.059Z"
+        },
+        "navigation": {
+          "destination": "view:view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "href": "/?destination=view%3Aview_1a21c456-f760-4520-bb6c-c3114a94a15f"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": 2,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "received at or after 1970-01-01T00:00:00.000Z"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; received at or after 1970-01-01T00:00:00.000Z."
+          },
+          "preparationNotices": [],
+          "viewId": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+          "saveEligibility": {
+            "code": null,
+            "allowed": true,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "update",
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Externally advanced current View",
+            "kind": "saved_view"
+          },
+          "definition": {
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1
+          },
+          "identity": {
+            "name": "Local newer edits survive exact acknowledgement",
+            "description": "",
+            "position": 0,
+            "color": "#0b9b84"
+          },
+          "definitionDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+        },
+        "expectedRevisions": {
+          "workspace": 20,
+          "view": 2
+        },
+        "retryKey": "CE3A766F-321B-4AD3-B94B-C91D593950BA",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 22,
+        "view": {
+          "skipInbox": false,
+          "id": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "workspaceId": "owner",
+          "name": "Submitted before read failure commit-ack",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:46.098Z",
+          "updatedAt": "2026-11-11T13:34:46.098Z"
+        },
+        "navigation": {
+          "destination": "view:view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "href": "/?destination=view%3Aview_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "mode": "create",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Submitted before read failure commit-ack",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 21,
+          "view": null
+        },
+        "retryKey": "6A2EF2D9-5CDE-4F02-B679-194D69C1AB56",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 23,
+        "view": {
+          "skipInbox": false,
+          "id": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "workspaceId": "owner",
+          "name": "Newer server object",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:46.098Z",
+          "updatedAt": "2026-11-11T13:34:46.130Z"
+        },
+        "navigation": {
+          "destination": "view:view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "href": "/?destination=view%3Aview_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": 1,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; received at or after 1970-01-01T00:00:00.000Z.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "received at or after 1970-01-01T00:00:00.000Z"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "saveEligibility": {
+            "code": null,
+            "detail": "This reviewed definition is ready to save.",
+            "allowed": true
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "update",
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "saved_view",
+            "label": "Submitted before read failure commit-ack"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "revision": 1,
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Newer server object",
+            "position": 0
+          },
+          "definitionDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+        },
+        "expectedRevisions": {
+          "view": 1,
+          "workspace": 22
+        },
+        "retryKey": "3D5646C6-3937-49B1-B89F-B56D2CC06A04",
+        "confirmedZeroMatchDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 23,
+        "view": {
+          "skipInbox": false,
+          "id": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "workspaceId": "owner",
+          "name": "Newer server object",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:46.098Z",
+          "updatedAt": "2026-11-11T13:34:46.130Z"
+        },
+        "navigation": {
+          "destination": "view:view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "href": "/?destination=view%3Aview_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+        }
+      },
+      "command": {
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "allowed": true,
+            "code": null,
+            "detail": "This reviewed definition is ready to save."
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "identity": {
+            "description": "",
+            "color": "#0b9b84",
+            "name": "Submitted before read failure commit-ack",
+            "position": 0
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "expectedRevisions": {
+          "workspace": 21,
+          "view": null
+        },
+        "retryKey": "6A2EF2D9-5CDE-4F02-B679-194D69C1AB56",
+        "confirmedZeroMatchDigest": null
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 24,
+        "view": {
+          "skipInbox": false,
+          "id": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "workspaceId": "owner",
+          "name": "Newer retained local edits commit-ack",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 3,
+          "createdAt": "2026-11-11T13:34:46.098Z",
+          "updatedAt": "2026-11-11T13:34:46.289Z"
+        },
+        "navigation": {
+          "destination": "view:view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "href": "/?destination=view%3Aview_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "view": 2,
+          "workspace": 23
+        },
+        "draft": {
+          "viewRevision": 2,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; received at or after 1970-01-01T00:00:00.000Z.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "received at or after 1970-01-01T00:00:00.000Z"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+          "saveEligibility": {
+            "code": null,
+            "detail": "This reviewed definition is ready to save.",
+            "allowed": true
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "update",
+          "unsupportedClauses": [],
+          "source": {
+            "kind": "saved_view",
+            "label": "Newer server object"
+          },
+          "definitionKind": "filtered",
+          "definition": {
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            }
+          },
+          "identity": {
+            "name": "Newer retained local edits commit-ack",
+            "color": "#0b9b84",
+            "description": "",
+            "position": 0
+          },
+          "definitionDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+        },
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "EAFA7AE1-FF36-4237-8DA3-14FA1FB74412"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 503,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 25,
+        "view": {
+          "skipInbox": false,
+          "id": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "workspaceId": "owner",
+          "name": "Submitted before read failure typed-proof",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 1,
+          "createdAt": "2026-11-11T13:34:46.326Z",
+          "updatedAt": "2026-11-11T13:34:46.326Z"
+        },
+        "navigation": {
+          "destination": "view:view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "href": "/?destination=view%3Aview_742ab184-dcdd-47b8-86ab-ecebf1215495"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "view": null,
+          "workspace": 24
+        },
+        "draft": {
+          "viewRevision": null,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": null,
+          "saveEligibility": {
+            "detail": "This reviewed definition is ready to save.",
+            "code": null,
+            "allowed": true
+          },
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "mode": "create",
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "label": "Native All Mail search",
+            "kind": "search"
+          },
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "position": 0,
+            "name": "Submitted before read failure typed-proof",
+            "color": "#0b9b84",
+            "description": ""
+          },
+          "definitionDigest": "sha256:2644ed623d4be2fbe4329666250c0a41480d5a415e1141ad0c3568840e3ebee4"
+        },
+        "confirmedZeroMatchDigest": null,
+        "retryKey": "BFD7647A-C654-4B39-8C05-64EDE4592372"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 26,
+        "view": {
+          "skipInbox": false,
+          "id": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "workspaceId": "owner",
+          "name": "Newer server object",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 2,
+          "createdAt": "2026-11-11T13:34:46.326Z",
+          "updatedAt": "2026-11-11T13:34:46.359Z"
+        },
+        "navigation": {
+          "destination": "view:view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "href": "/?destination=view%3Aview_742ab184-dcdd-47b8-86ab-ecebf1215495"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "view": 1,
+          "workspace": 25
+        },
+        "draft": {
+          "viewRevision": 1,
+          "skipInbox": false,
+          "summary": {
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; received at or after 1970-01-01T00:00:00.000Z.",
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "received at or after 1970-01-01T00:00:00.000Z"
+            ]
+          },
+          "preparationNotices": [],
+          "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "saveEligibility": {
+            "detail": "This reviewed definition is ready to save.",
+            "code": null,
+            "allowed": true
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "kind": "saved_view",
+            "label": "Submitted before read failure typed-proof"
+          },
+          "definition": {
+            "accountIds": [
+              "account"
+            ],
+            "revision": 1,
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            }
+          },
+          "identity": {
+            "name": "Newer server object",
+            "color": "#0b9b84",
+            "description": "",
+            "position": 0
+          },
+          "definitionDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+        },
+        "confirmedZeroMatchDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79",
+        "retryKey": "69586A84-0CEB-4B4B-9723-9E0677A9BFF9"
+      }
+    },
+    {
+      "path": "/v1/organization/views/commit",
+      "actualStatus": 200,
+      "deliveredStatus": 200,
+      "response": {
+        "workspaceId": "owner",
+        "workspaceRevision": 27,
+        "view": {
+          "skipInbox": false,
+          "id": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "workspaceId": "owner",
+          "name": "Newer retained local edits typed-proof",
+          "description": "",
+          "color": "#0b9b84",
+          "position": 0,
+          "definition": {
+            "revision": 1,
+            "accountIds": [
+              "account"
+            ],
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "thread": {
+              "subjectContains": "Subject"
+            }
+          },
+          "revision": 3,
+          "createdAt": "2026-11-11T13:34:46.326Z",
+          "updatedAt": "2026-11-11T13:34:46.467Z"
+        },
+        "navigation": {
+          "destination": "view:view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "href": "/?destination=view%3Aview_742ab184-dcdd-47b8-86ab-ecebf1215495"
+        }
+      },
+      "command": {
+        "expectedRevisions": {
+          "view": 2,
+          "workspace": 26
+        },
+        "confirmedZeroMatchDigest": null,
+        "draft": {
+          "viewRevision": 2,
+          "skipInbox": false,
+          "summary": {
+            "clauses": [
+              "1 explicit account",
+              "subject contains “Subject”",
+              "received at or after 1970-01-01T00:00:00.000Z"
+            ],
+            "text": "Threads matching 1 explicit account; subject contains “Subject”; received at or after 1970-01-01T00:00:00.000Z."
+          },
+          "preparationNotices": [],
+          "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+          "saveEligibility": {
+            "detail": "This reviewed definition is ready to save.",
+            "code": null,
+            "allowed": true
+          },
+          "mode": "update",
+          "effectiveAccountIds": [
+            "account"
+          ],
+          "unsupportedClauses": [],
+          "definitionKind": "filtered",
+          "source": {
+            "kind": "saved_view",
+            "label": "Newer server object"
+          },
+          "definition": {
+            "thread": {
+              "subjectContains": "Subject"
+            },
+            "revision": 1,
+            "date": {
+              "receivedAfter": "1970-01-01T00:00:00.000Z"
+            },
+            "accountIds": [
+              "account"
+            ]
+          },
+          "identity": {
+            "position": 0,
+            "name": "Newer retained local edits typed-proof",
+            "color": "#0b9b84",
+            "description": ""
+          },
+          "definitionDigest": "sha256:555730211fb2c6deb9d3c8f812d5eb2762e8bd71d28ce51fdb71a6c4a1290a79"
+        },
+        "retryKey": "8A9244C0-0926-42E5-8D92-7BA4CC04753D"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/auth/session",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/preferences",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": "owner"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/preferences",
+      "status": 409,
+      "fixtureOwner": "owner-b",
+      "expectedOwner": "owner",
+      "error": "{\"error\":{\"code\":\"session_owner_changed\",\"message\":\"The signed-in account changed. Reload preferences before saving.\"}}"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/preferences",
+      "status": 409,
+      "fixtureOwner": "owner-b",
+      "expectedOwner": "owner",
+      "error": "{\"error\":{\"code\":\"session_owner_changed\",\"message\":\"The signed-in account changed. Reload preferences before saving.\"}}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/preferences",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": "owner"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/organization/views",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 400,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"validation_error\",\"message\":\"Change at least one View field before saving\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 409,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"revision_conflict\",\"message\":\"The expected Workspace revision is stale\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_a19fc06c-b1cd-4186-9f2c-e89f2db378bc",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 400,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"validation_error\",\"message\":\"Change at least one View field before saving\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 400,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"validation_error\",\"message\":\"Change at least one View field before saving\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 409,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"revision_conflict\",\"message\":\"The expected Workspace revision is stale\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 409,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"revision_conflict\",\"message\":\"The expected Workspace revision is stale\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_5d8bf4fd-98d0-47d3-8e97-0efcd262b9ac",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 401,
+      "fixtureOwner": null,
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"unauthorized\",\"message\":\"Authentication required\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 403,
+      "fixtureOwner": "owner-b",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"account_denied\",\"message\":\"The requested Account scope is not authorized for this Workspace\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 409,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"revision_conflict\",\"message\":\"The idempotency key was already used for a different View command\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_62f1142c-dea0-4123-a011-b5db00b9b02a",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/organization/views",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/organization/views/view_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47",
+      "status": 204,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 404,
+      "kind": "saved_view",
+      "viewId": "view_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47",
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"not_found\",\"message\":\"The requested View was not found\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 404,
+      "kind": "saved_view",
+      "viewId": "view_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47",
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"not_found\",\"message\":\"The requested View was not found\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 404,
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"not_found\",\"message\":\"The committed View could not be reloaded\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 404,
+      "kind": "saved_view",
+      "viewId": "view_6b0b54c4-d82e-4681-b8f0-8e37ca7f9e47",
+      "fixtureOwner": "owner",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"not_found\",\"message\":\"The requested View was not found\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/organization/views",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "deliveredStatus": 503,
+      "fixtureOwner": "owner",
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "deliveredStatus": 503,
+      "fixtureOwner": "owner",
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "deliveredStatus": 503,
+      "fixtureOwner": "owner",
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 401,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": null,
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"unauthorized\",\"message\":\"Authentication required\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 404,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner-b",
+      "expectedOwner": null,
+      "error": "{\"error\":{\"code\":\"not_found\",\"message\":\"The requested View was not found\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/organization/views",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "typed_definition",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "deliveredStatus": 503,
+      "fixtureOwner": "owner",
+      "kind": "saved_view",
+      "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit-status",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "deliveredStatus": 503,
+      "fixtureOwner": "owner",
+      "kind": "saved_view",
+      "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "deliveredStatus": 503,
+      "fixtureOwner": "owner",
+      "kind": "saved_view",
+      "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/preview",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/commit",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "POST",
+      "path": "/v1/organization/views/prepare",
+      "status": 200,
+      "kind": "saved_view",
+      "viewId": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/organization/views",
+      "status": 200,
+      "fixtureOwner": "owner",
+      "expectedOwner": null
+    }
+  ],
+  "providerCalls": 0,
+  "preferences": [
+    {
+      "user_id": "owner",
+      "signature": "Owner A same-owner positive control",
+      "compose_format": "plain",
+      "reply_behavior": "reply",
+      "notify_by_default": 0,
+      "updated_at": 1794404084973,
+      "first_view_guidance_completed_at": "2026-11-11T13:34:45.009Z"
+    },
+    {
+      "user_id": "owner-b",
+      "signature": "Owner B original",
+      "compose_format": "plain",
+      "reply_behavior": "reply",
+      "notify_by_default": 0,
+      "updated_at": 1794404084000,
+      "first_view_guidance_completed_at": null
+    }
+  ],
+  "preferenceWrites": [
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    },
+    {
+      "user_id": "owner",
+      "operation": "update"
+    }
+  ],
+  "views": [
+    {
+      "id": "view_1a21c456-f760-4520-bb6c-c3114a94a15f",
+      "name": "Local newer edits survive exact acknowledgement",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"date\":{\"receivedAfter\":\"1970-01-01T00:00:00.000Z\"},\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 5
+    },
+    {
+      "id": "view_465b8fc9-2dea-4e2a-9bb1-f6a75cbfeec1",
+      "name": "Different command same key",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 8
+    },
+    {
+      "id": "view_53bf137d-e684-4f95-8f19-cb1808627da5",
+      "name": "Newer unknown edits",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 10
+    },
+    {
+      "id": "view_5d8bf4fd-98d0-47d3-8e97-0efcd262b9ac",
+      "name": "Recovered lost stale",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 10
+    },
+    {
+      "id": "view_62f1142c-dea0-4123-a011-b5db00b9b02a",
+      "name": "Kept after durable fence",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 6
+    },
+    {
+      "id": "view_638b872c-9be4-4fb2-adc6-bcc99c03fb12",
+      "name": "Independent workspace revision advance",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"sender\":{\"addresses\":[\"person@example.com\"]},\"thread\":{\"subjectContains\":\"Subject\",\"readState\":\"unread\"}}",
+      "revision": 13
+    },
+    {
+      "id": "view_654a8058-6482-439b-9056-ad2fd942ec7e",
+      "name": "Reopened edit",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 16
+    },
+    {
+      "id": "view_742ab184-dcdd-47b8-86ab-ecebf1215495",
+      "name": "Newer retained local edits typed-proof",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"date\":{\"receivedAfter\":\"1970-01-01T00:00:00.000Z\"},\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 3
+    },
+    {
+      "id": "view_7a849364-4345-4151-aaea-5a47741c5925",
+      "name": "Advance before lost rejection",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"sender\":{\"addresses\":[\"person@example.com\"]},\"thread\":{\"subjectContains\":\"Subject\",\"readState\":\"unread\"}}",
+      "revision": 11
+    },
+    {
+      "id": "view_a19fc06c-b1cd-4186-9f2c-e89f2db378bc",
+      "name": "Stale recovery preserves latest edit",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 12
+    },
+    {
+      "id": "view_b6b22ee8-02c6-4d9b-b179-695dc2928544",
+      "name": "Newer retained local edits commit-ack",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"date\":{\"receivedAfter\":\"1970-01-01T00:00:00.000Z\"},\"thread\":{\"subjectContains\":\"Subject\"}}",
+      "revision": 4
+    },
+    {
+      "id": "view_c9ef0082-c3d1-464a-b44c-1f11f5df0edd",
+      "name": "Recovered lost noop",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"sender\":{\"addresses\":[\"person@example.com\"]},\"thread\":{\"subjectContains\":\"Subject\",\"readState\":\"unread\"}}",
+      "revision": 17
+    },
+    {
+      "id": "view_e6116ae5-1ca6-46b7-b400-5b381062d556",
+      "name": "Independent fence advance",
+      "definition": "{\"revision\":1,\"accountIds\":[\"account\"],\"sender\":{\"addresses\":[\"person@example.com\"]},\"thread\":{\"subjectContains\":\"Subject\",\"readState\":\"unread\"}}",
+      "revision": 7
+    }
+  ]
+}

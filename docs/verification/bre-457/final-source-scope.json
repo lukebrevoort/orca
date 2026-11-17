@@ -1,0 +1,24 @@
+{
+  "controllerSourceSHA": "1a28069f1cd0bacb1ccd1553d21e82a7520d5a9b",
+  "controllerAssertions": 76,
+  "swiftGrammarFiles": 36,
+  "scope": "Foundation controller/actual loopback API/owned SQLite; not SwiftUI/XCTest",
+  "runnerSHA256": "82c3d5e1041b5ae3224b760a40a7531b8428984cd5e1a02ccb9a2bc402234919",
+  "runnerChange": "images selector only; both themes now select all five existing cases; test bodies unchanged",
+  "staticZshSyntax": "passed",
+  "selectedImageCases": [
+    "testImagesRequireExplicitLoadingAndResetOnReopen",
+    "testOversizedImageSnapshotRefreshOffersReadOnlyRecovery",
+    "testChangedImageSourceRequiresSnapshotRefreshAndNewConsent",
+    "testMissingImageCapabilityOffersRefreshWithoutLoading",
+    "testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages"
+  ],
+  "newlySelectedPreviouslyUnverified": [
+    "testChangedImageSourceRequiresSnapshotRefreshAndNewConsent",
+    "testMissingImageCapabilityOffersRefreshWithoutLoading",
+    "testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages"
+  ],
+  "runtimeImageResult": "pending hosted execution; no prior red/pass claimed for newly selected cases",
+  "coreTree": "19d00ae04fece6ba0adf0222d48d776d5600838a",
+  "nativeTestTree": "0ee44151c0b0e98778a182fe9781d63a4d77c70f"
+}

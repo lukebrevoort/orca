@@ -1,0 +1,56 @@
+[
+  {
+    "time": 1794413464.3655019,
+    "stage": "before",
+    "ownerPid": 45052,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  55.6 110880 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "28629  39.1 103776 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "37901  13.9 228672 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "38373  13.5 135280 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      "15382  10.0 655872 codex",
+      " 1046   9.3 652672 /Applications/Zen.app/Contents/MacOS/zen"
+    ],
+    "memory": "System-wide memory free percentage: 48%"
+  },
+  {
+    "time": 1794413479.4666638,
+    "stage": "running",
+    "ownerPid": 45052,
+    "childPid": 45071,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "45170 100.0 468816 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend",
+      "45171  92.3 268768 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/Applications/MobileCal.app/MobileCal",
+      "45173  62.1  36976 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/PrivateFrameworks/WorkflowKit.framework/XPCServices/BackgroundShortcutRunner.xpc/BackgroundShortcutRunner",
+      "  404  59.9 109632 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "28629  43.5 103024 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "45140  31.2  82048 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/usr/libexec/eventkitsyncd"
+    ],
+    "memory": "System-wide memory free percentage: 47%"
+  },
+  {
+    "time": 1794413486.427496,
+    "stage": "after",
+    "ownerPid": 45052,
+    "childPid": 45071,
+    "command": "python3",
+    "exitCode": 1,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "  404  54.5 109728 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+      "28629  37.2 102464 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif).app/Contents/MacOS/Codex (Aperitif)",
+      "44443  14.4 322368 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/PrivateFrameworks/SiriTTSService.framework/sirittsd",
+      "38373  13.0 135120 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.39/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)",
+      " 1152  12.7  22112 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "44334  12.6 143664 /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/usr/libexec/mobileassetd"
+    ],
+    "memory": "System-wide memory free percentage: 47%"
+  }
+]

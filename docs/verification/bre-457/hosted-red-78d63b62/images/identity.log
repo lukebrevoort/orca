@@ -1,0 +1,12 @@
+mode=ios
+tested_sha=78d63b628b2694b946106c3bc30d415a3677e023
+event_sha=33e312e43e00681a955b7af466316b3bd32dcf57
+head_sha=78d63b628b2694b946106c3bc30d415a3677e023
+runner_os=macOS runner_arch=ARM64
+image=macos26 image_version=20261102.0473.1
+bun=1.3.14
+node=v24.22.2
+Xcode 26.4.1
+Build version 17E202
+{"runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-17", "name": "iPhone 17"}
+simulator=5B82265D-6381-4C9B-815F-9EF1B05261D1

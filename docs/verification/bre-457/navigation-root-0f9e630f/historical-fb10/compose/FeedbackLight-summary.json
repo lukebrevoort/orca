@@ -1,0 +1,42 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "10D22142-E32C-4B85-99C6-4A23DD0373CC",
+        "deviceName" : "Orca CI 43087654824-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 0,
+      "passedTests" : 1,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 0,
+  "finishTime" : 1794426788.765,
+  "passedTests" : 1,
+  "result" : "Passed",
+  "skippedTests" : 0,
+  "startTime" : 1794426603.04,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 1
+}

@@ -1,0 +1,860 @@
+﻿2026-11-11T23:51:04.8574050Z Current runner version: '2.338.2'
+2026-11-11T23:51:04.8607880Z ##[group]Runner Image Provisioner
+2026-11-11T23:51:04.8608630Z Hosted Compute Agent
+2026-11-11T23:51:04.8609020Z Version: 20261028.624
+2026-11-11T23:51:04.8609650Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+2026-11-11T23:51:04.8610290Z Build Date: 2026-10-28T21:51:42Z
+2026-11-11T23:51:04.8610930Z Worker ID: {20af7419-de61-43f3-9fe9-6029acda2783}
+2026-11-11T23:51:04.8611410Z Region: westus
+2026-11-11T23:51:04.8611970Z Cloud: MacCloud
+2026-11-11T23:51:04.8612450Z ##[endgroup]
+2026-11-11T23:51:04.8613680Z ##[group]Operating System
+2026-11-11T23:51:04.8614340Z macOS
+2026-11-11T23:51:04.8614760Z 26.7.2
+2026-11-11T23:51:04.8615170Z 25G332
+2026-11-11T23:51:04.8615650Z ##[endgroup]
+2026-11-11T23:51:04.8616080Z ##[group]Runner Image
+2026-11-11T23:51:04.8616660Z Image: macos-26-arm64
+2026-11-11T23:51:04.8617230Z Version: 20261102.0473.1
+2026-11-11T23:51:04.8618320Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20261102.0473/images/macos/macos-26-arm64-Readme.md
+2026-11-11T23:51:04.8619600Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20261102.0473
+2026-11-11T23:51:04.8620340Z ##[endgroup]
+2026-11-11T23:51:04.8621380Z ##[group]GITHUB_TOKEN Permissions
+2026-11-11T23:51:04.8623200Z Contents: read
+2026-11-11T23:51:04.8623690Z Metadata: read
+2026-11-11T23:51:04.8624280Z ##[endgroup]
+2026-11-11T23:51:04.8625840Z Secret source: Actions
+2026-11-11T23:51:04.8626550Z Cache mode: write
+2026-11-11T23:51:04.8631400Z Prepare workflow directory
+2026-11-11T23:51:04.9081630Z Prepare all required actions
+2026-11-11T23:51:04.9129610Z Getting action download info
+2026-11-11T23:51:05.0885130Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-11T23:51:05.5997420Z Download action repository 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+2026-11-11T23:51:06.4811280Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-11T23:51:06.9216310Z Complete job name: Unsigned iOS unit and compose UI
+2026-11-11T23:51:07.0630100Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-11T23:51:07.0631620Z with:
+2026-11-11T23:51:07.0632220Z   persist-credentials: false
+2026-11-11T23:51:07.0632860Z   repository: lukebrevoort/orca
+2026-11-11T23:51:07.0652910Z   token: ***
+2026-11-11T23:51:07.0653660Z   ssh-strict: true
+2026-11-11T23:51:07.0654260Z   ssh-user: git
+2026-11-11T23:51:07.0654850Z   clean: true
+2026-11-11T23:51:07.0655490Z   sparse-checkout-cone-mode: true
+2026-11-11T23:51:07.0656240Z   fetch-depth: 1
+2026-11-11T23:51:07.0656810Z   fetch-tags: false
+2026-11-11T23:51:07.0657420Z   show-progress: true
+2026-11-11T23:51:07.0658050Z   lfs: false
+2026-11-11T23:51:07.0658620Z   submodules: false
+2026-11-11T23:51:07.0659280Z   set-safe-directory: true
+2026-11-11T23:51:07.0662800Z   allow-unsafe-pr-checkout: false
+2026-11-11T23:51:07.0665770Z env:
+2026-11-11T23:51:07.0667070Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:07.0671520Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:07.0673700Z ##[endgroup]
+2026-11-11T23:51:07.8033940Z Syncing repository: lukebrevoort/orca
+2026-11-11T23:51:07.8036720Z ##[group]Getting Git version info
+2026-11-11T23:51:07.8038980Z Working directory is '/Users/runner/work/orca/orca'
+2026-11-11T23:51:07.8043150Z [command]/opt/homebrew/bin/git version
+2026-11-11T23:51:07.8776540Z git version 2.56.0
+2026-11-11T23:51:07.8820970Z ##[endgroup]
+2026-11-11T23:51:07.8844160Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/4e3e34b6-2451-4eca-8c87-c973cbbbff50/.gitconfig'
+2026-11-11T23:51:07.8865340Z Temporarily overriding HOME='/Users/runner/work/_temp/4e3e34b6-2451-4eca-8c87-c973cbbbff50' before making global git config changes
+2026-11-11T23:51:07.8872670Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-11T23:51:07.8895330Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/orca/orca
+2026-11-11T23:51:07.9095610Z Deleting the contents of '/Users/runner/work/orca/orca'
+2026-11-11T23:51:07.9108000Z ##[group]Initializing the repository
+2026-11-11T23:51:07.9113650Z [command]/opt/homebrew/bin/git init /Users/runner/work/orca/orca
+2026-11-11T23:51:08.0489050Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-11T23:51:08.0697670Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-11T23:51:08.0796010Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-11T23:51:08.0799030Z hint: call:
+2026-11-11T23:51:08.0801270Z hint:
+2026-11-11T23:51:08.0803790Z hint: 	git config --global init.defaultBranch <name>
+2026-11-11T23:51:08.0806060Z hint:
+2026-11-11T23:51:08.0808070Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-11T23:51:08.0812550Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-11T23:51:08.0818050Z hint:
+2026-11-11T23:51:08.0820500Z hint: 	git branch -m <name>
+2026-11-11T23:51:08.0822360Z hint:
+2026-11-11T23:51:08.0824620Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-11T23:51:08.0827670Z Initialized empty Git repository in /Users/runner/work/orca/orca/.git/
+2026-11-11T23:51:08.0830940Z [command]/opt/homebrew/bin/git remote add origin https://github.com/lukebrevoort/orca
+2026-11-11T23:51:08.0835900Z ##[endgroup]
+2026-11-11T23:51:08.0838450Z ##[group]Disabling automatic garbage collection
+2026-11-11T23:51:08.0840310Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-11-11T23:51:08.0844200Z ##[endgroup]
+2026-11-11T23:51:08.0846610Z ##[group]Setting up auth
+2026-11-11T23:51:08.0849300Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-11T23:51:08.0920420Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-11T23:51:08.2713500Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-11T23:51:08.2802510Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-11T23:51:08.4640340Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-11T23:51:08.4826240Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-11T23:51:08.6452640Z [command]/opt/homebrew/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-11T23:51:08.6586600Z ##[endgroup]
+2026-11-11T23:51:08.6587720Z ##[group]Fetching the repository
+2026-11-11T23:51:08.6631750Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +24e231a6253dc8f51db7e1d51f501c56f01e6374:refs/remotes/pull/313/merge
+2026-11-11T23:51:20.5943970Z From https://github.com/lukebrevoort/orca
+2026-11-11T23:51:20.5944980Z  * [new ref]         24e231a6253dc8f51db7e1d51f501c56f01e6374 -> pull/313/merge
+2026-11-11T23:51:20.5963680Z ##[endgroup]
+2026-11-11T23:51:20.5965510Z ##[group]Determining the checkout info
+2026-11-11T23:51:20.5969090Z ##[endgroup]
+2026-11-11T23:51:20.5985100Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-11-11T23:51:20.6143000Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-11T23:51:20.6256590Z ##[group]Checking out the ref
+2026-11-11T23:51:20.6263940Z [command]/opt/homebrew/bin/git checkout --progress --force refs/remotes/pull/313/merge
+2026-11-11T23:51:21.8544680Z Updating files:  21% (1296/6093)
+2026-11-11T23:51:21.9304430Z Updating files:  22% (1341/6093)
+2026-11-11T23:51:21.9519810Z Updating files:  23% (1402/6093)
+2026-11-11T23:51:21.9671990Z Updating files:  24% (1463/6093)
+2026-11-11T23:51:21.9805240Z Updating files:  25% (1524/6093)
+2026-11-11T23:51:21.9923070Z Updating files:  26% (1585/6093)
+2026-11-11T23:51:22.0004980Z Updating files:  27% (1646/6093)
+2026-11-11T23:51:22.0115470Z Updating files:  28% (1707/6093)
+2026-11-11T23:51:22.0245240Z Updating files:  29% (1767/6093)
+2026-11-11T23:51:22.0383080Z Updating files:  30% (1828/6093)
+2026-11-11T23:51:22.0499870Z Updating files:  31% (1889/6093)
+2026-11-11T23:51:22.0630950Z Updating files:  32% (1950/6093)
+2026-11-11T23:51:22.0806330Z Updating files:  33% (2011/6093)
+2026-11-11T23:51:22.0962670Z Updating files:  34% (2072/6093)
+2026-11-11T23:51:22.1074170Z Updating files:  35% (2133/6093)
+2026-11-11T23:51:22.1159600Z Updating files:  36% (2194/6093)
+2026-11-11T23:51:22.1254940Z Updating files:  37% (2255/6093)
+2026-11-11T23:51:22.1390300Z Updating files:  38% (2316/6093)
+2026-11-11T23:51:22.1567130Z Updating files:  39% (2377/6093)
+2026-11-11T23:51:22.1762630Z Updating files:  40% (2438/6093)
+2026-11-11T23:51:22.1912140Z Updating files:  41% (2499/6093)
+2026-11-11T23:51:22.2031180Z Updating files:  42% (2560/6093)
+2026-11-11T23:51:22.2205950Z Updating files:  43% (2620/6093)
+2026-11-11T23:51:22.2351090Z Updating files:  44% (2681/6093)
+2026-11-11T23:51:22.2501560Z Updating files:  45% (2742/6093)
+2026-11-11T23:51:22.2654860Z Updating files:  46% (2803/6093)
+2026-11-11T23:51:22.2970510Z Updating files:  47% (2864/6093)
+2026-11-11T23:51:22.3919730Z Updating files:  48% (2925/6093)
+2026-11-11T23:51:22.5164670Z Updating files:  49% (2986/6093)
+2026-11-11T23:51:22.6381800Z Updating files:  50% (3047/6093)
+2026-11-11T23:51:22.6587860Z Updating files:  51% (3108/6093)
+2026-11-11T23:51:22.7736100Z Updating files:  51% (3117/6093)
+2026-11-11T23:51:22.8795740Z Updating files:  52% (3169/6093)
+2026-11-11T23:51:22.9693890Z Updating files:  53% (3230/6093)
+2026-11-11T23:51:23.0512480Z Updating files:  54% (3291/6093)
+2026-11-11T23:51:23.1252460Z Updating files:  55% (3352/6093)
+2026-11-11T23:51:23.2159280Z Updating files:  56% (3413/6093)
+2026-11-11T23:51:23.3230600Z Updating files:  57% (3474/6093)
+2026-11-11T23:51:23.4124190Z Updating files:  58% (3534/6093)
+2026-11-11T23:51:23.4802880Z Updating files:  59% (3595/6093)
+2026-11-11T23:51:23.6595520Z Updating files:  60% (3656/6093)
+2026-11-11T23:51:23.7804640Z Updating files:  60% (3710/6093)
+2026-11-11T23:51:23.9108100Z Updating files:  61% (3717/6093)
+2026-11-11T23:51:23.9353760Z Updating files:  62% (3778/6093)
+2026-11-11T23:51:23.9586820Z Updating files:  63% (3839/6093)
+2026-11-11T23:51:23.9785850Z Updating files:  64% (3900/6093)
+2026-11-11T23:51:23.9946520Z Updating files:  65% (3961/6093)
+2026-11-11T23:51:24.0175570Z Updating files:  66% (4022/6093)
+2026-11-11T23:51:24.0339210Z Updating files:  67% (4083/6093)
+2026-11-11T23:51:24.0448550Z Updating files:  68% (4144/6093)
+2026-11-11T23:51:24.0676270Z Updating files:  69% (4205/6093)
+2026-11-11T23:51:24.0783680Z Updating files:  70% (4266/6093)
+2026-11-11T23:51:24.1105430Z Updating files:  71% (4327/6093)
+2026-11-11T23:51:24.1403510Z Updating files:  72% (4387/6093)
+2026-11-11T23:51:24.2204740Z Updating files:  73% (4448/6093)
+2026-11-11T23:51:24.2513900Z Updating files:  74% (4509/6093)
+2026-11-11T23:51:24.2884880Z Updating files:  75% (4570/6093)
+2026-11-11T23:51:24.3137780Z Updating files:  76% (4631/6093)
+2026-11-11T23:51:24.3450450Z Updating files:  77% (4692/6093)
+2026-11-11T23:51:24.3699530Z Updating files:  78% (4753/6093)
+2026-11-11T23:51:24.3992370Z Updating files:  79% (4814/6093)
+2026-11-11T23:51:24.4332960Z Updating files:  80% (4875/6093)
+2026-11-11T23:51:24.4820790Z Updating files:  81% (4936/6093)
+2026-11-11T23:51:24.6267140Z Updating files:  82% (4997/6093)
+2026-11-11T23:51:24.6510300Z Updating files:  83% (5058/6093)
+2026-11-11T23:51:24.6559100Z Updating files:  84% (5119/6093)
+2026-11-11T23:51:24.6773920Z Updating files:  84% (5134/6093)
+2026-11-11T23:51:24.7123990Z Updating files:  85% (5180/6093)
+2026-11-11T23:51:24.7408390Z Updating files:  86% (5240/6093)
+2026-11-11T23:51:24.7637340Z Updating files:  87% (5301/6093)
+2026-11-11T23:51:24.7849560Z Updating files:  88% (5362/6093)
+2026-11-11T23:51:24.8051890Z Updating files:  89% (5423/6093)
+2026-11-11T23:51:24.8446040Z Updating files:  90% (5484/6093)
+2026-11-11T23:51:24.8911110Z Updating files:  91% (5545/6093)
+2026-11-11T23:51:24.9524740Z Updating files:  92% (5606/6093)
+2026-11-11T23:51:24.9712290Z Updating files:  93% (5667/6093)
+2026-11-11T23:51:24.9796540Z Updating files:  94% (5728/6093)
+2026-11-11T23:51:25.0526450Z Updating files:  95% (5789/6093)
+2026-11-11T23:51:25.1271440Z Updating files:  96% (5850/6093)
+2026-11-11T23:51:25.1899640Z Updating files:  97% (5911/6093)
+2026-11-11T23:51:25.2097170Z Updating files:  98% (5972/6093)
+2026-11-11T23:51:25.2234950Z Updating files:  99% (6033/6093)
+2026-11-11T23:51:25.2236160Z Updating files: 100% (6093/6093)
+2026-11-11T23:51:25.2236470Z Updating files: 100% (6093/6093), done.
+2026-11-11T23:51:25.2359970Z HEAD is now at 24e231a Merge 41a0998b14428f62280027f504678b1c243e5a77 into 97d0484d8358b8bf9207eca3b4ecf05012a0bac3
+2026-11-11T23:51:25.2399130Z ##[endgroup]
+2026-11-11T23:51:25.2767280Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-11-11T23:51:25.2958970Z 24e231a6253dc8f51db7e1d51f501c56f01e6374
+2026-11-11T23:51:25.2974120Z ##[group]Removing auth
+2026-11-11T23:51:25.2982590Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-11T23:51:25.3130610Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-11T23:51:25.5066820Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-11T23:51:25.5147000Z http.https://github.com/.extraheader
+2026-11-11T23:51:25.5158630Z [command]/opt/homebrew/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-11T23:51:25.5258390Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-11T23:51:25.6755540Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-11T23:51:25.7059770Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-11T23:51:25.8035270Z ##[endgroup]
+2026-11-11T23:51:25.8453600Z ##[group]Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+2026-11-11T23:51:25.8454040Z with:
+2026-11-11T23:51:25.8454230Z   bun-version: 1.3.14
+2026-11-11T23:51:25.8454480Z   no-cache: false
+2026-11-11T23:51:25.8456930Z   token: ***
+2026-11-11T23:51:25.8457220Z env:
+2026-11-11T23:51:25.8457540Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:25.8457960Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:25.8458400Z ##[endgroup]
+2026-11-11T23:51:26.3027820Z Cache hit for: bun-kSmiCOujAb+jFWQqTDn70+CxniQ=
+2026-11-11T23:51:26.8455960Z Received 21289718 of 21289718 (100.0%), 43.0 MBs/sec
+2026-11-11T23:51:26.8478170Z Cache Size: ~20 MB (21289718 B)
+2026-11-11T23:51:26.8541590Z [command]/opt/homebrew/bin/gtar -xf /Users/runner/work/_temp/4e572ce9-20ef-42b3-b8a3-526d162ca0f5/cache.tzst -P -C /Users/runner/work/orca/orca --delay-directory-restore --use-compress-program unzstd
+2026-11-11T23:51:27.1060510Z Cache restored successfully
+2026-11-11T23:51:27.1090740Z [command]/Users/runner/.bun/bin/bun --revision
+2026-11-11T23:51:27.1432140Z 1.3.14+0d9b296af
+2026-11-11T23:51:27.1435150Z Using a cached version of Bun: 1.3.14+0d9b296af
+2026-11-11T23:51:27.1593860Z ##[group]Run bun install --frozen-lockfile
+2026-11-11T23:51:27.1594940Z [36;1mbun install --frozen-lockfile[0m
+2026-11-11T23:51:27.1657010Z shell: /bin/bash -e {0}
+2026-11-11T23:51:27.1657250Z env:
+2026-11-11T23:51:27.1657480Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:27.1657840Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:27.1658130Z ##[endgroup]
+2026-11-11T23:51:27.2727940Z bun install v1.3.14 (0d9b296a)
+2026-11-11T23:51:30.7195780Z 
+2026-11-11T23:51:30.7200320Z + @types/node@24.13.2
+2026-11-11T23:51:30.7202560Z + axe-core@4.13.0
+2026-11-11T23:51:30.7203840Z + playwright@1.62.1
+2026-11-11T23:51:30.7205050Z + typescript@5.9.3
+2026-11-11T23:51:30.7205410Z 
+2026-11-11T23:51:30.7206250Z 177 packages installed [3.45s]
+2026-11-11T23:51:30.7592940Z ##[group]Run bash scripts/ci/fixture-check.sh ios
+2026-11-11T23:51:30.7593460Z [36;1mbash scripts/ci/fixture-check.sh ios[0m
+2026-11-11T23:51:30.7662490Z shell: /bin/bash -e {0}
+2026-11-11T23:51:30.7662780Z env:
+2026-11-11T23:51:30.7663640Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-11T23:51:30.7664320Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-11T23:51:30.7664810Z ##[endgroup]
+2026-11-11T23:51:34.8218670Z [fixture stage] phase=xcode_preflight_started
+2026-11-11T23:51:37.8074470Z [fixture stage] phase=xcode_preflight_finished
+2026-11-11T23:52:15.1346450Z [fixture stage] phase=simulator_boot_started
+2026-11-11T23:53:43.8877340Z Monitoring boot status for Orca CI 43122924544-1 (338BF4B8-064D-4455-BD80-117FE9E6C3D2).
+2026-11-11T23:53:43.9018960Z [2026-11-11 23:53:43 +0000] Status=2, isTerminal=NO, Elapsed=01:26.
+2026-11-11T23:53:43.9145650Z 	Waiting on Data Migration
+2026-11-11T23:53:43.9219740Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-11T23:53:43.9327720Z 		Migration Elapsed:01:16 seconds
+2026-11-11T23:53:43.9430390Z 
+2026-11-11T23:53:46.4607360Z [2026-11-11 23:53:46 +0000] Status=2, isTerminal=NO, Elapsed=01:28.
+2026-11-11T23:53:46.4611080Z 	Waiting on Data Migration
+2026-11-11T23:53:46.4613120Z 		Reason:Running plugin com.apple.-0LaunchServicesMigrator (00LaunchServicesMigrator.migrator, user-agnostic)
+2026-11-11T23:53:46.4614850Z 		Migration Elapsed:01:17 seconds
+2026-11-11T23:53:46.4615640Z 
+2026-11-11T23:53:48.2191110Z [2026-11-11 23:53:48 +0000] Status=2, isTerminal=NO, Elapsed=01:30.
+2026-11-11T23:53:48.3052430Z 	Waiting on Data Migration
+2026-11-11T23:53:48.3059030Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-11T23:53:48.3846250Z 		Migration Elapsed:01:19 seconds
+2026-11-11T23:53:48.5035930Z 
+2026-11-11T23:53:49.3053220Z [2026-11-11 23:53:49 +0000] Status=2, isTerminal=NO, Elapsed=01:31.
+2026-11-11T23:53:49.3891150Z 	Waiting on Data Migration
+2026-11-11T23:53:49.3924550Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-11T23:53:49.4085800Z 		Migration Elapsed:01:21 seconds
+2026-11-11T23:53:49.4155580Z 
+2026-11-11T23:53:49.4610280Z [2026-11-11 23:53:49 +0000] Status=2, isTerminal=NO, Elapsed=01:31.
+2026-11-11T23:53:49.4727210Z 	Waiting on Data Migration
+2026-11-11T23:53:49.5044190Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-11T23:53:49.5198630Z 		Migration Elapsed:01:21 seconds
+2026-11-11T23:53:49.5199370Z 
+2026-11-11T23:53:50.5172720Z [2026-11-11 23:53:50 +0000] Status=2, isTerminal=NO, Elapsed=01:32.
+2026-11-11T23:53:50.5284460Z 	Waiting on Data Migration
+2026-11-11T23:53:50.5428950Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-11T23:53:50.5592200Z 		Migration Elapsed:01:22 seconds
+2026-11-11T23:53:50.5729510Z 
+2026-11-11T23:53:50.9964420Z [2026-11-11 23:53:50 +0000] Status=2, isTerminal=NO, Elapsed=01:33.
+2026-11-11T23:53:51.0139740Z 	Waiting on Data Migration
+2026-11-11T23:53:51.0703800Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-11T23:53:51.0898710Z 		Migration Elapsed:01:23 seconds
+2026-11-11T23:53:51.1006130Z 
+2026-11-11T23:53:52.7349720Z [2026-11-11 23:53:52 +0000] Status=2, isTerminal=NO, Elapsed=01:34.
+2026-11-11T23:53:52.8739050Z 	Waiting on Data Migration
+2026-11-11T23:53:52.8758060Z 		Reason:Running plugin com.apple.securityd.KeychainMigrator (KeychainMigrator.migrator, user-agnostic)
+2026-11-11T23:53:53.0536370Z 		Migration Elapsed:01:24 seconds
+2026-11-11T23:53:53.8959540Z 
+2026-11-11T23:53:54.3035030Z [2026-11-11 23:53:54 +0000] Status=2, isTerminal=NO, Elapsed=01:36.
+2026-11-11T23:53:54.3042300Z 	Waiting on Data Migration
+2026-11-11T23:53:54.4678140Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:53:54.4985110Z 		Migration Elapsed:01:25 seconds
+2026-11-11T23:53:54.5127130Z 
+2026-11-11T23:53:54.7564300Z [2026-11-11 23:53:54 +0000] Status=2, isTerminal=NO, Elapsed=01:36.
+2026-11-11T23:53:54.8370250Z 	Waiting on Data Migration
+2026-11-11T23:53:55.0004610Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:53:55.0802580Z 		Migration Elapsed:01:26 seconds
+2026-11-11T23:53:55.1626550Z 
+2026-11-11T23:53:55.6560530Z [2026-11-11 23:53:55 +0000] Status=2, isTerminal=NO, Elapsed=01:37.
+2026-11-11T23:53:55.8269370Z 	Waiting on Data Migration
+2026-11-11T23:53:55.9104970Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:53:56.0757560Z 		Migration Elapsed:01:27 seconds
+2026-11-11T23:53:56.1635240Z 
+2026-11-11T23:53:56.4101900Z [2026-11-11 23:53:55 +0000] Status=2, isTerminal=NO, Elapsed=01:38.
+2026-11-11T23:53:58.0924470Z 	Waiting on Data Migration
+2026-11-11T23:53:58.2567850Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:53:58.3377030Z 		Migration Elapsed:01:28 seconds
+2026-11-11T23:53:59.2927070Z 
+2026-11-11T23:53:59.4609290Z [2026-11-11 23:53:58 +0000] Status=2, isTerminal=NO, Elapsed=01:40.
+2026-11-11T23:53:59.5434470Z 	Waiting on Data Migration
+2026-11-11T23:53:59.6286260Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:53:59.7088960Z 		Migration Elapsed:01:29 seconds
+2026-11-11T23:53:59.7961230Z 
+2026-11-11T23:54:00.0016520Z [2026-11-11 23:53:58 +0000] Status=2, isTerminal=NO, Elapsed=01:40.
+2026-11-11T23:54:00.4369500Z 	Waiting on Data Migration
+2026-11-11T23:54:01.3731550Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:54:01.7846770Z 		Migration Elapsed:01:30 seconds
+2026-11-11T23:54:01.7847190Z 
+2026-11-11T23:54:01.7847440Z [2026-11-11 23:53:59 +0000] Status=2, isTerminal=NO, Elapsed=01:41.
+2026-11-11T23:54:01.7848710Z 	Waiting on Data Migration
+2026-11-11T23:54:01.7849980Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:54:01.7850540Z 		Migration Elapsed:01:31 seconds
+2026-11-11T23:54:01.7860360Z 
+2026-11-11T23:54:02.6283490Z [2026-11-11 23:54:01 +0000] Status=2, isTerminal=NO, Elapsed=01:43.
+2026-11-11T23:54:04.0603980Z 	Waiting on Data Migration
+2026-11-11T23:54:04.4763300Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:54:04.7205110Z 		Migration Elapsed:01:32 seconds
+2026-11-11T23:54:04.9773320Z 
+2026-11-11T23:54:05.8061100Z [2026-11-11 23:54:03 +0000] Status=2, isTerminal=NO, Elapsed=01:45.
+2026-11-11T23:54:06.3238250Z 	Waiting on Data Migration
+2026-11-11T23:54:06.6724030Z 		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+2026-11-11T23:54:07.0039560Z 		Migration Elapsed:01:34 seconds
+2026-11-11T23:54:07.1857990Z 
+2026-11-11T23:54:08.0019080Z [2026-11-11 23:54:04 +0000] Status=2, isTerminal=NO, Elapsed=01:46.
+2026-11-11T23:54:09.4100580Z 	Waiting on Data Migration
+2026-11-11T23:54:11.3325650Z 		Reason:Running plugin com.apple.WebBookmarks.migrator (WebBookmarks.migrator)
+2026-11-11T23:54:11.3327100Z 		Migration Elapsed:01:36 seconds
+2026-11-11T23:54:11.3327480Z 
+2026-11-11T23:54:11.3328180Z [2026-11-11 23:54:06 +0000] Status=2, isTerminal=NO, Elapsed=01:48.
+2026-11-11T23:54:11.3329220Z 	Waiting on Data Migration
+2026-11-11T23:54:11.3329670Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:11.3418910Z 		Migration Elapsed:01:37 seconds
+2026-11-11T23:54:11.3419970Z 
+2026-11-11T23:54:11.3420350Z [2026-11-11 23:54:06 +0000] Status=2, isTerminal=NO, Elapsed=01:49.
+2026-11-11T23:54:11.3421680Z 	Waiting on Data Migration
+2026-11-11T23:54:11.3429010Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:11.3430400Z 		Migration Elapsed:01:39 seconds
+2026-11-11T23:54:11.3749050Z 
+2026-11-11T23:54:11.3749690Z [2026-11-11 23:54:09 +0000] Status=2, isTerminal=NO, Elapsed=01:52.
+2026-11-11T23:54:11.3750460Z 	Waiting on Data Migration
+2026-11-11T23:54:11.3751030Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:11.3751760Z 		Migration Elapsed:01:39 seconds
+2026-11-11T23:54:11.3752440Z 
+2026-11-11T23:54:11.3752740Z [2026-11-11 23:54:10 +0000] Status=2, isTerminal=NO, Elapsed=01:52.
+2026-11-11T23:54:11.3753500Z 	Waiting on Data Migration
+2026-11-11T23:54:11.3754440Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:11.3762000Z 		Migration Elapsed:01:42 seconds
+2026-11-11T23:54:11.3766610Z 
+2026-11-11T23:54:11.3767100Z [2026-11-11 23:54:11 +0000] Status=2, isTerminal=NO, Elapsed=01:53.
+2026-11-11T23:54:11.3768170Z 	Waiting on Data Migration
+2026-11-11T23:54:11.3768660Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:11.3787970Z 		Migration Elapsed:01:43 seconds
+2026-11-11T23:54:11.3789520Z 
+2026-11-11T23:54:14.1286750Z [2026-11-11 23:54:12 +0000] Status=2, isTerminal=NO, Elapsed=01:54.
+2026-11-11T23:54:14.7852640Z 	Waiting on Data Migration
+2026-11-11T23:54:15.6194160Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:16.3831510Z 		Migration Elapsed:01:44 seconds
+2026-11-11T23:54:17.2222580Z 
+2026-11-11T23:54:17.6482400Z [2026-11-11 23:54:14 +0000] Status=2, isTerminal=NO, Elapsed=01:56.
+2026-11-11T23:54:18.3883720Z 	Waiting on Data Migration
+2026-11-11T23:54:18.5917110Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:18.9533740Z 		Migration Elapsed:01:45 seconds
+2026-11-11T23:54:19.0345310Z 
+2026-11-11T23:54:19.1176040Z [2026-11-11 23:54:15 +0000] Status=2, isTerminal=NO, Elapsed=01:57.
+2026-11-11T23:54:19.2876080Z 	Waiting on Data Migration
+2026-11-11T23:54:19.4559310Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:19.6174480Z 		Migration Elapsed:01:47 seconds
+2026-11-11T23:54:19.7135640Z 
+2026-11-11T23:54:20.2888070Z [2026-11-11 23:54:15 +0000] Status=2, isTerminal=NO, Elapsed=01:57.
+2026-11-11T23:54:20.4556920Z 	Waiting on Data Migration
+2026-11-11T23:54:20.7313030Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:21.2853510Z 		Migration Elapsed:01:47 seconds
+2026-11-11T23:54:21.3788790Z 
+2026-11-11T23:54:21.4594950Z [2026-11-11 23:54:16 +0000] Status=2, isTerminal=NO, Elapsed=01:58.
+2026-11-11T23:54:21.4595680Z 	Waiting on Data Migration
+2026-11-11T23:54:21.6513350Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:21.7341750Z 		Migration Elapsed:01:48 seconds
+2026-11-11T23:54:21.8197150Z 
+2026-11-11T23:54:21.9016070Z [2026-11-11 23:54:17 +0000] Status=2, isTerminal=NO, Elapsed=01:59.
+2026-11-11T23:54:22.0656200Z 	Waiting on Data Migration
+2026-11-11T23:54:22.1493490Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:22.1498540Z 		Migration Elapsed:01:49 seconds
+2026-11-11T23:54:22.5615490Z 
+2026-11-11T23:54:22.5616220Z [2026-11-11 23:54:18 +0000] Status=2, isTerminal=NO, Elapsed=02:00.
+2026-11-11T23:54:22.5616710Z 	Waiting on Data Migration
+2026-11-11T23:54:22.5617450Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:22.5618310Z 		Migration Elapsed:01:50 seconds
+2026-11-11T23:54:22.5618750Z 
+2026-11-11T23:54:22.5618880Z [2026-11-11 23:54:19 +0000] Status=2, isTerminal=NO, Elapsed=02:01.
+2026-11-11T23:54:22.5619390Z 	Waiting on Data Migration
+2026-11-11T23:54:22.5620290Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:22.5620930Z 		Migration Elapsed:01:51 seconds
+2026-11-11T23:54:22.5621640Z 
+2026-11-11T23:54:23.0345750Z [2026-11-11 23:54:20 +0000] Status=2, isTerminal=NO, Elapsed=02:02.
+2026-11-11T23:54:23.0360250Z 	Waiting on Data Migration
+2026-11-11T23:54:23.1192960Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:23.1195410Z 		Migration Elapsed:01:52 seconds
+2026-11-11T23:54:23.1195650Z 
+2026-11-11T23:54:23.1196000Z [2026-11-11 23:54:21 +0000] Status=2, isTerminal=NO, Elapsed=02:03.
+2026-11-11T23:54:23.1196630Z 	Waiting on Data Migration
+2026-11-11T23:54:23.1197300Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:23.1199610Z 		Migration Elapsed:01:53 seconds
+2026-11-11T23:54:23.1199950Z 
+2026-11-11T23:54:23.1200080Z [2026-11-11 23:54:22 +0000] Status=2, isTerminal=NO, Elapsed=02:04.
+2026-11-11T23:54:23.1200920Z 	Waiting on Data Migration
+2026-11-11T23:54:23.1201490Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:23.1203430Z 		Migration Elapsed:01:54 seconds
+2026-11-11T23:54:23.1204300Z 
+2026-11-11T23:54:23.7361270Z [2026-11-11 23:54:23 +0000] Status=2, isTerminal=NO, Elapsed=02:05.
+2026-11-11T23:54:23.9462500Z 	Waiting on Data Migration
+2026-11-11T23:54:24.1563030Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:24.2727960Z 		Migration Elapsed:01:55 seconds
+2026-11-11T23:54:24.4858200Z 
+2026-11-11T23:54:25.9426410Z [2026-11-11 23:54:23 +0000] Status=2, isTerminal=NO, Elapsed=02:06.
+2026-11-11T23:54:26.7718930Z 	Waiting on Data Migration
+2026-11-11T23:54:26.8926600Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:26.9078140Z 		Migration Elapsed:01:56 seconds
+2026-11-11T23:54:26.9205360Z 
+2026-11-11T23:54:26.9758660Z [2026-11-11 23:54:24 +0000] Status=2, isTerminal=NO, Elapsed=02:07.
+2026-11-11T23:54:26.9923070Z 	Waiting on Data Migration
+2026-11-11T23:54:27.0049890Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:27.0152700Z 		Migration Elapsed:01:57 seconds
+2026-11-11T23:54:27.0468370Z 
+2026-11-11T23:54:27.0571590Z [2026-11-11 23:54:26 +0000] Status=2, isTerminal=NO, Elapsed=02:08.
+2026-11-11T23:54:27.0719570Z 	Waiting on Data Migration
+2026-11-11T23:54:27.0912260Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:27.1104170Z 		Migration Elapsed:01:58 seconds
+2026-11-11T23:54:27.1290730Z 
+2026-11-11T23:54:27.2337960Z [2026-11-11 23:54:26 +0000] Status=2, isTerminal=NO, Elapsed=02:09.
+2026-11-11T23:54:27.2983140Z 	Waiting on Data Migration
+2026-11-11T23:54:27.3103950Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:27.3441600Z 		Migration Elapsed:01:59 seconds
+2026-11-11T23:54:27.3542910Z 
+2026-11-11T23:54:27.9561950Z [2026-11-11 23:54:27 +0000] Status=2, isTerminal=NO, Elapsed=02:10.
+2026-11-11T23:54:28.0864350Z 	Waiting on Data Migration
+2026-11-11T23:54:28.1163900Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:28.1321570Z 		Migration Elapsed:02:00 seconds
+2026-11-11T23:54:28.1428920Z 
+2026-11-11T23:54:29.4983320Z [2026-11-11 23:54:29 +0000] Status=2, isTerminal=NO, Elapsed=02:11.
+2026-11-11T23:54:29.4993410Z 	Waiting on Data Migration
+2026-11-11T23:54:29.5103260Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:29.5209430Z 		Migration Elapsed:02:01 seconds
+2026-11-11T23:54:29.5311100Z 
+2026-11-11T23:54:30.9677480Z [2026-11-11 23:54:30 +0000] Status=2, isTerminal=NO, Elapsed=02:12.
+2026-11-11T23:54:30.9679080Z 	Waiting on Data Migration
+2026-11-11T23:54:30.9680640Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:30.9681600Z 		Migration Elapsed:02:02 seconds
+2026-11-11T23:54:30.9681960Z 
+2026-11-11T23:54:31.1787800Z [2026-11-11 23:54:31 +0000] Status=2, isTerminal=NO, Elapsed=02:13.
+2026-11-11T23:54:31.1788730Z 	Waiting on Data Migration
+2026-11-11T23:54:31.2291900Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:31.2292720Z 		Migration Elapsed:02:03 seconds
+2026-11-11T23:54:31.2293060Z 
+2026-11-11T23:54:31.9476240Z [2026-11-11 23:54:31 +0000] Status=2, isTerminal=NO, Elapsed=02:14.
+2026-11-11T23:54:31.9500260Z 	Waiting on Data Migration
+2026-11-11T23:54:31.9525320Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:31.9526230Z 		Migration Elapsed:02:04 seconds
+2026-11-11T23:54:31.9526750Z 
+2026-11-11T23:54:32.9315300Z [2026-11-11 23:54:32 +0000] Status=2, isTerminal=NO, Elapsed=02:15.
+2026-11-11T23:54:32.9417070Z 	Waiting on Data Migration
+2026-11-11T23:54:32.9454370Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:32.9455450Z 		Migration Elapsed:02:05 seconds
+2026-11-11T23:54:32.9455770Z 
+2026-11-11T23:54:33.8863860Z [2026-11-11 23:54:33 +0000] Status=2, isTerminal=NO, Elapsed=02:16.
+2026-11-11T23:54:33.8870600Z 	Waiting on Data Migration
+2026-11-11T23:54:33.8895010Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:33.8908060Z 		Migration Elapsed:02:06 seconds
+2026-11-11T23:54:33.8919120Z 
+2026-11-11T23:54:34.8871810Z [2026-11-11 23:54:34 +0000] Status=2, isTerminal=NO, Elapsed=02:17.
+2026-11-11T23:54:34.8978780Z 	Waiting on Data Migration
+2026-11-11T23:54:34.9084840Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:34.9199180Z 		Migration Elapsed:02:07 seconds
+2026-11-11T23:54:34.9353850Z 
+2026-11-11T23:54:35.8768530Z [2026-11-11 23:54:35 +0000] Status=2, isTerminal=NO, Elapsed=02:18.
+2026-11-11T23:54:35.8869630Z 	Waiting on Data Migration
+2026-11-11T23:54:35.8928890Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:35.8944030Z 		Migration Elapsed:02:08 seconds
+2026-11-11T23:54:35.8952900Z 
+2026-11-11T23:54:36.8670820Z [2026-11-11 23:54:36 +0000] Status=2, isTerminal=NO, Elapsed=02:19.
+2026-11-11T23:54:36.8672130Z 	Waiting on Data Migration
+2026-11-11T23:54:36.8674290Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:36.8675290Z 		Migration Elapsed:02:09 seconds
+2026-11-11T23:54:36.8675590Z 
+2026-11-11T23:54:37.8769680Z [2026-11-11 23:54:37 +0000] Status=2, isTerminal=NO, Elapsed=02:20.
+2026-11-11T23:54:37.8871470Z 	Waiting on Data Migration
+2026-11-11T23:54:37.8973620Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:37.9026470Z 		Migration Elapsed:02:10 seconds
+2026-11-11T23:54:37.9027050Z 
+2026-11-11T23:54:38.8834020Z [2026-11-11 23:54:38 +0000] Status=2, isTerminal=NO, Elapsed=02:21.
+2026-11-11T23:54:38.8870780Z 	Waiting on Data Migration
+2026-11-11T23:54:38.8877000Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:38.8877710Z 		Migration Elapsed:02:11 seconds
+2026-11-11T23:54:38.8878140Z 
+2026-11-11T23:54:39.8773540Z [2026-11-11 23:54:39 +0000] Status=2, isTerminal=NO, Elapsed=02:22.
+2026-11-11T23:54:39.8775760Z 	Waiting on Data Migration
+2026-11-11T23:54:39.8784120Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:39.8786820Z 		Migration Elapsed:02:12 seconds
+2026-11-11T23:54:39.8786960Z 
+2026-11-11T23:54:40.8922920Z [2026-11-11 23:54:40 +0000] Status=2, isTerminal=NO, Elapsed=02:23.
+2026-11-11T23:54:40.9024320Z 	Waiting on Data Migration
+2026-11-11T23:54:40.9125840Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:40.9227120Z 		Migration Elapsed:02:13 seconds
+2026-11-11T23:54:40.9327060Z 
+2026-11-11T23:54:42.6311280Z [2026-11-11 23:54:42 +0000] Status=2, isTerminal=NO, Elapsed=02:24.
+2026-11-11T23:54:42.6476320Z 	Waiting on Data Migration
+2026-11-11T23:54:42.6549230Z 		Reason:Running plugin com.apple.locationd.migrator (CoreLocationMigrator.migrator)
+2026-11-11T23:54:42.6645070Z 		Migration Elapsed:02:14 seconds
+2026-11-11T23:54:42.6923950Z 
+2026-11-11T23:54:43.0310440Z [2026-11-11 23:54:43 +0000] Status=2, isTerminal=NO, Elapsed=02:25.
+2026-11-11T23:54:43.0413790Z 	Waiting on Data Migration
+2026-11-11T23:54:43.0520120Z 		Reason:Running plugin com.apple.managedconfiguration.mdm.migrator (MCMDM.migrator)
+2026-11-11T23:54:43.0630480Z 		Migration Elapsed:02:15 seconds
+2026-11-11T23:54:43.0731780Z 
+2026-11-11T23:54:45.1824660Z [2026-11-11 23:54:44 +0000] Status=2, isTerminal=NO, Elapsed=02:27.
+2026-11-11T23:54:45.1825480Z 	Waiting on Data Migration
+2026-11-11T23:54:45.2648870Z 		Reason:Running plugin com.apple.CloudTabsMigrator.migrator (CloudTabsMigrator.migrator)
+2026-11-11T23:54:45.3792480Z 		Migration Elapsed:02:16 seconds
+2026-11-11T23:54:45.4641680Z 
+2026-11-11T23:54:45.5755160Z [2026-11-11 23:54:45 +0000] Status=2, isTerminal=NO, Elapsed=02:27.
+2026-11-11T23:54:45.9097580Z 	Waiting on Data Migration
+2026-11-11T23:54:46.1811690Z 		Reason:Running plugin com.apple.MobileAsset (MobileAsset.migrator)
+2026-11-11T23:54:46.4307460Z 		Migration Elapsed:02:17 seconds
+2026-11-11T23:54:46.5940680Z 
+2026-11-11T23:54:48.8792970Z [2026-11-11 23:54:48 +0000] Status=4, isTerminal=NO, Elapsed=02:30.
+2026-11-11T23:54:48.8824080Z 	Waiting on System App
+2026-11-11T23:54:48.8852360Z 
+2026-11-11T23:54:51.6332040Z [2026-11-11 23:54:51 +0000] Status=4, isTerminal=NO, Elapsed=02:33.
+2026-11-11T23:54:51.6335950Z 	Waiting on System App
+2026-11-11T23:54:51.6336780Z 
+2026-11-11T23:54:53.3097430Z [2026-11-11 23:54:52 +0000] Status=4, isTerminal=NO, Elapsed=02:34.
+2026-11-11T23:54:53.3922570Z 	Waiting on System App
+2026-11-11T23:54:53.4473100Z 
+2026-11-11T23:54:53.4921970Z [2026-11-11 23:54:53 +0000] Status=4, isTerminal=NO, Elapsed=02:35.
+2026-11-11T23:54:53.6267130Z 	Waiting on System App
+2026-11-11T23:54:53.6448800Z 
+2026-11-11T23:54:53.7558820Z [2026-11-11 23:54:53 +0000] Status=4, isTerminal=NO, Elapsed=02:35.
+2026-11-11T23:54:53.7765090Z 	Waiting on System App
+2026-11-11T23:54:53.7782780Z 
+2026-11-11T23:54:53.9955120Z [2026-11-11 23:54:53 +0000] Status=4, isTerminal=NO, Elapsed=02:36.
+2026-11-11T23:54:54.0063260Z 	Waiting on System App
+2026-11-11T23:54:54.0163190Z 
+2026-11-11T23:54:54.9320290Z [2026-11-11 23:54:54 +0000] Status=4, isTerminal=NO, Elapsed=02:37.
+2026-11-11T23:54:54.9426420Z 	Waiting on System App
+2026-11-11T23:54:54.9427110Z 
+2026-11-11T23:54:56.9892490Z [2026-11-11 23:54:56 +0000] Status=4, isTerminal=NO, Elapsed=02:38.
+2026-11-11T23:54:56.9937960Z 	Waiting on System App
+2026-11-11T23:54:57.0558390Z 
+2026-11-11T23:54:57.0683740Z [2026-11-11 23:54:56 +0000] Status=4, isTerminal=NO, Elapsed=02:39.
+2026-11-11T23:54:57.0800820Z 	Waiting on System App
+2026-11-11T23:54:57.0993660Z 
+2026-11-11T23:54:59.7200890Z [2026-11-11 23:54:58 +0000] Status=4, isTerminal=NO, Elapsed=02:40.
+2026-11-11T23:54:59.7203570Z 	Waiting on System App
+2026-11-11T23:54:59.9653200Z 
+2026-11-11T23:55:00.2234600Z [2026-11-11 23:54:59 +0000] Status=4, isTerminal=NO, Elapsed=02:41.
+2026-11-11T23:55:00.6484220Z 	Waiting on System App
+2026-11-11T23:55:00.9743830Z 
+2026-11-11T23:55:01.2813180Z [2026-11-11 23:55:00 +0000] Status=4, isTerminal=NO, Elapsed=02:42.
+2026-11-11T23:55:01.6103580Z 	Waiting on System App
+2026-11-11T23:55:01.8535730Z 
+2026-11-11T23:55:07.7857640Z [2026-11-11 23:55:07 +0000] Status=4294967295, isTerminal=YES, Elapsed=02:49.
+2026-11-11T23:55:08.1132550Z 	Finished
+2026-11-11T23:55:08.1136040Z 
+2026-11-11T23:55:08.7695570Z [fixture stage] phase=simulator_boot_finished
+2026-11-11T23:55:08.8514750Z [fixture stage] phase=fixture_starting
+2026-11-11T23:55:33.0079770Z [fixture stage] phase=fixture_ready
+2026-11-11T23:55:33.0095010Z [fixture stage] phase=swift_contract_started
+2026-11-11T23:57:46.4848840Z [fixture stage] phase=swift_contract_finished
+2026-11-11T23:57:46.4956200Z [fixture stage] phase=ios_suite_started
+2026-11-11T23:57:46.5942790Z [fixture stage] phase=owned_simulator_recheck_started
+2026-11-11T23:57:56.8366250Z [fixture stage] phase=owned_simulator_recheck_finished
+2026-11-11T23:58:10.5639400Z [fixture stage] phase=xcode_destination_started
+2026-11-11T23:58:36.7154710Z [fixture stage] phase=xcode_destination_finished
+2026-11-11T23:58:36.7265640Z [fixture stage] phase=build_for_testing_started
+2026-11-12T00:03:10.3416440Z [fixture stage] phase=build_for_testing_finished
+2026-11-12T00:03:41.6881610Z [fixture stage] phase=feedback_layout_light_started
+2026-11-12T00:06:26.2974120Z [fixture stage] phase=feedback_layout_light_finished
+2026-11-12T00:06:32.5517040Z [fixture stage] phase=feedback_layout_dark_started
+2026-11-12T00:08:58.2876750Z [fixture stage] phase=feedback_layout_dark_finished
+2026-11-12T00:09:04.7230260Z [fixture stage] phase=capture_light_started
+2026-11-12T00:11:14.1690710Z [fixture stage] phase=capture_light_finished
+2026-11-12T00:11:14.1692410Z [fixture stage] phase=feedback_light_started
+2026-11-12T00:14:17.5139470Z [fixture stage] phase=evidence_export_started
+2026-11-12T00:14:24.2069910Z [feedback test] OrcaTests.FeedbackTicketTests.testAvailabilityFailsClosedAndBlocksOtherAccounts passed (0.057 seconds)
+2026-11-12T00:14:24.2081510Z [feedback test] OrcaTests.FeedbackTicketTests.testChangingOwnerClearsDraftAndRejectsOldScopeActions passed (0.488 seconds)
+2026-11-12T00:14:24.2091320Z [feedback test] OrcaTests.FeedbackTicketTests.testFeedbackValidationUsesWireLengthAndRequiresText passed (0.002 seconds)
+2026-11-12T00:14:24.2095590Z [feedback test] OrcaTests.FeedbackTicketTests.testImagePreparationStripsMetadataAndBoundsDecodedDimensions passed (0.101 seconds)
+2026-11-12T00:14:24.2098000Z [feedback test] OrcaTests.FeedbackTicketTests.testLostResponseRetainsExactSubmissionUntilConfirmedTicket passed (0.206 seconds)
+2026-11-12T00:14:24.2103920Z [feedback test] OrcaTests.FeedbackTicketTests.testMalformedReceiptNeverReportsSuccessOrDropsDraft passed (0.005 seconds)
+2026-11-12T00:14:24.2105630Z [feedback test] OrcaTests.FeedbackTicketTests.testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft passed (0.164 seconds)
+2026-11-12T00:14:24.2111660Z [feedback test] OrcaTests.FeedbackTicketTests.testMediaRequiresReviewAndCleansUpOnOwnerChange passed (0.010 seconds)
+2026-11-12T00:14:24.2149790Z [feedback test] OrcaTests.FeedbackTicketTests.testMediaRetryFreezesBytesAndSuccessRemovesPreview passed (0.015 seconds)
+2026-11-12T00:14:24.2151950Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenCaptureRequiresForegroundOriginatingScene passed (0.004 seconds)
+2026-11-12T00:14:24.2154150Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingCancellationFencesLatePermissionAndAccountChange passed (0.006 seconds)
+2026-11-12T00:14:24.2155460Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit passed (0.006 seconds)
+2026-11-12T00:14:24.2156530Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingUnavailableAndOversizedResultsNeverAttach passed (0.018 seconds)
+2026-11-12T00:14:24.2170210Z [feedback test] OrcaTests.FeedbackTicketTests.testScreenRecordingWriterProducesSilentBoundedVideo passed (0.640 seconds)
+2026-11-12T00:14:24.2176140Z [feedback test] OrcaTests.FeedbackTicketTests.testTicketLinkAcceptsOnlyHTTPSLinearURLs passed (0.005 seconds)
+2026-11-12T00:14:24.2177240Z [feedback test] OrcaUITests.OrcaUITests.test39FeedbackCapturesCurrentOrcaScreen passed (48.909 seconds)
+2026-11-12T00:14:24.2206960Z [feedback test] OrcaUITests.OrcaUITests.test38FeedbackCornerCreatesLinearTicket failed (115.578 seconds)
+2026-11-12T00:14:24.2213270Z [feedback picker] snapshot_nodes=98 truncated=false app_state=4
+2026-11-12T00:14:24.2219820Z [feedback picker] kind=Button count=7
+2026-11-12T00:14:24.2220430Z [feedback picker] kind=Button label=Cancel identifier=Cancel
+2026-11-12T00:14:24.2220960Z [feedback picker] kind=Button label=Photos identifier=
+2026-11-12T00:14:24.2221810Z [feedback picker] kind=Button label=Collections identifier=
+2026-11-12T00:14:24.2225110Z [feedback picker] kind=Button label=Done identifier=Add
+2026-11-12T00:14:24.2225890Z [feedback picker] kind=Button label=Sort and Filter identifier=Sort and Filter
+2026-11-12T00:14:24.2585440Z [feedback picker] kind=Button label=1 Photo, Location Included identifier=
+2026-11-12T00:14:24.2586460Z [feedback picker] kind=Button label=Search identifier=
+2026-11-12T00:14:24.2587020Z [feedback picker] kind=StaticText count=3
+2026-11-12T00:14:24.2587620Z [feedback picker] kind=StaticText label=Select up to 3 items. identifier=
+2026-11-12T00:14:24.2591080Z [feedback picker] kind=StaticText label=1 Photo identifier=
+2026-11-12T00:14:24.2608870Z [feedback picker] kind=StaticText label=Location Included identifier=
+2026-11-12T00:14:24.2613600Z [feedback picker] kind=Image count=9
+2026-11-12T00:14:24.2927790Z [feedback picker] kind=Image label=Photo, November 12, 12:03 AM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2951460Z [feedback picker] kind=Image label=Video, one second, November 11, 11:51 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2952630Z [feedback picker] kind=Image label=Photo, March 30, 2018, 7:14 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2963640Z [feedback picker] kind=Image label=Photo, August 08, 2012, 9:55 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2964410Z [feedback picker] kind=Image label=Photo, August 08, 2012, 9:29 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2965580Z [feedback picker] kind=Image label=Photo, August 08, 2012, 6:52 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2971170Z [feedback picker] kind=Image label=Photo, March 13, 2011, 12:17 AM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2972180Z [feedback picker] kind=Image label=Photo, October 09, 2009, 9:09 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:24.2972790Z [feedback picker] kind=Image label= identifier=
+2026-11-12T00:14:24.2976000Z [feedback picker] kind=Cell count=0
+2026-11-12T00:14:24.2983650Z [feedback picker] kind=CollectionView count=0
+2026-11-12T00:14:24.2988180Z [feedback picker] kind=ScrollView count=1
+2026-11-12T00:14:24.2988670Z [feedback picker] kind=ScrollView label= identifier=photosView_content_scroll_view
+2026-11-12T00:14:24.2989010Z [feedback picker] kind=Sheet count=0
+2026-11-12T00:14:24.2989370Z [feedback picker] kind=Other count=72
+2026-11-12T00:14:24.2989760Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2993670Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2994570Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2994930Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2995470Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2996090Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2996410Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.2997000Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.3001000Z [simulator readiness] first_launch_status=0
+2026-11-12T00:14:24.3001550Z [simulator readiness] attempt=1 exit=0 owned_destination=True
+2026-11-12T00:14:24.3002330Z [simulator readiness] attempt=1 exit=0 owned_destination=True
+2026-11-12T00:14:24.3002790Z [feedback capture] phase=sheet_dismissed
+2026-11-12T00:14:24.3003360Z [feedback capture] phase=render_begin
+2026-11-12T00:14:24.3003760Z [feedback capture] phase=render_end
+2026-11-12T00:14:24.3004120Z [feedback capture] phase=png_ready
+2026-11-12T00:14:24.3004800Z [feedback capture] phase=attachment_begin
+2026-11-12T00:14:24.3005830Z [feedback capture] phase=attachment_end
+2026-11-12T00:14:24.3010330Z [feedback capture] phase=composer_reopen
+2026-11-12T00:14:24.3015910Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"d12a2be0-428c-4030-8fdf-546aaa599eca","event":"received","epoch_ms":1794441465088,"path":"/v1/inbox","query":null,"view":"normal"}
+2026-11-12T00:14:24.3017670Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"d12a2be0-428c-4030-8fdf-546aaa599eca","event":"response_ready","epoch_ms":1794441465191,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3020600Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"da636eff-bf11-412a-933e-64d40d572120","event":"received","epoch_ms":1794441894492,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3022150Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"da636eff-bf11-412a-933e-64d40d572120","event":"response_ready","epoch_ms":1794441894543,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3026870Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"11aa4cfe-ab42-40ce-adbc-add733d2a0a2","event":"received","epoch_ms":1794441898478,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3034440Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"11aa4cfe-ab42-40ce-adbc-add733d2a0a2","event":"response_ready","epoch_ms":1794441898838,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3035900Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"81ff9296-dd6d-45dd-9f11-869002b7f34e","event":"received","epoch_ms":1794441898956,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T00:14:24.3037630Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"81ff9296-dd6d-45dd-9f11-869002b7f34e","event":"response_ready","epoch_ms":1794441899281,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3039350Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"1f0e1350-a484-4d53-8e9e-57210793ca5d","event":"received","epoch_ms":1794441959907,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3043420Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"1f0e1350-a484-4d53-8e9e-57210793ca5d","event":"response_ready","epoch_ms":1794441960204,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3044770Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"6c84b959-d85e-4566-97a9-13be2668b59b","event":"received","epoch_ms":1794441964456,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3046170Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"6c84b959-d85e-4566-97a9-13be2668b59b","event":"response_ready","epoch_ms":1794441965055,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3047700Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"49da1e36-7ce1-4c33-8865-da2404042897","event":"received","epoch_ms":1794441965086,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T00:14:24.3049360Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"49da1e36-7ce1-4c33-8865-da2404042897","event":"response_ready","epoch_ms":1794441965447,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3050970Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"0fcacc1a-c9a3-4eee-97b1-466f19b19921","event":"received","epoch_ms":1794442037028,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3055440Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"0fcacc1a-c9a3-4eee-97b1-466f19b19921","event":"response_ready","epoch_ms":1794442037119,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3057290Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f25abe5e-d379-4f7d-a1c5-c3eb5b41a295","event":"received","epoch_ms":1794442044665,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3058420Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f25abe5e-d379-4f7d-a1c5-c3eb5b41a295","event":"response_ready","epoch_ms":1794442045244,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3059950Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f7572977-5a2c-4145-a742-75b5d405f8ca","event":"received","epoch_ms":1794442045267,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T00:14:24.3061710Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f7572977-5a2c-4145-a742-75b5d405f8ca","event":"response_ready","epoch_ms":1794442045372,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3063370Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"d9133bee-f67f-465d-baba-d86b3a9cfab8","event":"received","epoch_ms":1794442106417,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3068190Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"d9133bee-f67f-465d-baba-d86b3a9cfab8","event":"response_ready","epoch_ms":1794442106504,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3069750Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"689f449e-db38-4b3d-a66d-1b7955963684","event":"received","epoch_ms":1794442110924,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3071340Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"689f449e-db38-4b3d-a66d-1b7955963684","event":"response_ready","epoch_ms":1794442111450,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3072560Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f9ef3d34-f920-45be-ad09-f02c90b1676a","event":"received","epoch_ms":1794442111458,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T00:14:24.3074390Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"f9ef3d34-f920-45be-ad09-f02c90b1676a","event":"response_ready","epoch_ms":1794442111596,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3075970Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"4661e1fe-9276-42a4-b45f-4152284e3128","event":"received","epoch_ms":1794442191498,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3078040Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"4661e1fe-9276-42a4-b45f-4152284e3128","event":"response_ready","epoch_ms":1794442191572,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3079930Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"8ff92441-3b4a-4405-bd93-cd8b5fe99542","event":"received","epoch_ms":1794442195187,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3082210Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"8ff92441-3b4a-4405-bd93-cd8b5fe99542","event":"response_ready","epoch_ms":1794442195240,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3084420Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b0d4b3d0-eb15-49cd-8465-bee2d77f945c","event":"received","epoch_ms":1794442195478,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T00:14:24.3089580Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"b0d4b3d0-eb15-49cd-8465-bee2d77f945c","event":"response_ready","epoch_ms":1794442195589,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3095640Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3e187364-3dd5-422f-ae92-b60ef806f652","event":"received","epoch_ms":1794442318429,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3101120Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3e187364-3dd5-422f-ae92-b60ef806f652","event":"response_ready","epoch_ms":1794442318462,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3102610Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"ab505d47-9cd3-4534-9380-083eb81d9dc2","event":"received","epoch_ms":1794442324156,"path":"/v1/destinations","query":null,"view":null}
+2026-11-12T00:14:24.3104340Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"ab505d47-9cd3-4534-9380-083eb81d9dc2","event":"response_ready","epoch_ms":1794442324283,"path":"/v1/destinations","status":200}
+2026-11-12T00:14:24.3105820Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3cc89fe7-6cf6-4e33-bb33-eab3c5993825","event":"received","epoch_ms":1794442324396,"path":"/v1/inbox","query":null,"view":"all"}
+2026-11-12T00:14:24.3107630Z [fixture telemetry] fixture.log: [search-fixture-server] {"trace":"3cc89fe7-6cf6-4e33-bb33-eab3c5993825","event":"response_ready","epoch_ms":1794442324530,"path":"/v1/inbox","status":200,"messageIds":["ios-fixture-message-1","ios-fixture-message-2","ios-fixture-message-3","ios-fixture-message-4","ios-fixture-message-5"]}
+2026-11-12T00:14:24.3111020Z Sanitized failure context (bounded; full log remains in artifact):
+2026-11-12T00:14:24.3112170Z [fixture failure] 928: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1808:106: warning: expression implicitly coerced from 'Any?' to 'Any'
+2026-11-12T00:14:24.3113580Z [fixture failure] 929:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T00:14:24.3114450Z [fixture failure] 930:                                                                                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T00:14:24.3116100Z [fixture failure] 931: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1808:117: note: provide a default value to avoid this warning
+2026-11-12T00:14:24.3117390Z [fixture failure] 932:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T00:14:24.3118430Z [fixture failure] 933:                                                                                                          ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T00:14:24.3119650Z [fixture failure] 935: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1808:117: note: force-unwrap the value to avoid this warning
+2026-11-12T00:14:24.3120920Z [fixture failure] 936:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T00:14:24.3121980Z [fixture failure] 937:                                                                                                          ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T00:14:24.3122910Z [fixture failure] 939: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:1808:117: note: explicitly cast to 'Any' with 'as Any' to silence this warning
+2026-11-12T00:14:24.3123930Z [fixture failure] 940:             XCTAssertEqual(currentSQL["manualOverrideDestinationId"] as? NSObject, (explicit is NSNull ? originalSQL["manualOverrideDestinationId"] : explicit) as? NSObject)
+2026-11-12T00:14:24.3124880Z [fixture failure] 941:                                                                                                          ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-12T00:14:24.3125560Z [fixture failure] 1365:     t =    53.66s     Checking existence of `StaticText (First Match)`
+2026-11-12T00:14:24.3126670Z [fixture failure] 1366:     t =    54.05s Collecting debug information to assist test failure triage
+2026-11-12T00:14:24.3127510Z [fixture failure] 1367:     t =    54.05s     Requesting snapshot of accessibility hierarchy for app with pid 27520
+2026-11-12T00:14:24.3128330Z [fixture failure] 1384:     t =    62.61s     Checking existence of `StaticText (First Match)`
+2026-11-12T00:14:24.3132500Z [fixture failure] 1385:     t =    63.31s Collecting debug information to assist test failure triage
+2026-11-12T00:14:24.3133200Z [fixture failure] 1386:     t =    63.31s     Requesting snapshot of accessibility hierarchy for app with pid 27520
+2026-11-12T00:14:24.3134390Z [fixture failure] 1744:     t =    56.67s     Checking existence of `StaticText (First Match)`
+2026-11-12T00:14:24.3135150Z [fixture failure] 1745:     t =    57.50s Collecting debug information to assist test failure triage
+2026-11-12T00:14:24.3135760Z [fixture failure] 1746:     t =    57.51s     Requesting snapshot of accessibility hierarchy for app with pid 32871
+2026-11-12T00:14:24.3139580Z [fixture failure] 1763:     t =    63.37s     Checking existence of `StaticText (First Match)`
+2026-11-12T00:14:24.3140130Z [fixture failure] 1764:     t =    64.09s Collecting debug information to assist test failure triage
+2026-11-12T00:14:24.3140780Z [fixture failure] 1765:     t =    64.09s     Requesting snapshot of accessibility hierarchy for app with pid 32871
+2026-11-12T00:14:24.3141380Z [fixture failure] 2416:     t =   110.68s     Checking existence of `Image (First Match)`
+2026-11-12T00:14:24.3142090Z [fixture failure] 2417:     t =   111.69s Collecting debug information to assist test failure triage
+2026-11-12T00:14:24.3143070Z [fixture failure] 2418:     t =   111.69s     Requesting snapshot of accessibility hierarchy for app with pid 43705
+2026-11-12T00:14:24.3143670Z [fixture failure] 2456: [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:24.3169070Z [fixture failure] 2457: /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:593: error: -[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket] : failed - System picker must expose exactly one recording imported for this fixture day
+2026-11-12T00:14:24.3170610Z [fixture failure] 2458:     t =   114.62s Tear Down
+2026-11-12T00:14:24.3171350Z [fixture failure] 2459: Test Case '-[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket]' failed (115.578 seconds).
+2026-11-12T00:14:24.3172070Z [fixture failure] 2460: Test Suite 'OrcaUITests' failed at 2026-11-12 00:13:33.701.
+2026-11-12T00:14:24.3172710Z [fixture failure] 2461: 	 Executed 1 test, with 1 failure (0 unexpected) in 115.578 (115.581) seconds
+2026-11-12T00:14:24.3173600Z [fixture failure] 2462: Test Suite 'OrcaUITests.xctest' failed at 2026-11-12 00:13:33.702.
+2026-11-12T00:14:24.3174150Z [fixture failure] 2463: 	 Executed 1 test, with 1 failure (0 unexpected) in 115.578 (115.582) seconds
+2026-11-12T00:14:24.3175420Z [fixture failure] 2464: Test Suite 'Selected tests' failed at 2026-11-12 00:13:33.702.
+2026-11-12T00:14:24.3176010Z [fixture failure] 2465: 	 Executed 1 test, with 1 failure (0 unexpected) in 115.578 (115.584) seconds
+2026-11-12T00:14:24.3177100Z [fixture failure] 2466: 2026-11-12 00:14:04.826 xcodebuild[41900:117536] [MT] IDETestOperationsObserverDebug: 159.324 elapsed -- Testing started completed.
+2026-11-12T00:14:24.3177590Z [fixture failure] 2472: 
+2026-11-12T00:14:24.3177800Z [fixture failure] 2473: ** TEST EXECUTE FAILED **
+2026-11-12T00:14:24.3178340Z [fixture failure] 2474: 
+2026-11-12T00:14:24.3182520Z Synthetic checks exit code: 65; sanitized evidence: /Users/runner/work/_temp/orca-ci-evidence
+2026-11-12T00:14:24.3183090Z [fixture stage] phase=evidence_export_finished
+2026-11-12T00:14:34.3774180Z     t =   106.64s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+2026-11-12T00:14:34.3782410Z     t =   106.64s         Checking existence of `Image (First Match)`
+2026-11-12T00:14:34.3783800Z     t =   107.49s         Capturing element debug description
+2026-11-12T00:14:34.3790190Z     t =   107.59s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+2026-11-12T00:14:34.3792800Z     t =   107.59s         Checking existence of `Image (First Match)`
+2026-11-12T00:14:34.3794450Z     t =   108.44s         Capturing element debug description
+2026-11-12T00:14:34.3795080Z     t =   108.62s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+2026-11-12T00:14:34.3795650Z     t =   108.62s         Checking existence of `Image (First Match)`
+2026-11-12T00:14:34.3796500Z     t =   109.46s         Capturing element debug description
+2026-11-12T00:14:34.3797740Z     t =   109.57s     Checking `Expect predicate `existsNoRetry == 1` for object Image (First Match)`
+2026-11-12T00:14:34.3798990Z     t =   109.57s         Checking existence of `Image (First Match)`
+2026-11-12T00:14:34.3799580Z     t =   110.67s         Capturing element debug description
+2026-11-12T00:14:34.3800270Z     t =   110.68s     Checking existence of `Image (First Match)`
+2026-11-12T00:14:34.3800910Z     t =   111.69s Collecting debug information to assist test failure triage
+2026-11-12T00:14:34.3801990Z     t =   111.69s     Requesting snapshot of accessibility hierarchy for app with pid 43705
+2026-11-12T00:14:34.3802510Z     t =   112.68s Find the Target Application 'com.orca.mail'
+2026-11-12T00:14:34.3803300Z [feedback picker] snapshot_nodes=98 truncated=false app_state=4
+2026-11-12T00:14:34.3803790Z [feedback picker] kind=Button count=7
+2026-11-12T00:14:34.3804280Z [feedback picker] kind=Button label=Cancel identifier=Cancel
+2026-11-12T00:14:34.3807720Z [feedback picker] kind=Button label=Photos identifier=
+2026-11-12T00:14:34.3808480Z [feedback picker] kind=Button label=Collections identifier=
+2026-11-12T00:14:34.3811830Z [feedback picker] kind=Button label=Done identifier=Add
+2026-11-12T00:14:34.3812550Z [feedback picker] kind=Button label=Sort and Filter identifier=Sort and Filter
+2026-11-12T00:14:34.3814080Z [feedback picker] kind=Button label=1 Photo, Location Included identifier=
+2026-11-12T00:14:34.3814990Z [feedback picker] kind=Button label=Search identifier=
+2026-11-12T00:14:34.3815400Z [feedback picker] kind=StaticText count=3
+2026-11-12T00:14:34.3818660Z [feedback picker] kind=StaticText label=Select up to 3 items. identifier=
+2026-11-12T00:14:34.3819240Z [feedback picker] kind=StaticText label=1 Photo identifier=
+2026-11-12T00:14:34.3822580Z [feedback picker] kind=StaticText label=Location Included identifier=
+2026-11-12T00:14:34.3823480Z [feedback picker] kind=Image count=9
+2026-11-12T00:14:34.3837710Z [feedback picker] kind=Image label=Photo, November 12, 12:03 AM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3839160Z [feedback picker] kind=Image label=Video, one second, November 11, 11:51 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3840270Z [feedback picker] kind=Image label=Photo, March 30, 2018, 7:14 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3841180Z [feedback picker] kind=Image label=Photo, August 08, 2012, 9:55 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3842160Z [feedback picker] kind=Image label=Photo, August 08, 2012, 9:29 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3842920Z [feedback picker] kind=Image label=Photo, August 08, 2012, 6:52 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3844260Z [feedback picker] kind=Image label=Photo, March 13, 2011, 12:17 AM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3845360Z [feedback picker] kind=Image label=Photo, October 09, 2009, 9:09 PM identifier=PXGGridLayout-Info
+2026-11-12T00:14:34.3846060Z [feedback picker] kind=Image label= identifier=
+2026-11-12T00:14:34.3846550Z [feedback picker] kind=Cell count=0
+2026-11-12T00:14:34.3847210Z [feedback picker] kind=CollectionView count=0
+2026-11-12T00:14:34.3847760Z [feedback picker] kind=ScrollView count=1
+2026-11-12T00:14:34.3848330Z [feedback picker] kind=ScrollView label= identifier=photosView_content_scroll_view
+2026-11-12T00:14:34.3850150Z [feedback picker] kind=Sheet count=0
+2026-11-12T00:14:34.3850790Z [feedback picker] kind=Other count=72
+2026-11-12T00:14:34.3855360Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3859720Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3860220Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3860960Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3861750Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3862140Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3862960Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3863630Z [feedback picker] kind=Other label= identifier=
+2026-11-12T00:14:34.3879500Z /Users/runner/work/orca/orca/apps/ios/OrcaUITests/OrcaUITests.swift:593: error: -[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket] : failed - System picker must expose exactly one recording imported for this fixture day
+2026-11-12T00:14:34.3881440Z     t =   114.62s Tear Down
+2026-11-12T00:14:34.3882790Z Test Case '-[OrcaUITests.OrcaUITests test38FeedbackCornerCreatesLinearTicket]' failed (115.578 seconds).
+2026-11-12T00:14:34.3883700Z Test Suite 'OrcaUITests' failed at 2026-11-12 00:13:33.701.
+2026-11-12T00:14:34.3884470Z 	 Executed 1 test, with 1 failure (0 unexpected) in 115.578 (115.581) seconds
+2026-11-12T00:14:34.3885470Z Test Suite 'OrcaUITests.xctest' failed at 2026-11-12 00:13:33.702.
+2026-11-12T00:14:34.3885980Z 	 Executed 1 test, with 1 failure (0 unexpected) in 115.578 (115.582) seconds
+2026-11-12T00:14:34.3886910Z Test Suite 'Selected tests' failed at 2026-11-12 00:13:33.702.
+2026-11-12T00:14:34.3887500Z 	 Executed 1 test, with 1 failure (0 unexpected) in 115.578 (115.584) seconds
+2026-11-12T00:14:34.3888140Z 2026-11-12 00:14:04.826 xcodebuild[41900:117536] [MT] IDETestOperationsObserverDebug: 159.324 elapsed -- Testing started completed.
+2026-11-12T00:14:34.3888920Z 2026-11-12 00:14:04.828 xcodebuild[41900:117536] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-12T00:14:34.3889830Z 2026-11-12 00:14:04.828 xcodebuild[41900:117536] [MT] IDETestOperationsObserverDebug: 159.324 sec, +159.324 sec -- end
+2026-11-12T00:14:34.3890260Z 
+2026-11-12T00:14:34.3890440Z Test session results, code coverage, and logs:
+2026-11-12T00:14:34.3890890Z 	/Users/runner/work/_temp/orca-ios-ci.yfcBUu/results/FeedbackLight.xcresult
+2026-11-12T00:14:34.3891230Z 
+2026-11-12T00:14:34.3891370Z ** TEST EXECUTE FAILED **
+2026-11-12T00:14:34.3891500Z 
+2026-11-12T00:14:34.3891630Z Testing started
+2026-11-12T00:14:34.3891780Z 
+2026-11-12T00:14:34.3891920Z [feedback capture] phase=sheet_dismissed
+2026-11-12T00:14:34.3892340Z [feedback capture] phase=render_begin
+2026-11-12T00:14:34.3892720Z [feedback capture] phase=render_end
+2026-11-12T00:14:34.3893090Z [feedback capture] phase=png_ready
+2026-11-12T00:14:34.3893650Z [feedback capture] phase=attachment_begin
+2026-11-12T00:14:34.3893980Z [feedback capture] phase=attachment_end
+2026-11-12T00:14:34.3894340Z [feedback capture] phase=composer_reopen
+2026-11-12T00:14:34.4646980Z ##[error]Process completed with exit code 65.
+2026-11-12T00:14:34.5932220Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-12T00:14:34.5932840Z with:
+2026-11-12T00:14:34.5933070Z   name: ios-simulator-43122924544-1
+2026-11-12T00:14:34.5933470Z   path: /Users/runner/work/_temp/orca-ci-evidence/
+2026-11-12T00:14:34.5933830Z   if-no-files-found: ignore
+2026-11-12T00:14:34.5934080Z   retention-days: 7
+2026-11-12T00:14:34.5934400Z   compression-level: 6
+2026-11-12T00:14:34.5934700Z   overwrite: false
+2026-11-12T00:14:34.5935010Z   include-hidden-files: false
+2026-11-12T00:14:34.5940220Z env:
+2026-11-12T00:14:34.5940550Z   ORCA_CI_HEAD_SHA: 41a0998b14428f62280027f504678b1c243e5a77
+2026-11-12T00:14:34.5941100Z   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+2026-11-12T00:14:34.5941520Z ##[endgroup]
+2026-11-12T00:14:36.3115440Z (node:50477) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-12T00:14:36.3120410Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-12T00:14:36.3207750Z With the provided path, there will be 30 files uploaded
+2026-11-12T00:14:36.3214410Z Artifact name is valid!
+2026-11-12T00:14:36.3214690Z Root directory input is valid!
+2026-11-12T00:14:36.6174710Z Beginning upload of artifact content to blob storage
+2026-11-12T00:14:36.9870980Z (node:50477) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-12T00:14:37.2862180Z Uploaded bytes 7178709
+2026-11-12T00:14:37.4035050Z Finished uploading artifact content to blob storage!
+2026-11-12T00:14:37.4196660Z SHA256 digest of uploaded artifact zip is 8c083d1930352645789b33960e41cafa295f72520af0c4728475101108714106
+2026-11-12T00:14:37.4298170Z Finalizing artifact upload
+2026-11-12T00:14:37.7484720Z Artifact ios-simulator-43122924544-1.zip successfully finalized. Artifact ID 13902942946
+2026-11-12T00:14:37.7487200Z Artifact ios-simulator-43122924544-1 has been successfully uploaded! Final size is 7178709 bytes. Artifact ID is 13902942946
+2026-11-12T00:14:37.7505720Z Artifact download URL: https://github.com/lukebrevoort/orca/actions/runs/43122924544/artifacts/13902942946
+2026-11-12T00:14:37.7876740Z Post job cleanup.
+2026-11-12T00:14:38.0737640Z [command]/opt/homebrew/bin/git version
+2026-11-12T00:14:38.1535100Z git version 2.56.0
+2026-11-12T00:14:38.1721660Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/13125bb4-bac3-4880-b60b-1a246b4bc4b4/.gitconfig'
+2026-11-12T00:14:38.1723040Z Temporarily overriding HOME='/Users/runner/work/_temp/13125bb4-bac3-4880-b60b-1a246b4bc4b4' before making global git config changes
+2026-11-12T00:14:38.1724390Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-12T00:14:38.1725210Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/orca/orca
+2026-11-12T00:14:38.1859210Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-12T00:14:38.2021450Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-12T00:14:38.4606890Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-12T00:14:38.4710040Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-12T00:14:38.6569820Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-12T00:14:38.6712640Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-12T00:14:38.8734980Z Cleaning up orphan processes
+2026-11-12T00:14:43.0914980Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

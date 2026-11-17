@@ -1,0 +1,45 @@
+{
+  "scope": "Seven synthetic checkpoint/kill/cleanup/status/privacy/browser-layout controls ONLY. Existing25export tests exactfc3, phase2/lifecycle4/shellsyntax exactee retained separately; no Apple/native product execution",
+  "startSHA": "cbdcf6132c765f4e59aafcdb98c008437ba4871f",
+  "sourceHashes": {
+    "scripts/ci/test-evidence-checkpoint.py": "bc99911b4d9d474ed5c2edf6462d92a6fe31f2801ec30012e6bf5cf2e1f9e6c1",
+    "scripts/ci/export-evidence.py": "392db819fd1c079b2c071f400a62522cfaf3458bb91599e376bb926098762a99",
+    "scripts/ci/fixture-check.sh": "873a0d23d60dfcee248b5d4a15c118e3e9030ea5ed8e68c2d7f6234c7b494b20",
+    "apps/ios/OrcaUITests/run-fixture-tests.sh": "f6bd65336551731b69ab1d9d34f84f3538887318ecce88de5dca93d91274af13",
+    ".github/workflows/native-mailbox.yml": "aa0d4bc4fa835d0fee216dcc2f88b79cd6879be56f97f33be696bf3ba401f6af",
+    "scripts/ci/test-export-evidence.py": "2f2eff7856874e801e3d0193f61be58dfff297c934dc8a54c1acb9372a8eae58",
+    "scripts/ci/test-ios-mailbox-phases.py": "aa440b11cd8dd94f3b86d6bd2c6f67829c76ea7eb37d2ff1f4e20326bf9838cf",
+    "apps/ios/Tools/ReviewRegressions/runner-lifecycle.py": "00647ddfd152f9a191d0d032d6ab64fbac5a2b52a0efcf4af59fb7fe0c7d22f0"
+  },
+  "stages": [
+    {
+      "stage": "checkpoint-controls",
+      "command": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "-B",
+        "scripts/ci/test-evidence-checkpoint.py"
+      ],
+      "exit": 0,
+      "timeout": false,
+      "cleanup": "terminal",
+      "ownedPidAndPgid": 4412,
+      "elapsedSeconds": 3.444772874994669
+    }
+  ],
+  "exit": 0,
+  "endSHA": "cbdcf6132c765f4e59aafcdb98c008437ba4871f",
+  "endStatus": "",
+  "endingSourceHashes": {
+    "scripts/ci/test-evidence-checkpoint.py": "bc99911b4d9d474ed5c2edf6462d92a6fe31f2801ec30012e6bf5cf2e1f9e6c1",
+    "scripts/ci/export-evidence.py": "392db819fd1c079b2c071f400a62522cfaf3458bb91599e376bb926098762a99",
+    "scripts/ci/fixture-check.sh": "873a0d23d60dfcee248b5d4a15c118e3e9030ea5ed8e68c2d7f6234c7b494b20",
+    "apps/ios/OrcaUITests/run-fixture-tests.sh": "f6bd65336551731b69ab1d9d34f84f3538887318ecce88de5dca93d91274af13",
+    ".github/workflows/native-mailbox.yml": "aa0d4bc4fa835d0fee216dcc2f88b79cd6879be56f97f33be696bf3ba401f6af",
+    "scripts/ci/test-export-evidence.py": "2f2eff7856874e801e3d0193f61be58dfff297c934dc8a54c1acb9372a8eae58",
+    "scripts/ci/test-ios-mailbox-phases.py": "aa440b11cd8dd94f3b86d6bd2c6f67829c76ea7eb37d2ff1f4e20326bf9838cf",
+    "apps/ios/Tools/ReviewRegressions/runner-lifecycle.py": "00647ddfd152f9a191d0d032d6ab64fbac5a2b52a0efcf4af59fb7fe0c7d22f0"
+  },
+  "elapsedSeconds": 3.507955792010762,
+  "identityUnchanged": true,
+  "notStarted": []
+}

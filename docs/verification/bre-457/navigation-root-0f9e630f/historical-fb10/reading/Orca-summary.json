@@ -1,0 +1,61 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "FC17C4A0-E97E-4897-99A7-CC26452834C0",
+        "deviceName" : "Orca CI 43087654927-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 2,
+      "passedTests" : 186,
+      "skippedTests" : 5,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 2,
+  "finishTime" : 1794426935.635,
+  "passedTests" : 186,
+  "result" : "Failed",
+  "skippedTests" : 5,
+  "startTime" : 1794426018.181,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "XCTAssertTrue failed",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 184,
+      "testIdentifierString" : "OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps",
+      "testName" : "test37LongConversationOffersOffscreenUnreadAndLatestJumps()"
+    },
+    {
+      "failureText" : "XCTAssertEqual failed: (\"Optional(\"0\")\") is not equal to (\"Optional(\"1\")\")",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 190,
+      "testIdentifierString" : "ReaderUITests/testMessageToolsPreserveFindFormattingAndWideContentChoices()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testMessageToolsPreserveFindFormattingAndWideContentChoices",
+      "testName" : "testMessageToolsPreserveFindFormattingAndWideContentChoices()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "92% of duration",
+      "text" : "9 longest test runs with outlier durations exceeding 12.61s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 193
+}

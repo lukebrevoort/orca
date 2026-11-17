@@ -1,0 +1,18 @@
+{
+  "sha": "4f4a1f8892212dbd9ebb92d25947783a17fdcd45",
+  "label": "rejected-baseline",
+  "swiftParseCount": 35,
+  "elapsed": 7.5838811659778,
+  "stages": [
+    {
+      "stage": "controllers-api",
+      "exit": 1,
+      "elapsed": 7.459814499976346
+    },
+    {
+      "stage": "swift-parse",
+      "exit": 0,
+      "elapsed": 7.583865708002122
+    }
+  ]
+}

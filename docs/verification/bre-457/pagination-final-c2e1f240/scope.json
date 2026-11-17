@@ -1,0 +1,20 @@
+{
+  "testedSourceSHA": "c2e1f24071eb87264bafd1d7224ba6d142724a7e",
+  "compileExit": 0,
+  "regressionExit": 0,
+  "assertions": 125,
+  "passed": 125,
+  "failed": 0,
+  "prior121Preserved": true,
+  "newForeignAndLaterCacheAssertions": 4,
+  "swiftGrammarFiles": 36,
+  "externalProviderCalls": 0,
+  "elapsedSeconds": 12.8808073750115,
+  "scope": "Foundation production controllers/APIClient, synthetic HTTP plus actual loopback API/SQLite; not SwiftUI/XCTest",
+  "trees": {
+    "apps/ios/Orca": "910f3b62f8e3106120c44cb64eb068869d283f70",
+    "apps/ios/OrcaTests": "53c8b85b9d4d0851c3b11b56a323935dfabf693e",
+    "apps/ios/OrcaUITests": "3f8bbdda2cbe7321a924da20596de76a36ca8eac",
+    "apps/ios/Tools": "fd17a30eec284eb6328b931fe739f08a8d02f9f6"
+  }
+}

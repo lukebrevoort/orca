@@ -1,0 +1,15 @@
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Orca/Core/NativeViewEditorController.swift:204:51: error: cannot assign to value: 'error' is immutable
+202 |                 return try await completeApplied(id: applied.id, workspaceRevision: applied.workspace, viewRevision: applied.view, command: command, client: client, state: state, request: request)
+203 |             } catch {
+204 |                 if await currentClient(request) { error = "Original Save applied as \(applied.id), but that View is unavailable. No replacement was created. Reload it again when connected." }
+    |                                                   `- error: cannot assign to value: 'error' is immutable
+205 |                 return nil
+206 |             }
+
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Orca/Core/NativeViewEditorController.swift:204:59: error: cannot assign value of type 'String' to type 'any Error'
+202 |                 return try await completeApplied(id: applied.id, workspaceRevision: applied.workspace, viewRevision: applied.view, command: command, client: client, state: state, request: request)
+203 |             } catch {
+204 |                 if await currentClient(request) { error = "Original Save applied as \(applied.id), but that View is unavailable. No replacement was created. Reload it again when connected." }
+    |                                                           `- error: cannot assign value of type 'String' to type 'any Error'
+205 |                 return nil
+206 |             }

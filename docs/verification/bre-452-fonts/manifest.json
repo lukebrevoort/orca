@@ -1,0 +1,22 @@
+{
+  "base": "fcb848c322e2948973d87a27b999fc3e1121ca8f",
+  "screenshotCommit": "d1e8751f78a1ca5bb046e72ce1a06cc025908df8",
+  "productSha256": {
+    "apps/web/src/styles.css": "2fa4da20cc190a0c71fb35319e09958ec997da479ff86f5b4dd137da8c95b3b9",
+    "apps/web/src/compose-workspace.tsx": "3d4bb1f0b942448ed24816d8e63977250d00c8f6fe5391039629e6982c4538f0",
+    "apps/web/public/fonts/Sora-variable.ttf": "84ff7096ae3ec6c8be47d906d1a0ba4de7f2ce78c615275c77301964a316e16c",
+    "apps/web/public/fonts/Newsreader-OFL.txt": "fdfad38143ec470553cae82a1e45320bdd1b9ec70415d37bd0171051d8a4ded8",
+    "apps/web/public/fonts/README.md": "281d3e1e51ba9cfb7b3780fc8b66f0d93b1314d194dd56ba459595e87500d11c",
+    "apps/web/public/fonts/Newsreader-variable.ttf": "8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1",
+    "apps/web/public/fonts/Sora-OFL.txt": "ba0b9729c9428ba79a0459ab8ec575791b51509dbec213e383d0316d37fec299"
+  },
+  "candidateScenarios": 164,
+  "candidateAssertions": 3180,
+  "candidateGeometryMeasurements": 134,
+  "candidateScreenshots": 168,
+  "candidateProviderInvocations": 12,
+  "fontPayloadBytesPerColdPair": 563064,
+  "fontResponseCount": 64,
+  "fontResponsePayloadBytesAllCases": 18018048,
+  "externalRequestCount": 0
+}

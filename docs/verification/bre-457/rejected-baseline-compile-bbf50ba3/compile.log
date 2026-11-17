@@ -1,0 +1,15 @@
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Tools/ReviewRegressions/Run.swift:118:39: error: actor-isolated instance method 'serverOrigin()' cannot be called from outside of the actor
+116 |             let authenticated: AuthSession = try await client.request("v1/auth/session")
+117 |             state.userID = authenticated.user?.id; state.baseURLText = connection.baseURL
+118 |             state.ownerScope = client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
+    |                                       `- error: actor-isolated instance method 'serverOrigin()' cannot be called from outside of the actor
+119 |             let apiHold = PreferenceCredentialHold(first: connection.token, second: connection.otherToken)
+120 |             let realPreferencesState = AppState(cache: state.cache)
+
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Tools/ReviewRegressions/Run.swift:122:54: error: actor-isolated instance method 'serverOrigin()' cannot be called from outside of the actor
+120 |             let realPreferencesState = AppState(cache: state.cache)
+121 |             realPreferencesState.userID = authenticated.user?.id
+122 |             realPreferencesState.ownerScope = client.serverOrigin() + "|" + (authenticated.user?.id ?? "unknown")
+    |                                                      `- error: actor-isolated instance method 'serverOrigin()' cannot be called from outside of the actor
+123 |             realPreferencesState.client = APIClient(baseURL: URL(string: connection.baseURL)!) { await apiHold.token() }
+124 |             let realPreferences = AccountPreferencesController()

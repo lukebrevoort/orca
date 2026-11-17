@@ -1,0 +1,20 @@
+[
+  {
+    "source": "/tmp/bre457-mailbox-appearance-red-4a0ba775-01/manifest.json",
+    "retained": "docs/verification/bre-457/mailbox-appearance-red-4a0ba775/manifest.json",
+    "bytes": 444,
+    "sha256": "c07b21adf3e973552aed2eac47ba4a619f162e726ae13d5b6752f482692a949d"
+  },
+  {
+    "source": "/tmp/bre457-mailbox-appearance-red-4a0ba775-01/phase-tests.log",
+    "retained": "docs/verification/bre-457/mailbox-appearance-red-4a0ba775/phase-tests.log",
+    "bytes": 1242,
+    "sha256": "f59dcb3d6d5b62ac970dd8ff9e544679b7b99791e3e1b2ab5d39c6d41879b816"
+  },
+  {
+    "source": "/tmp/bre457-mailbox-appearance-red-4a0ba775-01.wrapper.log",
+    "retained": "docs/verification/bre-457/mailbox-appearance-red-4a0ba775/wrapper.log",
+    "bytes": 2372,
+    "sha256": "0c3940bf8c358ff4ebf4db888c4128a2d7d85d7af2cbde7ff0c51314e509ed7d"
+  }
+]

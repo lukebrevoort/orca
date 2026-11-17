@@ -1,0 +1,21 @@
+{
+  "sha": "dabf42bd46e9f5db2638f8b36ad43e4db4b9482a",
+  "elapsed": 11.04167329199845,
+  "stages": [
+    {
+      "stage": "frozen-install",
+      "exit": 0,
+      "elapsed": 1.80774483300047
+    },
+    {
+      "stage": "runner-lifecycle",
+      "exit": 1,
+      "elapsed": 3.691864791995613
+    },
+    {
+      "stage": "foundation-api",
+      "exit": 1,
+      "elapsed": 11.023234791995492
+    }
+  ]
+}

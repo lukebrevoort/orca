@@ -1,0 +1,1656 @@
+CASE NAV-A-important-first: PASS — used production projection keeps Important first
+CASE NAV-A-all-mail-permanent: PASS — empty/hidden catalog cannot remove All Mail
+CASE NAV-A-inbox-permanent: PASS — current Inbox utility survives optional visibility choices
+CASE NAV-A-focus-utility-optional: PASS — old optional utility identity and visibility are preserved
+CASE NAV-A-custom-names-order: PASS — server array order and literal names survive; not alphabetical/default reconstruction
+CASE NAV-A-view-names-order: PASS — existing saved View order and names retained
+CASE NAV-A-hidden-view-excluded: PASS — existing enabled-ID visibility remains authoritative
+CASE NAV-A-unknown-choice-retained: PASS — projection does not mutate the caller's choices; old unavailable-View policy unchanged
+CASE NAV-A-malformed-routing-keeps-prior: PASS — nil preserves the existing load path's prior destinations rather than replacing them with empty
+CASE NAV-A-retired-excluded: PASS — retired destinations remain excluded
+CASE NAV-A-name-not-identity: PASS — same display name alone does not trigger legacy-ID exclusion
+CASE NAV-A-focus-current-normal-destination: PASS — behavior-preserving utility mapping; not actual named Focus browse
+CASE NAV-A-focus-current-api-view: PASS — current API attention utility stays view=focus
+CASE NAV-A-inbox-current-api-view: PASS — resolved placement uses view=all plus destination
+CASE NAV-A-important-no-catalog: PASS — Important does not gain a destination intersection
+CASE NAV-A-all-mail-no-catalog: PASS — All Mail remains independent of destination hydration
+CASE NAV-A-opaque-destination-request: PASS — explicit existing destination selection forwards opaque ID and view=all
+CASE NAV-A-unresolved-inbox-old-mapping: PASS — extraction preserves unresolved-map behavior rather than fixing it silently
+CASE NAV-A-preference-exact-roundtrip: PASS — actual production store round-trips unknown IDs using the unchanged original key
+CASE NAV-A-preference-owner-isolated: PASS — different owner receives original defaults, not A's configured View IDs
+CASE NAV-A-preference-origin-isolated: PASS — different canonical origin does not inherit A's choices
+CASE NAV-A-named-focus-preserved: FAIL — all active named Spaces must survive; old projection excludes this actual legacy Focus ID
+CASE NAV-A-named-inbox-preserved: FAIL — user-owned fallback name must survive in named Spaces; fixed utility label is not a substitute
+CASE P2-saved-first-503-pending-established: PASS — a real first submitted request is held before acknowledgement; no accepted search result is fabricated
+CASE P2-saved-first-503-pending-surface-visible: PASS — InboxView's actual policy must show the pending search surface, not keep old SavedMailboxResults mounted
+CASE P2-saved-first-503-error-established: PASS — actual request failure retains typed query and truthful error with no accepted or unauthorized rows
+CASE P2-saved-first-503-error-recovery-visible: PASS — the same production branch decision must expose the failed first search and retry/recovery controls
+CASE P2-saved-first-offline-pending-established: PASS — a real first submitted request is held before acknowledgement; no accepted search result is fabricated
+CASE P2-saved-first-offline-pending-surface-visible: PASS — InboxView's actual policy must show the pending search surface, not keep old SavedMailboxResults mounted
+CASE P2-saved-first-offline-error-established: PASS — actual request failure retains typed query and truthful error with no accepted or unauthorized rows
+CASE P2-saved-first-offline-error-recovery-visible: PASS — the same production branch decision must expose the failed first search and retry/recovery controls
+CASE P2-saved-first-401-pending-established: PASS — a real first submitted request is held before acknowledgement; no accepted search result is fabricated
+CASE P2-saved-first-401-pending-surface-visible: PASS — InboxView's actual policy must show the pending search surface, not keep old SavedMailboxResults mounted
+CASE P2-saved-first-401-error-established: PASS — actual request failure retains typed query and truthful error with no accepted or unauthorized rows
+CASE P2-saved-first-401-error-recovery-visible: PASS — the same production branch decision must expose the failed first search and retry/recovery controls
+CASE DISCARD-unsafe-integration-other-editor-must-survive: PASS — candidate adapter uses atomic discard-specific API; historical generic unsafe control remains c426 red
+CASE DISCARD-unsafe-integration-lease-blocks-new-editor: PASS — negative control: discard needs an atomic special lease that blocks new editor registration across awaits
+CASE DISCARD-unsafe-integration-ack-cannot-remove-newer-snapshot: PASS — negative control: remove(id) has no exact approved-snapshot predicate; future discard must refuse a newer leased snapshot
+CASE DISCARD-local-durable-exact-removal: PASS — local acknowledgement is real durable removal, no network or recipient validation
+CASE DISCARD-retired-snapshot-cannot-recreate: PASS — no replacement UUID or retired-row resurrection
+CASE DISCARD-linked-checkpoints-raw-rich-attachments-before-delete: PASS — actual disk checkpoint preserves incomplete recipients, HTML/text and attachment data before injected 204
+CASE DISCARD-linked-exact-id-only: PASS — one local identity removed; sibling with same server ID remains
+CASE DISCARD-role-released-after-success: PASS — the dedicated lease ends after completion
+CASE DISCARD-confirmation-raw-to-changed-zero-delete: PASS — old confirmation is bound to the full raw/rich/attachment visible fingerprint
+CASE DISCARD-confirmation-raw-cc-changed-zero-delete: PASS — old confirmation is bound to the full raw/rich/attachment visible fingerprint
+CASE DISCARD-confirmation-raw-bcc-changed-zero-delete: PASS — old confirmation is bound to the full raw/rich/attachment visible fingerprint
+CASE DISCARD-confirmation-html-changed-zero-delete: PASS — old confirmation is bound to the full raw/rich/attachment visible fingerprint
+CASE DISCARD-confirmation-attachments-changed-zero-delete: PASS — old confirmation is bound to the full raw/rich/attachment visible fingerprint
+CASE DISCARD-refuses-sending-zero-delete: PASS — no send-key reset, new identity, detach or ambiguous-send replay
+CASE DISCARD-refuses-ambiguous-zero-delete: PASS — no send-key reset, new identity, detach or ambiguous-send replay
+CASE DISCARD-refuses-rejected-zero-delete: PASS — no send-key reset, new identity, detach or ambiguous-send replay
+CASE DISCARD-refuses-sent-zero-delete: PASS — no send-key reset, new identity, detach or ambiguous-send replay
+CASE DISCARD-refuses-keyed-zero-delete: PASS — no send-key reset, new identity, detach or ambiguous-send replay
+CASE DISCARD-controller-other-editor-zero-delete: PASS — atomic reservation refuses another registered editor before network
+CASE DISCARD-awaits-entire-predecessor-save: PASS — a cancelled but running predecessor cannot be overtaken by DELETE
+CASE DISCARD-held-own-save-drained-before-delete: PASS — production ComposeSaveSequencing drains the whole cancelled predecessor chain before the exact role lease is acquired
+CASE DISCARD-newer-local-snapshot-zero-delete: PASS — an unrelated newer snapshot is not adopted as the old confirmation
+CASE DISCARD-held-delete-blocks-new-editor-and-repeat: PASS — same controller and actor role exclude repeated operation/new editors throughout the await
+CASE DISCARD-held-delete-success-once: PASS — one acknowledgement and one exact local removal
+CASE DISCARD-held-204-owner-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-account-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-client-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-generation-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-editor-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-origin-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-writing-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-server-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-closed-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-lease-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-snapshot-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-held-204-registration-keeps-local: PASS — stale acknowledgement cannot retire original writing or dismiss a changed composer
+CASE DISCARD-disk-checkpoint-keeps-local: PASS — disk failure before DELETE stops network; after 204 is explicitly partial and the last successfully persisted writing survives independently
+CASE DISCARD-disk-after204-keeps-local: PASS — disk failure before DELETE stops network; after 204 is explicitly partial and the last successfully persisted writing survives independently
+CASE DISCARD-client-200-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-202-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-400-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-401-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-403-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-404-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-409-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-client-502-not-a204-receipt: PASS — actual production APIClient refuses every non204; 404 is never implicit success
+CASE DISCARD-network--1001-keeps-writing: PASS — uncertain transport never unlocks a fabricated successful deletion
+CASE DISCARD-network--1009-keeps-writing: PASS — uncertain transport never unlocks a fabricated successful deletion
+CASE DISCARD-network--999-keeps-writing: PASS — uncertain transport never unlocks a fabricated successful deletion
+CASE DISCARD-owner-change-during-token-zero-request: PASS — original approval is rechecked after credential lookup, before any DELETE request
+CASE CORE02-primary-refresh-submitted-precondition: PASS — real primary Mail Submit accepts A with a second page before editing B
+CASE CORE02-primary-refresh-request-keeps-submitted-query: PASS — routine primary Mail refresh/page must request submitted A, not unfinished B; observed=[(query: "A", cursor: nil), (query: "A", cursor: nil)]
+CASE CORE02-primary-refresh-rows-and-editable-provenance: PASS — typed B remains editable while accepted A rows/provenance and page append stay A
+CASE CORE02-primary-page-submitted-precondition: PASS — real primary Mail Submit accepts A with a second page before editing B
+CASE CORE02-primary-page-request-keeps-submitted-query: PASS — routine primary Mail refresh/page must request submitted A, not unfinished B; observed=[(query: "A", cursor: nil), (query: "A", cursor: Optional("page-two"))]
+CASE CORE02-primary-page-rows-and-editable-provenance: PASS — typed B remains editable while accepted A rows/provenance and page append stay A
+CASE CORE02-primary-cache-two-query-precondition: PASS — both owned caches contain distinguishable accepted data
+CASE CORE02-primary-offline-refresh-keeps-A-cache: PASS — refresh must read A's owned cache, not typed B's valid but unsubmitted cached rows
+CASE CORE02-primary-held-typing-request: PASS — the in-flight routine request must capture submitted A before any await
+CASE CORE02-primary-held-typing-ownership: PASS — late other-account response cannot install; editing again must not clear the accepted submitted conversation set
+CASE CORE02-primary-held-account-request: PASS — the in-flight routine request must capture submitted A before any await
+CASE CORE02-primary-held-account-ownership: PASS — late other-account response cannot install; editing again must not clear the accepted submitted conversation set
+CASE CORE02-primary-empty-edit-remains-unsubmitted: PASS — backspacing an editable field through empty is not an implicit Submit
+CASE CORE02-primary-explicit-clear-restores-mailbox: PASS — explicit All Mail/filter action clears submitted intent and uses the real mailbox endpoint
+CASE CORE02-primary-saved-view-transition-defers-own-endpoint: PASS — a saved View is handled by SavedMailboxResults, never an invented inbox view parameter
+CASE CORE02-primary-search-from-saved-view-explicit-submit: PASS — explicit submission from a saved View still searches All Mail without clearing the new query
+CASE CORE02-pagination-400-invalid_request-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-400-invalid_request-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-400-invalid_request-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-400-other_error-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-400-other_error-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-400-other_error-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-503-unavailable-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-503-unavailable-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-503-unavailable-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-401-unauthorized-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-401-unauthorized-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-401-unauthorized-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-403-forbidden-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-403-forbidden-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-403-forbidden-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-pagination-404-account_not_found-request-count: PASS — ordinary error codes never trigger cursor restart; no invented retry
+CASE CORE02-pagination-404-account_not_found-owned-state: PASS — auth/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor
+CASE CORE02-pagination-404-account_not_found-error-and-provenance: PASS — failure stays visible with submitted-query provenance and completed loading
+CASE CORE02-foreign-page-established-owned-page: PASS — nonempty authorized page precedes the wrong-account pagination response
+CASE CORE02-foreign-200-page-rejected: PASS — a well-formed200 page containing another account's row fails ownership validation and clears this request's visible page
+CASE CORE02-current-auth-rejection-clears-visible-page: PASS — current authentication rejection is not treated as an offline response
+CASE CORE02-later-same-owner-offline-reset-keeps-cache-policy: PASS — later distinct network failure can load the existing cache for the unchanged owner/account/query; no new cache purge policy
+CASE CORE02-typed-cursor-restart-true: PASS — only typed invalid_cursor restarts once against a fresh snapshot
+CASE CORE02-typed-cursor-result-true: PASS — failed fresh restart retains accepted owned rows but retires stale cursor; successful restart replaces rows
+CASE CORE02-typed-cursor-restart-false: PASS — only typed invalid_cursor restarts once against a fresh snapshot
+CASE CORE02-typed-cursor-result-false: PASS — failed fresh restart retains accepted owned rows but retires stale cursor; successful restart replaces rows
+CASE CORE02-late-pagination-owner-invalidated: PASS — late old identity response cannot restore cleared rows after native invalidation
+CASE CORE02-late-pagination-account-invalidated: PASS — late old identity response cannot restore cleared rows after native invalidation
+CASE CORE02-late-pagination-logout-invalidated: PASS — late old identity response cannot restore cleared rows after native invalidation
+CASE 465-original-uncertain-lock: PASS — A committed, acknowledgement lost and reconciliation offline
+CASE 465-no-A-receipt-under-B: PASS — visible receipt target = none
+CASE 465-no-A-undo-under-B: PASS — Undo must not operate on A under B
+CASE 465-stale-test-established-current-receipt: PASS — must establish current revision1 receipt before checking revision2
+CASE 465-known-newer-revision-disables-Undo: PASS — current conversation revision2 supersedes receipt revision1
+CASE cached-query-provenance: PASS — cached row B labeled B
+CASE 480-correction-actually-acknowledged: PASS — production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback
+CASE 480-acknowledged-correction-refreshes-submitted-search: PASS — actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime
+CASE 480-late-old-account-search-cannot-overwrite: PASS — production controller account/request generation rejects held older account response
+CASE notification-route-keeps-unsaved-settings: PASS — notification must use the shared Stay/Leave guard
+CASE 473-stay-preserves-edits: PASS — Stay cancels notification navigation
+CASE 473-leave-routes-original-thread: PASS — explicit discard applies captured route
+CASE 473-stale-owner-cannot-route: PASS — delayed Leave cannot route or discard another owner's choices
+CASE 469-native-header-retains-original-owner-after-held-token: PASS — actual APIClient dispatch retains captured draft owner even after token/observable owner change; server enforcement separate
+CASE 469-native-stale-ack-keeps-original-edits: PASS — late different-owner response cannot replace the original draft
+CASE 469-real-server-held-token-zero-preference-writes: PASS — actual independent SQLite preference rows for A and B remain byte-equivalent
+CASE 469-real-server-rejects-patch-and-recovery: PASS — actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409
+CASE 469-real-server-preference-write-probe-zero: PASS — fixture-owned SQLite INSERT/UPDATE/DELETE triggers observe no preference writes on rejected held PATCH/recovery
+CASE 469-write-probe-positive-control: PASS — same-owner real PATCH succeeds and independently records one A write; B remains untouched
+CASE 466-first-commit-actually-recorded: PASS — actual API/SQLite commit exists; response replaced by HTTP503
+CASE 466-edit-retry-exactly-one-creation: PASS — actual view count after commit/retry = 1, first count = 1
+CASE 466-dismiss-reopen-no-duplicate: PASS — actual view count after reopen = 1
+CASE 466-repeated-retry-preserves-exact-command: PASS — first three committed/replayed requests retain identical UUID, expected revisions and reviewed definition
+CASE 466-advanced-definition-preserved: PASS — actual API saved ID and complete sender/thread/readState definition retained
+CASE 466-advanced-update-no-extra-creation: PASS — one recovered View plus one intentional advanced fixture, updates retain both IDs
+CASE 466-provider-boundary: PASS — synthetic provider calls = 0
+CASE 478-noop-actual-terminal-400: PASS — actual API no-op rejection writes no View
+CASE 478-noop-reopen-unlocks-preview: PASS — definitive rejection must recover current authorized saved identity without dropping newer edits
+CASE 478-noop-recovery-updates-same-id: PASS — fresh explicit preview/update retains original ID and creation count
+CASE 478-stale-create-actual-terminal-409: PASS — actual stale workspace rejection creates nothing
+CASE 478-stale-reopen-preserves-ready-edits: PASS — recovery must retain explicitly chosen predicate and editable draft
+CASE 478-stale-recovery-creates-exactly-once: PASS — one creation only after fresh preview/explicit Save
+CASE 478-lost-noop-actual-rejection-hidden: PASS — actual server rejected without write, but client received503 and must preserve uncertainty
+CASE 478-lost-noop-reopen-retains-command: PASS — reopening retains original immutable pending command and newer edits
+CASE 478-lost-noop-recovery-completes-once: PASS — typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation
+CASE 478-lost-stale-actual-rejection-hidden: PASS — actual server rejected without write, but client received503 and must preserve uncertainty
+CASE 478-lost-stale-reopen-retains-command: PASS — reopening retains original immutable pending command and newer edits
+CASE 478-lost-stale-recovery-completes-once: PASS — typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity/exactly-one creation
+CASE 478-strict-valid-variant-0: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-valid-variant-1: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-valid-variant-2: PASS — strict shared discriminated shape accepts valid variant
+CASE 478-strict-invalid-variant-0: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-1: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-2: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-3: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-4: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-5: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-6: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-7: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-8: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-9: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-10: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-strict-invalid-variant-11: PASS — invalid/extra fields, reason or revision fence cannot become proof
+CASE 478-eligible-unknown-keeps-exact-command: PASS — actual eligible/unresolved status never releases the original command
+CASE 478-invalid-proof-keeps-command-0: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-1: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-2: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-3: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-invalid-proof-keeps-command-4: PASS — mismatched or malformed injected transport proof cannot unlock
+CASE 478-status-failure-keeps-command-401: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-status-failure-keeps-command-404: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-status-failure-keeps-command-503: PASS — auth/foreign404/unavailable status never becomes a no-write proof
+CASE 478-real-unauthenticated-cannot-unlock: PASS — real API auth/ownership rejection retains the exact original command
+CASE 478-real-foreign-owner-cannot-unlock: PASS — real API auth/ownership rejection retains the exact original command
+CASE 478-offline-keeps-command: PASS — actual URLSession transport failure retains uncertainty
+CASE 478-held-other-account-cannot-accept-proof: PASS — account change during held proof rejects publication and retirement
+CASE 478-late-original-replays-only-once: PASS — safe retry and delayed original share one real API receipt/creation
+CASE 478-real-command-mismatch-stays-locked: PASS — actual owned key collision is unknown, never a no-write fence for this command
+CASE 478-fence-prepares-before-retiring: PASS — actual server fence plus fresh authorized prepare permits a replacement preview
+CASE 478-fence-blocks-delayed-original: PASS — delayed original cannot race the replacement into a duplicate
+CASE 478-applied-deleted-never-recreates: PASS — applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID view_c5a7a50e-e4d0-47ba-9845-ede5ea1cd2d3, pending true, counts 10/10, error Original Save applied as view_c5a7a50e-e4d0-47ba-9845-ede5ea1cd2d3. Reload its current View before previewing; no replacement will be created.
+CASE 478-status-provider-boundary: PASS — all status, fence and recovery cases use zero external provider calls
+CASE 478-added-account-status-stays-conservative: PASS — historical account-set receipt proof stays unknown
+CASE 478-added-account-exact-retry-recovers: PASS — independent exact-command200ack permits original View recovery despite conservative unknown status; no duplicate
+CASE 478-added-account-current-revisions-and-edits: PASS — current object may have later revisions; local unsaved edits remain while fresh advanced predicates are retained
+CASE 478-added-account-update-preserves-fresh-definition: PASS — fresh explicit update preserves externally added advanced definition and original identity
+CASE 478-unresolved-commit-ack-reachable-check-action: PASS — View binds this public action title/handler while outcome is still unresolved; hosted tap proof remains pending
+CASE 478-applied-commit-ack-read-failure-established: PASS — validated applied ID persists before actual saved prepare200 acknowledgement is replaced503
+CASE 478-applied-commit-ack-reachable-reload-action: PASS — same actual View button is labeled Reload and invokes the tested public handler for a known applied ID
+CASE 478-applied-commit-ack-status-conservative: PASS — real status stays unknown after account addition; existing original ID remains authoritative
+CASE 478-applied-commit-ack-public-reload-retries-read: PASS — user-reachable Check/Reload must retry original-ID prepare; repeated failures retain immutable command and newer edits
+CASE 478-applied-reload-unauthenticated-protected: PASS — real original-ID read remains auth/owner guarded, never interpreted as absence
+CASE 478-applied-reload-foreign-protected: PASS — real original-ID read remains auth/owner guarded, never interpreted as absence
+CASE 478-applied-reload-held-account-protected: PASS — late owned read cannot retire the journal or replace edits after identity/generation changes
+CASE 478-applied-reload-held-owner-protected: PASS — late owned read cannot retire the journal or replace edits after identity/generation changes
+CASE 478-applied-reload-held-origin-protected: PASS — late owned read cannot retire the journal or replace edits after identity/generation changes
+CASE 478-applied-commit-ack-public-reload-recovers: PASS — network recovery uses persisted validated ID even while status remains unknown; no new creation or stale-edit overwrite
+CASE 478-applied-commit-ack-same-id-update: PASS — fresh preview/Save updates the original ID once and preserves current advanced predicates
+CASE 478-unresolved-typed-proof-reachable-check-action: PASS — View binds this public action title/handler while outcome is still unresolved; hosted tap proof remains pending
+CASE 478-applied-typed-proof-read-failure-established: PASS — validated applied ID persists before actual saved prepare200 acknowledgement is replaced503
+CASE 478-applied-typed-proof-reachable-reload-action: PASS — same actual View button is labeled Reload and invokes the tested public handler for a known applied ID
+CASE 478-applied-typed-proof-status-conservative: PASS — real status stays unknown after account addition; existing original ID remains authoritative
+CASE 478-applied-typed-proof-public-reload-retries-read: PASS — user-reachable Check/Reload must retry original-ID prepare; repeated failures retain immutable command and newer edits
+CASE 478-applied-typed-proof-public-reload-recovers: PASS — network recovery uses persisted validated ID even while status remains unknown; no new creation or stale-edit overwrite
+CASE 478-applied-typed-proof-same-id-update: PASS — fresh preview/Save updates the original ID once and preserves current advanced predicates
+CASE 478-applied-reload-provider-boundary: PASS — all known-applied recovery cases use zero external provider calls
+CASE CORE02-primary-real-API-A-precondition: PASS — actual production inbox endpoint returned owned matching mail before unsubmitted edit
+CASE CORE02-primary-real-API-refresh-keeps-submitted-A: PASS — actual HTTP ledger and rows must stay with submitted A, not editable B
+CASE VIEW01-sender-actual-matching-rows-returned: PASS — real preview returns actual matching rows; visible rendering still requires hosted native UI
+CASE VIEW01-sender-fresh-repeated-command-one-creation: PASS — acknowledged original ID stays current and repeated Save is a no-op, with one actual creation
+CASE VIEW01-sender-lost-ack-actual-commit-precondition: PASS — actual API committed once and fixture replaced only the200 acknowledgement with503
+CASE VIEW01-sender-lost-ack-dismiss-reopen-exactly-one: PASS — reopening/repeated Save adopts the owned original ID, not another creation; actual before=15 after=15
+CASE VIEW01-sender-pending-retry-exact-and-ack-quiescent: PASS — one lost ACK then original retry; every pending body/key is identical and repeated Save after definitive ACK issues NO further POST
+CASE VIEW01-sender-refinement-is-real-preview-no-write: PASS — explicit sender refinement previews real matching mail and changes no stored View before Save
+CASE VIEW01-sender-refinement-save-reopen-real-predicate: PASS — explicit Save/reopen updates the same owned ID and preserves actual refined predicate with no new creation
+CASE VIEW01-sender-advanced-target-preserved: PASS — selected_senders adds the real exact sender while retaining target identity/advanced predicates/routing, using existing wire
+CASE VIEW01-sender-provider-boundary: PASS — actual independent provider counter stays0
+CASE DISCARD-API204-exact-local-server-durable-removal: PASS — production APIClient/controller/store and actual API/SQLite agree on one owned deletion
+CASE DISCARD-API-success-zero-provider: PASS — synthetic unmirrored drafts only; no external provider calls
+CASE DISCARD-API-missing-retains-local-and-real-original: PASS — actual authorized missing or foreign request is not a deletion receipt; original server draft and local writing survive
+CASE DISCARD-API-missing-zero-provider: PASS — synthetic unmirrored drafts only; no external provider calls
+CASE DISCARD-API-foreign-retains-local-and-real-original: PASS — actual authorized missing or foreign request is not a deletion receipt; original server draft and local writing survive
+CASE DISCARD-API-foreign-zero-provider: PASS — synthetic unmirrored drafts only; no external provider calls
+CASE DISCARD-API-held204-independent-server-removed-local-retained: PASS — real API204 and independent SQLite deletion precede released native acknowledgement; local writing remains under lease
+CASE DISCARD-API-held204-new-generation-keeps-device-writing: PASS — a real server receipt never authorizes local removal/dismissal in a changed generation
+CASE DISCARD-API-held204-zero-provider: PASS — synthetic unmirrored drafts only; no external provider calls
+CASE NAV-API-seed-precondition: PASS — test-only owned fixture seed is explicit DML, not a read-only endpoint claim
+CASE NAV-API-owned-catalog: PASS — actual authenticated account-aware catalog, not legacy first-Gmail projection
+CASE NAV-API-pin-targets: PASS — actual typed resource targets and query references all present
+CASE NAV-API-pin-order-names: PASS — server order and literal pin labels retained
+CASE NAV-API-query-object-revisions: PASS — schema and object revisions have different meanings
+CASE NAV-API-collection-retained-mail: PASS — actual membership read includes archived/quiet retained mail independent of Inbox
+CASE NAV-API-query-legacy-pin-v1-metadata: PASS — actual wire metadata only; no Swift canonical-digest matching claim in phase A
+CASE NAV-API-query-legacy-pin-v1-opaque-pagination: PASS — same opaque cursor/limit, no generated definition query params, distinct exact owned rows
+CASE NAV-API-query-stored-mail-v1-metadata: PASS — actual wire metadata only; no Swift canonical-digest matching claim in phase A
+CASE NAV-API-query-stored-mail-v1-opaque-pagination: PASS — same opaque cursor/limit, no generated definition query params, distinct exact owned rows
+CASE NAV-API-thread-pin-direct: PASS — direct owned thread GET works without finding it in loaded Inbox rows
+CASE NAV-API-sender-substring-scope: PASS — explicit All Mail literal sender name/address substring scope; not importance identity
+CASE NAV-API-legacy-pin-inbox: PASS — actual legacy enum endpoint semantics; not saved View ID or named Focus destination
+CASE NAV-API-legacy-pin-focus: PASS — actual legacy enum endpoint semantics; not saved View ID or named Focus destination
+CASE NAV-API-legacy-pin-quiet: PASS — actual legacy enum endpoint semantics; not saved View ID or named Focus destination
+CASE NAV-API-legacy-pin-hidden: PASS — actual legacy enum endpoint semantics; not saved View ID or named Focus destination
+CASE NAV-API-legacy-pin-all: PASS — actual legacy enum endpoint semantics; not saved View ID or named Focus destination
+CASE NAV-API-query-account-boundary: PASS — actual account mismatch is an indistinguishable missing-query response
+CASE NAV-API-independent-sqlite-membership: PASS — independent SQLite counts, not response-derived totals
+CASE NAV-API-result-domain-dml-zero: PASS — 13 measured read requests after explicit bootstrap; auth connection changes reported separately
+CASE NAV-API-provider-read-boundary-zero: PASS — existing fail-closed GmailClient and sealed GET-only Bun fetch boundary both observe zero calls; not physical provider delivery
+CASE NAV-DIAG-direct-encoded-plus-transport: PASS — direct transport %2B control, not a production APIClient fix
+CASE NAV-DIAG-no-plus-transport-boundary: PASS — unchanged APIClient input; literal sender name/address matching, no domain expansion
+CASE NAV-DIAG-space-transport-boundary: PASS — unchanged APIClient input; literal sender name/address matching, no domain expansion
+CASE NAV-DIAG-literal-percent-transport-boundary: PASS — unchanged APIClient input; literal sender name/address matching, no domain expansion
+CASE NAV-DIAG-independent-sender-sqlite-witness: PASS — independent exact-address SQLite IDs; not copied from HTTP results or an API matcher reimplementation
+CASE NAV-DIAG-original-wire-evidence-complete: PASS — actual server ingress preserves the original APIClient alias and exact SQLite-witnessed rows; request-side delegate observation is separately unverified
+CASE NAV-DIAG-direct-wire-preserves-plus: PASS — independent explicitly encoded transport reaches the same API as a literal plus with the same owned rows
+CASE NAV-DIAG-final-read-boundaries: PASS — four extra read-only transport controls; original13-GET assertion remains before this suffix
+NATIVE_SYNTHETIC_SENDER_TRANSPORT {"actualRequestObservations":[],"requestSideObservationLimit":"Empty delegate observations do not establish hook execution or rejection; no request-side observation claim follows.","scope":"fixed synthetic loopback sender transport only; server ingress is the wire witness","urlComponentsReconstructionPercentEncodedQuery":"accountId=account&view=all&sender=needle+nav@example.com"}
+{
+  "results" : [
+    {
+      "case" : "NAV-A-important-first",
+      "detail" : "used production projection keeps Important first",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-all-mail-permanent",
+      "detail" : "empty\/hidden catalog cannot remove All Mail",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-inbox-permanent",
+      "detail" : "current Inbox utility survives optional visibility choices",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-focus-utility-optional",
+      "detail" : "old optional utility identity and visibility are preserved",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-custom-names-order",
+      "detail" : "server array order and literal names survive; not alphabetical\/default reconstruction",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-view-names-order",
+      "detail" : "existing saved View order and names retained",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-hidden-view-excluded",
+      "detail" : "existing enabled-ID visibility remains authoritative",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-unknown-choice-retained",
+      "detail" : "projection does not mutate the caller's choices; old unavailable-View policy unchanged",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-malformed-routing-keeps-prior",
+      "detail" : "nil preserves the existing load path's prior destinations rather than replacing them with empty",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-retired-excluded",
+      "detail" : "retired destinations remain excluded",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-name-not-identity",
+      "detail" : "same display name alone does not trigger legacy-ID exclusion",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-focus-current-normal-destination",
+      "detail" : "behavior-preserving utility mapping; not actual named Focus browse",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-focus-current-api-view",
+      "detail" : "current API attention utility stays view=focus",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-inbox-current-api-view",
+      "detail" : "resolved placement uses view=all plus destination",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-important-no-catalog",
+      "detail" : "Important does not gain a destination intersection",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-all-mail-no-catalog",
+      "detail" : "All Mail remains independent of destination hydration",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-opaque-destination-request",
+      "detail" : "explicit existing destination selection forwards opaque ID and view=all",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-unresolved-inbox-old-mapping",
+      "detail" : "extraction preserves unresolved-map behavior rather than fixing it silently",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-preference-exact-roundtrip",
+      "detail" : "actual production store round-trips unknown IDs using the unchanged original key",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-preference-owner-isolated",
+      "detail" : "different owner receives original defaults, not A's configured View IDs",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-preference-origin-isolated",
+      "detail" : "different canonical origin does not inherit A's choices",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-A-named-focus-preserved",
+      "detail" : "all active named Spaces must survive; old projection excludes this actual legacy Focus ID",
+      "pass" : false
+    },
+    {
+      "case" : "NAV-A-named-inbox-preserved",
+      "detail" : "user-owned fallback name must survive in named Spaces; fixed utility label is not a substitute",
+      "pass" : false
+    },
+    {
+      "case" : "P2-saved-first-503-pending-established",
+      "detail" : "a real first submitted request is held before acknowledgement; no accepted search result is fabricated",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-503-pending-surface-visible",
+      "detail" : "InboxView's actual policy must show the pending search surface, not keep old SavedMailboxResults mounted",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-503-error-established",
+      "detail" : "actual request failure retains typed query and truthful error with no accepted or unauthorized rows",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-503-error-recovery-visible",
+      "detail" : "the same production branch decision must expose the failed first search and retry\/recovery controls",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-offline-pending-established",
+      "detail" : "a real first submitted request is held before acknowledgement; no accepted search result is fabricated",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-offline-pending-surface-visible",
+      "detail" : "InboxView's actual policy must show the pending search surface, not keep old SavedMailboxResults mounted",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-offline-error-established",
+      "detail" : "actual request failure retains typed query and truthful error with no accepted or unauthorized rows",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-offline-error-recovery-visible",
+      "detail" : "the same production branch decision must expose the failed first search and retry\/recovery controls",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-401-pending-established",
+      "detail" : "a real first submitted request is held before acknowledgement; no accepted search result is fabricated",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-401-pending-surface-visible",
+      "detail" : "InboxView's actual policy must show the pending search surface, not keep old SavedMailboxResults mounted",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-401-error-established",
+      "detail" : "actual request failure retains typed query and truthful error with no accepted or unauthorized rows",
+      "pass" : true
+    },
+    {
+      "case" : "P2-saved-first-401-error-recovery-visible",
+      "detail" : "the same production branch decision must expose the failed first search and retry\/recovery controls",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-unsafe-integration-other-editor-must-survive",
+      "detail" : "candidate adapter uses atomic discard-specific API; historical generic unsafe control remains c426 red",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-unsafe-integration-lease-blocks-new-editor",
+      "detail" : "negative control: discard needs an atomic special lease that blocks new editor registration across awaits",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-unsafe-integration-ack-cannot-remove-newer-snapshot",
+      "detail" : "negative control: remove(id) has no exact approved-snapshot predicate; future discard must refuse a newer leased snapshot",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-local-durable-exact-removal",
+      "detail" : "local acknowledgement is real durable removal, no network or recipient validation",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-retired-snapshot-cannot-recreate",
+      "detail" : "no replacement UUID or retired-row resurrection",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-linked-checkpoints-raw-rich-attachments-before-delete",
+      "detail" : "actual disk checkpoint preserves incomplete recipients, HTML\/text and attachment data before injected 204",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-linked-exact-id-only",
+      "detail" : "one local identity removed; sibling with same server ID remains",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-role-released-after-success",
+      "detail" : "the dedicated lease ends after completion",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-confirmation-raw-to-changed-zero-delete",
+      "detail" : "old confirmation is bound to the full raw\/rich\/attachment visible fingerprint",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-confirmation-raw-cc-changed-zero-delete",
+      "detail" : "old confirmation is bound to the full raw\/rich\/attachment visible fingerprint",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-confirmation-raw-bcc-changed-zero-delete",
+      "detail" : "old confirmation is bound to the full raw\/rich\/attachment visible fingerprint",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-confirmation-html-changed-zero-delete",
+      "detail" : "old confirmation is bound to the full raw\/rich\/attachment visible fingerprint",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-confirmation-attachments-changed-zero-delete",
+      "detail" : "old confirmation is bound to the full raw\/rich\/attachment visible fingerprint",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-refuses-sending-zero-delete",
+      "detail" : "no send-key reset, new identity, detach or ambiguous-send replay",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-refuses-ambiguous-zero-delete",
+      "detail" : "no send-key reset, new identity, detach or ambiguous-send replay",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-refuses-rejected-zero-delete",
+      "detail" : "no send-key reset, new identity, detach or ambiguous-send replay",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-refuses-sent-zero-delete",
+      "detail" : "no send-key reset, new identity, detach or ambiguous-send replay",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-refuses-keyed-zero-delete",
+      "detail" : "no send-key reset, new identity, detach or ambiguous-send replay",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-controller-other-editor-zero-delete",
+      "detail" : "atomic reservation refuses another registered editor before network",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-awaits-entire-predecessor-save",
+      "detail" : "a cancelled but running predecessor cannot be overtaken by DELETE",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-own-save-drained-before-delete",
+      "detail" : "production ComposeSaveSequencing drains the whole cancelled predecessor chain before the exact role lease is acquired",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-newer-local-snapshot-zero-delete",
+      "detail" : "an unrelated newer snapshot is not adopted as the old confirmation",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-delete-blocks-new-editor-and-repeat",
+      "detail" : "same controller and actor role exclude repeated operation\/new editors throughout the await",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-delete-success-once",
+      "detail" : "one acknowledgement and one exact local removal",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-owner-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-account-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-client-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-generation-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-editor-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-origin-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-writing-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-server-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-closed-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-lease-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-snapshot-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-held-204-registration-keeps-local",
+      "detail" : "stale acknowledgement cannot retire original writing or dismiss a changed composer",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-disk-checkpoint-keeps-local",
+      "detail" : "disk failure before DELETE stops network; after 204 is explicitly partial and the last successfully persisted writing survives independently",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-disk-after204-keeps-local",
+      "detail" : "disk failure before DELETE stops network; after 204 is explicitly partial and the last successfully persisted writing survives independently",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-200-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-202-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-400-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-401-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-403-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-404-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-409-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-client-502-not-a204-receipt",
+      "detail" : "actual production APIClient refuses every non204; 404 is never implicit success",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-network--1001-keeps-writing",
+      "detail" : "uncertain transport never unlocks a fabricated successful deletion",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-network--1009-keeps-writing",
+      "detail" : "uncertain transport never unlocks a fabricated successful deletion",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-network--999-keeps-writing",
+      "detail" : "uncertain transport never unlocks a fabricated successful deletion",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-owner-change-during-token-zero-request",
+      "detail" : "original approval is rechecked after credential lookup, before any DELETE request",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-refresh-submitted-precondition",
+      "detail" : "real primary Mail Submit accepts A with a second page before editing B",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-refresh-request-keeps-submitted-query",
+      "detail" : "routine primary Mail refresh\/page must request submitted A, not unfinished B; observed=[(query: \"A\", cursor: nil), (query: \"A\", cursor: nil)]",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-refresh-rows-and-editable-provenance",
+      "detail" : "typed B remains editable while accepted A rows\/provenance and page append stay A",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-page-submitted-precondition",
+      "detail" : "real primary Mail Submit accepts A with a second page before editing B",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-page-request-keeps-submitted-query",
+      "detail" : "routine primary Mail refresh\/page must request submitted A, not unfinished B; observed=[(query: \"A\", cursor: nil), (query: \"A\", cursor: Optional(\"page-two\"))]",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-page-rows-and-editable-provenance",
+      "detail" : "typed B remains editable while accepted A rows\/provenance and page append stay A",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-cache-two-query-precondition",
+      "detail" : "both owned caches contain distinguishable accepted data",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-offline-refresh-keeps-A-cache",
+      "detail" : "refresh must read A's owned cache, not typed B's valid but unsubmitted cached rows",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-held-typing-request",
+      "detail" : "the in-flight routine request must capture submitted A before any await",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-held-typing-ownership",
+      "detail" : "late other-account response cannot install; editing again must not clear the accepted submitted conversation set",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-held-account-request",
+      "detail" : "the in-flight routine request must capture submitted A before any await",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-held-account-ownership",
+      "detail" : "late other-account response cannot install; editing again must not clear the accepted submitted conversation set",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-empty-edit-remains-unsubmitted",
+      "detail" : "backspacing an editable field through empty is not an implicit Submit",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-explicit-clear-restores-mailbox",
+      "detail" : "explicit All Mail\/filter action clears submitted intent and uses the real mailbox endpoint",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-saved-view-transition-defers-own-endpoint",
+      "detail" : "a saved View is handled by SavedMailboxResults, never an invented inbox view parameter",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-search-from-saved-view-explicit-submit",
+      "detail" : "explicit submission from a saved View still searches All Mail without clearing the new query",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-400-invalid_request-request-count",
+      "detail" : "ordinary error codes never trigger cursor restart; no invented retry",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-400-invalid_request-owned-state",
+      "detail" : "auth\/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-400-invalid_request-error-and-provenance",
+      "detail" : "failure stays visible with submitted-query provenance and completed loading",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-400-other_error-request-count",
+      "detail" : "ordinary error codes never trigger cursor restart; no invented retry",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-400-other_error-owned-state",
+      "detail" : "auth\/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-400-other_error-error-and-provenance",
+      "detail" : "failure stays visible with submitted-query provenance and completed loading",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-503-unavailable-request-count",
+      "detail" : "ordinary error codes never trigger cursor restart; no invented retry",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-503-unavailable-owned-state",
+      "detail" : "auth\/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-503-unavailable-error-and-provenance",
+      "detail" : "failure stays visible with submitted-query provenance and completed loading",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-401-unauthorized-request-count",
+      "detail" : "ordinary error codes never trigger cursor restart; no invented retry",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-401-unauthorized-owned-state",
+      "detail" : "auth\/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-401-unauthorized-error-and-provenance",
+      "detail" : "failure stays visible with submitted-query provenance and completed loading",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-403-forbidden-request-count",
+      "detail" : "ordinary error codes never trigger cursor restart; no invented retry",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-403-forbidden-owned-state",
+      "detail" : "auth\/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-403-forbidden-error-and-provenance",
+      "detail" : "failure stays visible with submitted-query provenance and completed loading",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-404-account_not_found-request-count",
+      "detail" : "ordinary error codes never trigger cursor restart; no invented retry",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-404-account_not_found-owned-state",
+      "detail" : "auth\/ownership errors invalidate rows; other pagination failures retain the already accepted owned page and manual-retry cursor",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-pagination-404-account_not_found-error-and-provenance",
+      "detail" : "failure stays visible with submitted-query provenance and completed loading",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-foreign-page-established-owned-page",
+      "detail" : "nonempty authorized page precedes the wrong-account pagination response",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-foreign-200-page-rejected",
+      "detail" : "a well-formed200 page containing another account's row fails ownership validation and clears this request's visible page",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-current-auth-rejection-clears-visible-page",
+      "detail" : "current authentication rejection is not treated as an offline response",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-later-same-owner-offline-reset-keeps-cache-policy",
+      "detail" : "later distinct network failure can load the existing cache for the unchanged owner\/account\/query; no new cache purge policy",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-typed-cursor-restart-true",
+      "detail" : "only typed invalid_cursor restarts once against a fresh snapshot",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-typed-cursor-result-true",
+      "detail" : "failed fresh restart retains accepted owned rows but retires stale cursor; successful restart replaces rows",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-typed-cursor-restart-false",
+      "detail" : "only typed invalid_cursor restarts once against a fresh snapshot",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-typed-cursor-result-false",
+      "detail" : "failed fresh restart retains accepted owned rows but retires stale cursor; successful restart replaces rows",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-late-pagination-owner-invalidated",
+      "detail" : "late old identity response cannot restore cleared rows after native invalidation",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-late-pagination-account-invalidated",
+      "detail" : "late old identity response cannot restore cleared rows after native invalidation",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-late-pagination-logout-invalidated",
+      "detail" : "late old identity response cannot restore cleared rows after native invalidation",
+      "pass" : true
+    },
+    {
+      "case" : "465-original-uncertain-lock",
+      "detail" : "A committed, acknowledgement lost and reconciliation offline",
+      "pass" : true
+    },
+    {
+      "case" : "465-no-A-receipt-under-B",
+      "detail" : "visible receipt target = none",
+      "pass" : true
+    },
+    {
+      "case" : "465-no-A-undo-under-B",
+      "detail" : "Undo must not operate on A under B",
+      "pass" : true
+    },
+    {
+      "case" : "465-stale-test-established-current-receipt",
+      "detail" : "must establish current revision1 receipt before checking revision2",
+      "pass" : true
+    },
+    {
+      "case" : "465-known-newer-revision-disables-Undo",
+      "detail" : "current conversation revision2 supersedes receipt revision1",
+      "pass" : true
+    },
+    {
+      "case" : "cached-query-provenance",
+      "detail" : "cached row B labeled B",
+      "pass" : true
+    },
+    {
+      "case" : "480-correction-actually-acknowledged",
+      "detail" : "production ImportanceController accepts the synthetic HTTP acknowledgement and publishes its real state revision callback",
+      "pass" : true
+    },
+    {
+      "case" : "480-acknowledged-correction-refreshes-submitted-search",
+      "detail" : "actual controller rows refresh on production task identity while submitted provenance and unsent query stay distinct; not SwiftUI runtime",
+      "pass" : true
+    },
+    {
+      "case" : "480-late-old-account-search-cannot-overwrite",
+      "detail" : "production controller account\/request generation rejects held older account response",
+      "pass" : true
+    },
+    {
+      "case" : "notification-route-keeps-unsaved-settings",
+      "detail" : "notification must use the shared Stay\/Leave guard",
+      "pass" : true
+    },
+    {
+      "case" : "473-stay-preserves-edits",
+      "detail" : "Stay cancels notification navigation",
+      "pass" : true
+    },
+    {
+      "case" : "473-leave-routes-original-thread",
+      "detail" : "explicit discard applies captured route",
+      "pass" : true
+    },
+    {
+      "case" : "473-stale-owner-cannot-route",
+      "detail" : "delayed Leave cannot route or discard another owner's choices",
+      "pass" : true
+    },
+    {
+      "case" : "469-native-header-retains-original-owner-after-held-token",
+      "detail" : "actual APIClient dispatch retains captured draft owner even after token\/observable owner change; server enforcement separate",
+      "pass" : true
+    },
+    {
+      "case" : "469-native-stale-ack-keeps-original-edits",
+      "detail" : "late different-owner response cannot replace the original draft",
+      "pass" : true
+    },
+    {
+      "case" : "469-real-server-held-token-zero-preference-writes",
+      "detail" : "actual independent SQLite preference rows for A and B remain byte-equivalent",
+      "pass" : true
+    },
+    {
+      "case" : "469-real-server-rejects-patch-and-recovery",
+      "detail" : "actual APIClient PATCH and recovery GET use original verified A owner with B token; both actual server409",
+      "pass" : true
+    },
+    {
+      "case" : "469-real-server-preference-write-probe-zero",
+      "detail" : "fixture-owned SQLite INSERT\/UPDATE\/DELETE triggers observe no preference writes on rejected held PATCH\/recovery",
+      "pass" : true
+    },
+    {
+      "case" : "469-write-probe-positive-control",
+      "detail" : "same-owner real PATCH succeeds and independently records one A write; B remains untouched",
+      "pass" : true
+    },
+    {
+      "case" : "466-first-commit-actually-recorded",
+      "detail" : "actual API\/SQLite commit exists; response replaced by HTTP503",
+      "pass" : true
+    },
+    {
+      "case" : "466-edit-retry-exactly-one-creation",
+      "detail" : "actual view count after commit\/retry = 1, first count = 1",
+      "pass" : true
+    },
+    {
+      "case" : "466-dismiss-reopen-no-duplicate",
+      "detail" : "actual view count after reopen = 1",
+      "pass" : true
+    },
+    {
+      "case" : "466-repeated-retry-preserves-exact-command",
+      "detail" : "first three committed\/replayed requests retain identical UUID, expected revisions and reviewed definition",
+      "pass" : true
+    },
+    {
+      "case" : "466-advanced-definition-preserved",
+      "detail" : "actual API saved ID and complete sender\/thread\/readState definition retained",
+      "pass" : true
+    },
+    {
+      "case" : "466-advanced-update-no-extra-creation",
+      "detail" : "one recovered View plus one intentional advanced fixture, updates retain both IDs",
+      "pass" : true
+    },
+    {
+      "case" : "466-provider-boundary",
+      "detail" : "synthetic provider calls = 0",
+      "pass" : true
+    },
+    {
+      "case" : "478-noop-actual-terminal-400",
+      "detail" : "actual API no-op rejection writes no View",
+      "pass" : true
+    },
+    {
+      "case" : "478-noop-reopen-unlocks-preview",
+      "detail" : "definitive rejection must recover current authorized saved identity without dropping newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-noop-recovery-updates-same-id",
+      "detail" : "fresh explicit preview\/update retains original ID and creation count",
+      "pass" : true
+    },
+    {
+      "case" : "478-stale-create-actual-terminal-409",
+      "detail" : "actual stale workspace rejection creates nothing",
+      "pass" : true
+    },
+    {
+      "case" : "478-stale-reopen-preserves-ready-edits",
+      "detail" : "recovery must retain explicitly chosen predicate and editable draft",
+      "pass" : true
+    },
+    {
+      "case" : "478-stale-recovery-creates-exactly-once",
+      "detail" : "one creation only after fresh preview\/explicit Save",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-noop-actual-rejection-hidden",
+      "detail" : "actual server rejected without write, but client received503 and must preserve uncertainty",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-noop-reopen-retains-command",
+      "detail" : "reopening retains original immutable pending command and newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-noop-recovery-completes-once",
+      "detail" : "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity\/exactly-one creation",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-stale-actual-rejection-hidden",
+      "detail" : "actual server rejected without write, but client received503 and must preserve uncertainty",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-stale-reopen-retains-command",
+      "detail" : "reopening retains original immutable pending command and newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-lost-stale-recovery-completes-once",
+      "detail" : "typed authorized recovery must release rejected command after lost acknowledgement; preserve saved identity\/exactly-one creation",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-valid-variant-0",
+      "detail" : "strict shared discriminated shape accepts valid variant",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-valid-variant-1",
+      "detail" : "strict shared discriminated shape accepts valid variant",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-valid-variant-2",
+      "detail" : "strict shared discriminated shape accepts valid variant",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-0",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-1",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-2",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-3",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-4",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-5",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-6",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-7",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-8",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-9",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-10",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-strict-invalid-variant-11",
+      "detail" : "invalid\/extra fields, reason or revision fence cannot become proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-eligible-unknown-keeps-exact-command",
+      "detail" : "actual eligible\/unresolved status never releases the original command",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-0",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-1",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-2",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-3",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-invalid-proof-keeps-command-4",
+      "detail" : "mismatched or malformed injected transport proof cannot unlock",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-failure-keeps-command-401",
+      "detail" : "auth\/foreign404\/unavailable status never becomes a no-write proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-failure-keeps-command-404",
+      "detail" : "auth\/foreign404\/unavailable status never becomes a no-write proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-failure-keeps-command-503",
+      "detail" : "auth\/foreign404\/unavailable status never becomes a no-write proof",
+      "pass" : true
+    },
+    {
+      "case" : "478-real-unauthenticated-cannot-unlock",
+      "detail" : "real API auth\/ownership rejection retains the exact original command",
+      "pass" : true
+    },
+    {
+      "case" : "478-real-foreign-owner-cannot-unlock",
+      "detail" : "real API auth\/ownership rejection retains the exact original command",
+      "pass" : true
+    },
+    {
+      "case" : "478-offline-keeps-command",
+      "detail" : "actual URLSession transport failure retains uncertainty",
+      "pass" : true
+    },
+    {
+      "case" : "478-held-other-account-cannot-accept-proof",
+      "detail" : "account change during held proof rejects publication and retirement",
+      "pass" : true
+    },
+    {
+      "case" : "478-late-original-replays-only-once",
+      "detail" : "safe retry and delayed original share one real API receipt\/creation",
+      "pass" : true
+    },
+    {
+      "case" : "478-real-command-mismatch-stays-locked",
+      "detail" : "actual owned key collision is unknown, never a no-write fence for this command",
+      "pass" : true
+    },
+    {
+      "case" : "478-fence-prepares-before-retiring",
+      "detail" : "actual server fence plus fresh authorized prepare permits a replacement preview",
+      "pass" : true
+    },
+    {
+      "case" : "478-fence-blocks-delayed-original",
+      "detail" : "delayed original cannot race the replacement into a duplicate",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-deleted-never-recreates",
+      "detail" : "applied receipt pins original deleted ID and exact command; no new UUID or replacement View. Original ID view_c5a7a50e-e4d0-47ba-9845-ede5ea1cd2d3, pending true, counts 10\/10, error Original Save applied as view_c5a7a50e-e4d0-47ba-9845-ede5ea1cd2d3. Reload its current View before previewing; no replacement will be created.",
+      "pass" : true
+    },
+    {
+      "case" : "478-status-provider-boundary",
+      "detail" : "all status, fence and recovery cases use zero external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-status-stays-conservative",
+      "detail" : "historical account-set receipt proof stays unknown",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-exact-retry-recovers",
+      "detail" : "independent exact-command200ack permits original View recovery despite conservative unknown status; no duplicate",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-current-revisions-and-edits",
+      "detail" : "current object may have later revisions; local unsaved edits remain while fresh advanced predicates are retained",
+      "pass" : true
+    },
+    {
+      "case" : "478-added-account-update-preserves-fresh-definition",
+      "detail" : "fresh explicit update preserves externally added advanced definition and original identity",
+      "pass" : true
+    },
+    {
+      "case" : "478-unresolved-commit-ack-reachable-check-action",
+      "detail" : "View binds this public action title\/handler while outcome is still unresolved; hosted tap proof remains pending",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-commit-ack-read-failure-established",
+      "detail" : "validated applied ID persists before actual saved prepare200 acknowledgement is replaced503",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-commit-ack-reachable-reload-action",
+      "detail" : "same actual View button is labeled Reload and invokes the tested public handler for a known applied ID",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-commit-ack-status-conservative",
+      "detail" : "real status stays unknown after account addition; existing original ID remains authoritative",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-commit-ack-public-reload-retries-read",
+      "detail" : "user-reachable Check\/Reload must retry original-ID prepare; repeated failures retain immutable command and newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-reload-unauthenticated-protected",
+      "detail" : "real original-ID read remains auth\/owner guarded, never interpreted as absence",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-reload-foreign-protected",
+      "detail" : "real original-ID read remains auth\/owner guarded, never interpreted as absence",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-reload-held-account-protected",
+      "detail" : "late owned read cannot retire the journal or replace edits after identity\/generation changes",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-reload-held-owner-protected",
+      "detail" : "late owned read cannot retire the journal or replace edits after identity\/generation changes",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-reload-held-origin-protected",
+      "detail" : "late owned read cannot retire the journal or replace edits after identity\/generation changes",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-commit-ack-public-reload-recovers",
+      "detail" : "network recovery uses persisted validated ID even while status remains unknown; no new creation or stale-edit overwrite",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-commit-ack-same-id-update",
+      "detail" : "fresh preview\/Save updates the original ID once and preserves current advanced predicates",
+      "pass" : true
+    },
+    {
+      "case" : "478-unresolved-typed-proof-reachable-check-action",
+      "detail" : "View binds this public action title\/handler while outcome is still unresolved; hosted tap proof remains pending",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-typed-proof-read-failure-established",
+      "detail" : "validated applied ID persists before actual saved prepare200 acknowledgement is replaced503",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-typed-proof-reachable-reload-action",
+      "detail" : "same actual View button is labeled Reload and invokes the tested public handler for a known applied ID",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-typed-proof-status-conservative",
+      "detail" : "real status stays unknown after account addition; existing original ID remains authoritative",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-typed-proof-public-reload-retries-read",
+      "detail" : "user-reachable Check\/Reload must retry original-ID prepare; repeated failures retain immutable command and newer edits",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-typed-proof-public-reload-recovers",
+      "detail" : "network recovery uses persisted validated ID even while status remains unknown; no new creation or stale-edit overwrite",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-typed-proof-same-id-update",
+      "detail" : "fresh preview\/Save updates the original ID once and preserves current advanced predicates",
+      "pass" : true
+    },
+    {
+      "case" : "478-applied-reload-provider-boundary",
+      "detail" : "all known-applied recovery cases use zero external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-real-API-A-precondition",
+      "detail" : "actual production inbox endpoint returned owned matching mail before unsubmitted edit",
+      "pass" : true
+    },
+    {
+      "case" : "CORE02-primary-real-API-refresh-keeps-submitted-A",
+      "detail" : "actual HTTP ledger and rows must stay with submitted A, not editable B",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-actual-matching-rows-returned",
+      "detail" : "real preview returns actual matching rows; visible rendering still requires hosted native UI",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-fresh-repeated-command-one-creation",
+      "detail" : "acknowledged original ID stays current and repeated Save is a no-op, with one actual creation",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-lost-ack-actual-commit-precondition",
+      "detail" : "actual API committed once and fixture replaced only the200 acknowledgement with503",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-lost-ack-dismiss-reopen-exactly-one",
+      "detail" : "reopening\/repeated Save adopts the owned original ID, not another creation; actual before=15 after=15",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-pending-retry-exact-and-ack-quiescent",
+      "detail" : "one lost ACK then original retry; every pending body\/key is identical and repeated Save after definitive ACK issues NO further POST",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-refinement-is-real-preview-no-write",
+      "detail" : "explicit sender refinement previews real matching mail and changes no stored View before Save",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-refinement-save-reopen-real-predicate",
+      "detail" : "explicit Save\/reopen updates the same owned ID and preserves actual refined predicate with no new creation",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-advanced-target-preserved",
+      "detail" : "selected_senders adds the real exact sender while retaining target identity\/advanced predicates\/routing, using existing wire",
+      "pass" : true
+    },
+    {
+      "case" : "VIEW01-sender-provider-boundary",
+      "detail" : "actual independent provider counter stays0",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API204-exact-local-server-durable-removal",
+      "detail" : "production APIClient\/controller\/store and actual API\/SQLite agree on one owned deletion",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-success-zero-provider",
+      "detail" : "synthetic unmirrored drafts only; no external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-missing-retains-local-and-real-original",
+      "detail" : "actual authorized missing or foreign request is not a deletion receipt; original server draft and local writing survive",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-missing-zero-provider",
+      "detail" : "synthetic unmirrored drafts only; no external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-foreign-retains-local-and-real-original",
+      "detail" : "actual authorized missing or foreign request is not a deletion receipt; original server draft and local writing survive",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-foreign-zero-provider",
+      "detail" : "synthetic unmirrored drafts only; no external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-held204-independent-server-removed-local-retained",
+      "detail" : "real API204 and independent SQLite deletion precede released native acknowledgement; local writing remains under lease",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-held204-new-generation-keeps-device-writing",
+      "detail" : "a real server receipt never authorizes local removal\/dismissal in a changed generation",
+      "pass" : true
+    },
+    {
+      "case" : "DISCARD-API-held204-zero-provider",
+      "detail" : "synthetic unmirrored drafts only; no external provider calls",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-seed-precondition",
+      "detail" : "test-only owned fixture seed is explicit DML, not a read-only endpoint claim",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-owned-catalog",
+      "detail" : "actual authenticated account-aware catalog, not legacy first-Gmail projection",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-pin-targets",
+      "detail" : "actual typed resource targets and query references all present",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-pin-order-names",
+      "detail" : "server order and literal pin labels retained",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-query-object-revisions",
+      "detail" : "schema and object revisions have different meanings",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-collection-retained-mail",
+      "detail" : "actual membership read includes archived\/quiet retained mail independent of Inbox",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-query-legacy-pin-v1-metadata",
+      "detail" : "actual wire metadata only; no Swift canonical-digest matching claim in phase A",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-query-legacy-pin-v1-opaque-pagination",
+      "detail" : "same opaque cursor\/limit, no generated definition query params, distinct exact owned rows",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-query-stored-mail-v1-metadata",
+      "detail" : "actual wire metadata only; no Swift canonical-digest matching claim in phase A",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-query-stored-mail-v1-opaque-pagination",
+      "detail" : "same opaque cursor\/limit, no generated definition query params, distinct exact owned rows",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-thread-pin-direct",
+      "detail" : "direct owned thread GET works without finding it in loaded Inbox rows",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-sender-substring-scope",
+      "detail" : "explicit All Mail literal sender name\/address substring scope; not importance identity",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-legacy-pin-inbox",
+      "detail" : "actual legacy enum endpoint semantics; not saved View ID or named Focus destination",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-legacy-pin-focus",
+      "detail" : "actual legacy enum endpoint semantics; not saved View ID or named Focus destination",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-legacy-pin-quiet",
+      "detail" : "actual legacy enum endpoint semantics; not saved View ID or named Focus destination",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-legacy-pin-hidden",
+      "detail" : "actual legacy enum endpoint semantics; not saved View ID or named Focus destination",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-legacy-pin-all",
+      "detail" : "actual legacy enum endpoint semantics; not saved View ID or named Focus destination",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-query-account-boundary",
+      "detail" : "actual account mismatch is an indistinguishable missing-query response",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-independent-sqlite-membership",
+      "detail" : "independent SQLite counts, not response-derived totals",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-result-domain-dml-zero",
+      "detail" : "13 measured read requests after explicit bootstrap; auth connection changes reported separately",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-API-provider-read-boundary-zero",
+      "detail" : "existing fail-closed GmailClient and sealed GET-only Bun fetch boundary both observe zero calls; not physical provider delivery",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-direct-encoded-plus-transport",
+      "detail" : "direct transport %2B control, not a production APIClient fix",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-no-plus-transport-boundary",
+      "detail" : "unchanged APIClient input; literal sender name\/address matching, no domain expansion",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-space-transport-boundary",
+      "detail" : "unchanged APIClient input; literal sender name\/address matching, no domain expansion",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-literal-percent-transport-boundary",
+      "detail" : "unchanged APIClient input; literal sender name\/address matching, no domain expansion",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-independent-sender-sqlite-witness",
+      "detail" : "independent exact-address SQLite IDs; not copied from HTTP results or an API matcher reimplementation",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-original-wire-evidence-complete",
+      "detail" : "actual server ingress preserves the original APIClient alias and exact SQLite-witnessed rows; request-side delegate observation is separately unverified",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-direct-wire-preserves-plus",
+      "detail" : "independent explicitly encoded transport reaches the same API as a literal plus with the same owned rows",
+      "pass" : true
+    },
+    {
+      "case" : "NAV-DIAG-final-read-boundaries",
+      "detail" : "four extra read-only transport controls; original13-GET assertion remains before this suffix",
+      "pass" : true
+    }
+  ],
+  "scope" : "production native controllers\/Foundation HTTP\/cache; not Apple UI"
+}

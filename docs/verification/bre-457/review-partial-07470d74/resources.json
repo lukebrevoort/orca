@@ -1,0 +1,38 @@
+[
+  {
+    "time": 1794392358.307188,
+    "stage": "before",
+    "ownerPid": 79657,
+    "childPid": null,
+    "command": "python3",
+    "exitCode": null,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "15232  16.8 542832 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper (Renderer).app/Contents/MacOS/T3 Code (Nightly) Helper (Renderer)",
+      " 1152  15.9  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "15214  10.6  90896 /Applications/T3 Code (Nightly).app/Contents/Frameworks/T3 Code (Nightly) Helper.app/Contents/MacOS/T3 Code (Nightly) Helper",
+      "15382  10.3 1033184 codex",
+      "    1   7.6  22848 /sbin/launchd",
+      "  416   5.8  22096 /usr/sbin/coreaudiod"
+    ],
+    "memory": "System-wide memory free percentage: 75%"
+  },
+  {
+    "time": 1794392367.474684,
+    "stage": "after",
+    "ownerPid": 79657,
+    "childPid": 79675,
+    "command": "python3",
+    "exitCode": 1,
+    "cpuRssTop": [
+      "  PID  %CPU    RSS COMM",
+      "43178  19.9  40992 /System/Library/PrivateFrameworks/XprotectFramework.framework/Versions/A/XPCServices/XprotectService.xpc/Contents/MacOS/XprotectService",
+      " 1152  18.9  22224 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      " 1046   4.4 849952 /Applications/Zen.app/Contents/MacOS/zen",
+      "  416   4.1  22096 /usr/sbin/coreaudiod",
+      "25406   3.9 572144 /Applications/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container",
+      "  379   3.6  28560 /usr/libexec/locationd"
+    ],
+    "memory": "System-wide memory free percentage: 75%"
+  }
+]

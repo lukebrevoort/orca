@@ -1,0 +1,59 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "4D4C865A-D95C-4F14-8496-0E1902195308",
+      "deviceName" : "Orca CI 43131878435-1",
+      "modelName" : "iPhone 17",
+      "osBuildNumber" : "23E254a",
+      "osVersion" : "26.4.1",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:2414: XCTAssertTrue failed",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "1m 51s",
+                  "durationInSeconds" : 111.35096800327301,
+                  "name" : "test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof()",
+                  "nodeIdentifier" : "OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test48ImportantNotificationAdoptionIsExplicitAccountScopedAndNotDeliveryProof",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "OrcaUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "OrcaUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "Orca",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}

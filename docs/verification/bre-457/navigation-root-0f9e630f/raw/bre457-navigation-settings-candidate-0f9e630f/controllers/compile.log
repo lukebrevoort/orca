@@ -1,0 +1,14 @@
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Orca/Core/NativeMailBrowser.swift:132:100: warning: no 'async' operations occur within 'await' expression
+130 |     private var blockedCache = Set<String>()
+131 |     private let loadCachedPage: (CacheStore, String) async -> MailActionJSON?
+132 |     init(loadCachedPage: @escaping (CacheStore, String) async -> MailActionJSON? = { cache, key in await cache.load(MailActionJSON.self, key: key) }) { self.loadCachedPage = loadCachedPage }
+    |                                                                                                    `- warning: no 'async' operations occur within 'await' expression
+133 |     func invalidate() {
+134 |         generation = UUID(); key = nil; messages = []; nextCursor = nil; freshness = nil
+/Users/lbrevoort/.t3/worktrees/orca/t3-e7dbe952-6002d97f243ef88b/apps/ios/Orca/Core/NativeMailBrowser.swift:132:100: warning: no 'async' operations occur within 'await' expression
+130 |     private var blockedCache = Set<String>()
+131 |     private let loadCachedPage: (CacheStore, String) async -> MailActionJSON?
+132 |     init(loadCachedPage: @escaping (CacheStore, String) async -> MailActionJSON? = { cache, key in await cache.load(MailActionJSON.self, key: key) }) { self.loadCachedPage = loadCachedPage }
+    |                                                                                                    `- warning: no 'async' operations occur within 'await' expression
+133 |     func invalidate() {
+134 |         generation = UUID(); key = nil; messages = []; nextCursor = nil; freshness = nil

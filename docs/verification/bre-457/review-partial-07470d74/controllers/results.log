@@ -1,0 +1,15 @@
+CASE 465-original-uncertain-lock: PASS — A committed, acknowledgement lost and reconciliation offline
+CASE 465-no-A-receipt-under-B: PASS — visible receipt target = none
+CASE 465-no-A-undo-under-B: PASS — Undo must not operate on A under B
+CASE 465-stale-test-established-current-receipt: PASS — must establish current revision1 receipt before checking revision2
+CASE 465-known-newer-revision-disables-Undo: PASS — current conversation revision2 supersedes receipt revision1
+CASE cached-query-provenance: PASS — cached row B labeled B
+CASE notification-route-keeps-unsaved-settings: PASS — notification must use the shared Stay/Leave guard
+CASE 473-stay-preserves-edits: PASS — Stay cancels notification navigation
+CASE 473-leave-routes-original-thread: PASS — explicit discard applies captured route
+CASE 473-stale-owner-cannot-route: PASS — delayed Leave cannot route or discard another owner's choices
+CASE 466-first-commit-actually-recorded: PASS — actual API/SQLite commit exists; response replaced by HTTP503
+CASE 466-edit-retry-exactly-one-creation: PASS — actual view count after commit/retry = 1, first count = 1
+CASE 466-dismiss-reopen-no-duplicate: PASS — actual view count after reopen = 1
+CASE 466-repeated-retry-preserves-exact-command: PASS — first three committed/replayed requests retain identical UUID, expected revisions and reviewed definition
+Swift/ErrorType.swift:254: Fatal error: Error raised at top level: regressions.APIClient.ClientError.http(400, Optional(regressions.APIErrorBody(code: "validation_error", message: "Invalid live View request", retryable: nil, currentRevision: nil)))

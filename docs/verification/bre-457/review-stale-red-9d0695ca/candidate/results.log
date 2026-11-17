@@ -1,0 +1,1 @@
+Swift/ErrorType.swift:254: Fatal error: Error raised at top level: regressions.APIClient.ClientError.http(400, Optional(regressions.APIErrorBody(code: "validation_error", message: "Invalid live View request", retryable: nil, currentRevision: nil)))

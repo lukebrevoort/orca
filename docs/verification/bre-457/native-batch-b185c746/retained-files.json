@@ -1,0 +1,95 @@
+{
+  "originalCopyCount": 15,
+  "files": [
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/allocated-driver.py",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/allocated-driver.py",
+      "bytes": 5622,
+      "sha256": "643ca542ddc619e81a7ef3537d252495d56303c419208ddbe009fb85ea172a08"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/geometry",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/geometry",
+      "bytes": 82680,
+      "sha256": "0e16094413b90849bf1487d0520108a29fd9956412d2ff163f0174a8061edb5a"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/geometry-compile.log",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/geometry-compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/geometry-replay.log",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/geometry-replay.log",
+      "bytes": 94,
+      "sha256": "85c6afa1f71f63149e2d559436bbaa4d944272582973d70537d9701d33db0228"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/grammar.log",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/grammar.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/main.swift",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/main.swift",
+      "bytes": 2803,
+      "sha256": "4d494265c7e89fb1d68b5353fa25da22dcffd4c2966bda095bb622c4a8b8db14"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01/manifest.json",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/manifest.json",
+      "bytes": 16561,
+      "sha256": "f921b048e15ab65d6d5d18ca2e005d0c99e1f69426e882aeef434fd0b54a3a64"
+    },
+    {
+      "source": "/tmp/bre457-native-batch-review-b185.md",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/review.md",
+      "bytes": 12528,
+      "sha256": "5d21e8258ba39b171ce9dfcd10acb8cc61c8c7966728795dbce8caf35e48d24c"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-01.wrapper.log",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/gate/wrapper.log",
+      "bytes": 5461,
+      "sha256": "5f77327fa8924ecd388df81231b9a828ebe7439785c03374ee5fd76821e8b6f9"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-minimal-gate.py",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/preparation/driver.py",
+      "bytes": 5622,
+      "sha256": "643ca542ddc619e81a7ef3537d252495d56303c419208ddbe009fb85ea172a08"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-geometry-prep.json",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/preparation/geometry-prep.json",
+      "bytes": 751,
+      "sha256": "ffcd3612e82efc7ca67c6476e1aa97b85d2ed0e4a593c55fbcc3cacb043198be"
+    },
+    {
+      "source": "/tmp/bre457-native-b185-geometry-main.swift",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/preparation/main.swift",
+      "bytes": 2803,
+      "sha256": "4d494265c7e89fb1d68b5353fa25da22dcffd4c2966bda095bb622c4a8b8db14"
+    },
+    {
+      "source": "/tmp/bre457-native-batch-design-b185c746.md",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/preparation/design.md",
+      "bytes": 7253,
+      "sha256": "bbf97f7a095ddaa19630ac95e17ee382305430e079c6a8e09631ea45e396fa52"
+    },
+    {
+      "source": "/tmp/bre457-native-batch-b185c746.patch",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/preparation/source.patch",
+      "bytes": 29013,
+      "sha256": "43283a483f05de1c2c2366810089d5fa3d23ec839738412b1c0c38ce54e58d4b"
+    },
+    {
+      "source": "/tmp/bre457-native-batch-b185c746.json",
+      "retained": "docs/verification/bre-457/native-batch-b185c746/preparation/source-inventory.json",
+      "bytes": 12090,
+      "sha256": "599393004314e210248108686f51904e4f6273e743e8924a3579f5489382ff11"
+    }
+  ]
+}

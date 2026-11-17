@@ -56,7 +56,12 @@ actor DraftStore {
         }
     }
     private var drafts = [LocalDraft](); private let fileURL: URL; private var recoveryError: Error?
+    struct DiscardReservation: Sendable, Equatable {
+        let reservation: Reservation
+        let editorID: UUID
+    }
     private var reservations = [UUID: Reservation]()
+    private var discardReservations = [UUID: DiscardReservation]()
     // A visible editor may have typing that has not reached autosave yet.
     // Runtime-only registrations protect that writing during list refreshes.
     private var editors = [UUID: UUID]()
@@ -83,7 +88,7 @@ actor DraftStore {
         drafts.first { $0.id == id && $0.ownerScope == ownerScope && $0.accountId == accountId }
     }
     func beginEditing(_ id: UUID, ownerScope: String, accountId: String, editorID: UUID) -> LocalDraft? {
-        guard let draft = current(id, ownerScope: ownerScope, accountId: accountId) else { return nil }
+        guard discardReservations[id] == nil, let draft = current(id, ownerScope: ownerScope, accountId: accountId) else { return nil }
         editors[editorID] = id
         return draft
     }
@@ -144,6 +149,52 @@ actor DraftStore {
     func release(_ reservation: Reservation) {
         guard reservations[reservation.draftID] == reservation else { return }
         reservations.removeValue(forKey: reservation.draftID)
+        discardReservations.removeValue(forKey: reservation.draftID)
+    }
+    /// The exact current snapshot, sole registered editor and operation lease
+    /// are checked in this one actor turn. Ordinary reservations retain their
+    /// existing semantics; they are not authority to discard visible writing.
+    func reserveForDiscard(_ snapshot: LocalDraft, editorID: UUID) throws -> DiscardReservation {
+        try requireHealthy()
+        guard let current = drafts.first(where: { $0.id == snapshot.id }), current == snapshot else { throw StoreError.staleDraft }
+        guard Self.permitsDiscard(current) else { throw StoreError.identityChanged }
+        guard editors[editorID] == snapshot.id,
+              !editors.contains(where: { $0.key != editorID && $0.value == snapshot.id }),
+              reservations[snapshot.id] == nil else { throw StoreError.operationInProgress }
+        let token = DiscardReservation(reservation: Reservation(id: UUID(), draftID: snapshot.id), editorID: editorID)
+        reservations[snapshot.id] = token.reservation; discardReservations[snapshot.id] = token
+        return token
+    }
+    @discardableResult func checkpointForDiscard(_ snapshot: LocalDraft, content: DraftContent,
+        recipientText: LocalDraft.RecipientText, token: DiscardReservation) throws -> LocalDraft {
+        try requireDiscard(snapshot, token: token)
+        var writing = snapshot; writing.content = content; writing.recipientText = recipientText
+        if writing != snapshot { writing.storageRevision = UUID(); writing.modifiedAt = .now }
+        var candidate = drafts
+        guard let index = candidate.firstIndex(where: { $0.id == snapshot.id }) else { throw StoreError.staleDraft }
+        candidate[index] = writing
+        // Unlike ordinary autosave's identical-value shortcut, confirmation
+        // requires a fresh successful durable checkpoint before any DELETE.
+        try persist(candidate); drafts = candidate
+        return writing
+    }
+    func removeForDiscard(_ snapshot: LocalDraft, token: DiscardReservation) throws {
+        try requireDiscard(snapshot, token: token)
+        // Persist first: disk failure retains the current in-memory writing.
+        let candidate = drafts.filter { $0.id != snapshot.id }
+        try persist(candidate); drafts = candidate
+        editors = editors.filter { $0.value != snapshot.id }
+    }
+    private func requireDiscard(_ snapshot: LocalDraft, token: DiscardReservation) throws {
+        try requireHealthy()
+        try requireReservation(for: snapshot.id, reservation: token.reservation)
+        guard discardReservations[snapshot.id] == token, editors[token.editorID] == snapshot.id,
+              !editors.contains(where: { $0.key != token.editorID && $0.value == snapshot.id }) else { throw StoreError.invalidReservation }
+        guard let current = drafts.first(where: { $0.id == snapshot.id }), current == snapshot else { throw StoreError.staleDraft }
+        guard Self.permitsDiscard(current) else { throw StoreError.identityChanged }
+    }
+    nonisolated static func permitsDiscard(_ draft: LocalDraft) -> Bool {
+        ["local", "draft"].contains(draft.deliveryState) && draft.idempotencyKey == nil
     }
     func isReserved(_ id: UUID) -> Bool { reservations[id] != nil }
     @discardableResult func save(_ draft: LocalDraft, reservation: Reservation? = nil) throws -> LocalDraft {
@@ -278,4 +329,88 @@ actor DraftStore {
         guard draft.ownerScope == current.ownerScope, draft.accountId == current.accountId else { throw StoreError.identityChanged }
     }
     private func persist(_ value: [LocalDraft]) throws { try JSONEncoder().encode(value).write(to: fileURL, options: [.atomic, .completeFileProtection]) }
+}
+
+@MainActor enum ComposeSaveSequencing {
+    static func enqueue(after previous: Task<Void, Never>?, debounce: Bool,
+                        canSave: @escaping @MainActor () -> Bool,
+                        save: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        previous?.cancel()
+        return Task { @MainActor in
+            if debounce { try? await Task.sleep(for: .milliseconds(350)) }
+            // Even a cancelled queue entry must drain its predecessor. Otherwise
+            // Send could await this entry while an older disk write is still live.
+            await previous?.value
+            guard !Task.isCancelled, canSave() else { return }
+            await save()
+        }
+    }
+}
+
+/// Captured from the visible composer, never reconstructed from the currently
+/// selected account. Raw recipients deliberately include unfinished typing.
+struct ComposeDiscardContext: Equatable {
+    var draft: LocalDraft
+    var content: DraftContent
+    var recipientText: LocalDraft.RecipientText
+    var editorID: UUID
+    var generation: UUID
+    var clientID: ObjectIdentifier?
+    var origin: String
+    func permits(_ current: Self) -> Bool {
+        draft.id == current.draft.id && draft.ownerScope == current.draft.ownerScope &&
+        draft.accountId == current.draft.accountId && draft.serverID == current.draft.serverID &&
+        editorID == current.editorID && generation == current.generation && clientID == current.clientID &&
+        origin == current.origin && content == current.content && recipientText == current.recipientText &&
+        DraftStore.permitsDiscard(current.draft)
+    }
+}
+
+@MainActor final class ComposeDiscardController {
+    enum Outcome: Equatable {
+        case discarded
+        case kept(String)
+        case serverDeletedLocalKept
+        case originalRemoved
+    }
+    private(set) var busy = false
+    /// Callers synchronously freeze their UI before starting this operation.
+    /// Every suspension is followed by the original approval/ownership guard.
+    func discard(_ approval: ComposeDiscardContext, store: DraftStore, predecessor: Task<Void, Never>?,
+                 current: @escaping @MainActor () -> ComposeDiscardContext?,
+                 checkpointed: @MainActor (LocalDraft) -> Void = { _ in },
+                 leased: @MainActor (DraftStore.Reservation?) -> Void = { _ in },
+                 delete: @MainActor (LocalDraft) async throws -> Void) async -> Outcome {
+        guard !busy else { return .kept("Discard is already in progress. Your writing is kept.") }
+        busy = true
+        defer { busy = false }
+        func valid() -> Bool { !Task.isCancelled && current().map(approval.permits) == true }
+        predecessor?.cancel(); await predecessor?.value
+        guard valid(), let snapshot = current()?.draft else { return .kept("Discard stopped because this composer changed. Your writing is kept.") }
+        var lease: DraftStore.DiscardReservation?
+        var serverDeleted = false
+        let result: Outcome
+        do {
+            let token = try await store.reserveForDiscard(snapshot, editorID: approval.editorID)
+            lease = token; leased(token.reservation)
+            guard valid() else { throw CancellationError() }
+            let saved = try await store.checkpointForDiscard(snapshot, content: approval.content,
+                recipientText: approval.recipientText, token: token)
+            // A committed checkpoint is retained even if navigation interrupts
+            // the operation; it must not be replaced by an older local revision.
+            if valid() { checkpointed(saved) }
+            guard valid() else { throw CancellationError() }
+            if saved.serverID != nil {
+                try await delete(saved) // This closure must require actual 204.
+                serverDeleted = true
+                guard valid() else { throw CancellationError() }
+            }
+            try await store.removeForDiscard(saved, token: token)
+            result = valid() ? .discarded : .originalRemoved
+        } catch {
+            result = serverDeleted ? .serverDeletedLocalKept : .kept("Could not confirm discard. Your writing is kept on this device. You can keep editing or explicitly try Discard draft again.")
+        }
+        if let lease { await store.release(lease.reservation); leased(nil) }
+        return result
+    }
 }

@@ -1,0 +1,20 @@
+{
+  "sourceSHA": "1b1dddbfb22e0b4920503824a1fa54445e29e80f",
+  "cleanAtStart": true,
+  "runtimeBaseline": "unrun; hosted Apple only; source audit does not establish actual failing runtime",
+  "findings": [
+    "No native importance API calls/projections/writer",
+    "Default Inbox rather than Important",
+    "All Mail can be hidden by device preference",
+    "Search unavailable within saved views",
+    "Native Settings is one long page; no native account preference editor"
+  ],
+  "files": {
+    "apps/ios/Orca/Mail/InboxView.swift": "fca02699ac1aa6839afe19dca28bb1843bc6c42a1c142f7931708eda30b1d63e",
+    "apps/ios/Orca/Mail/MailboxViews.swift": "961e28fff731d86c1ad5e193216f6f869318e40aeb9170faf4495097e25ce59e",
+    "apps/ios/Orca/Core/APIClient.swift": "4e7b123e79aa043d440551a4bf145adc7e727956fb6ebba4dbb5f2b53e798e01",
+    "apps/ios/Orca/Core/Models.swift": "1113a5ba4a094c10f5dd58de104678de50292670cdb56262bfcde16570fd9dfd",
+    "apps/ios/Orca/Mail/ThreadView.swift": "15f7f3b4219cc120f7cf4e091e03e46ae46dfdd8be45afa7e5c74ee269d37aef",
+    "apps/ios/Orca/SettingsView.swift": "8038c700659aefa4eb826db068037b46287dba33978bd9f2852c6306c6862102"
+  }
+}

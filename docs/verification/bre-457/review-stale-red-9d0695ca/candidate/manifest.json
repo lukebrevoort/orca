@@ -1,0 +1,24 @@
+{
+  "sourceSHA": "9d0695ca324e015a86e177ccddb64595c74ea02a",
+  "scope": "production Foundation controllers, synthetic URLProtocol and optional actual HTTP/API/SQLite; not Apple UI runtime",
+  "sourceHashes": {
+    "Orca/Core/Models.swift": "c0332c3c0a01f190af1ded1a90aa9ba581b300f416f741cc1412b6c76d74836d",
+    "Orca/Core/APIClient.swift": "7a321288491cfdee95c277fc6f625249ed9fac87ffc093ed58819a438eef68df",
+    "Orca/Core/CacheStore.swift": "3ba61106879acdf5ee8ddc6183160b656f89788843e4ca3728b83b0cbfa344b6",
+    "Orca/Core/MailActionJSON.swift": "29821025192bbe9e45253e01ba5c0bfaa261ee5ac4658508793f4adc6f958fac",
+    "Orca/Core/Importance.swift": "38debfda6b9c3cc0a22ae551adc66511f3a5cffec29794bdeeaf25fd7f37a36b",
+    "Orca/Core/InboxViewModel.swift": "2edaedae14bbda47d5a30e258393fe7d0ae2946238b9dc34ae9681c86823ea08",
+    "Orca/Core/AccountPreferences.swift": "a0ebcc5273dfa57e24f12c9a61669355834c820ed295927076d94e44944a2f2a",
+    "Orca/Core/NotificationNavigation.swift": "635618e29c437c02c13ad28efe5cbb180e810ab17aac266cc9ef3f7d44444ac7",
+    "Orca/Core/NativeViewEditorController.swift": "01bf822907b49afb894d34d4c118f1dd0b13e4209b2427da7cb7cef5677c66e4",
+    "Tools/ReviewRegressions/Support.swift": "9d38fde119f0b647c747023418c82fa039698ff23c5d3f8e849419a197425ff9",
+    "Tools/ReviewRegressions/Run.swift": "be5f23391686cd5d2fc90212f6e4f370e0b8464273a2ef13db80743384640b6a"
+  },
+  "harnessHashes": {
+    "run.py": "2c5639ea7b272000aa4a810f297023cefe802587215a4c90836342907314d76c",
+    "api-fixture.ts": "65a6988152bbdf41cf929a9235c1be66f79a182b1339a2b04a3e9be1846660ab",
+    "runner-lifecycle.py": "3fc5ee3c81ec319c270e2603810ca69bbedf6a2eba353ebd10afdb32600ab983"
+  },
+  "compileExit": 0,
+  "regressionExit": -5
+}

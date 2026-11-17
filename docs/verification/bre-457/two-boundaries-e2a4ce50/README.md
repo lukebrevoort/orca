@@ -1,0 +1,7 @@
+# Two-boundary e2a source/syntax proof
+
+Exact source `e2a4ce5071c66bc2fbb4f38318457f63821c4b98` removes only broad Settings root AX identity and validates bounded permission-label components in test-only geometry/capture. [Full independent review](review.md) is APPROVED WITH COMMENTS/no source blocker. Zero footer matches remain distinct from proven permission absence; hosted read-only cases must show two real component frames, plus the granted no-footer path.
+
+[Grammar manifest](grammar/manifest.json):44 start/end hashes match clean exacte2a, exit0,0.430823s, empty [log](grammar/grammar.log); parser84804 terminal. [Exact driver](grammar/driver.py), SHA2560125c854f0227cdb44fa06fd42116c507e9acdf27f5aae38b07c7e6300873b34, and [full wrapper/resources](grammar/wrapper.log):wrapper84797 terminal0/~0.69s,48% memory-free before/after. All original bytes and current44 input hashes were rechecked for retention. No parse rerun occurred.
+
+This is syntax/static source proof ONLY, not UIKit types/XCTest/native UI/423/runner proof.64b reader bridge/test04/three UIKit cases remain preserved and await actual hosted tests. Original724 mailbox/compose failures stay in [retained evidence](../mailbox-compose-724-boundaries/README.md). P04/AX/Search/menu/sender findings are not fixed by e2a. Subsequent batch source changes require new exact-source review and allocated gates; e2a approval does not transfer. Publication/all33/formal merge remain ROOT gates.

@@ -1,0 +1,49 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "338BF4B8-064D-4455-BD80-117FE9E6C3D2",
+        "deviceName" : "Orca CI 43122924544-1",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23E254a",
+        "osVersion" : "26.4.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 1,
+      "passedTests" : 0,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Orca · Built with macOS 26.7.2",
+  "expectedFailures" : 0,
+  "failedTests" : 1,
+  "finishTime" : 1794442445.274,
+  "passedTests" : 0,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1794442280.92,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "failed - System picker must expose exactly one recording imported for this fixture day",
+      "targetName" : "OrcaUITests",
+      "testIdentifier" : 1,
+      "testIdentifierString" : "OrcaUITests/test38FeedbackCornerCreatesLinearTicket()",
+      "testIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test38FeedbackCornerCreatesLinearTicket",
+      "testName" : "test38FeedbackCornerCreatesLinearTicket()"
+    }
+  ],
+  "title" : "Test - Orca",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 1
+}

@@ -1,0 +1,176 @@
+{
+  "status": "both complete NONPASS; candidate only remaining named-space policy reds",
+  "records": [
+    {
+      "scope": "baseline-1f6b453b",
+      "executedSHA": "1f6b453bb128c3c32c3306554b994f8e665f2a7e",
+      "completed": 275,
+      "passed": 270,
+      "failures": [
+        "CASE NAV-A-named-focus-preserved: FAIL \u2014 all active named Spaces must survive; old projection excludes this actual legacy Focus ID",
+        "CASE NAV-A-named-inbox-preserved: FAIL \u2014 user-owned fallback name must survive in named Spaces; fixed utility label is not a substitute",
+        "CASE NAV-API-sender-substring-scope: FAIL \u2014 explicit All Mail literal sender name/address substring scope; not importance identity",
+        "CASE NAV-DIAG-original-wire-evidence-complete: FAIL \u2014 actual original request and server raw query tied to a separately labeled URLComponents reconstruction; decoded sender and rows retained without asserting a hypothesis",
+        "CASE NAV-DIAG-direct-wire-preserves-plus: FAIL \u2014 explicitly encoded transport reaches the same API as a literal plus, not a space"
+      ],
+      "compileExit": 0,
+      "runtimeExit": 1,
+      "grammarExit": 0,
+      "coverageMatched": true,
+      "elapsedSeconds": 21.208759667002596,
+      "serverSenderRecords": [
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle+nav@example.com",
+          "sender": "needle nav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%2Bnav%40example.com",
+          "sender": "needle+nav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [
+            "nav-mail-archived",
+            "nav-mail-quiet"
+          ],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=neighbor@example.com",
+          "sender": "neighbor@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [
+            "nav-mail-inbox"
+          ],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%20nav@example.com",
+          "sender": "needle nav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%252Bnav@example.com",
+          "sender": "needle%2Bnav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        }
+      ],
+      "independentSQLiteRows": [
+        "nav-mail-archived",
+        "nav-mail-quiet"
+      ],
+      "readRequests": 17,
+      "authDML": 0,
+      "domainDML": 0,
+      "seedDML": 156,
+      "providerClientCalls": 0,
+      "outboundNetworkCalls": 0
+    },
+    {
+      "scope": "candidate-dd00cb04",
+      "executedSHA": "dd00cb041c56f39efbd7a92c2e88e7d64677ec31",
+      "completed": 275,
+      "passed": 273,
+      "failures": [
+        "CASE NAV-A-named-focus-preserved: FAIL \u2014 all active named Spaces must survive; old projection excludes this actual legacy Focus ID",
+        "CASE NAV-A-named-inbox-preserved: FAIL \u2014 user-owned fallback name must survive in named Spaces; fixed utility label is not a substitute"
+      ],
+      "compileExit": 0,
+      "runtimeExit": 1,
+      "grammarExit": 0,
+      "coverageMatched": true,
+      "elapsedSeconds": 20.9678682499798,
+      "serverSenderRecords": [
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%2Bnav@example.com",
+          "sender": "needle+nav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [
+            "nav-mail-archived",
+            "nav-mail-quiet"
+          ],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%2Bnav%40example.com",
+          "sender": "needle+nav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [
+            "nav-mail-archived",
+            "nav-mail-quiet"
+          ],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=neighbor@example.com",
+          "sender": "neighbor@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [
+            "nav-mail-inbox"
+          ],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%20nav@example.com",
+          "sender": "needle nav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        },
+        {
+          "rawPercentEncodedQuery": "accountId=account&view=all&sender=needle%252Bnav@example.com",
+          "sender": "needle%2Bnav@example.com",
+          "accountId": "account",
+          "view": "all",
+          "status": 200,
+          "rowIds": [],
+          "otherRowCount": 0,
+          "decodeFailed": false
+        }
+      ],
+      "independentSQLiteRows": [
+        "nav-mail-archived",
+        "nav-mail-quiet"
+      ],
+      "readRequests": 17,
+      "authDML": 0,
+      "domainDML": 0,
+      "seedDML": 156,
+      "providerClientCalls": 0,
+      "outboundNetworkCalls": 0
+    }
+  ],
+  "limits": "Baseline observer admitted no records; callback-vs-filter cause not instrumented. Candidate rescoping uses server witnesses, not a request-side observer pass. No AppleUI/all33 proof."
+}

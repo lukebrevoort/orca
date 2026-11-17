@@ -1,0 +1,2092 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "B1DF1EB0-9DC8-42D8-9C2D-D9FEB2926EA2",
+      "deviceName" : "Orca CI 43024332168-1",
+      "modelName" : "iPhone 17",
+      "osBuildNumber" : "23E254a",
+      "osVersion" : "26.4.1",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "duration" : "0.0054s",
+                  "durationInSeconds" : 0.0053560733795166016,
+                  "name" : "testCommittedConversionCanBeAdoptedAfterInterruptionButCannotReplaceAnotherIdentityOrRevision()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testCommittedConversionCanBeAdoptedAfterInterruptionButCannotReplaceAnotherIdentityOrRevision()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testCommittedConversionCanBeAdoptedAfterInterruptionButCannotReplaceAnotherIdentityOrRevision",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.016s",
+                  "durationInSeconds" : 0.016070008277893066,
+                  "name" : "testConversionRefusesFrozenDeliveryStates()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testConversionRefusesFrozenDeliveryStates()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testConversionRefusesFrozenDeliveryStates",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0063s",
+                  "durationInSeconds" : 0.006257057189941406,
+                  "name" : "testConversionRejectsChangedBodyStaleSnapshotAndForeignLease()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testConversionRejectsChangedBodyStaleSnapshotAndForeignLease()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testConversionRejectsChangedBodyStaleSnapshotAndForeignLease",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0011s",
+                  "durationInSeconds" : 0.001098036766052246,
+                  "name" : "testConversionReservationExcludesEveryOtherMutationAndRepeatTap()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testConversionReservationExcludesEveryOtherMutationAndRepeatTap()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testConversionReservationExcludesEveryOtherMutationAndRepeatTap",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.038s",
+                  "durationInSeconds" : 0.03766298294067383,
+                  "name" : "testDraftLifecycleConvertedBodyEditsRemainPlainText()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testDraftLifecycleConvertedBodyEditsRemainPlainText()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testDraftLifecycleConvertedBodyEditsRemainPlainText",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.003s",
+                  "durationInSeconds" : 0.0029610395431518555,
+                  "name" : "testDraftLifecycleOpeningLocalRichDraftPreservesHTML()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testDraftLifecycleOpeningLocalRichDraftPreservesHTML()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testDraftLifecycleOpeningLocalRichDraftPreservesHTML",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00074s",
+                  "durationInSeconds" : 0.0007419586181640625,
+                  "name" : "testDraftLifecycleOpeningServerRichDraftPreservesHTML()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testDraftLifecycleOpeningServerRichDraftPreservesHTML()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testDraftLifecycleOpeningServerRichDraftPreservesHTML",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0031s",
+                  "durationInSeconds" : 0.003056049346923828,
+                  "name" : "testDraftLifecycleStaleSaveCannotEraseAnEstablishedServerIdentity()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testDraftLifecycleStaleSaveCannotEraseAnEstablishedServerIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testDraftLifecycleStaleSaveCannotEraseAnEstablishedServerIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0028s",
+                  "durationInSeconds" : 0.0027669668197631836,
+                  "name" : "testDraftLifecycleUnapprovedBodyEditCannotDiscardHTMLDuringAutosave()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testDraftLifecycleUnapprovedBodyEditCannotDiscardHTMLDuringAutosave()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testDraftLifecycleUnapprovedBodyEditCannotDiscardHTMLDuringAutosave",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.004s",
+                  "durationInSeconds" : 0.003986001014709473,
+                  "name" : "testDraftLifecycleUnchangedRichBodySurvivesSaveAndReopen()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testDraftLifecycleUnchangedRichBodySurvivesSaveAndReopen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testDraftLifecycleUnchangedRichBodySurvivesSaveAndReopen",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0087s",
+                  "durationInSeconds" : 0.00866997241973877,
+                  "name" : "testExplicitConversionPersistsBeforeAnyTextEditAndKeepsDraftIdentity()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testExplicitConversionPersistsBeforeAnyTextEditAndKeepsDraftIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testExplicitConversionPersistsBeforeAnyTextEditAndKeepsDraftIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0041s",
+                  "durationInSeconds" : 0.004052996635437012,
+                  "name" : "testFailedConversionKeepsRichBodyOnDiskAndInMemoryUntilSuccessfulRetry()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testFailedConversionKeepsRichBodyOnDiskAndInMemoryUntilSuccessfulRetry()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testFailedConversionKeepsRichBodyOnDiskAndInMemoryUntilSuccessfulRetry",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00099s",
+                  "durationInSeconds" : 0.000988006591796875,
+                  "name" : "testSharedOperationCompletionReloadsOnlyTheBlockedObserver()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testSharedOperationCompletionReloadsOnlyTheBlockedObserver()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testSharedOperationCompletionReloadsOnlyTheBlockedObserver",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0011s",
+                  "durationInSeconds" : 0.0011360645294189453,
+                  "name" : "testVerifiedCopyOnlyAllowsMatchingTerminalDeliveryStates()",
+                  "nodeIdentifier" : "DraftLifecycleTests/testVerifiedCopyOnlyAllowsMatchingTerminalDeliveryStates()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests/testVerifiedCopyOnlyAllowsMatchingTerminalDeliveryStates",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "DraftLifecycleTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftLifecycleTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.0033s",
+                  "durationInSeconds" : 0.0032999515533447266,
+                  "name" : "testConcurrentReservationAcquisitionHasExactlyOneOwnerPerDraft()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testConcurrentReservationAcquisitionHasExactlyOneOwnerPerDraft()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testConcurrentReservationAcquisitionHasExactlyOneOwnerPerDraft",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0036s",
+                  "durationInSeconds" : 0.0036269426345825195,
+                  "name" : "testCurrentRevisionCannotRegressEstablishedIdentityOrDeliveryMetadata()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testCurrentRevisionCannotRegressEstablishedIdentityOrDeliveryMetadata()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testCurrentRevisionCannotRegressEstablishedIdentityOrDeliveryMetadata",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0025s",
+                  "durationInSeconds" : 0.00251007080078125,
+                  "name" : "testDeletedPersistedDraftCannotBeResurrectedEvenAfterStoreRecreation()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testDeletedPersistedDraftCannotBeResurrectedEvenAfterStoreRecreation()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testDeletedPersistedDraftCannotBeResurrectedEvenAfterStoreRecreation",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.046s",
+                  "durationInSeconds" : 0.046414971351623535,
+                  "name" : "testDiskFailuresNeverCommitSaveTransitionCopyOrRemovalInMemory()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testDiskFailuresNeverCommitSaveTransitionCopyOrRemovalInMemory()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testDiskFailuresNeverCommitSaveTransitionCopyOrRemovalInMemory",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0037s",
+                  "durationInSeconds" : 0.0037419795989990234,
+                  "name" : "testEditableCopyRejectsUnverifiedStatusesIdentityAndStaleSnapshots()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testEditableCopyRejectsUnverifiedStatusesIdentityAndStaleSnapshots()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testEditableCopyRejectsUnverifiedStatusesIdentityAndStaleSnapshots",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0051s",
+                  "durationInSeconds" : 0.00507199764251709,
+                  "name" : "testEveryDeliveryTransitionReturnsAFreshDurableRevision()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testEveryDeliveryTransitionReturnsAFreshDurableRevision()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testEveryDeliveryTransitionReturnsAFreshDurableRevision",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.013s",
+                  "durationInSeconds" : 0.012676000595092773,
+                  "name" : "testExplicitEditableCopiesPreserveWritingAndRetireOldIdentity()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testExplicitEditableCopiesPreserveWritingAndRetireOldIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testExplicitEditableCopiesPreserveWritingAndRetireOldIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.011s",
+                  "durationInSeconds" : 0.01110994815826416,
+                  "name" : "testFailedLegacyMigrationPreservesFileAndDoesNotExposeUnversionedRows()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testFailedLegacyMigrationPreservesFileAndDoesNotExposeUnversionedRows()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testFailedLegacyMigrationPreservesFileAndDoesNotExposeUnversionedRows",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0048s",
+                  "durationInSeconds" : 0.004829049110412598,
+                  "name" : "testLegacyRowsReceiveDurableRevisionsBeforeTheyCanBeOpened()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testLegacyRowsReceiveDurableRevisionsBeforeTheyCanBeOpened()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testLegacyRowsReceiveDurableRevisionsBeforeTheyCanBeOpened",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0018s",
+                  "durationInSeconds" : 0.001782059669494629,
+                  "name" : "testNoOpSavePreservesRevisionTimestampAndDiskBytes()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testNoOpSavePreservesRevisionTimestampAndDiskBytes()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testNoOpSavePreservesRevisionTimestampAndDiskBytes",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.032s",
+                  "durationInSeconds" : 0.03174304962158203,
+                  "name" : "testReservationAcquisitionRejectsStaleRemovedUnsavedAndWrongScopeSnapshots()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testReservationAcquisitionRejectsStaleRemovedUnsavedAndWrongScopeSnapshots()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testReservationAcquisitionRejectsStaleRemovedUnsavedAndWrongScopeSnapshots",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0024s",
+                  "durationInSeconds" : 0.002437114715576172,
+                  "name" : "testReservationBlocksEveryForeignMutationIncludingIdenticalAutosave()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testReservationBlocksEveryForeignMutationIncludingIdenticalAutosave()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testReservationBlocksEveryForeignMutationIncludingIdenticalAutosave",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0088s",
+                  "durationInSeconds" : 0.008782029151916504,
+                  "name" : "testReservationOwnerCanMakeVerifiedEditableCopyWithoutTransferringLease()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testReservationOwnerCanMakeVerifiedEditableCopyWithoutTransferringLease()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testReservationOwnerCanMakeVerifiedEditableCopyWithoutTransferringLease",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0081s",
+                  "durationInSeconds" : 0.008097052574157715,
+                  "name" : "testReservationOwnerCanPersistServerIdentityAndEveryDeliveryTransition()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testReservationOwnerCanPersistServerIdentityAndEveryDeliveryTransition()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testReservationOwnerCanPersistServerIdentityAndEveryDeliveryTransition",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0049s",
+                  "durationInSeconds" : 0.004929065704345703,
+                  "name" : "testReservationsAreEphemeralAndNeverSerialized()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testReservationsAreEphemeralAndNeverSerialized()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testReservationsAreEphemeralAndNeverSerialized",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0058s",
+                  "durationInSeconds" : 0.005815029144287109,
+                  "name" : "testStaleBodyAndAttachmentSnapshotCannotOverwriteNewerWriting()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testStaleBodyAndAttachmentSnapshotCannotOverwriteNewerWriting()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testStaleBodyAndAttachmentSnapshotCannotOverwriteNewerWriting",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0045s",
+                  "durationInSeconds" : 0.004545092582702637,
+                  "name" : "testStaleButIdenticalSaveAdoptsCurrentRevisionWithoutAnotherWrite()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testStaleButIdenticalSaveAdoptsCurrentRevisionWithoutAnotherWrite()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testStaleButIdenticalSaveAdoptsCurrentRevisionWithoutAnotherWrite",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.022s",
+                  "durationInSeconds" : 0.021553993225097656,
+                  "name" : "testWrongReleaseCannotUnlockDraftAndExpiredTokenCannotMutateAfterReacquisition()",
+                  "nodeIdentifier" : "DraftStoreRevisionTests/testWrongReleaseCannotUnlockDraftAndExpiredTokenCannotMutateAfterReacquisition()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests/testWrongReleaseCannotUnlockDraftAndExpiredTokenCannotMutateAfterReacquisition",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "DraftStoreRevisionTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreRevisionTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.0049s",
+                  "durationInSeconds" : 0.0049239397048950195,
+                  "name" : "testBeginEditingReturnsLatestRowAndRejectsWrongScopeOrRemovedIdentity()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testBeginEditingReturnsLatestRowAndRejectsWrongScopeOrRemovedIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testBeginEditingReturnsLatestRowAndRejectsWrongScopeOrRemovedIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0039s",
+                  "durationInSeconds" : 0.0038930177688598633,
+                  "name" : "testEditableCopyTransfersAllEditorRegistrationsToFreshIdentity()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testEditableCopyTransfersAllEditorRegistrationsToFreshIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testEditableCopyTransfersAllEditorRegistrationsToFreshIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0048s",
+                  "durationInSeconds" : 0.004794001579284668,
+                  "name" : "testEditorRegistrationsAreEphemeralAcrossStoreRestart()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testEditorRegistrationsAreEphemeralAcrossStoreRestart()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testEditorRegistrationsAreEphemeralAcrossStoreRestart",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0034s",
+                  "durationInSeconds" : 0.0033789873123168945,
+                  "name" : "testFailedCopyOrRemovalKeepsOriginalEditorRegistration()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testFailedCopyOrRemovalKeepsOriginalEditorRegistration()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testFailedCopyOrRemovalKeepsOriginalEditorRegistration",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0052s",
+                  "durationInSeconds" : 0.005243897438049316,
+                  "name" : "testOpenEditorsProtectUnsavedWritingUntilEveryEditorEnds()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testOpenEditorsProtectUnsavedWritingUntilEveryEditorEnds()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testOpenEditorsProtectUnsavedWritingUntilEveryEditorEnds",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.039s",
+                  "durationInSeconds" : 0.03902602195739746,
+                  "name" : "testOwnedSentReconciliationPreservesDivergentWritingWhileSkippingOtherLeasesAndEditors()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testOwnedSentReconciliationPreservesDivergentWritingWhileSkippingOtherLeasesAndEditors()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testOwnedSentReconciliationPreservesDivergentWritingWhileSkippingOtherLeasesAndEditors",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.01s",
+                  "durationInSeconds" : 0.010120034217834473,
+                  "name" : "testOwnedSentReconciliationRejectsWrongExpiredCrossDraftAndCrossScopeReservations()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testOwnedSentReconciliationRejectsWrongExpiredCrossDraftAndCrossScopeReservations()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testOwnedSentReconciliationRejectsWrongExpiredCrossDraftAndCrossScopeReservations",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.007s",
+                  "durationInSeconds" : 0.007036089897155762,
+                  "name" : "testOwnedSentReconciliationRemovesExactShadowAndRejectsObserverResurrection()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testOwnedSentReconciliationRemovesExactShadowAndRejectsObserverResurrection()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testOwnedSentReconciliationRemovesExactShadowAndRejectsObserverResurrection",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.061s",
+                  "durationInSeconds" : 0.060777902603149414,
+                  "name" : "testPreservedSentWritingIsFrozenUntilVerifiedExplicitCopy()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testPreservedSentWritingIsFrozenUntilVerifiedExplicitCopy()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testPreservedSentWritingIsFrozenUntilVerifiedExplicitCopy",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0065s",
+                  "durationInSeconds" : 0.006542086601257324,
+                  "name" : "testRemovalRetiresOnlyMatchingEditorRegistrations()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testRemovalRetiresOnlyMatchingEditorRegistrations()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testRemovalRetiresOnlyMatchingEditorRegistrations",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0063s",
+                  "durationInSeconds" : 0.0063010454177856445,
+                  "name" : "testSentReconciliationDiskFailureDoesNotRemoveOrFreezeInMemory()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationDiskFailureDoesNotRemoveOrFreezeInMemory()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationDiskFailureDoesNotRemoveOrFreezeInMemory",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.004s",
+                  "durationInSeconds" : 0.003970026969909668,
+                  "name" : "testSentReconciliationIgnoresLocalRowsWithoutVerifiedServerRevision()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationIgnoresLocalRowsWithoutVerifiedServerRevision()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationIgnoresLocalRowsWithoutVerifiedServerRevision",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0027s",
+                  "durationInSeconds" : 0.002696990966796875,
+                  "name" : "testSentReconciliationIgnoresWrongStatusAccountScopeIdentityAndOldRevision()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationIgnoresWrongStatusAccountScopeIdentityAndOldRevision()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationIgnoresWrongStatusAccountScopeIdentityAndOldRevision",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0048s",
+                  "durationInSeconds" : 0.004781007766723633,
+                  "name" : "testSentReconciliationOnlyChangesMatchingRowsAndReturnsCurrentScopedList()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationOnlyChangesMatchingRowsAndReturnsCurrentScopedList()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationOnlyChangesMatchingRowsAndReturnsCurrentScopedList",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.02s",
+                  "durationInSeconds" : 0.020328998565673828,
+                  "name" : "testSentReconciliationPreservesEveryWritingDifferenceAndRawUnfinishedRecipient()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationPreservesEveryWritingDifferenceAndRawUnfinishedRecipient()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationPreservesEveryWritingDifferenceAndRawUnfinishedRecipient",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.068s",
+                  "durationInSeconds" : 0.06800901889801025,
+                  "name" : "testSentReconciliationRemembersNewestVerifiedRevisionBeforeIgnoringOlderMatchingResponse()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationRemembersNewestVerifiedRevisionBeforeIgnoringOlderMatchingResponse()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationRemembersNewestVerifiedRevisionBeforeIgnoringOlderMatchingResponse",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0019s",
+                  "durationInSeconds" : 0.0019190311431884766,
+                  "name" : "testSentReconciliationSkipsActiveReservationUntilRelease()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationSkipsActiveReservationUntilRelease()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationSkipsActiveReservationUntilRelease",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0022s",
+                  "durationInSeconds" : 0.0022200345993041992,
+                  "name" : "testSentReconciliationUsesLatestActorWritingRatherThanPreFetchSnapshotOrTimestamps()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testSentReconciliationUsesLatestActorWritingRatherThanPreFetchSnapshotOrTimestamps()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testSentReconciliationUsesLatestActorWritingRatherThanPreFetchSnapshotOrTimestamps",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.057s",
+                  "durationInSeconds" : 0.0573350191116333,
+                  "name" : "testVerifiedSentRemovesUnchangedShadowAfterRestartAndNormalizesRecipientNames()",
+                  "nodeIdentifier" : "DraftStoreSentReconciliationTests/testVerifiedSentRemovesUnchangedShadowAfterRestartAndNormalizesRecipientNames()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests/testVerifiedSentRemovesUnchangedShadowAfterRestartAndNormalizesRecipientNames",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "DraftStoreSentReconciliationTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/DraftStoreSentReconciliationTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.03s",
+                  "durationInSeconds" : 0.029590964317321777,
+                  "name" : "testAvailabilityFailsClosedAndBlocksOtherAccounts()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testAvailabilityFailsClosedAndBlocksOtherAccounts()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testAvailabilityFailsClosedAndBlocksOtherAccounts",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.013s",
+                  "durationInSeconds" : 0.013182997703552246,
+                  "name" : "testChangingOwnerClearsDraftAndRejectsOldScopeActions()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testChangingOwnerClearsDraftAndRejectsOldScopeActions()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testChangingOwnerClearsDraftAndRejectsOldScopeActions",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0023s",
+                  "durationInSeconds" : 0.0022820234298706055,
+                  "name" : "testFeedbackValidationUsesWireLengthAndRequiresText()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testFeedbackValidationUsesWireLengthAndRequiresText()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testFeedbackValidationUsesWireLengthAndRequiresText",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.069s",
+                  "durationInSeconds" : 0.06863701343536377,
+                  "name" : "testImagePreparationStripsMetadataAndBoundsDecodedDimensions()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testImagePreparationStripsMetadataAndBoundsDecodedDimensions()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testImagePreparationStripsMetadataAndBoundsDecodedDimensions",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.023s",
+                  "durationInSeconds" : 0.022854924201965332,
+                  "name" : "testLostResponseRetainsExactSubmissionUntilConfirmedTicket()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testLostResponseRetainsExactSubmissionUntilConfirmedTicket()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testLostResponseRetainsExactSubmissionUntilConfirmedTicket",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0033s",
+                  "durationInSeconds" : 0.003284931182861328,
+                  "name" : "testMalformedReceiptNeverReportsSuccessOrDropsDraft()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testMalformedReceiptNeverReportsSuccessOrDropsDraft()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testMalformedReceiptNeverReportsSuccessOrDropsDraft",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.078s",
+                  "durationInSeconds" : 0.07784593105316162,
+                  "name" : "testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testMediaBoundsRemovalAndRejectedImportDoNotLoseDraft",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0043s",
+                  "durationInSeconds" : 0.00427699089050293,
+                  "name" : "testMediaRequiresReviewAndCleansUpOnOwnerChange()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testMediaRequiresReviewAndCleansUpOnOwnerChange()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testMediaRequiresReviewAndCleansUpOnOwnerChange",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.014s",
+                  "durationInSeconds" : 0.013858914375305176,
+                  "name" : "testMediaRetryFreezesBytesAndSuccessRemovesPreview()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testMediaRetryFreezesBytesAndSuccessRemovesPreview()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testMediaRetryFreezesBytesAndSuccessRemovesPreview",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.024s",
+                  "durationInSeconds" : 0.024472951889038086,
+                  "name" : "testScreenCaptureRequiresForegroundOriginatingScene()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testScreenCaptureRequiresForegroundOriginatingScene()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testScreenCaptureRequiresForegroundOriginatingScene",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0041s",
+                  "durationInSeconds" : 0.004114985466003418,
+                  "name" : "testScreenRecordingCancellationFencesLatePermissionAndAccountChange()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testScreenRecordingCancellationFencesLatePermissionAndAccountChange()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testScreenRecordingCancellationFencesLatePermissionAndAccountChange",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0024s",
+                  "durationInSeconds" : 0.0024460554122924805,
+                  "name" : "testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testScreenRecordingReturnsUnreviewedMediaAndStopsAtLimit",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0067s",
+                  "durationInSeconds" : 0.006698966026306152,
+                  "name" : "testScreenRecordingUnavailableAndOversizedResultsNeverAttach()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testScreenRecordingUnavailableAndOversizedResultsNeverAttach()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testScreenRecordingUnavailableAndOversizedResultsNeverAttach",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "2s",
+                  "durationInSeconds" : 2.422369956970215,
+                  "name" : "testScreenRecordingWriterProducesSilentBoundedVideo()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testScreenRecordingWriterProducesSilentBoundedVideo()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testScreenRecordingWriterProducesSilentBoundedVideo",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0038s",
+                  "durationInSeconds" : 0.003793001174926758,
+                  "name" : "testTicketLinkAcceptsOnlyHTTPSLinearURLs()",
+                  "nodeIdentifier" : "FeedbackTicketTests/testTicketLinkAcceptsOnlyHTTPSLinearURLs()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests/testTicketLinkAcceptsOnlyHTTPSLinearURLs",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "FeedbackTicketTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/FeedbackTicketTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.042s",
+                  "durationInSeconds" : 0.042456984519958496,
+                  "name" : "testCancelledOrChangedIdentityResponseCannotPublishOrCache()",
+                  "nodeIdentifier" : "InboxLoadingTests/testCancelledOrChangedIdentityResponseCannotPublishOrCache()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testCancelledOrChangedIdentityResponseCannotPublishOrCache",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "2s",
+                  "durationInSeconds" : 2.173561930656433,
+                  "name" : "testDelayedSyntheticRequestSequencingMeasurement()",
+                  "nodeIdentifier" : "InboxLoadingTests/testDelayedSyntheticRequestSequencingMeasurement()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testDelayedSyntheticRequestSequencingMeasurement",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.013s",
+                  "durationInSeconds" : 0.012897968292236328,
+                  "name" : "testDirectInboxLoadsDoNotDependOnCatalogAvailability()",
+                  "nodeIdentifier" : "InboxLoadingTests/testDirectInboxLoadsDoNotDependOnCatalogAvailability()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testDirectInboxLoadsDoNotDependOnCatalogAvailability",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.015s",
+                  "durationInSeconds" : 0.014752030372619629,
+                  "name" : "testInboxErrorAndOfflineCacheRemainScoped()",
+                  "nodeIdentifier" : "InboxLoadingTests/testInboxErrorAndOfflineCacheRemainScoped()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testInboxErrorAndOfflineCacheRemainScoped",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.008s",
+                  "durationInSeconds" : 0.007958054542541504,
+                  "name" : "testLegacyCatalogFailureStillStopsInboxAndMissingMappingKeepsFallback()",
+                  "nodeIdentifier" : "InboxLoadingTests/testLegacyCatalogFailureStillStopsInboxAndMissingMappingKeepsFallback()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testLegacyCatalogFailureStillStopsInboxAndMissingMappingKeepsFallback",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.007s",
+                  "durationInSeconds" : 0.00698399543762207,
+                  "name" : "testNewerSearchWinsAndDuplicatePaginationDoesNotStart()",
+                  "nodeIdentifier" : "InboxLoadingTests/testNewerSearchWinsAndDuplicatePaginationDoesNotStart()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testNewerSearchWinsAndDuplicatePaginationDoesNotStart",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.032s",
+                  "durationInSeconds" : 0.03198206424713135,
+                  "name" : "testRefreshAndPaginationKeepCursorSearchAndFreshLegacyMappings()",
+                  "nodeIdentifier" : "InboxLoadingTests/testRefreshAndPaginationKeepCursorSearchAndFreshLegacyMappings()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testRefreshAndPaginationKeepCursorSearchAndFreshLegacyMappings",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.021s",
+                  "durationInSeconds" : 0.02108001708984375,
+                  "name" : "testRequestPathsAndQueryPreserveAllDestinationAndLegacyViews()",
+                  "nodeIdentifier" : "InboxLoadingTests/testRequestPathsAndQueryPreserveAllDestinationAndLegacyViews()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests/testRequestPathsAndQueryPreserveAllDestinationAndLegacyViews",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "InboxLoadingTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxLoadingTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaTests.swift:2448: XCTAssertEqual failed: (\"[]\") is not equal to (\"[\"saved\"]\")",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.67s",
+                  "durationInSeconds" : 0.6658240556716919,
+                  "name" : "testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails()",
+                  "nodeIdentifier" : "InboxRecoveryTests/testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests/testInvalidCursorRecoveryStopsIfFreshRequestAlsoFails",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "duration" : "0.032s",
+                  "durationInSeconds" : 0.03238511085510254,
+                  "name" : "testInvalidMailboxCursorRestartsOnceAndReplacesStalePage()",
+                  "nodeIdentifier" : "InboxRecoveryTests/testInvalidMailboxCursorRestartsOnceAndReplacesStalePage()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests/testInvalidMailboxCursorRestartsOnceAndReplacesStalePage",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0068s",
+                  "durationInSeconds" : 0.006752967834472656,
+                  "name" : "testPaginationWithoutCursorDoesNotDuplicateFirstPage()",
+                  "nodeIdentifier" : "InboxRecoveryTests/testPaginationWithoutCursorDoesNotDuplicateFirstPage()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests/testPaginationWithoutCursorDoesNotDuplicateFirstPage",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaTests.swift:2464: XCTAssertEqual failed: (\"3\") is not equal to (\"2\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:2464: XCTAssertEqual failed: (\"nil\") is not equal to (\"Optional(\"valid-cursor\")\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:2465: XCTAssertEqual failed: (\"[]\") is not equal to (\"[\"saved\"]\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:2464: XCTAssertEqual failed: (\"nil\") is not equal to (\"Optional(\"valid-cursor\")\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:2465: XCTAssertEqual failed: (\"[]\") is not equal to (\"[\"saved\"]\")",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.069s",
+                  "durationInSeconds" : 0.06921601295471191,
+                  "name" : "testUnrelatedPaginationFailuresKeepCursorForManualRetry()",
+                  "nodeIdentifier" : "InboxRecoveryTests/testUnrelatedPaginationFailuresKeepCursorForManualRetry()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests/testUnrelatedPaginationFailuresKeepCursorForManualRetry",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "InboxRecoveryTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/InboxRecoveryTests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "19s",
+                  "durationInSeconds" : 19.56512999534607,
+                  "name" : "testAlternatingWarmParserBenchmark()",
+                  "nodeIdentifier" : "MailDateTests/testAlternatingWarmParserBenchmark()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/MailDateTests/testAlternatingWarmParserBenchmark",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "1s",
+                  "durationInSeconds" : 1.674070954322815,
+                  "name" : "testConcurrentParsingMatchesOriginalForEveryInput()",
+                  "nodeIdentifier" : "MailDateTests/testConcurrentParsingMatchesOriginalForEveryInput()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/MailDateTests/testConcurrentParsingMatchesOriginalForEveryInput",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.78s",
+                  "durationInSeconds" : 0.7844369411468506,
+                  "name" : "testParsingMatchesOriginalAcrossDistinctDatesAndEdgeCases()",
+                  "nodeIdentifier" : "MailDateTests/testParsingMatchesOriginalAcrossDistinctDatesAndEdgeCases()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/MailDateTests/testParsingMatchesOriginalAcrossDistinctDatesAndEdgeCases",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "4s",
+                  "durationInSeconds" : 4.707165002822876,
+                  "name" : "testParsingPreservesAbsoluteInstantsAndDisplayFallbacks()",
+                  "nodeIdentifier" : "MailDateTests/testParsingPreservesAbsoluteInstantsAndDisplayFallbacks()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/MailDateTests/testParsingPreservesAbsoluteInstantsAndDisplayFallbacks",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "MailDateTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/MailDateTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.12s",
+                  "durationInSeconds" : 0.11753606796264648,
+                  "name" : "testAcknowledgedCorrectionRefreshesSubmittedGlobalSearchWithoutSubmittingNewTyping()",
+                  "nodeIdentifier" : "NativeImportanceTests/testAcknowledgedCorrectionRefreshesSubmittedGlobalSearchWithoutSubmittingNewTyping()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testAcknowledgedCorrectionRefreshesSubmittedGlobalSearchWithoutSubmittingNewTyping",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0024s",
+                  "durationInSeconds" : 0.0023889541625976562,
+                  "name" : "testCommandEncodesResetAsNullWithStableUUIDAndNoBroaderScope()",
+                  "nodeIdentifier" : "NativeImportanceTests/testCommandEncodesResetAsNullWithStableUUIDAndNoBroaderScope()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testCommandEncodesResetAsNullWithStableUUIDAndNoBroaderScope",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0068s",
+                  "durationInSeconds" : 0.0068389177322387695,
+                  "name" : "testDelayedOldAccountCannotInstallImportanceOrReceipt()",
+                  "nodeIdentifier" : "NativeImportanceTests/testDelayedOldAccountCannotInstallImportanceOrReceipt()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testDelayedOldAccountCannotInstallImportanceOrReceipt",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.089s",
+                  "durationInSeconds" : 0.08889603614807129,
+                  "name" : "testDroppedConversationAcknowledgementRemainsOwnedByOriginalTarget()",
+                  "nodeIdentifier" : "NativeImportanceTests/testDroppedConversationAcknowledgementRemainsOwnedByOriginalTarget()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testDroppedConversationAcknowledgementRemainsOwnedByOriginalTarget",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.34s",
+                  "durationInSeconds" : 0.3368830680847168,
+                  "name" : "testDroppedWriteReconcilesWithoutAnotherWriteAndSupersededReceiptIsNotCurrent()",
+                  "nodeIdentifier" : "NativeImportanceTests/testDroppedWriteReconcilesWithoutAnotherWriteAndSupersededReceiptIsNotCurrent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testDroppedWriteReconcilesWithoutAnotherWriteAndSupersededReceiptIsNotCurrent",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.046s",
+                  "durationInSeconds" : 0.04566299915313721,
+                  "name" : "testExactSenderPreviewNeverWritesUntilFreshExplicitConfirmation()",
+                  "nodeIdentifier" : "NativeImportanceTests/testExactSenderPreviewNeverWritesUntilFreshExplicitConfirmation()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testExactSenderPreviewNeverWritesUntilFreshExplicitConfirmation",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0076s",
+                  "durationInSeconds" : 0.007611989974975586,
+                  "name" : "testFindUsesCompleteCaseInsensitiveUnicodeMessageAndEmptyDoesNotLoop()",
+                  "nodeIdentifier" : "NativeImportanceTests/testFindUsesCompleteCaseInsensitiveUnicodeMessageAndEmptyDoesNotLoop()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testFindUsesCompleteCaseInsensitiveUnicodeMessageAndEmptyDoesNotLoop",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0014s",
+                  "durationInSeconds" : 0.0013799667358398438,
+                  "name" : "testImportantNotificationPermissionMappingKeepsOSAuthority()",
+                  "nodeIdentifier" : "NativeImportanceTests/testImportantNotificationPermissionMappingKeepsOSAuthority()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testImportantNotificationPermissionMappingKeepsOSAuthority",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.033s",
+                  "durationInSeconds" : 0.03264892101287842,
+                  "name" : "testImportantUsesRetainedPageWithoutDestinationCallsAndRestartsStaleCursorOnce()",
+                  "nodeIdentifier" : "NativeImportanceTests/testImportantUsesRetainedPageWithoutDestinationCallsAndRestartsStaleCursorOnce()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testImportantUsesRetainedPageWithoutDestinationCallsAndRestartsStaleCursorOnce",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.018s",
+                  "durationInSeconds" : 0.01773202419281006,
+                  "name" : "testKnownNewerConversationRevisionRetiresReceiptAndUndo()",
+                  "nodeIdentifier" : "NativeImportanceTests/testKnownNewerConversationRevisionRetiresReceiptAndUndo()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testKnownNewerConversationRevisionRetiresReceiptAndUndo",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.015s",
+                  "durationInSeconds" : 0.015480995178222656,
+                  "name" : "testNotificationWireKeepsPolicyRegistrationAndDeliverySeparate()",
+                  "nodeIdentifier" : "NativeImportanceTests/testNotificationWireKeepsPolicyRegistrationAndDeliverySeparate()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testNotificationWireKeepsPolicyRegistrationAndDeliverySeparate",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.05s",
+                  "durationInSeconds" : 0.04960906505584717,
+                  "name" : "testOfflineReopenRetainsOriginalCommandAndFresh404AllowsExplicitCurrentReview()",
+                  "nodeIdentifier" : "NativeImportanceTests/testOfflineReopenRetainsOriginalCommandAndFresh404AllowsExplicitCurrentReview()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testOfflineReopenRetainsOriginalCommandAndFresh404AllowsExplicitCurrentReview",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0064s",
+                  "durationInSeconds" : 0.0064460039138793945,
+                  "name" : "testPermanentAllMailDoesNotEraseOldVisibilityChoice()",
+                  "nodeIdentifier" : "NativeImportanceTests/testPermanentAllMailDoesNotEraseOldVisibilityChoice()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testPermanentAllMailDoesNotEraseOldVisibilityChoice",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.01s",
+                  "durationInSeconds" : 0.010285019874572754,
+                  "name" : "testRealOptInHeadersAndEnvelopeOwnershipAreRequired()",
+                  "nodeIdentifier" : "NativeImportanceTests/testRealOptInHeadersAndEnvelopeOwnershipAreRequired()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testRealOptInHeadersAndEnvelopeOwnershipAreRequired",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.021s",
+                  "durationInSeconds" : 0.02078402042388916,
+                  "name" : "testUndoUsesOwnedRevisionAndNullRestorationStillInheritsCurrentImportant()",
+                  "nodeIdentifier" : "NativeImportanceTests/testUndoUsesOwnedRevisionAndNullRestorationStillInheritsCurrentImportant()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests/testUndoUsesOwnedRevisionAndNullRestorationStillInheritsCurrentImportant",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "NativeImportanceTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeImportanceTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.046s",
+                  "durationInSeconds" : 0.046401023864746094,
+                  "name" : "testAuthenticatedOwnerAndCanonicalServerRetainIdentityAcrossReloginButSeparateOtherOwners()",
+                  "nodeIdentifier" : "NativeNotificationIdentityTests/testAuthenticatedOwnerAndCanonicalServerRetainIdentityAcrossReloginButSeparateOtherOwners()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeNotificationIdentityTests/testAuthenticatedOwnerAndCanonicalServerRetainIdentityAcrossReloginButSeparateOtherOwners",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.019s",
+                  "durationInSeconds" : 0.01918792724609375,
+                  "name" : "testDelayedTokenAndLegacyStatusCannotInstallPreviousOwnerIdentity()",
+                  "nodeIdentifier" : "NativeNotificationIdentityTests/testDelayedTokenAndLegacyStatusCannotInstallPreviousOwnerIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeNotificationIdentityTests/testDelayedTokenAndLegacyStatusCannotInstallPreviousOwnerIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.035s",
+                  "durationInSeconds" : 0.03528702259063721,
+                  "name" : "testLegacyIDMigratesOnlyAfterAuthenticatedOwnedRegistrationWithoutDeletingOtherData()",
+                  "nodeIdentifier" : "NativeNotificationIdentityTests/testLegacyIDMigratesOnlyAfterAuthenticatedOwnedRegistrationWithoutDeletingOtherData()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeNotificationIdentityTests/testLegacyIDMigratesOnlyAfterAuthenticatedOwnedRegistrationWithoutDeletingOtherData",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.087s",
+                  "durationInSeconds" : 0.08741199970245361,
+                  "name" : "testUnauthorizedOfflineAndMismatchedSessionNeverClaimLegacyIdentity()",
+                  "nodeIdentifier" : "NativeNotificationIdentityTests/testUnauthorizedOfflineAndMismatchedSessionNeverClaimLegacyIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeNotificationIdentityTests/testUnauthorizedOfflineAndMismatchedSessionNeverClaimLegacyIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "NativeNotificationIdentityTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeNotificationIdentityTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.016s",
+                  "durationInSeconds" : 0.016427993774414062,
+                  "name" : "testNewerAccountEditsSurviveOlderSaveAcknowledgementAcrossSections()",
+                  "nodeIdentifier" : "NativePreferenceTests/testNewerAccountEditsSurviveOlderSaveAcknowledgementAcrossSections()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativePreferenceTests/testNewerAccountEditsSurviveOlderSaveAcknowledgementAcrossSections",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0054s",
+                  "durationInSeconds" : 0.005363941192626953,
+                  "name" : "testNotificationRouteCannotLeaveUnsavedAccountChoices()",
+                  "nodeIdentifier" : "NativePreferenceTests/testNotificationRouteCannotLeaveUnsavedAccountChoices()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativePreferenceTests/testNotificationRouteCannotLeaveUnsavedAccountChoices",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "NativePreferenceTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativePreferenceTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaTests.swift:3588: XCTAssertEqual failed: (\"0\") is not equal to (\"1\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3592: XCTAssertEqual failed: (\"Original\") is not equal to (\"Newer preserved edit\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3592: XCTAssertNotNil failed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3596: XCTAssertEqual failed: (\"0\") is not equal to (\"1\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3596: XCTAssertEqual failed: (\"0\") is not equal to (\"2\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3596: XCTAssertEqual failed: (\"0\") is not equal to (\"1\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3597: XCTAssertEqual failed: (\"Original\") is not equal to (\"Newer preserved edit\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3597: XCTAssertTrue failed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3599: XCTAssertEqual failed: (\"nil\") is not equal to (\"Optional(\"created-view\")\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3599: XCTAssertEqual failed: (\"0\") is not equal to (\"1\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3599: XCTAssertEqual failed: (\"Original\") is not equal to (\"Newer preserved edit\")",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "OrcaTests.swift:3600: XCTAssertEqual failed: (\"0\") is not equal to (\"2\") - Newer edits receive a separate update command only after the original Save resolves",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.087s",
+                  "durationInSeconds" : 0.08733797073364258,
+                  "name" : "testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView()",
+                  "nodeIdentifier" : "NativeViewEditorRecoveryTests/testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeViewEditorRecoveryTests/testDroppedCreateSurvivesEditDismissReopenAndUpdatesExactlyOneAdvancedView",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "NativeViewEditorRecoveryTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/NativeViewEditorRecoveryTests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.00055s",
+                  "durationInSeconds" : 0.0005539655685424805,
+                  "name" : "testAttachmentCountMatchesServerLimitBeforeReadingFiles()",
+                  "nodeIdentifier" : "OrcaTests/testAttachmentCountMatchesServerLimitBeforeReadingFiles()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testAttachmentCountMatchesServerLimitBeforeReadingFiles",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00054s",
+                  "durationInSeconds" : 0.0005369186401367188,
+                  "name" : "testAttachmentLimitIsAggregate()",
+                  "nodeIdentifier" : "OrcaTests/testAttachmentLimitIsAggregate()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testAttachmentLimitIsAggregate",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0036s",
+                  "durationInSeconds" : 0.0035860538482666016,
+                  "name" : "testAttentionDateGroupsUseTheLocalCalendar()",
+                  "nodeIdentifier" : "OrcaTests/testAttentionDateGroupsUseTheLocalCalendar()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testAttentionDateGroupsUseTheLocalCalendar",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0022s",
+                  "durationInSeconds" : 0.0021589994430541992,
+                  "name" : "testBaseURLRequiresCleanRootOrigin()",
+                  "nodeIdentifier" : "OrcaTests/testBaseURLRequiresCleanRootOrigin()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testBaseURLRequiresCleanRootOrigin",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.11s",
+                  "durationInSeconds" : 0.10605204105377197,
+                  "name" : "testCancelledAutosavesStillDrainInitializationBeforeDelivery()",
+                  "nodeIdentifier" : "OrcaTests/testCancelledAutosavesStillDrainInitializationBeforeDelivery()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testCancelledAutosavesStillDrainInitializationBeforeDelivery",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.007s",
+                  "durationInSeconds" : 0.006987929344177246,
+                  "name" : "testCapabilityRefreshUnlocksSendingWithoutReplacingTheSelectedAccount()",
+                  "nodeIdentifier" : "OrcaTests/testCapabilityRefreshUnlocksSendingWithoutReplacingTheSelectedAccount()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testCapabilityRefreshUnlocksSendingWithoutReplacingTheSelectedAccount",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0053s",
+                  "durationInSeconds" : 0.00530695915222168,
+                  "name" : "testConfirmedPreReservationTransitionRestoresEditableDraftAtRemoteRevision()",
+                  "nodeIdentifier" : "OrcaTests/testConfirmedPreReservationTransitionRestoresEditableDraftAtRemoteRevision()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testConfirmedPreReservationTransitionRestoresEditableDraftAtRemoteRevision",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.012s",
+                  "durationInSeconds" : 0.011554956436157227,
+                  "name" : "testCorruptDraftFileIsPreservedAndBlocksOverwrite()",
+                  "nodeIdentifier" : "OrcaTests/testCorruptDraftFileIsPreservedAndBlocksOverwrite()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testCorruptDraftFileIsPreservedAndBlocksOverwrite",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.005s",
+                  "durationInSeconds" : 0.0050209760665893555,
+                  "name" : "testDefinitiveAndUncertainSendFailuresPreserveDifferentRetrySafety()",
+                  "nodeIdentifier" : "OrcaTests/testDefinitiveAndUncertainSendFailuresPreserveDifferentRetrySafety()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testDefinitiveAndUncertainSendFailuresPreserveDifferentRetrySafety",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.016s",
+                  "durationInSeconds" : 0.016148090362548828,
+                  "name" : "testDelayedReconciliationAndAttachmentEditsCannotRestoreEachOthersSnapshots()",
+                  "nodeIdentifier" : "OrcaTests/testDelayedReconciliationAndAttachmentEditsCannotRestoreEachOthersSnapshots()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testDelayedReconciliationAndAttachmentEditsCannotRestoreEachOthersSnapshots",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0046s",
+                  "durationInSeconds" : 0.004618048667907715,
+                  "name" : "testDraftsAreAccountIsolated()",
+                  "nodeIdentifier" : "OrcaTests/testDraftsAreAccountIsolated()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testDraftsAreAccountIsolated",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0019s",
+                  "durationInSeconds" : 0.0018990039825439453,
+                  "name" : "testDraftWireEncodingEmitsRequiredNullFields()",
+                  "nodeIdentifier" : "OrcaTests/testDraftWireEncodingEmitsRequiredNullFields()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testDraftWireEncodingEmitsRequiredNullFields",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0063s",
+                  "durationInSeconds" : 0.006288051605224609,
+                  "name" : "testFailedCapabilityRefreshPreservesAccountScopeAndCachedGrants()",
+                  "nodeIdentifier" : "OrcaTests/testFailedCapabilityRefreshPreservesAccountScopeAndCachedGrants()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testFailedCapabilityRefreshPreservesAccountScopeAndCachedGrants",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0066s",
+                  "durationInSeconds" : 0.006559014320373535,
+                  "name" : "testFailedKeepBothCheckpointNeverStartsRemoteVerification()",
+                  "nodeIdentifier" : "OrcaTests/testFailedKeepBothCheckpointNeverStartsRemoteVerification()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testFailedKeepBothCheckpointNeverStartsRemoteVerification",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0056s",
+                  "durationInSeconds" : 0.005635976791381836,
+                  "name" : "testFailedStaleReconciliationKeepsOriginalDeliveryKeyFrozen()",
+                  "nodeIdentifier" : "OrcaTests/testFailedStaleReconciliationKeepsOriginalDeliveryKeyFrozen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testFailedStaleReconciliationKeepsOriginalDeliveryKeyFrozen",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0023s",
+                  "durationInSeconds" : 0.0022780895233154297,
+                  "name" : "testFreshInstallUsesProductionAPIWithoutServerSetup()",
+                  "nodeIdentifier" : "OrcaTests/testFreshInstallUsesProductionAPIWithoutServerSetup()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testFreshInstallUsesProductionAPIWithoutServerSetup",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0018s",
+                  "durationInSeconds" : 0.0018279552459716797,
+                  "name" : "testImageStaleErrorRequiresRefreshInsteadOfRetry()",
+                  "nodeIdentifier" : "OrcaTests/testImageStaleErrorRequiresRefreshInsteadOfRetry()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testImageStaleErrorRequiresRefreshInsteadOfRetry",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0017s",
+                  "durationInSeconds" : 0.0016919374465942383,
+                  "name" : "testInboxDecodesExistingWireContract()",
+                  "nodeIdentifier" : "OrcaTests/testInboxDecodesExistingWireContract()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testInboxDecodesExistingWireContract",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.015s",
+                  "durationInSeconds" : 0.01494598388671875,
+                  "name" : "testKeepBothCheckpointsLatestWordsBeforeStalledOrFailedRemoteCheck()",
+                  "nodeIdentifier" : "OrcaTests/testKeepBothCheckpointsLatestWordsBeforeStalledOrFailedRemoteCheck()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testKeepBothCheckpointsLatestWordsBeforeStalledOrFailedRemoteCheck",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0008s",
+                  "durationInSeconds" : 0.0007990598678588867,
+                  "name" : "testKeepBothRequiresUnreservedLocalAndRemoteDrafts()",
+                  "nodeIdentifier" : "OrcaTests/testKeepBothRequiresUnreservedLocalAndRemoteDrafts()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testKeepBothRequiresUnreservedLocalAndRemoteDrafts",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.038s",
+                  "durationInSeconds" : 0.03788602352142334,
+                  "name" : "testLateSavedViewCacheMissCannotOverwriteNewerResults()",
+                  "nodeIdentifier" : "OrcaTests/testLateSavedViewCacheMissCannotOverwriteNewerResults()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testLateSavedViewCacheMissCannotOverwriteNewerResults",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.16s",
+                  "durationInSeconds" : 0.15861904621124268,
+                  "name" : "testLateViewCatalogResponseCannotCrossIdentityScope()",
+                  "nodeIdentifier" : "OrcaTests/testLateViewCatalogResponseCannotCrossIdentityScope()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testLateViewCatalogResponseCannotCrossIdentityScope",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0077s",
+                  "durationInSeconds" : 0.0076830387115478516,
+                  "name" : "testLegacyNotificationOffMigratesOnceWithoutLeakingToAnotherIdentity()",
+                  "nodeIdentifier" : "OrcaTests/testLegacyNotificationOffMigratesOnceWithoutLeakingToAnotherIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testLegacyNotificationOffMigratesOnceWithoutLeakingToAnotherIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0048s",
+                  "durationInSeconds" : 0.004800081253051758,
+                  "name" : "testLocalDeliveryRecoveryReplaysOnlyItsPersistedCommand()",
+                  "nodeIdentifier" : "OrcaTests/testLocalDeliveryRecoveryReplaysOnlyItsPersistedCommand()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testLocalDeliveryRecoveryReplaysOnlyItsPersistedCommand",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0045s",
+                  "durationInSeconds" : 0.004478931427001953,
+                  "name" : "testLocalDraftSurvivesStoreRecreationAndKeepsSendKey()",
+                  "nodeIdentifier" : "OrcaTests/testLocalDraftSurvivesStoreRecreationAndKeepsSendKey()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testLocalDraftSurvivesStoreRecreationAndKeepsSendKey",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0025s",
+                  "durationInSeconds" : 0.00250399112701416,
+                  "name" : "testNotificationDoesNotRouteUntilSessionIsReady()",
+                  "nodeIdentifier" : "OrcaTests/testNotificationDoesNotRouteUntilSessionIsReady()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testNotificationDoesNotRouteUntilSessionIsReady",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0082s",
+                  "durationInSeconds" : 0.008249998092651367,
+                  "name" : "testNotificationPreferencesAreIdentityScopedAndDefaultToInbox()",
+                  "nodeIdentifier" : "OrcaTests/testNotificationPreferencesAreIdentityScopedAndDefaultToInbox()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testNotificationPreferencesAreIdentityScopedAndDefaultToInbox",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00071s",
+                  "durationInSeconds" : 0.0007109642028808594,
+                  "name" : "testNotificationSelectionEncodingUsesInboxAndUniqueOpaqueSpaceIDs()",
+                  "nodeIdentifier" : "OrcaTests/testNotificationSelectionEncodingUsesInboxAndUniqueOpaqueSpaceIDs()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testNotificationSelectionEncodingUsesInboxAndUniqueOpaqueSpaceIDs",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0015s",
+                  "durationInSeconds" : 0.001466989517211914,
+                  "name" : "testOutgoingLastMessageFallsBackToExternalRecipients()",
+                  "nodeIdentifier" : "OrcaTests/testOutgoingLastMessageFallsBackToExternalRecipients()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testOutgoingLastMessageFallsBackToExternalRecipients",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0024s",
+                  "durationInSeconds" : 0.0024030208587646484,
+                  "name" : "testOwnedAccountNotificationSelectsAccountAndThread()",
+                  "nodeIdentifier" : "OrcaTests/testOwnedAccountNotificationSelectsAccountAndThread()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testOwnedAccountNotificationSelectsAccountAndThread",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.012s",
+                  "durationInSeconds" : 0.012202978134155273,
+                  "name" : "testPatchThenConcurrentEditThenSend409ReconcilesRemoteRevision()",
+                  "nodeIdentifier" : "OrcaTests/testPatchThenConcurrentEditThenSend409ReconcilesRemoteRevision()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testPatchThenConcurrentEditThenSend409ReconcilesRemoteRevision",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0037s",
+                  "durationInSeconds" : 0.0036630630493164062,
+                  "name" : "testPKCEProducesURLSafeChallenge()",
+                  "nodeIdentifier" : "OrcaTests/testPKCEProducesURLSafeChallenge()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testPKCEProducesURLSafeChallenge",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0031s",
+                  "durationInSeconds" : 0.0030750036239624023,
+                  "name" : "testPrepareSendReusesStableIdempotencyKey()",
+                  "nodeIdentifier" : "OrcaTests/testPrepareSendReusesStableIdempotencyKey()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testPrepareSendReusesStableIdempotencyKey",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0034s",
+                  "durationInSeconds" : 0.0033539533615112305,
+                  "name" : "testPreviewDecodingIsBoundedTextOnly()",
+                  "nodeIdentifier" : "OrcaTests/testPreviewDecodingIsBoundedTextOnly()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testPreviewDecodingIsBoundedTextOnly",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.016s",
+                  "durationInSeconds" : 0.01606595516204834,
+                  "name" : "testPushClientUsesNotificationSelectionContractAndDecodesCatalog()",
+                  "nodeIdentifier" : "OrcaTests/testPushClientUsesNotificationSelectionContractAndDecodesCatalog()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testPushClientUsesNotificationSelectionContractAndDecodesCatalog",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0011s",
+                  "durationInSeconds" : 0.0011429786682128906,
+                  "name" : "testReaderQuotesPreserveExactTextAndInlineAnswers()",
+                  "nodeIdentifier" : "OrcaTests/testReaderQuotesPreserveExactTextAndInlineAnswers()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testReaderQuotesPreserveExactTextAndInlineAnswers",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00065s",
+                  "durationInSeconds" : 0.0006489753723144531,
+                  "name" : "testReadOnlyCapabilityBlocksOnlyNormalSendAndShowsWebRepairPath()",
+                  "nodeIdentifier" : "OrcaTests/testReadOnlyCapabilityBlocksOnlyNormalSendAndShowsWebRepairPath()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testReadOnlyCapabilityBlocksOnlyNormalSendAndShowsWebRepairPath",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0014s",
+                  "durationInSeconds" : 0.001356959342956543,
+                  "name" : "testRecipientValidationRejectsPartialInvalidList()",
+                  "nodeIdentifier" : "OrcaTests/testRecipientValidationRejectsPartialInvalidList()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testRecipientValidationRejectsPartialInvalidList",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0013s",
+                  "durationInSeconds" : 0.001323103904724121,
+                  "name" : "testRejectedCopyRequiresConfirmedTerminalRejection()",
+                  "nodeIdentifier" : "OrcaTests/testRejectedCopyRequiresConfirmedTerminalRejection()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testRejectedCopyRequiresConfirmedTerminalRejection",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0035s",
+                  "durationInSeconds" : 0.0034509897232055664,
+                  "name" : "testRejectedDeliveryStateIsDurable()",
+                  "nodeIdentifier" : "OrcaTests/testRejectedDeliveryStateIsDurable()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testRejectedDeliveryStateIsDurable",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0008s",
+                  "durationInSeconds" : 0.0007950067520141602,
+                  "name" : "testReopenedDraftPreservesReplyContext()",
+                  "nodeIdentifier" : "OrcaTests/testReopenedDraftPreservesReplyContext()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testReopenedDraftPreservesReplyContext",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0025s",
+                  "durationInSeconds" : 0.0024870634078979492,
+                  "name" : "testSavedViewClientUsesCanonicalResultsAndOpaqueCursorWithoutPushWrites()",
+                  "nodeIdentifier" : "OrcaTests/testSavedViewClientUsesCanonicalResultsAndOpaqueCursorWithoutPushWrites()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testSavedViewClientUsesCanonicalResultsAndOpaqueCursorWithoutPushWrites",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0014s",
+                  "durationInSeconds" : 0.0014139413833618164,
+                  "name" : "testSavedViewIDIsEncodedAsOnePathComponent()",
+                  "nodeIdentifier" : "OrcaTests/testSavedViewIDIsEncodedAsOnePathComponent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testSavedViewIDIsEncodedAsOnePathComponent",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.037s",
+                  "durationInSeconds" : 0.037492990493774414,
+                  "name" : "testSavedViewPaginationAndOfflineCacheAreScoped()",
+                  "nodeIdentifier" : "OrcaTests/testSavedViewPaginationAndOfflineCacheAreScoped()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testSavedViewPaginationAndOfflineCacheAreScoped",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.044s",
+                  "durationInSeconds" : 0.04362201690673828,
+                  "name" : "testSavedViewResultsValidateViewRevisionAndAccountOwnership()",
+                  "nodeIdentifier" : "OrcaTests/testSavedViewResultsValidateViewRevisionAndAccountOwnership()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testSavedViewResultsValidateViewRevisionAndAccountOwnership",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0054s",
+                  "durationInSeconds" : 0.0053550004959106445,
+                  "name" : "testSavedViewThreadHandoffSelectsOwnedAccountAndRejectsUnknownAccount()",
+                  "nodeIdentifier" : "OrcaTests/testSavedViewThreadHandoffSelectsOwnedAccountAndRejectsUnknownAccount()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testSavedViewThreadHandoffSelectsOwnedAccountAndRejectsUnknownAccount",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0016s",
+                  "durationInSeconds" : 0.0016469955444335938,
+                  "name" : "testSentAliasIsOwnedAndRecipientDedupeIsCaseInsensitive()",
+                  "nodeIdentifier" : "OrcaTests/testSentAliasIsOwnedAndRecipientDedupeIsCaseInsensitive()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testSentAliasIsOwnedAndRecipientDedupeIsCaseInsensitive",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0046s",
+                  "durationInSeconds" : 0.0046340227127075195,
+                  "name" : "testServerOriginDeliveryRecoveryUsesOnlyGETWithoutInventingAKey()",
+                  "nodeIdentifier" : "OrcaTests/testServerOriginDeliveryRecoveryUsesOnlyGETWithoutInventingAKey()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testServerOriginDeliveryRecoveryUsesOnlyGETWithoutInventingAKey",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.031s",
+                  "durationInSeconds" : 0.030873894691467285,
+                  "name" : "testUnknownAccountNotificationDoesNotRoute()",
+                  "nodeIdentifier" : "OrcaTests/testUnknownAccountNotificationDoesNotRoute()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testUnknownAccountNotificationDoesNotRoute",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0016s",
+                  "durationInSeconds" : 0.001629948616027832,
+                  "name" : "testViewCacheIsNeverUsedForAuthorizationOrDeletedViewErrors()",
+                  "nodeIdentifier" : "OrcaTests/testViewCacheIsNeverUsedForAuthorizationOrDeletedViewErrors()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testViewCacheIsNeverUsedForAuthorizationOrDeletedViewErrors",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.015s",
+                  "durationInSeconds" : 0.015214085578918457,
+                  "name" : "testViewCatalogRemovalFallsBackWithoutErasingSavedVisibility()",
+                  "nodeIdentifier" : "OrcaTests/testViewCatalogRemovalFallsBackWithoutErasingSavedVisibility()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testViewCatalogRemovalFallsBackWithoutErasingSavedVisibility",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0011s",
+                  "durationInSeconds" : 0.0010720491409301758,
+                  "name" : "testViewDefinitionRoundTripPreservesServerOwnedFields()",
+                  "nodeIdentifier" : "OrcaTests/testViewDefinitionRoundTripPreservesServerOwnedFields()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testViewDefinitionRoundTripPreservesServerOwnedFields",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0047s",
+                  "durationInSeconds" : 0.004742980003356934,
+                  "name" : "testVisibleViewsPersistIndependentlyOfNotificationsAndIdentity()",
+                  "nodeIdentifier" : "OrcaTests/testVisibleViewsPersistIndependentlyOfNotificationsAndIdentity()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests/testVisibleViewsPersistIndependentlyOfNotificationsAndIdentity",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "OrcaTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/OrcaTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.00092s",
+                  "durationInSeconds" : 0.0009200572967529297,
+                  "name" : "testNavigationTracksVisiblePortionsAndClippedCards()",
+                  "nodeIdentifier" : "ReaderNavigationVisibilityTests/testNavigationTracksVisiblePortionsAndClippedCards()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/ReaderNavigationVisibilityTests/testNavigationTracksVisiblePortionsAndClippedCards",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "ReaderNavigationVisibilityTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/ReaderNavigationVisibilityTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "23s",
+                  "durationInSeconds" : 23.72810697555542,
+                  "name" : "testActualAPINewsletterOutputRemainsReadable()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testActualAPINewsletterOutputRemainsReadable()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testActualAPINewsletterOutputRemainsReadable",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "15s",
+                  "durationInSeconds" : 15.110643029212952,
+                  "name" : "testFixedWidthTableKeepsHeadersAndEveryCellWithinReader()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testFixedWidthTableKeepsHeadersAndEveryCellWithinReader()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testFixedWidthTableKeepsHeadersAndEveryCellWithinReader",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "16s",
+                  "durationInSeconds" : 16.481063961982727,
+                  "name" : "testFormattedNewsletterStacksColumnsAndPreservesContentAndDataTable()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testFormattedNewsletterStacksColumnsAndPreservesContentAndDataTable()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testFormattedNewsletterStacksColumnsAndPreservesContentAndDataTable",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "15s",
+                  "durationInSeconds" : 15.4163099527359,
+                  "name" : "testLongPreformattedCodeRemainsReadableWithoutHorizontalScrolling()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testLongPreformattedCodeRemainsReadableWithoutHorizontalScrolling()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testLongPreformattedCodeRemainsReadableWithoutHorizontalScrolling",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "16s",
+                  "durationInSeconds" : 16.329803943634033,
+                  "name" : "testOptionalWideFormattingKeepsSemanticTableAndLocalScrollReachable()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testOptionalWideFormattingKeepsSemanticTableAndLocalScrollReachable()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testOptionalWideFormattingKeepsSemanticTableAndLocalScrollReachable",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "16s",
+                  "durationInSeconds" : 16.280948996543884,
+                  "name" : "testOrdinaryEmailAndLongThreadKeepReaderTypographyAndContent()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testOrdinaryEmailAndLongThreadKeepReaderTypographyAndContent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testOrdinaryEmailAndLongThreadKeepReaderTypographyAndContent",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "10s",
+                  "durationInSeconds" : 10.921778082847595,
+                  "name" : "testSenderInlineWidthsAndNoWrapCannotHideTableText()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testSenderInlineWidthsAndNoWrapCannotHideTableText()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testSenderInlineWidthsAndNoWrapCannotHideTableText",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "20s",
+                  "durationInSeconds" : 20.732474088668823,
+                  "name" : "testUnmarkedDigestUsesAvailableWidthInsteadOfEqualSpacerColumns()",
+                  "nodeIdentifier" : "SafeHTMLOverflowTests/testUnmarkedDigestUsesAvailableWidthInsteadOfEqualSpacerColumns()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests/testUnmarkedDigestUsesAvailableWidthInsteadOfEqualSpacerColumns",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "SafeHTMLOverflowTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLOverflowTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.062s",
+                  "durationInSeconds" : 0.06201601028442383,
+                  "name" : "testEquivalentFreshStringsAndIndependentReaders()",
+                  "nodeIdentifier" : "SafeHTMLViewTests/testEquivalentFreshStringsAndIndependentReaders()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLViewTests/testEquivalentFreshStringsAndIndependentReaders",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.15s",
+                  "durationInSeconds" : 0.15018796920776367,
+                  "name" : "testMessageThemeAndTypeSizeChangesReloadWithoutStaleContent()",
+                  "nodeIdentifier" : "SafeHTMLViewTests/testMessageThemeAndTypeSizeChangesReloadWithoutStaleContent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLViewTests/testMessageThemeAndTypeSizeChangesReloadWithoutStaleContent",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.18s",
+                  "durationInSeconds" : 0.17556297779083252,
+                  "name" : "testProfileRepeatedReaderPreparation()",
+                  "nodeIdentifier" : "SafeHTMLViewTests/testProfileRepeatedReaderPreparation()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLViewTests/testProfileRepeatedReaderPreparation",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.047s",
+                  "durationInSeconds" : 0.04744100570678711,
+                  "name" : "testReaderShellKeepsSecurityAndTypographyContract()",
+                  "nodeIdentifier" : "SafeHTMLViewTests/testReaderShellKeepsSecurityAndTypographyContract()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLViewTests/testReaderShellKeepsSecurityAndTypographyContract",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0078s",
+                  "durationInSeconds" : 0.007750034332275391,
+                  "name" : "testRepeatedUpdatesDoNotReloadWebContent()",
+                  "nodeIdentifier" : "SafeHTMLViewTests/testRepeatedUpdatesDoNotReloadWebContent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLViewTests/testRepeatedUpdatesDoNotReloadWebContent",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "SafeHTMLViewTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/SafeHTMLViewTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.12s",
+                  "durationInSeconds" : 0.1233530044555664,
+                  "name" : "testDemoInboxAggregatesUnreadAndMembershipAcrossWholeAccountThread()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testDemoInboxAggregatesUnreadAndMembershipAcrossWholeAccountThread()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testDemoInboxAggregatesUnreadAndMembershipAcrossWholeAccountThread",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0015s",
+                  "durationInSeconds" : 0.0015289783477783203,
+                  "name" : "testDemoNonInboxKeepsAttentionOrderAndUsesAscendingAccountAndIDTies()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testDemoNonInboxKeepsAttentionOrderAndUsesAscendingAccountAndIDTies()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testDemoNonInboxKeepsAttentionOrderAndUsesAscendingAccountAndIDTies",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00056s",
+                  "durationInSeconds" : 0.0005559921264648438,
+                  "name" : "testDemoTimelinePromotesOnlyUnreadFocusCategoryWithoutNotifyTier()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testDemoTimelinePromotesOnlyUnreadFocusCategoryWithoutNotifyTier()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testDemoTimelinePromotesOnlyUnreadFocusCategoryWithoutNotifyTier",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "1s",
+                  "durationInSeconds" : 1.0209439992904663,
+                  "name" : "testMissingInboxDestinationKeepsSemanticInboxFallback()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testMissingInboxDestinationKeepsSemanticInboxFallback()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testMissingInboxDestinationKeepsSemanticInboxFallback",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.012s",
+                  "durationInSeconds" : 0.011594057083129883,
+                  "name" : "testReadMutationInvalidatesAllInboxLensesOnlyAfterSuccess()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testReadMutationInvalidatesAllInboxLensesOnlyAfterSuccess()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testReadMutationInvalidatesAllInboxLensesOnlyAfterSuccess",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0051s",
+                  "durationInSeconds" : 0.005125999450683594,
+                  "name" : "testReadMutationRejectsAnOlderInFlightInboxResponse()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testReadMutationRejectsAnOlderInFlightInboxResponse()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testReadMutationRejectsAnOlderInFlightInboxResponse",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.018s",
+                  "durationInSeconds" : 0.018244028091430664,
+                  "name" : "testServerTimelineOrderAndThreadUnreadSurvivePaginationAndOfflineCache()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testServerTimelineOrderAndThreadUnreadSurvivePaginationAndOfflineCache()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testServerTimelineOrderAndThreadUnreadSurvivePaginationAndOfflineCache",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.013s",
+                  "durationInSeconds" : 0.013109922409057617,
+                  "name" : "testSuccessfulReadCannotRestoreStaleOfflinePromotion()",
+                  "nodeIdentifier" : "UnreadFocusTimelineTests/testSuccessfulReadCannotRestoreStaleOfflinePromotion()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests/testSuccessfulReadCannotRestoreStaleOfflinePromotion",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "UnreadFocusTimelineTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/UnreadFocusTimelineTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.035s",
+                  "durationInSeconds" : 0.035090088844299316,
+                  "name" : "testBoundariesAndCap()",
+                  "nodeIdentifier" : "VerificationCodeTests/testBoundariesAndCap()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/VerificationCodeTests/testBoundariesAndCap",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.049s",
+                  "durationInSeconds" : 0.048591017723083496,
+                  "name" : "testSharedVectors()",
+                  "nodeIdentifier" : "VerificationCodeTests/testSharedVectors()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/VerificationCodeTests/testSharedVectors",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "VerificationCodeTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests/VerificationCodeTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            }
+          ],
+          "name" : "OrcaTests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaTests",
+          "nodeType" : "Unit test bundle",
+          "result" : "Failed"
+        },
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:2106: Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x10a29aa30>.\nSparse tree of matches:\n→Application, pid: 25784, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳CollectionView, identifier: 'inbox.list'\n                                    ↳Cell\n                                      ↳Other\n                                        ↳Other\n                                          ↳Other\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-3', label: 'Sofia Martinez, 11:27 AM, Notes from our conversation, Here are the three things I took away: protect people's attention, make writing effortless, and never lose a draft.\n\nThat feels like the right place t, Unreviewed'\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-3', label: 'Importance for Notes from our conversation', value: Unreviewed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "34s",
+                  "durationInSeconds" : 34.26555299758911,
+                  "name" : "test04StyledHTMLUsesReadableCanvas()",
+                  "nodeIdentifier" : "OrcaUITests/test04StyledHTMLUsesReadableCanvas()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test04StyledHTMLUsesReadableCanvas",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:2106: Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x10a29ad00>.\nSparse tree of matches:\n→Application, pid: 27003, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳CollectionView, identifier: 'inbox.list'\n                                    ↳Cell\n                                      ↳Other\n                                        ↳Other\n                                          ↳Other\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Maya Chen, 12:57 PM, Unread, A quieter kind of inbox, I tried the new reading view this morning. The space around each conversation makes such a difference.\n\nCould we catch up tomorrow about the writing e, Unreviewed'\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Importance for A quieter kind of inbox', value: Unreviewed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "27s",
+                  "durationInSeconds" : 27.846621990203857,
+                  "name" : "test07ConversationOpensAtLatestMessage()",
+                  "nodeIdentifier" : "OrcaUITests/test07ConversationOpensAtLatestMessage()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test07ConversationOpensAtLatestMessage",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "OrcaUITests.swift:2106: Failed to get matching snapshot: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x10a29af80>.\nSparse tree of matches:\n→Application, pid: 27989, label: 'Orca'\n  ↳Window (Main)\n    ↳Other\n      ↳Other\n        ↳Other\n          ↳Other\n            ↳Other\n              ↳Other\n                ↳Other\n                  ↳Other\n                    ↳Other\n                      ↳Other\n                        ↳Other\n                          ↳Other\n                            ↳Other\n                              ↳Other\n                                ↳Other\n                                  ↳CollectionView, identifier: 'inbox.list'\n                                    ↳Cell\n                                      ↳Other\n                                        ↳Other\n                                          ↳Other\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Maya Chen, 12:57 PM, Unread, A quieter kind of inbox, I tried the new reading view this morning. The space around each conversation makes such a difference.\n\nCould we catch up tomorrow about the writing e, Unreviewed'\n                                            ↳Button, identifier: 'inbox.message.ios-fixture-message-1', label: 'Importance for A quieter kind of inbox', value: Unreviewed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "30s",
+                  "durationInSeconds" : 30.42436397075653,
+                  "name" : "test37LongConversationOffersOffscreenUnreadAndLatestJumps()",
+                  "nodeIdentifier" : "OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests/test37LongConversationOffersOffscreenUnreadAndLatestJumps",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                }
+              ],
+              "name" : "OrcaUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/OrcaUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            },
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "name" : "Test skipped - Requires the isolated image fixture",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.26s",
+                  "durationInSeconds" : 0.2632230520248413,
+                  "name" : "testChangedImageSourceRequiresSnapshotRefreshAndNewConsent()",
+                  "nodeIdentifier" : "ReaderUITests/testChangedImageSourceRequiresSnapshotRefreshAndNewConsent()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testChangedImageSourceRequiresSnapshotRefreshAndNewConsent",
+                  "nodeType" : "Test Case",
+                  "result" : "Skipped"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "ReaderUITests.swift:11: XCTAssertTrue failed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "38s",
+                  "durationInSeconds" : 38.84488391876221,
+                  "name" : "testEarlierMessagesRemainReadableAtAccessibilitySize()",
+                  "nodeIdentifier" : "ReaderUITests/testEarlierMessagesRemainReadableAtAccessibilitySize()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testEarlierMessagesRemainReadableAtAccessibilitySize",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "ReaderUITests.swift:513: Failed to swipe up \"inbox.list\" CollectionView: No matches found for Elements matching predicate '\"inbox.list\" IN identifiers' from input {(\n    Window (Main),\n    Window,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Button, identifier: 'feedback.open', label: 'Feedback',\n    Other,\n    Other,\n    Image, identifier: 'bubble.left', label: 'Comment Left',\n    StaticText, label: 'Feedback',\n    Other,\n    Other,\n    Other,\n    Other,\n    TabBar, label: 'Tab Bar',\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Button, identifier: 'tray', label: 'Mail',\n    Button, identifier: 'doc.text', label: 'Drafts', Selected,\n    Button, identifier: 'gearshape', label: 'Settings',\n    Other,\n    Other,\n    Other,\n    NavigationBar, identifier: 'Drafts',\n    Other,\n    Other,\n    Image, identifier: 'tray.fill', label: 'inbox',\n    Image, identifier: 'text.document.fill', label: 'text.document.fill',\n    Image, identifier: 'gearshape.fill', label: 'gearshape.fill',\n    Other,\n    Other,\n    Other,\n    StaticText, label: 'Drafts',\n    Other, identifier: 'magnifyingglass', label: 'Search All Mail',\n    Other, identifier: 'compose.open', label: 'Compose',\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Other,\n    Button, identifier: 'magnifyingglass', label: 'Search All Mail',\n    Button, identifier: 'compose.open', label: 'Compose',\n    Other,\n    Other,\n    Image, identifier: 'doc.text', label: 'Plain Text Document',\n    StaticText, label: 'No drafts',\n    StaticText, label: 'Anything you start writing will be saved immediately.'\n)}",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "23s",
+                  "durationInSeconds" : 23.857948064804077,
+                  "name" : "testHTMLAtAccessibilityTypeSize()",
+                  "nodeIdentifier" : "ReaderUITests/testHTMLAtAccessibilityTypeSize()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testHTMLAtAccessibilityTypeSize",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Test skipped - Requires the isolated image fixture",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.29s",
+                  "durationInSeconds" : 0.2931540012359619,
+                  "name" : "testImagesRequireExplicitLoadingAndResetOnReopen()",
+                  "nodeIdentifier" : "ReaderUITests/testImagesRequireExplicitLoadingAndResetOnReopen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testImagesRequireExplicitLoadingAndResetOnReopen",
+                  "nodeType" : "Test Case",
+                  "result" : "Skipped"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "ReaderUITests.swift:516: XCTAssertTrue failed",
+                      "nodeType" : "Failure Message"
+                    },
+                    {
+                      "name" : "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported and may result in a broken view hierarchy. Add your view above UIHostingController.view in a common superview or insert it into your SwiftUI content in a UIViewRepresentable instead.",
+                      "nodeType" : "Runtime Warning"
+                    }
+                  ],
+                  "duration" : "36s",
+                  "durationInSeconds" : 36.18977499008179,
+                  "name" : "testLongHTMLScrollBackAndRepeatedOpen()",
+                  "nodeIdentifier" : "ReaderUITests/testLongHTMLScrollBackAndRepeatedOpen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testLongHTMLScrollBackAndRepeatedOpen",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Test skipped - Requires the isolated image fixture",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.18s",
+                  "durationInSeconds" : 0.1833409070968628,
+                  "name" : "testMissingImageCapabilityOffersRefreshWithoutLoading()",
+                  "nodeIdentifier" : "ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testMissingImageCapabilityOffersRefreshWithoutLoading",
+                  "nodeType" : "Test Case",
+                  "result" : "Skipped"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Test skipped - Requires the isolated image fixture",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.14s",
+                  "durationInSeconds" : 0.13973796367645264,
+                  "name" : "testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages()",
+                  "nodeIdentifier" : "ReaderUITests/testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testNavigatingAwayDuringSnapshotRefreshDoesNotRestoreOldContentOrLoadImages",
+                  "nodeType" : "Test Case",
+                  "result" : "Skipped"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Test skipped - Requires the isolated image fixture",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0.12s",
+                  "durationInSeconds" : 0.11799502372741699,
+                  "name" : "testOversizedImageSnapshotRefreshOffersReadOnlyRecovery()",
+                  "nodeIdentifier" : "ReaderUITests/testOversizedImageSnapshotRefreshOffersReadOnlyRecovery()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests/testOversizedImageSnapshotRefreshOffersReadOnlyRecovery",
+                  "nodeType" : "Test Case",
+                  "result" : "Skipped"
+                }
+              ],
+              "name" : "ReaderUITests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests/ReaderUITests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "OrcaUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Orca/OrcaUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "Orca",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}
