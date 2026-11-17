@@ -1,0 +1,175 @@
+{
+  "head": "67b20d73e62fed9d7cfc75e9c81a00acf76210ae",
+  "composeTestedMerge": "ae637dc2376e98054709733f19e2d96645ad862a",
+  "composeJob": "https://github.com/lukebrevoort/orca/actions/runs/42981756526/job/130393563596",
+  "readingJob": "https://github.com/lukebrevoort/orca/actions/runs/42981756366/job/130408009956",
+  "outcome": "FAILED; not a verified complete fix",
+  "compose": {
+    "lightPassed": 155,
+    "lightFailed": 4,
+    "skipped": 0,
+    "laterDarkSuite": "not run after light failure",
+    "earlyFeedbackLayoutLight": {
+      "passed": 1,
+      "failed": 0
+    },
+    "earlyFeedbackLayoutDark": {
+      "passed": 1,
+      "failed": 0
+    },
+    "exitCode": 65
+  },
+  "reading": {
+    "passed": 163,
+    "failed": 1,
+    "scopeSkips": 5,
+    "laterDarkSupplement": "not run after main failure",
+    "exitCode": 65
+  },
+  "geometryObservations": [
+    {
+      "checkpoint": "conflict-copy-keyboard",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "conflict-copy-reopened",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "conflict-copy-keyboard",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "conflict-copy-reopened",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "uncertain-delivery-check",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "sent-recovery-standard",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "rich-recovery-standard",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "rich-recovery-standard",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "rich-recovery-accessibility",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "sent-recovery-accessibility",
+      "controls": 2,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "short-standard-reader",
+      "controls": 3,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "short-standard-reader-scrolled",
+      "controls": 3,
+      "overlappingControls": 0
+    },
+    {
+      "checkpoint": "short-standard-keyboard",
+      "controls": 3,
+      "overlappingControls": 0
+    }
+  ],
+  "fullyCompletedGeometryChecks": [
+    {
+      "checkpoint": "conflict-copy-keyboard",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "conflict-copy-reopened",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "conflict-copy-keyboard",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "conflict-copy-reopened",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "uncertain-delivery-check",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "sent-recovery-standard",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "rich-recovery-standard",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "rich-recovery-standard",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "rich-recovery-accessibility",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "sent-recovery-accessibility",
+      "assertions": 20
+    },
+    {
+      "checkpoint": "short-standard-reader",
+      "assertions": 30
+    },
+    {
+      "checkpoint": "short-standard-reader-scrolled",
+      "assertions": 30
+    }
+  ],
+  "actualSyntheticDeliveryDeltas": [
+    {
+      "checkpoint": "conflict-copy-delivered",
+      "requests": 1,
+      "deliveries": 1
+    },
+    {
+      "checkpoint": "conflict-copy-delivered",
+      "requests": 1,
+      "deliveries": 1
+    }
+  ],
+  "scope": "Only completed checks/deltas are counted; short-keyboard case logged zero overlaps but stopped at36pt Done target before success. Other failed cases did not reach their later geometry/delivery assertions.",
+  "artifacts": [
+    {
+      "path": "/tmp/bre459-hosted-compose-failed-67b20d73/Orca-summary.json",
+      "sha256": "b2d71b2c83362049c738e1a17e644081d625859e19e893eb9455421db23eb8d1"
+    },
+    {
+      "path": "/tmp/bre459-hosted-reading-failed-67b20d73/Orca-summary.json",
+      "sha256": "cace48542c0106f5008c265e124a91927ecc9ae26419d26ea6ffe4406adb0937"
+    }
+  ],
+  "inspectedSelectedUI": [
+    "/tmp/bre459-hosted-compose-failed-67b20d73/screenshots/Orca-136.png",
+    "/tmp/bre459-hosted-reading-failed-67b20d73/screenshots/Orca-14.png",
+    "/tmp/bre459-hosted-reading-failed-67b20d73/screenshots/Orca-53.png"
+  ],
+  "limitations": "Selected inspected images show large-text header/recovery layouts and standard expanded history, not a uniquely mapped screenshot of every failed tap. Exact failure geometry and hit dispatch come from retained traces. No physical device."
+}
