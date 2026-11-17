@@ -26,6 +26,8 @@ type ReadInput = {
   queryId: string;
   query: OrganizationSavedQueryResultQuery;
   cursorSecret: string;
+  /** Trusted representation option; deliberately excluded from evaluation/cursor scope. */
+  includeImportance?: boolean;
   observe?: (metric: MailboxReadMetric) => void;
 };
 
@@ -96,12 +98,16 @@ export function readSavedQueryResults(sqlite: Database, input: ReadInput): Organ
     const savedQueryProfile = legacy || attention !== "all" || filters.sender
       ? { legacy, attention, ...(filters.sender ? { person: filters.sender } : {}), ...(legacy && filters.text ? { text: filters.text } : {}) }
       : undefined;
-    const { response } = createMailboxReader(sqlite, { observe: input.observe }).read({
+    const { response } = createMailboxReader(sqlite, { observe: input.observe, includeImportance: input.includeImportance }).read({
       authorization: { userId, accountIds: [accountId] }, query,
       ...(savedQueryProfile ? { savedQueryProfile } : {}),
     });
     if (response.accounts.length !== 1 || response.accounts[0]?.id !== accountId
       || response.messages.some(message => message.accountId !== accountId)) throw new Error("Saved-query mailbox projection escaped Account scope");
+    // The existing batch reader omits targets with missing precomputed state.
+    // An opted-in success must be complete, never a fabricated Unreviewed or a
+    // partial projection. This check remains inside the same query-only snapshot.
+    if (input.includeImportance && response.messages.some(message => message.importance === undefined)) throw unavailable();
     return organizationSavedQueryResultResponseSchema.parse({
       query: { id: input.queryId, accountId, revision: record.revision, definitionDigest, evaluationProfile: profile },
       accounts: response.accounts,

@@ -1,0 +1,94 @@
+{
+  "base": "7c97193688599e5996bb657c34227a63927c384c",
+  "testedHead": "a19a3bba31805d56263851cc800f8267e95db7b3",
+  "branch": "t3/bre-457-query-importance-read",
+  "sourceCleanBefore": true,
+  "kind": "TEST-ONLY additive importance/owner-precondition baseline; no endpoint absence or old UI bug claim",
+  "driverSha256": "79b177c89bd0b7e058c7157550e434748a6d564e60aa9750582ca2db2853ae95",
+  "wrapperSha256": "e29f82749105f0fee6535fc4c510b7a3b529c3be7f51f9d6f5930e58ba3f15a8",
+  "inheritedWrapperLockFds": [
+    3
+  ],
+  "stageCapSeconds": 30,
+  "workCapSeconds": 90,
+  "plannedCounts": {
+    "controls": {
+      "pass": 1,
+      "fail": 0
+    },
+    "extension": {
+      "pass": 0,
+      "fail": 5
+    }
+  },
+  "stages": [
+    {
+      "name": "controls",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "test",
+        "apps/api/src/organization/collections-pins/query-importance-baseline.test.ts",
+        "--timeout",
+        "15000"
+      ],
+      "rawExit": 0,
+      "seconds": 0.6969335409812629,
+      "logSha256": "d85addbbb5755af2f9e36a820b0dd1221437a77333652108d10d8f5c8e358007",
+      "summary": {
+        "pass": 1,
+        "fail": 0
+      },
+      "receiptsSha256": "fea237d2e59a8ac296700f530999b6eabc7a58bc448a88835323ce3a60bf8fb3"
+    },
+    {
+      "name": "extension",
+      "command": [
+        "/opt/homebrew/bin/bun",
+        "test",
+        "apps/api/src/organization/collections-pins/query-importance-baseline.test.ts",
+        "--timeout",
+        "15000"
+      ],
+      "rawExit": 1,
+      "seconds": 0.5445544170215726,
+      "logSha256": "aa38e98b3da73c306756c0fce9457d4bbcf2517b6ec89eff7a1d55da97654574",
+      "summary": {
+        "pass": 0,
+        "fail": 5
+      },
+      "receiptsSha256": "360f755096a87066f31cfad2ec7ee04afd8fc6bd556c98e2591d75ce9de60261"
+    }
+  ],
+  "overallExit": 1,
+  "classification": "ACTUAL EXPECTED EXTENSION RED: one missing importance projection + four absent original-owner preconditions",
+  "startedAt": 1794449648.763135,
+  "bun": "1.3.14",
+  "node": "v24.22.1",
+  "semanticComparisonCount": 5,
+  "ownedScratchRemoved": true,
+  "finalHead": "a19a3bba31805d56263851cc800f8267e95db7b3",
+  "finalStatus": "",
+  "wallSeconds": 1.3946869999635965,
+  "rawArtifacts": [
+    {
+      "path": "controls.jsonl",
+      "bytes": 4260,
+      "sha256": "fea237d2e59a8ac296700f530999b6eabc7a58bc448a88835323ce3a60bf8fb3"
+    },
+    {
+      "path": "controls.log",
+      "bytes": 4808,
+      "sha256": "d85addbbb5755af2f9e36a820b0dd1221437a77333652108d10d8f5c8e358007"
+    },
+    {
+      "path": "extension.jsonl",
+      "bytes": 11181,
+      "sha256": "360f755096a87066f31cfad2ec7ee04afd8fc6bd556c98e2591d75ce9de60261"
+    },
+    {
+      "path": "extension.log",
+      "bytes": 18234,
+      "sha256": "aa38e98b3da73c306756c0fce9457d4bbcf2517b6ec89eff7a1d55da97654574"
+    }
+  ]
+}

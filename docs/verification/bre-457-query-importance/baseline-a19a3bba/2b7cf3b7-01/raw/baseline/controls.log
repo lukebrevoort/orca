@@ -1,0 +1,14 @@
+bun test v1.3.14 (d1632b29)
+
+apps/api/src/organization/collections-pins/query-importance-baseline.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module '@orca/shared' from '/Users/lbrevoort/.t3/worktrees/orca/t3-bf6ff789-f6f7314e6cf4e829/apps/api/src/organization/collections-pins/query-importance-baseline.test.ts'
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [163.00ms]

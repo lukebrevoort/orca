@@ -1,0 +1,65 @@
+{
+  "status": "PREPARED ONLY; NO RUNTIME EXECUTION",
+  "base": "7c97193688599e5996bb657c34227a63927c384c",
+  "branch": "t3/bre-457-query-importance-read",
+  "duplicateChecks": {
+    "branchPatterns": [
+      "*query-importance*",
+      "*importance-projection*"
+    ],
+    "branchMatches": [],
+    "activeThreadSearch": "BRE-457 query importance",
+    "activeThreadMatches": [],
+    "notExhaustive": true
+  },
+  "plannedCounts": {
+    "controls": {
+      "pass": 1,
+      "fail": 0
+    },
+    "extension": {
+      "pass": 0,
+      "fail": 5
+    }
+  },
+  "newProductChanges": false,
+  "runtimeExecuted": false,
+  "installRequired": false,
+  "warmEstimateSeconds": [
+    10,
+    20
+  ],
+  "stageHardCapsSeconds": {
+    "controls": 30,
+    "extension": 30
+  },
+  "driverWorkCapSeconds": 90,
+  "proposedOuterCapWithCleanupSeconds": 105,
+  "files": [
+    {
+      "path": "apps/api/src/organization/collections-pins/query-importance-baseline.fixture.ts",
+      "bytes": 16035,
+      "sha256": "72bd099e5cfd7dd41ae2fcbf861a705a9e66e5e6cbf0f5c20ec5e4f6aa3d9050"
+    },
+    {
+      "path": "apps/api/src/organization/collections-pins/query-importance-baseline.test.ts",
+      "bytes": 4343,
+      "sha256": "13939f7771cf99e427650e1c8b59c555fec3a72c5c86709961982098a352bb1c"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/run-baseline.py",
+      "bytes": 13242,
+      "sha256": "b6078a7658c1d8e65650fc33bb3758d84842eb246e9a8db0e02de5e4b4541a90"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/README.md",
+      "bytes": 10316,
+      "sha256": "b23d5106e45c48aa101984e55e6cd651774db34f7808378ae33a7306fc8655bd"
+    },
+    {
+      "path": "docs/verification/bre-457-query-importance/source-inventory.json",
+      "bytes": 83760,
+      "sha256": "2bd2f50b138578a631d157b0af7652a090261e9a7e133f769ddda9a1453a74da"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+BRE457_IMPORTANCE starting controls; hardcap=30.0s; no install/types/build
+BRE457_IMPORTANCE finished controls; rawExit=0; actualSeconds=0.697
+BRE457_IMPORTANCE starting extension; hardcap=30.0s; no install/types/build
+BRE457_IMPORTANCE finished extension; rawExit=1; actualSeconds=0.545
+BRE457_IMPORTANCE terminal exit=1 classification=ACTUAL EXPECTED EXTENSION RED: one missing importance projection + four absent original-owner preconditions; evidence=/private/tmp/bre457-query-importance-root-a19a3bba-01/baseline

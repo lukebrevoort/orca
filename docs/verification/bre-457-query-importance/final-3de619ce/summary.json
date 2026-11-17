@@ -1,0 +1,244 @@
+{
+  "testedSource": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+  "mainBase": "7c97193688599e5996bb657c34227a63927c384c",
+  "sourceReview": {
+    "sha256": "71f4df7143c56006bcaebbc33bff0c1f774e89564d380e25eda9b0a1e442c21f",
+    "verdict": "APPROVED WITH COMMENTS; no production blocker; source-only review not formal GitHub approval",
+    "commentsDisposition": "Evidence labels clarified here; stated nested provenance/work gaps remain explicit; no tested source changed"
+  },
+  "focusedGate": {
+    "overallExit": 0,
+    "stages": [
+      {
+        "name": "controls",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 0.9683427499840036
+      },
+      {
+        "name": "focused",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 4.82073329098057
+      },
+      {
+        "name": "shared-types",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 1.7267352089984342
+      },
+      {
+        "name": "api-types",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 7.579877666023094
+      },
+      {
+        "name": "metadata-demo",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "seconds": 1.4866660420084372
+      }
+    ],
+    "testCounts": {
+      "controls": 1,
+      "focused": 106,
+      "overlapWarning": "Focused tests overlap full workspace; never sum as unique tests"
+    },
+    "same5RedAssertionsGreen": {
+      "projection": [
+        {
+          "stage": "extension",
+          "name": "extension-projection",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "queryId": "importance-query-bre457-importance-account-U",
+          "actualRows": 3,
+          "missingImportanceThreads": [],
+          "sourceEffectiveValues": [
+            "important",
+            "not_important",
+            "unreviewed"
+          ],
+          "comparisonExecuted": true,
+          "evidenceScope": "additive importance projection; existing endpoint200, not endpoint absence or old UI reproduction"
+        }
+      ],
+      "ownerFence": [
+        {
+          "stage": "extension",
+          "name": "extension-owner-fence",
+          "kind": "cookie",
+          "surface": "catalog",
+          "expectedStatus": 409,
+          "actualStatus": 409,
+          "observedScope": {
+            "error": {
+              "code": "session_owner_changed",
+              "message": "The signed-in account changed. Reload before continuing."
+            }
+          },
+          "openedConnections": 1,
+          "comparisonExecuted": true,
+          "evidenceScope": "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"
+        },
+        {
+          "stage": "extension",
+          "name": "extension-owner-fence",
+          "kind": "cookie",
+          "surface": "results",
+          "expectedStatus": 409,
+          "actualStatus": 409,
+          "observedScope": {
+            "error": {
+              "code": "session_owner_changed",
+              "message": "The signed-in account changed. Reload before continuing."
+            }
+          },
+          "openedConnections": 1,
+          "comparisonExecuted": true,
+          "evidenceScope": "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"
+        },
+        {
+          "stage": "extension",
+          "name": "extension-owner-fence",
+          "kind": "mobile",
+          "surface": "catalog",
+          "expectedStatus": 409,
+          "actualStatus": 409,
+          "observedScope": {
+            "error": {
+              "code": "session_owner_changed",
+              "message": "The signed-in account changed. Reload before continuing."
+            }
+          },
+          "openedConnections": 1,
+          "comparisonExecuted": true,
+          "evidenceScope": "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"
+        },
+        {
+          "stage": "extension",
+          "name": "extension-owner-fence",
+          "kind": "mobile",
+          "surface": "results",
+          "expectedStatus": 409,
+          "actualStatus": 409,
+          "observedScope": {
+            "error": {
+              "code": "session_owner_changed",
+              "message": "The signed-in account changed. Reload before continuing."
+            }
+          },
+          "openedConnections": 1,
+          "comparisonExecuted": true,
+          "evidenceScope": "B authenticated and requesting B's own proven scope with expected U; missing original-owner precondition, not anonymous/foreign-account disclosure"
+        }
+      ]
+    },
+    "observedRequestControls": 85,
+    "freshRequestControlsAllZeroCommittedChangesAndProviderSeams": true,
+    "headCleanStartEnd": true,
+    "ownedRemaining": [],
+    "ownedTmpRemoved": true
+  },
+  "fullWorkspaceGate": {
+    "overallExit": 0,
+    "stages": [
+      {
+        "name": "lint",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "elapsedSeconds": 14.380494124954566
+      },
+      {
+        "name": "typecheck",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "elapsedSeconds": 13.664374333049636
+      },
+      {
+        "name": "test",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "elapsedSeconds": 200.15686529199593
+      },
+      {
+        "name": "build",
+        "rawExit": 0,
+        "checkedExit": 0,
+        "elapsedSeconds": 15.962940374971367
+      }
+    ],
+    "workspaces": [
+      {
+        "workspace": "@orca/api",
+        "passed": 1344,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "expectCalls": 5774,
+        "ran": 1344,
+        "files": 154
+      },
+      {
+        "workspace": "@orca/web",
+        "passed": 869,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "expectCalls": 6148,
+        "ran": 869,
+        "files": 70
+      },
+      {
+        "workspace": "@orca/shared",
+        "passed": 191,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "expectCalls": 240,
+        "ran": 191,
+        "files": 23
+      }
+    ],
+    "totals": {
+      "passed": 2404,
+      "failed": 0,
+      "expectCalls": 12162
+    },
+    "elapsedSeconds": 251.2439173749881,
+    "trackedInputCountAtExecution": 5534,
+    "exactInputHashesAtStartAndEnd": true,
+    "sourceCleanStartEnd": true,
+    "compilerProjectWitnessesPerCompileStage": 3,
+    "viteBuildWitness": true,
+    "usageDetected": false,
+    "notStarted": [],
+    "ownedRemaining": [],
+    "ownedTmpRemoved": true,
+    "directWrapperAfterExit": 0,
+    "memoryObservations": {
+      "before": "System-wide memory free percentage: 47%",
+      "after": "System-wide memory free percentage: 45%"
+    },
+    "noStandaloneFocusedDemoRepeat": true
+  },
+  "executedRuntime": {
+    "Bun": "1.3.14",
+    "Node": "v24.22.1",
+    "TypeScript": "5.9.3"
+  },
+  "noNewExecutionDuringRetention": true,
+  "cancellationInjectionTested": false,
+  "timingLabel": "callbackMs is fixture-controlled request+observers wall time, not isolated route latency; RSS before/after is process-wide snapshot, not peak/allocation",
+  "coverageGaps": [
+    "No complete expected nested null-choice tombstone resolution at this seam",
+    "No complete expected mixed inherited vote resolution at this seam",
+    "Same-sender two-account case uses opposing conversation choices, not opposing exact-sender preferences",
+    "Freshness writes source choice as setup through real triggers, not a supported mutation endpoint test",
+    "Work demo first pages only; next/empty continuation work not measured",
+    "Basic always precedes enhanced; not counterbalanced"
+  ],
+  "workScope": "Python3 SQLite3.53.4 actual source-pinned metadata statements:2 SELECTs,3 state rows,20 preference rows, interval1 progress callbacks3184/4603, changes0. Not Bun VM or whole endpoint count/work. Dense/sparse separate reader scanned4/76 candidates to retain4 and return3 on this finite fixture; no bound/speedup.",
+  "publication": "NEW draft PR NOT CREATED; local docs-only delivery needs ROOT readback then explicit publication grant. Merged320 untouched."
+}

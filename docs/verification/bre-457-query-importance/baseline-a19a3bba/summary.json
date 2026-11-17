@@ -1,0 +1,72 @@
+{
+  "testedRed": "a19a3bba31805d56263851cc800f8267e95db7b3",
+  "base": "7c97193688599e5996bb657c34227a63927c384c",
+  "scope": "ACTUAL additive extension red after valid real preconditions; not endpoint absence or historical UI bug",
+  "controls": {
+    "name": "controls",
+    "command": [
+      "/opt/homebrew/bin/bun",
+      "test",
+      "apps/api/src/organization/collections-pins/query-importance-baseline.test.ts",
+      "--timeout",
+      "15000"
+    ],
+    "rawExit": 0,
+    "seconds": 0.6969335409812629,
+    "logSha256": "d85addbbb5755af2f9e36a820b0dd1221437a77333652108d10d8f5c8e358007",
+    "summary": {
+      "pass": 1,
+      "fail": 0
+    },
+    "receiptsSha256": "fea237d2e59a8ac296700f530999b6eabc7a58bc448a88835323ce3a60bf8fb3"
+  },
+  "extension": {
+    "name": "extension",
+    "command": [
+      "/opt/homebrew/bin/bun",
+      "test",
+      "apps/api/src/organization/collections-pins/query-importance-baseline.test.ts",
+      "--timeout",
+      "15000"
+    ],
+    "rawExit": 1,
+    "seconds": 0.5445544170215726,
+    "logSha256": "aa38e98b3da73c306756c0fce9457d4bbcf2517b6ec89eff7a1d55da97654574",
+    "summary": {
+      "pass": 0,
+      "fail": 5
+    },
+    "receiptsSha256": "360f755096a87066f31cfad2ec7ee04afd8fc6bd556c98e2591d75ce9de60261"
+  },
+  "innerWallSeconds": 1.3946869999635965,
+  "rawOverallExit": 1,
+  "first2bSetupFailuresRemainNonpass": [
+    {
+      "run": "2b7cf3b7-01",
+      "cause": "missing @orca/shared dependency import; no preconditions/extension",
+      "overallExit": 2
+    },
+    {
+      "run": "2b7cf3b7-02",
+      "cause": "catalog200 normalized invalid paired mailbox/attention seed; strict result422; extension not started",
+      "overallExit": 2
+    }
+  ],
+  "rootCorrection": "strict schema validation plus attention all; driver accepts ancestor main7c with same allowed-path gate",
+  "frozenInstall": {
+    "run": "2b7cf3b7-02",
+    "rawExit": 0,
+    "seconds": 3.031340999994427,
+    "packages": 177,
+    "sourceLockDrift": false
+  },
+  "counts": {
+    "controlsGetChecks": 12,
+    "extensionGetChecks": 17,
+    "missingImportanceRows": 3,
+    "ownerMismatch200Cases": 4
+  },
+  "limits": "committed-change/source-table controls and provider-seam calls only; separate real query_only rejected UPDATE total_changes0. No global network audit, VM count or cancellation injection claim.",
+  "cancellationInjectionTested": false,
+  "rawCopiesUnmodified": true
+}

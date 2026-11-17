@@ -1,0 +1,16 @@
+{
+  "statements": [
+    "WITH wanted(account_id,thread_id) AS (VALUES (?,?),(?,?),(?,?))\n    SELECT s.*,c.choice,c.revision choice_revision,r.revision account_revision\n    FROM wanted w JOIN importance_thread_state s ON s.account_id=w.account_id AND s.thread_id=w.thread_id\n    LEFT JOIN importance_choices c ON c.account_id=s.account_id AND c.kind='conversation' AND c.target=s.thread_id\n    JOIN mailbox_revisions r ON r.account_id=s.account_id",
+    "WITH wanted(account_id,thread_id) AS (VALUES (?,?),(?,?),(?,?)), ranked AS (\n    SELECT p.account_id,p.thread_id,p.address,c.choice,c.revision,\n      row_number() OVER(PARTITION BY p.account_id,p.thread_id ORDER BY CASE c.choice WHEN 'important' THEN 0 ELSE 1 END,p.address) ordinal\n    FROM wanted w JOIN importance_participants p ON p.account_id=w.account_id AND p.thread_id=w.thread_id\n    JOIN importance_choices c ON c.account_id=p.account_id AND c.kind='sender' AND c.target=p.address AND c.choice IS NOT NULL)\n    SELECT * FROM ranked WHERE ordinal<=20"
+  ],
+  "params": [
+    "bre457-importance-account-U",
+    "importance-work-000",
+    "bre457-importance-account-U",
+    "importance-work-001",
+    "bre457-importance-account-U",
+    "importance-work-002"
+  ],
+  "targetCount": 3,
+  "productionSourceSha256": "43715a62bf23bb37f620bb1cbafc633b9aaf59ccf33a2a17a322da6b13dfcf24"
+}

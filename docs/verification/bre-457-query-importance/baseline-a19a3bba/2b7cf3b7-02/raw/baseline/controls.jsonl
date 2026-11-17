@@ -1,0 +1,7 @@
+{"stage":"controls","name":"request-control","request":"anonymous catalog","status":401,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":0,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+{"stage":"controls","name":"request-control","request":"U real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+{"stage":"controls","name":"request-control","request":"cookie real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+{"stage":"controls","name":"request-control","request":"mobile real session","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+{"stage":"controls","name":"request-control","request":"U actual catalog","status":200,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+{"stage":"controls","name":"request-control","request":"U own default query","status":422,"noCommittedWrites":true,"stateUnchanged":true,"openedConnections":2,"providerCalls":{"client":0,"body":0,"sync":0,"transport":0},"freshSession":true}
+{"stage":"controls","name":"owned-fixture-cleanup","removed":true}

@@ -1,0 +1,224 @@
+{
+  "mainBase": "7c97193688599e5996bb657c34227a63927c384c",
+  "tested": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+  "checks": [
+    {
+      "pr": 303,
+      "url": "https://github.com/lukebrevoort/orca/pull/303",
+      "recordedHead": "707e012c7f977730badaa06912d6d8f13f4d0668",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 309,
+      "url": "https://github.com/lukebrevoort/orca/pull/309",
+      "recordedHead": "5a07a5362e35cc34ff6bd07663fb2df2b558c55a",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 310,
+      "url": "https://github.com/lukebrevoort/orca/pull/310",
+      "recordedHead": "b476970cb7d4c3e649fea11f7b71f8fa36c5e897",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 1,
+          "isAncestor": false
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 1,
+          "isAncestor": false
+        }
+      ]
+    },
+    {
+      "pr": 311,
+      "url": "https://github.com/lukebrevoort/orca/pull/311",
+      "recordedHead": "5795909927d8aa77c5e777e37a3e85eaf14aeb99",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 312,
+      "url": "https://github.com/lukebrevoort/orca/pull/312",
+      "recordedHead": "bc1b26e0de0e66d7fe0cc4711e4b525610eba312",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 1,
+          "isAncestor": false
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 1,
+          "isAncestor": false
+        }
+      ]
+    },
+    {
+      "pr": 313,
+      "url": "https://github.com/lukebrevoort/orca/pull/313",
+      "recordedHead": "fb10f5c89f4c5147de3a7e7b9a375c4ad1f9951f",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 1,
+          "isAncestor": false
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 1,
+          "isAncestor": false
+        }
+      ]
+    },
+    {
+      "pr": 314,
+      "url": "https://github.com/lukebrevoort/orca/pull/314",
+      "recordedHead": "20a0166d66807fd6f26406319c083fa2ae8aa8fd",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 315,
+      "url": "https://github.com/lukebrevoort/orca/pull/315",
+      "recordedHead": "03c6045e6a1ea87583c012f2c7d4c037f078ebe6",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 316,
+      "url": "https://github.com/lukebrevoort/orca/pull/316",
+      "recordedHead": "c539ca3259f05a6cbb9babdc93bac4708c3d8558",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 318,
+      "url": "https://github.com/lukebrevoort/orca/pull/318",
+      "recordedHead": "996ae13a909024f1a2c5f6fa5c3f59d3c38aa4a7",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 319,
+      "url": "https://github.com/lukebrevoort/orca/pull/319",
+      "recordedHead": "d8f66c7b2af3a4d7282621b42519efd906ac9b8f",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    },
+    {
+      "pr": 320,
+      "url": "https://github.com/lukebrevoort/orca/pull/320",
+      "recordedHead": "cef8ee7daeb629a0aeea446e17f654dd1f2a0d24",
+      "checks": [
+        {
+          "target": "7c97193688599e5996bb657c34227a63927c384c",
+          "exit": 0,
+          "isAncestor": true
+        },
+        {
+          "target": "3de619ce8a92dc52182638fe5ba94de5ac63f380",
+          "exit": 0,
+          "isAncestor": true
+        }
+      ]
+    }
+  ],
+  "inheritedPrs": [
+    303,
+    309,
+    311,
+    314,
+    315,
+    316,
+    318,
+    319,
+    320
+  ],
+  "newOwnPR": "NOT CREATED; next publication must create a distinct draft, never modify merged320",
+  "pendingClientContext": "Unpublished web/native branches are separately ROOT-owned integration context, not inherited layers or verified client acceptance. No current PR head/status or unpublished integration is invented here.",
+  "linkAfterFuturePublication": "New actual own URL plus these9 inherited URLs immediately; no watch/dispatch/merge by this worker."
+}

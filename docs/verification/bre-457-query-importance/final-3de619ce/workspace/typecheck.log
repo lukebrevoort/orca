@@ -1,0 +1,3 @@
+@orca/api:typecheck    | Done in 1.31s
+@orca/shared:typecheck | Done in 639ms
+@orca/web:typecheck    | Done in 11.33s

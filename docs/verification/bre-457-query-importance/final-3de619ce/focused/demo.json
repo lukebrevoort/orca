@@ -1,0 +1,522 @@
+{
+  "kind": "real Hono HTTP callbacks and migrated SQLite finite fixture; no loopback server/browser/device",
+  "sourceWorkRows": 120,
+  "contributingParticipantsAdded": 40,
+  "limit": 3,
+  "rounds": 3,
+  "observations": [
+    {
+      "round": 0,
+      "profile": "dense",
+      "includeImportance": false,
+      "rows": [
+        "importance-work-000",
+        "importance-work-001",
+        "importance-work-002"
+      ],
+      "callbackMs": 16.34054100000003,
+      "rssBefore": 253149184,
+      "rssAfter": 255623168,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.0687500000000227,
+        "countDurationMs": 1.108208999999988,
+        "pageDurationMs": 0.7337909999999965,
+        "enrichmentDurationMs": 0.11941600000000108,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 4,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 0,
+      "profile": "dense",
+      "includeImportance": true,
+      "rows": [
+        "importance-work-000",
+        "importance-work-001",
+        "importance-work-002"
+      ],
+      "callbackMs": 14.34470900000008,
+      "rssBefore": 255639552,
+      "rssAfter": 255983616,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.3880420000000413,
+        "countDurationMs": 1.0449169999999413,
+        "pageDurationMs": 0.76400000000001,
+        "enrichmentDurationMs": 0.4769579999999678,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 4,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "scope": "separate Python SQLite metadata-only replay",
+      "profile": "dense",
+      "measured": {
+        "engine": "Python sqlite3 SQL replay, not Bun VM observations",
+        "sqliteVersion": "3.53.4",
+        "productionSourceSha256": "43715a62bf23bb37f620bb1cbafc633b9aaf59ccf33a2a17a322da6b13dfcf24",
+        "targetCount": 3,
+        "actualBatchSelects": 2,
+        "statements": [
+          {
+            "sqlSha256": "a00f5bd92e16abdef9ef87bee0908bdee863c4ca2dd946ecb3d6c1fb422e8ab8",
+            "rows": 3,
+            "progressCallbacksInterval1": 3184,
+            "seconds": 0.003080249996855855
+          },
+          {
+            "sqlSha256": "7683cdb91a1280a1dbd423e81e1431e2b84ba80888bdfeb0b4d9e1b94475356b",
+            "rows": 20,
+            "progressCallbacksInterval1": 4603,
+            "seconds": 0.0010136669734492898
+          }
+        ],
+        "connectionTotalChanges": 0,
+        "queryOnly": 1,
+        "limits": "Finite source-pinned metadata statements only; preference window visits may exceed output20/thread; no whole-request SQL/VM/memory or speedup claim"
+      }
+    },
+    {
+      "round": 0,
+      "profile": "sparse",
+      "includeImportance": false,
+      "rows": [
+        "importance-work-000",
+        "importance-work-025",
+        "importance-work-050"
+      ],
+      "callbackMs": 15.337374999999952,
+      "rssBefore": 256475136,
+      "rssAfter": 258129920,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.118667000000073,
+        "countDurationMs": 0.9526250000000118,
+        "pageDurationMs": 0.8735419999999294,
+        "enrichmentDurationMs": 0.05566699999997127,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 76,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 0,
+      "profile": "sparse",
+      "includeImportance": true,
+      "rows": [
+        "importance-work-000",
+        "importance-work-025",
+        "importance-work-050"
+      ],
+      "callbackMs": 14.339374999999905,
+      "rssBefore": 258162688,
+      "rssAfter": 258949120,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.6067500000000337,
+        "countDurationMs": 1.0156670000000076,
+        "pageDurationMs": 1.0026249999999663,
+        "enrichmentDurationMs": 0.48879199999998946,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 76,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "scope": "separate Python SQLite metadata-only replay",
+      "profile": "sparse",
+      "measured": {
+        "engine": "Python sqlite3 SQL replay, not Bun VM observations",
+        "sqliteVersion": "3.53.4",
+        "productionSourceSha256": "43715a62bf23bb37f620bb1cbafc633b9aaf59ccf33a2a17a322da6b13dfcf24",
+        "targetCount": 3,
+        "actualBatchSelects": 2,
+        "statements": [
+          {
+            "sqlSha256": "a00f5bd92e16abdef9ef87bee0908bdee863c4ca2dd946ecb3d6c1fb422e8ab8",
+            "rows": 3,
+            "progressCallbacksInterval1": 3184,
+            "seconds": 0.00304883299395442
+          },
+          {
+            "sqlSha256": "7683cdb91a1280a1dbd423e81e1431e2b84ba80888bdfeb0b4d9e1b94475356b",
+            "rows": 20,
+            "progressCallbacksInterval1": 4603,
+            "seconds": 0.0006089579546824098
+          }
+        ],
+        "connectionTotalChanges": 0,
+        "queryOnly": 1,
+        "limits": "Finite source-pinned metadata statements only; preference window visits may exceed output20/thread; no whole-request SQL/VM/memory or speedup claim"
+      }
+    },
+    {
+      "round": 1,
+      "profile": "dense",
+      "includeImportance": false,
+      "rows": [
+        "importance-work-000",
+        "importance-work-001",
+        "importance-work-002"
+      ],
+      "callbackMs": 13.647874999999999,
+      "rssBefore": 259063808,
+      "rssAfter": 260079616,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 1.873124999999959,
+        "countDurationMs": 0.9883750000000191,
+        "pageDurationMs": 0.6862500000000864,
+        "enrichmentDurationMs": 0.057916999999974905,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 4,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 1,
+      "profile": "dense",
+      "includeImportance": true,
+      "rows": [
+        "importance-work-000",
+        "importance-work-001",
+        "importance-work-002"
+      ],
+      "callbackMs": 12.224333000000001,
+      "rssBefore": 260096000,
+      "rssAfter": 260521984,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.633624999999938,
+        "countDurationMs": 1.1538750000000846,
+        "pageDurationMs": 0.8196249999999736,
+        "enrichmentDurationMs": 0.5229580000000169,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 4,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 1,
+      "profile": "sparse",
+      "includeImportance": false,
+      "rows": [
+        "importance-work-000",
+        "importance-work-025",
+        "importance-work-050"
+      ],
+      "callbackMs": 14.67229199999997,
+      "rssBefore": 260587520,
+      "rssAfter": 260620288,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.034375000000068,
+        "countDurationMs": 0.9757920000000695,
+        "pageDurationMs": 0.9021249999999554,
+        "enrichmentDurationMs": 0.06645800000001145,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 76,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 1,
+      "profile": "sparse",
+      "includeImportance": true,
+      "rows": [
+        "importance-work-000",
+        "importance-work-025",
+        "importance-work-050"
+      ],
+      "callbackMs": 14.243957999999907,
+      "rssBefore": 260636672,
+      "rssAfter": 260718592,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.5023329999999078,
+        "countDurationMs": 1.0301249999999982,
+        "pageDurationMs": 0.9302920000000086,
+        "enrichmentDurationMs": 0.4333750000000691,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 76,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 2,
+      "profile": "dense",
+      "includeImportance": false,
+      "rows": [
+        "importance-work-000",
+        "importance-work-001",
+        "importance-work-002"
+      ],
+      "callbackMs": 14.22745900000018,
+      "rssBefore": 260931584,
+      "rssAfter": 261554176,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.05600000000004,
+        "countDurationMs": 1.0801249999999527,
+        "pageDurationMs": 0.7925420000001395,
+        "enrichmentDurationMs": 0.07433400000013535,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 4,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 2,
+      "profile": "dense",
+      "includeImportance": true,
+      "rows": [
+        "importance-work-000",
+        "importance-work-001",
+        "importance-work-002"
+      ],
+      "callbackMs": 12.640625,
+      "rssBefore": 261554176,
+      "rssAfter": 262078464,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.360249999999951,
+        "countDurationMs": 1.1027090000000044,
+        "pageDurationMs": 0.7552080000000387,
+        "enrichmentDurationMs": 0.40583399999991343,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 4,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 2,
+      "profile": "sparse",
+      "includeImportance": false,
+      "rows": [
+        "importance-work-000",
+        "importance-work-025",
+        "importance-work-050"
+      ],
+      "callbackMs": 14.40295900000001,
+      "rssBefore": 262111232,
+      "rssAfter": 262275072,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.035707999999886,
+        "countDurationMs": 0.98050000000012,
+        "pageDurationMs": 0.8943329999999605,
+        "enrichmentDurationMs": 0.0647079999998823,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 76,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    },
+    {
+      "round": 2,
+      "profile": "sparse",
+      "includeImportance": true,
+      "rows": [
+        "importance-work-000",
+        "importance-work-025",
+        "importance-work-050"
+      ],
+      "callbackMs": 12.681208000000197,
+      "rssBefore": 262275072,
+      "rssAfter": 262602752,
+      "openedConnections": 2,
+      "metric": {
+        "durationMs": 2.6902919999999995,
+        "countDurationMs": 0.997124999999869,
+        "pageDurationMs": 1.0447079999999005,
+        "enrichmentDurationMs": 0.5412919999998849,
+        "accountCount": 1,
+        "limit": 3,
+        "returnedMessages": 3,
+        "aggregateRowsReturned": 1,
+        "pageRowsProjected": 4,
+        "lookaheadRowsProjected": 1,
+        "labelAssociationRowsLoaded": 0,
+        "effectiveOverridesProjected": 0,
+        "accountPageQueries": 1,
+        "maxPageRowsBound": 4,
+        "revision": "mailbox-v2:6bebedb7f32d6dc14be864407045438a5a308bb2eda6a01bc176c246c910ba98",
+        "savedQuery": {
+          "candidateRowsScanned": 76,
+          "candidateSelects": 1,
+          "candidateBatchSize": 1,
+          "maxRetainedRows": 4
+        }
+      },
+      "metricScope": "separate actual reader invocation on same fixture; not HTTP SQL instrumentation"
+    }
+  ],
+  "limits": "O(candidates) query stream plus contributing-preference work; two batch SELECTs source prediction and separate Python SQL replay, never a Bun whole-request VM/SQL bound or speedup"
+}

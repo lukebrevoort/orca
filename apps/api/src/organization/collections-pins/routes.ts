@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
+import { requireSessionOwner } from "../../auth/session-owner.ts";
 import { getAuthConfig } from "../../auth/config.ts";
 import { organizationSavedQueryResultQuerySchema } from "@orca/shared";
 import { MailboxCursorError } from "../../mailbox/read.ts";
@@ -41,8 +42,9 @@ export function registerOrganizationCollectionsPinsRoutes(
 
   app.get("/v1/organization/collections-pins/queries/:queryId/results", (c, next) => {
     c.header("Cache-Control", "private, no-store");
+    c.header("Vary", "x-orca-importance-version", { append: true });
     return next();
-  }, requireAuth({ dbFactory }), (c) => {
+  }, requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const values = c.req.queries();
     const parsed = organizationSavedQueryResultQuerySchema.safeParse(c.req.query());
     if (!parsed.success || Object.values(values).some(value => value.length !== 1)) {
@@ -53,6 +55,7 @@ export function registerOrganizationCollectionsPinsRoutes(
       return c.json(readSavedQueryResults(sqlite, {
         auth: c.get("auth"), authSource: c.get("authSource") ?? "cookie",
         queryId: c.req.param("queryId"), query: parsed.data, cursorSecret: getAuthConfig().sessionSecret,
+        includeImportance: c.req.header("x-orca-importance-version") === "1",
       }));
     } catch (error) {
       if (error instanceof SavedQueryReadError) return c.json({ error: { code: error.code, message: error.message } }, error.status);
@@ -88,7 +91,7 @@ export function registerOrganizationCollectionsPinsRoutes(
     }
   });
 
-  app.get("/v1/organization/collections-pins/query", requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/organization/collections-pins/query", requireAuth({ dbFactory }), requireSessionOwner, (c) => {
     const { organization, scope, sqlite } = open(c.get("auth").userId);
     try {
       return c.json(organization.query({
